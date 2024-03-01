@@ -723,25 +723,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 switch customChatContents.kind {
                 case let .quickReplyMessageInput(_, shortcutType):
                     if let historyView = strongSelf.chatDisplayNode.historyNode.originalHistoryView, historyView.entries.isEmpty {
-                        //TODO:localize
                         
                         let titleString: String
                         let textString: String
                         switch shortcutType {
                         case .generic:
-                            titleString = "Remove Shortcut"
-                            textString = "You didn't create a quick reply message. Exiting will remove the shortcut."
+                            titleString = strongSelf.presentationData.strings.QuickReply_ChatRemoveGeneric_Title
+                            textString = strongSelf.presentationData.strings.QuickReply_ChatRemoveGeneric_Text
                         case .greeting:
-                            titleString = "Remove Greeting Message"
-                            textString = "You didn't create a greeting message. Exiting will remove it."
+                            titleString = strongSelf.presentationData.strings.QuickReply_ChatRemoveGreetingMessage_Title
+                            textString = strongSelf.presentationData.strings.QuickReply_ChatRemoveGreetingMessage_Text
                         case .away:
-                            titleString = "Remove Away Message"
-                            textString = "You didn't create an away message. Exiting will remove it."
+                            titleString = strongSelf.presentationData.strings.QuickReply_ChatRemoveAwayMessage_Title
+                            textString = strongSelf.presentationData.strings.QuickReply_ChatRemoveAwayMessage_Text
                         }
                         
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: titleString, text: textString, actions: [
                             TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
-                            TextAlertAction(type: .defaultAction, title: "Remove", action: { [weak strongSelf] in
+                            TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.QuickReply_ChatRemoveGeneric_DeleteAction, action: { [weak strongSelf] in
                                 strongSelf?.dismiss()
                             })
                         ]), in: .window(.root))
@@ -6204,7 +6203,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.reportIrrelvantGeoNoticePromise.set(.single(nil))
                 self.titleDisposable.set(nil)
                 
-                //TODO:localize
                 if case let .customChatContents(customChatContents) = self.subject {
                     switch customChatContents.kind {
                     case let .quickReplyMessageInput(shortcut, shortcutType):
@@ -6212,13 +6210,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .generic:
                             self.chatTitleView?.titleContent = .custom("\(shortcut)", nil, false)
                         case .greeting:
-                            self.chatTitleView?.titleContent = .custom("Greeting Message", nil, false)
+                            self.chatTitleView?.titleContent = .custom(self.presentationData.strings.QuickReply_TitleGreetingMessage, nil, false)
                         case .away:
-                            self.chatTitleView?.titleContent = .custom("Away Message", nil, false)
+                            self.chatTitleView?.titleContent = .custom(self.presentationData.strings.QuickReply_TitleAwayMessage, nil, false)
                         }
                     }
                 } else {
-                    self.chatTitleView?.titleContent = .custom("Messages", nil, false)
+                    self.chatTitleView?.titleContent = .custom(" ", nil, false)
                 }
                 
                 if !self.didSetChatLocationInfoReady {

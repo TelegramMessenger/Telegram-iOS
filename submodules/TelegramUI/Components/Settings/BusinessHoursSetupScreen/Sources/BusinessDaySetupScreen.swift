@@ -117,7 +117,7 @@ final class BusinessDaySetupScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
-            guard let component = self.component else {
+            guard let component = self.component, let enviroment = self.environment else {
                 return true
             }
             
@@ -126,11 +126,10 @@ final class BusinessDaySetupScreenComponent: Component {
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            //TODO:localize
-            self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Business hours are intersecting. Reset?", actions: [
-                TextAlertAction(type: .genericAction, title: "Cancel", action: {
+            self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: enviroment.strings.BusinessHoursSetup_ErrorIntersectingHours_Text, actions: [
+                TextAlertAction(type: .genericAction, title: enviroment.strings.Common_Cancel, action: {
                 }),
-                TextAlertAction(type: .defaultAction, title: "Reset", action: {
+                TextAlertAction(type: .defaultAction, title: enviroment.strings.BusinessHoursSetup_ErrorIntersectingHours_ResetAction, action: {
                     complete()
                 })
             ]), in: .window(.root))
@@ -258,23 +257,22 @@ final class BusinessDaySetupScreenComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
-            //TODO:localize
             let title: String
             switch component.dayIndex {
             case 0:
-                title = "Monday"
+                title = environment.strings.Weekday_Monday
             case 1:
-                title = "Tuesday"
+                title = environment.strings.Weekday_Tuesday
             case 2:
-                title = "Wednesday"
+                title = environment.strings.Weekday_Wednesday
             case 3:
-                title = "Thursday"
+                title = environment.strings.Weekday_Thursday
             case 4:
-                title = "Friday"
+                title = environment.strings.Weekday_Friday
             case 5:
-                title = "Saturday"
+                title = environment.strings.Weekday_Saturday
             case 6:
-                title = "Sunday"
+                title = environment.strings.Weekday_Sunday
             default:
                 title = " "
             }
@@ -309,7 +307,6 @@ final class BusinessDaySetupScreenComponent: Component {
             contentHeight += environment.navigationHeight
             contentHeight += 16.0
             
-            //TODO:localize
             let generalSectionSize = self.generalSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -322,7 +319,7 @@ final class BusinessDaySetupScreenComponent: Component {
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "Open On This Day",
+                                        string: environment.strings.BusinessHoursSetup_DaySwitch,
                                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                         textColor: environment.theme.list.itemPrimaryTextColor
                                     )),
@@ -381,7 +378,7 @@ final class BusinessDaySetupScreenComponent: Component {
                         title: AnyComponent(VStack([
                             AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
-                                    string: isOpenTime ? "Opening time" : "Closing Time",
+                                    string: isOpenTime ? environment.strings.BusinessHoursSetup_DayIntervalStart : environment.strings.BusinessHoursSetup_DayIntervalEnd,
                                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                     textColor: environment.theme.list.itemPrimaryTextColor
                                 )),
@@ -420,7 +417,7 @@ final class BusinessDaySetupScreenComponent: Component {
                     title: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Remove",
+                                string: environment.strings.BusinessHoursSetup_DayIntervalRemove,
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                 textColor: environment.theme.list.itemDestructiveColor
                             )),
@@ -503,7 +500,6 @@ final class BusinessDaySetupScreenComponent: Component {
                 canAddRanges = false
             }
             
-            //TODO:localize
             let addSectionSize = self.addSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -511,7 +507,7 @@ final class BusinessDaySetupScreenComponent: Component {
                     header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Specify your working hours during the day.",
+                            string: environment.strings.BusinessHoursSetup_AddSectionFooter,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -523,7 +519,7 @@ final class BusinessDaySetupScreenComponent: Component {
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "Add a Set of Hours",
+                                        string: environment.strings.BusinessHoursSetup_AddAction,
                                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                         textColor: environment.theme.list.itemAccentColor
                                     )),

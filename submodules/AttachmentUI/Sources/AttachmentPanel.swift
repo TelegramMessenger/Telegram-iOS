@@ -218,8 +218,7 @@ private final class AttachButtonComponent: CombinedComponent {
                 imageName = ""
                 imageFile = nil
             case .quickReply:
-                //TODO:localize
-                name = "Reply"
+                name = strings.Attachment_Reply
                 imageName = "Chat/Attach Menu/Reply"
             }
 
@@ -1188,8 +1187,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             case .standalone:
                 accessibilityTitle = ""
             case .quickReply:
-                //TODO:localize
-                accessibilityTitle = "Reply"
+                accessibilityTitle = self.presentationData.strings.Attachment_Reply
             }
             buttonView.isAccessibilityElement = true
             buttonView.accessibilityLabel = accessibilityTitle

@@ -11316,6 +11316,14 @@ Sorry for the inconvenience.";
 "ChannelBoost.Header.Giveaway" = "giveaway";
 "ChannelBoost.Header.Features" = "features";
 
+
+"GroupBoost.Table.Group.VoiceToText" = "Voice-to-Text Conversion";
+"GroupBoost.Table.Group.EmojiPack" = "Custom Emojipack";
+
+"ChannelBoost.Header.Boost" = "boost";
+"ChannelBoost.Header.Giveaway" = "giveaway";
+"ChannelBoost.Header.Features" = "features";
+
 "Premium.FolderTags" = "Folder Tags";
 "Premium.FolderTagsInfo" = "Add colorful labels to chats for faster access with Telegram Premium.";
 "Premium.FolderTagsStandaloneInfo" = "Add colorful labels to chats for faster access with Telegram Premium.";
@@ -11390,3 +11398,190 @@ to respond to messages faster.";
 "Story.Editor.DiscardText" = "If you go back now, you will lose any changes you made.";
 
 "Premium.Business.Description" = "Turn your account to a business page with these additional features.";
+
+"Attachment.Reply" = "Reply";
+
+"ChatList.ItemMoreMessagesFormat_1" = "+1 MORE";
+"ChatList.ItemMoreMessagesFormat_any" = "+%d MORE";
+"ChatList.ItemMenuEdit" = "Edit";
+"ChatList.ItemMenuDelete" = "Delete";
+"ChatList.PeerTypeNonContact" = "non-contact";
+
+"ChatListFilter.TagLabelNoTag" = "NO TAG";
+"ChatListFilter.TagLabelPremiumExpired" = "PREMIUM EXPIRED";
+"ChatListFilter.TagSectionTitle" = "FOLDER COLOR";
+"ChatListFilter.TagSectionFooter" = "This color will be used for the folder's tag in the chat list";
+"ChatListFilter.TagPremiumRequiredTooltipText" = "Subscribe to **Telegram Premium** to select folder color.";
+"ChatListFilterList.ShowTags" = "Show Folder Tags";
+"ChatListFilterList.ShowTagsFooter" = "Display folder names for each chat in the chat list.";
+
+"PeerInfo.BusinessHours.DayOpen24h" = "open 24 hours";
+"PeerInfo.BusinessHours.DayClosed" = "closed";
+"PeerInfo.BusinessHours.StatusOpen" = "Open";
+"PeerInfo.BusinessHours.StatusClosed" = "Closed";
+"PeerInfo.BusinessHours.StatusOpensInMinutes_1" = "Opens in one minute";
+"PeerInfo.BusinessHours.StatusOpensInMinutes_any" = "Opens in %d minutes";
+"PeerInfo.BusinessHours.StatusOpensInHours_1" = "Opens in one hour";
+"PeerInfo.BusinessHours.StatusOpensInHours_any" = "Opens in %d hours";
+"PeerInfo.BusinessHours.StatusOpensOnDate" = "Opens %@";
+"PeerInfo.BusinessHours.TimezoneSwitchMy" = "my time";
+"PeerInfo.BusinessHours.TimezoneSwitchBusiness" = "local time";
+"PeerInfo.BusinessHours.Label" = "business hours";
+"PeerInfo.Location.Label" = "location";
+
+"QuickReplies.EmptyState.Title" = "No Quick Replies";
+"QuickReplies.EmptyState.Text" = "Set up shortcuts with rich text and media to respond to messages faster.";
+"QuickReplies.EmptyState.AddButton" = "Add Quick Reply";
+
+"Chat.CommandList.EditQuickReplies" = "Edit Quick Replies";
+
+"Conversation.EditingQuickReplyPanelTitle" = "Edit Quick Reply";
+
+"Chat.Placeholder.QuickReply" = "Add quick reply..";
+"Chat.Placeholder.GreetingMessage" = "Add greeting message...";
+"Chat.Placeholder.AwayMessage" = "Add away message...";
+
+"Chat.QuickReplyMessageLimitReachedText_1" =  "Limit of %d message reached";
+"Chat.QuickReplyMessageLimitReachedText_any" =  "Limit of %d messages reached";
+
+"Chat.EmptyState.QuickReply.Title" = "New Quick Reply";
+"Chat.EmptyState.QuickReply.Text1" = "· Enter a message below that will be sent in chats when you type \"**/%@\"**.";
+"Chat.EmptyState.QuickReply.Text2" = "· You can access Quick Replies in any chat by typing \"/\" or using the Attachment menu.";
+"EmptyState.GreetingMessage.Title" = "New Greeting Message";
+"EmptyState.GreetingMessage.Text" = "Create greetings that will be automatically sent to new customers";
+"EmptyState.AwayMessage.Title" = "New Away Message";
+"EmptyState.AwayMessage.Text" = "Add messages that are automatically sent when you are off.";
+
+"QuickReply.Title" = "Quick Replies";
+"QuickReply.SelectedTitle_1" = "%d Selected";
+"QuickReply.SelectedTitle_any" = "%d Selected";
+
+"QuickReply.ShortcutPlaceholder" = "Shortcut";
+"QuickReply.CreateShortcutTitle" = "New Quick Reply";
+"QuickReply.CreateShortcutText" = "Add a shortcut for your quick reply.";
+"QuickReply.EditShortcutTitle" = "Edit Shortcut";
+"QuickReply.EditShortcutText" = "Add a new name for your shortcut.";
+"QuickReply.ShortcutExistsInlineError" = "Shortcut with that name already exists";
+
+"QuickReply.ChatRemoveGeneric.Title" = "Remove Shortcut";
+"QuickReply.ChatRemoveGeneric.Text" = "You didn't create a quick reply message. Exiting will remove the shortcut.";
+"QuickReply.ChatRemoveGreetingMessage.Title" = "Remove Greeting Message";
+"QuickReply.ChatRemoveGreetingMessage.Text" = "You didn't create a greeting message. Exiting will remove it.";
+"QuickReply.ChatRemoveAwayMessage.Title" = "Remove Away Message";
+"QuickReply.ChatRemoveAwayMessage.Text" = "You didn't create an away message. Exiting will remove it.";
+"QuickReply.ChatRemoveGeneric.DeleteAction" = "Delete";
+"QuickReply.TitleGreetingMessage" = "Greeting Message";
+"QuickReply.TitleAwayMessage" = "Away Message";
+
+"QuickReply.InlineCreateAction" = "New Quick Reply";
+"QuickReply.DeleteConfirmationSingle" = "Delete Quick Reply";
+"QuickReply.DeleteConfirmationMultiple" = "Delete Quick Replies";
+"QuickReply.DeleteAction_1" = "Delete 1 Quick Reply";
+"QuickReply.DeleteAction_any" = "Delete %d Quick Replies";
+
+"TimeZoneSelection.Title" = "Time Zone";
+
+"BusinessMessageSetup.TitleGreetingMessage" = "Greeting Message";
+"BusinessMessageSetup.TextGreetingMessage" = "Greet customers when they message you the first time or after a period of no activity.";
+"BusinessMessageSetup.TitleAwayMessage" = "Away Message";
+"BusinessMessageSetup.TextAwayMessage" = "Automatically reply with a message when you are away.";
+"BusinessMessageSetup.ToggleGreetingMessage" = "Send Greeting Message";
+"BusinessMessageSetup.ToggleAwayMessage" = "Send Away Message";
+"BusinessMessageSetup.CreateGreetingMessage" = "Create a Greeting Message";
+"BusinessMessageSetup.CreateAwayMessage" = "Create an Away Message";
+"BusinessMessageSetup.GreetingMessageSectionHeader" = "GREETING MESSAGE";
+"BusinessMessageSetup.AwayMessageSectionHeader" = "AWAY MESSAGE";
+
+"BusinessMessageSetup.ScheduleSectionHeader" = "SCHEDULE";
+"BusinessMessageSetup.ScheduleAlways" = "Always Send";
+"BusinessMessageSetup.ScheduleOutsideBusinessHours" = "Outside of Business Hours";
+"BusinessMessageSetup.ScheduleCustom" = "Custom Schedule";
+"BusinessMessageSetup.ScheduleStartTime" = "Start Time";
+"BusinessMessageSetup.ScheduleEndTime" = "End Time";
+"BusinessMessageSetup.ScheduleTimePlaceholder" = "Set";
+
+"BusinessMessageSetup.SendWhenOffline" = "Only if Offline";
+"BusinessMessageSetup.SendWhenOfflineFooter" = "Don't send the away message if you've recently been online.";
+
+"BusinessMessageSetup.ErrorNoRecipients.Text" = "No recipients selected. Reset?";
+"BusinessMessageSetup.ErrorNoRecipients.ResetAction" = "Reset";
+"BusinessMessageSetup.ErrorScheduleEndTimeBeforeStartTime.Text" = "Custom schedule end time must be larger than start time.";
+"BusinessMessageSetup.ErrorScheduleTimeMissing.Text" = "Custom schedule time is missing.";
+"BusinessMessageSetup.ErrorScheduleStartTimeMissing.Text" = "Custom schedule start time is missing.";
+"BusinessMessageSetup.ErrorScheduleEndTimeMissing.Text" = "Custom schedule end time is missing.";
+"BusinessMessageSetup.ErrorScheduleTime.ResetAction" = "Reset";
+
+"BusinessMessageSetup.RecipientsSectionHeader" = "RECIPIENTS";
+"BusinessMessageSetup.RecipientsOptionAllExcept" = "All 1-to-1 Chats Except...";
+"BusinessMessageSetup.RecipientsOptionOnly" = "Only Selected Chats";
+
+"BusinessMessageSetup.Recipients.AddExclude" = "Exclude Chats...";
+"BusinessMessageSetup.Recipients.AddInclude" = "Include Chats...";
+
+"BusinessMessageSetup.Recipients.CategoryExistingChats" = "Existing Chats";
+"BusinessMessageSetup.Recipients.CategoryNewChats" = "New Chats";
+"BusinessMessageSetup.Recipients.CategoryContacts" = "Contacts";
+"BusinessMessageSetup.Recipients.CategoryNonContacts" = "Non-Contacts";
+"BusinessMessageSetup.Recipients.IncludeSearchTitle" = "Include Chats";
+"BusinessMessageSetup.Recipients.ExcludeSearchTitle" = "Exclude Chats";
+
+"BusinessMessageSetup.Recipients.IncludedSectionHeader" = "INCLUDED CHATS";
+"BusinessMessageSetup.Recipients.ExcludedSectionHeader" = "EXCLUDED CHATS";
+"BusinessMessageSetup.Recipients.GreetingMessageFooter" = "Choose chats or entire chat categories for sending a greeting message.";
+"BusinessMessageSetup.Recipients.AwayMessageFooter" = "Choose chats or entire chat categories for sending an away message.";
+
+"BusinessMessageSetup.InactivitySectionHeader" = "PERIOD OF NO ACTIVITY";
+"BusinessMessageSetup.InactivitySectionFooter" = "Choose how many days should pass after your last interaction with a recipient to send them the greeting in response to their message.";
+
+"BusinessHoursSetup.Title" = "Business Hours";
+"BusinessHoursSetup.Text" = "Turn this on to show your opening hours schedule to your customers.";
+
+"BusinessHoursSetup.MainToggle" = "Show Business Hours";
+
+"BusinessHoursSetup.DaySwitch" = "Open On This Day";
+"BusinessHoursSetup.DayIntervalStart" = "Opening time";
+"BusinessHoursSetup.DayIntervalEnd" = "Closing time";
+"BusinessHoursSetup.DayIntervalRemove" = "Remove";
+"BusinessHoursSetup.AddSectionFooter" = "Specify your working hours during the day.";
+"BusinessHoursSetup.AddAction" = "Add a Set of Hours";
+
+"BusinessHoursSetup.ErrorIntersectingHours.Text" = "Business hours are intersecting. Reset?";
+"BusinessHoursSetup.ErrorIntersectingHours.ResetAction" = "Reset";
+
+"BusinessHoursSetup.ErrorIntersectingDays.Text" = "Business hours are intersecting. Reset?";
+"BusinessHoursSetup.ErrorIntersectingDays.ResetAction" = "Reset";
+
+"BusinessHoursSetup.DayOpen24h" = "Open 24 Hours";
+"BusinessHoursSetup.DayClosed" = "Closed";
+"BusinessHoursSetup.DaysSectionTitle" = "BUSINESS HOURS";
+
+"BusinessHoursSetup.TimeZone" = "Time Zone";
+
+"BusinessLocationSetup.Title" = "Location";
+"BusinessLocationSetup.Text" = "Display the location of your business on your account.";
+
+"BusinessLocationSetup.AddressPlaceholder" = "Enter Address";
+"BusinessLocationSetup.SetLocationOnMap" = "Set Location on Map";
+"BusinessLocationSetup.DeleteLocation" = "Delete Location";
+
+"BusinessLocationSetup.ErrorAddressEmpty.Text" = "Address can't be empty.";
+"BusinessLocationSetup.ErrorAddressEmpty.ResetAction" = "Delete";
+
+"ChatbotSetup.Title" = "Chatbots";
+"ChatbotSetup.Text" = "Add a bot to your account to help you automatically process and respond to the messages you receive. [Learn More >]()";
+"ChatbotSetup.TextLink" = "https://telegram.org";
+
+"ChatbotSetup.BotSearchPlaceholder" = "Bot Username";
+"ChatbotSetup.BotSectionFooter" = "Enter the username or URL of the Telegram bot that you want to automatically process your chats.";
+
+"ChatbotSetup.RecipientsSectionHeader" = "CHATS ACCESSIBLE FOR THE BOT";
+
+"ChatbotSetup.Recipients.ExcludedSectionFooter" = "Select chats or entire chat categories which the bot **WILL NOT** have access to.";
+"ChatbotSetup.Recipients.IncludedSectionFooter" = "Select chats or entire chat categories which the bot **WILL** have access to.";
+
+"ChatbotSetup.PermissionsSectionHeader" = "BOT PERMISSIONS";
+"ChatbotSetup.PermissionsSectionFooter" = "The bot will be able to view all new incoming messages, but not the messages that had been sent before you added the bot.";
+"ChatbotSetup.Permission.ReplyToMessages" = "Reply to Messages";
+
+"ChatbotSetup.BotAddAction" = "ADD";
+"ChatbotSetup.BotNotFoundStatus" = "Chatbot not found";

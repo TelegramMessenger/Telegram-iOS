@@ -1167,8 +1167,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }
             
             if let businessHours = cachedData.businessHours {
-                //TODO:localize
-                items[.peerInfo]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: "business hours", businessHours: businessHours, requestLayout: { animated in
+                items[.peerInfo]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: presentationData.strings.PeerInfo_BusinessHours_Label, businessHours: businessHours, requestLayout: { animated in
                     interaction.requestLayout(animated)
                 }, longTapAction: { sourceNode, text in
                     if !text.isEmpty {
@@ -1178,12 +1177,11 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }
             
             if let businessLocation = cachedData.businessLocation {
-                //TODO:localize
                 if let coordinates = businessLocation.coordinates {
                     let imageSignal = chatMapSnapshotImage(engine: context.engine, resource: MapSnapshotMediaResource(latitude: coordinates.latitude, longitude: coordinates.longitude, width: 90, height: 90))
                     items[.peerInfo]!.append(PeerInfoScreenAddressItem(
                         id: 301,
-                        label: "location",
+                        label: presentationData.strings.PeerInfo_Location_Label,
                         text: businessLocation.address,
                         imageSignal: imageSignal,
                         action: {
@@ -1198,7 +1196,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 } else {
                     items[.peerInfo]!.append(PeerInfoScreenAddressItem(
                         id: 301,
-                        label: "location",
+                        label: presentationData.strings.PeerInfo_Location_Label,
                         text: businessLocation.address,
                         imageSignal: nil,
                         action: nil,

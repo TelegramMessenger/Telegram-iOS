@@ -78,8 +78,7 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
     func item(context: AccountContext, presentationData: PresentationData, commandSelected: @escaping (ChatInputTextCommand, Bool) -> Void, openEditShortcuts: @escaping () -> Void) -> ListViewItem {
         switch self.content {
         case .editShortcuts:
-            //TODO:localzie
-            return VerticalListContextResultsChatInputPanelButtonItem(theme: presentationData.theme, style: .round, title: "Edit Quick Replies", pressed: {
+            return VerticalListContextResultsChatInputPanelButtonItem(theme: presentationData.theme, style: .round, title: presentationData.strings.Chat_CommandList_EditQuickReplies, pressed: {
                 openEditShortcuts()
             })
         case let .command(command):

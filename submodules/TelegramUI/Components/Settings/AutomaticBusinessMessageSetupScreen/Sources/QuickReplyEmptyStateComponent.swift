@@ -75,7 +75,7 @@ final class QuickReplyEmptyStateComponent: Component {
                     content: AnyComponentWithIdentity(
                         id: AnyHashable(0),
                         component: AnyComponent(ButtonTextContentComponent(
-                            text: "Add Quick Reply",
+                            text: component.strings.QuickReplies_EmptyState_AddButton,
                             badge: 0,
                             textColor: component.theme.list.itemCheckColors.foregroundColor,
                             badgeBackground: component.theme.list.itemCheckColors.foregroundColor,
@@ -115,11 +115,10 @@ final class QuickReplyEmptyStateComponent: Component {
                 containerSize: CGSize(width: 120.0, height: 120.0)
             )
             
-            //TODO:localize
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "No Quick Replies", font: Font.semibold(17.0), textColor: component.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: component.strings.QuickReplies_EmptyState_Title, font: Font.semibold(17.0), textColor: component.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -129,7 +128,7 @@ final class QuickReplyEmptyStateComponent: Component {
             let textSize = self.text.update(
                 transition: .immediate,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Set up shortcuts with rich text and media to respond to messages faster.", font: Font.regular(15.0), textColor: component.theme.list.itemSecondaryTextColor)),
+                    text: .plain(NSAttributedString(string: component.strings.QuickReplies_EmptyState_Text, font: Font.regular(15.0), textColor: component.theme.list.itemSecondaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 20,
                     lineSpacing: 0.2

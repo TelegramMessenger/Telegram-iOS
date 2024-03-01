@@ -702,9 +702,29 @@ private struct ContactsListNodeTransition {
 }
 
 public enum ContactListPresentation {
+    public struct Search {
+        public var signal: Signal<String, NoError>
+        public var searchChatList: Bool
+        public var searchDeviceContacts: Bool
+        public var searchGroups: Bool
+        public var searchChannels: Bool
+        public var globalSearch: Bool
+        public var displaySavedMessages: Bool
+        
+        public init(signal: Signal<String, NoError>, searchChatList: Bool, searchDeviceContacts: Bool, searchGroups: Bool, searchChannels: Bool, globalSearch: Bool, displaySavedMessages: Bool) {
+            self.signal = signal
+            self.searchChatList = searchChatList
+            self.searchDeviceContacts = searchDeviceContacts
+            self.searchGroups = searchGroups
+            self.searchChannels = searchChannels
+            self.globalSearch = globalSearch
+            self.displaySavedMessages = displaySavedMessages
+        }
+    }
+    
     case orderedByPresence(options: [ContactListAdditionalOption])
     case natural(options: [ContactListAdditionalOption], includeChatList: Bool, topPeers: Bool)
-    case search(signal: Signal<String, NoError>, searchChatList: Bool, searchDeviceContacts: Bool, searchGroups: Bool, searchChannels: Bool, globalSearch: Bool)
+    case search(Search)
     
     public var sortOrder: ContactsSortOrder? {
         switch self {
@@ -1097,7 +1117,15 @@ public final class ContactListNode: ASDisplayNode {
                 displayTopPeers = displayTopPeersValue
             }
             
-            if case let .search(query, searchChatList, searchDeviceContacts, searchGroups, searchChannels, globalSearch) = presentation {
+            if case let .search(search) = presentation {
+                let query = search.signal
+                let searchChatList = search.searchChatList
+                let searchDeviceContacts = search.searchDeviceContacts
+                let searchGroups = search.searchGroups
+                let searchChannels = search.searchChannels
+                let globalSearch = search.globalSearch
+                let displaySavedMessages = search.displaySavedMessages
+                
                 return query
                 |> mapToSignal { query in
                     let foundLocalContacts: Signal<([FoundPeer], [EnginePeer.Id: EnginePeer.Presence]), NoError>
@@ -1108,6 +1136,12 @@ public final class ContactListNode: ASDisplayNode {
                             var resultPeers: [FoundPeer] = []
                             
                             for peer in peers {
+                                if !displaySavedMessages {
+                                    if peer.peerId == context.account.peerId {
+                                        continue
+                                    }
+                                }
+                                
                                 if searchGroups || searchChannels {
                                     let mainPeer = peer.chatMainPeer
                                     if let _ = mainPeer as? TelegramUser {

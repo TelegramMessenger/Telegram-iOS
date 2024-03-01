@@ -462,20 +462,23 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                 arguments.expandSection(.exclude)
             })
         case let .tagColorHeader(name, color, isPremium):
-            //TODO:localize
             var badge: String?
             var badgeStyle: ItemListSectionHeaderItem.BadgeStyle?
             var accessoryText: ItemListSectionHeaderAccessoryText?
-            if isPremium, let color {
-                badge = name.uppercased()
-                badgeStyle = ItemListSectionHeaderItem.BadgeStyle(
-                    background: color.main.withMultipliedAlpha(0.1),
-                    foreground: color.main
-                )
+            if isPremium {
+                if let color {
+                    badge = name.uppercased()
+                    badgeStyle = ItemListSectionHeaderItem.BadgeStyle(
+                        background: color.main.withMultipliedAlpha(0.1),
+                        foreground: color.main
+                    )
+                } else {
+                    accessoryText = ItemListSectionHeaderAccessoryText(value: presentationData.strings.ChatListFilter_TagLabelNoTag, color: .generic)
+                }
             } else if color != nil {
-                accessoryText = ItemListSectionHeaderAccessoryText(value: "PREMIUM EXPIRED", color: .generic)
+                accessoryText = ItemListSectionHeaderAccessoryText(value: presentationData.strings.ChatListFilter_TagLabelPremiumExpired, color: .generic)
             }
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "FOLDER COLOR", badge: badge, badgeStyle: badgeStyle, accessoryText: accessoryText, sectionId: self.section)
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.ChatListFilter_TagSectionTitle, badge: badge, badgeStyle: badgeStyle, accessoryText: accessoryText, sectionId: self.section)
         case let .tagColor(colors, color, isPremium):
             return PeerNameColorItem(
                 theme: presentationData.theme,
@@ -494,8 +497,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                 sectionId: self.section
             )
         case .tagColorFooter:
-            //TODO:localize
-            return ItemListTextItem(presentationData: presentationData, text: .plain("This color will be used for the folder's tag in the chat list"), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .plain(presentationData.strings.ChatListFilter_TagSectionFooter), sectionId: self.section)
         case .inviteLinkHeader:
             return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.ChatListFilter_SectionShare, badge: nil, sectionId: self.section)
         case let .inviteLinkCreate(hasLinks):
@@ -1576,14 +1578,15 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
             }
         },
         openTagColorPremium: {
-            //TODO:localize
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: nil, text: "Subscribe to **Telegram Premium** to select folder color.", customUndoText: presentationData.strings.ChatListFolderSettings_SubscribeToMoveAllAction, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
-                if case .undo = action {
-                    pushControllerImpl?(PremiumIntroScreen(context: context, source: .folders))
-                }
-                return false
-            }), nil)
+            var replaceImpl: ((ViewController) -> Void)?
+            let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .folderTags, action: {
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .folderTags, forceDark: false, dismissed: nil)
+                replaceImpl?(controller)
+            })
+            replaceImpl = { [weak controller] c in
+                controller?.replace(with: c)
+            }
+            pushControllerImpl?(controller)
         }
     )
         

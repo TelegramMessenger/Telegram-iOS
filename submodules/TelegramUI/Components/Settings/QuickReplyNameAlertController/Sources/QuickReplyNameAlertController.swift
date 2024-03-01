@@ -239,8 +239,7 @@ public final class QuickReplyNameAlertContentNode: AlertContentNode {
         self.subtext = subtext
         self.titleFont = titleFont
         
-        //TODO:localize
-        self.inputFieldNode = PromptInputFieldNode(theme: ptheme, placeholder: "Shortcut", characterLimit: characterLimit)
+        self.inputFieldNode = PromptInputFieldNode(theme: ptheme, placeholder: strings.QuickReply_ShortcutPlaceholder, characterLimit: characterLimit)
         self.inputFieldNode.text = value ?? ""
         
         self.actionNodesSeparator = ASDisplayNode()

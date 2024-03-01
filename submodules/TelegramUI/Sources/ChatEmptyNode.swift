@@ -736,28 +736,25 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                     switch shortcutType {
                     case .generic:
                         iconName = "Chat/Empty Chat/QuickReplies"
-                        //TODO:localize
                         centerText = false
-                        titleString = "New Quick Reply"
+                        titleString = interfaceState.strings.Chat_EmptyState_QuickReply_Title
                         strings = [
-                            "· Enter a message below that will be sent in chats when you type \"**/\(shortcut)\"**.",
-                            "· You can access Quick Replies in any chat by typing \"/\" or using the Attachment menu."
+                            interfaceState.strings.Chat_EmptyState_QuickReply_Text1(shortcut).string,
+                            interfaceState.strings.Chat_EmptyState_QuickReply_Text2
                         ]
                     case .greeting:
                         iconName = "Chat/Empty Chat/GreetingShortcut"
-                        //TODO:localize
                         centerText = true
-                        titleString = "New Greeting Message"
+                        titleString = interfaceState.strings.EmptyState_GreetingMessage_Title
                         strings = [
-                            "Create greetings that will be automatically sent to new customers"
+                            interfaceState.strings.EmptyState_GreetingMessage_Text
                         ]
                     case .away:
                         iconName = "Chat/Empty Chat/AwayShortcut"
-                        //TODO:localize
                         centerText = true
-                        titleString = "New Away Message"
+                        titleString = interfaceState.strings.EmptyState_AwayMessage_Title
                         strings = [
-                            "Add messages that are automatically sent when you are off."
+                            interfaceState.strings.EmptyState_AwayMessage_Text
                         ]
                     }
                 }

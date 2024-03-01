@@ -39,8 +39,7 @@ public class TimezoneSelectionScreen: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        //TODO:localize
-        self.title = "Time Zone"
+        self.title = self.presentationData.strings.TimeZoneSelection_Title
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         

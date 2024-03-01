@@ -11,13 +11,12 @@ import QuickReplyNameAlertController
 
 extension ChatControllerImpl {
     func editChat() {
-        //TODO:localize
         if case let .customChatContents(customChatContents) = self.subject, case let .quickReplyMessageInput(currentValue, shortcutType) = customChatContents.kind, case .generic = shortcutType {
             var completion: ((String?) -> Void)?
             let alertController = quickReplyNameAlertController(
                 context: self.context,
-                text: "Edit Shortcut",
-                subtext: "Add a new name for your shortcut.",
+                text: self.presentationData.strings.QuickReply_EditShortcutTitle,
+                subtext: self.presentationData.strings.QuickReply_EditShortcutText,
                 value: currentValue,
                 characterLimit: 32,
                 apply: { value in
@@ -45,7 +44,7 @@ extension ChatControllerImpl {
                         
                         if shortcutMessageList.items.contains(where: { $0.shortcut.lowercased() == value.lowercased() }) {
                             if let contentNode = alertController?.contentNode as? QuickReplyNameAlertContentNode {
-                                contentNode.setErrorText(errorText: "Shortcut with that name already exists")
+                                contentNode.setErrorText(errorText: self.presentationData.strings.QuickReply_ShortcutExistsInlineError)
                             }
                         } else {
                             self.chatTitleView?.titleContent = .custom("\(value)", nil, false)

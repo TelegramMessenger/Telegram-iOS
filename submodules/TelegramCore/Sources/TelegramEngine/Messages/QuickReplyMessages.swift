@@ -358,7 +358,7 @@ func _internal_applySentQuickReplyMessage(transaction: Transaction, shortcut: St
     var state = transaction.getPreferencesEntry(key: PreferencesKeys.shortcutMessages())?.get(QuickReplyMessageShortcutsState.self) ?? QuickReplyMessageShortcutsState(shortcuts: [])
     
     if !state.shortcuts.contains(where: { $0.id == quickReplyId }) {
-        state.shortcuts.insert(QuickReplyMessageShortcut(id: quickReplyId, shortcut: shortcut), at: 0)
+        state.shortcuts.append(QuickReplyMessageShortcut(id: quickReplyId, shortcut: shortcut))
         transaction.setPreferencesEntry(key: PreferencesKeys.shortcutMessages(), value: PreferencesEntry(state))
     }
 }
@@ -540,16 +540,19 @@ public final class TelegramBusinessAwayMessage: Codable, Equatable {
         case shortcutId
         case recipients
         case schedule
+        case sendWhenOffline
     }
     
     public let shortcutId: Int32
     public let recipients: TelegramBusinessRecipients
     public let schedule: Schedule
+    public let sendWhenOffline: Bool
     
-    public init(shortcutId: Int32, recipients: TelegramBusinessRecipients, schedule: Schedule) {
+    public init(shortcutId: Int32, recipients: TelegramBusinessRecipients, schedule: Schedule, sendWhenOffline: Bool) {
         self.shortcutId = shortcutId
         self.recipients = recipients
         self.schedule = schedule
+        self.sendWhenOffline = sendWhenOffline
     }
     
     public init(from decoder: Decoder) throws {
@@ -558,6 +561,7 @@ public final class TelegramBusinessAwayMessage: Codable, Equatable {
         self.shortcutId = try container.decode(Int32.self, forKey: .shortcutId)
         self.recipients = try container.decode(TelegramBusinessRecipients.self, forKey: .recipients)
         self.schedule = try container.decode(Schedule.self, forKey: .schedule)
+        self.sendWhenOffline = try container.decodeIfPresent(Bool.self, forKey: .sendWhenOffline) ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -566,6 +570,7 @@ public final class TelegramBusinessAwayMessage: Codable, Equatable {
         try container.encode(self.shortcutId, forKey: .shortcutId)
         try container.encode(self.recipients, forKey: .recipients)
         try container.encode(self.schedule, forKey: .schedule)
+        try container.encode(self.sendWhenOffline, forKey: .sendWhenOffline)
     }
     
     public static func ==(lhs: TelegramBusinessAwayMessage, rhs: TelegramBusinessAwayMessage) -> Bool {
@@ -582,6 +587,9 @@ public final class TelegramBusinessAwayMessage: Codable, Equatable {
         if lhs.schedule != rhs.schedule {
             return false
         }
+        if lhs.sendWhenOffline != rhs.sendWhenOffline {
+            return false
+        }
         
         return true
     }
@@ -591,7 +599,6 @@ extension TelegramBusinessAwayMessage {
     convenience init(apiAwayMessage: Api.BusinessAwayMessage) {
         switch apiAwayMessage {
         case let .businessAwayMessage(flags, shortcutId, schedule, recipients):
-            let _ = flags
             let mappedSchedule: Schedule
             switch schedule {
             case .businessAwayMessageScheduleAlways:
@@ -602,10 +609,13 @@ extension TelegramBusinessAwayMessage {
                 mappedSchedule = .custom(beginTimestamp: startDate, endTimestamp: endDate)
             }
             
+            let sendWhenOffline = (flags & (1 << 0)) != 0
+            
             self.init(
                 shortcutId: shortcutId,
                 recipients: TelegramBusinessRecipients(apiValue: recipients),
-                schedule: mappedSchedule
+                schedule: mappedSchedule,
+                sendWhenOffline: sendWhenOffline
             )
         }
     }
@@ -730,8 +740,13 @@ func _internal_updateBusinessAwayMessage(account: Account, awayMessage: Telegram
                 mappedSchedule = .businessAwayMessageScheduleCustom(startDate: beginTimestamp, endDate: endTimestamp)
             }
             
+            var flags: Int32 = 0
+            if awayMessage.sendWhenOffline {
+                flags |= 1 << 0
+            }
+            
             mappedMessage = .inputBusinessAwayMessage(
-                flags: 0,
+                flags: flags,
                 shortcutId: awayMessage.shortcutId,
                 schedule: mappedSchedule,
                 recipients: awayMessage.recipients.apiInputValue(additionalPeers: additionalPeers)
@@ -762,19 +777,6 @@ func _internal_updateBusinessAwayMessage(account: Account, awayMessage: Telegram
     |> ignoreValues
     |> then(remoteApply)
 }
-
-/*
- connectedBot flags:# can_reply:flags.0?true bot_id:long recipients:BusinessRecipients = ConnectedBot;
-
- account.connectedBots connected_bots:Vector<ConnectedBot> users:Vector<User> = account.ConnectedBots;
-
- ---functions---
-
- account.setConnectedBot flags:# can_reply:flags.0?true deleted:flags.1?true bot:InputUser recipients:InputBusinessRecipients = Updates;
-
- account.getConnectedBots = account.ConnectedBots;
-
- */
 
 public final class TelegramAccountConnectedBot: Codable, Equatable {
     public let id: PeerId
