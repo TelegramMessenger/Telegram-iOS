@@ -392,7 +392,7 @@ public final class OngoingGroupCallContext {
         public let mirrorHorizontally: Bool
         public let mirrorVertically: Bool
 
-        init(frameData: CallVideoFrameData) {
+        public init(frameData: CallVideoFrameData) {
             if let nativeBuffer = frameData.buffer as? CallVideoFrameNativePixelBuffer {
                 if CVPixelBufferGetPixelFormatType(nativeBuffer.pixelBuffer) == kCVPixelFormatType_32ARGB {
                     self.buffer = .argb(NativeBuffer(pixelBuffer: nativeBuffer.pixelBuffer))
