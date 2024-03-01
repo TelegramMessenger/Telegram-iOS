@@ -562,9 +562,9 @@ public enum PremiumPerk: CaseIterable {
         case .businessQuickReplies:
             return "quick_replies"
         case .businessGreetingMessage:
-            return "greeting_messages"
+            return "greeting_message"
         case .businessAwayMessage:
-            return "away_messages"
+            return "away_message"
         case .businessChatBots:
             return "chatbots"
         }
