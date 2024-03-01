@@ -11585,3 +11585,6 @@ to respond to messages faster.";
 
 "ChatbotSetup.BotAddAction" = "ADD";
 "ChatbotSetup.BotNotFoundStatus" = "Chatbot not found";
+
+"Chat.QuickReply.ServiceHeader1" = "To edit or delete your quick reply, tap an hold on it.";
+"Chat.QuickReply.ServiceHeader2" = "To use this quick reply in a chat, type / and select the shortcut from the list.";

@@ -519,7 +519,7 @@ func chatHistoryEntriesForView(
     if let subject = associatedData.subject, case let .customChatContents(customChatContents) = subject, case let .quickReplyMessageInput(_, shortcutType) = customChatContents.kind, case .generic = shortcutType {
         if !view.isLoading && view.laterId == nil && !view.entries.isEmpty {
             for i in 0 ..< 2 {
-                let string = i == 1 ? "To edit or delete your quick reply, tap an hold on it." : "To use this quick reply in a chat, type / and select the shortcut from the list."
+                let string = i == 1 ? presentationData.strings.Chat_QuickReply_ServiceHeader1 : presentationData.strings.Chat_QuickReply_ServiceHeader2
                 let formattedString = parseMarkdownIntoAttributedString(
                     string,
                     attributes: MarkdownAttributes(
