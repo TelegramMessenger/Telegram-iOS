@@ -23,6 +23,8 @@ swift_library(
         "//submodules/PresentationDataUtils",
         "//submodules/SearchBarNode",
         "//submodules/TelegramUIPreferences",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/BalancedTextComponent",
     ],
     visibility = [
         "//visibility:public",

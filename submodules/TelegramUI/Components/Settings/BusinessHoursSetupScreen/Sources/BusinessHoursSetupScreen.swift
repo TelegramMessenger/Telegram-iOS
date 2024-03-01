@@ -27,7 +27,9 @@ private func wrappedMinuteRange(range: Range<Int>, dayIndexOffset: Int = 0) -> I
     
     var result = IndexSet()
     if mappedRange.upperBound > 7 * 24 * 60 {
-        result.insert(integersIn: mappedRange.lowerBound ..< 7 * 24 * 60)
+        if mappedRange.lowerBound < 7 * 24 * 60 {
+            result.insert(integersIn: mappedRange.lowerBound ..< 7 * 24 * 60)
+        }
         result.insert(integersIn: 0 ..< (mappedRange.upperBound - 7 * 24 * 60))
     } else {
         result.insert(integersIn: mappedRange)

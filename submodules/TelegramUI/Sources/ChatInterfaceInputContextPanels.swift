@@ -28,10 +28,6 @@ private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult
 }
 
 func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputContextPanelNode?, controllerInteraction: ChatControllerInteraction, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPresentationContext: ChatPresentationContext) -> ChatInputContextPanelNode? {
-    guard let _ = chatPresentationInterfaceState.renderedPeer?.peer else {
-        return nil
-    }
-    
     if chatPresentationInterfaceState.showCommands, let renderedPeer = chatPresentationInterfaceState.renderedPeer {
         if let currentPanel = currentPanel as? CommandMenuChatInputContextPanelNode {
             return currentPanel

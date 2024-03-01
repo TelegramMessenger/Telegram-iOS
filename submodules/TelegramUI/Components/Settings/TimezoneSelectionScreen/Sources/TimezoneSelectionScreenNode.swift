@@ -13,6 +13,8 @@ import AccountContext
 import SearchBarNode
 import SearchUI
 import TelegramUIPreferences
+import ComponentFlow
+import BalancedTextComponent
 
 private struct TimezoneListEntry: Comparable, Identifiable {
     var id: String
@@ -60,6 +62,7 @@ private struct TimezoneListSearchContainerTransition {
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let isSearching: Bool
+    let isEmptyResult: Bool
 }
 
 private func preparedLanguageListSearchContainerTransition(presentationData: PresentationData, from fromEntries: [TimezoneListEntry], to toEntries: [TimezoneListEntry], action: @escaping (String) -> Void, isSearching: Bool, forceUpdate: Bool) -> TimezoneListSearchContainerTransition {
@@ -69,13 +72,15 @@ private func preparedLanguageListSearchContainerTransition(presentationData: Pre
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, searchMode: true, action: action), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, searchMode: true, action: action), directionHint: nil) }
     
-    return TimezoneListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching)
+    return TimezoneListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, isEmptyResult: isSearching && toEntries.isEmpty)
 }
 
 private final class TimezoneListSearchContainerNode: SearchDisplayControllerContentNode {
     private let timeZoneList: TimeZoneList
     private let dimNode: ASDisplayNode
     private let listNode: ListView
+    
+    private var notFoundText: ComponentView<Empty>?
     
     private var enqueuedTransitions: [TimezoneListSearchContainerTransition] = []
     private var hasValidLayout = false
@@ -87,6 +92,9 @@ private final class TimezoneListSearchContainerNode: SearchDisplayControllerCont
     private var presentationDataDisposable: Disposable?
     
     private let presentationDataPromise: Promise<PresentationData>
+    
+    private var isEmptyResult: Bool = false
+    private var currentLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
     
     public override var hasDim: Bool {
         return true
@@ -220,14 +228,26 @@ private final class TimezoneListSearchContainerNode: SearchDisplayControllerCont
             options.insert(.PreferSynchronousDrawing)
             
             let isSearching = transition.isSearching
+            let isEmptyResult = transition.isEmptyResult
+            
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
-                self?.listNode.isHidden = !isSearching
-                self?.dimNode.isHidden = isSearching
+                guard let self else {
+                    return
+                }
+                self.listNode.isHidden = !isSearching
+                self.dimNode.isHidden = isSearching
+                self.isEmptyResult = isEmptyResult
+                
+                if let currentLayout = self.currentLayout {
+                    self.containerLayoutUpdated(currentLayout.layout, navigationBarHeight: currentLayout.navigationBarHeight, transition: .immediate)
+                }
             })
         }
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.currentLayout = (layout, navigationBarHeight)
+        
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
         let topInset = navigationBarHeight
@@ -243,6 +263,36 @@ private final class TimezoneListSearchContainerNode: SearchDisplayControllerCont
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransitions()
             }
+        }
+        
+        if self.isEmptyResult {
+            let notFoundText: ComponentView<Empty>
+            if let current = self.notFoundText {
+                notFoundText = current
+            } else {
+                notFoundText = ComponentView()
+                self.notFoundText = notFoundText
+            }
+            let notFoundTextSize = notFoundText.update(
+                transition: .immediate,
+                component: AnyComponent(BalancedTextComponent(
+                    text: .plain(NSAttributedString(string: self.presentationData.strings.Conversation_SearchNoResults, font: Font.regular(17.0), textColor: self.presentationData.theme.list.freeTextColor, paragraphAlignment: .center)),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 0
+                )),
+                environment: {},
+                containerSize: CGSize(width: layout.size.width - 16.0 * 2.0, height: layout.size.height)
+            )
+            let notFoundTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - notFoundTextSize.width) * 0.5), y: navigationBarHeight + floor((layout.size.height - navigationBarHeight - notFoundTextSize.height) * 0.5)), size: notFoundTextSize)
+            if let notFoundTextView = notFoundText.view {
+                if notFoundTextView.superview == nil {
+                    self.view.addSubview(notFoundTextView)
+                }
+                notFoundTextView.frame = notFoundTextFrame
+            }
+        } else if let notFoundText = self.notFoundText {
+            self.notFoundText = nil
+            notFoundText.view?.removeFromSuperview()
         }
     }
     

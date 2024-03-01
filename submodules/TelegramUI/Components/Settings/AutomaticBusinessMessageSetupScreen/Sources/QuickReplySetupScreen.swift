@@ -23,6 +23,7 @@ import PlainButtonComponent
 import MultilineTextComponent
 import AttachmentUI
 import SearchBarNode
+import BalancedTextComponent
 
 final class QuickReplySetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -474,6 +475,7 @@ final class QuickReplySetupScreenComponent: Component {
     final class View: UIView {
         private var emptyState: ComponentView<Empty>?
         private var contentListNode: ContentListNode?
+        private var emptySearchState: ComponentView<Empty>?
         
         private let navigationBarView = ComponentView<Empty>()
         private var navigationHeight: CGFloat?
@@ -1170,6 +1172,41 @@ final class QuickReplySetupScreenComponent: Component {
                 }
             }
             contentListNode.setEntries(entries: entries, animated: !transition.animation.isImmediate)
+            
+            if !self.searchQuery.isEmpty && entries.isEmpty {
+                var emptySearchStateTransition = transition
+                let emptySearchState: ComponentView<Empty>
+                if let current = self.emptySearchState {
+                    emptySearchState = current
+                } else {
+                    emptySearchStateTransition = emptySearchStateTransition.withAnimation(.none)
+                    emptySearchState = ComponentView()
+                    self.emptySearchState = emptySearchState
+                }
+                let emptySearchStateSize = emptySearchState.update(
+                    transition: .immediate,
+                    component: AnyComponent(BalancedTextComponent(
+                        text: .plain(NSAttributedString(string: environment.strings.Conversation_SearchNoResults, font: Font.regular(17.0), textColor: environment.theme.list.freeTextColor, paragraphAlignment: .center)),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: availableSize.height)
+                )
+                var emptySearchStateBottomInset = listBottomInset
+                emptySearchStateBottomInset = max(emptySearchStateBottomInset, environment.inputHeight)
+                let emptySearchStateFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - emptySearchStateSize.width) * 0.5), y: navigationHeight + floor((availableSize.height - emptySearchStateBottomInset - navigationHeight) * 0.5)), size: emptySearchStateSize)
+                if let emptySearchStateView = emptySearchState.view {
+                    if emptySearchStateView.superview == nil {
+                        self.addSubview(emptySearchStateView)
+                    }
+                    emptySearchStateTransition.containedViewLayoutTransition.updatePosition(layer: emptySearchStateView.layer, position: emptySearchStateFrame.center)
+                    emptySearchStateView.bounds = CGRect(origin: CGPoint(), size: emptySearchStateFrame.size)
+                }
+            } else if let emptySearchState = self.emptySearchState {
+                self.emptySearchState = nil
+                emptySearchState.view?.removeFromSuperview()
+            }
             
             if let shortcutMessageList = self.shortcutMessageList, !shortcutMessageList.items.isEmpty {
                 contentListNode.isHidden = false
