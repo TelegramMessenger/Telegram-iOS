@@ -613,15 +613,15 @@ final class ShareWithPeersScreenComponent: Component {
                 controller.present(alertController, in: .window(.root))
             }
             
-            if groupTooLarge {
-                showCountLimitAlert()
-                return
-            }
-            
             var append = false
             if let index = self.selectedGroups.firstIndex(of: peer.id) {
                 self.selectedGroups.remove(at: index)
             } else {
+                if groupTooLarge {
+                    showCountLimitAlert()
+                    return
+                }
+                
                 self.selectedGroups.append(peer.id)
                 append = true
             }
