@@ -1009,12 +1009,6 @@ public class Account {
         self.callSessionManager = CallSessionManager(postbox: postbox, network: network, accountPeerId: peerId, maxLayer: networkArguments.voipMaxLayer, versions: networkArguments.voipVersions, addUpdates: { [weak self] updates in
             self?.stateManager?.addUpdates(updates)
         })
-
-        // If isSupportAccount is true, create a file in basePath to indicate that this is a support account
-        if isSupportAccount {
-            let supportAccountFile = basePath + "/support_account"
-            FileManager.default.createFile(atPath: supportAccountFile, contents: nil, attributes: nil)
-        }
         
         self.mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
         
