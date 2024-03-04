@@ -519,7 +519,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         
         var clipDelta = delta
-        if inputHeight.isZero || layout.isNonExclusive {
+        if inputHeight < 70.0 || layout.isNonExclusive {
             clipDelta -= self.contentContainerNode.frame.height + 16.0
         }
         
@@ -642,7 +642,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             }
             
             var clipDelta = delta
-            if inputHeight.isZero || layout.isNonExclusive {
+            if inputHeight < 70.0 || layout.isNonExclusive {
                 clipDelta -= self.contentContainerNode.frame.height + 16.0
             }
             
@@ -714,7 +714,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         } else {
             contentOrigin = CGPoint(x: layout.size.width - sideInset - contentSize.width - layout.safeInsets.right, y: layout.size.height - 6.0 - insets.bottom - contentSize.height)
         }
-        if inputHeight > 0.0 && !layout.isNonExclusive && self.animateInputField {
+        if inputHeight > 70.0 && !layout.isNonExclusive && self.animateInputField {
             contentOrigin.y += menuHeightWithInset
         }
         contentOrigin.y = min(contentOrigin.y + contentOffset, layout.size.height - 6.0 - layout.intrinsicInsets.bottom - contentSize.height)
@@ -728,7 +728,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         
         var sendButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - initialSendButtonFrame.width + 1.0 - UIScreenPixel - layout.safeInsets.right, y: layout.size.height - insets.bottom - initialSendButtonFrame.height), size: initialSendButtonFrame.size)
-        if (inputHeight.isZero || layout.isNonExclusive) && self.animateInputField {
+        if (inputHeight < 70.0 || layout.isNonExclusive) && self.animateInputField {
             sendButtonFrame.origin.y -= menuHeightWithInset
         }
         sendButtonFrame.origin.y = min(sendButtonFrame.origin.y + contentOffset, layout.size.height - layout.intrinsicInsets.bottom - initialSendButtonFrame.height)
@@ -741,7 +741,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         let messageHeightAddition: CGFloat = max(0.0, 35.0 - messageFrame.size.height)
         
-        if inputHeight.isZero || layout.isNonExclusive {
+        if inputHeight < 70.0 || layout.isNonExclusive {
             messageFrame.origin.y += menuHeightWithInset
         }
         
