@@ -243,7 +243,6 @@ public final class WindowKeyboardGestureRecognizerDelegate: NSObject, UIGestureR
 public class Window1 {
     public let hostView: WindowHostView
     public let badgeView: UIImageView
-    private let customProximityDimView: UIView
     
     private var deviceMetrics: DeviceMetrics
     
@@ -330,10 +329,6 @@ public class Window1 {
         self.badgeView = UIImageView()
         self.badgeView.image = UIImage(bundleImageName: "Components/AppBadge")
         self.badgeView.isHidden = true
-        
-        self.customProximityDimView = UIView()
-        self.customProximityDimView.backgroundColor = .black
-        self.customProximityDimView.isHidden = true
         
         self.systemUserInterfaceStyle = hostView.systemUserInterfaceStyle
         
@@ -673,7 +668,6 @@ public class Window1 {
         self.windowPanRecognizer = recognizer
         self.hostView.containerView.addGestureRecognizer(recognizer)
         self.hostView.containerView.addSubview(self.badgeView)
-        self.hostView.containerView.addSubview(self.customProximityDimView)
     }
             
     public required init(coder aDecoder: NSCoder) {
@@ -707,11 +701,18 @@ public class Window1 {
         self.updateBadgeVisibility()
     }
     
+    private var proximityDimController: CustomDimController?
     public func setProximityDimHidden(_ hidden: Bool) {
-        guard hidden != self.customProximityDimView.isHidden else {
-            return
+        if !hidden {
+            if self.proximityDimController == nil {
+                let proximityDimController = CustomDimController(navigationBarPresentationData: nil)
+                self.proximityDimController = proximityDimController
+                (self.viewController as? NavigationController)?.presentOverlay(controller: proximityDimController, inGlobal: true, blockInteraction: false)
+            }
+        } else if let proximityDimController = self.proximityDimController {
+            self.proximityDimController = nil
+            proximityDimController.dismiss()
         }
-        self.customProximityDimView.isHidden = hidden
     }
     
     private func updateBadgeVisibility() {
@@ -1170,8 +1171,6 @@ public class Window1 {
                     self.updateBadgeVisibility()
                     self.badgeView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.windowLayout.size.width - image.size.width) / 2.0), y: 5.0), size: image.size)
                 }
-                
-                self.customProximityDimView.frame = CGRect(origin: .zero, size: self.windowLayout.size)
             }
         }
     }
@@ -1381,5 +1380,27 @@ public class Window1 {
         DispatchQueue.main.async {
             self.shouldNotAnimateLikelyKeyboardAutocorrectionSwitch = false
         }
+    }
+}
+
+private class CustomDimController: ViewController {
+    class Node: ASDisplayNode {
+        override init() {
+            super.init()
+            
+            self.backgroundColor = .black
+        }
+    }
+    override init(navigationBarPresentationData: NavigationBarPresentationData?) {
+        super.init(navigationBarPresentationData: nil)
+    }
+    
+    required public init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func loadDisplayNode() {
+        let node = Node()
+        self.displayNode = node
     }
 }
