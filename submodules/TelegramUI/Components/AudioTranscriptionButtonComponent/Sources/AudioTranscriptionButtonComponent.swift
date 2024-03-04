@@ -17,6 +17,12 @@ public final class AudioTranscriptionButtonComponent: Component {
                 } else {
                     return false
                 }
+            case let .custom(lhsBackgroundColor, lhsForegroundColor):
+                if case let .custom(rhsBackgroundColor, rhsForegroundColor) = rhs {
+                    return lhsBackgroundColor == rhsBackgroundColor && lhsForegroundColor == rhsForegroundColor
+                } else {
+                    return false
+                }
             case let .freeform(lhsFreeform, lhsForeground):
                 if case let .freeform(rhsFreeform, rhsForeground) = rhs, lhsFreeform == rhsFreeform, lhsForeground == rhsForeground {
                     return true
@@ -27,6 +33,7 @@ public final class AudioTranscriptionButtonComponent: Component {
         }
         
         case bubble(PresentationThemePartedColors)
+        case custom(UIColor, UIColor)
         case freeform((UIColor, Bool), UIColor)
     }
     
@@ -101,6 +108,9 @@ public final class AudioTranscriptionButtonComponent: Component {
             case let .bubble(theme):
                 foregroundColor = theme.bubble.withWallpaper.reactionActiveBackground
                 backgroundColor = theme.bubble.withWallpaper.reactionInactiveBackground
+            case let .custom(backgroundColorValue, foregroundColorValue):
+                foregroundColor = foregroundColorValue
+                backgroundColor = backgroundColorValue
             case let .freeform(colorAndBlur, color):
                 foregroundColor = color
                 backgroundColor = .clear

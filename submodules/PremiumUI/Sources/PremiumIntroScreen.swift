@@ -3141,9 +3141,13 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             let secondaryTitleText: String
             var isAnonymous = false
             if var otherPeerName = state.otherPeerName {
-                if case let .emojiStatus(_, _, file, maybeEmojiPack) = context.component.source, let emojiPack = maybeEmojiPack, case let .result(info, _, _) = emojiPack {
+                if case let .emojiStatus(peerId, _, file, maybeEmojiPack) = context.component.source, let emojiPack = maybeEmojiPack, case let .result(info, _, _) = emojiPack {
                     loadedEmojiPack = maybeEmojiPack
                     highlightableLinks = true
+                    
+                    if peerId.isGroupOrChannel, otherPeerName.count > 20 {
+                        otherPeerName = otherPeerName.prefix(20).trimmingCharacters(in: .whitespacesAndNewlines) + "\u{2026}"
+                    }
                     
                     var packReference: StickerPackReference?
                     if let file = file {
