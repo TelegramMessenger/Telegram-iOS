@@ -65,6 +65,11 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
                         self.nextUpdateIsHoleFill = false
                         
                         self.sourceHistoryView = view
+                        
+                        if !view.entries.contains(where: { $0.message.id.namespace == Namespaces.Message.QuickReplyCloud }) {
+                            self.shortcutId = nil
+                        }
+                        
                         self.updateHistoryView(updateType: nextUpdateIsHoleFill ? .FillHole : .Generic)
                     })
                 }

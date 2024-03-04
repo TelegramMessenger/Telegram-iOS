@@ -30,6 +30,7 @@ swift_library(
         "//submodules/TextFormat",
         "//submodules/PhotoResources",
         "//submodules/TelegramUI/Components/ListSectionComponent",
+        "//submodules/TelegramUI/Components/ListItemSwipeOptionContainer",
     ],
     visibility = [
         "//visibility:public",

@@ -348,6 +348,9 @@ public final class AccountViewTracker {
     
     var resetPeerHoleManagement: ((PeerId) -> Void)?
     
+    private var quickRepliesUpdateDisposable: Disposable?
+    private var quickRepliesUpdateTimestamp: Double = 0.0
+    
     init(account: Account) {
         self.account = account
         self.accountPeerId = account.peerId
@@ -373,6 +376,7 @@ public final class AccountViewTracker {
         self.updatedViewCountDisposables.dispose()
         self.updatedReactionsDisposables.dispose()
         self.externallyUpdatedPeerIdDisposable.dispose()
+        self.quickRepliesUpdateDisposable?.dispose()
     }
     
     func reset() {
@@ -2545,6 +2549,20 @@ public final class AccountViewTracker {
                     return value
                 }
                 self.hiddenChatListFilterIdsPromise.set(updatedIds)
+            }
+        }
+    }
+    
+    public func keepQuickRepliesApproximatelyUpdated() {
+        self.queue.async {
+            guard let account = self.account else {
+                return
+            }
+            let timestamp = CFAbsoluteTimeGetCurrent()
+            if self.quickRepliesUpdateTimestamp + 16 * 60 * 60 < timestamp {
+                self.quickRepliesUpdateTimestamp = timestamp
+                self.quickRepliesUpdateDisposable?.dispose()
+                self.quickRepliesUpdateDisposable = _internal_keepShortcutMessagesUpdated(account: account).startStrict()
             }
         }
     }

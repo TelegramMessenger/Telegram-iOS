@@ -1414,6 +1414,7 @@ private func synchronizeChatListFilters(transaction: Transaction, accountPeerId:
                         state.filters = remoteFilters
                         state.remoteFilters = state.filters
                         state.displayTags = remoteTagsEnabled
+                        state.remoteDisplayTags = state.displayTags
                         return state
                     })
                 }

@@ -1,4 +1,5 @@
 import Foundation
+import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -20,6 +21,7 @@ import EmojiTextAttachmentView
 import TextFormat
 import PhotoResources
 import ListSectionComponent
+import ListItemSwipeOptionContainer
 
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 private let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
@@ -77,6 +79,58 @@ public final class PeerListItemComponent: Component {
         }
     }
     
+    public final class InlineAction: Equatable {
+        public enum Color: Equatable {
+            case destructive
+        }
+        
+        public let id: AnyHashable
+        public let title: String
+        public let color: Color
+        public let action: () -> Void
+        
+        public init(id: AnyHashable, title: String, color: Color, action: @escaping () -> Void) {
+            self.id = id
+            self.title = title
+            self.color = color
+            self.action = action
+        }
+        
+        public static func ==(lhs: InlineAction, rhs: InlineAction) -> Bool {
+            if lhs === rhs {
+                return true
+            }
+            if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.title != rhs.title {
+                return false
+            }
+            if lhs.color != rhs.color {
+                return false
+            }
+            return true
+        }
+    }
+    
+    public final class InlineActionsState: Equatable {
+        public let actions: [InlineAction]
+        
+        public init(actions: [InlineAction]) {
+            self.actions = actions
+        }
+        
+        public static func ==(lhs: InlineActionsState, rhs: InlineActionsState) -> Bool {
+            if lhs === rhs {
+                return true
+            }
+            if lhs.actions != rhs.actions {
+                return false
+            }
+            return true
+        }
+    }
+    
     public final class Reaction: Equatable {
         public let reaction: MessageReaction.Reaction
         public let file: TelegramMediaFile?
@@ -131,6 +185,7 @@ public final class PeerListItemComponent: Component {
     let isEnabled: Bool
     let hasNext: Bool
     let action: (EnginePeer, EngineMessage.Id?, UIView?) -> Void
+    let inlineActions: InlineActionsState?
     let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     let openStories: ((EnginePeer, AvatarNode) -> Void)?
     
@@ -156,6 +211,7 @@ public final class PeerListItemComponent: Component {
         isEnabled: Bool = true,
         hasNext: Bool,
         action: @escaping (EnginePeer, EngineMessage.Id?, UIView?) -> Void,
+        inlineActions: InlineActionsState? = nil,
         contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)? = nil,
         openStories: ((EnginePeer, AvatarNode) -> Void)? = nil
     ) {
@@ -180,6 +236,7 @@ public final class PeerListItemComponent: Component {
         self.isEnabled = isEnabled
         self.hasNext = hasNext
         self.action = action
+        self.inlineActions = inlineActions
         self.contextAction = contextAction
         self.openStories = openStories
     }
@@ -245,12 +302,17 @@ public final class PeerListItemComponent: Component {
         if lhs.hasNext != rhs.hasNext {
             return false
         }
+        if lhs.inlineActions != rhs.inlineActions {
+            return false
+        }
         return true
     }
     
     public final class View: ContextControllerSourceView, ListSectionComponent.ChildView {
         private let extractedContainerView: ContextExtractedContentContainingView
         private let containerButton: HighlightTrackingButton
+        
+        private let swipeOptionContainer: ListItemSwipeOptionContainer
         
         private let title = ComponentView<Empty>()
         private let label = ComponentView<Empty>()
@@ -306,7 +368,10 @@ public final class PeerListItemComponent: Component {
             
             self.extractedContainerView = ContextExtractedContentContainingView()
             self.containerButton = HighlightTrackingButton()
+            self.containerButton.layer.anchorPoint = CGPoint()
             self.containerButton.isExclusiveTouch = true
+            
+            self.swipeOptionContainer = ListItemSwipeOptionContainer(frame: CGRect())
             
             self.avatarNode = AvatarNode(font: avatarFont)
             self.avatarNode.isLayerBacked = false
@@ -319,7 +384,9 @@ public final class PeerListItemComponent: Component {
             self.addSubview(self.extractedContainerView)
             self.targetViewForActivationProgress = self.extractedContainerView.contentView
             
-            self.extractedContainerView.contentView.addSubview(self.containerButton)
+            self.extractedContainerView.contentView.addSubview(self.swipeOptionContainer)
+            
+            self.swipeOptionContainer.addSubview(self.containerButton)
             
             self.layer.addSublayer(self.separatorLayer)
             self.containerButton.layer.addSublayer(self.avatarNode.layer)
@@ -366,6 +433,25 @@ public final class PeerListItemComponent: Component {
                 }
                 if let customUpdateIsHighlighted = self.customUpdateIsHighlighted {
                     customUpdateIsHighlighted(highlighted)
+                }
+            }
+            
+            self.swipeOptionContainer.updateRevealOffset = { [weak self] offset, transition in
+                guard let self else {
+                    return
+                }
+                transition.setBounds(view: self.containerButton, bounds: CGRect(origin: CGPoint(x: -offset, y: 0.0), size: self.containerButton.bounds.size))
+            }
+            self.swipeOptionContainer.revealOptionSelected = { [weak self] option, animated in
+                guard let self, let component = self.component else {
+                    return
+                }
+                guard let inlineActions = component.inlineActions else {
+                    return
+                }
+                self.swipeOptionContainer.setRevealOptionsOpened(false, animated: animated)
+                if let inlineAction = inlineActions.actions.first(where: { $0.id == option.key }) {
+                    inlineAction.action()
                 }
             }
         }
@@ -1007,9 +1093,38 @@ public final class PeerListItemComponent: Component {
             self.extractedContainerView.contentRect = resultBounds
             
             let containerFrame = CGRect(origin: CGPoint(x: contextInset, y: verticalInset), size: CGSize(width: availableSize.width - contextInset * 2.0, height: height - verticalInset * 2.0))
-            transition.setFrame(view: self.containerButton, frame: containerFrame)
+            
+            let swipeOptionContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: height))
+            transition.setFrame(view: self.swipeOptionContainer, frame: swipeOptionContainerFrame)
+            
+            transition.setPosition(view: self.containerButton, position: containerFrame.origin)
+            transition.setBounds(view: self.containerButton, bounds: CGRect(origin: self.containerButton.bounds.origin, size: containerFrame.size))
             
             self.separatorInset = leftInset
+            
+            self.swipeOptionContainer.updateLayout(size: swipeOptionContainerFrame.size, leftInset: 0.0, rightInset: 0.0)
+            
+            var rightOptions: [ListItemSwipeOptionContainer.Option] = []
+            if let inlineActions = component.inlineActions {
+                rightOptions = inlineActions.actions.map { action in
+                    let color: UIColor
+                    let textColor: UIColor
+                    switch action.color {
+                    case .destructive:
+                        color = component.theme.list.itemDisclosureActions.destructive.fillColor
+                        textColor = component.theme.list.itemDisclosureActions.destructive.foregroundColor
+                    }
+                    
+                    return ListItemSwipeOptionContainer.Option(
+                        key: action.id,
+                        title: action.title,
+                        icon: .none,
+                        color: color,
+                        textColor: textColor
+                    )
+                }
+            }
+            self.swipeOptionContainer.setRevealOptions(([], rightOptions))
             
             return CGSize(width: availableSize.width, height: height)
         }
