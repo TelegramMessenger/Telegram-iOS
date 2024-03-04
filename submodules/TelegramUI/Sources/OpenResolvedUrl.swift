@@ -302,7 +302,7 @@ func openResolvedUrlImpl(
             })
             dismissInput()
         case let .share(url, text, to):
-            let continueWithPeer: (PeerId) -> Void = { peerId in
+            let continueWithPeer: (PeerId, Int64?) -> Void = { peerId, threadId in
                 let textInputState: ChatTextInputState?
                 if let text = text, !text.isEmpty {
                     if let url = url, !url.isEmpty {
@@ -320,15 +320,42 @@ func openResolvedUrlImpl(
                     textInputState = nil
                 }
                 
+                let updateControllers = { [weak navigationController] in
+                    guard let navigationController else {
+                        return
+                    }
+                    let chatController: Signal<ChatController, NoError>
+                    if let threadId {
+                        chatController = chatControllerForForumThreadImpl(context: context, peerId: peerId, threadId: threadId)
+                    } else {
+                        chatController = .single(ChatControllerImpl(context: context, chatLocation: .peer(id: peerId)))
+                    }
+                    
+                    let _ = (chatController
+                    |> deliverOnMainQueue).start(next: { [weak navigationController] chatController in
+                        guard let navigationController else {
+                            return
+                        }  
+                        var controllers = navigationController.viewControllers.filter { controller in
+                            if controller is PeerSelectionController {
+                                return false
+                            }
+                            return true
+                        }
+                        controllers.append(chatController)
+                        navigationController.setViewControllers(controllers, animated: true)
+                    })
+                }
+                
                 if let textInputState = textInputState {
-                    let _ = (ChatInterfaceState.update(engine: context.engine, peerId: peerId, threadId: nil, { currentState in
+                    let _ = (ChatInterfaceState.update(engine: context.engine, peerId: peerId, threadId: threadId, { currentState in
                         return currentState.withUpdatedComposeInputState(textInputState)
                     })
                     |> deliverOnMainQueue).startStandalone(completed: {
-                        navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(id: peerId)))
+                        updateControllers()
                     })
                 } else {
-                    navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(id: peerId)))
+                    updateControllers()
                 }
             }
             
@@ -344,7 +371,7 @@ func openResolvedUrlImpl(
                     |> deliverOnMainQueue).startStandalone(next: { peer in
                         if let peer = peer {
                             context.sharedContext.applicationBindings.dismissNativeController()
-                            continueWithPeer(peer.id)
+                            continueWithPeer(peer.id, nil)
                         }
                     })
                 } else {
@@ -352,7 +379,7 @@ func openResolvedUrlImpl(
                     |> deliverOnMainQueue).startStandalone(next: { peer in
                         if let peer = peer {
                             context.sharedContext.applicationBindings.dismissNativeController()
-                            continueWithPeer(peer.id)
+                            continueWithPeer(peer.id, nil)
                         }
                     })
                     /*let query = to.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789").inverted)
@@ -377,13 +404,8 @@ func openResolvedUrlImpl(
                     context.sharedContext.applicationBindings.dismissNativeController()
                 } else {
                     let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled], selectForumThreads: true))
-                    controller.peerSelected = { [weak controller] peer, _ in
-                        let peerId = peer.id
-                        
-                        if let strongController = controller {
-                            strongController.dismiss()
-                            continueWithPeer(peerId)
-                        }
+                    controller.peerSelected = { peer, threadId in
+                        continueWithPeer(peer.id, threadId)
                     }
                     context.sharedContext.applicationBindings.dismissNativeController()
                     navigationController?.pushViewController(controller)

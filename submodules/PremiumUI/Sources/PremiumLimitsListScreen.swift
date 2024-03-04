@@ -228,6 +228,8 @@ public class PremiumLimitsListScreen: ViewController {
                     if scrollView.contentSize.width > scrollView.contentSize.height || scrollView.contentSize.height > 1500.0 {
                         return false
                     }
+                } else if otherGestureRecognizer.view is PremiumCoinComponent.View {
+                    return false
                 }
                 return true
             }
