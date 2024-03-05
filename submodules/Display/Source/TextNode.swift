@@ -1440,7 +1440,8 @@ open class TextNode: ASDisplayNode {
                     let line = CTTypesetterCreateLine(typesetter, CFRange(location: currentLineStartIndex, length: lineCharacterCount))
                     var lineAscent: CGFloat = 0.0
                     var lineDescent: CGFloat = 0.0
-                    let lineWidth = CTLineGetTypographicBounds(line, &lineAscent, &lineDescent, nil)
+                    var lineWidth = CTLineGetTypographicBounds(line, &lineAscent, &lineDescent, nil)
+                    lineWidth = min(lineWidth, constrainedSegmentWidth - additionalSegmentRightInset)
                     
                     var isRTL = false
                     let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
