@@ -11336,12 +11336,10 @@ Sorry for the inconvenience.";
 "Premium.Business.Location.Text" = "Display the location of your business on your account.";
             
 "Premium.Business.Hours.Title" = "Opening Hours";
-"Premium.Business.Hours.Text" = "Show to your customers when you are
-open for business.";
+"Premium.Business.Hours.Text" = "Show to your customers when you are open for business.";
 
 "Premium.Business.Replies.Title" = "Quick Replies";
-"Premium.Business.Replies.Text" = "Set up shortcuts with rich text and media
-to respond to messages faster.";
+"Premium.Business.Replies.Text" = "Set up shortcuts with rich text and media to respond to messages faster.";
 
 "Premium.Business.Greetings.Title" = "Greeting Messages";
 "Premium.Business.Greetings.Text" = "Create greetings that will be automatically sent to new customers.";

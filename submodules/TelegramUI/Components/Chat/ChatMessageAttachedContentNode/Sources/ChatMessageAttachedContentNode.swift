@@ -728,7 +728,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     
                     let contentFileSizeAndApply: (CGSize, ChatMessageInteractiveFileNode.Apply)?
                     if let contentFileFinalizeLayout {
-                        let (size, apply) = contentFileFinalizeLayout(resultingWidth - insets.left - insets.right)
+                        let (size, apply) = contentFileFinalizeLayout(resultingWidth - insets.left - insets.right - 6.0)
                         contentFileSizeAndApply = (size, apply)
                     } else {
                         contentFileSizeAndApply = nil
@@ -846,7 +846,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     offsetY: actualSize.height
                                 ))
                                 
-                                actualSize.height += contentFileSize.height
+                                actualSize.height += contentFileSize.height + 9.0
                             }
                         case .actionButton:
                             if let (actionButtonSize, _) = actionButtonSizeAndApply {

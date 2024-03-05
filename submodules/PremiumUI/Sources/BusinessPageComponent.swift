@@ -70,7 +70,7 @@ private final class HeaderComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: component.strings.Premium_Business_Description, font: Font.regular(15.0), textColor: .black)),
+                        text: .plain(NSAttributedString(string: component.strings.Premium_Business_Description, font: Font.regular(15.0), textColor: component.theme.list.itemPrimaryTextColor)),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.2

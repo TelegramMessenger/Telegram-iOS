@@ -427,6 +427,10 @@ final class ShareWithPeersScreenComponent: Component {
             }
         }
         
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            self.endEditing(true)
+        }
+        
         func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
             guard let itemLayout = self.itemLayout, let topOffsetDistance = self.topOffsetDistance else {
                 return
@@ -801,7 +805,7 @@ final class ShareWithPeersScreenComponent: Component {
         }
         
         private func updateModalOverlayTransition(transition: Transition) {
-            guard let component = self.component, let environment = self.environment, let itemLayout = self.itemLayout else {
+            guard let component = self.component, let environment = self.environment, let itemLayout = self.itemLayout, !self.isDismissed else {
                 return
             }
             
@@ -2071,6 +2075,14 @@ final class ShareWithPeersScreenComponent: Component {
                                 self.selectedCategories.insert(.everyone)
                             }
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
+                        },
+                        isFocusedUpdated: { [weak self] isFocused in
+                            guard let self else {
+                                return
+                            }
+                            if isFocused {
+                                self.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.scrollView.contentInset.top), animated: true)
+                            }
                         }
                     )),
                     environment: {},
@@ -2122,11 +2134,11 @@ final class ShareWithPeersScreenComponent: Component {
                 
             transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize))
             if case .members = component.stateContext.subject {
-                self.dimView .isHidden = true
+                self.dimView.isHidden = true
             } else if case .channels = component.stateContext.subject {
-                self.dimView .isHidden = true
+                self.dimView.isHidden = true
             } else {
-                self.dimView .isHidden = false
+                self.dimView.isHidden = false
             }
             
             let categoryItemSize = self.categoryTemplateItem.update(

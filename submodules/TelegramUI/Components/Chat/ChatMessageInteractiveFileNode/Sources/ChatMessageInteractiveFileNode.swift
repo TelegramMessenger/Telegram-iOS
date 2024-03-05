@@ -1329,10 +1329,16 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                         strongSelf.view.addSubview(audioTranscriptionButton)
                                         added = true
                                     }
+                                    let buttonTheme: AudioTranscriptionButtonComponent.Theme
+                                    if let customTintColor = arguments.customTintColor {
+                                        buttonTheme = .custom(customTintColor.withMultipliedAlpha(0.1), customTintColor)
+                                    } else {
+                                        buttonTheme = .bubble(arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing)
+                                    }
                                     let audioTranscriptionButtonSize = audioTranscriptionButton.update(
                                         transition: animation.isAnimated ? .easeInOut(duration: 0.3) : .immediate,
                                         component: AnyComponent(AudioTranscriptionButtonComponent(
-                                            theme: .bubble(arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing),
+                                            theme: buttonTheme,
                                             transcriptionState: effectiveAudioTranscriptionState,
                                             pressed: {
                                                 guard let strongSelf = self else {
