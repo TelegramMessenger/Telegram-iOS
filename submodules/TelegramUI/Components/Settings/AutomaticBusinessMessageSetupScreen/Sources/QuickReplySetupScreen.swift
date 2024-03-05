@@ -54,6 +54,7 @@ final class QuickReplySetupScreenComponent: Component {
         enum Id: Hashable {
             case add
             case item(Int32)
+            case pendingItem(String)
         }
         
         var stableId: Id {
@@ -61,7 +62,11 @@ final class QuickReplySetupScreenComponent: Component {
             case .add:
                 return .add
             case let .item(item, _, _, _, _):
-                return .item(item.id)
+                if let itemId = item.id {
+                    return .item(itemId)
+                } else {
+                    return .pendingItem(item.shortcut)
+                }
             }
         }
         
@@ -126,13 +131,17 @@ final class QuickReplySetupScreenComponent: Component {
                         guard let listNode, let parentView = listNode.parentView else {
                             return
                         }
-                        parentView.toggleShortcutSelection(id: item.id)
+                        if let itemId = item.id {
+                            parentView.toggleShortcutSelection(id: itemId)
+                        }
                     },
                     togglePeersSelection: { [weak listNode] _, _ in
                         guard let listNode, let parentView = listNode.parentView else {
                             return
                         }
-                        parentView.toggleShortcutSelection(id: item.id)
+                        if let itemId = item.id {
+                            parentView.toggleShortcutSelection(id: itemId)
+                        }
                     },
                     additionalCategorySelected: { _ in
                     },
@@ -158,7 +167,9 @@ final class QuickReplySetupScreenComponent: Component {
                         guard let listNode, let parentView = listNode.parentView else {
                             return
                         }
-                        parentView.openDeleteShortcuts(ids: [item.id])
+                        if let itemId = item.id {
+                            parentView.openDeleteShortcuts(ids: [itemId])
+                        }
                     },
                     deletePeerThread: { _, _ in
                     },
@@ -208,7 +219,9 @@ final class QuickReplySetupScreenComponent: Component {
                         guard let listNode, let parentView = listNode.parentView else {
                             return
                         }
-                        parentView.openEditShortcut(id: item.id, currentValue: item.shortcut)
+                        if let itemId = item.id {
+                            parentView.openEditShortcut(id: itemId, currentValue: item.shortcut)
+                        }
                     }
                 )
                 
@@ -406,6 +419,8 @@ final class QuickReplySetupScreenComponent: Component {
                         return true
                     case let .item(id):
                         return !pendingRemoveItems.contains(id)
+                    case .pendingItem:
+                        return true
                     }
                 }
             }
@@ -874,7 +889,7 @@ final class QuickReplySetupScreenComponent: Component {
                 self.accountPeer = component.initialData.accountPeer
                 self.shortcutMessageList = component.initialData.shortcutMessageList
                 
-                self.shortcutMessageListDisposable = (component.context.engine.accountData.shortcutMessageList()
+                self.shortcutMessageListDisposable = (component.context.engine.accountData.shortcutMessageList(onlyRemote: false)
                 |> deliverOnMainQueue).startStrict(next: { [weak self] shortcutMessageList in
                     guard let self else {
                         return
@@ -937,7 +952,11 @@ final class QuickReplySetupScreenComponent: Component {
                 )
                 if let emptyStateView = emptyState.view {
                     if emptyStateView.superview == nil {
-                        self.addSubview(emptyStateView)
+                        if let navigationBarComponentView = self.navigationBarView.view {
+                            self.insertSubview(emptyStateView, belowSubview: navigationBarComponentView)
+                        } else {
+                            self.addSubview(emptyStateView)
+                        }
                     }
                     emptyStateTransition.setFrame(view: emptyStateView, frame: emptyStateFrame)
                 }
@@ -1168,7 +1187,11 @@ final class QuickReplySetupScreenComponent: Component {
                             continue
                         }
                     }
-                    entries.append(.item(item: item, accountPeer: accountPeer, sortIndex: entries.count, isEditing: self.isEditing, isSelected: self.selectedIds.contains(item.id)))
+                    var isItemSelected = false
+                    if let itemId = item.id {
+                        isItemSelected = self.selectedIds.contains(itemId)
+                    }
+                    entries.append(.item(item: item, accountPeer: accountPeer, sortIndex: entries.count, isEditing: self.isEditing, isSelected: isItemSelected))
                 }
             }
             contentListNode.setEntries(entries: entries, animated: !transition.animation.isImmediate)
@@ -1198,7 +1221,11 @@ final class QuickReplySetupScreenComponent: Component {
                 let emptySearchStateFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - emptySearchStateSize.width) * 0.5), y: navigationHeight + floor((availableSize.height - emptySearchStateBottomInset - navigationHeight) * 0.5)), size: emptySearchStateSize)
                 if let emptySearchStateView = emptySearchState.view {
                     if emptySearchStateView.superview == nil {
-                        self.addSubview(emptySearchStateView)
+                        if let navigationBarComponentView = self.navigationBarView.view {
+                            self.insertSubview(emptySearchStateView, belowSubview: navigationBarComponentView)
+                        } else {
+                            self.addSubview(emptySearchStateView)
+                        }
                     }
                     emptySearchStateTransition.containedViewLayoutTransition.updatePosition(layer: emptySearchStateView.layer, position: emptySearchStateFrame.center)
                     emptySearchStateView.bounds = CGRect(origin: CGPoint(), size: emptySearchStateFrame.size)
@@ -1327,7 +1354,7 @@ public final class QuickReplySetupScreen: ViewControllerComponentContainer, Atta
             context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
             ),
-            context.engine.accountData.shortcutMessageList()
+            context.engine.accountData.shortcutMessageList(onlyRemote: false)
             |> take(1)
         )
         |> map { accountPeer, shortcutMessageList -> QuickReplySetupScreenInitialData in

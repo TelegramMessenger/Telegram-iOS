@@ -237,7 +237,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             if let user = peer as? TelegramUser, user.botInfo == nil {
                 context.account.viewTracker.keepQuickRepliesApproximatelyUpdated()
                 
-                shortcuts = context.engine.accountData.shortcutMessageList()
+                shortcuts = context.engine.accountData.shortcutMessageList(onlyRemote: true)
                 |> map { shortcutMessageList -> [ShortcutMessageList.Item] in
                     return shortcutMessageList.items.filter { item in
                         return item.shortcut.hasPrefix(normalizedQuery)

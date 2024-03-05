@@ -34,7 +34,7 @@ extension ChatControllerImpl {
                         return
                     }
                     
-                    let _ = (self.context.engine.accountData.shortcutMessageList()
+                    let _ = (self.context.engine.accountData.shortcutMessageList(onlyRemote: false)
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] shortcutMessageList in
                         guard let self else {

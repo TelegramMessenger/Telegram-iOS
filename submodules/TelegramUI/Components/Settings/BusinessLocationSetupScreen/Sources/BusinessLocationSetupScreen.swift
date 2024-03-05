@@ -79,10 +79,12 @@ final class BusinessLocationSetupScreenComponent: Component {
         private var resetAddressText: String?
         
         private var isLoadingGeocodedAddress: Bool = false
-        private var geocodeAddressState: (address: String, disposable: Disposable)?
+        private var geocodeDisposable: Disposable?
         
         private var mapCoordinates: TelegramBusinessLocation.Coordinates?
         private var mapCoordinatesManuallySet: Bool = false
+        
+        private var applyButtonItem: UIBarButtonItem?
         
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
@@ -110,7 +112,7 @@ final class BusinessLocationSetupScreenComponent: Component {
         }
         
         deinit {
-            self.geocodeAddressState?.disposable.dispose()
+            self.geocodeDisposable?.dispose()
         }
 
         func scrollToTop() {
@@ -122,32 +124,20 @@ final class BusinessLocationSetupScreenComponent: Component {
                 return true
             }
             
-            var address = ""
-            if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View {
-                address = textView.currentText
-            }
+            let businessLocation = self.currentBusinessLocation()
             
-            var businessLocation: TelegramBusinessLocation?
-            if !address.isEmpty || self.mapCoordinates != nil {
-                businessLocation = TelegramBusinessLocation(address: address, coordinates: self.mapCoordinates)
-            }
-            
-            if businessLocation != nil && address.isEmpty {
+            if businessLocation != component.initialValue {
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: environment.strings.BusinessLocationSetup_ErrorAddressEmpty_Text, actions: [
+                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: environment.strings.BusinessLocationSetup_AlertUnsavedChanges_Text, actions: [
                     TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {
                     }),
-                    TextAlertAction(type: .destructiveAction, title: environment.strings.BusinessLocationSetup_ErrorAddressEmpty_ResetAction, action: {
-                        let _ = component.context.engine.accountData.updateAccountBusinessLocation(businessLocation: nil).startStandalone()
-                        
+                    TextAlertAction(type: .destructiveAction, title: environment.strings.BusinessLocationSetup_AlertUnsavedChanges_ResetAction, action: {
                         complete()
                     })
                 ]), in: .window(.root))
                 
                 return false
             }
-            
-            let _ = component.context.engine.accountData.updateAccountBusinessLocation(businessLocation: businessLocation).startStandalone()
             
             return true
         }
@@ -186,16 +176,51 @@ final class BusinessLocationSetupScreenComponent: Component {
             }
         }
         
+        private func currentBusinessLocation() -> TelegramBusinessLocation? {
+            var address = ""
+            if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View {
+                address = textView.currentText
+            }
+            
+            var businessLocation: TelegramBusinessLocation?
+            if !address.isEmpty || self.mapCoordinates != nil {
+                businessLocation = TelegramBusinessLocation(address: address, coordinates: self.mapCoordinates)
+            }
+            return businessLocation
+        }
+        
         private func openLocationPicker() {
+            var initialLocation: CLLocationCoordinate2D?
+            var initialGeocodedLocation: String?
+            if let mapCoordinates = self.mapCoordinates {
+                initialLocation = CLLocationCoordinate2D(latitude: mapCoordinates.latitude, longitude: mapCoordinates.longitude)
+            } else if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View, textView.currentText.count >= 2 {
+                initialGeocodedLocation = textView.currentText
+            }
+            
+            if let initialGeocodedLocation {
+                self.isLoadingGeocodedAddress = true
+                self.state?.updated(transition: .immediate)
+                
+                self.geocodeDisposable?.dispose()
+                self.geocodeDisposable = (geocodeLocation(address: initialGeocodedLocation)
+                |> deliverOnMainQueue).startStrict(next: { [weak self] venues in
+                    guard let self else {
+                        return
+                    }
+                    self.isLoadingGeocodedAddress = false
+                    self.state?.updated(transition: .immediate)
+                    self.presentLocationPicker(initialLocation: venues?.first?.location?.coordinate)
+                })
+            } else {
+                self.presentLocationPicker(initialLocation: initialLocation)
+            }
+        }
+            
+        private func presentLocationPicker(initialLocation: CLLocationCoordinate2D?) {
             guard let component = self.component else {
                 return
             }
-            
-            var initialLocation: CLLocationCoordinate2D?
-            if let mapCoordinates = self.mapCoordinates {
-                initialLocation = CLLocationCoordinate2D(latitude: mapCoordinates.latitude, longitude: mapCoordinates.longitude)
-            }
-            
             let controller = LocationPickerController(context: component.context, updatedPresentationData: nil, mode: .pick, initialLocation: initialLocation, completion: { [weak self] location, _, _, address, _ in
                 guard let self else {
                     return
@@ -212,41 +237,30 @@ final class BusinessLocationSetupScreenComponent: Component {
             self.environment?.controller()?.push(controller)
         }
         
-        private func updateGeocodedAddress(string: String) {
-            let addressValue: String?
-            if self.mapCoordinates != nil && self.mapCoordinatesManuallySet {
-                addressValue = nil
-            } else if string.count < 3 {
-                addressValue = nil
-            } else {
-                addressValue = string
+        @objc private func savePressed() {
+            guard let component = self.component, let environment = self.environment else {
+                return
             }
             
-            if let current = self.geocodeAddressState, current.address == addressValue {
-            } else {
-                self.geocodeAddressState?.disposable.dispose()
-                self.geocodeAddressState = nil
-                
-                if let addressValue {
-                    let disposable = MetaDisposable()
-                    self.geocodeAddressState = (string, disposable)
-                    
-                    disposable.set((
-                        geocodeLocation(address: addressValue, locale: Locale.current)
-                        |> delay(0.4, queue: .mainQueue())
-                        |> deliverOnMainQueue
-                    ).start(next: { [weak self] result in
-                        guard let self else {
-                            return
-                        }
-                        
-                        if let location = result?.first?.location, !self.mapCoordinatesManuallySet {
-                            self.mapCoordinates = TelegramBusinessLocation.Coordinates(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
-                            self.state?.updated(transition: .immediate)
-                        }
-                    }))
-                }
+            var address = ""
+            if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View {
+                address = textView.currentText
             }
+            
+            let businessLocation = self.currentBusinessLocation()
+            
+            if businessLocation != nil && address.isEmpty {
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: environment.strings.BusinessLocationSetup_ErrorAddressEmpty_Text, actions: [
+                    TextAlertAction(type: .genericAction, title: environment.strings.Common_OK, action: {
+                    })
+                ]), in: .window(.root))
+                
+                return
+            }
+            
+            let _ = component.context.engine.accountData.updateAccountBusinessLocation(businessLocation: businessLocation).startStandalone()
+            environment.controller()?.dismiss()
         }
         
         func update(component: BusinessLocationSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -391,7 +405,8 @@ final class BusinessLocationSetupScreenComponent: Component {
                 placeholder: environment.strings.BusinessLocationSetup_AddressPlaceholder,
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
-                characterLimit: 64,
+                characterLimit: 256,
+                allowEmptyLines: false,
                 updated: { _ in
                 },
                 textUpdateTransition: .spring(duration: 0.4),
@@ -422,6 +437,14 @@ final class BusinessLocationSetupScreenComponent: Component {
             contentHeight += sectionSpacing
             
             var mapSectionItems: [AnyComponentWithIdentity<Empty>] = []
+            
+            let mapSelectionAccessory: ListActionItemComponent.Accessory?
+            if self.isLoadingGeocodedAddress {
+                mapSelectionAccessory = .activity
+            } else {
+                mapSelectionAccessory = .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.mapCoordinates != nil, isInteractive: self.mapCoordinates != nil))
+            }
+            
             mapSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
                 theme: environment.theme,
                 title: AnyComponent(VStack([
@@ -434,7 +457,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                         maximumNumberOfLines: 1
                     ))),
                 ], alignment: .left, spacing: 2.0)),
-                accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.mapCoordinates != nil, isInteractive: self.mapCoordinates != nil)),
+                accessory: mapSelectionAccessory,
                 action: { [weak self] _ in
                     guard let self else {
                         return
@@ -572,6 +595,26 @@ final class BusinessLocationSetupScreenComponent: Component {
             self.topOverscrollLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: -3000.0), size: CGSize(width: availableSize.width, height: 3000.0))
             
             self.updateScrolling(transition: transition)
+            
+            if let controller = environment.controller() as? BusinessLocationSetupScreen {
+                let businessLocation = self.currentBusinessLocation()
+                
+                if businessLocation == component.initialValue {
+                    if controller.navigationItem.rightBarButtonItem != nil {
+                        controller.navigationItem.setRightBarButton(nil, animated: true)
+                    }
+                } else {
+                    let applyButtonItem: UIBarButtonItem
+                    if let current = self.applyButtonItem {
+                        applyButtonItem = current
+                    } else {
+                        applyButtonItem = UIBarButtonItem(title: environment.strings.Common_Save, style: .done, target: self, action: #selector(self.savePressed))
+                    }
+                    if controller.navigationItem.rightBarButtonItem !== applyButtonItem {
+                        controller.navigationItem.setRightBarButton(applyButtonItem, animated: true)
+                    }
+                }
+            }
             
             return availableSize
         }

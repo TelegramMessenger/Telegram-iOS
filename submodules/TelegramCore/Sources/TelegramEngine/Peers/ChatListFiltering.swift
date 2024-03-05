@@ -978,6 +978,22 @@ func _internal_updateChatListFiltersDisplayTagsInteractively(postbox: Postbox, d
             var state = entry?.get(ChatListFiltersState.self) ?? ChatListFiltersState.default
             if displayTags != state.displayTags {
                 state.displayTags = displayTags
+                
+                if state.displayTags {
+                    for i in 0 ..< state.filters.count {
+                        switch state.filters[i] {
+                        case .allChats:
+                            break
+                        case let .filter(id, title, emoticon, data):
+                            if data.color == nil {
+                                var data = data
+                                data.color = PeerNameColor(rawValue: Int32.random(in: 0 ... 7))
+                                state.filters[i] = .filter(id: id, title: title, emoticon: emoticon, data: data)
+                            }
+                        }
+                    }
+                }
+                
                 hasUpdates = true
             }
             

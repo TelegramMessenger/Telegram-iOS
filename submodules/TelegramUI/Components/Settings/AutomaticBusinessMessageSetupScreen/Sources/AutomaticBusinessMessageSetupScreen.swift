@@ -257,9 +257,9 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             switch component.mode {
             case .greeting:
                 var greetingMessage: TelegramBusinessGreetingMessage?
-                if self.isOn, let currentShortcut = self.currentShortcut {
+                if self.isOn, let currentShortcut = self.currentShortcut, let shortcutId = currentShortcut.id {
                     greetingMessage = TelegramBusinessGreetingMessage(
-                        shortcutId: currentShortcut.id,
+                        shortcutId: shortcutId,
                         recipients: recipients,
                         inactivityDays: self.inactivityDays
                     )
@@ -267,7 +267,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 let _ = component.context.engine.accountData.updateBusinessGreetingMessage(greetingMessage: greetingMessage).startStandalone()
             case .away:
                 var awayMessage: TelegramBusinessAwayMessage?
-                if self.isOn, let currentShortcut = self.currentShortcut {
+                if self.isOn, let currentShortcut = self.currentShortcut, let shortcutId = currentShortcut.id {
                     let mappedSchedule: TelegramBusinessAwayMessage.Schedule
                     switch self.schedule {
                     case .always:
@@ -282,7 +282,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         }
                     }
                     awayMessage = TelegramBusinessAwayMessage(
-                        shortcutId: currentShortcut.id,
+                        shortcutId: shortcutId,
                         recipients: recipients,
                         schedule: mappedSchedule,
                         sendWhenOffline: self.sendWhenOffline
@@ -654,7 +654,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 
                 self.currentShortcut = component.initialData.shortcutMessageList.items.first(where: { $0.shortcut == shortcutName })
                 
-                self.currentShortcutDisposable = (component.context.engine.accountData.shortcutMessageList()
+                self.currentShortcutDisposable = (component.context.engine.accountData.shortcutMessageList(onlyRemote: false)
                 |> deliverOnMainQueue).start(next: { [weak self] shortcutMessageList in
                     guard let self else {
                         return
@@ -1623,7 +1623,7 @@ public final class AutomaticBusinessMessageSetupScreen: ViewControllerComponentC
                 TelegramEngine.EngineData.Item.Peer.BusinessAwayMessage(id: context.account.peerId),
                 TelegramEngine.EngineData.Item.Peer.BusinessHours(id: context.account.peerId)
             ),
-            context.engine.accountData.shortcutMessageList()
+            context.engine.accountData.shortcutMessageList(onlyRemote: true)
             |> take(1)
         )
         |> mapToSignal { data, shortcutMessageList -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError> in

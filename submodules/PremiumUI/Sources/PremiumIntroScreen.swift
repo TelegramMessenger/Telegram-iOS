@@ -3617,6 +3617,10 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
             }
             navigationController.pushViewController(peerSelectionController)
         }
+        
+        if case .business = mode {
+            context.account.viewTracker.keepQuickRepliesApproximatelyUpdated()
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {

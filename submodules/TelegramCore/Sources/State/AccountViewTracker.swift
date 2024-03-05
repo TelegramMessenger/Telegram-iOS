@@ -2016,6 +2016,35 @@ public final class AccountViewTracker {
         })
     }
     
+    public func pendingQuickReplyMessagesViewForLocation(shortcut: String) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+        guard let account = self.account else {
+            return .never()
+        }
+        let chatLocation: ChatLocationInput = .peer(peerId: account.peerId, threadId: nil)
+        let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 200, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .just([Namespaces.Message.QuickReplyLocal]), orderStatistics: [], additionalData: [])
+        |> map { view, update, initialData in
+            var entries: [MessageHistoryEntry] = []
+            for entry in view.entries {
+                var matches = false
+                inner: for attribute in entry.message.attributes {
+                    if let attribute = attribute as? OutgoingQuickReplyMessageAttribute {
+                        if attribute.shortcut == shortcut {
+                            matches = true
+                        }
+                        break inner
+                    }
+                }
+                if matches {
+                    entries.append(entry)
+                }
+            }
+            let mappedView = MessageHistoryView(tag: nil, namespaces: .just([Namespaces.Message.QuickReplyLocal]), entries: entries, holeEarlier: false, holeLater: false, isLoading: false)
+            
+            return (mappedView, update, initialData)
+        }
+        return signal
+    }
+    
     public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocationInput, ignoreMessagesInTimestampRange: ClosedRange<Int32>? = nil, count: Int, tag: HistoryViewInputTag? = nil, appendMessagesFromTheSameGroup: Bool = false, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = [], useRootInterfaceStateForThread: Bool = false) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>

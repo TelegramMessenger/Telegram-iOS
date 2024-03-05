@@ -45,6 +45,7 @@ public final class ListActionItemComponent: Component {
     public enum Accessory: Equatable {
         case arrow
         case toggle(Toggle)
+        case activity
     }
     
     public enum IconInsets: Equatable {
@@ -123,6 +124,7 @@ public final class ListActionItemComponent: Component {
         private var arrowView: UIImageView?
         private var switchNode: SwitchNode?
         private var iconSwitchNode: IconSwitchNode?
+        private var activityIndicatorView: UIActivityIndicatorView?
         
         private var component: ListActionItemComponent?
         
@@ -190,6 +192,8 @@ public final class ListActionItemComponent: Component {
             case .arrow:
                 contentRightInset = 30.0
             case .toggle:
+                contentRightInset = 76.0
+            case .activity:
                 contentRightInset = 76.0
             }
             
@@ -425,6 +429,40 @@ public final class ListActionItemComponent: Component {
                 if let switchNode = self.switchNode {
                     self.switchNode = nil
                     switchNode.view.removeFromSuperview()
+                }
+            }
+            
+            if case .activity = component.accessory {
+                let activityIndicatorView: UIActivityIndicatorView
+                var activityIndicatorTransition = transition
+                if let current = self.activityIndicatorView {
+                    activityIndicatorView = current
+                } else {
+                    activityIndicatorTransition = activityIndicatorTransition.withAnimation(.none)
+                    if #available(iOS 13.0, *) {
+                        activityIndicatorView = UIActivityIndicatorView(style: .medium)
+                    } else {
+                        activityIndicatorView = UIActivityIndicatorView(style: .gray)
+                    }
+                    self.activityIndicatorView = activityIndicatorView
+                    self.addSubview(activityIndicatorView)
+                    activityIndicatorView.sizeToFit()
+                }
+                
+                let activityIndicatorSize = activityIndicatorView.bounds.size
+                let activityIndicatorFrame = CGRect(origin: CGPoint(x: availableSize.width - 16.0 - activityIndicatorSize.width, y: floor((min(60.0, contentHeight) - activityIndicatorSize.height) * 0.5)), size: activityIndicatorSize)
+                
+                activityIndicatorView.tintColor = component.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.5)
+                
+                activityIndicatorTransition.setFrame(view: activityIndicatorView, frame: activityIndicatorFrame)
+                
+                if !activityIndicatorView.isAnimating {
+                    activityIndicatorView.startAnimating()
+                }
+            } else {
+                if let activityIndicatorView = self.activityIndicatorView {
+                    self.activityIndicatorView = nil
+                    activityIndicatorView.removeFromSuperview()
                 }
             }
             

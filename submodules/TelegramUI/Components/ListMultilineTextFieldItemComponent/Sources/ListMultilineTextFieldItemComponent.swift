@@ -38,6 +38,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
     public let autocapitalizationType: UITextAutocapitalizationType
     public let autocorrectionType: UITextAutocorrectionType
     public let characterLimit: Int?
+    public let allowEmptyLines: Bool
     public let updated: ((String) -> Void)?
     public let textUpdateTransition: Transition
     public let tag: AnyObject?
@@ -53,6 +54,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
         autocapitalizationType: UITextAutocapitalizationType = .sentences,
         autocorrectionType: UITextAutocorrectionType = .default,
         characterLimit: Int? = nil,
+        allowEmptyLines: Bool = true,
         updated: ((String) -> Void)?,
         textUpdateTransition: Transition = .immediate,
         tag: AnyObject? = nil
@@ -67,6 +69,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
         self.autocapitalizationType = autocapitalizationType
         self.autocorrectionType = autocorrectionType
         self.characterLimit = characterLimit
+        self.allowEmptyLines = allowEmptyLines
         self.updated = updated
         self.textUpdateTransition = textUpdateTransition
         self.tag = tag
@@ -101,6 +104,9 @@ public final class ListMultilineTextFieldItemComponent: Component {
             return false
         }
         if lhs.characterLimit != rhs.characterLimit {
+            return false
+        }
+        if lhs.allowEmptyLines != rhs.allowEmptyLines {
             return false
         }
         if (lhs.updated == nil) != (rhs.updated == nil) {
@@ -212,6 +218,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
                     },
                     isOneLineWhenUnfocused: false,
                     characterLimit: component.characterLimit,
+                    allowEmptyLines: component.allowEmptyLines,
                     formatMenuAvailability: .none,
                     lockedFormatAction: {
                     },

@@ -121,8 +121,10 @@ final class BusinessDaySetupScreenComponent: Component {
                 return true
             }
             
-            if self.intersectingRanges.isEmpty {
-                return true
+            if self.isOpen {
+                if self.intersectingRanges.isEmpty {
+                    return true
+                }
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }

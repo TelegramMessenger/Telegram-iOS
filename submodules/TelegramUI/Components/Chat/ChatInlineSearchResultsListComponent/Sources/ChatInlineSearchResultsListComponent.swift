@@ -81,6 +81,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
     public let loadTagMessages: (MemoryBuffer, MessageIndex?) -> Signal<MessageHistoryView, NoError>?
     public let getSearchResult: () -> Signal<SearchMessagesResult?, NoError>?
     public let getSavedPeers: (String) -> Signal<[(EnginePeer, MessageIndex?)], NoError>?
+    public let loadMoreSearchResults: () -> Void
     
     public init(
         context: AccountContext,
@@ -92,7 +93,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
         peerSelected: @escaping (EnginePeer) -> Void,
         loadTagMessages: @escaping (MemoryBuffer, MessageIndex?) -> Signal<MessageHistoryView, NoError>?,
         getSearchResult: @escaping () -> Signal<SearchMessagesResult?, NoError>?,
-        getSavedPeers: @escaping (String) -> Signal<[(EnginePeer, MessageIndex?)], NoError>?
+        getSavedPeers: @escaping (String) -> Signal<[(EnginePeer, MessageIndex?)], NoError>?,
+        loadMoreSearchResults: @escaping () -> Void
     ) {
         self.context = context
         self.presentation = presentation
@@ -104,6 +106,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         self.loadTagMessages = loadTagMessages
         self.getSearchResult = getSearchResult
         self.getSavedPeers = getSavedPeers
+        self.loadMoreSearchResults = loadMoreSearchResults
     }
     
     public static func ==(lhs: ChatInlineSearchResultsListComponent, rhs: ChatInlineSearchResultsListComponent) -> Bool {
@@ -377,6 +380,19 @@ public final class ChatInlineSearchResultsListComponent: Component {
                             break
                         }
                     }
+                } else if let (currentIndex, disposable) = self.searchContents {
+                    if let loadAroundIndex, loadAroundIndex != currentIndex {
+                        switch component.contents {
+                        case .empty:
+                            break
+                        case .tag:
+                            break
+                        case .search:
+                            self.searchContents = (loadAroundIndex, disposable)
+                            
+                            component.loadMoreSearchResults()
+                        }
+                    }
                 }
             }
             
@@ -511,7 +527,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                                 contentId: .search(query),
                                 entries: entries,
                                 messages: messages,
-                                hasEarlier: false,
+                                hasEarlier: !(result?.completed ?? true),
                                 hasLater: false
                             )
                             if !self.isUpdating {

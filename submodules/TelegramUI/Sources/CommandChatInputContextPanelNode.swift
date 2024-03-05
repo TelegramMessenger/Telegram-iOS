@@ -66,7 +66,11 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
             case let .command(command):
                 return .command(command)
             case let .shortcut(shortcut):
-                return .shortcut(shortcut.id)
+                if let shortcutId = shortcut.id {
+                    return .shortcut(shortcutId)
+                } else {
+                    return .shortcut(0)
+                }
             }
         }
     }
@@ -375,7 +379,9 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                     }
                 }
             case let .shortcut(shortcut):
-                interfaceInteraction.sendShortcut(shortcut.id)
+                if let shortcutId = shortcut.id {
+                    interfaceInteraction.sendShortcut(shortcutId)
+                }
             }
         }, openEditShortcuts: { [weak self] in
             guard let self, let interfaceInteraction = self.interfaceInteraction else {

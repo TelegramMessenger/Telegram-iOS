@@ -162,8 +162,8 @@ public extension TelegramEngine {
             |> then(remoteApply)
         }
         
-        public func shortcutMessageList() -> Signal<ShortcutMessageList, NoError> {
-            return _internal_shortcutMessageList(account: self.account)
+        public func shortcutMessageList(onlyRemote: Bool) -> Signal<ShortcutMessageList, NoError> {
+            return _internal_shortcutMessageList(account: self.account, onlyRemote: onlyRemote)
         }
 
         public func keepShortcutMessageListUpdated() -> Signal<Never, NoError> {

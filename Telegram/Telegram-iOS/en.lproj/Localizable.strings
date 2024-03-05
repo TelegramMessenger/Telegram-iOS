@@ -11424,6 +11424,8 @@ to respond to messages faster.";
 "PeerInfo.BusinessHours.StatusOpensInHours_1" = "Opens in one hour";
 "PeerInfo.BusinessHours.StatusOpensInHours_any" = "Opens in %d hours";
 "PeerInfo.BusinessHours.StatusOpensOnDate" = "Opens %@";
+"PeerInfo.BusinessHours.StatusOpensTodayAt" = "Opens today at %@";
+"PeerInfo.BusinessHours.StatusOpensTomorrowAt" = "Opens tomorrow at %@";
 "PeerInfo.BusinessHours.TimezoneSwitchMy" = "my time";
 "PeerInfo.BusinessHours.TimezoneSwitchBusiness" = "local time";
 "PeerInfo.BusinessHours.Label" = "business hours";
@@ -11567,6 +11569,9 @@ to respond to messages faster.";
 "BusinessLocationSetup.ErrorAddressEmpty.Text" = "Address can't be empty.";
 "BusinessLocationSetup.ErrorAddressEmpty.ResetAction" = "Delete";
 
+"BusinessLocationSetup.AlertUnsavedChanges.Text" = "You have unsaved changes.";
+"BusinessLocationSetup.AlertUnsavedChanges.ResetAction" = "Revert";
+
 "ChatbotSetup.Title" = "Chatbots";
 "ChatbotSetup.Text" = "Add a bot to your account to help you automatically process and respond to the messages you receive. [Learn More >]()";
 "ChatbotSetup.TextLink" = "https://telegram.org";
@@ -11588,3 +11593,6 @@ to respond to messages faster.";
 
 "Chat.QuickReply.ServiceHeader1" = "To edit or delete your quick reply, tap an hold on it.";
 "Chat.QuickReply.ServiceHeader2" = "To use this quick reply in a chat, type / and select the shortcut from the list.";
+
+"Chat.QuickReplyMediaMessageLimitReachedText_1" = "There can be at most %d message in this chat.";
+"Chat.QuickReplyMediaMessageLimitReachedText_any" = "There can be at most %d messages in this chat.";

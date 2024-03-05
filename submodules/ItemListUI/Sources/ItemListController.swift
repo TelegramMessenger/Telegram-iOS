@@ -251,6 +251,13 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
     
     public var willDisappear: ((Bool) -> Void)?
     public var didDisappear: ((Bool) -> Void)?
+    public var afterTransactionCompleted: (() -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode).afterTransactionCompleted = self.afterTransactionCompleted
+            }
+        }
+    }
     
     public init<ItemGenerationArguments>(presentationData: ItemListPresentationData, updatedPresentationData: Signal<ItemListPresentationData, NoError>, state: Signal<(ItemListControllerState, (ItemListNodeState, ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {
         self.state = state
@@ -486,6 +493,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         displayNode.searchActivated = self.searchActivated
         displayNode.reorderEntry = self.reorderEntry
         displayNode.reorderCompleted = self.reorderCompleted
+        displayNode.afterTransactionCompleted = self.afterTransactionCompleted
         displayNode.listNode.experimentalSnapScrollToItem = self.experimentalSnapScrollToItem
         displayNode.listNode.didScrollWithOffset = self.didScrollWithOffset
         displayNode.requestLayout = { [weak self] transition in
