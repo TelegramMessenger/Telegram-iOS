@@ -13,8 +13,7 @@
 #ifdef HAVE_JPEG
 #include <assert.h>
 
-#if !defined(__pnacl__) && !defined(__CLR_VER) && \
-    !defined(COVERAGE_ENABLED) && !defined(TARGET_IPHONE_SIMULATOR)
+#if !defined(__pnacl__) && !defined(__CLR_VER) && !defined(COVERAGE_ENABLED)
 // Must be included before jpeglib.
 #include <setjmp.h>
 #define HAVE_SETJMP
@@ -109,7 +108,7 @@ LIBYUV_BOOL MJpegDecoder::LoadFrame(const uint8_t* src, size_t src_len) {
   }
 
   buf_.data = src;
-  buf_.len = static_cast<int>(src_len);
+  buf_.len = (int)src_len;
   buf_vec_.pos = 0;
   decompress_struct_->client_data = &buf_vec_;
 #ifdef HAVE_SETJMP
@@ -428,7 +427,7 @@ boolean fill_input_buffer(j_decompress_ptr cinfo) {
 
 void skip_input_data(j_decompress_ptr cinfo, long num_bytes) {  // NOLINT
   jpeg_source_mgr* src = cinfo->src;
-  size_t bytes = static_cast<size_t>(num_bytes);
+  size_t bytes = (size_t)num_bytes;
   if (bytes > src->bytes_in_buffer) {
     src->next_input_byte = nullptr;
     src->bytes_in_buffer = 0;

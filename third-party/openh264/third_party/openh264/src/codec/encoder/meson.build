@@ -74,6 +74,15 @@ elif cpu_family == 'aarch64'
   else
     cpp_sources += asm_sources
   endif
+elif cpu_family in ['loongarch32', 'loongarch64']
+  asm_sources = [
+    'core/loongarch/quant_lsx.c',
+    'core/loongarch/get_intra_predictor_lsx.c',
+    'core/loongarch/dct_lasx.c',
+    'core/loongarch/svc_motion_estimate_lsx.c',
+    'core/loongarch/sample_lasx.c',
+  ]
+  cpp_sources += asm_sources
 else
   error('Unsupported cpu family @0@'.format(cpu_family))
 endif

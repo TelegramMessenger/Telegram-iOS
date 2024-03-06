@@ -19,6 +19,11 @@
 #ifndef ABSL_HASH_INTERNAL_HASH_H_
 #define ABSL_HASH_INTERNAL_HASH_H_
 
+#ifdef __APPLE__
+#include <Availability.h>
+#include <TargetConditionals.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <bitset>
@@ -49,11 +54,21 @@
 #include "absl/hash/internal/city.h"
 #include "absl/hash/internal/low_level_hash.h"
 #include "absl/meta/type_traits.h"
+#include "absl/numeric/bits.h"
 #include "absl/numeric/int128.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "absl/types/variant.h"
 #include "absl/utility/utility.h"
+
+#if ABSL_INTERNAL_CPLUSPLUS_LANG >= 201703L && \
+    !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+#include <filesystem>  // NOLINT
+#endif
+
+#ifdef ABSL_HAVE_STD_STRING_VIEW
+#include <string_view>
+#endif
 
 namespace absl {
 ABSL_NAMESPACE_BEGIN
@@ -404,9 +419,23 @@ AbslHashValue(H hash_state, LongDouble value) {
   return H::combine(std::move(hash_state), category);
 }
 
+// Without this overload, an array decays to a pointer and we hash that, which
+// is not likely to be what the caller intended.
+template <typename H, typename T, size_t N>
+H AbslHashValue(H hash_state, T (&)[N]) {
+  static_assert(
+      sizeof(T) == -1,
+      "Hashing C arrays is not allowed. For string literals, wrap the literal "
+      "in absl::string_view(). To hash the array contents, use "
+      "absl::MakeSpan() or make the array an std::array. To hash the array "
+      "address, use &array[0].");
+  return hash_state;
+}
+
 // AbslHashValue() for hashing pointers
 template <typename H, typename T>
-H AbslHashValue(H hash_state, T* ptr) {
+std::enable_if_t<std::is_pointer<T>::value, H> AbslHashValue(H hash_state,
+                                                             T ptr) {
   auto v = reinterpret_cast<uintptr_t>(ptr);
   // Due to alignment, pointers tend to have low bits as zero, and the next few
   // bits follow a pattern since they are also multiples of some base value.
@@ -423,7 +452,7 @@ H AbslHashValue(H hash_state, std::nullptr_t) {
 
 // AbslHashValue() for hashing pointers-to-member
 template <typename H, typename T, typename C>
-H AbslHashValue(H hash_state, T C::* ptr) {
+H AbslHashValue(H hash_state, T C::*ptr) {
   auto salient_ptm_size = [](std::size_t n) -> std::size_t {
 #if defined(_MSC_VER)
     // Pointers-to-member-function on MSVC consist of one pointer plus 0, 1, 2,
@@ -441,8 +470,8 @@ H AbslHashValue(H hash_state, T C::* ptr) {
       return n == 24 ? 20 : n == 16 ? 12 : n;
     }
 #else
-    // On other platforms, we assume that pointers-to-members do not have
-    // padding.
+  // On other platforms, we assume that pointers-to-members do not have
+  // padding.
 #ifdef __cpp_lib_has_unique_object_representations
     static_assert(std::has_unique_object_representations<T C::*>::value);
 #endif  // __cpp_lib_has_unique_object_representations
@@ -515,14 +544,15 @@ H AbslHashValue(H hash_state, const std::shared_ptr<T>& ptr) {
 // the same character sequence. These types are:
 //
 //  - `absl::Cord`
-//  - `std::string` (and std::basic_string<char, std::char_traits<char>, A> for
-//      any allocator A)
-//  - `absl::string_view` and `std::string_view`
+//  - `std::string` (and std::basic_string<T, std::char_traits<T>, A> for
+//      any allocator A and any T in {char, wchar_t, char16_t, char32_t})
+//  - `absl::string_view`, `std::string_view`, `std::wstring_view`,
+//    `std::u16string_view`, and `std::u32_string_view`.
 //
-// For simplicity, we currently support only `char` strings. This support may
-// be broadened, if necessary, but with some caution - this overload would
-// misbehave in cases where the traits' `eq()` member isn't equivalent to `==`
-// on the underlying character type.
+// For simplicity, we currently support only strings built on `char`, `wchar_t`,
+// `char16_t`, or `char32_t`. This support may be broadened, if necessary, but
+// with some caution - this overload would misbehave in cases where the traits'
+// `eq()` member isn't equivalent to `==` on the underlying character type.
 template <typename H>
 H AbslHashValue(H hash_state, absl::string_view str) {
   return H::combine(
@@ -542,6 +572,44 @@ H AbslHashValue(
       H::combine_contiguous(std::move(hash_state), str.data(), str.size()),
       str.size());
 }
+
+#ifdef ABSL_HAVE_STD_STRING_VIEW
+
+// Support std::wstring_view, std::u16string_view and std::u32string_view.
+template <typename Char, typename H,
+          typename = absl::enable_if_t<std::is_same<Char, wchar_t>::value ||
+                                       std::is_same<Char, char16_t>::value ||
+                                       std::is_same<Char, char32_t>::value>>
+H AbslHashValue(H hash_state, std::basic_string_view<Char> str) {
+  return H::combine(
+      H::combine_contiguous(std::move(hash_state), str.data(), str.size()),
+      str.size());
+}
+
+#endif  // ABSL_HAVE_STD_STRING_VIEW
+
+#if defined(__cpp_lib_filesystem) && __cpp_lib_filesystem >= 201703L && \
+    !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY) && \
+    (!defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) ||        \
+     __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 130000)
+
+#define ABSL_INTERNAL_STD_FILESYSTEM_PATH_HASH_AVAILABLE 1
+
+// Support std::filesystem::path. The SFINAE is required because some string
+// types are implicitly convertible to std::filesystem::path.
+template <typename Path, typename H,
+          typename = absl::enable_if_t<
+              std::is_same_v<Path, std::filesystem::path>>>
+H AbslHashValue(H hash_state, const Path& path) {
+  // This is implemented by deferring to the standard library to compute the
+  // hash.  The standard library requires that for two paths, `p1 == p2`, then
+  // `hash_value(p1) == hash_value(p2)`. `AbslHashValue` has the same
+  // requirement. Since `operator==` does platform specific matching, deferring
+  // to the standard library is the simplest approach.
+  return H::combine(std::move(hash_state), std::filesystem::hash_value(path));
+}
+
+#endif  // ABSL_INTERNAL_STD_FILESYSTEM_PATH_HASH_AVAILABLE
 
 // -----------------------------------------------------------------------------
 // AbslHashValue for Sequence Containers
@@ -797,7 +865,7 @@ AbslHashValue(H hash_state, const absl::variant<T...>& v) {
 template <typename H, size_t N>
 H AbslHashValue(H hash_state, const std::bitset<N>& set) {
   typename H::AbslInternalPiecewiseCombiner combiner;
-  for (int i = 0; i < N; i++) {
+  for (size_t i = 0; i < N; i++) {
     unsigned char c = static_cast<unsigned char>(set[i]);
     hash_state = combiner.add_buffer(std::move(hash_state), &c, sizeof(c));
   }
@@ -934,8 +1002,8 @@ class ABSL_DLL MixingHashState : public HashStateBase<MixingHashState> {
 #endif  // ABSL_HAVE_INTRINSIC_INT128
 
   static constexpr uint64_t kMul =
-      sizeof(size_t) == 4 ? uint64_t{0xcc9e2d51}
-                          : uint64_t{0x9ddfea08eb382d69};
+  sizeof(size_t) == 4 ? uint64_t{0xcc9e2d51}
+                      : uint64_t{0x9ddfea08eb382d69};
 
   template <typename T>
   using IntegralFastPath =
@@ -968,7 +1036,8 @@ class ABSL_DLL MixingHashState : public HashStateBase<MixingHashState> {
   // The result should be the same as running the whole algorithm, but faster.
   template <typename T, absl::enable_if_t<IntegralFastPath<T>::value, int> = 0>
   static size_t hash(T value) {
-    return static_cast<size_t>(Mix(Seed(), static_cast<uint64_t>(value)));
+    return static_cast<size_t>(
+        Mix(Seed(), static_cast<std::make_unsigned_t<T>>(value)));
   }
 
   // Overload of MixingHashState::hash()
@@ -1052,7 +1121,7 @@ class ABSL_DLL MixingHashState : public HashStateBase<MixingHashState> {
     uint64_t most_significant = low_mem;
     uint64_t least_significant = high_mem;
 #endif
-    return {least_significant, most_significant >> (128 - len * 8)};
+    return {least_significant, most_significant};
   }
 
   // Reads 4 to 8 bytes from p. Zero pads to fill uint64_t.
@@ -1072,6 +1141,7 @@ class ABSL_DLL MixingHashState : public HashStateBase<MixingHashState> {
 
   // Reads 1 to 3 bytes from p. Zero pads to fill uint32_t.
   static uint32_t Read1To3(const unsigned char* p, size_t len) {
+    // The trick used by this implementation is to avoid branches if possible.
     unsigned char mem0 = p[0];
     unsigned char mem1 = p[len / 2];
     unsigned char mem2 = p[len - 1];
@@ -1081,7 +1151,7 @@ class ABSL_DLL MixingHashState : public HashStateBase<MixingHashState> {
     unsigned char significant0 = mem0;
 #else
     unsigned char significant2 = mem0;
-    unsigned char significant1 = mem1;
+    unsigned char significant1 = len == 2 ? mem0 : mem1;
     unsigned char significant0 = mem2;
 #endif
     return static_cast<uint32_t>(significant0 |                     //
@@ -1134,7 +1204,8 @@ class ABSL_DLL MixingHashState : public HashStateBase<MixingHashState> {
   // probably per-build and not per-process.
   ABSL_ATTRIBUTE_ALWAYS_INLINE static uint64_t Seed() {
 #if (!defined(__clang__) || __clang_major__ > 11) && \
-    !defined(__apple_build_version__)
+    (!defined(__apple_build_version__) ||            \
+     __apple_build_version__ >= 19558921)  // Xcode 12
     return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(&kSeed));
 #else
     // Workaround the absence of
@@ -1183,9 +1254,22 @@ inline uint64_t MixingHashState::CombineContiguousImpl(
     }
     v = Hash64(first, len);
   } else if (len > 8) {
+    // This hash function was constructed by the ML-driven algorithm discovery
+    // using reinforcement learning. We fed the agent lots of inputs from
+    // microbenchmarks, SMHasher, low hamming distance from generated inputs and
+    // picked up the one that was good on micro and macrobenchmarks.
     auto p = Read9To16(first, len);
-    state = Mix(state, p.first);
-    v = p.second;
+    uint64_t lo = p.first;
+    uint64_t hi = p.second;
+    // Rotation by 53 was found to be most often useful when discovering these
+    // hashing algorithms with ML techniques.
+    lo = absl::rotr(lo, 53);
+    state += kMul;
+    lo += state;
+    state ^= hi;
+    uint128 m = state;
+    m *= lo;
+    return static_cast<uint64_t>(m ^ (m >> 64));
   } else if (len >= 4) {
     v = Read4To8(first, len);
   } else if (len > 0) {

@@ -56,6 +56,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <exception>
 #include <functional>
 #include <initializer_list>
 #include <memory>
@@ -66,6 +67,7 @@
 #include "absl/base/config.h"
 #include "absl/base/internal/invoke.h"
 #include "absl/base/macros.h"
+#include "absl/base/optimization.h"
 #include "absl/meta/type_traits.h"
 #include "absl/utility/utility.h"
 
@@ -133,8 +135,16 @@ void InvokeR(F&& f, P&&... args) {
 template <class ReturnType, class F, class... P,
           absl::enable_if_t<!std::is_void<ReturnType>::value, int> = 0>
 ReturnType InvokeR(F&& f, P&&... args) {
+  // GCC 12 has a false-positive -Wmaybe-uninitialized warning here.
+#if ABSL_INTERNAL_HAVE_MIN_GNUC_VERSION(12, 0)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
   return absl::base_internal::invoke(std::forward<F>(f),
                                      std::forward<P>(args)...);
+#if ABSL_INTERNAL_HAVE_MIN_GNUC_VERSION(12, 0)
+#pragma GCC diagnostic pop
+#endif
 }
 
 //
@@ -195,7 +205,7 @@ union TypeErasedState {
 template <class T>
 T& ObjectInLocalStorage(TypeErasedState* const state) {
   // We launder here because the storage may be reused with the same type.
-#if ABSL_INTERNAL_CPLUSPLUS_LANG >= 201703L
+#if defined(__cpp_lib_launder) && __cpp_lib_launder >= 201606L
   return *std::launder(reinterpret_cast<T*>(&state->storage));
 #elif ABSL_HAVE_BUILTIN(__builtin_launder)
   return *__builtin_launder(reinterpret_cast<T*>(&state->storage));
@@ -205,8 +215,8 @@ T& ObjectInLocalStorage(TypeErasedState* const state) {
   // behavior, which works as intended on Abseil's officially supported
   // platforms as of Q2 2022.
 #if !defined(__clang__) && defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
   return *reinterpret_cast<T*>(&state->storage);
 #if !defined(__clang__) && defined(__GNUC__)
@@ -281,7 +291,7 @@ void LocalManagerNontrivial(FunctionToCall operation,
       from_object.~T();  // Must not throw. // NOLINT
       return;
   }
-  ABSL_INTERNAL_UNREACHABLE;
+  ABSL_UNREACHABLE();
 }
 
 // The invoker that is used when a target function is in local storage
@@ -319,7 +329,7 @@ inline void RemoteManagerTrivial(FunctionToCall operation,
 #endif  // __cpp_sized_deallocation
       return;
   }
-  ABSL_INTERNAL_UNREACHABLE;
+  ABSL_UNREACHABLE();
 }
 
 // The manager that is used when a target function is in remote storage and the
@@ -341,7 +351,7 @@ void RemoteManagerNontrivial(FunctionToCall operation,
       ::delete static_cast<T*>(from->remote.target);  // Must not throw.
       return;
   }
-  ABSL_INTERNAL_UNREACHABLE;
+  ABSL_UNREACHABLE();
 }
 
 // The invoker that is used when a target function is in remote storage
@@ -430,11 +440,11 @@ class CoreImpl {
 
   CoreImpl() noexcept : manager_(EmptyManager), invoker_(nullptr) {}
 
-  enum class TargetType : int {
-    kPointer = 0,
-    kCompatibleAnyInvocable = 1,
-    kIncompatibleAnyInvocable = 2,
-    kOther = 3,
+  enum class TargetType {
+    kPointer,
+    kCompatibleAnyInvocable,
+    kIncompatibleAnyInvocable,
+    kOther,
   };
 
   // Note: QualDecayedTRef here includes the cv-ref qualifiers associated with
@@ -456,8 +466,7 @@ class CoreImpl {
     // NOTE: We only use integers instead of enums as template parameters in
     // order to work around a bug on C++14 under MSVC 2017.
     // See b/236131881.
-    Initialize<static_cast<int>(kTargetType), QualDecayedTRef>(
-        std::forward<F>(f));
+    Initialize<kTargetType, QualDecayedTRef>(std::forward<F>(f));
   }
 
   // Note: QualTRef here includes the cv-ref qualifiers associated with the
@@ -486,7 +495,7 @@ class CoreImpl {
     // object.
     Clear();
 
-    // Perform the actual move/destory operation on the target function.
+    // Perform the actual move/destroy operation on the target function.
     other.manager_(FunctionToCall::relocate_from_to, &other.state_, &state_);
     manager_ = other.manager_;
     invoker_ = other.invoker_;
@@ -508,8 +517,8 @@ class CoreImpl {
     invoker_ = nullptr;
   }
 
-  template <int target_type, class QualDecayedTRef, class F,
-            absl::enable_if_t<target_type == 0, int> = 0>
+  template <TargetType target_type, class QualDecayedTRef, class F,
+            absl::enable_if_t<target_type == TargetType::kPointer, int> = 0>
   void Initialize(F&& f) {
 // This condition handles types that decay into pointers, which includes
 // function references. Since function references cannot be null, GCC warns
@@ -517,10 +526,10 @@ class CoreImpl {
 // Since this is template-heavy code, we prefer to disable these warnings
 // locally instead of adding yet another overload of this function.
 #if !defined(__clang__) && defined(__GNUC__)
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Waddress"
 #pragma GCC diagnostic ignored "-Wnonnull-compare"
-#pragma GCC diagnostic push
 #endif
     if (static_cast<RemoveCVRef<QualDecayedTRef>>(f) == nullptr) {
 #if !defined(__clang__) && defined(__GNUC__)
@@ -533,8 +542,9 @@ class CoreImpl {
     InitializeStorage<QualDecayedTRef>(std::forward<F>(f));
   }
 
-  template <int target_type, class QualDecayedTRef, class F,
-            absl::enable_if_t<target_type == 1, int> = 0>
+  template <TargetType target_type, class QualDecayedTRef, class F,
+            absl::enable_if_t<
+                target_type == TargetType::kCompatibleAnyInvocable, int> = 0>
   void Initialize(F&& f) {
     // In this case we can "steal the guts" of the other AnyInvocable.
     f.manager_(FunctionToCall::relocate_from_to, &f.state_, &state_);
@@ -545,8 +555,9 @@ class CoreImpl {
     f.invoker_ = nullptr;
   }
 
-  template <int target_type, class QualDecayedTRef, class F,
-            absl::enable_if_t<target_type == 2, int> = 0>
+  template <TargetType target_type, class QualDecayedTRef, class F,
+            absl::enable_if_t<
+                target_type == TargetType::kIncompatibleAnyInvocable, int> = 0>
   void Initialize(F&& f) {
     if (f.HasValue()) {
       InitializeStorage<QualDecayedTRef>(std::forward<F>(f));
@@ -556,8 +567,8 @@ class CoreImpl {
     }
   }
 
-  template <int target_type, class QualDecayedTRef, class F,
-            typename = absl::enable_if_t<target_type == 3>>
+  template <TargetType target_type, class QualDecayedTRef, class F,
+            typename = absl::enable_if_t<target_type == TargetType::kOther>>
   void Initialize(F&& f) {
     InitializeStorage<QualDecayedTRef>(std::forward<F>(f));
   }
@@ -809,19 +820,22 @@ using CanAssignReferenceWrapper = TrueAlias<
         : Core(absl::in_place_type<absl::decay_t<T> inv_quals>,                \
                std::forward<Args>(args)...) {}                                 \
                                                                                \
+    /*Raises a fatal error when the AnyInvocable is invoked after a move*/     \
+    static ReturnType InvokedAfterMove(                                        \
+      TypeErasedState*,                                                        \
+      ForwardedParameterType<P>...) noexcept(noex) {                           \
+      ABSL_HARDENING_ASSERT(false && "AnyInvocable use-after-move");           \
+      std::terminate();                                                        \
+    }                                                                          \
+                                                                               \
     InvokerType<noex, ReturnType, P...>* ExtractInvoker() cv {                 \
       using QualifiedTestType = int cv ref;                                    \
       auto* invoker = this->invoker_;                                          \
       if (!std::is_const<QualifiedTestType>::value &&                          \
           std::is_rvalue_reference<QualifiedTestType>::value) {                \
-        ABSL_HARDENING_ASSERT([this]() {                                       \
+        ABSL_ASSERT([this]() {                                                 \
           /* We checked that this isn't const above, so const_cast is safe */  \
-          const_cast<Impl*>(this)->invoker_ =                                  \
-              [](TypeErasedState*,                                             \
-                 ForwardedParameterType<P>...) noexcept(noex) -> ReturnType {  \
-            ABSL_HARDENING_ASSERT(false && "AnyInvocable use-after-move");     \
-            std::terminate();                                                  \
-          };                                                                   \
+          const_cast<Impl*>(this)->invoker_ = InvokedAfterMove;                \
           return this->HasValue();                                             \
         }());                                                                  \
       }                                                                        \

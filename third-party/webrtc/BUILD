@@ -35,7 +35,6 @@ absl_sources = [ "dependencies/third_party/abseil-cpp/" + x for x in [
     "absl/strings/internal/cord_rep_flat.h",
     "absl/strings/internal/cord_rep_btree_reader.h",
     "absl/strings/internal/cord_rep_btree_navigator.h",
-    "absl/strings/internal/cord_rep_ring.h",
     "absl/strings/internal/cordz_functions.h",
     "absl/strings/internal/cordz_info.h",
     "absl/strings/internal/cordz_handle.h",
@@ -52,7 +51,6 @@ absl_sources = [ "dependencies/third_party/abseil-cpp/" + x for x in [
     "absl/base/internal/spinlock_wait.cc",
     "absl/base/internal/strerror.cc",
     "absl/base/internal/sysinfo.cc",
-    "absl/base/internal/thread_annotations.h",
     "absl/base/internal/thread_identity.cc",
     "absl/base/internal/throw_delegate.cc",
     "absl/base/internal/unscaledcycleclock.cc",
@@ -72,7 +70,6 @@ absl_sources = [ "dependencies/third_party/abseil-cpp/" + x for x in [
     "absl/debugging/internal/vdso_support.cc",
     "absl/debugging/stacktrace.cc",
     "absl/debugging/symbolize.cc",
-    "absl/flags/flag.cc",
     "absl/flags/flag_test_defs.cc",
     "absl/flags/internal/commandlineflag.cc",
     "absl/flags/internal/flag.cc",
@@ -130,7 +127,6 @@ absl_sources = [ "dependencies/third_party/abseil-cpp/" + x for x in [
     "absl/synchronization/internal/create_thread_identity.cc",
     "absl/synchronization/internal/graphcycles.cc",
     "absl/synchronization/internal/per_thread_sem.cc",
-    "absl/synchronization/internal/waiter.cc",
     "absl/synchronization/notification.cc",
     "absl/time/civil_time.cc",
     "absl/time/clock.cc",
@@ -340,7 +336,6 @@ absl_sources = [ "dependencies/third_party/abseil-cpp/" + x for x in [
     "absl/container/internal/compressed_tuple.h",
     "absl/random/internal/fastmath.h",
     "absl/random/uniform_int_distribution.h",
-    "absl/strings/internal/char_map.h",
     "absl/strings/strip.h",
     "absl/synchronization/internal/create_thread_identity.h",
     "absl/time/internal/get_current_time_chrono.inc",
@@ -352,7 +347,6 @@ absl_sources = [ "dependencies/third_party/abseil-cpp/" + x for x in [
     "absl/functional/bind_front.h",
     "absl/functional/internal/front_binder.h",
     "absl/base/internal/cycleclock_config.h",
-    "absl/base/internal/prefetch.h",
     "absl/base/internal/unscaledcycleclock_config.h",
     "absl/functional/any_invocable.h",
     "absl/profiling/internal/exponential_biased.h",
@@ -366,6 +360,24 @@ absl_sources = [ "dependencies/third_party/abseil-cpp/" + x for x in [
     "absl/strings/internal/cord_data_edge.h",
     "absl/cleanup/internal/cleanup.h",
     "absl/strings/internal/cord_rep_crc.h",
+    "absl/base/nullability.h",
+    "absl/strings/has_absl_stringify.h",
+    "absl/synchronization/internal/futex_waiter.h",
+    "absl/base/internal/nullability_impl.h",
+    "absl/strings/internal/str_format/constexpr_parser.h",
+    "absl/synchronization/internal/waiter_base.h",
+    "absl/synchronization/internal/pthread_waiter.h",
+    "absl/base/no_destructor.h",
+    "absl/base/prefetch.h",
+    "absl/crc/internal/crc_cord_state.h",
+    "absl/strings/charset.h",
+    "absl/synchronization/internal/sem_waiter.h",
+    "absl/crc/crc32c.h",
+    "absl/synchronization/internal/stdcpp_waiter.h",
+    "absl/crc/internal/crc32c_inline.h",
+    "absl/synchronization/internal/win32_waiter.h",
+    "absl/crc/internal/crc32_x86_arm_combined_simd.h",
+    "absl/strings/internal/damerau_levenshtein_distance.h",
 ]]
 
 webrtc_sources = [
@@ -916,7 +928,6 @@ webrtc_sources = [
     "modules/audio_device/dummy/file_audio_device.cc",
     "modules/audio_device/dummy/file_audio_device_factory.cc",
     "modules/audio_device/fine_audio_buffer.cc",
-    "modules/audio_device/include/test_audio_device.cc",
     "modules/audio_device/audio_device_name.h",
     "modules/audio_mixer/audio_frame_manipulator.cc",
     "modules/audio_mixer/audio_mixer_impl.cc",
@@ -1742,7 +1753,6 @@ webrtc_sources = [
     "modules/audio_device/dummy/file_audio_device_factory.h",
     "modules/audio_device/fine_audio_buffer.h",
     "modules/audio_device/include/audio_device_data_observer.h",
-    "modules/audio_device/include/test_audio_device.h",
     "modules/audio_mixer/audio_frame_manipulator.h",
     "modules/audio_mixer/audio_mixer_impl.h",
     "modules/audio_mixer/default_output_rate_calculator.h",
@@ -2778,7 +2788,50 @@ webrtc_sources = [
     "p2p/base/ice_agent_interface.h",
     "api/video_codecs/video_encoder_factory_template_open_h264_adapter.h",
     "api/video_codecs/simulcast_stream.cc",
-    ":experiments/registered_field_trials.h",
+    "rtc_base/network/received_packet.cc",
+    "rtc_base/network/received_packet.h",
+    "api/video/i410_buffer.cc",
+    "api/video/i410_buffer.h",
+    "rtc_base/async_dns_resolver.cc",
+    "rtc_base/async_dns_resolver.h",
+    "api/legacy_stats_types.cc",
+    "api/legacy_stats_types.h",
+    "api/field_trials_registry.cc",
+    "api/field_trials_registry.h",
+    "pc/simulcast_sdp_serializer.cc",
+    "pc/simulcast_sdp_serializer.h",
+    "stats/attribute.cc",
+    "api/stats/attribute.h",
+    "stats/rtc_stats_member.cc",
+    "api/environment/environment.h",
+    "api/location.h",
+    "api/ref_count.h",
+    "api/stats/rtc_stats_member.h",
+    "common_video/h265/h265_inline.h",
+    "modules/rtp_rtcp/source/frame_object.h",
+    "logging/rtc_event_log/events/rtc_event_log_parse_status.h",
+    "media/base/media_channel_impl.h",
+    "modules/audio_processing/agc2/input_volume_controller.h",
+    "modules/audio_processing/agc2/input_volume_stats_reporter.h",
+    "modules/rtp_rtcp/include/recovered_packet_receiver.h",
+    "modules/rtp_rtcp/source/flexfec_03_header_reader_writer.h",
+    "modules/rtp_rtcp/source/leb128.h",
+    "modules/video_capture/raw_video_sink_interface.h",
+    "modules/video_coding/timing/decode_time_percentile_filter.h",
+    "rtc_base/bitrate_tracker.h",
+    "rtc_base/numerics/sequence_number_unwrapper.h",
+    "rtc_base/strings/str_join.h",
+    "video/frame_dumping_encoder.h",
+    "api/enable_media.h",
+    "logging/rtc_event_log/events/rtc_event_neteq_set_minimum_delay.h",
+    "modules/audio_processing/agc2/speech_level_estimator.h",
+    "p2p/base/stun_dictionary.h",
+    "pc/media_factory.h",
+    "rtc_base/frequency_tracker.h",
+    "api/environment/environment_factory.h",
+    "modules/rtp_rtcp/source/rtp_video_stream_receiver_frame_transformer_delegate.h",
+    "modules/video_coding/timing/inter_frame_delay_variation_calculator.h",
+    "video/receive_statistics_proxy.h",
 ]
 
 ios_objc_sources = [
@@ -2792,12 +2845,8 @@ ios_objc_sources = [
     "objc/base/RTCVideoEncoderQpThresholds.m",
     "objc/base/RTCVideoEncoderSettings.h",
     "objc/base/RTCVideoEncoderSettings.m",
-    "objc/components/renderer/opengl/RTCNV12TextureCache.h",
-    "objc/components/renderer/opengl/RTCNV12TextureCache.m",
     "objc/helpers/RTCDispatcher.h",
     "objc/helpers/RTCDispatcher.m",
-    "objc/components/renderer/opengl/RTCDisplayLinkTimer.h",
-    "objc/components/renderer/opengl/RTCDisplayLinkTimer.m",
     "objc/components/video_codec/RTCVideoEncoderFactoryH264.h",
     "objc/components/video_codec/RTCVideoEncoderFactoryH264.m",
     "objc/components/video_codec/RTCVideoDecoderFactoryH264.h",
@@ -2870,14 +2919,6 @@ ios_sources = [
     "objc/components/video_codec/helpers.h",
     "objc/components/video_codec/nalu_rewriter.cc",
     "objc/components/video_codec/nalu_rewriter.h",
-    "objc/components/renderer/opengl/RTCDefaultShader.h",
-    "objc/components/renderer/opengl/RTCDefaultShader.mm",
-    "objc/components/renderer/opengl/RTCI420TextureCache.h",
-    "objc/components/renderer/opengl/RTCI420TextureCache.mm",
-    "objc/components/renderer/opengl/RTCOpenGLDefines.h",
-    "objc/components/renderer/opengl/RTCShader.h",
-    "objc/components/renderer/opengl/RTCShader.mm",
-    "objc/components/renderer/opengl/RTCVideoViewShading.h",
     "objc/helpers/RTCDispatcher+Private.h",
     "objc/helpers/AVCaptureSession+DevicePosition.h",
     "objc/helpers/AVCaptureSession+DevicePosition.mm",
@@ -3286,6 +3327,7 @@ dcsctp_sources = [ "webrtc/net/dcsctp/" + path for path in [
     "packet/bounded_byte_writer.h",
     "packet/chunk/data_common.h",
     "packet/chunk/forward_tsn_common.h",
+    "packet/parameter/zero_checksum_acceptable_chunk_parameter.h",
 
     "rx/data_tracker.cc",
     "rx/reassembly_queue.cc",
@@ -3412,23 +3454,35 @@ opus_headers = [
 ]
 
 raw_combined_sources = webrtc_sources
-combined_sources = [webrtc_source_dir + "/" + path for path in raw_combined_sources] + arch_specific_sources + [ webrtc_source_dir + "/" + "sdk/" + path for path in ios_sources + ios_objc_sources] + absl_sources + fft4g_sources + rnnoise_sources + pffft_sources + crc32c_sources + dcsctp_sources + opus_headers
+combined_sources = [
+    webrtc_source_dir + "/" + path for path in raw_combined_sources
+] + arch_specific_sources + [
+    webrtc_source_dir + "/" + "sdk/" + path for path in ios_sources + ios_objc_sources
+] + absl_sources + fft4g_sources + rnnoise_sources + pffft_sources + crc32c_sources + dcsctp_sources + opus_headers
 
 genrule(
-    name = "opus_build",
+    name = "generate_field_trials_header",
     srcs = [
-        "experiments/field_trials.py",
+        ":webrtc/experiments/field_trials.py",
     ],
     cmd_bash = 
     """
     set -ex
-
-    python3 $(location :experiments/field_trials.py) header --output $(location :registered_field_trials.h),
+    python3 $(location :webrtc/experiments/field_trials.py) header --output "$@"
     """,
-    outs = ["experiments/registered_field_trials.h"],
+    outs = [":field_trials_header/experiments/registered_field_trials.h"],
     visibility = [
         "//visibility:public",
     ]
+)
+
+cc_library(
+    name = "field_trials_header",
+    srcs = [],
+    hdrs = [":field_trials_header/experiments/registered_field_trials.h"],
+    includes = [
+        "field_trials_header",
+    ],
 )
 
 objc_library(
@@ -3437,6 +3491,7 @@ objc_library(
     module_name = "webrtc",
     srcs = combined_sources,
     copts = [
+        "-Wno-all",
         "-Ithird-party/webrtc/" + webrtc_source_dir + "/",
         "-Ithird-party/webrtc/dependencies",
         "-Ithird-party/webrtc/dependencies/third_party/abseil-cpp",
@@ -3478,6 +3533,7 @@ objc_library(
         "//third-party/libvpx:vpx",
         "//submodules/ffmpeg:ffmpeg",
         "//third-party/openh264:openh264",
+        ":field_trials_header",
     ],
     sdk_frameworks = [
         "AVFoundation",
@@ -3486,7 +3542,6 @@ objc_library(
         "UIKit",
         "CoreMedia",
         "CoreVideo",
-        "OpenGLES",
         "CoreGraphics",
         "QuartzCore",
     ],

@@ -140,7 +140,7 @@ public class WelsDecTest extends Activity {
   static {
     try {
       System.loadLibrary ("openh264");
-      System.loadLibrary ("stlport_shared");
+      System.loadLibrary ("c++_shared");
       System.loadLibrary ("welsdecdemo");
       Log.v (TAG, "Load libwelsdec successful");
     } catch (Exception e) {

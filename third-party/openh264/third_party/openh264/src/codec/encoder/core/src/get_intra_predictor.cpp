@@ -734,5 +734,21 @@ void WelsInitIntraPredFuncs (SWelsFuncPtrList* pFuncList, const uint32_t kuiCpuF
     pFuncList->pfGetChromaPred[C_PRED_P]    = WelsIChromaPredPlane_mmi;
   }
 #endif//HAVE_MMI
+
+#if defined(HAVE_LSX)
+  if (kuiCpuFlag & WELS_CPU_LSX) {
+    pFuncList->pfGetLumaI16x16Pred[I16_PRED_V] = WelsI16x16LumaPredV_lsx;
+    pFuncList->pfGetLumaI16x16Pred[I16_PRED_H] = WelsI16x16LumaPredH_lsx;
+    pFuncList->pfGetLumaI16x16Pred[I16_PRED_P] = WelsI16x16LumaPredPlane_lsx;
+  }
+#endif//HAVE_LSX
+
+#if defined(HAVE_LASX)
+  if (kuiCpuFlag & WELS_CPU_LASX) {
+    pFuncList->pfGetChromaPred[C_PRED_V]    = WelsIChromaPredV_lasx;
+    pFuncList->pfGetChromaPred[C_PRED_H]    = WelsIChromaPredH_lasx;
+    pFuncList->pfGetChromaPred[C_PRED_DC]   = WelsIChromaPredDc_lasx;
+  }
+#endif//HAVE_LASX
 }
 }

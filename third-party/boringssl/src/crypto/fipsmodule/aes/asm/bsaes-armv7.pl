@@ -60,7 +60,7 @@ if ($flavour && $flavour ne "void") {
     ( $xlate="${dir}../../../perlasm/arm-xlate.pl" and -f $xlate) or
     die "can't locate arm-xlate.pl";
 
-    open OUT,"| \"$^X\" $xlate $flavour $output";
+    open OUT,"| \"$^X\" \"$xlate\" $flavour \"$output\"";
     *STDOUT=*OUT;
 } else {
     open OUT,">$output";
@@ -718,7 +718,6 @@ $code.=<<___;
 # define VFP_ABI_FRAME	0
 # define BSAES_ASM_EXTENDED_KEY
 # define XTS_CHAIN_TWEAK
-# define __ARM_ARCH__ __LINUX_ARM_ARCH__
 # define __ARM_MAX_ARCH__ 7
 #endif
 
@@ -2433,4 +2432,4 @@ close SELF;
 
 print $code;
 
-close STDOUT or die "error closing STDOUT";
+close STDOUT or die "error closing STDOUT: $!";

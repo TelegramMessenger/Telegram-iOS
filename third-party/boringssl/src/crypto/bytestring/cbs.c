@@ -12,21 +12,19 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
-#include <openssl/mem.h>
+#include <openssl/asn1.h>
 #include <openssl/bytestring.h>
+#include <openssl/mem.h>
 
 #include <assert.h>
+#include <ctype.h>
 #include <inttypes.h>
 #include <string.h>
 
-#include "internal.h"
+#include "../asn1/internal.h"
 #include "../internal.h"
+#include "internal.h"
 
-
-void CBS_init(CBS *cbs, const uint8_t *data, size_t len) {
-  cbs->data = data;
-  cbs->len = len;
-}
 
 static int cbs_get(CBS *cbs, const uint8_t **p, size_t n) {
   if (cbs->len < n) {
@@ -42,14 +40,6 @@ static int cbs_get(CBS *cbs, const uint8_t **p, size_t n) {
 int CBS_skip(CBS *cbs, size_t len) {
   const uint8_t *dummy;
   return cbs_get(cbs, &dummy, len);
-}
-
-const uint8_t *CBS_data(const CBS *cbs) {
-  return cbs->data;
-}
-
-size_t CBS_len(const CBS *cbs) {
-  return cbs->len;
 }
 
 int CBS_stow(const CBS *cbs, uint8_t **out_ptr, size_t *out_len) {
@@ -133,7 +123,7 @@ int CBS_get_u24(CBS *cbs, uint32_t *out) {
   if (!cbs_get_u(cbs, &v, 3)) {
     return 0;
   }
-  *out = v;
+  *out = (uint32_t)v;
   return 1;
 }
 
@@ -142,7 +132,7 @@ int CBS_get_u32(CBS *cbs, uint32_t *out) {
   if (!cbs_get_u(cbs, &v, 4)) {
     return 0;
   }
-  *out = v;
+  *out = (uint32_t)v;
   return 1;
 }
 
@@ -216,6 +206,38 @@ int CBS_get_u24_length_prefixed(CBS *cbs, CBS *out) {
   return cbs_get_length_prefixed(cbs, out, 3);
 }
 
+int CBS_get_until_first(CBS *cbs, CBS *out, uint8_t c) {
+  const uint8_t *split = OPENSSL_memchr(CBS_data(cbs), c, CBS_len(cbs));
+  if (split == NULL) {
+    return 0;
+  }
+  return CBS_get_bytes(cbs, out, split - CBS_data(cbs));
+}
+
+int CBS_get_u64_decimal(CBS *cbs, uint64_t *out) {
+  uint64_t v = 0;
+  int seen_digit = 0;
+  while (CBS_len(cbs) != 0) {
+    uint8_t c = CBS_data(cbs)[0];
+    if (!OPENSSL_isdigit(c)) {
+      break;
+    }
+    CBS_skip(cbs, 1);
+    if (// Forbid stray leading zeros.
+        (v == 0 && seen_digit) ||
+        // Check for overflow.
+        v > UINT64_MAX / 10 ||  //
+        v * 10 > UINT64_MAX - (c - '0')) {
+      return 0;
+    }
+    v = v * 10 + (c - '0');
+    seen_digit = 1;
+  }
+
+  *out = v;
+  return seen_digit;
+}
+
 // parse_base128_integer reads a big-endian base-128 integer from |cbs| and sets
 // |*out| to the result. This is the encoding used in DER for both high tag
 // number form and OID components.
@@ -243,7 +265,7 @@ static int parse_base128_integer(CBS *cbs, uint64_t *out) {
   return 1;
 }
 
-static int parse_asn1_tag(CBS *cbs, unsigned *out) {
+static int parse_asn1_tag(CBS *cbs, CBS_ASN1_TAG *out) {
   uint8_t tag_byte;
   if (!CBS_get_u8(cbs, &tag_byte)) {
     return 0;
@@ -254,38 +276,52 @@ static int parse_asn1_tag(CBS *cbs, unsigned *out) {
   //
   // If the number portion is 31 (0x1f, the largest value that fits in the
   // allotted bits), then the tag is more than one byte long and the
-  // continuation bytes contain the tag number. This parser only supports tag
-  // numbers less than 31 (and thus single-byte tags).
-  unsigned tag = ((unsigned)tag_byte & 0xe0) << CBS_ASN1_TAG_SHIFT;
-  unsigned tag_number = tag_byte & 0x1f;
+  // continuation bytes contain the tag number.
+  CBS_ASN1_TAG tag = ((CBS_ASN1_TAG)tag_byte & 0xe0) << CBS_ASN1_TAG_SHIFT;
+  CBS_ASN1_TAG tag_number = tag_byte & 0x1f;
   if (tag_number == 0x1f) {
     uint64_t v;
     if (!parse_base128_integer(cbs, &v) ||
         // Check the tag number is within our supported bounds.
         v > CBS_ASN1_TAG_NUMBER_MASK ||
-        // Small tag numbers should have used low tag number form.
+        // Small tag numbers should have used low tag number form, even in BER.
         v < 0x1f) {
       return 0;
     }
-    tag_number = (unsigned)v;
+    tag_number = (CBS_ASN1_TAG)v;
   }
 
   tag |= tag_number;
+
+  // Tag [UNIVERSAL 0] is reserved for use by the encoding. Reject it here to
+  // avoid some ambiguity around ANY values and BER indefinite-length EOCs. See
+  // https://crbug.com/boringssl/455.
+  if ((tag & ~CBS_ASN1_CONSTRUCTED) == 0) {
+    return 0;
+  }
 
   *out = tag;
   return 1;
 }
 
-static int cbs_get_any_asn1_element(CBS *cbs, CBS *out, unsigned *out_tag,
-                                    size_t *out_header_len, int ber_ok) {
+static int cbs_get_any_asn1_element(CBS *cbs, CBS *out, CBS_ASN1_TAG *out_tag,
+                                    size_t *out_header_len, int *out_ber_found,
+                                    int *out_indefinite, int ber_ok) {
   CBS header = *cbs;
   CBS throwaway;
 
   if (out == NULL) {
     out = &throwaway;
   }
+  if (ber_ok) {
+    *out_ber_found = 0;
+    *out_indefinite = 0;
+  } else {
+    assert(out_ber_found == NULL);
+    assert(out_indefinite == NULL);
+  }
 
-  unsigned tag;
+  CBS_ASN1_TAG tag;
   if (!parse_asn1_tag(&header, &tag)) {
     return 0;
   }
@@ -321,27 +357,39 @@ static int cbs_get_any_asn1_element(CBS *cbs, CBS *out, unsigned *out_tag,
       if (out_header_len != NULL) {
         *out_header_len = header_len;
       }
+      *out_ber_found = 1;
+      *out_indefinite = 1;
       return CBS_get_bytes(cbs, out, header_len);
     }
 
     // ITU-T X.690 clause 8.1.3.5.c specifies that the value 0xff shall not be
     // used as the first byte of the length. If this parser encounters that
-    // value, num_bytes will be parsed as 127, which will fail the check below.
+    // value, num_bytes will be parsed as 127, which will fail this check.
     if (num_bytes == 0 || num_bytes > 4) {
       return 0;
     }
     if (!cbs_get_u(&header, &len64, num_bytes)) {
       return 0;
     }
-    // ITU-T X.690 section 10.1 (DER length forms) requires encoding the length
-    // with the minimum number of octets.
+    // ITU-T X.690 section 10.1 (DER length forms) requires encoding the
+    // length with the minimum number of octets. BER could, technically, have
+    // 125 superfluous zero bytes. We do not attempt to handle that and still
+    // require that the length fit in a |uint32_t| for BER.
     if (len64 < 128) {
       // Length should have used short-form encoding.
-      return 0;
+      if (ber_ok) {
+        *out_ber_found = 1;
+      } else {
+        return 0;
+      }
     }
-    if ((len64 >> ((num_bytes-1)*8)) == 0) {
+    if ((len64 >> ((num_bytes - 1) * 8)) == 0) {
       // Length should have been at least one byte shorter.
-      return 0;
+      if (ber_ok) {
+        *out_ber_found = 1;
+      } else {
+        return 0;
+      }
     }
     len = len64;
     if (len + header_len + num_bytes < len) {
@@ -357,7 +405,7 @@ static int cbs_get_any_asn1_element(CBS *cbs, CBS *out, unsigned *out_tag,
   return CBS_get_bytes(cbs, out, len);
 }
 
-int CBS_get_any_asn1(CBS *cbs, CBS *out, unsigned *out_tag) {
+int CBS_get_any_asn1(CBS *cbs, CBS *out, CBS_ASN1_TAG *out_tag) {
   size_t header_len;
   if (!CBS_get_any_asn1_element(cbs, out, out_tag, &header_len)) {
     return 0;
@@ -371,22 +419,26 @@ int CBS_get_any_asn1(CBS *cbs, CBS *out, unsigned *out_tag) {
   return 1;
 }
 
-int CBS_get_any_asn1_element(CBS *cbs, CBS *out, unsigned *out_tag,
+int CBS_get_any_asn1_element(CBS *cbs, CBS *out, CBS_ASN1_TAG *out_tag,
                                     size_t *out_header_len) {
-  return cbs_get_any_asn1_element(cbs, out, out_tag, out_header_len,
-                                  0 /* DER only */);
+  return cbs_get_any_asn1_element(cbs, out, out_tag, out_header_len, NULL, NULL,
+                                  /*ber_ok=*/0);
 }
 
-int CBS_get_any_ber_asn1_element(CBS *cbs, CBS *out, unsigned *out_tag,
-                                 size_t *out_header_len) {
-  return cbs_get_any_asn1_element(cbs, out, out_tag, out_header_len,
-                                  1 /* BER allowed */);
+int CBS_get_any_ber_asn1_element(CBS *cbs, CBS *out, CBS_ASN1_TAG *out_tag,
+                                 size_t *out_header_len, int *out_ber_found,
+                                 int *out_indefinite) {
+  int ber_found_temp;
+  return cbs_get_any_asn1_element(
+      cbs, out, out_tag, out_header_len,
+      out_ber_found ? out_ber_found : &ber_found_temp, out_indefinite,
+      /*ber_ok=*/1);
 }
 
-static int cbs_get_asn1(CBS *cbs, CBS *out, unsigned tag_value,
+static int cbs_get_asn1(CBS *cbs, CBS *out, CBS_ASN1_TAG tag_value,
                         int skip_header) {
   size_t header_len;
-  unsigned tag;
+  CBS_ASN1_TAG tag;
   CBS throwaway;
 
   if (out == NULL) {
@@ -406,49 +458,30 @@ static int cbs_get_asn1(CBS *cbs, CBS *out, unsigned tag_value,
   return 1;
 }
 
-int CBS_get_asn1(CBS *cbs, CBS *out, unsigned tag_value) {
+int CBS_get_asn1(CBS *cbs, CBS *out, CBS_ASN1_TAG tag_value) {
   return cbs_get_asn1(cbs, out, tag_value, 1 /* skip header */);
 }
 
-int CBS_get_asn1_element(CBS *cbs, CBS *out, unsigned tag_value) {
+int CBS_get_asn1_element(CBS *cbs, CBS *out, CBS_ASN1_TAG tag_value) {
   return cbs_get_asn1(cbs, out, tag_value, 0 /* include header */);
 }
 
-int CBS_peek_asn1_tag(const CBS *cbs, unsigned tag_value) {
-  if (CBS_len(cbs) < 1) {
-    return 0;
-  }
-
+int CBS_peek_asn1_tag(const CBS *cbs, CBS_ASN1_TAG tag_value) {
   CBS copy = *cbs;
-  unsigned actual_tag;
+  CBS_ASN1_TAG actual_tag;
   return parse_asn1_tag(&copy, &actual_tag) && tag_value == actual_tag;
 }
 
 int CBS_get_asn1_uint64(CBS *cbs, uint64_t *out) {
   CBS bytes;
-  if (!CBS_get_asn1(cbs, &bytes, CBS_ASN1_INTEGER)) {
+  if (!CBS_get_asn1(cbs, &bytes, CBS_ASN1_INTEGER) ||
+      !CBS_is_unsigned_asn1_integer(&bytes)) {
     return 0;
   }
 
   *out = 0;
   const uint8_t *data = CBS_data(&bytes);
   size_t len = CBS_len(&bytes);
-
-  if (len == 0) {
-    // An INTEGER is encoded with at least one octet.
-    return 0;
-  }
-
-  if ((data[0] & 0x80) != 0) {
-    // Negative number.
-    return 0;
-  }
-
-  if (data[0] == 0 && len > 1 && (data[1] & 0x80) == 0) {
-    // Extra leading zeros.
-    return 0;
-  }
-
   for (size_t i = 0; i < len; i++) {
     if ((*out >> 56) != 0) {
       // Too large to represent as a uint64_t.
@@ -462,36 +495,23 @@ int CBS_get_asn1_uint64(CBS *cbs, uint64_t *out) {
 }
 
 int CBS_get_asn1_int64(CBS *cbs, int64_t *out) {
+  int is_negative;
   CBS bytes;
-  if (!CBS_get_asn1(cbs, &bytes, CBS_ASN1_INTEGER)) {
+  if (!CBS_get_asn1(cbs, &bytes, CBS_ASN1_INTEGER) ||
+      !CBS_is_valid_asn1_integer(&bytes, &is_negative)) {
     return 0;
   }
   const uint8_t *data = CBS_data(&bytes);
   const size_t len = CBS_len(&bytes);
-
-  if (len == 0 || len > sizeof(int64_t)) {
-    // An INTEGER is encoded with at least one octet.
+  if (len > sizeof(int64_t)) {
     return 0;
   }
-  if (len > 1) {
-    if (data[0] == 0 && (data[1] & 0x80) == 0) {
-      return 0;  // Extra leading zeros.
-    }
-    if (data[0] == 0xff && (data[1] & 0x80) != 0) {
-      return 0;  // Extra leading 0xff.
-    }
-  }
-
-  union {
-    int64_t i;
-    uint8_t bytes[sizeof(int64_t)];
-  } u;
-  const int is_negative = (data[0] & 0x80);
-  memset(u.bytes, is_negative ? 0xff : 0, sizeof(u.bytes));  // Sign-extend.
+  uint8_t sign_extend[sizeof(int64_t)];
+  memset(sign_extend, is_negative ? 0xff : 0, sizeof(sign_extend));
   for (size_t i = 0; i < len; i++) {
-    u.bytes[i] = data[len - i - 1];
+    sign_extend[i] = data[len - i - 1];
   }
-  *out = u.i;
+  memcpy(out, sign_extend, sizeof(sign_extend));
   return 1;
 }
 
@@ -511,7 +531,7 @@ int CBS_get_asn1_bool(CBS *cbs, int *out) {
   return 1;
 }
 
-int CBS_get_optional_asn1(CBS *cbs, CBS *out, int *out_present, unsigned tag) {
+int CBS_get_optional_asn1(CBS *cbs, CBS *out, int *out_present, CBS_ASN1_TAG tag) {
   int present = 0;
 
   if (CBS_peek_asn1_tag(cbs, tag)) {
@@ -529,7 +549,7 @@ int CBS_get_optional_asn1(CBS *cbs, CBS *out, int *out_present, unsigned tag) {
 }
 
 int CBS_get_optional_asn1_octet_string(CBS *cbs, CBS *out, int *out_present,
-                                       unsigned tag) {
+                                       CBS_ASN1_TAG tag) {
   CBS child;
   int present;
   if (!CBS_get_optional_asn1(cbs, &child, &present, tag)) {
@@ -550,7 +570,7 @@ int CBS_get_optional_asn1_octet_string(CBS *cbs, CBS *out, int *out_present,
   return 1;
 }
 
-int CBS_get_optional_asn1_uint64(CBS *cbs, uint64_t *out, unsigned tag,
+int CBS_get_optional_asn1_uint64(CBS *cbs, uint64_t *out, CBS_ASN1_TAG tag,
                                  uint64_t default_value) {
   CBS child;
   int present;
@@ -568,7 +588,7 @@ int CBS_get_optional_asn1_uint64(CBS *cbs, uint64_t *out, unsigned tag,
   return 1;
 }
 
-int CBS_get_optional_asn1_bool(CBS *cbs, int *out, unsigned tag,
+int CBS_get_optional_asn1_bool(CBS *cbs, int *out, CBS_ASN1_TAG tag,
                                int default_value) {
   CBS child, child2;
   int present;
@@ -635,10 +655,57 @@ int CBS_asn1_bitstring_has_bit(const CBS *cbs, unsigned bit) {
          (CBS_data(cbs)[byte_num] & (1 << bit_num)) != 0;
 }
 
+int CBS_is_valid_asn1_integer(const CBS *cbs, int *out_is_negative) {
+  CBS copy = *cbs;
+  uint8_t first_byte, second_byte;
+  if (!CBS_get_u8(&copy, &first_byte)) {
+    return 0;  // INTEGERs may not be empty.
+  }
+  if (out_is_negative != NULL) {
+    *out_is_negative = (first_byte & 0x80) != 0;
+  }
+  if (!CBS_get_u8(&copy, &second_byte)) {
+    return 1;  // One byte INTEGERs are always minimal.
+  }
+  if ((first_byte == 0x00 && (second_byte & 0x80) == 0) ||
+      (first_byte == 0xff && (second_byte & 0x80) != 0)) {
+    return 0;  // The value is minimal iff the first 9 bits are not all equal.
+  }
+  return 1;
+}
+
+int CBS_is_unsigned_asn1_integer(const CBS *cbs) {
+  int is_negative;
+  return CBS_is_valid_asn1_integer(cbs, &is_negative) && !is_negative;
+}
+
 static int add_decimal(CBB *out, uint64_t v) {
   char buf[DECIMAL_SIZE(uint64_t) + 1];
-  BIO_snprintf(buf, sizeof(buf), "%" PRIu64, v);
+  snprintf(buf, sizeof(buf), "%" PRIu64, v);
   return CBB_add_bytes(out, (const uint8_t *)buf, strlen(buf));
+}
+
+int CBS_is_valid_asn1_oid(const CBS *cbs) {
+  if (CBS_len(cbs) == 0) {
+    return 0;  // OID encodings cannot be empty.
+  }
+
+  CBS copy = *cbs;
+  uint8_t v, prev = 0;
+  while (CBS_get_u8(&copy, &v)) {
+    // OID encodings are a sequence of minimally-encoded base-128 integers (see
+    // |parse_base128_integer|). If |prev|'s MSB was clear, it was the last byte
+    // of an integer (or |v| is the first byte). |v| is then the first byte of
+    // the next integer. If first byte of an integer is 0x80, it is not
+    // minimally-encoded.
+    if ((prev & 0x80) == 0 && v == 0x80) {
+      return 0;
+    }
+    prev = v;
+  }
+
+  // The last byte should must end an integer encoding.
+  return (prev & 0x80) == 0;
 }
 
 char *CBS_asn1_oid_to_text(const CBS *cbs) {
@@ -685,4 +752,162 @@ char *CBS_asn1_oid_to_text(const CBS *cbs) {
 err:
   CBB_cleanup(&cbb);
   return NULL;
+}
+
+static int cbs_get_two_digits(CBS *cbs, int *out) {
+  uint8_t first_digit, second_digit;
+  if (!CBS_get_u8(cbs, &first_digit)) {
+    return 0;
+  }
+  if (!OPENSSL_isdigit(first_digit)) {
+    return 0;
+  }
+  if (!CBS_get_u8(cbs, &second_digit)) {
+    return 0;
+  }
+  if (!OPENSSL_isdigit(second_digit)) {
+    return 0;
+  }
+  *out = (first_digit - '0') * 10 + (second_digit - '0');
+  return 1;
+}
+
+static int is_valid_day(int year, int month, int day) {
+  if (day < 1) {
+    return 0;
+  }
+  switch (month) {
+    case 1:
+    case 3:
+    case 5:
+    case 7:
+    case 8:
+    case 10:
+    case 12:
+      return day <= 31;
+    case 4:
+    case 6:
+    case 9:
+    case 11:
+      return day <= 30;
+    case 2:
+      if ((year % 4 == 0 && year % 100 != 0) || year % 400 == 0) {
+        return day <= 29;
+      } else {
+        return day <= 28;
+      }
+    default:
+      return 0;
+  }
+}
+
+static int CBS_parse_rfc5280_time_internal(const CBS *cbs, int is_gentime,
+                                           int allow_timezone_offset,
+                                           struct tm *out_tm) {
+  int year, month, day, hour, min, sec, tmp;
+  CBS copy = *cbs;
+  uint8_t tz;
+
+  if (is_gentime) {
+    if (!cbs_get_two_digits(&copy, &tmp)) {
+      return 0;
+    }
+    year = tmp * 100;
+    if (!cbs_get_two_digits(&copy, &tmp)) {
+      return 0;
+    }
+      year += tmp;
+  } else {
+    year = 1900;
+    if (!cbs_get_two_digits(&copy, &tmp)) {
+      return 0;
+    }
+    year += tmp;
+    if (year < 1950) {
+      year += 100;
+    }
+    if (year >= 2050) {
+      return 0;  // A Generalized time must be used.
+    }
+  }
+  if (!cbs_get_two_digits(&copy, &month) || month < 1 ||
+      month > 12 ||  // Reject invalid months.
+      !cbs_get_two_digits(&copy, &day) ||
+      !is_valid_day(year, month, day) ||  // Reject invalid days.
+      !cbs_get_two_digits(&copy, &hour) ||
+      hour > 23 ||  // Reject invalid hours.
+      !cbs_get_two_digits(&copy, &min) ||
+      min > 59 ||  // Reject invalid minutes.
+      !cbs_get_two_digits(&copy, &sec) || sec > 59 || !CBS_get_u8(&copy, &tz)) {
+    return 0;
+  }
+
+  int offset_sign = 0;
+  switch (tz) {
+    case 'Z':
+      break;  // We correctly have 'Z' on the end as per spec.
+    case '+':
+      offset_sign = 1;
+      break;  // Should not be allowed per RFC 5280.
+    case '-':
+      offset_sign = -1;
+      break;  // Should not be allowed per RFC 5280.
+    default:
+      return 0;  // Reject anything else after the time.
+  }
+
+  // If allow_timezone_offset is non-zero, allow for a four digit timezone
+  // offset to be specified even though this is not allowed by RFC 5280. We are
+  // permissive of this for UTCTimes due to the unfortunate existence of
+  // artisinally rolled long lived certificates that were baked into places that
+  // are now difficult to change. These certificates were generated with the
+  // 'openssl' command that permissively allowed the creation of certificates
+  // with notBefore and notAfter times specified as strings for direct
+  // certificate inclusion on the command line. For context see cl/237068815.
+  //
+  // TODO(bbe): This has been expunged from public web-pki as the ecosystem has
+  // managed to encourage CA compliance with standards. We should find a way to
+  // get rid of this or make it off by default.
+  int offset_seconds = 0;
+  if (offset_sign != 0) {
+    if (!allow_timezone_offset) {
+      return 0;
+    }
+    int offset_hours, offset_minutes;
+    if (!cbs_get_two_digits(&copy, &offset_hours) ||
+        offset_hours > 23 ||  // Reject invalid hours.
+        !cbs_get_two_digits(&copy, &offset_minutes) ||
+        offset_minutes > 59) {  // Reject invalid minutes.
+      return 0;
+    }
+    offset_seconds = offset_sign * (offset_hours * 3600 + offset_minutes * 60);
+  }
+
+  if (CBS_len(&copy) != 0) {
+    return 0;  // Reject invalid lengths.
+  }
+
+  if (out_tm != NULL) {
+    // Fill in the tm fields corresponding to what we validated.
+    out_tm->tm_year = year - 1900;
+    out_tm->tm_mon = month - 1;
+    out_tm->tm_mday = day;
+    out_tm->tm_hour = hour;
+    out_tm->tm_min = min;
+    out_tm->tm_sec = sec;
+    if (offset_seconds && !OPENSSL_gmtime_adj(out_tm, 0, offset_seconds)) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+int CBS_parse_generalized_time(const CBS *cbs, struct tm *out_tm,
+                               int allow_timezone_offset) {
+  return CBS_parse_rfc5280_time_internal(cbs, 1, allow_timezone_offset, out_tm);
+}
+
+int CBS_parse_utc_time(const CBS *cbs, struct tm *out_tm,
+                       int allow_timezone_offset) {
+  return CBS_parse_rfc5280_time_internal(cbs, 0, allow_timezone_offset, out_tm);
 }

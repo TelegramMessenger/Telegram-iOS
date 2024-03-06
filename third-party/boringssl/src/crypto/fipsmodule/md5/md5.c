@@ -60,8 +60,9 @@
 
 #include <openssl/mem.h>
 
-#include "internal.h"
 #include "../../internal.h"
+#include "../digest/md32_common.h"
+#include "internal.h"
 
 
 uint8_t *MD5(const uint8_t *data, size_t len, uint8_t out[MD5_DIGEST_LENGTH]) {
@@ -89,30 +90,26 @@ static void md5_block_data_order(uint32_t *state, const uint8_t *data,
                                  size_t num);
 #endif
 
+void MD5_Transform(MD5_CTX *c, const uint8_t data[MD5_CBLOCK]) {
+  md5_block_data_order(c->h, data, 1);
+}
 
-#define DATA_ORDER_IS_LITTLE_ENDIAN
+int MD5_Update(MD5_CTX *c, const void *data, size_t len) {
+  crypto_md32_update(&md5_block_data_order, c->h, c->data, MD5_CBLOCK, &c->num,
+                     &c->Nh, &c->Nl, data, len);
+  return 1;
+}
 
-#define HASH_CTX MD5_CTX
-#define HASH_CBLOCK 64
-#define HASH_DIGEST_LENGTH 16
-#define HASH_UPDATE MD5_Update
-#define HASH_TRANSFORM MD5_Transform
-#define HASH_FINAL MD5_Final
-#define HASH_MAKE_STRING(c, s) \
-  do {                         \
-    uint32_t ll;               \
-    ll = (c)->h[0];            \
-    HOST_l2c(ll, (s));         \
-    ll = (c)->h[1];            \
-    HOST_l2c(ll, (s));         \
-    ll = (c)->h[2];            \
-    HOST_l2c(ll, (s));         \
-    ll = (c)->h[3];            \
-    HOST_l2c(ll, (s));         \
-  } while (0)
-#define HASH_BLOCK_DATA_ORDER md5_block_data_order
+int MD5_Final(uint8_t out[MD5_DIGEST_LENGTH], MD5_CTX *c) {
+  crypto_md32_final(&md5_block_data_order, c->h, c->data, MD5_CBLOCK, &c->num,
+                    c->Nh, c->Nl, /*is_big_endian=*/0);
 
-#include "../digest/md32_common.h"
+  CRYPTO_store_u32_le(out, c->h[0]);
+  CRYPTO_store_u32_le(out + 4, c->h[1]);
+  CRYPTO_store_u32_le(out + 8, c->h[2]);
+  CRYPTO_store_u32_le(out + 12, c->h[3]);
+  return 1;
+}
 
 // As pointed out by Wei Dai <weidai@eskimo.com>, the above can be
 // simplified to the code below.  Wei attributes these optimizations
@@ -122,33 +119,31 @@ static void md5_block_data_order(uint32_t *state, const uint8_t *data,
 #define H(b, c, d) ((b) ^ (c) ^ (d))
 #define I(b, c, d) (((~(d)) | (b)) ^ (c))
 
-#define ROTATE(a, n) (((a) << (n)) | ((a) >> (32 - (n))))
-
 #define R0(a, b, c, d, k, s, t)            \
   do {                                     \
     (a) += ((k) + (t) + F((b), (c), (d))); \
-    (a) = ROTATE(a, s);                    \
+    (a) = CRYPTO_rotl_u32(a, s);           \
     (a) += (b);                            \
   } while (0)
 
 #define R1(a, b, c, d, k, s, t)            \
   do {                                     \
     (a) += ((k) + (t) + G((b), (c), (d))); \
-    (a) = ROTATE(a, s);                    \
+    (a) = CRYPTO_rotl_u32(a, s);           \
     (a) += (b);                            \
   } while (0)
 
 #define R2(a, b, c, d, k, s, t)            \
   do {                                     \
     (a) += ((k) + (t) + H((b), (c), (d))); \
-    (a) = ROTATE(a, s);                    \
+    (a) = CRYPTO_rotl_u32(a, s);           \
     (a) += (b);                            \
   } while (0)
 
 #define R3(a, b, c, d, k, s, t)            \
   do {                                     \
     (a) += ((k) + (t) + I((b), (c), (d))); \
-    (a) = ROTATE(a, s);                    \
+    (a) = CRYPTO_rotl_u32(a, s);           \
     (a) += (b);                            \
   } while (0)
 
@@ -158,7 +153,7 @@ static void md5_block_data_order(uint32_t *state, const uint8_t *data,
 #endif
 static void md5_block_data_order(uint32_t *state, const uint8_t *data,
                                  size_t num) {
-  uint32_t A, B, C, D, l;
+  uint32_t A, B, C, D;
   uint32_t XX0, XX1, XX2, XX3, XX4, XX5, XX6, XX7, XX8, XX9, XX10, XX11, XX12,
       XX13, XX14, XX15;
 #define X(i) XX##i
@@ -169,53 +164,53 @@ static void md5_block_data_order(uint32_t *state, const uint8_t *data,
   D = state[3];
 
   for (; num--;) {
-    HOST_c2l(data, l);
-    X(0) = l;
-    HOST_c2l(data, l);
-    X(1) = l;
+    X(0) = CRYPTO_load_u32_le(data);
+    data += 4;
+    X(1) = CRYPTO_load_u32_le(data);
+    data += 4;
     // Round 0
     R0(A, B, C, D, X(0), 7, 0xd76aa478L);
-    HOST_c2l(data, l);
-    X(2) = l;
+    X(2) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(D, A, B, C, X(1), 12, 0xe8c7b756L);
-    HOST_c2l(data, l);
-    X(3) = l;
+    X(3) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(C, D, A, B, X(2), 17, 0x242070dbL);
-    HOST_c2l(data, l);
-    X(4) = l;
+    X(4) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(B, C, D, A, X(3), 22, 0xc1bdceeeL);
-    HOST_c2l(data, l);
-    X(5) = l;
+    X(5) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(A, B, C, D, X(4), 7, 0xf57c0fafL);
-    HOST_c2l(data, l);
-    X(6) = l;
+    X(6) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(D, A, B, C, X(5), 12, 0x4787c62aL);
-    HOST_c2l(data, l);
-    X(7) = l;
+    X(7) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(C, D, A, B, X(6), 17, 0xa8304613L);
-    HOST_c2l(data, l);
-    X(8) = l;
+    X(8) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(B, C, D, A, X(7), 22, 0xfd469501L);
-    HOST_c2l(data, l);
-    X(9) = l;
+    X(9) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(A, B, C, D, X(8), 7, 0x698098d8L);
-    HOST_c2l(data, l);
-    X(10) = l;
+    X(10) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(D, A, B, C, X(9), 12, 0x8b44f7afL);
-    HOST_c2l(data, l);
-    X(11) = l;
+    X(11) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(C, D, A, B, X(10), 17, 0xffff5bb1L);
-    HOST_c2l(data, l);
-    X(12) = l;
+    X(12) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(B, C, D, A, X(11), 22, 0x895cd7beL);
-    HOST_c2l(data, l);
-    X(13) = l;
+    X(13) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(A, B, C, D, X(12), 7, 0x6b901122L);
-    HOST_c2l(data, l);
-    X(14) = l;
+    X(14) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(D, A, B, C, X(13), 12, 0xfd987193L);
-    HOST_c2l(data, l);
-    X(15) = l;
+    X(15) = CRYPTO_load_u32_le(data);
+    data += 4;
     R0(C, D, A, B, X(14), 17, 0xa679438eL);
     R0(B, C, D, A, X(15), 22, 0x49b40821L);
     // Round 1
@@ -279,23 +274,11 @@ static void md5_block_data_order(uint32_t *state, const uint8_t *data,
 #undef X
 #endif
 
-#undef DATA_ORDER_IS_LITTLE_ENDIAN
-#undef HASH_CTX
-#undef HASH_CBLOCK
-#undef HASH_DIGEST_LENGTH
-#undef HASH_UPDATE
-#undef HASH_TRANSFORM
-#undef HASH_FINAL
-#undef HASH_MAKE_STRING
-#undef HASH_BLOCK_DATA_ORDER
 #undef F
 #undef G
 #undef H
 #undef I
-#undef ROTATE
 #undef R0
 #undef R1
 #undef R2
 #undef R3
-#undef HOST_c2l
-#undef HOST_l2c

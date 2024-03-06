@@ -30,7 +30,10 @@ extern "C" {
 #endif
 // MemorySanitizer does not support assembly code yet. http://crbug.com/344505
 #if defined(__has_feature)
-#if __has_feature(memory_sanitizer)
+#if __has_feature(memory_sanitizer) && !defined(LIBYUV_DISABLE_NEON)
+#define LIBYUV_DISABLE_NEON
+#endif
+#if __has_feature(memory_sanitizer) && !defined(LIBYUV_DISABLE_X86)
 #define LIBYUV_DISABLE_X86
 #endif
 #endif
@@ -378,6 +381,24 @@ int I444Copy(const uint8_t* src_y,
 #define I210ToI210 I210Copy
 LIBYUV_API
 int I210Copy(const uint16_t* src_y,
+             int src_stride_y,
+             const uint16_t* src_u,
+             int src_stride_u,
+             const uint16_t* src_v,
+             int src_stride_v,
+             uint16_t* dst_y,
+             int dst_stride_y,
+             uint16_t* dst_u,
+             int dst_stride_u,
+             uint16_t* dst_v,
+             int dst_stride_v,
+             int width,
+             int height);
+
+// Copy I410 to I410.
+#define I410ToI410 I410Copy
+LIBYUV_API
+int I410Copy(const uint16_t* src_y,
              int src_stride_y,
              const uint16_t* src_u,
              int src_stride_u,
@@ -808,15 +829,6 @@ int ARGBCopyYToAlpha(const uint8_t* src_y,
                      int dst_stride_argb,
                      int width,
                      int height);
-
-typedef void (*ARGBBlendRow)(const uint8_t* src_argb0,
-                             const uint8_t* src_argb1,
-                             uint8_t* dst_argb,
-                             int width);
-
-// Get function to Alpha Blend ARGB pixels and store to destination.
-LIBYUV_API
-ARGBBlendRow GetARGBBlend();
 
 // Alpha Blend ARGB images and store to destination.
 // Source is pre-multiplied by alpha using ARGBAttenuate.

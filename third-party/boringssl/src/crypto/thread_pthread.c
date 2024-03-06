@@ -12,77 +12,49 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
+// Ensure we can't call OPENSSL_malloc circularly.
+#define _BORINGSSL_PROHIBIT_OPENSSL_MALLOC
 #include "internal.h"
 
 #if defined(OPENSSL_PTHREADS)
 
+#include <assert.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <openssl/mem.h>
-#include <openssl/type_check.h>
-
-
-OPENSSL_STATIC_ASSERT(sizeof(CRYPTO_MUTEX) >= sizeof(pthread_rwlock_t),
-                      "CRYPTO_MUTEX is too small");
-
 void CRYPTO_MUTEX_init(CRYPTO_MUTEX *lock) {
-  if (pthread_rwlock_init((pthread_rwlock_t *) lock, NULL) != 0) {
+  if (pthread_rwlock_init(lock, NULL) != 0) {
     abort();
   }
 }
 
 void CRYPTO_MUTEX_lock_read(CRYPTO_MUTEX *lock) {
-  if (pthread_rwlock_rdlock((pthread_rwlock_t *) lock) != 0) {
+  if (pthread_rwlock_rdlock(lock) != 0) {
     abort();
   }
 }
 
 void CRYPTO_MUTEX_lock_write(CRYPTO_MUTEX *lock) {
-  if (pthread_rwlock_wrlock((pthread_rwlock_t *) lock) != 0) {
+  if (pthread_rwlock_wrlock(lock) != 0) {
     abort();
   }
 }
 
 void CRYPTO_MUTEX_unlock_read(CRYPTO_MUTEX *lock) {
-  if (pthread_rwlock_unlock((pthread_rwlock_t *) lock) != 0) {
+  if (pthread_rwlock_unlock(lock) != 0) {
     abort();
   }
 }
 
 void CRYPTO_MUTEX_unlock_write(CRYPTO_MUTEX *lock) {
-  if (pthread_rwlock_unlock((pthread_rwlock_t *) lock) != 0) {
+  if (pthread_rwlock_unlock(lock) != 0) {
     abort();
   }
 }
 
 void CRYPTO_MUTEX_cleanup(CRYPTO_MUTEX *lock) {
-  pthread_rwlock_destroy((pthread_rwlock_t *) lock);
-}
-
-void CRYPTO_STATIC_MUTEX_lock_read(struct CRYPTO_STATIC_MUTEX *lock) {
-  if (pthread_rwlock_rdlock(&lock->lock) != 0) {
-    abort();
-  }
-}
-
-void CRYPTO_STATIC_MUTEX_lock_write(struct CRYPTO_STATIC_MUTEX *lock) {
-  if (pthread_rwlock_wrlock(&lock->lock) != 0) {
-    abort();
-  }
-}
-
-void CRYPTO_STATIC_MUTEX_unlock_read(struct CRYPTO_STATIC_MUTEX *lock) {
-  if (pthread_rwlock_unlock(&lock->lock) != 0) {
-    abort();
-  }
-}
-
-void CRYPTO_STATIC_MUTEX_unlock_write(struct CRYPTO_STATIC_MUTEX *lock) {
-  if (pthread_rwlock_unlock(&lock->lock) != 0) {
-    abort();
-  }
+  pthread_rwlock_destroy(lock);
 }
 
 void CRYPTO_once(CRYPTO_once_t *once, void (*init)(void)) {
@@ -116,40 +88,12 @@ static void thread_local_destructor(void *arg) {
     }
   }
 
-  OPENSSL_free(pointers);
+  free(pointers);
 }
 
 static pthread_once_t g_thread_local_init_once = PTHREAD_ONCE_INIT;
 static pthread_key_t g_thread_local_key;
 static int g_thread_local_key_created = 0;
-
-// OPENSSL_DANGEROUS_RELEASE_PTHREAD_KEY can be defined to cause
-// |pthread_key_delete| to be called in a destructor function. This can be
-// useful for programs that dlclose BoringSSL.
-//
-// Note that dlclose()ing BoringSSL is not supported and will leak memory:
-// thread-local values will be leaked as well as anything initialised via a
-// once. The |pthread_key_t| is destroyed because they run out very quickly,
-// while the other leaks are slow, and this allows code that happens to use
-// dlclose() despite all the problems to continue functioning.
-//
-// This is marked "dangerous" because it can cause multi-threaded processes to
-// crash (even if they don't use dlclose): if the destructor runs while other
-// threads are still executing then they may end up using an invalid key to
-// access thread-local variables.
-//
-// This may be removed after February 2020.
-#if defined(OPENSSL_DANGEROUS_RELEASE_PTHREAD_KEY) && \
-    (defined(__GNUC__) || defined(__clang__))
-// thread_key_destructor is called when the library is unloaded with dlclose.
-static void thread_key_destructor(void) __attribute__((destructor, unused));
-static void thread_key_destructor(void) {
-  if (g_thread_local_key_created) {
-    g_thread_local_key_created = 0;
-    pthread_key_delete(g_thread_local_key);
-  }
-}
-#endif
 
 static void thread_local_init(void) {
   g_thread_local_key_created =
@@ -179,14 +123,14 @@ int CRYPTO_set_thread_local(thread_local_data_t index, void *value,
 
   void **pointers = pthread_getspecific(g_thread_local_key);
   if (pointers == NULL) {
-    pointers = OPENSSL_malloc(sizeof(void *) * NUM_OPENSSL_THREAD_LOCALS);
+    pointers = malloc(sizeof(void *) * NUM_OPENSSL_THREAD_LOCALS);
     if (pointers == NULL) {
       destructor(value);
       return 0;
     }
     OPENSSL_memset(pointers, 0, sizeof(void *) * NUM_OPENSSL_THREAD_LOCALS);
     if (pthread_setspecific(g_thread_local_key, pointers) != 0) {
-      OPENSSL_free(pointers);
+      free(pointers);
       destructor(value);
       return 0;
     }

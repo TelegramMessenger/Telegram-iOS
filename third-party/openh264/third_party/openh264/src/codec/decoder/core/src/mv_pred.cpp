@@ -395,7 +395,7 @@ int32_t PredMvBDirectSpatial (PWelsDecoderContext pCtx, int16_t iMvp[LIST_A][2],
   int32_t ret = ERR_NONE;
   PDqLayer pCurDqLayer = pCtx->pCurDqLayer;
   int32_t iMbXy = pCurDqLayer->iMbXyIndex;
-  bool bSkipOrDirect = (IS_SKIP (GetMbType (pCurDqLayer)[iMbXy]) | IS_DIRECT (GetMbType (pCurDqLayer)[iMbXy])) > 0;
+  bool bSkipOrDirect = (IS_SKIP (GetMbType (pCurDqLayer)[iMbXy]) || IS_DIRECT (GetMbType (pCurDqLayer)[iMbXy]));
 
   MbType mbType;
   ret = GetColocatedMb (pCtx, mbType, subMbType);
@@ -615,7 +615,7 @@ int32_t PredBDirectTemporal (PWelsDecoderContext pCtx, int16_t iMvp[LIST_A][2], 
   int32_t ret = ERR_NONE;
   PDqLayer pCurDqLayer = pCtx->pCurDqLayer;
   int32_t iMbXy = pCurDqLayer->iMbXyIndex;
-  bool bSkipOrDirect = (IS_SKIP (GetMbType (pCurDqLayer)[iMbXy]) | IS_DIRECT (GetMbType (pCurDqLayer)[iMbXy])) > 0;
+  bool bSkipOrDirect = (IS_SKIP (GetMbType (pCurDqLayer)[iMbXy]) || IS_DIRECT (GetMbType (pCurDqLayer)[iMbXy]));
 
   MbType mbType;
   ret = GetColocatedMb (pCtx, mbType, subMbType);

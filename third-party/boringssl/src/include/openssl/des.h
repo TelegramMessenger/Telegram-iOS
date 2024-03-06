@@ -65,6 +65,12 @@ extern "C" {
 
 
 // DES.
+//
+// This module is deprecated and retained for legacy reasons only. It is slow
+// and may leak key material with timing or cache side channels. Moreover,
+// single-keyed DES is broken and can be brute-forced in under a day.
+//
+// Use a modern cipher, such as AES-GCM or ChaCha20-Poly1305, instead.
 
 
 typedef struct DES_cblock_st {
@@ -155,19 +161,6 @@ OPENSSL_EXPORT void DES_ede3_cfb_encrypt(const uint8_t *in, uint8_t *out,
                                          DES_key_schedule *ks2,
                                          DES_key_schedule *ks3,
                                          DES_cblock *ivec, int enc);
-
-
-// Private functions.
-//
-// These functions are only exported for use in |decrepit|.
-
-OPENSSL_EXPORT void DES_decrypt3(uint32_t *data, const DES_key_schedule *ks1,
-                                 const DES_key_schedule *ks2,
-                                 const DES_key_schedule *ks3);
-
-OPENSSL_EXPORT void DES_encrypt3(uint32_t *data, const DES_key_schedule *ks1,
-                                 const DES_key_schedule *ks2,
-                                 const DES_key_schedule *ks3);
 
 
 #if defined(__cplusplus)

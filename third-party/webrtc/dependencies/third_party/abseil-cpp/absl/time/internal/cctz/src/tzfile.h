@@ -21,14 +21,6 @@
 ** Information about time zone files.
 */
 
-#ifndef TZDIR
-#define TZDIR "/usr/share/zoneinfo" /* Time zone object file directory */
-#endif                              /* !defined TZDIR */
-
-#ifndef TZDEFAULT
-#define TZDEFAULT "/etc/localtime"
-#endif /* !defined TZDEFAULT */
-
 #ifndef TZDEFRULES
 #define TZDEFRULES "posixrules"
 #endif /* !defined TZDEFRULES */
@@ -85,11 +77,11 @@ struct tzhead {
 ** time uses 8 rather than 4 chars,
 ** then a POSIX-TZ-environment-variable-style string for use in handling
 ** instants after the last transition time stored in the file
-** (with nothing between the newlines if there is no POSIX representation for
-** such instants).
+** (with nothing between the newlines if there is no POSIX.1-2017
+** representation for such instants).
 **
 ** If tz_version is '3' or greater, the above is extended as follows.
-** First, the POSIX TZ string's hour offset may range from -167
+** First, the TZ string's hour offset may range from -167
 ** through 167 as compared to the POSIX-required 0 through 24.
 ** Second, its DST start time may be January 1 at 00:00 and its stop
 ** time December 31 at 24:00 plus the difference between DST and
@@ -102,20 +94,24 @@ struct tzhead {
 */
 
 #ifndef TZ_MAX_TIMES
+/* This must be at least 242 for Europe/London with 'zic -b fat'.  */
 #define TZ_MAX_TIMES 2000
 #endif /* !defined TZ_MAX_TIMES */
 
 #ifndef TZ_MAX_TYPES
-/* This must be at least 17 for Europe/Samara and Europe/Vilnius.  */
+/* This must be at least 18 for Europe/Vilnius with 'zic -b fat'.  */
 #define TZ_MAX_TYPES 256 /* Limited by what (unsigned char)'s can hold */
 #endif                   /* !defined TZ_MAX_TYPES */
 
 #ifndef TZ_MAX_CHARS
+/* This must be at least 40 for America/Anchorage.  */
 #define TZ_MAX_CHARS 50 /* Maximum number of abbreviation characters */
                         /* (limited by what unsigned chars can hold) */
 #endif                  /* !defined TZ_MAX_CHARS */
 
 #ifndef TZ_MAX_LEAPS
+/* This must be at least 27 for leap seconds from 1972 through mid-2023.
+   There's a plan to discontinue leap seconds by 2035.  */
 #define TZ_MAX_LEAPS 50 /* Maximum number of leap second corrections */
 #endif                  /* !defined TZ_MAX_LEAPS */
 

@@ -38,7 +38,7 @@ void ScaleRowDown2_NEON(const uint8_t* src_ptr,
         "+r"(dst),       // %1
         "+r"(dst_width)  // %2
       :
-      : "v0", "v1"  // Clobber List
+      : "memory", "cc", "v0", "v1"  // Clobber List
   );
 }
 
@@ -61,7 +61,7 @@ void ScaleRowDown2Linear_NEON(const uint8_t* src_ptr,
         "+r"(dst),       // %1
         "+r"(dst_width)  // %2
       :
-      : "v0", "v1"  // Clobber List
+      : "memory", "cc", "v0", "v1"  // Clobber List
   );
 }
 
@@ -92,7 +92,7 @@ void ScaleRowDown2Box_NEON(const uint8_t* src_ptr,
         "+r"(dst),         // %2
         "+r"(dst_width)    // %3
       :
-      : "v0", "v1", "v2", "v3"  // Clobber List
+      : "memory", "cc", "v0", "v1", "v2", "v3"  // Clobber List
   );
 }
 
@@ -112,7 +112,7 @@ void ScaleRowDown4_NEON(const uint8_t* src_ptr,
         "+r"(dst_ptr),   // %1
         "+r"(dst_width)  // %2
       :
-      : "v0", "v1", "v2", "v3", "memory", "cc");
+      : "memory", "cc", "v0", "v1", "v2", "v3");
 }
 
 void ScaleRowDown4Box_NEON(const uint8_t* src_ptr,
@@ -148,7 +148,7 @@ void ScaleRowDown4Box_NEON(const uint8_t* src_ptr,
         "+r"(src_ptr3),  // %4
         "+r"(dst_width)  // %5
       :
-      : "v0", "v1", "v2", "v3", "memory", "cc");
+      : "memory", "cc", "v0", "v1", "v2", "v3");
 }
 
 // Down scale from 4 to 3 pixels. Use the neon multilane read/write
@@ -171,7 +171,7 @@ void ScaleRowDown34_NEON(const uint8_t* src_ptr,
         "+r"(dst_ptr),   // %1
         "+r"(dst_width)  // %2
       :
-      : "v0", "v1", "v2", "v3", "memory", "cc");
+      : "memory", "cc", "v0", "v1", "v2", "v3");
 }
 
 void ScaleRowDown34_0_Box_NEON(const uint8_t* src_ptr,
@@ -229,8 +229,8 @@ void ScaleRowDown34_0_Box_NEON(const uint8_t* src_ptr,
         "+r"(dst_width),  // %2
         "+r"(src_stride)  // %3
       :
-      : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17", "v18",
-        "v19", "v20", "memory", "cc");
+      : "memory", "cc", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16",
+        "v17", "v18", "v19", "v20");
 }
 
 void ScaleRowDown34_1_Box_NEON(const uint8_t* src_ptr,
@@ -272,7 +272,7 @@ void ScaleRowDown34_1_Box_NEON(const uint8_t* src_ptr,
         "+r"(dst_width),  // %2
         "+r"(src_stride)  // %3
       :
-      : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v20", "memory", "cc");
+      : "memory", "cc", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v20");
 }
 
 static const uvec8 kShuf38 = {0,  3,  6,  8,  11, 14, 16, 19,
@@ -306,7 +306,7 @@ void ScaleRowDown38_NEON(const uint8_t* src_ptr,
         "+r"(dst_ptr),   // %1
         "+r"(dst_width)  // %2
       : "r"(&kShuf38)    // %3
-      : "v0", "v1", "v2", "v3", "memory", "cc");
+      : "memory", "cc", "v0", "v1", "v2", "v3");
 }
 
 // 32x3 -> 12x1
@@ -427,9 +427,9 @@ void OMITFP ScaleRowDown38_3_Box_NEON(const uint8_t* src_ptr,
       : "r"(&kMult38_Div6),    // %5
         "r"(&kShuf38_2),       // %6
         "r"(&kMult38_Div9)     // %7
-      : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17", "v18",
-        "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v29", "v30", "v31",
-        "memory", "cc");
+      : "memory", "cc", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16",
+        "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v29",
+        "v30", "v31");
 }
 
 // 32x2 -> 12x1
@@ -531,8 +531,8 @@ void ScaleRowDown38_2_Box_NEON(const uint8_t* src_ptr,
         "+r"(dst_width)        // %3
       : "r"(&kMult38_Div6),    // %4
         "r"(&kShuf38_2)        // %5
-      : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17", "v18",
-        "v19", "v30", "v31", "memory", "cc");
+      : "memory", "cc", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16",
+        "v17", "v18", "v19", "v30", "v31");
 }
 
 void ScaleRowUp2_Linear_NEON(const uint8_t* src_ptr,
@@ -1118,101 +1118,6 @@ void ScaleFilterCols_NEON(uint8_t* dst_ptr,
 
 #undef LOAD2_DATA8_LANE
 
-// 16x2 -> 16x1
-void ScaleFilterRows_NEON(uint8_t* dst_ptr,
-                          const uint8_t* src_ptr,
-                          ptrdiff_t src_stride,
-                          int dst_width,
-                          int source_y_fraction) {
-  int y_fraction = 256 - source_y_fraction;
-  asm volatile(
-      "cmp         %w4, #0                       \n"
-      "b.eq        100f                          \n"
-      "add         %2, %2, %1                    \n"
-      "cmp         %w4, #64                      \n"
-      "b.eq        75f                           \n"
-      "cmp         %w4, #128                     \n"
-      "b.eq        50f                           \n"
-      "cmp         %w4, #192                     \n"
-      "b.eq        25f                           \n"
-
-      "dup         v5.8b, %w4                    \n"
-      "dup         v4.8b, %w5                    \n"
-      // General purpose row blend.
-      "1:                                        \n"
-      "ld1         {v0.16b}, [%1], #16           \n"
-      "ld1         {v1.16b}, [%2], #16           \n"
-      "subs        %w3, %w3, #16                 \n"
-      "umull       v6.8h, v0.8b, v4.8b           \n"
-      "umull2      v7.8h, v0.16b, v4.16b         \n"
-      "prfm        pldl1keep, [%1, 448]          \n"  // prefetch 7 lines ahead
-      "umlal       v6.8h, v1.8b, v5.8b           \n"
-      "umlal2      v7.8h, v1.16b, v5.16b         \n"
-      "prfm        pldl1keep, [%2, 448]          \n"
-      "rshrn       v0.8b, v6.8h, #8              \n"
-      "rshrn2      v0.16b, v7.8h, #8             \n"
-      "st1         {v0.16b}, [%0], #16           \n"
-      "b.gt        1b                            \n"
-      "b           99f                           \n"
-
-      // Blend 25 / 75.
-      "25:                                       \n"
-      "ld1         {v0.16b}, [%1], #16           \n"
-      "ld1         {v1.16b}, [%2], #16           \n"
-      "subs        %w3, %w3, #16                 \n"
-      "urhadd      v0.16b, v0.16b, v1.16b        \n"
-      "prfm        pldl1keep, [%1, 448]          \n"  // prefetch 7 lines ahead
-      "urhadd      v0.16b, v0.16b, v1.16b        \n"
-      "prfm        pldl1keep, [%2, 448]          \n"
-      "st1         {v0.16b}, [%0], #16           \n"
-      "b.gt        25b                           \n"
-      "b           99f                           \n"
-
-      // Blend 50 / 50.
-      "50:                                       \n"
-      "ld1         {v0.16b}, [%1], #16           \n"
-      "ld1         {v1.16b}, [%2], #16           \n"
-      "subs        %w3, %w3, #16                 \n"
-      "prfm        pldl1keep, [%1, 448]          \n"  // prefetch 7 lines ahead
-      "urhadd      v0.16b, v0.16b, v1.16b        \n"
-      "prfm        pldl1keep, [%2, 448]          \n"
-      "st1         {v0.16b}, [%0], #16           \n"
-      "b.gt        50b                           \n"
-      "b           99f                           \n"
-
-      // Blend 75 / 25.
-      "75:                                       \n"
-      "ld1         {v1.16b}, [%1], #16           \n"
-      "ld1         {v0.16b}, [%2], #16           \n"
-      "subs        %w3, %w3, #16                 \n"
-      "urhadd      v0.16b, v0.16b, v1.16b        \n"
-      "prfm        pldl1keep, [%1, 448]          \n"  // prefetch 7 lines ahead
-      "urhadd      v0.16b, v0.16b, v1.16b        \n"
-      "prfm        pldl1keep, [%2, 448]          \n"
-      "st1         {v0.16b}, [%0], #16           \n"
-      "b.gt        75b                           \n"
-      "b           99f                           \n"
-
-      // Blend 100 / 0 - Copy row unchanged.
-      "100:                                      \n"
-      "ld1         {v0.16b}, [%1], #16           \n"
-      "subs        %w3, %w3, #16                 \n"
-      "prfm        pldl1keep, [%1, 448]          \n"  // prefetch 7 lines ahead
-      "st1         {v0.16b}, [%0], #16           \n"
-      "b.gt        100b                          \n"
-
-      "99:                                       \n"
-      "st1         {v0.b}[15], [%0]              \n"
-      : "+r"(dst_ptr),            // %0
-        "+r"(src_ptr),            // %1
-        "+r"(src_stride),         // %2
-        "+r"(dst_width),          // %3
-        "+r"(source_y_fraction),  // %4
-        "+r"(y_fraction)          // %5
-      :
-      : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "memory", "cc");
-}
-
 void ScaleARGBRowDown2_NEON(const uint8_t* src_ptr,
                             ptrdiff_t src_stride,
                             uint8_t* dst,
@@ -1512,7 +1417,7 @@ void ScaleRowDown2Box_16_NEON(const uint16_t* src_ptr,
         "+r"(dst),         // %2
         "+r"(dst_width)    // %3
       :
-      : "v0", "v1", "v2", "v3"  // Clobber List
+      : "memory", "cc", "v0", "v1", "v2", "v3"  // Clobber List
   );
 }
 
@@ -1563,9 +1468,48 @@ void ScaleRowUp2_16_NEON(const uint16_t* src_ptr,
         "+r"(dst_width)    // %3
       : "r"(2LL),          // %4
         "r"(14LL)          // %5
-      : "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17", "v18",
-        "v19"  // Clobber List
+      : "memory", "cc", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16",
+        "v17", "v18", "v19"  // Clobber List
   );
+}
+
+void ScaleUVRowDown2_NEON(const uint8_t* src_ptr,
+                          ptrdiff_t src_stride,
+                          uint8_t* dst,
+                          int dst_width) {
+  (void)src_stride;
+  asm volatile(
+      "1:                                        \n"
+      "ld2         {v0.8h,v1.8h}, [%0], #32      \n"  // load 16 UV
+      "subs        %w2, %w2, #8                  \n"  // 8 processed per loop.
+      "prfm        pldl1keep, [%0, 448]          \n"  // prefetch 7 lines ahead
+      "st1         {v1.8h}, [%1], #16            \n"  // store 8 UV
+      "b.gt        1b                            \n"
+      : "+r"(src_ptr),   // %0
+        "+r"(dst),       // %1
+        "+r"(dst_width)  // %2
+      :
+      : "memory", "cc", "v0", "v1");
+}
+
+void ScaleUVRowDown2Linear_NEON(const uint8_t* src_ptr,
+                                ptrdiff_t src_stride,
+                                uint8_t* dst,
+                                int dst_width) {
+  (void)src_stride;
+  asm volatile(
+      "1:                                        \n"
+      "ld2         {v0.8h,v1.8h}, [%0], #32      \n"  // load 16 UV
+      "subs        %w2, %w2, #8                  \n"  // 8 processed per loop.
+      "urhadd      v0.16b, v0.16b, v1.16b        \n"  // rounding half add
+      "prfm        pldl1keep, [%0, 448]          \n"  // prefetch 7 lines ahead
+      "st1         {v0.8h}, [%1], #16            \n"  // store 8 UV
+      "b.gt        1b                            \n"
+      : "+r"(src_ptr),   // %0
+        "+r"(dst),       // %1
+        "+r"(dst_width)  // %2
+      :
+      : "memory", "cc", "v0", "v1");
 }
 
 void ScaleUVRowDown2Box_NEON(const uint8_t* src_ptr,

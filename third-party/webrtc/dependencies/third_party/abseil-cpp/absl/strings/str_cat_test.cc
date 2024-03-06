@@ -16,13 +16,16 @@
 
 #include "absl/strings/str_cat.h"
 
+#include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <limits>
 #include <string>
 #include <vector>
 
 #include "gtest/gtest.h"
 #include "absl/strings/str_format.h"
-#include "absl/strings/substitute.h"
+#include "absl/strings/string_view.h"
 
 #ifdef __ANDROID__
 // Android assert messages only go to system log, so death tests cannot inspect
@@ -35,6 +38,24 @@
 #endif
 
 namespace {
+
+template <typename Integer>
+void VerifyInteger(Integer value) {
+  const std::string expected = std::to_string(value);
+
+  EXPECT_EQ(absl::StrCat(value), expected);
+
+  const char* short_prefix = "x";
+  const char* long_prefix = "2;k.msabxiuow2[09i;o3k21-93-9=29]";
+
+  std::string short_str = short_prefix;
+  absl::StrAppend(&short_str, value);
+  EXPECT_EQ(short_str, short_prefix + expected);
+
+  std::string long_str = long_prefix;
+  absl::StrAppend(&long_str, value);
+  EXPECT_EQ(long_str, long_prefix + expected);
+}
 
 // Test absl::StrCat of ints and longs of various sizes and signdedness.
 TEST(StrCat, Ints) {
@@ -65,6 +86,34 @@ TEST(StrCat, Ints) {
   EXPECT_EQ(answer, "-9-12");
   answer = absl::StrCat(uintptr, 0);
   EXPECT_EQ(answer, "130");
+
+  for (const uint32_t base : {2u, 10u}) {
+    for (const int extra_shift : {0, 12}) {
+      for (uint64_t i = 0; i < (1 << 8); ++i) {
+        uint64_t j = i;
+        while (true) {
+          uint64_t v = j ^ (extra_shift != 0 ? (j << extra_shift) * base : 0);
+          VerifyInteger(static_cast<bool>(v));
+          VerifyInteger(static_cast<wchar_t>(v));
+          VerifyInteger(static_cast<signed char>(v));
+          VerifyInteger(static_cast<unsigned char>(v));
+          VerifyInteger(static_cast<short>(v));               // NOLINT
+          VerifyInteger(static_cast<unsigned short>(v));      // NOLINT
+          VerifyInteger(static_cast<int>(v));                 // NOLINT
+          VerifyInteger(static_cast<unsigned int>(v));        // NOLINT
+          VerifyInteger(static_cast<long>(v));                // NOLINT
+          VerifyInteger(static_cast<unsigned long>(v));       // NOLINT
+          VerifyInteger(static_cast<long long>(v));           // NOLINT
+          VerifyInteger(static_cast<unsigned long long>(v));  // NOLINT
+          const uint64_t next = j == 0 ? 1 : j * base;
+          if (next <= j) {
+            break;
+          }
+          j = next;
+        }
+      }
+    }
+  }
 }
 
 TEST(StrCat, Enums) {
@@ -443,7 +492,7 @@ TEST(StrCat, AvoidsMemcpyWithNullptr) {
   EXPECT_EQ(result, "12345");
 }
 
-#ifdef GTEST_HAS_DEATH_TEST
+#if GTEST_HAS_DEATH_TEST
 TEST(StrAppend, Death) {
   std::string s = "self";
   // on linux it's "assertion", on mac it's "Assertion",
@@ -660,6 +709,22 @@ void AbslStringify(Sink& sink, EnumWithStringify e) {
 TEST(StrCat, AbslStringifyWithEnum) {
   const auto e = EnumWithStringify::Choices;
   EXPECT_EQ(absl::StrCat(e), "Choices");
+}
+
+template <typename Integer>
+void CheckSingleArgumentIntegerLimits() {
+  Integer max = std::numeric_limits<Integer>::max();
+  Integer min = std::numeric_limits<Integer>::min();
+
+  EXPECT_EQ(absl::StrCat(max), std::to_string(max));
+  EXPECT_EQ(absl::StrCat(min), std::to_string(min));
+}
+
+TEST(StrCat, SingleArgumentLimits) {
+  CheckSingleArgumentIntegerLimits<int32_t>();
+  CheckSingleArgumentIntegerLimits<uint32_t>();
+  CheckSingleArgumentIntegerLimits<int64_t>();
+  CheckSingleArgumentIntegerLimits<uint64_t>();
 }
 
 }  // namespace

@@ -62,10 +62,9 @@ require "x86asm.pl";
 $output=pop;
 open STDOUT,">$output";
 
-&asm_init($ARGV[0],$ARGV[$#ARGV] eq "386");
+&asm_init($ARGV[0]);
 
-$sse2=0;
-for (@ARGV) { $sse2=1 if (/-DOPENSSL_IA32_SSE2/); }
+$sse2=1;
 
 &external_label("OPENSSL_ia32cap_P") if ($sse2);
 
@@ -922,4 +921,4 @@ sub BODY_00_15_ssse3 {		# "phase-less" copy of BODY_00_15_sse2
 
 &asm_finish();
 
-close STDOUT or die "error closing STDOUT";
+close STDOUT or die "error closing STDOUT: $!";

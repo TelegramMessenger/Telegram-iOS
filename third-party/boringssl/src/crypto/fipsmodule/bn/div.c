@@ -64,10 +64,10 @@
 #include "internal.h"
 
 
-#if !defined(BN_CAN_DIVIDE_ULLONG) && !defined(BN_CAN_USE_INLINE_ASM)
 // bn_div_words divides a double-width |h|,|l| by |d| and returns the result,
 // which must fit in a |BN_ULONG|.
-static BN_ULONG bn_div_words(BN_ULONG h, BN_ULONG l, BN_ULONG d) {
+OPENSSL_UNUSED static BN_ULONG bn_div_words(BN_ULONG h, BN_ULONG l,
+                                            BN_ULONG d) {
   BN_ULONG dh, dl, q, ret = 0, th, tl, t;
   int i, count = 2;
 
@@ -135,7 +135,6 @@ static BN_ULONG bn_div_words(BN_ULONG h, BN_ULONG l, BN_ULONG d) {
   ret |= q;
   return ret;
 }
-#endif  // !defined(BN_CAN_DIVIDE_ULLONG) && !defined(BN_CAN_USE_INLINE_ASM)
 
 static inline void bn_div_rem_words(BN_ULONG *quotient_out, BN_ULONG *rem_out,
                                     BN_ULONG n0, BN_ULONG n1, BN_ULONG d0) {
@@ -286,8 +285,10 @@ int BN_div(BIGNUM *quotient, BIGNUM *rem, const BIGNUM *numerator,
   // pointer to the 'top' of snum
   wnump = &(snum->d[num_n - 1]);
 
-  // Setup to 'res'
-  res->neg = (numerator->neg ^ divisor->neg);
+  // Setup |res|. |numerator| and |res| may alias, so we save |numerator->neg|
+  // for later.
+  const int numerator_neg = numerator->neg;
+  res->neg = (numerator_neg ^ divisor->neg);
   if (!bn_wexpand(res, loop + 1)) {
     goto err;
   }
@@ -380,14 +381,11 @@ int BN_div(BIGNUM *quotient, BIGNUM *rem, const BIGNUM *numerator,
   bn_set_minimal_width(snum);
 
   if (rem != NULL) {
-    // Keep a copy of the neg flag in numerator because if |rem| == |numerator|
-    // |BN_rshift| will overwrite it.
-    int neg = numerator->neg;
     if (!BN_rshift(rem, snum, norm_shift)) {
       goto err;
     }
     if (!BN_is_zero(rem)) {
-      rem->neg = neg;
+      rem->neg = numerator_neg;
     }
   }
 
@@ -458,7 +456,7 @@ void bn_mod_add_words(BN_ULONG *r, const BN_ULONG *a, const BN_ULONG *b,
 
 int bn_div_consttime(BIGNUM *quotient, BIGNUM *remainder,
                      const BIGNUM *numerator, const BIGNUM *divisor,
-                     BN_CTX *ctx) {
+                     unsigned divisor_min_bits, BN_CTX *ctx) {
   if (BN_is_negative(numerator) || BN_is_negative(divisor)) {
     OPENSSL_PUT_ERROR(BN, BN_R_NEGATIVE_NUMBER);
     return 0;
@@ -498,8 +496,26 @@ int bn_div_consttime(BIGNUM *quotient, BIGNUM *remainder,
   r->neg = 0;
 
   // Incorporate |numerator| into |r|, one bit at a time, reducing after each
-  // step. At the start of each loop iteration, |r| < |divisor|
-  for (int i = numerator->width - 1; i >= 0; i--) {
+  // step. We maintain the invariant that |0 <= r < divisor| and
+  // |q * divisor + r = n| where |n| is the portion of |numerator| incorporated
+  // so far.
+  //
+  // First, we short-circuit the loop: if we know |divisor| has at least
+  // |divisor_min_bits| bits, the top |divisor_min_bits - 1| can be incorporated
+  // without reductions. This significantly speeds up |RSA_check_key|. For
+  // simplicity, we round down to a whole number of words.
+  assert(divisor_min_bits <= BN_num_bits(divisor));
+  int initial_words = 0;
+  if (divisor_min_bits > 0) {
+    initial_words = (divisor_min_bits - 1) / BN_BITS2;
+    if (initial_words > numerator->width) {
+      initial_words = numerator->width;
+    }
+    OPENSSL_memcpy(r->d, numerator->d + numerator->width - initial_words,
+                   initial_words * sizeof(BN_ULONG));
+  }
+
+  for (int i = numerator->width - initial_words - 1; i >= 0; i--) {
     for (int bit = BN_BITS2 - 1; bit >= 0; bit--) {
       // Incorporate the next bit of the numerator, by computing
       // r = 2*r or 2*r + 1. Note the result fits in one more word. We store the
@@ -536,7 +552,7 @@ static BIGNUM *bn_scratch_space_from_ctx(size_t width, BN_CTX *ctx) {
     return NULL;
   }
   ret->neg = 0;
-  ret->width = width;
+  ret->width = (int)width;
   return ret;
 }
 
@@ -695,15 +711,22 @@ int BN_mod_lshift(BIGNUM *r, const BIGNUM *a, int n, const BIGNUM *m,
 
 int bn_mod_lshift_consttime(BIGNUM *r, const BIGNUM *a, int n, const BIGNUM *m,
                             BN_CTX *ctx) {
-  if (!BN_copy(r, a)) {
+  if (!BN_copy(r, a) ||
+      !bn_resize_words(r, m->width)) {
     return 0;
   }
-  for (int i = 0; i < n; i++) {
-    if (!bn_mod_lshift1_consttime(r, r, m, ctx)) {
-      return 0;
+
+  BN_CTX_start(ctx);
+  BIGNUM *tmp = bn_scratch_space_from_ctx(m->width, ctx);
+  int ok = tmp != NULL;
+  if (ok) {
+    for (int i = 0; i < n; i++) {
+      bn_mod_add_words(r->d, r->d, r->d, m->d, tmp->d, m->width);
     }
+    r->neg = 0;
   }
-  return 1;
+  BN_CTX_end(ctx);
+  return ok;
 }
 
 int BN_mod_lshift_quick(BIGNUM *r, const BIGNUM *a, int n, const BIGNUM *m) {

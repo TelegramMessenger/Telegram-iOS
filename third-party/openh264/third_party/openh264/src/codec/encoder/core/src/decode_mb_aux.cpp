@@ -310,5 +310,12 @@ void WelsInitReconstructionFuncs (SWelsFuncPtrList* pFuncList, uint32_t  uiCpuFl
     pFuncList->pfIDctI16x16Dc   = WelsIDctRecI16x16Dc_mmi;
   }
 #endif//HAVE_MMI
+
+#if defined(HAVE_LASX)
+  if (uiCpuFlag & WELS_CPU_LASX) {
+    pFuncList->pfIDctT4         = WelsIDctT4Rec_lasx;
+    pFuncList->pfIDctFourT4     = WelsIDctFourT4Rec_lasx;
+  }
+#endif
 }
 }

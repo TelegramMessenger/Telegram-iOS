@@ -68,6 +68,8 @@
 
 int EVP_MD_type(const EVP_MD *md) { return md->type; }
 
+int EVP_MD_nid(const EVP_MD *md) { return EVP_MD_type(md); }
+
 uint32_t EVP_MD_flags(const EVP_MD *md) { return md->flags; }
 
 size_t EVP_MD_size(const EVP_MD *md) { return md->md_size; }
@@ -104,6 +106,11 @@ int EVP_MD_CTX_cleanup(EVP_MD_CTX *ctx) {
   return 1;
 }
 
+void EVP_MD_CTX_cleanse(EVP_MD_CTX *ctx) {
+  OPENSSL_cleanse(ctx->md_data, ctx->digest->ctx_size);
+  EVP_MD_CTX_cleanup(ctx);
+}
+
 void EVP_MD_CTX_free(EVP_MD_CTX *ctx) {
   if (!ctx) {
     return;
@@ -122,6 +129,8 @@ int EVP_DigestFinalXOF(EVP_MD_CTX *ctx, uint8_t *out, size_t len) {
 
 uint32_t EVP_MD_meth_get_flags(const EVP_MD *md) { return EVP_MD_flags(md); }
 
+void EVP_MD_CTX_set_flags(EVP_MD_CTX *ctx, int flags) {}
+
 int EVP_MD_CTX_copy_ex(EVP_MD_CTX *out, const EVP_MD_CTX *in) {
   // |in->digest| may be NULL if this is a signing |EVP_MD_CTX| for, e.g.,
   // Ed25519 which does not hash with |EVP_MD_CTX|.
@@ -135,7 +144,6 @@ int EVP_MD_CTX_copy_ex(EVP_MD_CTX *out, const EVP_MD_CTX *in) {
   if (in->pctx) {
     pctx = in->pctx_ops->dup(in->pctx);
     if (!pctx) {
-      OPENSSL_PUT_ERROR(DIGEST, ERR_R_MALLOC_FAILURE);
       return 0;
     }
   }
@@ -149,7 +157,6 @@ int EVP_MD_CTX_copy_ex(EVP_MD_CTX *out, const EVP_MD_CTX *in) {
         if (pctx) {
           in->pctx_ops->free(pctx);
         }
-        OPENSSL_PUT_ERROR(DIGEST, ERR_R_MALLOC_FAILURE);
         return 0;
       }
     } else {
@@ -175,6 +182,17 @@ int EVP_MD_CTX_copy_ex(EVP_MD_CTX *out, const EVP_MD_CTX *in) {
   return 1;
 }
 
+void EVP_MD_CTX_move(EVP_MD_CTX *out, EVP_MD_CTX *in) {
+  EVP_MD_CTX_cleanup(out);
+  // While not guaranteed, |EVP_MD_CTX| is currently safe to move with |memcpy|.
+  // bssl-crypto currently relies on this, however, so if we change this, we
+  // need to box the |HMAC_CTX|. (Relying on this is only fine because we assume
+  // BoringSSL and bssl-crypto will always be updated atomically. We do not
+  // allow any version skew between the two.)
+  OPENSSL_memcpy(out, in, sizeof(EVP_MD_CTX));
+  EVP_MD_CTX_init(in);
+}
+
 int EVP_MD_CTX_copy(EVP_MD_CTX *out, const EVP_MD_CTX *in) {
   EVP_MD_CTX_init(out);
   return EVP_MD_CTX_copy_ex(out, in);
@@ -191,7 +209,6 @@ int EVP_DigestInit_ex(EVP_MD_CTX *ctx, const EVP_MD *type, ENGINE *engine) {
     assert(type->ctx_size != 0);
     uint8_t *md_data = OPENSSL_malloc(type->ctx_size);
     if (md_data == NULL) {
-      OPENSSL_PUT_ERROR(DIGEST, ERR_R_MALLOC_FAILURE);
       return 0;
     }
 

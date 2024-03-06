@@ -54,6 +54,7 @@
  * copied and put under another distribution licence
  * [including the GNU Public Licence.] */
 
+#include <assert.h>
 #include <stdio.h>
 
 #include <openssl/bn.h>
@@ -61,7 +62,8 @@
 #include <openssl/err.h>
 #include <openssl/objects.h>
 #include <openssl/x509.h>
-#include <openssl/x509v3.h>
+
+#include "internal.h"
 
 
 int X509_REQ_print_fp(FILE *fp, X509_REQ *x) {
@@ -78,8 +80,7 @@ int X509_REQ_print_fp(FILE *fp, X509_REQ *x) {
 int X509_REQ_print_ex(BIO *bio, X509_REQ *x, unsigned long nmflags,
                       unsigned long cflag) {
   long l;
-  EVP_PKEY *pkey;
-  STACK_OF(X509_ATTRIBUTE) * sk;
+  STACK_OF(X509_ATTRIBUTE) *sk;
   char mlch = ' ';
 
   int nmindent = 0;
@@ -102,7 +103,11 @@ int X509_REQ_print_ex(BIO *bio, X509_REQ *x, unsigned long nmflags,
   }
   if (!(cflag & X509_FLAG_NO_VERSION)) {
     l = X509_REQ_get_version(x);
-    if (BIO_printf(bio, "%8sVersion: %ld (0x%lx)\n", "", l + 1, l) <= 0) {
+    // Only zero, |X509_REQ_VERSION_1|, is valid but our parser accepts some
+    // invalid values for compatibility.
+    assert(0 <= l && l <= 2);
+    if (BIO_printf(bio, "%8sVersion: %ld (0x%lx)\n", "", l + 1,
+                   (unsigned long)l) <= 0) {
       goto err;
     }
   }
@@ -121,13 +126,12 @@ int X509_REQ_print_ex(BIO *bio, X509_REQ *x, unsigned long nmflags,
       goto err;
     }
 
-    pkey = X509_REQ_get_pubkey(x);
+    const EVP_PKEY *pkey = X509_REQ_get0_pubkey(x);
     if (pkey == NULL) {
       BIO_printf(bio, "%12sUnable to load Public Key\n", "");
       ERR_print_errors(bio);
     } else {
       EVP_PKEY_print_public(bio, pkey, 16, NULL);
-      EVP_PKEY_free(pkey);
     }
   }
 
@@ -182,10 +186,8 @@ int X509_REQ_print_ex(BIO *bio, X509_REQ *x, unsigned long nmflags,
             goto err;
           }
 
-          if (type == V_ASN1_PRINTABLESTRING ||
-              type == V_ASN1_UTF8STRING ||
-              type == V_ASN1_IA5STRING ||
-              type == V_ASN1_T61STRING) {
+          if (type == V_ASN1_PRINTABLESTRING || type == V_ASN1_UTF8STRING ||
+              type == V_ASN1_IA5STRING || type == V_ASN1_T61STRING) {
             if (BIO_write(bio, (char *)bs->data, bs->length) != bs->length) {
               goto err;
             }
@@ -203,13 +205,12 @@ int X509_REQ_print_ex(BIO *bio, X509_REQ *x, unsigned long nmflags,
     if (exts) {
       BIO_printf(bio, "%8sRequested Extensions:\n", "");
 
-      size_t i;
-      for (i = 0; i < sk_X509_EXTENSION_num(exts); i++) {
-        X509_EXTENSION *ex = sk_X509_EXTENSION_value(exts, i);
+      for (size_t i = 0; i < sk_X509_EXTENSION_num(exts); i++) {
+        const X509_EXTENSION *ex = sk_X509_EXTENSION_value(exts, i);
         if (BIO_printf(bio, "%12s", "") <= 0) {
           goto err;
         }
-        ASN1_OBJECT *obj = X509_EXTENSION_get_object(ex);
+        const ASN1_OBJECT *obj = X509_EXTENSION_get_object(ex);
         i2a_ASN1_OBJECT(bio, obj);
         const int is_critical = X509_EXTENSION_get_critical(ex);
         if (BIO_printf(bio, ": %s\n", is_critical ? "critical" : "") <= 0) {

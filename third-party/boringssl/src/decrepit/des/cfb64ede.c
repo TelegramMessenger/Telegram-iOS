@@ -58,7 +58,7 @@
 
 #include <openssl/des.h>
 
-#include "../../crypto/fipsmodule/des/internal.h"
+#include "../../crypto/des/internal.h"
 #include "../../crypto/internal.h"
 
 
@@ -142,7 +142,7 @@ void DES_ede3_cfb_encrypt(const uint8_t *in, uint8_t *out, int numbits,
 
   if (num > 64) {
     return;
-  };
+  }
 
   iv = ivec->bytes;
   c2l(iv, v0);

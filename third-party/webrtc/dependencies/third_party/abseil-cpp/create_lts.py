@@ -33,7 +33,7 @@ def ReplaceStringsInFile(filename, replacement_dict):
       values
 
   Raises:
-    Exception: A failure occured
+    Exception: A failure occurred
   """
   f = open(filename, 'r')
   content = f.read()
@@ -62,7 +62,7 @@ def StripContentBetweenTags(filename, strip_begin_tag, strip_end_tag):
     strip_end_tag: the end of the content to be removed
 
   Raises:
-    Exception: A failure occured
+    Exception: A failure occurred
   """
   f = open(filename, 'r')
   content = f.read()
@@ -95,6 +95,11 @@ def main(argv):
         'datestamp={} is not in the YYYYMMDD format'.format(datestamp))
 
   # Replacement directives go here.
+  ReplaceStringsInFile(
+      'MODULE.bazel', {
+          'version = "head"':
+              'version = "{}.0"'.format(datestamp)
+      })
   ReplaceStringsInFile(
       'absl/base/config.h', {
           '#undef ABSL_LTS_RELEASE_VERSION':

@@ -4195,6 +4195,334 @@ void PixelAvg_mmi(uint8_t* pDst, int32_t iDstStride, const uint8_t* pSrcA, int32
   kpfFuncs[iWidth >> 4] (pDst, iDstStride, pSrcA, iSrcAStride, pSrcB, iSrcBStride, iHeight);
 }
 #endif//HAVE_MMI
+
+#if defined(HAVE_LSX)
+static inline void McCopy_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                              int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  if (iWidth == 16)
+    McCopyWidthEq16_lsx (pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  else if (iWidth == 8)
+    McCopyWidthEq8_lsx (pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  else if (iWidth == 4)
+    McCopyWidthEq4_lsx (pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  else
+    McCopyWidthEq2_c (pSrc, iSrcStride, pDst, iDstStride, iHeight);
+}
+
+void McChroma_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                  int32_t iDstStride, int16_t iMvX, int16_t iMvY,
+                  int32_t iWidth, int32_t iHeight) {
+  static const PMcChromaWidthExtFunc kpMcChromaWidthFuncs[2] = {
+    McChromaWidthEq4_lsx,
+    McChromaWidthEq8_lsx
+  };
+  const int32_t kiD8x = iMvX & 0x07;
+  const int32_t kiD8y = iMvY & 0x07;
+  if (kiD8x == 0 && kiD8y == 0) {
+    McCopy_lsx (pSrc, iSrcStride, pDst, iDstStride, iWidth, iHeight);
+    return;
+  }
+  if (iWidth != 2) {
+    kpMcChromaWidthFuncs[iWidth >> 3] (pSrc, iSrcStride, pDst, iDstStride,
+                                       g_kuiABCD[kiD8y][kiD8x], iHeight);
+  } else
+    McChromaWithFragMv_c (pSrc, iSrcStride, pDst, iDstStride, iMvX, iMvY,
+                          iWidth, iHeight);
+}
+
+void PixelAvg_lsx(uint8_t* pDst, int32_t iDstStride, const uint8_t* pSrcA,
+                  int32_t iSrcAStride, const uint8_t* pSrcB, int32_t iSrcBStride,
+                  int32_t iWidth, int32_t iHeight) {
+  static const PWelsSampleWidthAveragingFunc kpfFuncs[2] = {
+    PixelAvgWidthEq8_lsx,
+    PixelAvgWidthEq16_lsx
+  };
+  kpfFuncs[iWidth >> 4] (pDst, iDstStride, pSrcA, iSrcAStride, pSrcB, iSrcBStride, iHeight);
+}
+
+static inline void McHorVer01_lsx (const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                   int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pTmp, 256, 16);
+  if (iWidth == 16) {
+    McHorVer02WidthEq16_lsx (pSrc, iSrcStride, pTmp, 16, iHeight);
+    PixelAvgWidthEq16_lsx (pDst, iDstStride, pSrc, iSrcStride, pTmp, 16, iHeight);
+  } else if (iWidth == 8) {
+    McHorVer02WidthEq8_lsx (pSrc, iSrcStride, pTmp, 16, iHeight);
+    PixelAvgWidthEq8_lsx (pDst, iDstStride, pSrc, iSrcStride, pTmp, 16, iHeight);
+  } else {
+    McHorVer02_c (pSrc, iSrcStride, pTmp, 16, 4, iHeight);
+    PixelAvgWidthEq4_lsx (pDst, iDstStride, pSrc, iSrcStride, pTmp, 16, iHeight);
+  }
+}
+
+static inline void McHorVer02_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  if (iWidth == 16)
+    McHorVer02WidthEq16_lsx (pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  else if (iWidth == 8)
+    McHorVer02WidthEq8_lsx (pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  else
+    McHorVer02_c (pSrc, iSrcStride, pDst, iDstStride, 4, iHeight);
+}
+
+static inline void McHorVer03_lsx (const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                   int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pTmp, 256, 16);
+  if (iWidth == 16) {
+    McHorVer02WidthEq16_lsx (pSrc, iSrcStride, pTmp, 16, iHeight);
+    PixelAvgWidthEq16_lsx (pDst, iDstStride, pSrc + iSrcStride, iSrcStride, pTmp, 16, iHeight);
+  } else if (iWidth == 8) {
+    McHorVer02WidthEq8_lsx (pSrc, iSrcStride, pTmp, 16, iHeight);
+    PixelAvgWidthEq8_lsx (pDst, iDstStride, pSrc + iSrcStride, iSrcStride, pTmp, 16, iHeight);
+  } else {
+    McHorVer02_c (pSrc, iSrcStride, pTmp, 16, 4, iHeight);
+    PixelAvgWidthEq4_lsx (pDst, iDstStride, pSrc + iSrcStride, iSrcStride, pTmp, 16, iHeight);
+  }
+}
+
+static inline void McHorVer10_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pTmp, 256, 16);
+  if (iWidth == 16) {
+    McHorVer20WidthEq16_lsx (pSrc, iSrcStride, pTmp, 16, iHeight);
+    PixelAvgWidthEq16_lsx (pDst, iDstStride, pSrc, iSrcStride, pTmp, 16, iHeight);
+  } else if (iWidth == 8) {
+    McHorVer20WidthEq8_lsx (pSrc, iSrcStride, pTmp, 16, iHeight);
+    PixelAvgWidthEq8_lsx (pDst, iDstStride, pSrc, iSrcStride, pTmp, 16, iHeight);
+  } else {
+    McHorVer20WidthEq4_lsx (pSrc, iSrcStride, pTmp, 16, iHeight);
+    PixelAvgWidthEq4_lsx (pDst, iDstStride, pSrc, iSrcStride, pTmp, 16, iHeight);
+  }
+}
+
+static inline void McHorVer11_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pHorTmp, 256, 16);
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pVerTmp, 256, 16);
+  if (iWidth == 16) {
+    McHorVer20WidthEq16_lsx (pSrc, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer02WidthEq16_lsx (pSrc, iSrcStride, pVerTmp, 16, iHeight);
+    PixelAvgWidthEq16_lsx (pDst, iDstStride, pHorTmp, 16, pVerTmp, 16, iHeight);
+  } else if (iWidth == 8) {
+    McHorVer20WidthEq8_lsx (pSrc, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer02WidthEq8_lsx (pSrc, iSrcStride, pVerTmp, 16, iHeight);
+    PixelAvgWidthEq8_lsx (pDst, iDstStride, pHorTmp, 16, pVerTmp, 16, iHeight);
+  } else {
+    McHorVer20WidthEq4_lsx (pSrc, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer02_c (pSrc, iSrcStride, pVerTmp, 16, 4, iHeight);
+    PixelAvgWidthEq4_lsx (pDst, iDstStride, pHorTmp, 16, pVerTmp, 16, iHeight);
+  }
+}
+
+static inline void McHorVer22WidthEq16_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                           int32_t iDstStride, int32_t iHeight) {
+  McHorVer22WidthEq8_lsx (pSrc,     iSrcStride, pDst,     iDstStride, iHeight);
+  McHorVer22WidthEq8_lsx (&pSrc[8], iSrcStride, &pDst[8], iDstStride, iHeight);
+}
+
+static inline void McHorVer12_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pVerTmp, 256, 16);
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pCtrTmp, 256, 16);
+  if (iWidth == 16) {
+    McHorVer02WidthEq16_lsx (pSrc, iSrcStride, pVerTmp, 16, iHeight);
+    McHorVer22WidthEq16_lsx (pSrc, iSrcStride, pCtrTmp, 16, iHeight);
+    PixelAvgWidthEq16_lsx (pDst, iDstStride, pVerTmp, 16, pCtrTmp, 16, iHeight);
+  } else if (iWidth == 8) {
+    McHorVer02WidthEq8_lsx (pSrc, iSrcStride, pVerTmp, 16, iHeight);
+    McHorVer22WidthEq8_lsx (pSrc, iSrcStride, pCtrTmp, 16, iHeight);
+    PixelAvgWidthEq8_lsx (pDst, iDstStride, pVerTmp, 16, pCtrTmp, 16, iHeight);
+  } else {
+    McHorVer02_c (pSrc, iSrcStride, pVerTmp, 16, 4, iHeight);
+    McHorVer22_c (pSrc, iSrcStride, pCtrTmp, 16, 4, iHeight);
+    PixelAvgWidthEq4_lsx (pDst, iDstStride, pVerTmp, 16, pCtrTmp, 16, iHeight);
+  }
+}
+
+static inline void McHorVer13_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pHorTmp, 256, 16);
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pVerTmp, 256, 16);
+  if (iWidth == 16) {
+    McHorVer20WidthEq16_lsx (pSrc + iSrcStride, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer02WidthEq16_lsx (pSrc, iSrcStride, pVerTmp, 16, iHeight);
+    PixelAvgWidthEq16_lsx (pDst, iDstStride, pHorTmp, 16, pVerTmp, 16, iHeight);
+  } else if (iWidth == 8) {
+    McHorVer20WidthEq8_lsx (pSrc + iSrcStride, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer02WidthEq8_lsx (pSrc, iSrcStride, pVerTmp, 16, iHeight);
+    PixelAvgWidthEq8_lsx (pDst, iDstStride, pHorTmp, 16, pVerTmp, 16, iHeight);
+  } else {
+    McHorVer20WidthEq4_lsx (pSrc + iSrcStride, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer02_c (pSrc, iSrcStride, pVerTmp, 16, 4, iHeight);
+    PixelAvgWidthEq4_lsx (pDst, iDstStride, pHorTmp, 16, pVerTmp, 16, iHeight);
+  }
+}
+
+static inline void McHorVer20_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  if (iWidth == 16)
+    McHorVer20WidthEq16_lsx (pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  else if (iWidth == 8)
+    McHorVer20WidthEq8_lsx (pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  else
+    McHorVer20WidthEq4_lsx (pSrc, iSrcStride, pDst, iDstStride, iHeight);
+}
+
+static inline void McHorVer21_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pHorTmp, 256, 16);
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pCtrTmp, 256, 16);
+  if (iWidth == 16) {
+    McHorVer20WidthEq16_lsx (pSrc, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer22WidthEq16_lsx (pSrc, iSrcStride, pCtrTmp, 16, iHeight);
+    PixelAvgWidthEq16_lsx (pDst, iDstStride, pHorTmp, 16, pCtrTmp, 16, iHeight);
+  } else if (iWidth == 8) {
+    McHorVer20WidthEq8_lsx (pSrc, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer22WidthEq8_lsx (pSrc, iSrcStride, pCtrTmp, 16, iHeight);
+    PixelAvgWidthEq8_lsx (pDst, iDstStride, pHorTmp, 16, pCtrTmp, 16, iHeight);
+  } else {
+    McHorVer20WidthEq4_lsx (pSrc, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer22_c (pSrc, iSrcStride, pCtrTmp, 16, 4, iHeight);
+    PixelAvgWidthEq4_lsx (pDst, iDstStride, pHorTmp, 16, pCtrTmp, 16, iHeight);
+  }
+}
+
+static inline void McHorVer22_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  if (iWidth == 16)
+    McHorVer22WidthEq16_lsx (pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  else if (iWidth == 8)
+    McHorVer22WidthEq8_lsx (pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  else
+    McHorVer22_c (pSrc, iSrcStride, pDst, iDstStride, 4, iHeight);
+}
+
+static inline void McHorVer23_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pHorTmp, 256, 16);
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pCtrTmp, 256, 16);
+  if (iWidth == 16) {
+    McHorVer20WidthEq16_lsx (pSrc + iSrcStride, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer22WidthEq16_lsx (pSrc, iSrcStride, pCtrTmp, 16, iHeight);
+    PixelAvgWidthEq16_lsx (pDst, iDstStride, pHorTmp, 16, pCtrTmp, 16, iHeight);
+  } else if (iWidth == 8) {
+    McHorVer20WidthEq8_lsx (pSrc + iSrcStride, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer22WidthEq8_lsx (pSrc, iSrcStride, pCtrTmp, 16, iHeight);
+    PixelAvgWidthEq8_lsx (pDst, iDstStride, pHorTmp, 16, pCtrTmp, 16, iHeight);
+  } else {
+    McHorVer20WidthEq4_lsx (pSrc + iSrcStride, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer22_c (pSrc, iSrcStride, pCtrTmp, 16, 4, iHeight);
+    PixelAvgWidthEq4_lsx (pDst, iDstStride, pHorTmp, 16, pCtrTmp, 16, iHeight);
+  }
+}
+
+static inline void McHorVer30_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pHorTmp, 256, 16);
+  if (iWidth == 16) {
+    McHorVer20WidthEq16_lsx (pSrc, iSrcStride, pHorTmp, 16, iHeight);
+    PixelAvgWidthEq16_lsx (pDst, iDstStride, pSrc + 1, iSrcStride, pHorTmp, 16, iHeight);
+  } else if (iWidth == 8) {
+    McHorVer20WidthEq8_lsx (pSrc, iSrcStride, pHorTmp, 16, iHeight);
+    PixelAvgWidthEq8_lsx (pDst, iDstStride, pSrc + 1, iSrcStride, pHorTmp, 16, iHeight);
+  } else {
+    McHorVer20WidthEq4_lsx (pSrc, iSrcStride, pHorTmp, 16, iHeight);
+    PixelAvgWidthEq4_lsx (pDst, iDstStride, pSrc + 1, iSrcStride, pHorTmp, 16, iHeight);
+  }
+}
+
+static inline void McHorVer31_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pHorTmp, 256, 16);
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pVerTmp, 256, 16);
+  if (iWidth == 16) {
+    McHorVer20WidthEq16_lsx (pSrc, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer02WidthEq16_lsx (pSrc + 1, iSrcStride, pVerTmp, 16, iHeight);
+    PixelAvgWidthEq16_lsx (pDst, iDstStride, pHorTmp, 16, pVerTmp, 16, iHeight);
+  } else if (iWidth == 8) {
+    McHorVer20WidthEq8_lsx (pSrc, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer02WidthEq8_lsx (pSrc + 1, iSrcStride, pVerTmp, 16, iHeight);
+    PixelAvgWidthEq8_lsx (pDst, iDstStride, pHorTmp, 16, pVerTmp, 16, iHeight);
+  } else {
+    McHorVer20WidthEq4_lsx (pSrc, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer02_c (pSrc + 1, iSrcStride, pVerTmp, 16, 4, iHeight);
+    PixelAvgWidthEq4_lsx (pDst, iDstStride, pHorTmp, 16, pVerTmp, 16, iHeight);
+  }
+}
+
+static inline void McHorVer32_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pVerTmp, 256, 16);
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pCtrTmp, 256, 16);
+  if (iWidth == 16) {
+    McHorVer02WidthEq16_lsx (pSrc + 1, iSrcStride, pVerTmp, 16, iHeight);
+    McHorVer22WidthEq16_lsx (pSrc, iSrcStride, pCtrTmp, 16, iHeight);
+    PixelAvgWidthEq16_lsx (pDst, iDstStride, pVerTmp, 16, pCtrTmp, 16, iHeight);
+  } else if (iWidth == 8) {
+    McHorVer02WidthEq8_lsx (pSrc + 1, iSrcStride, pVerTmp, 16, iHeight);
+    McHorVer22WidthEq8_lsx (pSrc, iSrcStride, pCtrTmp, 16, iHeight);
+    PixelAvgWidthEq8_lsx (pDst, iDstStride, pVerTmp, 16, pCtrTmp, 16, iHeight);
+  } else {
+    McHorVer02_c (pSrc + 1, iSrcStride, pVerTmp, 16, 4, iHeight);
+    McHorVer22_c (pSrc, iSrcStride, pCtrTmp, 16, 4, iHeight);
+    PixelAvgWidthEq4_lsx (pDst, iDstStride, pVerTmp, 16, pCtrTmp, 16, iHeight);
+  }
+}
+
+static inline void McHorVer33_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                  int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pHorTmp, 256, 16);
+  ENFORCE_STACK_ALIGN_1D (uint8_t, pVerTmp, 256, 16);
+  if (iWidth == 16) {
+    McHorVer20WidthEq16_lsx (pSrc + iSrcStride, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer02WidthEq16_lsx (pSrc + 1, iSrcStride, pVerTmp, 16, iHeight);
+    PixelAvgWidthEq16_lsx (pDst, iDstStride, pHorTmp, 16, pVerTmp, 16, iHeight);
+  } else if (iWidth == 8) {
+    McHorVer20WidthEq8_lsx (pSrc + iSrcStride, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer02WidthEq8_lsx (pSrc + 1, iSrcStride, pVerTmp, 16, iHeight);
+    PixelAvgWidthEq8_lsx (pDst, iDstStride, pHorTmp, 16, pVerTmp, 16, iHeight);
+  } else {
+    McHorVer20WidthEq4_lsx (pSrc + iSrcStride, iSrcStride, pHorTmp, 16, iHeight);
+    McHorVer02_c (pSrc + 1, iSrcStride, pVerTmp, 16, 4, iHeight);
+    PixelAvgWidthEq4_lsx (pDst, iDstStride, pHorTmp, 16, pVerTmp, 16, iHeight);
+  }
+}
+
+void McLuma_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                int32_t iDstStride, int16_t iMvX, int16_t iMvY,
+                int32_t iWidth, int32_t iHeight) {
+  static const PWelsMcWidthHeightFunc pWelsMcFunc[4][4] = { //[x][y]
+    {McCopy_lsx,     McHorVer01_lsx, McHorVer02_lsx, McHorVer03_lsx},
+    {McHorVer10_lsx, McHorVer11_lsx, McHorVer12_lsx, McHorVer13_lsx},
+    {McHorVer20_lsx, McHorVer21_lsx, McHorVer22_lsx, McHorVer23_lsx},
+    {McHorVer30_lsx, McHorVer31_lsx, McHorVer32_lsx, McHorVer33_lsx},
+  };
+  pWelsMcFunc[iMvX & 0x03][iMvY & 0x03] (pSrc, iSrcStride, pDst, iDstStride, iWidth, iHeight);
+}
+
+static inline void McHorVer20Width5Or9Or17_lsx(const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                               int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  if (iWidth == 17) {
+      McHorVer20WidthEq17_lsx(pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  } else if (iWidth == 9) {
+      McHorVer20WidthEq9_lsx(pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  } else {//if (iWidth == 5)
+      McHorVer20WidthEq5_lsx(pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  }
+}
+
+void McHorVer22Width5Or9Or17_lsx (const uint8_t* pSrc, int32_t iSrcStride, uint8_t* pDst,
+                                                int32_t iDstStride, int32_t iWidth, int32_t iHeight) {
+  if (iWidth == 17) {
+    McHorVer22WidthEq17_lsx(pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  } else if (iWidth == 9) {
+    McHorVer22WidthEq9_lsx(pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  } else {
+    McHorVer22WidthEq5_lsx(pSrc, iSrcStride, pDst, iDstStride, iHeight);
+  }
+}
+#endif//HAVE_LSX
+
 } // anon ns.
 
 void WelsCommon::InitMcFunc (SMcFunc* pMcFuncs, uint32_t uiCpuFlag) {
@@ -4263,4 +4591,15 @@ void WelsCommon::InitMcFunc (SMcFunc* pMcFuncs, uint32_t uiCpuFlag) {
     pMcFuncs->pMcLumaFunc       = McLuma_mmi;
   }
 #endif//HAVE_MMI
+
+#if defined(HAVE_LSX)
+  if (uiCpuFlag & WELS_CPU_LSX) {
+    pMcFuncs->pMcChromaFunc     = McChroma_lsx;
+    pMcFuncs->pfSampleAveraging = PixelAvg_lsx;
+    pMcFuncs->pMcLumaFunc       = McLuma_lsx;
+    pMcFuncs->pfLumaHalfpelVer  = McHorVer02_lsx;
+    pMcFuncs->pfLumaHalfpelHor  = McHorVer20Width5Or9Or17_lsx;
+    pMcFuncs->pfLumaHalfpelCen  = McHorVer22Width5Or9Or17_lsx;
+  }
+#endif//HAVE_LSX
 }

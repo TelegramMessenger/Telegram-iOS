@@ -203,7 +203,9 @@ int32_t InitFunctionPointers (sWelsEncCtx* pEncCtx, SWelsSvcCodingParam* pParam,
 
   //
   WelsInitBGDFunc (pFuncList, pParam->bEnableBackgroundDetection);
-  WelsInitSCDPskipFunc (pFuncList, bScreenContent && (pParam->bEnableSceneChangeDetect));
+	WelsInitSCDPskipFunc (pFuncList, bScreenContent &&
+                        (pParam->bEnableSceneChangeDetect) &&
+                        (pEncCtx->pSvcParam->iComplexityMode < HIGH_COMPLEXITY));
 
   // for pfGetVarianceFromIntraVaa function ptr adaptive by CPU features, 6/7/2010
   InitIntraAnalysisVaaInfo (pFuncList, uiCpuFlag);

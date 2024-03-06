@@ -163,7 +163,8 @@ LogMessage::LogMessageData::LogMessageData(const char* file, int line,
                                            absl::Time timestamp)
     : extra_sinks_only(false),
       manipulated(nullptr),
-      encoded_remaining(encoded_buf) {
+      // This `absl::MakeSpan` silences spurious -Wuninitialized from GCC:
+      encoded_remaining(absl::MakeSpan(encoded_buf)) {
   // Legacy defaults for LOG's ostream:
   manipulated.setf(std::ios_base::showbase | std::ios_base::boolalpha);
   entry.full_filename_ = file;
@@ -232,6 +233,13 @@ LogMessage::LogMessage(const char* file, int line, absl::LogSeverity severity)
   // are fixable but probably not worth fixing.
   LogBacktraceIfNeeded();
 }
+
+LogMessage::LogMessage(const char* file, int line, InfoTag)
+    : LogMessage(file, line, absl::LogSeverity::kInfo) {}
+LogMessage::LogMessage(const char* file, int line, WarningTag)
+    : LogMessage(file, line, absl::LogSeverity::kWarning) {}
+LogMessage::LogMessage(const char* file, int line, ErrorTag)
+    : LogMessage(file, line, absl::LogSeverity::kError) {}
 
 LogMessage::~LogMessage() {
 #ifdef ABSL_MIN_LOG_LEVEL
@@ -345,11 +353,13 @@ void LogMessage::FailQuietly() {
 }
 
 LogMessage& LogMessage::operator<<(const std::string& v) {
-  return LogString(false, v);
+  CopyToEncodedBuffer<StringType::kNotLiteral>(v);
+  return *this;
 }
 
 LogMessage& LogMessage::operator<<(absl::string_view v) {
-  return LogString(false, v);
+  CopyToEncodedBuffer<StringType::kNotLiteral>(v);
+  return *this;
 }
 LogMessage& LogMessage::operator<<(std::ostream& (*m)(std::ostream& os)) {
   OstreamView view(*data_);
@@ -380,8 +390,7 @@ template LogMessage& LogMessage::operator<<(const double& v);
 template LogMessage& LogMessage::operator<<(const bool& v);
 
 void LogMessage::Flush() {
-  if (data_->entry.log_severity() < absl::MinLogLevel())
-    return;
+  if (data_->entry.log_severity() < absl::MinLogLevel()) return;
 
   if (data_->is_perror) {
     InternalStream() << ": " << absl::base_internal::StrError(errno_saver_())
@@ -431,20 +440,21 @@ LogMessage::OstreamView::OstreamView(LogMessageData& message_data)
 }
 
 LogMessage::OstreamView::~OstreamView() {
+  data_.manipulated.rdbuf(nullptr);
+  if (!string_start_.data()) {
+    // The second field header didn't fit.  Whether the first one did or not, we
+    // shouldn't commit `encoded_remaining_copy_`, and we also need to zero the
+    // size of `data_->encoded_remaining` so that no more data are encoded.
+    data_.encoded_remaining.remove_suffix(data_.encoded_remaining.size());
+    return;
+  }
   const absl::Span<const char> contents(pbase(),
                                         static_cast<size_t>(pptr() - pbase()));
+  if (contents.empty()) return;
   encoded_remaining_copy_.remove_prefix(contents.size());
-  if (!string_start_.data()) {
-    // The headers didn't fit; we won't write anything to the buffer, but we
-    // also need to zero the size of `data_->encoded_remaining` so that no more
-    // data is encoded.
-    data_.encoded_remaining.remove_suffix(data_.encoded_remaining.size());
-  } else if (!contents.empty()) {
-    EncodeMessageLength(string_start_, &encoded_remaining_copy_);
-    EncodeMessageLength(message_start_, &encoded_remaining_copy_);
-    data_.encoded_remaining = encoded_remaining_copy_;
-  }
-  data_.manipulated.rdbuf(nullptr);
+  EncodeMessageLength(string_start_, &encoded_remaining_copy_);
+  EncodeMessageLength(message_start_, &encoded_remaining_copy_);
+  data_.encoded_remaining = encoded_remaining_copy_;
 }
 
 std::ostream& LogMessage::OstreamView::stream() { return data_.manipulated; }
@@ -511,22 +521,62 @@ void LogMessage::LogBacktraceIfNeeded() {
   view.stream() << ") ";
 }
 
-// Encodes a partial `logging.proto.Event` containing the specified string data
-// into `data_->encoded_remaining`.
-LogMessage& LogMessage::LogString(bool literal, absl::string_view str) {
-  // Don't commit the MessageStart if the String tag_type and length don't fit.
+// Encodes into `data_->encoded_remaining` a partial `logging.proto.Event`
+// containing the specified string data using a `Value` field appropriate to
+// `str_type`.  Truncates `str` if necessary, but emits nothing and marks the
+// buffer full if  even the field headers do not fit.
+template <LogMessage::StringType str_type>
+void LogMessage::CopyToEncodedBuffer(absl::string_view str) {
   auto encoded_remaining_copy = data_->encoded_remaining;
   auto start = EncodeMessageStart(
       EventTag::kValue, BufferSizeFor(WireType::kLengthDelimited) + str.size(),
       &encoded_remaining_copy);
-  if (EncodeStringTruncate(
-          literal ? ValueTag::kStringLiteral : ValueTag::kString, str,
-          &encoded_remaining_copy)) {
+  // If the `logging.proto.Event.value` field header did not fit,
+  // `EncodeMessageStart` will have zeroed `encoded_remaining_copy`'s size and
+  // `EncodeStringTruncate` will fail too.
+  if (EncodeStringTruncate(str_type == StringType::kLiteral
+                               ? ValueTag::kStringLiteral
+                               : ValueTag::kString,
+                           str, &encoded_remaining_copy)) {
+    // The string may have been truncated, but the field header fit.
     EncodeMessageLength(start, &encoded_remaining_copy);
     data_->encoded_remaining = encoded_remaining_copy;
+  } else {
+    // The field header(s) did not fit; zero `encoded_remaining` so we don't
+    // write anything else later.
+    data_->encoded_remaining.remove_suffix(data_->encoded_remaining.size());
   }
-  return *this;
 }
+template void LogMessage::CopyToEncodedBuffer<LogMessage::StringType::kLiteral>(
+    absl::string_view str);
+template void LogMessage::CopyToEncodedBuffer<
+    LogMessage::StringType::kNotLiteral>(absl::string_view str);
+template <LogMessage::StringType str_type>
+void LogMessage::CopyToEncodedBuffer(char ch, size_t num) {
+  auto encoded_remaining_copy = data_->encoded_remaining;
+  auto value_start = EncodeMessageStart(
+      EventTag::kValue, BufferSizeFor(WireType::kLengthDelimited) + num,
+      &encoded_remaining_copy);
+  auto str_start = EncodeMessageStart(str_type == StringType::kLiteral
+                                          ? ValueTag::kStringLiteral
+                                          : ValueTag::kString,
+                                      num, &encoded_remaining_copy);
+  if (str_start.data()) {
+    // The field headers fit.
+    log_internal::AppendTruncated(ch, num, encoded_remaining_copy);
+    EncodeMessageLength(str_start, &encoded_remaining_copy);
+    EncodeMessageLength(value_start, &encoded_remaining_copy);
+    data_->encoded_remaining = encoded_remaining_copy;
+  } else {
+    // The field header(s) did not fit; zero `encoded_remaining` so we don't
+    // write anything else later.
+    data_->encoded_remaining.remove_suffix(data_->encoded_remaining.size());
+  }
+}
+template void LogMessage::CopyToEncodedBuffer<LogMessage::StringType::kLiteral>(
+    char ch, size_t num);
+template void LogMessage::CopyToEncodedBuffer<
+    LogMessage::StringType::kNotLiteral>(char ch, size_t num);
 
 LogMessageFatal::LogMessageFatal(const char* file, int line)
     : LogMessage(file, line, absl::LogSeverity::kFatal) {}

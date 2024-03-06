@@ -32,7 +32,7 @@ LOCAL_SRC_FILES := \
 # Header Includes
 #
 LOCAL_C_INCLUDES := \
-            $(LOCAL_PATH)/../../../../api/svc \
+            $(LOCAL_PATH)/../../../../api/wels \
             $(LOCAL_PATH)/../../../../console/enc/inc \
             $(LOCAL_PATH)/../../../../console/common/inc \
             $(LOCAL_PATH)/../../../../encoder/core/inc \

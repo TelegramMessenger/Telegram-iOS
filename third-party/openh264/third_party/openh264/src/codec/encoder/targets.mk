@@ -103,6 +103,27 @@ endif
 OBJS += $(ENCODER_OBJSMIPS_MMI)
 OBJS += $(ENCODER_OBJSMIPS_MSA)
 
+ENCODER_ASM_LOONGARCH_LSX_SRCS=\
+	$(ENCODER_SRCDIR)/core/loongarch/quant_lsx.c\
+	$(ENCODER_SRCDIR)/core/loongarch/get_intra_predictor_lsx.c\
+	$(ENCODER_SRCDIR)/core/loongarch/svc_motion_estimate_lsx.c\
+
+ENCODER_OBJSLOONGARCH_LSX += $(ENCODER_ASM_LOONGARCH_LSX_SRCS:.c=.$(OBJ))
+
+ENCODER_ASM_LOONGARCH_LASX_SRCS=\
+	$(ENCODER_SRCDIR)/core/loongarch/dct_lasx.c\
+	$(ENCODER_SRCDIR)/core/loongarch/sample_lasx.c\
+
+ENCODER_OBJSLOONGARCH_LASX += $(ENCODER_ASM_LOONGARCH_LASX_SRCS:.c=.$(OBJ))
+ifeq ($(ASM_ARCH), loongarch)
+ifeq ($(ENABLE_LSX), Yes)
+ENCODER_OBJS += $(ENCODER_OBJSLOONGARCH_LSX)
+endif
+ifeq ($(ENABLE_LASX), Yes)
+ENCODER_OBJS += $(ENCODER_OBJSLOONGARCH_LASX)
+endif
+endif
+
 OBJS += $(ENCODER_OBJS)
 
 $(ENCODER_SRCDIR)/%.$(OBJ): $(ENCODER_SRCDIR)/%.cpp

@@ -91,6 +91,29 @@ endif
 OBJS += $(COMMON_OBJSMIPS_MMI)
 OBJS += $(COMMON_OBJSMIPS_MSA)
 
+COMMON_ASM_LOONGARCH_LSX_SRCS=\
+        $(COMMON_SRCDIR)/loongarch/mc_chroma_lsx.c\
+        $(COMMON_SRCDIR)/loongarch/copy_mb_lsx.c\
+        $(COMMON_SRCDIR)/loongarch/deblock_lsx.c\
+        $(COMMON_SRCDIR)/loongarch/intra_pred_com_lsx.c\
+        $(COMMON_SRCDIR)/loongarch/mc_horver_lsx.c\
+
+COMMON_OBJSLOONGARCH_LSX += $(COMMON_ASM_LOONGARCH_LSX_SRCS:.c=.$(OBJ))
+
+COMMON_ASM_LOONGARCH_LASX_SRCS=\
+        $(COMMON_SRCDIR)/loongarch/satd_sad_lasx.c\
+        $(COMMON_SRCDIR)/loongarch/intra_pred_com_lasx.c\
+
+COMMON_OBJSLOONGARCH_LASX += $(COMMON_ASM_LOONGARCH_LASX_SRCS:.c=.$(OBJ))
+ifeq ($(ASM_ARCH), loongarch)
+ifeq ($(ENABLE_LSX), Yes)
+COMMON_OBJS += $(COMMON_OBJSLOONGARCH_LSX)
+endif
+ifeq ($(ENABLE_LASX), Yes)
+COMMON_OBJS += $(COMMON_OBJSLOONGARCH_LASX)
+endif
+endif
+
 OBJS += $(COMMON_OBJS)
 
 $(COMMON_SRCDIR)/%.$(OBJ): $(COMMON_SRCDIR)/%.cpp

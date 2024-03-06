@@ -61,8 +61,73 @@
 #include <openssl/err.h>
 #include <openssl/mem.h>
 
+#include "internal.h"
 #include "../bytestring/internal.h"
 
+
+#define OPENSSL_DSA_MAX_MODULUS_BITS 10000
+
+// This function is in dsa_asn1.c rather than dsa.c because it is reachable from
+// |EVP_PKEY| parsers. This makes it easier for the static linker to drop most
+// of the DSA implementation.
+int dsa_check_key(const DSA *dsa) {
+  if (!dsa->p || !dsa->q || !dsa->g) {
+    OPENSSL_PUT_ERROR(DSA, DSA_R_MISSING_PARAMETERS);
+    return 0;
+  }
+
+  // Fully checking for invalid DSA groups is expensive, so security and
+  // correctness of the signature scheme depend on how |dsa| was computed. I.e.
+  // we leave "assurance of domain parameter validity" from FIPS 186-4 to the
+  // caller. However, we check bounds on all values to avoid DoS vectors even
+  // when domain parameters are invalid. In particular, signing will infinite
+  // loop if |g| is zero.
+  if (BN_is_negative(dsa->p) || BN_is_negative(dsa->q) || BN_is_zero(dsa->p) ||
+      BN_is_zero(dsa->q) || !BN_is_odd(dsa->p) || !BN_is_odd(dsa->q) ||
+      // |q| must be a prime divisor of |p - 1|, which implies |q < p|.
+      BN_cmp(dsa->q, dsa->p) >= 0 ||
+      // |g| is in the multiplicative group of |p|.
+      BN_is_negative(dsa->g) || BN_is_zero(dsa->g) ||
+      BN_cmp(dsa->g, dsa->p) >= 0) {
+    OPENSSL_PUT_ERROR(DSA, DSA_R_INVALID_PARAMETERS);
+    return 0;
+  }
+
+  // FIPS 186-4 allows only three different sizes for q.
+  unsigned q_bits = BN_num_bits(dsa->q);
+  if (q_bits != 160 && q_bits != 224 && q_bits != 256) {
+    OPENSSL_PUT_ERROR(DSA, DSA_R_BAD_Q_VALUE);
+    return 0;
+  }
+
+  // Bound |dsa->p| to avoid a DoS vector. Note this limit is much larger than
+  // the one in FIPS 186-4, which only allows L = 1024, 2048, and 3072.
+  if (BN_num_bits(dsa->p) > OPENSSL_DSA_MAX_MODULUS_BITS) {
+    OPENSSL_PUT_ERROR(DSA, DSA_R_MODULUS_TOO_LARGE);
+    return 0;
+  }
+
+  if (dsa->pub_key != NULL) {
+    // The public key is also in the multiplicative group of |p|.
+    if (BN_is_negative(dsa->pub_key) || BN_is_zero(dsa->pub_key) ||
+        BN_cmp(dsa->pub_key, dsa->p) >= 0) {
+      OPENSSL_PUT_ERROR(DSA, DSA_R_INVALID_PARAMETERS);
+      return 0;
+    }
+  }
+
+  if (dsa->priv_key != NULL) {
+    // The private key is a non-zero element of the scalar field, determined by
+    // |q|.
+    if (BN_is_negative(dsa->priv_key) || BN_is_zero(dsa->priv_key) ||
+        BN_cmp(dsa->priv_key, dsa->q) >= 0) {
+      OPENSSL_PUT_ERROR(DSA, DSA_R_INVALID_PARAMETERS);
+      return 0;
+    }
+  }
+
+  return 1;
+}
 
 static int parse_integer(CBS *cbs, BIGNUM **out) {
   assert(*out == NULL);
@@ -124,10 +189,16 @@ DSA *DSA_parse_public_key(CBS *cbs) {
       !parse_integer(&child, &ret->g) ||
       CBS_len(&child) != 0) {
     OPENSSL_PUT_ERROR(DSA, DSA_R_DECODE_ERROR);
-    DSA_free(ret);
-    return NULL;
+    goto err;
+  }
+  if (!dsa_check_key(ret)) {
+    goto err;
   }
   return ret;
+
+err:
+  DSA_free(ret);
+  return NULL;
 }
 
 int DSA_marshal_public_key(CBB *cbb, const DSA *dsa) {
@@ -156,10 +227,16 @@ DSA *DSA_parse_parameters(CBS *cbs) {
       !parse_integer(&child, &ret->g) ||
       CBS_len(&child) != 0) {
     OPENSSL_PUT_ERROR(DSA, DSA_R_DECODE_ERROR);
-    DSA_free(ret);
-    return NULL;
+    goto err;
+  }
+  if (!dsa_check_key(ret)) {
+    goto err;
   }
   return ret;
+
+err:
+  DSA_free(ret);
+  return NULL;
 }
 
 int DSA_marshal_parameters(CBB *cbb, const DSA *dsa) {
@@ -203,6 +280,10 @@ DSA *DSA_parse_private_key(CBS *cbs) {
     OPENSSL_PUT_ERROR(DSA, DSA_R_DECODE_ERROR);
     goto err;
   }
+  if (!dsa_check_key(ret)) {
+    goto err;
+  }
+
   return ret;
 
 err:

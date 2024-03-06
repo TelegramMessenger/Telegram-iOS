@@ -148,8 +148,6 @@
 #include <openssl/pem.h>
 #include <openssl/stack.h>
 #include <openssl/x509.h>
-#include <openssl/x509v3.h>
-#include <openssl/x509_vfy.h>
 
 #include "internal.h"
 #include "../crypto/internal.h"
@@ -196,11 +194,21 @@ static UniquePtr<STACK_OF(CRYPTO_BUFFER)> new_leafless_chain(void) {
   return chain;
 }
 
-// ssl_cert_set_chain sets elements 1.. of |cert->chain| to the serialised
+static void ssl_crypto_x509_cert_flush_cached_leaf(CERT *cert) {
+  X509_free(cert->x509_leaf);
+  cert->x509_leaf = nullptr;
+}
+
+static void ssl_crypto_x509_cert_flush_cached_chain(CERT *cert) {
+  sk_X509_pop_free(cert->x509_chain, X509_free);
+  cert->x509_chain = nullptr;
+}
+
+// ssl_cert_set1_chain sets elements 1.. of |cert->chain| to the serialised
 // forms of elements of |chain|. It returns one on success or zero on error, in
 // which case no change to |cert->chain| is made. It preverses the existing
 // leaf from |cert->chain|, if any.
-static bool ssl_cert_set_chain(CERT *cert, STACK_OF(X509) *chain) {
+static bool ssl_cert_set1_chain(CERT *cert, STACK_OF(X509) *chain) {
   UniquePtr<STACK_OF(CRYPTO_BUFFER)> new_chain;
 
   if (cert->chain != nullptr) {
@@ -232,17 +240,8 @@ static bool ssl_cert_set_chain(CERT *cert, STACK_OF(X509) *chain) {
   }
 
   cert->chain = std::move(new_chain);
+  ssl_crypto_x509_cert_flush_cached_chain(cert);
   return true;
-}
-
-static void ssl_crypto_x509_cert_flush_cached_leaf(CERT *cert) {
-  X509_free(cert->x509_leaf);
-  cert->x509_leaf = nullptr;
-}
-
-static void ssl_crypto_x509_cert_flush_cached_chain(CERT *cert) {
-  sk_X509_pop_free(cert->x509_chain, X509_free);
-  cert->x509_chain = nullptr;
 }
 
 static bool ssl_crypto_x509_check_client_CA_list(
@@ -285,7 +284,6 @@ static bool ssl_crypto_x509_session_cache_objects(SSL_SESSION *sess) {
   if (sk_CRYPTO_BUFFER_num(sess->certs.get()) > 0) {
     chain.reset(sk_X509_new_null());
     if (!chain) {
-      OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
       return false;
     }
     if (sess->is_server) {
@@ -293,7 +291,6 @@ static bool ssl_crypto_x509_session_cache_objects(SSL_SESSION *sess) {
       // |SSL_get_peer_cert_chain|.
       chain_without_leaf.reset(sk_X509_new_null());
       if (!chain_without_leaf) {
-        OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
         return false;
       }
     }
@@ -310,11 +307,9 @@ static bool ssl_crypto_x509_session_cache_objects(SSL_SESSION *sess) {
       leaf = UpRef(x509);
     } else if (chain_without_leaf &&
                !PushToStack(chain_without_leaf.get(), UpRef(x509))) {
-      OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
       return false;
     }
     if (!PushToStack(chain.get(), std::move(x509))) {
-      OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
       return false;
     }
   }
@@ -368,25 +363,34 @@ static bool ssl_crypto_x509_session_verify_cert_chain(SSL_SESSION *session,
     return false;
   }
 
-  SSL_CTX *ssl_ctx = hs->ssl->ctx.get();
+  SSL *const ssl = hs->ssl;
+  SSL_CTX *ssl_ctx = ssl->ctx.get();
   X509_STORE *verify_store = ssl_ctx->cert_store;
   if (hs->config->cert->verify_store != nullptr) {
     verify_store = hs->config->cert->verify_store;
   }
 
   X509 *leaf = sk_X509_value(cert_chain, 0);
-  ScopedX509_STORE_CTX ctx;
-  if (!X509_STORE_CTX_init(ctx.get(), verify_store, leaf, cert_chain) ||
-      !X509_STORE_CTX_set_ex_data(
-          ctx.get(), SSL_get_ex_data_X509_STORE_CTX_idx(), hs->ssl) ||
+  const char *name;
+  size_t name_len;
+  SSL_get0_ech_name_override(ssl, &name, &name_len);
+  UniquePtr<X509_STORE_CTX> ctx(X509_STORE_CTX_new());
+  if (!ctx ||
+      !X509_STORE_CTX_init(ctx.get(), verify_store, leaf, cert_chain) ||
+      !X509_STORE_CTX_set_ex_data(ctx.get(),
+                                  SSL_get_ex_data_X509_STORE_CTX_idx(), ssl) ||
       // We need to inherit the verify parameters. These can be determined by
       // the context: if its a server it will verify SSL client certificates or
       // vice versa.
-      !X509_STORE_CTX_set_default(
-          ctx.get(), hs->ssl->server ? "ssl_client" : "ssl_server") ||
+      !X509_STORE_CTX_set_default(ctx.get(),
+                                  ssl->server ? "ssl_client" : "ssl_server") ||
       // Anything non-default in "param" should overwrite anything in the ctx.
       !X509_VERIFY_PARAM_set1(X509_STORE_CTX_get0_param(ctx.get()),
-                              hs->config->param)) {
+                              hs->config->param) ||
+      // ClientHelloOuter connections use a different name.
+      (name_len != 0 &&
+       !X509_VERIFY_PARAM_set1_host(X509_STORE_CTX_get0_param(ctx.get()), name,
+                                    name_len))) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_X509_LIB);
     return false;
   }
@@ -403,11 +407,11 @@ static bool ssl_crypto_x509_session_verify_cert_chain(SSL_SESSION *session,
     verify_ret = X509_verify_cert(ctx.get());
   }
 
-  session->verify_result = ctx->error;
+  session->verify_result = X509_STORE_CTX_get_error(ctx.get());
 
   // If |SSL_VERIFY_NONE|, the error is non-fatal, but we keep the result.
   if (verify_ret <= 0 && hs->config->verify_mode != SSL_VERIFY_NONE) {
-    *out_alert = SSL_alert_from_verify_result(ctx->error);
+    *out_alert = SSL_alert_from_verify_result(session->verify_result);
     return false;
   }
 
@@ -443,8 +447,9 @@ static void ssl_crypto_x509_ssl_config_free(SSL_CONFIG *cfg) {
 static bool ssl_crypto_x509_ssl_auto_chain_if_needed(SSL_HANDSHAKE *hs) {
   // Only build a chain if there are no intermediates configured and the feature
   // isn't disabled.
-  if ((hs->ssl->mode & SSL_MODE_NO_AUTO_CHAIN) ||
-      !ssl_has_certificate(hs) || hs->config->cert->chain == NULL ||
+  SSL *const ssl = hs->ssl;
+  if ((ssl->mode & SSL_MODE_NO_AUTO_CHAIN) || !ssl_has_certificate(hs) ||
+      hs->config->cert->chain == NULL ||
       sk_CRYPTO_BUFFER_num(hs->config->cert->chain.get()) > 1) {
     return true;
   }
@@ -456,9 +461,9 @@ static bool ssl_crypto_x509_ssl_auto_chain_if_needed(SSL_HANDSHAKE *hs) {
     return false;
   }
 
-  ScopedX509_STORE_CTX ctx;
-  if (!X509_STORE_CTX_init(ctx.get(), hs->ssl->ctx->cert_store, leaf.get(),
-                           NULL)) {
+  UniquePtr<X509_STORE_CTX> ctx(X509_STORE_CTX_new());
+  if (!ctx || !X509_STORE_CTX_init(ctx.get(), ssl->ctx->cert_store, leaf.get(),
+                                   nullptr)) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_X509_LIB);
     return false;
   }
@@ -468,15 +473,13 @@ static bool ssl_crypto_x509_ssl_auto_chain_if_needed(SSL_HANDSHAKE *hs) {
   ERR_clear_error();
 
   // Remove the leaf from the generated chain.
-  X509_free(sk_X509_shift(ctx->chain));
-
-  if (!ssl_cert_set_chain(hs->config->cert.get(), ctx->chain)) {
+  UniquePtr<STACK_OF(X509)> chain(X509_STORE_CTX_get1_chain(ctx.get()));
+  if (!chain) {
     return false;
   }
+  X509_free(sk_X509_shift(chain.get()));
 
-  ssl_crypto_x509_cert_flush_cached_chain(hs->config->cert.get());
-
-  return true;
+  return SSL_set1_chain(ssl, chain.get());
 }
 
 static void ssl_crypto_x509_ssl_ctx_flush_cached_client_CA(SSL_CTX *ctx) {
@@ -698,13 +701,6 @@ int SSL_CTX_load_verify_locations(SSL_CTX *ctx, const char *ca_file,
   return X509_STORE_load_locations(ctx->cert_store, ca_file, ca_dir);
 }
 
-void SSL_set_verify_result(SSL *ssl, long result) {
-  check_ssl_x509_method(ssl);
-  if (result != X509_V_OK) {
-    abort();
-  }
-}
-
 long SSL_get_verify_result(const SSL *ssl) {
   check_ssl_x509_method(ssl);
   SSL_SESSION *session = SSL_get_session(ssl);
@@ -795,26 +791,7 @@ X509 *SSL_CTX_get0_certificate(const SSL_CTX *ctx) {
   return ssl_cert_get0_leaf(ctx->cert.get());
 }
 
-static int ssl_cert_set0_chain(CERT *cert, STACK_OF(X509) *chain) {
-  if (!ssl_cert_set_chain(cert, chain)) {
-    return 0;
-  }
-
-  sk_X509_pop_free(chain, X509_free);
-  ssl_crypto_x509_cert_flush_cached_chain(cert);
-  return 1;
-}
-
-static int ssl_cert_set1_chain(CERT *cert, STACK_OF(X509) *chain) {
-  if (!ssl_cert_set_chain(cert, chain)) {
-    return 0;
-  }
-
-  ssl_crypto_x509_cert_flush_cached_chain(cert);
-  return 1;
-}
-
-static int ssl_cert_append_cert(CERT *cert, X509 *x509) {
+static int ssl_cert_add1_chain_cert(CERT *cert, X509 *x509) {
   assert(cert->x509_method);
 
   UniquePtr<CRYPTO_BUFFER> buffer = x509_to_buffer(x509);
@@ -822,43 +799,38 @@ static int ssl_cert_append_cert(CERT *cert, X509 *x509) {
     return 0;
   }
 
-  if (cert->chain != NULL) {
-    return PushToStack(cert->chain.get(), std::move(buffer));
+  if (cert->chain == nullptr) {
+    cert->chain = new_leafless_chain();
+    if (cert->chain == nullptr) {
+      return 0;
+    }
   }
 
-  cert->chain = new_leafless_chain();
-  if (!cert->chain ||
-      !PushToStack(cert->chain.get(), std::move(buffer))) {
-    cert->chain.reset();
+  if (!PushToStack(cert->chain.get(), std::move(buffer))) {
     return 0;
   }
 
+  ssl_crypto_x509_cert_flush_cached_chain(cert);
   return 1;
 }
 
 static int ssl_cert_add0_chain_cert(CERT *cert, X509 *x509) {
-  if (!ssl_cert_append_cert(cert, x509)) {
+  if (!ssl_cert_add1_chain_cert(cert, x509)) {
     return 0;
   }
 
   X509_free(cert->x509_stash);
   cert->x509_stash = x509;
-  ssl_crypto_x509_cert_flush_cached_chain(cert);
-  return 1;
-}
-
-static int ssl_cert_add1_chain_cert(CERT *cert, X509 *x509) {
-  if (!ssl_cert_append_cert(cert, x509)) {
-    return 0;
-  }
-
-  ssl_crypto_x509_cert_flush_cached_chain(cert);
   return 1;
 }
 
 int SSL_CTX_set0_chain(SSL_CTX *ctx, STACK_OF(X509) *chain) {
   check_ssl_ctx_x509_method(ctx);
-  return ssl_cert_set0_chain(ctx->cert.get(), chain);
+  if (!ssl_cert_set1_chain(ctx->cert.get(), chain)) {
+    return 0;
+  }
+  sk_X509_pop_free(chain, X509_free);
+  return 1;
 }
 
 int SSL_CTX_set1_chain(SSL_CTX *ctx, STACK_OF(X509) *chain) {
@@ -871,7 +843,11 @@ int SSL_set0_chain(SSL *ssl, STACK_OF(X509) *chain) {
   if (!ssl->config) {
     return 0;
   }
-  return ssl_cert_set0_chain(ssl->config->cert.get(), chain);
+  if (!ssl_cert_set1_chain(ssl->config->cert.get(), chain)) {
+    return 0;
+  }
+  sk_X509_pop_free(chain, X509_free);
+  return 1;
 }
 
 int SSL_set1_chain(SSL *ssl, STACK_OF(X509) *chain) {
@@ -1036,7 +1012,11 @@ SSL_SESSION *d2i_SSL_SESSION(SSL_SESSION **a, const uint8_t **pp, long length) {
 }
 
 STACK_OF(X509_NAME) *SSL_dup_CA_list(STACK_OF(X509_NAME) *list) {
-  return sk_X509_NAME_deep_copy(list, X509_NAME_dup, X509_NAME_free);
+  // TODO(https://crbug.com/boringssl/407): |X509_NAME_dup| should be const.
+  auto name_dup = [](const X509_NAME *name) {
+    return X509_NAME_dup(const_cast<X509_NAME *>(name));
+  };
+  return sk_X509_NAME_deep_copy(list, name_dup, X509_NAME_free);
 }
 
 static void set_client_CA_list(UniquePtr<STACK_OF(CRYPTO_BUFFER)> *ca_list,
@@ -1095,7 +1075,6 @@ static STACK_OF(X509_NAME) *
 
   UniquePtr<STACK_OF(X509_NAME)> new_cache(sk_X509_NAME_new_null());
   if (!new_cache) {
-    OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
     return NULL;
   }
 
@@ -1297,6 +1276,23 @@ int SSL_set1_verify_cert_store(SSL *ssl, X509_STORE *store) {
     return 0;
   }
   return set_cert_store(&ssl->config->cert->verify_store, store, 1);
+}
+
+int SSL_set1_host(SSL *ssl, const char *hostname) {
+  check_ssl_x509_method(ssl);
+  if (!ssl->config) {
+    return 0;
+  }
+  return X509_VERIFY_PARAM_set1_host(ssl->config->param, hostname,
+                                     strlen(hostname));
+}
+
+void SSL_set_hostflags(SSL *ssl, unsigned flags) {
+  check_ssl_x509_method(ssl);
+  if (!ssl->config) {
+    return;
+  }
+  X509_VERIFY_PARAM_set_hostflags(ssl->config->param, flags);
 }
 
 int SSL_alert_from_verify_result(long result) {

@@ -101,7 +101,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalUsingDirectories>$(WindowsSDK_MetadataPath);$(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <CompileAsWinRT>true</CompileAsWinRT>
-      <AdditionalIncludeDirectories>..\..\..\console\dec\inc;..\..\..\console\common\inc;..\..\..\api\svc;..\..\..\common\inc;..\..\..\console\enc\inc;..\..\..\encoder\core\inc;..\..\..\processing\interface</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\console\dec\inc;..\..\..\console\common\inc;..\..\..\api\wels;..\..\..\common\inc;..\..\..\console\enc\inc;..\..\..\encoder\core\inc;..\..\..\processing\interface</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -119,7 +119,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalUsingDirectories>$(WindowsSDK_MetadataPath);$(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <CompileAsWinRT>true</CompileAsWinRT>
-      <AdditionalIncludeDirectories>..\..\..\console\dec\inc;..\..\..\console\common\inc;..\..\..\api\svc;..\..\..\common\inc;..\..\..\console\enc\inc;..\..\..\encoder\core\inc;..\..\..\processing\interface</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\console\dec\inc;..\..\..\console\common\inc;..\..\..\api\wels;..\..\..\common\inc;..\..\..\console\enc\inc;..\..\..\encoder\core\inc;..\..\..\processing\interface</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

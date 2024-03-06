@@ -178,6 +178,8 @@ typedef struct TagWelsSvcCodingParam: SEncParamExt {
     param.iUsageType = CAMERA_VIDEO_REAL_TIME;
     param.uiMaxNalSize = 0;
     param.bIsLosslessLink = false;
+    param.bFixRCOverShoot = true;
+    param.iIdrBitrateRatio = IDR_BITRATE_RATIO * 100;
     for (int32_t iLayer = 0; iLayer < MAX_SPATIAL_LAYER_NUM; iLayer++) {
       param.sSpatialLayers[iLayer].uiProfileIdc = PRO_UNKNOWN;
       param.sSpatialLayers[iLayer].uiLevelIdc = LEVEL_UNKNOWN;
@@ -288,7 +290,6 @@ typedef struct TagWelsSvcCodingParam: SEncParamExt {
   }
   int32_t ParamTranscode (const SEncParamExt& pCodingParam) {
     float fParamMaxFrameRate = WELS_CLIP3 (pCodingParam.fMaxFrameRate, MIN_FRAME_RATE, MAX_FRAME_RATE);
-
     iUsageType = pCodingParam.iUsageType;
     iPicWidth   = pCodingParam.iPicWidth;
     iPicHeight  = pCodingParam.iPicHeight;
@@ -342,6 +343,8 @@ typedef struct TagWelsSvcCodingParam: SEncParamExt {
     bEnableLongTermReference   = pCodingParam.bEnableLongTermReference ? true : false;
     iLtrMarkPeriod = pCodingParam.iLtrMarkPeriod;
     bIsLosslessLink = pCodingParam.bIsLosslessLink;
+    bFixRCOverShoot = pCodingParam.bFixRCOverShoot;
+    iIdrBitrateRatio = pCodingParam.iIdrBitrateRatio;
     if (iUsageType == SCREEN_CONTENT_REAL_TIME && !bIsLosslessLink && bEnableLongTermReference) {
       bEnableLongTermReference = false;
     }
