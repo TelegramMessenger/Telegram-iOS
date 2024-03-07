@@ -32,6 +32,7 @@ import AuthorizationUI
 import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
 import WallpaperGalleryScreen
+import TelegramStringFormatting
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -986,7 +987,15 @@ func openResolvedUrlImpl(
                             forceDark: forceDark,
                             action: { [weak navigationController] in
                                 let _ = (context.engine.payments.applyPremiumGiftCode(slug: slug)
-                                |> deliverOnMainQueue).startStandalone(completed: {
+                                |> deliverOnMainQueue).startStandalone(error: { error in
+                                    dismissImpl?()
+                                    
+                                    if case let .waitForExpiration(date) = error {
+                                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                        let dateText = stringForMediumDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                                        (navigationController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: presentationData.strings.Premium_Gift_ApplyLink_AlreadyHasPremium_Title, text: presentationData.strings.Premium_Gift_ApplyLink_AlreadyHasPremium_Text(dateText).string, timeout: nil, customUndoText: nil), elevatedLayout: true, position: .bottom, action: { _ in return true }), in: .window(.root))
+                                    }
+                                }, completed: {
                                     dismissImpl?()
                                     
                                     let controller = PremiumIntroScreen(context: context, source: .settings, forceDark: forceDark, forceHasPremium: true)
@@ -1030,7 +1039,7 @@ func openResolvedUrlImpl(
                                         (navigationController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: peer.id == context.account.peerId ? presentationData.strings.GiftLink_LinkSharedToSavedMessages : presentationData.strings.GiftLink_LinkSharedToChat(peer.compactDisplayTitle).string), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
                                         
                                         let _ = (enqueueMessages(account: context.account, peerId: peer.id, messages: messages)
-                                                 |> deliverOnMainQueue).startStandalone()
+                                        |> deliverOnMainQueue).startStandalone()
                                         if let peerSelectionController = peerSelectionController {
                                             peerSelectionController.dismiss()
                                         }

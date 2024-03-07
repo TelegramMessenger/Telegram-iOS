@@ -714,11 +714,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if strongSelf.presentVoiceMessageDiscardAlert(action: action, performAction: false) {
                 return false
             }
-            
-            if strongSelf.presentRecordedVoiceMessageDiscardAlert(action: action, performAction: false) {
-                return false
-            }
-            
+                        
             if case let .customChatContents(customChatContents) = strongSelf.presentationInterfaceState.subject {
                 switch customChatContents.kind {
                 case let .quickReplyMessageInput(_, shortcutType):
@@ -14462,13 +14458,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     frames: data.frames,
                                                     framesUpdateTimestamp: data.framesUpdateTimestamp,
                                                     trimRange: data.trimRange
-//                                                    control: ChatRecordedMediaPreview.Video.Control(
-//                                                        updateTrimRange: { [weak self] start, end, updatedEnd, apply in
-//                                                            if let self, let videoRecorderValue = self.videoRecorderValue {
-//                                                                videoRecorderValue.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
-//                                                            }
-//                                                        }
-//                                                    )
                                                 )
                                             ))
                                         }.updatedInputTextPanelState { panelState in
