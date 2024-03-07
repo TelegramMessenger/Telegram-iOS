@@ -112,7 +112,7 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemNode {
+final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -415,7 +415,11 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                         if item.tagColor != nil {
                             sharedIconFrame.origin.x -= 34.0
                         }
-                        strongSelf.sharedIconNode.frame = sharedIconFrame
+                        if strongSelf.sharedIconNode.bounds.isEmpty {
+                            strongSelf.sharedIconNode.frame = sharedIconFrame
+                        } else {
+                            transition.updateFrame(node: strongSelf.sharedIconNode, frame: sharedIconFrame)
+                        }
                     }
                     var isShared = false
                     if case let .filter(_, _, _, data) = item.preset, data.isShared {
@@ -425,9 +429,11 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     
                     if let tagColor = item.tagColor {
                         let tagIconView: UIImageView
+                        var tagIconTransition = transition
                         if let current = strongSelf.tagIconView {
                             tagIconView = current
                         } else {
+                            tagIconTransition = .immediate
                             tagIconView = UIImageView(image: generateStretchableFilledCircleImage(diameter: 24.0, color: .white)?.withRenderingMode(.alwaysTemplate))
                             strongSelf.tagIconView = tagIconView
                             strongSelf.containerNode.view.addSubview(tagIconView)
@@ -435,13 +441,16 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                         tagIconView.tintColor = tagColor
                         
                         let tagIconFrame = CGRect(origin: CGPoint(x: strongSelf.arrowNode.frame.minX - 2.0 - 24.0, y: floorToScreenPixels((layout.contentSize.height - 24.0) / 2.0)), size: CGSize(width: 24.0, height: 24.0))
-                        tagIconView.frame = tagIconFrame
                         
-                        transition.updateAlpha(layer: tagIconView.layer, alpha: reorderControlSizeAndApply != nil ? 0.0 : 1.0)
+                        tagIconTransition.updateAlpha(layer: tagIconView.layer, alpha: reorderControlSizeAndApply != nil ? 0.0 : 1.0)
+                        tagIconTransition.updateFrame(view: tagIconView, frame: tagIconFrame)
                     } else {
                         if let tagIconView = strongSelf.tagIconView {
                             strongSelf.tagIconView = nil
-                            tagIconView.removeFromSuperview()
+                            transition.updateAlpha(layer: tagIconView.layer, alpha: 0.0, completion: { [weak tagIconView] _ in
+                                tagIconView?.removeFromSuperview()
+                            })
+                            transition.updateTransformScale(layer: tagIconView.layer, scale: 0.001)
                         }
                     }
                     
@@ -455,6 +464,13 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
                 }
             })
+        }
+    }
+    
+    func animateTagColorIn(delay: Double) {
+        if let tagIconView = self.tagIconView {
+            tagIconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12, delay: delay)
+            tagIconView.layer.animateSpring(from: 0.001 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, delay: delay)
         }
     }
     

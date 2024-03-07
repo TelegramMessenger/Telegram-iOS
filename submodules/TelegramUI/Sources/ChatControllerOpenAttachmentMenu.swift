@@ -135,7 +135,7 @@ extension ChatControllerImpl {
         if let peer = self.presentationInterfaceState.renderedPeer?.peer, !isScheduledMessages, !peer.isDeleted {
             buttons = combineLatest(
                 self.context.engine.messages.attachMenuBots(),
-                self.context.engine.accountData.shortcutMessageList() |> take(1)
+                self.context.engine.accountData.shortcutMessageList(onlyRemote: true) |> take(1)
             )
             |> map { attachMenuBots, shortcutMessageList in
                 var buttons = availableButtons

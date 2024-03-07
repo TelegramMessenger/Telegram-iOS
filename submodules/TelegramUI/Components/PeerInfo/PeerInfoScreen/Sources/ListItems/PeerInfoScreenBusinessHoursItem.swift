@@ -345,19 +345,20 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                         
                         let dateText = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: openTimestamp, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(
                             dateFormatString: { value in
-                                return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_Date(value).string, ranges: [])
+                                let text = PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_Date(value).string, ranges: [])
+                                return presentationData.strings.PeerInfo_BusinessHours_StatusOpensOnDate(text.string)
                             },
                             tomorrowFormatString: { value in
-                                return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_TodayAt(value).string, ranges: [])
+                                return PresentationStrings.FormattedString(string: presentationData.strings.PeerInfo_BusinessHours_StatusOpensTomorrowAt(value).string, ranges: [])
                             },
                             todayFormatString: { value in
-                                return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_TodayAt(value).string, ranges: [])
+                                return PresentationStrings.FormattedString(string: presentationData.strings.PeerInfo_BusinessHours_StatusOpensTodayAt(value).string, ranges: [])
                             },
                             yesterdayFormatString: { value in
-                                return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_YesterdayAt(value).string, ranges: [])
+                                return PresentationStrings.FormattedString(string: presentationData.strings.PeerInfo_BusinessHours_StatusOpensTodayAt(value).string, ranges: [])
                             }
                         )).string
-                        currentDayStatusText = presentationData.strings.PeerInfo_BusinessHours_StatusOpensOnDate(dateText).string
+                        currentDayStatusText = dateText
                     }
                     break
                 }

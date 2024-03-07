@@ -340,6 +340,8 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     let filtersWithCounts = Promise<[(ChatListFilter, Int)]>()
     filtersWithCounts.set(filtersWithCountsSignal)
     
+    let animateNextShowHideTagsTransition = Atomic<Bool?>(value: nil)
+    
     let arguments = ChatListFilterPresetListControllerArguments(context: context,
     addSuggestedPressed: { title, data in
         let _ = combineLatest(
@@ -580,6 +582,8 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     
     let preferences = context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.chatListFilterSettings])
     
+    let previousDisplayTags = Atomic<Bool?>(value: nil)
+    
     let limits = context.engine.data.get(
         TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
         TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
@@ -666,6 +670,11 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             })
         } else {
             rightNavigationButton = nil
+        }
+        
+        let previousDisplayTagsValue = previousDisplayTags.swap(displayTags)
+        if let previousDisplayTagsValue, previousDisplayTagsValue != displayTags {
+            let _ = animateNextShowHideTagsTransition.swap(displayTags)
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatListFolderSettings_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
@@ -787,6 +796,29 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             }
         })
     })
+    controller.afterTransactionCompleted = { [weak controller] in
+        guard let toggleDirection = animateNextShowHideTagsTransition.swap(nil) else {
+            return
+        }
+        
+        guard let controller else {
+            return
+        }
+        var presetItemNodes: [ChatListFilterPresetListItemNode] = []
+        controller.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatListFilterPresetListItemNode {
+                presetItemNodes.append(itemNode)
+            }
+        }
+        
+        var delay: Double = 0.0
+        for itemNode in presetItemNodes.reversed() {
+            if toggleDirection {
+                itemNode.animateTagColorIn(delay: delay)
+            }
+            delay += 0.02
+        }
+    }
     
     return controller
 }

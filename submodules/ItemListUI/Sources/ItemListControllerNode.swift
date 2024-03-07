@@ -285,6 +285,7 @@ open class ItemListControllerNode: ASDisplayNode {
     public var searchActivated: ((Bool) -> Void)?
     public var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Signal<Bool, NoError>)?
     public var reorderCompleted: (([ItemListNodeAnyEntry]) -> Void)?
+    public var afterTransactionCompleted: (() -> Void)?
     public var requestLayout: ((ContainedViewLayoutTransition) -> Void)?
     
     public var enableInteractiveDismiss = false {
@@ -920,6 +921,8 @@ open class ItemListControllerNode: ASDisplayNode {
                             }
                         }
                     }
+                    
+                    strongSelf.afterTransactionCompleted?()
                 }
             })
             var updateEmptyStateItem = false

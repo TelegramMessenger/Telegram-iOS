@@ -26,6 +26,7 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
         
         private var pendingMessages: [PendingMessageContext] = []
         private var historyViewDisposable: Disposable?
+        private var pendingHistoryViewDisposable: Disposable?
         let historyViewStream = ValuePipe<(MessageHistoryView, ViewUpdateType)>()
         private var nextUpdateIsHoleFill: Bool = false
         
@@ -43,10 +44,14 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
                 context.disposable.dispose()
             }
             self.historyViewDisposable?.dispose()
+            self.pendingHistoryViewDisposable?.dispose()
         }
         
         private func updateHistoryViewRequest(reload: Bool) {
             if let shortcutId = self.shortcutId {
+                self.pendingHistoryViewDisposable?.dispose()
+                self.pendingHistoryViewDisposable = nil
+                
                 if self.historyViewDisposable == nil || reload {
                     self.historyViewDisposable?.dispose()
                     
@@ -74,11 +79,28 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
                     })
                 }
             } else {
-                if self.sourceHistoryView == nil {
+                self.historyViewDisposable?.dispose()
+                self.historyViewDisposable = nil
+                
+                self.pendingHistoryViewDisposable = (self.context.account.viewTracker.pendingQuickReplyMessagesViewForLocation(shortcut: self.shortcut)
+                |> deliverOn(self.queue)).start(next: { [weak self] view, _, _ in
+                    guard let self else {
+                        return
+                    }
+                    
+                    let nextUpdateIsHoleFill = self.nextUpdateIsHoleFill
+                    self.nextUpdateIsHoleFill = false
+                    
+                    self.sourceHistoryView = view
+                    
+                    self.updateHistoryView(updateType: nextUpdateIsHoleFill ? .FillHole : .Generic)
+                })
+                
+                /*if self.sourceHistoryView == nil {
                     let sourceHistoryView = MessageHistoryView(tag: nil, namespaces: .just(Namespaces.Message.allQuickReply), entries: [], holeEarlier: false, holeLater: false, isLoading: false)
                     self.sourceHistoryView = sourceHistoryView
                     self.updateHistoryView(updateType: .Initial)
-                }
+                }*/
             }
         }
         

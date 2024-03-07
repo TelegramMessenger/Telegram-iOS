@@ -48,12 +48,12 @@ struct QuickReplyMessageShortcutsState: Codable, Equatable {
 
 public final class ShortcutMessageList: Equatable {
     public final class Item: Equatable {
-        public let id: Int32
+        public let id: Int32?
         public let shortcut: String
         public let topMessage: EngineMessage
         public let totalCount: Int
         
-        public init(id: Int32, shortcut: String, topMessage: EngineMessage, totalCount: Int) {
+        public init(id: Int32?, shortcut: String, topMessage: EngineMessage, totalCount: Int) {
             self.id = id
             self.shortcut = shortcut
             self.topMessage = topMessage
@@ -117,12 +117,15 @@ func _internal_quickReplyMessageShortcutsState(account: Account) -> Signal<Quick
 }
 
 func _internal_keepShortcutMessagesUpdated(account: Account) -> Signal<Never, NoError> {
-    let updateSignal = _internal_shortcutMessageList(account: account)
+    let updateSignal = _internal_shortcutMessageList(account: account, onlyRemote: true)
     |> take(1)
     |> mapToSignal { list -> Signal<Never, NoError> in
         var acc: UInt64 = 0
         for item in list.items {
-            combineInt64Hash(&acc, with: UInt64(item.id))
+            guard let itemId = item.id else {
+                continue
+            }
+            combineInt64Hash(&acc, with: UInt64(itemId))
             combineInt64Hash(&acc, with: md5StringHash(item.shortcut))
             combineInt64Hash(&acc, with: UInt64(item.topMessage.id.id))
 
@@ -204,10 +207,42 @@ func _internal_keepShortcutMessagesUpdated(account: Account) -> Signal<Never, No
     return updateSignal
 }
 
-func _internal_shortcutMessageList(account: Account) -> Signal<ShortcutMessageList, NoError> {
-    return _internal_quickReplyMessageShortcutsState(account: account)
-    |> distinctUntilChanged
-    |> mapToSignal { state -> Signal<ShortcutMessageList, NoError> in
+func _internal_shortcutMessageList(account: Account, onlyRemote: Bool) -> Signal<ShortcutMessageList, NoError> {
+    let pendingShortcuts: Signal<[String: EngineMessage], NoError>
+    if onlyRemote {
+        pendingShortcuts = .single([:])
+    } else {
+        pendingShortcuts = account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: account.peerId, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 100, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .just(Set([Namespaces.Message.QuickReplyLocal])), orderStatistics: [])
+        |> map { view , _, _ -> [String: EngineMessage] in
+            var topMessages: [String: EngineMessage] = [:]
+            for entry in view.entries {
+                var shortcut: String?
+                inner: for attribute in entry.message.attributes {
+                    if let attribute = attribute as? OutgoingQuickReplyMessageAttribute {
+                        shortcut = attribute.shortcut
+                        break inner
+                    }
+                }
+                if let shortcut {
+                    if let currentTopMessage = topMessages[shortcut] {
+                        if entry.message.index < currentTopMessage.index {
+                            topMessages[shortcut] = EngineMessage(entry.message)
+                        }
+                    } else {
+                        topMessages[shortcut] = EngineMessage(entry.message)
+                    }
+                }
+            }
+            return topMessages
+        }
+        |> distinctUntilChanged
+    }
+        
+    return combineLatest(queue: .mainQueue(),
+        _internal_quickReplyMessageShortcutsState(account: account) |> distinctUntilChanged,
+        pendingShortcuts
+    )
+    |> mapToSignal { state, pendingShortcuts -> Signal<ShortcutMessageList, NoError> in
         guard let state else {
             return .single(ShortcutMessageList(items: [], isLoading: true))
         }
@@ -238,6 +273,7 @@ func _internal_shortcutMessageList(account: Account) -> Signal<ShortcutMessageLi
         )
         |> map { views -> ShortcutMessageList in
             var items: [ShortcutMessageList.Item] = []
+            
             for shortcut in state.shortcuts {
                 guard let historyViewKey = historyViewKeys[shortcut.id], let historyView = views.views[historyViewKey] as? MessageHistoryView else {
                     continue
@@ -254,6 +290,18 @@ func _internal_shortcutMessageList(account: Account) -> Signal<ShortcutMessageLi
                     items.append(ShortcutMessageList.Item(id: shortcut.id, shortcut: shortcut.shortcut, topMessage: EngineMessage(entry.message), totalCount: totalCount))
                 }
             }
+            
+            for (shortcut, message) in pendingShortcuts.sorted(by: { $0.key < $1.key }) {
+                if !items.contains(where: { $0.shortcut == shortcut }) {
+                    items.append(ShortcutMessageList.Item(
+                        id: nil,
+                        shortcut: shortcut,
+                        topMessage: message,
+                        totalCount: 1
+                    ))
+                }
+            }
+            
             return ShortcutMessageList(items: items, isLoading: false)
         }
         |> distinctUntilChanged
