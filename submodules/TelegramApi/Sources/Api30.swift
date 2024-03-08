@@ -1,4 +1,122 @@
 public extension Api.payments {
+    enum PaymentForm: TypeConstructorDescription {
+        case paymentForm(flags: Int32, formId: Int64, botId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, providerId: Int64, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, additionalMethods: [Api.PaymentFormMethod]?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: [Api.PaymentSavedCredentials]?, users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .paymentForm(let flags, let formId, let botId, let title, let description, let photo, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let additionalMethods, let savedInfo, let savedCredentials, let users):
+                    if boxed {
+                        buffer.appendInt32(-1610250415)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(formId, buffer: buffer, boxed: false)
+                    serializeInt64(botId, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(description, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 5) != 0 {photo!.serialize(buffer, true)}
+                    invoice.serialize(buffer, true)
+                    serializeInt64(providerId, buffer: buffer, boxed: false)
+                    serializeString(url, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 4) != 0 {serializeString(nativeProvider!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {nativeParams!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 6) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(additionalMethods!.count))
+                    for item in additionalMethods! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 0) != 0 {savedInfo!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(savedCredentials!.count))
+                    for item in savedCredentials! {
+                        item.serialize(buffer, true)
+                    }}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .paymentForm(let flags, let formId, let botId, let title, let description, let photo, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let additionalMethods, let savedInfo, let savedCredentials, let users):
+                return ("paymentForm", [("flags", flags as Any), ("formId", formId as Any), ("botId", botId as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("providerId", providerId as Any), ("url", url as Any), ("nativeProvider", nativeProvider as Any), ("nativeParams", nativeParams as Any), ("additionalMethods", additionalMethods as Any), ("savedInfo", savedInfo as Any), ("savedCredentials", savedCredentials as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_paymentForm(_ reader: BufferReader) -> PaymentForm? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Api.WebDocument?
+            if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.WebDocument
+            } }
+            var _7: Api.Invoice?
+            if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.Invoice
+            }
+            var _8: Int64?
+            _8 = reader.readInt64()
+            var _9: String?
+            _9 = parseString(reader)
+            var _10: String?
+            if Int(_1!) & Int(1 << 4) != 0 {_10 = parseString(reader) }
+            var _11: Api.DataJSON?
+            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
+                _11 = Api.parse(reader, signature: signature) as? Api.DataJSON
+            } }
+            var _12: [Api.PaymentFormMethod]?
+            if Int(_1!) & Int(1 << 6) != 0 {if let _ = reader.readInt32() {
+                _12 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PaymentFormMethod.self)
+            } }
+            var _13: Api.PaymentRequestedInfo?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _13 = Api.parse(reader, signature: signature) as? Api.PaymentRequestedInfo
+            } }
+            var _14: [Api.PaymentSavedCredentials]?
+            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                _14 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PaymentSavedCredentials.self)
+            } }
+            var _15: [Api.User]?
+            if let _ = reader.readInt32() {
+                _15 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 5) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 4) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 4) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 6) == 0) || _12 != nil
+            let _c13 = (Int(_1!) & Int(1 << 0) == 0) || _13 != nil
+            let _c14 = (Int(_1!) & Int(1 << 1) == 0) || _14 != nil
+            let _c15 = _15 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 {
+                return Api.payments.PaymentForm.paymentForm(flags: _1!, formId: _2!, botId: _3!, title: _4!, description: _5!, photo: _6, invoice: _7!, providerId: _8!, url: _9!, nativeProvider: _10, nativeParams: _11, additionalMethods: _12, savedInfo: _13, savedCredentials: _14, users: _15!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.payments {
     enum PaymentReceipt: TypeConstructorDescription {
         case paymentReceipt(flags: Int32, date: Int32, botId: Int64, providerId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, info: Api.PaymentRequestedInfo?, shipping: Api.ShippingOption?, tipAmount: Int64?, currency: String, totalAmount: Int64, credentialsTitle: String, users: [Api.User])
     

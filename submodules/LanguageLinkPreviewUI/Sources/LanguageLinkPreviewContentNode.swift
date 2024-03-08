@@ -78,6 +78,9 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
     func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
     }
     
+    func setDidBeginDragging(_ f: (() -> Void)?) {
+    }
+    
     func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {
         self.contentOffsetUpdated = f
     }

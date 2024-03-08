@@ -126,6 +126,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     private let segmentedValues: [ShareControllerSegmentedValue]?
     
+    private var contentDidBeginDragging: (() -> Void)?
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     var openSearch: (() -> Void)?
@@ -297,6 +298,10 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))
+        
+        self.contentGridNode.scrollingInitiated = { [weak self] in
+            self?.contentDidBeginDragging?()
+        }
 
         self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
             self?.gridPresentationLayoutUpdated(presentationLayout, transition: transition)
@@ -348,6 +353,10 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
         self.ensurePeerVisibleOnLayout = peerId
+    }
+    
+    func setDidBeginDragging(_ f: (() -> Void)?) {
+        self.contentDidBeginDragging = f
     }
     
     func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {

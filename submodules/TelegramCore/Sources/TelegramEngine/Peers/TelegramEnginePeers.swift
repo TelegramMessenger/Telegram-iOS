@@ -30,6 +30,59 @@ public final class OpaqueChatInterfaceState {
     }
 }
 
+public final class TelegramCollectibleItemInfo: Equatable {
+    public enum Subject: Equatable {
+        case username(String)
+        case phoneNumber(String)
+    }
+    
+    public let subject: Subject
+    public let purchaseDate: Int32
+    public let currency: String
+    public let currencyAmount: Int64
+    public let cryptoCurrency: String
+    public let cryptoCurrencyAmount: Int64
+    public let url: String
+    
+    public init(subject: Subject, purchaseDate: Int32, currency: String, currencyAmount: Int64, cryptoCurrency: String, cryptoCurrencyAmount: Int64, url: String) {
+        self.subject = subject
+        self.purchaseDate = purchaseDate
+        self.currency = currency
+        self.currencyAmount = currencyAmount
+        self.cryptoCurrency = cryptoCurrency
+        self.cryptoCurrencyAmount = cryptoCurrencyAmount
+        self.url = url
+    }
+    
+    public static func ==(lhs: TelegramCollectibleItemInfo, rhs: TelegramCollectibleItemInfo) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        if lhs.subject != rhs.subject {
+            return false
+        }
+        if lhs.purchaseDate != rhs.purchaseDate {
+            return false
+        }
+        if lhs.currency != rhs.currency {
+            return false
+        }
+        if lhs.currencyAmount != rhs.currencyAmount {
+            return false
+        }
+        if lhs.cryptoCurrency != rhs.cryptoCurrency {
+            return false
+        }
+        if lhs.cryptoCurrencyAmount != rhs.cryptoCurrencyAmount {
+            return false
+        }
+        if lhs.url != rhs.url {
+            return false
+        }
+        return true
+    }
+}
+
 public extension TelegramEngine {
     enum NextUnreadChannelLocation: Equatable {
         case same
@@ -1386,6 +1439,56 @@ public extension TelegramEngine {
                     return PreferencesEntry(EngineDisplaySavedChatsAsTopics(value: value))
                 })
             }).start()
+        }
+        
+        public func getCollectibleUsernameInfo(username: String) -> Signal<TelegramCollectibleItemInfo?, NoError> {
+            return self.account.network.request(Api.functions.fragment.getCollectibleInfo(collectible: .inputCollectibleUsername(username: username)))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.fragment.CollectibleInfo?, NoError> in
+                return .single(nil)
+            }
+            |> map { result -> TelegramCollectibleItemInfo? in
+                guard let result else {
+                    return nil
+                }
+                switch result {
+                case let .collectibleInfo(purchaseDate, currency, amount, cryptoCurrency, cryptoAmount, url):
+                    return TelegramCollectibleItemInfo(
+                        subject: .username(username),
+                        purchaseDate: purchaseDate,
+                        currency: currency,
+                        currencyAmount: amount,
+                        cryptoCurrency: cryptoCurrency,
+                        cryptoCurrencyAmount: cryptoAmount,
+                        url: url
+                    )
+                }
+            }
+        }
+        
+        public func getCollectiblePhoneNumberInfo(phoneNumber: String) -> Signal<TelegramCollectibleItemInfo?, NoError> {
+            return self.account.network.request(Api.functions.fragment.getCollectibleInfo(collectible: .inputCollectiblePhone(phone: phoneNumber)))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.fragment.CollectibleInfo?, NoError> in
+                return .single(nil)
+            }
+            |> map { result -> TelegramCollectibleItemInfo? in
+                guard let result else {
+                    return nil
+                }
+                switch result {
+                case let .collectibleInfo(purchaseDate, currency, amount, cryptoCurrency, cryptoAmount, url):
+                    return TelegramCollectibleItemInfo(
+                        subject: .phoneNumber(phoneNumber),
+                        purchaseDate: purchaseDate,
+                        currency: currency,
+                        currencyAmount: amount,
+                        cryptoCurrency: cryptoCurrency,
+                        cryptoCurrencyAmount: cryptoAmount,
+                        url: url
+                    )
+                }
+            }
         }
     }
 }

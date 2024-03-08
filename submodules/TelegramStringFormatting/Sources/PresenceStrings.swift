@@ -143,7 +143,6 @@ public func stringForCompactDate(timestamp: Int32, strings: PresentationStrings,
     var timeinfo: tm = tm()
     localtime_r(&t, &timeinfo)
     
-    //TODO:localize
     return "\(shortStringForDayOfWeek(strings: strings, day: timeinfo.tm_wday)) \(timeinfo.tm_mday) \(monthAtIndex(Int(timeinfo.tm_mon), strings: strings))"
 }
 

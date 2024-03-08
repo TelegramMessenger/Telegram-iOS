@@ -101,7 +101,7 @@ public enum TextLinkItemActionType {
     case longTap
 }
 
-public enum TextLinkItem {
+public enum TextLinkItem: Equatable {
     case url(url: String, concealed: Bool)
     case mention(String)
     case hashtag(String?, String)
@@ -856,6 +856,15 @@ public protocol AutomaticBusinessMessageSetupScreenInitialData: AnyObject {
 public protocol ChatbotSetupScreenInitialData: AnyObject {
 }
 
+public protocol CollectibleItemInfoScreenInitialData: AnyObject {
+    var collectibleItemInfo: TelegramCollectibleItemInfo { get }
+}
+
+public enum CollectibleItemInfoScreenSubject {
+    case phoneNumber(String)
+    case username(String)
+}
+
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
@@ -951,6 +960,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeAutomaticBusinessMessageSetupScreenInitialData(context: AccountContext) -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError>
     func makeQuickReplySetupScreen(context: AccountContext, initialData: QuickReplySetupScreenInitialData) -> ViewController
     func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError>
+    func makeCollectibleItemInfoScreen(context: AccountContext, initialData: CollectibleItemInfoScreenInitialData) -> ViewController
+    func makeCollectibleItemInfoScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, subject: CollectibleItemInfoScreenSubject) -> Signal<CollectibleItemInfoScreenInitialData?, NoError>
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func navigateToForumChannel(context: AccountContext, peerId: EnginePeer.Id, navigationController: NavigationController)
     func navigateToForumThread(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?,  navigationController: NavigationController, activateInput: ChatControllerActivateInput?, keepStack: NavigateToChatKeepStack) -> Signal<Never, NoError>
