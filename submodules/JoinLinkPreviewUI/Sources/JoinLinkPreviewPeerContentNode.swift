@@ -91,6 +91,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         }
     }
     
+    private var contentDidBeginDragging: (() -> Void)?
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     private let avatarNode: AvatarNode
@@ -218,6 +219,10 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     }
     
     func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
+    }
+    
+    func setDidBeginDragging(_ f: (() -> Void)?) {
+        self.contentDidBeginDragging = f
     }
     
     func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {
@@ -385,6 +390,7 @@ public enum ShareLoadingState {
 }
 
 public final class JoinLinkPreviewLoadingContainerNode: ASDisplayNode, ShareContentContainerNode {
+    private var contentDidBeginDragging: (() -> Void)?
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     private var theme: PresentationTheme
@@ -406,6 +412,10 @@ public final class JoinLinkPreviewLoadingContainerNode: ASDisplayNode, ShareCont
     }
     
     public func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
+    }
+    
+    public func setDidBeginDragging(_ f: (() -> Void)?) {
+        self.contentDidBeginDragging = f
     }
     
     public func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {

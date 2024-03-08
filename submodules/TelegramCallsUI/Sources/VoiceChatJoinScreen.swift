@@ -686,6 +686,9 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
     func setEnsurePeerVisibleOnLayout(_ peerId: PeerId?) {
     }
     
+    func setDidBeginDragging(_ f: (() -> Void)?) {
+    }
+    
     func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {
         self.contentOffsetUpdated = f
     }

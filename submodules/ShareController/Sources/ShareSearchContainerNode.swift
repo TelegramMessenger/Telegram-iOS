@@ -194,6 +194,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let searchNode: ShareSearchBarNode
     private let cancelButtonNode: HighlightableButtonNode
     
+    private var contentDidBeginDragging: (() -> Void)?
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     var cancel: (() -> Void)?
@@ -239,6 +240,14 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.addSubnode(self.searchNode)
         self.addSubnode(self.cancelButtonNode)
         self.addSubnode(self.contentSeparatorNode)
+        
+        self.recentGridNode.scrollingInitiated = { [weak self] in
+            self?.contentDidBeginDragging?()
+        }
+        
+        self.contentGridNode.scrollingInitiated = { [weak self] in
+            self?.contentDidBeginDragging?()
+        }
         
         self.recentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
             if let strongSelf = self, !strongSelf.recentGridNode.isHidden {
@@ -464,6 +473,10 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
         self.ensurePeerVisibleOnLayout = peerId
+    }
+    
+    func setDidBeginDragging(_ f: (() -> Void)?) {
+        self.contentDidBeginDragging = f
     }
     
     func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {

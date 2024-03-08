@@ -55,6 +55,7 @@ import ChatbotSetupScreen
 import BusinessLocationSetupScreen
 import BusinessHoursSetupScreen
 import AutomaticBusinessMessageSetupScreen
+import CollectibleItemInfoScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1921,6 +1922,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError> {
         return QuickReplySetupScreen.initialData(context: context)
+    }
+    
+    public func makeCollectibleItemInfoScreen(context: AccountContext, initialData: CollectibleItemInfoScreenInitialData) -> ViewController {
+        return CollectibleItemInfoScreen(context: context, initialData: initialData as! CollectibleItemInfoScreen.InitialData)
+    }
+    
+    public func makeCollectibleItemInfoScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, subject: CollectibleItemInfoScreenSubject) -> Signal<CollectibleItemInfoScreenInitialData?, NoError> {
+        return CollectibleItemInfoScreen.initialData(context: context, peerId: peerId, subject: subject)
     }
     
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {

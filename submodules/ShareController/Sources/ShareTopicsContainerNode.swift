@@ -174,6 +174,7 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let contentSubtitleNode: ASTextNode
     private let backNode: CancelButtonNode
     
+    private var contentDidBeginDragging: (() -> Void)?
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
         
     private var validLayout: (CGSize, CGFloat)?
@@ -249,6 +250,10 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))
+        
+        self.contentGridNode.scrollingInitiated = { [weak self] in
+            self?.contentDidBeginDragging?()
+        }
 
         self.contentGridNode.presentationLayoutUpdated = { [weak self] presentationLayout, transition in
             self?.gridPresentationLayoutUpdated(presentationLayout, transition: transition)
@@ -285,6 +290,10 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
             }
             self.contentGridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         }
+    }
+    
+    func setDidBeginDragging(_ f: (() -> Void)?) {
+        self.contentDidBeginDragging = f
     }
         
     func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {
@@ -457,8 +466,6 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         originalSubtitleFrame.size = subtitleFrame.size
         self.contentSubtitleNode.frame = originalSubtitleFrame
         transition.updateFrame(node: self.contentSubtitleNode, frame: subtitleFrame)
-        
-
         
         self.contentOffsetUpdated?(presentationLayout.contentOffset.y, actualTransition)
     }
