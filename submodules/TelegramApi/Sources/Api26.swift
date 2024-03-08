@@ -634,6 +634,62 @@ public extension Api.contacts {
     
     }
 }
+public extension Api.fragment {
+    enum CollectibleInfo: TypeConstructorDescription {
+        case collectibleInfo(purchaseDate: Int32, currency: String, amount: Int64, cryptoCurrency: String, cryptoAmount: Int64, url: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .collectibleInfo(let purchaseDate, let currency, let amount, let cryptoCurrency, let cryptoAmount, let url):
+                    if boxed {
+                        buffer.appendInt32(1857945489)
+                    }
+                    serializeInt32(purchaseDate, buffer: buffer, boxed: false)
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(amount, buffer: buffer, boxed: false)
+                    serializeString(cryptoCurrency, buffer: buffer, boxed: false)
+                    serializeInt64(cryptoAmount, buffer: buffer, boxed: false)
+                    serializeString(url, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .collectibleInfo(let purchaseDate, let currency, let amount, let cryptoCurrency, let cryptoAmount, let url):
+                return ("collectibleInfo", [("purchaseDate", purchaseDate as Any), ("currency", currency as Any), ("amount", amount as Any), ("cryptoCurrency", cryptoCurrency as Any), ("cryptoAmount", cryptoAmount as Any), ("url", url as Any)])
+    }
+    }
+    
+        public static func parse_collectibleInfo(_ reader: BufferReader) -> CollectibleInfo? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int64?
+            _5 = reader.readInt64()
+            var _6: String?
+            _6 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.fragment.CollectibleInfo.collectibleInfo(purchaseDate: _1!, currency: _2!, amount: _3!, cryptoCurrency: _4!, cryptoAmount: _5!, url: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
 public extension Api.help {
     enum AppConfig: TypeConstructorDescription {
         case appConfig(hash: Int32, config: Api.JSONValue)
@@ -1304,92 +1360,6 @@ public extension Api.help {
         }
         public static func parse_peerColorsNotModified(_ reader: BufferReader) -> PeerColors? {
             return Api.help.PeerColors.peerColorsNotModified
-        }
-    
-    }
-}
-public extension Api.help {
-    enum PremiumPromo: TypeConstructorDescription {
-        case premiumPromo(statusText: String, statusEntities: [Api.MessageEntity], videoSections: [String], videos: [Api.Document], periodOptions: [Api.PremiumSubscriptionOption], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .premiumPromo(let statusText, let statusEntities, let videoSections, let videos, let periodOptions, let users):
-                    if boxed {
-                        buffer.appendInt32(1395946908)
-                    }
-                    serializeString(statusText, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(statusEntities.count))
-                    for item in statusEntities {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(videoSections.count))
-                    for item in videoSections {
-                        serializeString(item, buffer: buffer, boxed: false)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(videos.count))
-                    for item in videos {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(periodOptions.count))
-                    for item in periodOptions {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .premiumPromo(let statusText, let statusEntities, let videoSections, let videos, let periodOptions, let users):
-                return ("premiumPromo", [("statusText", statusText as Any), ("statusEntities", statusEntities as Any), ("videoSections", videoSections as Any), ("videos", videos as Any), ("periodOptions", periodOptions as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_premiumPromo(_ reader: BufferReader) -> PremiumPromo? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: [Api.MessageEntity]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
-            }
-            var _3: [String]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
-            }
-            var _4: [Api.Document]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
-            }
-            var _5: [Api.PremiumSubscriptionOption]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PremiumSubscriptionOption.self)
-            }
-            var _6: [Api.User]?
-            if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.help.PremiumPromo.premiumPromo(statusText: _1!, statusEntities: _2!, videoSections: _3!, videos: _4!, periodOptions: _5!, users: _6!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

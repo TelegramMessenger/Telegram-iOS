@@ -678,7 +678,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     
                     if !controller.didSetupGroups {
                         controller.didSetupGroups = true
-                        Queue.concurrentDefaultQueue().after(0.3) {
+                        Queue.concurrentDefaultQueue().after(0.4) {
+                            var isCreateSticker = false
+                            if case .assets(_, .createSticker) = controller.subject {
+                                isCreateSticker = true
+                            }
                             controller.groupsPromise.set(
                                 combineLatest(
                                     self.mediaAssetsContext.fetchAssetsCollections(.album),
@@ -707,6 +711,16 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                                             supportedAlbums.append(.smartAlbumDepthEffect)
                                             supportedAlbums.append(.smartAlbumLivePhotos)
                                         }
+                                        
+                                        if isCreateSticker {
+                                            supportedAlbums = supportedAlbums.filter { type in
+                                                if type == .smartAlbumSlomoVideos || type == .smartAlbumTimelapses || type == .smartAlbumVideos {
+                                                    return false
+                                                }
+                                                return true
+                                            }
+                                        }
+                                        
                                         if supportedAlbums.contains(collection.assetCollectionSubtype) {
                                             let result = PHAsset.fetchAssets(in: collection, options: nil)
                                             if result.count > 0 {
@@ -2560,6 +2574,54 @@ public func storyMediaPickerController(
                     })
                 }
             } else if let result = result as? PHAsset {
+                controller.updateHiddenMediaId(result.localIdentifier)
+                if let transitionView = controller.transitionView(for: result.localIdentifier, snapshot: false) {
+                    let transitionOut: (Bool?) -> (UIView, CGRect)? = { isNew in
+                        if let isNew {
+                            if isNew {
+                                controller.updateHiddenMediaId(nil)
+                                if let transitionView = controller.defaultTransitionView() {
+                                    return (transitionView, transitionView.bounds)
+                                }
+                            } else if let transitionView = controller.transitionView(for: result.localIdentifier, snapshot: false) {
+                                return (transitionView, transitionView.bounds)
+                            }
+                        }
+                        return nil
+                    }
+                    completion(result, transitionView, transitionView.bounds, controller.transitionImage(for: result.localIdentifier), transitionOut, { [weak controller] in
+                        controller?.updateHiddenMediaId(nil)
+                    })
+                }
+            }
+        }
+        present(mediaPickerController, mediaPickerController.mediaPickerContext)
+    }
+    controller.willDismiss = {
+        dismissed()
+    }
+    controller.navigationPresentation = .flatModal
+    controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+    return controller
+}
+
+public func stickerMediaPickerController(
+    context: AccountContext,
+    getSourceRect: @escaping () -> CGRect,
+    completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void,
+    dismissed: @escaping () -> Void
+) -> ViewController {
+    let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+    let updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
+    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
+        return nil
+    })
+    controller.forceSourceRect = true
+    controller.getSourceRect = getSourceRect
+    controller.requestController = { _, present in
+        let mediaPickerController = MediaPickerScreen(context: context, updatedPresentationData: updatedPresentationData, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .createSticker), mainButtonState: nil, mainButtonAction: nil)
+        mediaPickerController.customSelection = { controller, result in
+            if let result = result as? PHAsset {
                 controller.updateHiddenMediaId(result.localIdentifier)
                 if let transitionView = controller.transitionView(for: result.localIdentifier, snapshot: false) {
                     let transitionOut: (Bool?) -> (UIView, CGRect)? = { isNew in

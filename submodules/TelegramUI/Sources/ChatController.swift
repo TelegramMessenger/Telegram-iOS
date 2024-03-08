@@ -14106,6 +14106,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
+    func enqueueStickerFile(_ file: TelegramMediaFile) {
+        let message = EnqueueMessage.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), threadId: self.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+        
+        let replyMessageSubject = self.presentationInterfaceState.interfaceState.replyMessageSubject
+        self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
+            if let strongSelf = self {
+                strongSelf.chatDisplayNode.collapseInput()
+                
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil) }
+                })
+            }
+        }, nil)
+        self.sendMessages([message].map { $0.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel) })
+        
+        Queue.mainQueue().after(3.0) {
+            if let message = self.chatDisplayNode.historyNode.lastVisbleMesssage(), let file = message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile, file.isSticker {
+                self.context.engine.stickers.addRecentlyUsedSticker(file: file)
+            }
+        }
+    }
+    
     func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false, silentPosting: Bool = false, resetTextInputState: Bool = true) {
         if !canSendMessagesToChat(self.presentationInterfaceState) {
             return

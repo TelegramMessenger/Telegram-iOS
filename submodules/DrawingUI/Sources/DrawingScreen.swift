@@ -1012,7 +1012,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.currentMode = .sticker
             
             self.updateEntitiesPlayback.invoke(false)
-            let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get())
+            let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), hasInteractiveStickers: false)
             if let presentGallery = self.presentGallery {
                 controller.presentGallery = presentGallery
             }

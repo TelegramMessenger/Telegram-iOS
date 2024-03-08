@@ -618,6 +618,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         }
                         media = .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers)
                     }
+                default:
+                    break
                 }
             } else if let existingMedia {
                 media = .existing(media: existingMedia._asMedia())

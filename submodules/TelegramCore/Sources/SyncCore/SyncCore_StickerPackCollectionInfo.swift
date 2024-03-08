@@ -44,6 +44,7 @@ public struct StickerPackCollectionInfoFlags: OptionSet {
     public static let isEmoji = StickerPackCollectionInfoFlags(rawValue: 1 << 4)
     public static let isAvailableAsChannelStatus = StickerPackCollectionInfoFlags(rawValue: 1 << 5)
     public static let isCustomTemplateEmoji = StickerPackCollectionInfoFlags(rawValue: 1 << 6)
+    public static let isCreator = StickerPackCollectionInfoFlags(rawValue: 1 << 7)
 }
 
 
@@ -115,35 +116,27 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
         if lhs.id != rhs.id {
             return false
         }
-        
         if lhs.title != rhs.title {
             return false
         }
-        
         if lhs.shortName != rhs.shortName {
             return false
         }
-        
         if lhs.hash != rhs.hash {
             return false
         }
-        
         if lhs.immediateThumbnailData != rhs.immediateThumbnailData {
             return false
         }
-        
         if lhs.thumbnailFileId != rhs.thumbnailFileId {
             return false
         }
-        
         if lhs.flags != rhs.flags {
             return false
         }
-        
         if lhs.count != rhs.count {
             return false
         }
-        
         return true
     }
 }

@@ -78,10 +78,11 @@ func loadTexture(image: UIImage, device: MTLDevice) -> MTLTexture? {
         let bytePerPixel = 4
         let bytesPerRow = bytePerPixel * Int(width)
         let bitsPerComponent = 8
-        let bitmapInfo = CGBitmapInfo.byteOrder32Little.rawValue + CGImageAlphaInfo.premultipliedFirst.rawValue
-        let context = CGContext.init(data: rawData, width: width, height: height, bitsPerComponent: bitsPerComponent, bytesPerRow: bytesPerRow, space: colorSpace, bitmapInfo: bitmapInfo)
-        context?.draw(imageRef!, in: CGRect(x: 0, y: 0, width: width, height: height))
-        
+        let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
+        if let context = CGContext(data: rawData, width: width, height: height, bitsPerComponent: bitsPerComponent, bytesPerRow: bytesPerRow, space: colorSpace, bitmapInfo: bitmapInfo.rawValue) {
+            context.clear(CGRect(x: 0, y: 0, width: width, height: height))
+            context.draw(imageRef!, in: CGRect(x: 0, y: 0, width: width, height: height))
+        }
         return rawData
     }
     

@@ -11594,3 +11594,5 @@ Sorry for the inconvenience.";
 
 "Chat.QuickReplyMediaMessageLimitReachedText_1" = "There can be at most %d message in this chat.";
 "Chat.QuickReplyMediaMessageLimitReachedText_any" = "There can be at most %d messages in this chat.";
+
+"Stickers.Edit" = "EDIT";

@@ -1,4 +1,50 @@
 public extension Api.messages {
+    enum DialogFilters: TypeConstructorDescription {
+        case dialogFilters(flags: Int32, filters: [Api.DialogFilter])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .dialogFilters(let flags, let filters):
+                    if boxed {
+                        buffer.appendInt32(718878489)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(filters.count))
+                    for item in filters {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .dialogFilters(let flags, let filters):
+                return ("dialogFilters", [("flags", flags as Any), ("filters", filters as Any)])
+    }
+    }
+    
+        public static func parse_dialogFilters(_ reader: BufferReader) -> DialogFilters? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.DialogFilter]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DialogFilter.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.DialogFilters.dialogFilters(flags: _1!, filters: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum Dialogs: TypeConstructorDescription {
         case dialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case dialogsNotModified(count: Int32)
@@ -1305,6 +1351,52 @@ public extension Api.messages {
     }
 }
 public extension Api.messages {
+    enum MyStickers: TypeConstructorDescription {
+        case myStickers(count: Int32, sets: [Api.StickerSetCovered])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .myStickers(let count, let sets):
+                    if boxed {
+                        buffer.appendInt32(-83926371)
+                    }
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sets.count))
+                    for item in sets {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .myStickers(let count, let sets):
+                return ("myStickers", [("count", count as Any), ("sets", sets as Any)])
+    }
+    }
+    
+        public static func parse_myStickers(_ reader: BufferReader) -> MyStickers? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.StickerSetCovered]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.MyStickers.myStickers(count: _1!, sets: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum PeerDialogs: TypeConstructorDescription {
         case peerDialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User], state: Api.updates.State)
     
@@ -1520,64 +1612,6 @@ public extension Api.messages {
         }
         public static func parse_quickRepliesNotModified(_ reader: BufferReader) -> QuickReplies? {
             return Api.messages.QuickReplies.quickRepliesNotModified
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum Reactions: TypeConstructorDescription {
-        case reactions(hash: Int64, reactions: [Api.Reaction])
-        case reactionsNotModified
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .reactions(let hash, let reactions):
-                    if boxed {
-                        buffer.appendInt32(-352454890)
-                    }
-                    serializeInt64(hash, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(reactions.count))
-                    for item in reactions {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .reactionsNotModified:
-                    if boxed {
-                        buffer.appendInt32(-1334846497)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .reactions(let hash, let reactions):
-                return ("reactions", [("hash", hash as Any), ("reactions", reactions as Any)])
-                case .reactionsNotModified:
-                return ("reactionsNotModified", [])
-    }
-    }
-    
-        public static func parse_reactions(_ reader: BufferReader) -> Reactions? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: [Api.Reaction]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Reaction.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.Reactions.reactions(hash: _1!, reactions: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_reactionsNotModified(_ reader: BufferReader) -> Reactions? {
-            return Api.messages.Reactions.reactionsNotModified
         }
     
     }
