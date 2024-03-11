@@ -177,7 +177,7 @@ public class DrawingReactionEntityView: DrawingStickerEntityView {
         reactionContextNode.forceTailToRight = true
         reactionContextNode.forceDark = true
         self.reactionContextNode = reactionContextNode
-        
+                
         reactionContextNode.reactionSelected = { [weak self] updateReaction, _ in
             guard let self else {
                 return

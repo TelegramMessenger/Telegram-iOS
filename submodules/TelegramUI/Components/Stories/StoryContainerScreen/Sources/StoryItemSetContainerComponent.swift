@@ -5583,6 +5583,8 @@ public final class StoryItemSetContainerComponent: Component {
                                         }
                                     }))
                                 }
+                            default:
+                                break
                             }
                         } else if updatedText != nil {
                             let _ = (context.engine.messages.editStory(peerId: peerId, id: id, media: nil, mediaAreas: nil, text: updatedText, entities: updatedEntities, privacy: nil)

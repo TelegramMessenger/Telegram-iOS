@@ -804,6 +804,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     })
                 }
             },
+            editAction: { _ in },
             pushController: { [weak interaction] controller in
                 guard let interaction else {
                     return
@@ -969,6 +970,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     isPremiumLocked: false,
                                     isEmbedded: false,
                                     hasClear: false,
+                                    hasEdit: false,
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
@@ -1018,6 +1020,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                             isPremiumLocked: false,
                                             isEmbedded: false,
                                             hasClear: false,
+                                            hasEdit: false,
                                             collapsedLineCount: 3,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
@@ -1077,6 +1080,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             isPremiumLocked: false,
                             isEmbedded: false,
                             hasClear: false,
+                            hasEdit: false,
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
@@ -1108,6 +1112,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     isPremiumLocked: false,
                                     isEmbedded: false,
                                     hasClear: false,
+                                    hasEdit: false,
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
@@ -1313,6 +1318,33 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 } else if groupId == AnyHashable("peerSpecific") {
                 }
             },
+            editAction: { [weak interaction] groupId in
+                guard let collectionId = groupId.base as? ItemCollectionId else {
+                    return
+                }
+                let viewKey = PostboxViewKey.itemCollectionInfo(id: collectionId)
+                let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak interaction] views in
+                    guard let interaction, let view = views.views[viewKey] as? ItemCollectionInfoView, let info = view.info as? StickerPackCollectionInfo else {
+                        return
+                    }
+                    let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
+                    let controller = context.sharedContext.makeStickerPackScreen(
+                        context: context,
+                        updatedPresentationData: nil,
+                        mainStickerPack: packReference,
+                        stickerPacks: [packReference],
+                        loadedStickerPacks: [],
+                        isEditing: true,
+                        parentNavigationController: nil,
+                        sendSticker: { [weak interaction] fileReference, sourceView, sourceRect in
+                            return interaction?.sendSticker(fileReference, false, false, nil, false, sourceView, sourceRect, nil, []) ?? false
+                        }
+                    )
+                    interaction.presentController(controller, nil)
+                })
+            },
             pushController: { [weak interaction] controller in
                 guard let interaction else {
                     return
@@ -1382,6 +1414,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             isPremiumLocked: false,
                             isEmbedded: false,
                             hasClear: false,
+                            hasEdit: false,
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
@@ -1413,6 +1446,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     isPremiumLocked: false,
                                     isEmbedded: false,
                                     hasClear: false,
+                                    hasEdit: false,
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
@@ -2327,6 +2361,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
                     strongSelf.presentController?(actionSheet)
                 }
             },
+            editAction: { _ in },
             pushController: { _ in
             },
             presentController: { _ in
@@ -2774,7 +2809,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                     switch attribute {
                                     case let .CustomEmoji(_, _, _, packReference), let .Sticker(_, packReference, _):
                                         if let packReference = packReference {
-                                            let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: interaction.navigationController(), sendSticker: { file, sourceView, sourceRect in
+                                            let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, parentNavigationController: interaction.navigationController(), sendSticker: { file, sourceView, sourceRect in
                                                 sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
                                                 return true
                                             })

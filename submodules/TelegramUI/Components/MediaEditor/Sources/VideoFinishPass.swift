@@ -149,7 +149,7 @@ struct VideoEncodeParameters {
     var roundness: simd_float1
     var alpha: simd_float1
     var isOpaque: simd_float1
-    var empty: simd_float1
+    var empty: simd_float1 = 0.0
 }
 
 final class VideoFinishPass: RenderPass {
@@ -242,18 +242,6 @@ final class VideoFinishPass: RenderPass {
             empty: 0
         )
         encoder.setFragmentBytes(&parameters, length: MemoryLayout<VideoEncodeParameters>.size, index: 0)
-//        var resolution = simd_uint2(UInt32(size.width), UInt32(size.height))
-//        encoder.setFragmentBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 0)
-//        
-//        var roundness = roundness
-//        encoder.setFragmentBytes(&roundness, length: MemoryLayout<simd_float1>.size, index: 1)
-//        
-//        var alpha = alpha
-//        encoder.setFragmentBytes(&alpha, length: MemoryLayout<simd_float1>.size, index: 2)
-//        
-//        var isOpaque = maskTexture == nil ? 1.0 : 0.0
-//        encoder.setFragmentBytes(&isOpaque, length: MemoryLayout<simd_float1>.size, index: 3)
-        
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
     }
     
@@ -645,9 +633,7 @@ final class VideoFinishPass: RenderPass {
             length: MemoryLayout<VertexData>.stride * vertices.count,
             options: [])
         encoder.setVertexBuffer(buffer, offset: 0, index: 0)
-    
         encoder.setFragmentBytes(&self.gradientColors, length: MemoryLayout<GradientColors>.size, index: 0)
-        
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
     }
     

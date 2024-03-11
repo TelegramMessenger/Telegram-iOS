@@ -145,7 +145,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         self.angleLayer.opacity = 0.0
         self.angleLayer.lineDashPattern = [12, 12] as [NSNumber]
         
-        self.stickerOverlayLayer.fillColor = UIColor(rgb: 0x000000, alpha: 0.6).cgColor
+        self.stickerOverlayLayer.fillColor = UIColor(rgb: 0x000000, alpha: 0.7).cgColor
         
         self.stickerFrameLayer.fillColor = UIColor.clear.cgColor
         self.stickerFrameLayer.strokeColor = UIColor(rgb: 0xffffff, alpha: 0.55).cgColor

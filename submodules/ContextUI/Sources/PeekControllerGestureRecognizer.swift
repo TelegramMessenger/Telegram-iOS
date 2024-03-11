@@ -22,6 +22,7 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
     private let present: (PeekControllerContent, UIView, CGRect) -> ViewController?
     private let updateContent: (PeekControllerContent?) -> Void
     private let activateBySingleTap: Bool
+    public var longPressEnabled = true
     public var checkSingleTapActivationAtPoint: ((CGPoint) -> Bool)?
     
     private var tapLocation: CGPoint?
@@ -54,6 +55,9 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
     }
     
     private func startLongTapTimer() {
+        guard self.longPressEnabled else {
+            return
+        }
         self.longTapTimer?.invalidate()
         let longTapTimer = SwiftSignalKit.Timer(timeout: 0.4, repeat: false, completion: { [weak self] in
             self?.longTapTimerFired()

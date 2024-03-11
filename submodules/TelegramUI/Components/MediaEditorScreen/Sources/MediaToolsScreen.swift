@@ -665,7 +665,7 @@ private final class MediaToolsScreenComponent: Component {
                 
                 tools = tools.filter { !component.hiddenTools.contains($0.key) }
                 
-                if !component.mediaEditor.sourceIsVideo {
+                if !component.mediaEditor.sourceIsVideo && !component.hiddenTools.contains(.grain) {
                     tools.insert(AdjustmentTool(
                         key: .grain,
                         title: presentationData.strings.Story_Editor_Tool_Grain,

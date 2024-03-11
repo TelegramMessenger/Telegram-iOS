@@ -11604,3 +11604,5 @@ Sorry for the inconvenience.";
 "CollectibleItemInfo.ButtonCopyUsername" = "Copy Link";
 "CollectibleItemInfo.ButtonCopyPhone" = "Copy Phone Number";
 "CollectibleItemInfo.ShareInlineText.LearnMore" = "Learn more >";
+
+"Stickers.Edit" = "EDIT";

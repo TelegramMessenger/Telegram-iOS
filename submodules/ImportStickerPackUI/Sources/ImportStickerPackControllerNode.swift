@@ -14,6 +14,7 @@ import ContextUI
 import RadialStatusNode
 import UndoUI
 import StickerPackPreviewUI
+import StickerPackEditTitleController
 
 private struct StickerPackPreviewGridEntry: Comparable, Equatable, Identifiable {
     let index: Int
@@ -718,7 +719,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     
     @objc private func createActionButtonPressed() {
         var proceedImpl: ((String, String?) -> Void)?
-        let titleController = importStickerPackTitleController(context: self.context, title: self.presentationData.strings.ImportStickerPack_ChooseName, text: self.presentationData.strings.ImportStickerPack_ChooseNameDescription, placeholder: self.presentationData.strings.ImportStickerPack_NamePlaceholder, value: nil, maxLength: 128, apply: { [weak self] title in
+        let titleController = stickerPackEditTitleController(context: self.context, title: self.presentationData.strings.ImportStickerPack_ChooseName, text: self.presentationData.strings.ImportStickerPack_ChooseNameDescription, placeholder: self.presentationData.strings.ImportStickerPack_NamePlaceholder, value: nil, maxLength: 128, apply: { [weak self] title in
             if let strongSelf = self, let title = title {
                 strongSelf.shortNameSuggestionDisposable.set((strongSelf.context.engine.stickers.getStickerSetShortNameSuggestion(title: title)
                 |> deliverOnMainQueue).start(next: { suggestedShortName in

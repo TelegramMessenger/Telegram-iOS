@@ -1163,7 +1163,6 @@ private class ReorderingGestureRecognizer: UIGestureRecognizer {
         }
     }
     
-    private var currentItemNode: ASDisplayNode?
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         

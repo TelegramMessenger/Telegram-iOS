@@ -97,9 +97,9 @@ final class AdjustmentsRenderPass: DefaultRenderPass {
     }
         
     override func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        guard self.adjustments.hasValues else {
-            return input
-        }
+//        guard self.adjustments.hasValues else {
+//            return input
+//        }
         self.setupVerticesBuffer(device: device)
                 
         let width = input.width

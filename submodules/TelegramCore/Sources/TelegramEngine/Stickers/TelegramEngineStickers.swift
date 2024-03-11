@@ -86,6 +86,30 @@ public extension TelegramEngine {
             return _internal_createStickerSet(account: self.account, title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnail, type: type, software: software)
         }
         
+        public func renameStickerSet(packReference: StickerPackReference, title: String) -> Signal<Never, RenameStickerSetError> {
+            return _internal_renameStickerSet(account: self.account, packReference: packReference, title: title)
+        }
+        
+        public func deleteStickerSet(packReference: StickerPackReference) -> Signal<Never, DeleteStickerSetError> {
+            return _internal_deleteStickerSet(account: self.account, packReference: packReference)
+        }
+        
+        public func addStickerToStickerSet(packReference: StickerPackReference, sticker: ImportSticker) -> Signal<Bool, AddStickerToSetError> {
+            return _internal_addStickerToStickerSet(account: self.account, packReference: packReference, sticker: sticker)
+        }
+        
+        public func reorderSticker(sticker: FileMediaReference, position: Int) -> Signal<Never, ReorderStickerError> {
+            return _internal_reorderSticker(account: self.account, sticker: sticker, position: position)
+        }
+        
+        public func deleteStickerFromStickerSet(sticker: FileMediaReference) -> Signal<Never, DeleteStickerError> {
+            return _internal_deleteStickerFromStickerSet(account: self.account, sticker: sticker)
+        }
+        
+        public func getMyStickerSets() -> Signal<[(StickerPackCollectionInfo, StickerPackItem?)], NoError> {
+            return _internal_getMyStickerSets(account: self.account)
+        }
+        
         public func getStickerSetShortNameSuggestion(title: String) -> Signal<String?, NoError> {
             return _internal_getStickerSetShortNameSuggestion(account: self.account, title: title)
         }

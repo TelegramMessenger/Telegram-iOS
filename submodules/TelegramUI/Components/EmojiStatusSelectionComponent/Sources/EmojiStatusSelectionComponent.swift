@@ -462,6 +462,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     },
                     clearGroup: { groupId in
                     },
+                    editAction: { _ in },
                     pushController: { c in
                     },
                     presentController: { c in
@@ -584,6 +585,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                             isPremiumLocked: false,
                                             isEmbedded: false,
                                             hasClear: false,
+                                            hasEdit: false,
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
@@ -639,6 +641,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                     isPremiumLocked: false,
                                     isEmbedded: false,
                                     hasClear: false,
+                                    hasEdit: false,
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
@@ -671,6 +674,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                             isPremiumLocked: false,
                                             isEmbedded: false,
                                             hasClear: false,
+                                            hasEdit: false,
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,

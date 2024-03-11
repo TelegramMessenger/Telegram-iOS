@@ -991,6 +991,7 @@ public class StickerPickerScreen: ViewController {
                         context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
                     }
                 },
+                editAction: { _ in },
                 pushController: { c in
                 },
                 presentController: { c in
@@ -1122,6 +1123,7 @@ public class StickerPickerScreen: ViewController {
                                         isPremiumLocked: false,
                                         isEmbedded: false,
                                         hasClear: false,
+                                        hasEdit: false,
                                         collapsedLineCount: nil,
                                         displayPremiumBadges: false,
                                         headerItem: nil,
@@ -1177,6 +1179,7 @@ public class StickerPickerScreen: ViewController {
                                 isPremiumLocked: false,
                                 isEmbedded: false,
                                 hasClear: false,
+                                hasEdit: false,
                                 collapsedLineCount: nil,
                                 displayPremiumBadges: false,
                                 headerItem: nil,
@@ -1208,6 +1211,7 @@ public class StickerPickerScreen: ViewController {
                                         isPremiumLocked: false,
                                         isEmbedded: false,
                                         hasClear: false,
+                                        hasEdit: false,
                                         collapsedLineCount: nil,
                                         displayPremiumBadges: false,
                                         headerItem: nil,
@@ -1386,6 +1390,7 @@ public class StickerPickerScreen: ViewController {
                     } else if groupId == AnyHashable("peerSpecific") {
                     }
                 },
+                editAction: { _ in },
                 pushController: { c in
                 },
                 presentController: { c in
@@ -1450,6 +1455,7 @@ public class StickerPickerScreen: ViewController {
                                 isPremiumLocked: false,
                                 isEmbedded: false,
                                 hasClear: false,
+                                hasEdit: false,
                                 collapsedLineCount: nil,
                                 displayPremiumBadges: false,
                                 headerItem: nil,
@@ -1481,6 +1487,7 @@ public class StickerPickerScreen: ViewController {
                                         isPremiumLocked: false,
                                         isEmbedded: false,
                                         hasClear: false,
+                                        hasEdit: false,
                                         collapsedLineCount: nil,
                                         displayPremiumBadges: false,
                                         headerItem: nil,
@@ -1507,7 +1514,7 @@ public class StickerPickerScreen: ViewController {
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
-                customContentView: controller.hasGifs ? self.storyStickersContentView : nil,
+                customContentView: controller.hasInteractiveStickers ? self.storyStickersContentView : nil,
                 useOpaqueTheme: false,
                 hideBackground: true,
                 stateContext: nil,
@@ -1966,6 +1973,7 @@ public class StickerPickerScreen: ViewController {
     private let inputData: Signal<StickerPickerInputData, NoError>
     fileprivate let defaultToEmoji: Bool
     let hasGifs: Bool
+    let hasInteractiveStickers: Bool
     
     private var currentLayout: ContainerViewLayout?
     
@@ -1980,12 +1988,13 @@ public class StickerPickerScreen: ViewController {
     public var addReaction: () -> Void = { }
     public var addCamera: () -> Void = { }
     
-    public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>, defaultToEmoji: Bool = false, hasGifs: Bool = false) {
+    public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>, defaultToEmoji: Bool = false, hasGifs: Bool = false, hasInteractiveStickers: Bool = true) {
         self.context = context
         self.theme = defaultDarkColorPresentationTheme
         self.inputData = inputData
         self.defaultToEmoji = defaultToEmoji
         self.hasGifs = hasGifs
+        self.hasInteractiveStickers = hasInteractiveStickers
         
         super.init(navigationBarPresentationData: nil)
         

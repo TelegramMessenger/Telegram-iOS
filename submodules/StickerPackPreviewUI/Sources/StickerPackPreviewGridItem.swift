@@ -16,19 +16,22 @@ import TextFormat
 
 final class StickerPackPreviewInteraction {
     var previewedItem: StickerPreviewPeekItem?
+    var reorderingFileId: MediaId?
     var playAnimatedStickers: Bool
     
     let addStickerPack: (StickerPackCollectionInfo, [StickerPackItem]) -> Void
     let removeStickerPack: (StickerPackCollectionInfo) -> Void
     let emojiSelected: (String, ChatTextInputTextCustomEmojiAttribute) -> Void
     let emojiLongPressed: (String, ChatTextInputTextCustomEmojiAttribute, ASDisplayNode, CGRect) -> Void
+    let addPressed: () -> Void
     
-    init(playAnimatedStickers: Bool, addStickerPack: @escaping (StickerPackCollectionInfo, [StickerPackItem]) -> Void, removeStickerPack: @escaping (StickerPackCollectionInfo) -> Void, emojiSelected: @escaping (String, ChatTextInputTextCustomEmojiAttribute) -> Void, emojiLongPressed: @escaping (String, ChatTextInputTextCustomEmojiAttribute, ASDisplayNode, CGRect) -> Void) {
+    init(playAnimatedStickers: Bool, addStickerPack: @escaping (StickerPackCollectionInfo, [StickerPackItem]) -> Void, removeStickerPack: @escaping (StickerPackCollectionInfo) -> Void, emojiSelected: @escaping (String, ChatTextInputTextCustomEmojiAttribute) -> Void, emojiLongPressed: @escaping (String, ChatTextInputTextCustomEmojiAttribute, ASDisplayNode, CGRect) -> Void, addPressed: @escaping () -> Void) {
         self.playAnimatedStickers = playAnimatedStickers
         self.addStickerPack = addStickerPack
         self.removeStickerPack = removeStickerPack
         self.emojiSelected = emojiSelected
         self.emojiLongPressed = emojiLongPressed
+        self.addPressed = addPressed
     }
 }
 
@@ -40,10 +43,12 @@ final class StickerPackPreviewGridItem: GridItem {
     let isPremium: Bool
     let isLocked: Bool
     let isEmpty: Bool
+    let isEditing: Bool
+    let isAdd: Bool
     
     let section: GridSection? = nil
         
-    init(context: AccountContext, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isPremium: Bool, isLocked: Bool, isEmpty: Bool) {
+    init(context: AccountContext, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isPremium: Bool, isLocked: Bool, isEmpty: Bool, isEditing: Bool, isAdd: Bool = false) {
         self.context = context
         self.stickerItem = stickerItem
         self.interaction = interaction
@@ -51,11 +56,13 @@ final class StickerPackPreviewGridItem: GridItem {
         self.isPremium = isPremium
         self.isLocked = isLocked
         self.isEmpty = isEmpty
+        self.isEditing = isEditing
+        self.isAdd = isAdd
     }
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPackPreviewGridItemNode()
-        node.setup(context: self.context, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty)
+        node.setup(context: self.context, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty, isEditing: self.isEditing, isAdd: self.isAdd)
         return node
     }
     
@@ -64,17 +71,18 @@ final class StickerPackPreviewGridItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(context: self.context, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty)
+        node.setup(context: self.context, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty, isEditing: self.isEditing, isAdd: self.isAdd)
     }
 }
 
 private let textFont = Font.regular(20.0)
 
 final class StickerPackPreviewGridItemNode: GridItemNode {
-    private var currentState: (AccountContext, StickerPackItem?)?
+    private var currentState: (AccountContext, StickerPackItem?, Bool, Bool)?
     private var isLocked: Bool?
     private var isPremium: Bool?
     private var isEmpty: Bool?
+    private let containerNode: ASDisplayNode
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
     private var placeholderNode: StickerShimmerEffectNode
@@ -84,6 +92,8 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     private var lockIconNode: ASImageNode?
     
     private var theme: PresentationTheme?
+    
+    private var isEditing = false
     
     override var isVisibleInGrid: Bool {
         didSet {
@@ -103,14 +113,18 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     private let effectFetchedDisposable = MetaDisposable()
     
     var interaction: StickerPackPreviewInteraction?
-    
-    var selected: (() -> Void)?
-    
+        
     var stickerPackItem: StickerPackItem? {
         return self.currentState?.1
     }
     
+    var isAdd: Bool {
+        return self.currentState?.2 == true
+    }
+    
     override init() {
+        self.containerNode = ASDisplayNode()
+        
         self.imageNode = TransformImageNode()
         self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
         self.placeholderNode = StickerShimmerEffectNode()
@@ -118,8 +132,9 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         
         super.init()
         
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.placeholderNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.imageNode)
+        self.containerNode.addSubnode(self.placeholderNode)
         
         var firstTime = true
         self.imageNode.imageUpdated = { [weak self] image in
@@ -172,15 +187,62 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
+    @objc private func handleAddTap() {
+        self.interaction?.addPressed()
+    }
+    
     private var setupTimestamp: Double?
-    func setup(context: AccountContext, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isLocked: Bool, isPremium: Bool, isEmpty: Bool) {
+    func setup(context: AccountContext, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isLocked: Bool, isPremium: Bool, isEmpty: Bool, isEditing: Bool, isAdd: Bool) {
         self.interaction = interaction
         self.theme = theme
         
+        let isFirstTime = self.currentState == nil
+        if isAdd {
+            if !isFirstTime {
+                return
+            }
+            
+            let color = theme.actionSheet.controlAccentColor
+            self.imageNode.setSignal(.single({ arguments in
+                let drawingContext = DrawingContext(size: arguments.imageSize, opaque: false)
+                let size = arguments.imageSize
+                drawingContext?.withContext({ context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    
+                    UIGraphicsPushContext(context)
+                    
+                    context.setFillColor(color.withMultipliedAlpha(0.1).cgColor)
+                    context.fillEllipse(in: CGRect(origin: .zero, size: size).insetBy(dx: 4.0, dy: 4.0))
+                    context.setFillColor(color.cgColor)
+                    
+                    let plusSize = CGSize(width: 3.0, height: 21.0)
+                    context.addPath(UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - plusSize.width) / 2.0), y: floorToScreenPixels((size.height - plusSize.height) / 2.0), width: plusSize.width, height: plusSize.height), cornerRadius: plusSize.width / 2.0).cgPath)
+                    context.addPath(UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - plusSize.height) / 2.0), y: floorToScreenPixels((size.height - plusSize.width) / 2.0), width: plusSize.height, height: plusSize.width), cornerRadius: plusSize.width / 2.0).cgPath)
+                    context.fillPath()
+                    
+                    UIGraphicsPopContext()
+                })
+                return drawingContext
+            }))
+            
+            self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.handleAddTap)))
+            
+            self.currentState = (context, nil, true, false)
+            self.setNeedsLayout()
+            
+            return
+        }
+        
+        if interaction.reorderingFileId != nil {
+            self.isHidden = stickerItem?.file.fileId == interaction.reorderingFileId
+        } else {
+            self.isHidden = false
+        }
+        
         if self.currentState == nil || self.currentState!.0 !== context || self.currentState!.1 != stickerItem || self.isLocked != isLocked || self.isPremium != isPremium || self.isEmpty != isEmpty {
             self.isLocked = isLocked
-            
-            if isLocked {
+                        
+            if isLocked || isEditing {
                 let lockBackground: UIVisualEffectView
                 let lockIconNode: ASImageNode
                 if let currentBackground = self.lockBackground, let currentIcon = self.lockIconNode {
@@ -198,7 +260,24 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     lockBackground.isUserInteractionEnabled = false
                     lockIconNode = ASImageNode()
                     lockIconNode.displaysAsynchronously = false
-                    lockIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
+                    
+                    if isEditing {
+                        lockIconNode.image = generateImage(CGSize(width: 24.0, height: 24.0), contextGenerator: { size, context in
+                            context.clear(CGRect(origin: .zero, size: size))
+                            context.setFillColor(UIColor.white.cgColor)
+                                   
+                            context.addEllipse(in: CGRect(x: 5.5, y: 11.0, width: 3.0, height: 3.0))
+                            context.fillPath()
+                            
+                            context.addEllipse(in: CGRect(x: size.width / 2.0 - 1.5, y: 11.0, width: 3.0, height: 3.0))
+                            context.fillPath()
+                            
+                            context.addEllipse(in: CGRect(x: size.width - 3.0 - 5.5, y: 11.0, width: 3.0, height: 3.0))
+                            context.fillPath()
+                        })
+                    } else {
+                        lockIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
+                    }
                     
                     let lockTintView = UIView()
                     lockTintView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.15)
@@ -209,15 +288,21 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     self.lockIconNode = lockIconNode
                     
                     self.view.addSubview(lockBackground)
-                    self.addSubnode(lockIconNode)
+                    lockBackground.contentView.addSubview(lockIconNode.view)
+                    
+                    if !isFirstTime {
+                        lockBackground.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                    }
                 }
-            } else if let lockBackground = self.lockBackground, let lockTintView = self.lockTintView, let lockIconNode = self.lockIconNode {
+            } else if let lockBackground = self.lockBackground {
                 self.lockBackground = nil
                 self.lockTintView = nil
                 self.lockIconNode = nil
-                lockBackground.removeFromSuperview()
-                lockTintView.removeFromSuperview()
-                lockIconNode.removeFromSupernode()
+                
+                lockBackground.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                lockBackground.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                    lockBackground.removeFromSuperview()
+                })
             }
             
             if let stickerItem = stickerItem {
@@ -237,7 +322,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     if self.animationNode == nil {
                         let animationNode = DefaultAnimatedStickerNodeImpl()
                         self.animationNode = animationNode
-                        self.insertSubnode(animationNode, aboveSubnode: self.imageNode)
+                        self.containerNode.insertSubnode(animationNode, aboveSubnode: self.imageNode)
                         animationNode.started = { [weak self] in
                             guard let strongSelf = self else {
                                 return
@@ -287,21 +372,85 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             self.animationNode?.alpha = isLocked ? 0.5 : 1.0
             self.imageNode.alpha = isLocked ? 0.5 : 1.0
             
-            self.currentState = (context, stickerItem)
+            self.currentState = (context, stickerItem, false, isEditing)
             self.setNeedsLayout()
         }
         self.isEmpty = isEmpty
+        
+        if self.isEditing != isEditing {
+            self.isEditing = isEditing
+            if self.isEditing {
+                self.startShaking()
+            } else {
+                self.containerNode.layer.removeAnimation(forKey: "shaking_position")
+                self.containerNode.layer.removeAnimation(forKey: "shaking_rotation")
+            }
+        }
+    }
+    
+    private func startShaking() {
+        func degreesToRadians(_ x: CGFloat) -> CGFloat {
+            return .pi * x / 180.0
+        }
+
+        let duration: Double = 0.4
+        let displacement: CGFloat = 1.0
+        let degreesRotation: CGFloat = 2.0
+        
+        let negativeDisplacement = -1.0 * displacement
+        let position = CAKeyframeAnimation.init(keyPath: "position")
+        position.beginTime = 0.8
+        position.duration = duration
+        position.values = [
+            NSValue(cgPoint: CGPoint(x: negativeDisplacement, y: negativeDisplacement)),
+            NSValue(cgPoint: CGPoint(x: 0, y: 0)),
+            NSValue(cgPoint: CGPoint(x: negativeDisplacement, y: 0)),
+            NSValue(cgPoint: CGPoint(x: 0, y: negativeDisplacement)),
+            NSValue(cgPoint: CGPoint(x: negativeDisplacement, y: negativeDisplacement))
+        ]
+        position.calculationMode = .linear
+        position.isRemovedOnCompletion = false
+        position.repeatCount = Float.greatestFiniteMagnitude
+        position.beginTime = CFTimeInterval(Float(arc4random()).truncatingRemainder(dividingBy: Float(25)) / Float(100))
+        position.isAdditive = true
+
+        let transform = CAKeyframeAnimation.init(keyPath: "transform")
+        transform.beginTime = 2.6
+        transform.duration = 0.3
+        transform.valueFunction = CAValueFunction(name: CAValueFunctionName.rotateZ)
+        transform.values = [
+            degreesToRadians(-1.0 * degreesRotation),
+            degreesToRadians(degreesRotation),
+            degreesToRadians(-1.0 * degreesRotation)
+        ]
+        transform.calculationMode = .linear
+        transform.isRemovedOnCompletion = false
+        transform.repeatCount = Float.greatestFiniteMagnitude
+        transform.isAdditive = true
+        transform.beginTime = CFTimeInterval(Float(arc4random()).truncatingRemainder(dividingBy: Float(25)) / Float(100))
+
+        self.containerNode.layer.add(position, forKey: "shaking_position")
+        self.containerNode.layer.add(transform, forKey: "shaking_rotation")
     }
     
     override func layout() {
         super.layout()
         
         let bounds = self.bounds
+        self.containerNode.frame = bounds
+        
         let boundsSide = min(bounds.size.width - 14.0, bounds.size.height - 14.0)
         var boundingSize = CGSize(width: boundsSide, height: boundsSide)
                 
-        if let (_, item) = self.currentState {
-            if let item = item, let dimensions = item.file.dimensions?.cgSize {
+        if let (_, item, isAdd, _) = self.currentState {
+            if isAdd {
+                let imageSize = CGSize(width: 512, height: 512).aspectFitted(boundingSize)
+                let imageFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
+                self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
+                self.imageNode.frame = imageFrame
+                
+                return
+            } else if let item = item, let dimensions = item.file.dimensions?.cgSize {
                 if item.file.isPremiumSticker {
                     boundingSize = CGSize(width: boundingSize.width * 1.1, height: boundingSize.width * 1.1)
                 }
@@ -322,13 +471,20 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         let placeholderFrame = imageFrame
         self.placeholderNode.frame = imageFrame
     
-        if let theme = self.theme, let (context, stickerItem) = self.currentState, let item = stickerItem {
+        if let theme = self.theme, let (context, stickerItem, _, _) = self.currentState, let item = stickerItem {
             self.placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.file.immediateThumbnailData, size: placeholderFrame.size, enableEffect: context.sharedContext.energyUsageSettings.fullTranslucency)
         }
         
         if let lockBackground = self.lockBackground, let lockTintView = self.lockTintView, let lockIconNode = self.lockIconNode {
-            let lockSize = CGSize(width: 16.0, height: 16.0)
-            let lockBackgroundFrame = CGRect(origin: CGPoint(x: bounds.width - lockSize.width, y: bounds.height - lockSize.height), size: lockSize)
+            let lockSize: CGSize
+            let lockBackgroundFrame: CGRect
+            if let (_, _, _, isEditing) = self.currentState, isEditing {
+                lockSize = CGSize(width: 24.0, height: 24.0)
+                lockBackgroundFrame = CGRect(origin: CGPoint(x: 3.0, y: 3.0), size: lockSize)
+            } else {
+                lockSize = CGSize(width: 16.0, height: 16.0)
+                lockBackgroundFrame = CGRect(origin: CGPoint(x: bounds.width - lockSize.width, y: bounds.height - lockSize.height), size: lockSize)
+            }
             lockBackground.frame = lockBackgroundFrame
             lockBackground.layer.cornerRadius = lockSize.width / 2.0
             if #available(iOS 13.0, *) {
@@ -337,7 +493,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             lockTintView.frame = CGRect(origin: CGPoint(), size: lockBackgroundFrame.size)
             if let icon = lockIconNode.image {
                 let iconSize = CGSize(width: icon.size.width - 4.0, height: icon.size.height - 4.0)
-                lockIconNode.frame = CGRect(origin: CGPoint(x: lockBackgroundFrame.minX + floorToScreenPixels((lockBackgroundFrame.width - iconSize.width) / 2.0), y: lockBackgroundFrame.minY + floorToScreenPixels((lockBackgroundFrame.height - iconSize.height) / 2.0)), size: iconSize)
+                lockIconNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((lockBackgroundFrame.width - iconSize.width) / 2.0), y: floorToScreenPixels((lockBackgroundFrame.height - iconSize.height) / 2.0)), size: iconSize)
             }
         }
     }
@@ -355,7 +511,10 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     
     func updatePreviewing(animated: Bool) {
         var isPreviewing = false
-        if let (_, maybeItem) = self.currentState, let interaction = self.interaction, let item = maybeItem {
+        if let (_, maybeItem, isAdd, _) = self.currentState, let interaction = self.interaction, let item = maybeItem {
+            if isAdd {
+                return
+            }
             isPreviewing = interaction.previewedItem == .pack(item.file)
         }
         if self.currentIsPreviewing != isPreviewing {
