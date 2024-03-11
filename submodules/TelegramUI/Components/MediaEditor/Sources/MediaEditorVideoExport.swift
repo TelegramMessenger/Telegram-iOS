@@ -505,7 +505,7 @@ public final class MediaEditorVideoExport {
                     result = trackTrimRange
                 }
                 if trackStart + result.duration > maxDuration {
-                    result = CMTimeRange(start: result.start, end: maxDuration - trackStart)
+                    result = CMTimeRange(start: result.start, duration: maxDuration - trackStart)
                 }
                 return result
             }
