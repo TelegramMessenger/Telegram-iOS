@@ -286,6 +286,7 @@ private enum PreferencesKeyValues: Int32 {
     case displaySavedChatsAsTopics = 35
     case shortcutMessages = 37
     case timezoneList = 38
+    case botBiometricsState = 39
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -479,6 +480,13 @@ public struct PreferencesKeys {
     public static func timezoneList() -> ValueBoxKey {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.timezoneList.rawValue)
+        return key
+    }
+    
+    public static func botBiometricsState(peerId: PeerId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 4 + 8)
+        key.setInt32(0, value: PreferencesKeyValues.botBiometricsState.rawValue)
+        key.setInt64(4, value: peerId.toInt64())
         return key
     }
 }

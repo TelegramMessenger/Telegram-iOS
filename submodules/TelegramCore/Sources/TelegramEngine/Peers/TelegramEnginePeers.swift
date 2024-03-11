@@ -1490,6 +1490,10 @@ public extension TelegramEngine {
                 }
             }
         }
+        
+        public func updateBotBiometricsState(peerId: EnginePeer.Id, update: @escaping (TelegramBotBiometricsState) -> TelegramBotBiometricsState) {
+            let _ = _internal_updateBotBiometricsState(account: self.account, peerId: peerId, update: update).startStandalone()
+        }
     }
 }
 

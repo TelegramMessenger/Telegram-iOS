@@ -33,6 +33,7 @@ swift_library(
         "//submodules/CheckNode:CheckNode",
         "//submodules/Markdown:Markdown",
         "//submodules/TextFormat:TextFormat",
+        "//submodules/LocalAuth",
     ],
     visibility = [
         "//visibility:public",

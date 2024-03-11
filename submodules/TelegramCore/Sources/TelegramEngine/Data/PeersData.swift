@@ -1584,5 +1584,33 @@ public extension TelegramEngine.EngineData.Item {
                 }
             }
         }
+        
+        public struct BotBiometricsState: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = TelegramBotBiometricsState
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.botBiometricsState(peerId: self.id)]))
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                if let state = view.values[PreferencesKeys.botBiometricsState(peerId: self.id)]?.get(TelegramBotBiometricsState.self) {
+                    return state
+                } else {
+                    return TelegramBotBiometricsState.default
+                }
+            }
+        }
     }
 }

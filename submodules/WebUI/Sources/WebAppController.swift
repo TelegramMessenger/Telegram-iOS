@@ -23,6 +23,7 @@ import PromptUI
 import PhoneNumberFormat
 import QrCodeUI
 import InstantPageUI
+import LocalAuth
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -1064,6 +1065,18 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     if let json = json, let isVisible = json["is_visible"] as? Bool {
                         self.controller?.hasSettings = isVisible
                     }
+                case "web_app_biometry_get_info":
+                    self.sendBiometryInfoReceivedEvent()
+                case "web_app_biometry_request_access":
+                    self.requestBiometryAccess()
+                case "web_app_biometry_request_auth":
+                    self.requestBiometryAuth()
+                case "web_app_biometry_update_token":
+                    var tokenData: Data?
+                    if let json, let tokenDataValue = json["token"] as? Data {
+                        tokenData = tokenDataValue
+                    }
+                    self.requestBiometryUpdateToken(tokenData: tokenData)
                 default:
                     break
             }
@@ -1391,6 +1404,230 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 let paramsString = "{req_id: \"\(requestId)\", result: \(result)}"
                 self.webView?.sendEvent(name: "custom_method_invoked", data: paramsString)
             })
+        }
+        
+        fileprivate func sendBiometryInfoReceivedEvent() {
+            guard let controller = self.controller else {
+                return
+            }
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.BotBiometricsState(id: controller.botId)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                guard let self else {
+                    return
+                }
+                
+                var data: [String: Any] = [:]
+                if let biometricAuthentication = LocalAuth.biometricAuthentication {
+                    data["available"] = true
+                    switch biometricAuthentication {
+                    case .faceId:
+                        data["type"] = "face"
+                    case .touchId:
+                        data["type"] = "finger"
+                    }
+                    data["access_requested"] = state.accessRequested
+                    data["access_granted"] = state.accessGranted
+                    data["token_saved"] = state.opaqueToken != nil
+                } else {
+                    data["available"] = false
+                }
+                
+                guard let jsonData = try? JSONSerialization.data(withJSONObject: data) else {
+                    return
+                }
+                guard let jsonDataString = String(data: jsonData, encoding: .utf8) else {
+                    return
+                }
+                self.webView?.sendEvent(name: "biometry_info_received", data: jsonDataString)
+            })
+        }
+        
+        fileprivate func requestBiometryAccess() {
+            guard let controller = self.controller else {
+                return
+            }
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId),
+                TelegramEngine.EngineData.Item.Peer.BotBiometricsState(id: controller.botId)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] botPeer, state in
+                guard let self, let botPeer, let controller = self.controller else {
+                    return
+                }
+                
+                if state.accessRequested {
+                    self.sendBiometryInfoReceivedEvent()
+                    return
+                }
+                
+                let updateAccessGranted: (Bool) -> Void = { [weak self] granted in
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.context.engine.peers.updateBotBiometricsState(peerId: botPeer.id, update: { state in
+                        var state = state
+                        state.accessRequested = true
+                        state.accessGranted = granted
+                        return state
+                    })
+                    
+                    self.sendBiometryInfoReceivedEvent()
+                }
+                
+                //TODO:localize
+                let alertText = "Do you want to allow \(botPeer.compactDisplayTitle) to use Face ID?"
+                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: alertText, actions: [
+                    TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_No, action: {
+                        updateAccessGranted(false)
+                    }),
+                    TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Yes, action: {
+                        updateAccessGranted(true)
+                    })
+                ], parseMarkdown: false), in: .window(.root))
+            })
+        }
+        
+        fileprivate func requestBiometryAuth() {
+            guard let controller = self.controller else {
+                return
+            }
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId),
+                TelegramEngine.EngineData.Item.Peer.BotBiometricsState(id: controller.botId)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] botPeer, state in
+                guard let self else {
+                    return
+                }
+                
+                if state.accessRequested && state.accessGranted {
+                    guard let controller = self.controller else {
+                        return
+                    }
+                    guard let keyId = "A\(UInt64(bitPattern: self.context.account.id.int64))WebBot\(UInt64(bitPattern: controller.botId.toInt64()))".data(using: .utf8) else {
+                        return
+                    }
+                    let appBundleId = self.context.sharedContext.applicationBindings.appBundleId
+                    
+                    Thread { [weak self] in
+                        var key = LocalAuth.getPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
+                        if key == nil {
+                            key = LocalAuth.addPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
+                        }
+                        
+                        let decryptedData: LocalAuth.DecryptionResult
+                        if let key {
+                            if let encryptedData = state.opaqueToken {
+                                if encryptedData.publicKey == key.publicKeyRepresentation {
+                                    decryptedData = key.decrypt(data: encryptedData.data)
+                                } else {
+                                    // The local keychain has been reset
+                                    if let emptyEncryptedData = key.encrypt(data: Data()) {
+                                        decryptedData = key.decrypt(data: emptyEncryptedData)
+                                    } else {
+                                        decryptedData = .error(.generic)
+                                    }
+                                }
+                            } else {
+                                if let emptyEncryptedData = key.encrypt(data: Data()) {
+                                    decryptedData = key.decrypt(data: emptyEncryptedData)
+                                } else {
+                                    decryptedData = .error(.generic)
+                                }
+                            }
+                        } else {
+                            decryptedData = .error(.generic)
+                        }
+                        
+                        DispatchQueue.main.async {
+                            guard let self else {
+                                return
+                            }
+                            
+                            switch decryptedData {
+                            case let .result(token):
+                                self.sendBiometryAuthResult(isAuthorized: true, tokenData: state.opaqueToken != nil ? token : nil)
+                            case .error:
+                                self.sendBiometryAuthResult(isAuthorized: false, tokenData: nil)
+                            }
+                        }
+                    }.start()
+                } else {
+                    self.sendBiometryAuthResult(isAuthorized: false, tokenData: nil)
+                }
+            })
+        }
+        
+        fileprivate func sendBiometryAuthResult(isAuthorized: Bool, tokenData: Data?) {
+            var data: [String: Any] = [:]
+            data["status"] = isAuthorized ? "authorized" : "failed"
+            if isAuthorized {
+                if let tokenData {
+                    data["token"] = tokenData
+                } else {
+                    data["token"] = Data()
+                }
+            }
+            
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: data) else {
+                return
+            }
+            guard let jsonDataString = String(data: jsonData, encoding: .utf8) else {
+                return
+            }
+            self.webView?.sendEvent(name: "biometry_auth_requested", data: jsonDataString)
+        }
+        
+        fileprivate func requestBiometryUpdateToken(tokenData: Data?) {
+            guard let controller = self.controller else {
+                return
+            }
+            guard let keyId = "A\(UInt64(bitPattern: self.context.account.id.int64))WebBot\(UInt64(bitPattern: controller.botId.toInt64()))".data(using: .utf8) else {
+                return
+            }
+            
+            if let tokenData {
+                let appBundleId = self.context.sharedContext.applicationBindings.appBundleId
+                Thread { [weak self] in
+                    var key = LocalAuth.getPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
+                    if key == nil {
+                        key = LocalAuth.addPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
+                    }
+                    
+                    var encryptedData: TelegramBotBiometricsState.OpaqueToken?
+                    if let key {
+                        if let result = key.encrypt(data: tokenData) {
+                            encryptedData = TelegramBotBiometricsState.OpaqueToken(
+                                publicKey: key.publicKeyRepresentation,
+                                data: result
+                            )
+                        }
+                    }
+                    
+                    DispatchQueue.main.async {
+                        guard let self else {
+                            return
+                        }
+                        
+                        if let encryptedData {
+                            self.context.engine.peers.updateBotBiometricsState(peerId: controller.botId, update: { state in
+                                var state = state
+                                state.opaqueToken = encryptedData
+                                return state
+                            })
+                        }
+                    }
+                }.start()
+            } else {
+                self.context.engine.peers.updateBotBiometricsState(peerId: controller.botId, update: { state in
+                    var state = state
+                    state.opaqueToken = nil
+                    return state
+                })
+            }
         }
     }
     
