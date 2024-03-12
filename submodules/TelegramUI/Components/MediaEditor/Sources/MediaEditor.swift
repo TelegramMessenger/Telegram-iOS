@@ -106,6 +106,7 @@ public final class MediaEditor {
         case asset(PHAsset)
         case draft(MediaEditorDraft)
         case message(MessageId)
+        case sticker(TelegramMediaFile)
         
         var dimensions: PixelDimensions {
             switch self {
@@ -116,6 +117,8 @@ public final class MediaEditor {
             case let .draft(draft):
                 return draft.dimensions
             case .message:
+                return PixelDimensions(width: 1080, height: 1920)
+            case .sticker:
                 return PixelDimensions(width: 1080, height: 1920)
             }
         }
@@ -654,6 +657,19 @@ public final class MediaEditor {
                     )
                 }
             }
+        case .sticker:
+            let image = generateImage(CGSize(width: 1080, height: 1920), contextGenerator: { size, context in
+                context.clear(CGRect(origin: .zero, size: size))
+            }, opaque: false, scale: 1.0)
+            textureSource = .single(
+                TextureSourceResult(
+                    image: image,
+                    nightImage: nil,
+                    player: nil,
+                    playerIsReference: false,
+                    gradientColors: GradientColors(top: .clear, bottom: .clear)
+                )
+            )
         }
         
         self.textureSourceDisposable = (textureSource

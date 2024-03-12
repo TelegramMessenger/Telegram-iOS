@@ -8792,7 +8792,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
                             previousController.dismiss()
                         }
-                        let controller = self.context.sharedContext.makePremiumBoostLevelsController(context: self.context, peerId: peer.id, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: false, openStats: { [weak self] in
+                        let controller = self.context.sharedContext.makePremiumBoostLevelsController(context: self.context, peerId: peer.id, subject: .stories, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: false, openStats: { [weak self] in
                             if let self {
                                 self.openStats(boosts: true, boostStatus: boostStatus)
                             }

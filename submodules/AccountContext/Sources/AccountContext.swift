@@ -991,16 +991,18 @@ public protocol SharedAccountContext: AnyObject {
     func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Bool) -> ViewController
     func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (() -> Void)?) -> ViewController
     func makePremiumPrivacyControllerController(context: AccountContext, subject: PremiumPrivacySubject, peerId: EnginePeer.Id) -> ViewController
-    func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool, openStats: (() -> Void)?) -> ViewController
+    func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, subject: BoostSubject, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool, openStats: (() -> Void)?) -> ViewController
     
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], isEditing: Bool, parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
     
     func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController
     
-//    func makeStickerEditorScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, initialSticker: TelegramMediaFile?, targetStickerPack: StickerPackReference?) -> ViewController
+    func makeStickerEditorScreen(context: AccountContext, source: Any, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile) -> Void) -> ViewController
     
     func makeStickerMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void) -> ViewController
     func makeStoryMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController
+    
+    func makeStickerPickerScreen(context: AccountContext, inputData: Promise<StickerPickerInput>, completion: @escaping (TelegramMediaFile) -> Void) -> ViewController
     
     func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController
     

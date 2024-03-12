@@ -64,7 +64,7 @@ public func standaloneUploadedImage(postbox: Postbox, network: Network, peerId: 
                 |> mapError { _ -> StandaloneUploadMediaError in }
                 |> mapToSignal { inputPeer -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                     if let inputPeer = inputPeer {
-                        return network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: inputFile, stickers: nil, ttlSeconds: nil)))
+                        return network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: inputFile, stickers: nil, ttlSeconds: nil)))
                         |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                         |> mapToSignal { media -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                             switch media {
@@ -158,7 +158,7 @@ public func standaloneUploadedFile(postbox: Postbox, network: Network, peerId: P
                                         if let _ = thumbnailFile {
                                             flags |= 1 << 2
                                         }
-                                        return network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), stickers: nil, ttlSeconds: nil)))
+                                        return network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), stickers: nil, ttlSeconds: nil)))
                                             |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                                             |> mapToSignal { media -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                                                 switch media {

@@ -7538,3 +7538,19 @@ private final class FadingMaskLayer: SimpleLayer {
         self.fillLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: gradientHeight), size: CGSize(width: self.bounds.width, height: self.bounds.height - gradientHeight))
     }
 }
+
+public struct StickerPickerInputData: StickerPickerInput, Equatable {
+    public var emoji: EmojiPagerContentComponent
+    public var stickers: EmojiPagerContentComponent?
+    public var gifs: GifPagerContentComponent?
+    
+    public init(
+        emoji: EmojiPagerContentComponent,
+        stickers: EmojiPagerContentComponent?,
+        gifs: GifPagerContentComponent?
+    ) {
+        self.emoji = emoji
+        self.stickers = stickers
+        self.gifs = gifs
+    }
+}

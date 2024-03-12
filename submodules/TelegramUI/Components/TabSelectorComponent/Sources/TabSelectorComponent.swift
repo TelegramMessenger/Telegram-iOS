@@ -21,10 +21,12 @@ public final class TabSelectorComponent: Component {
     public struct CustomLayout: Equatable {
         public var font: UIFont
         public var spacing: CGFloat
+        public var lineSelection: Bool
         
-        public init(font: UIFont, spacing: CGFloat) {
+        public init(font: UIFont, spacing: CGFloat, lineSelection: Bool = false) {
             self.font = font
             self.spacing = spacing
+            self.lineSelection = lineSelection
         }
     }
     
@@ -107,6 +109,8 @@ public final class TabSelectorComponent: Component {
         }
         
         func update(component: TabSelectorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let selectionColorUpdated = component.colors.selection != self.component?.colors.selection
+           
             self.component = component
             self.state = state
             
@@ -115,14 +119,27 @@ public final class TabSelectorComponent: Component {
             let spacing: CGFloat = component.customLayout?.spacing ?? 2.0
             
             let itemFont: UIFont
+            var isLineSelection = false
             if let customLayout = component.customLayout {
                 itemFont = customLayout.font
+                isLineSelection = customLayout.lineSelection
             } else {
                 itemFont = Font.semibold(14.0)
             }
             
-            if self.selectionView.image == nil {
-                self.selectionView.image = generateStretchableFilledCircleImage(diameter: baseHeight, color: component.colors.selection)
+            if selectionColorUpdated {
+                if isLineSelection {
+                    self.selectionView.image = generateImage(CGSize(width: 5.0, height: 3.0), rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(component.colors.selection.cgColor)
+                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: 4.0, height: 4.0)))
+                        context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - 4.0, y: 0.0), size: CGSize(width: 4.0, height: 4.0)))
+                        context.fill(CGRect(x: 2.0, y: 0.0, width: size.width - 4.0, height: 4.0))
+                        context.fill(CGRect(x: 0.0, y: 2.0, width: size.width, height: 2.0))
+                    })?.resizableImage(withCapInsets: UIEdgeInsets(top: 3.0, left: 3.0, bottom: 0.0, right: 3.0), resizingMode: .stretch)
+                } else {
+                    self.selectionView.image = generateStretchableFilledCircleImage(diameter: baseHeight, color: component.colors.selection)
+                }
             }
             
             var contentWidth: CGFloat = 0.0
@@ -146,7 +163,11 @@ public final class TabSelectorComponent: Component {
                 let itemSize = itemView.title.update(
                     transition: .immediate,
                     component: AnyComponent(PlainButtonComponent(
-                        content: AnyComponent(Text(text: item.title, font: itemFont, color: component.colors.foreground)),
+                        content: AnyComponent(Text(
+                            text: item.title,
+                            font: itemFont,
+                            color: item.id == component.selectedId && isLineSelection ? component.colors.selection : component.colors.foreground
+                        )),
                         effectAlignment: .center,
                         minSize: nil,
                         action: { [weak self] in
@@ -154,7 +175,8 @@ public final class TabSelectorComponent: Component {
                                 return
                             }
                             component.setSelectedId(itemId)
-                        }
+                        },
+                        animateScale: !isLineSelection
                     )),
                     environment: {},
                     containerSize: CGSize(width: 200.0, height: 100.0)
@@ -178,7 +200,7 @@ public final class TabSelectorComponent: Component {
                     }
                     itemTransition.setPosition(view: itemTitleView, position: itemTitleFrame.origin)
                     itemTransition.setBounds(view: itemTitleView, bounds: CGRect(origin: CGPoint(), size: itemTitleFrame.size))
-                    itemTransition.setAlpha(view: itemTitleView, alpha: item.id == component.selectedId ? 1.0 : 0.4)
+                    itemTransition.setAlpha(view: itemTitleView, alpha: item.id == component.selectedId || isLineSelection ? 1.0 : 0.4)
                 }
             }
             
@@ -195,7 +217,15 @@ public final class TabSelectorComponent: Component {
             
             if let selectedBackgroundRect {
                 self.selectionView.alpha = 1.0
-                transition.setFrame(view: self.selectionView, frame: selectedBackgroundRect)
+                
+                if isLineSelection {
+                    var mappedSelectionFrame = selectedBackgroundRect.insetBy(dx: 12.0, dy: 0.0)
+                    mappedSelectionFrame.origin.y = mappedSelectionFrame.maxY + 6.0
+                    mappedSelectionFrame.size.height = 3.0
+                    transition.setFrame(view: self.selectionView, frame: mappedSelectionFrame)
+                } else {
+                    transition.setFrame(view: self.selectionView, frame: selectedBackgroundRect)
+                }
             } else {
                 self.selectionView.alpha = 0.0
             }

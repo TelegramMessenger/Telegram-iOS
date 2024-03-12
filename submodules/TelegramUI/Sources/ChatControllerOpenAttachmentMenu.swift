@@ -1725,7 +1725,7 @@ extension ChatControllerImpl {
                 }
                 let editorController = MediaEditorScreen(
                     context: self.context,
-                    mode: .stickerEditor,
+                    mode: .stickerEditor(mode: .generic),
                     subject: .single(.asset(asset)),
                     transitionIn: .gallery(
                         MediaEditorScreen.TransitionIn.GalleryTransitionIn(
@@ -1756,8 +1756,6 @@ extension ChatControllerImpl {
                     } as (MediaEditorScreen.Result, @escaping (@escaping () -> Void) -> Void) -> Void
                 )
                 self.push(editorController)
-                
-                
             },
             dismissed: {}
         )
@@ -1768,68 +1766,4 @@ extension ChatControllerImpl {
         mainController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.push(mainController)
     }
-    
-//    func openStickerEditor() {
-//        let mainController = AttachmentController(context: self.context, updatedPresentationData: self.updatedPresentationData, chatLocation: nil, buttons: [.standalone], initialButton: .standalone, fromMenu: false, hasTextInput: false, makeEntityInputView: {
-//            return nil
-//        })
-////        controller.forceSourceRect = true
-////        controller.getSourceRect = getSourceRect
-//        mainController.requestController = { [weak self, weak mainController] _, present in
-//            guard let self else {
-//                return
-//            }
-//            let mediaPickerController = MediaPickerScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: nil, threadTitle: nil, chatLocation: nil, subject: .assets(nil, .createSticker))
-//            mediaPickerController.customSelection = { [weak self, weak mainController] controller, result in
-//                guard let self else {
-//                    return
-//                }
-//                if let result = result as? PHAsset {
-//                    controller.updateHiddenMediaId(result.localIdentifier)
-//                    if let transitionView = controller.transitionView(for: result.localIdentifier, snapshot: false) {
-//                        let editorController = MediaEditorScreen(
-//                            context: self.context,
-//                            mode: .stickerEditor,
-//                            subject: .single(.asset(result)),
-//                            transitionIn: .gallery(
-//                                MediaEditorScreen.TransitionIn.GalleryTransitionIn(
-//                                    sourceView: transitionView,
-//                                    sourceRect: transitionView.bounds,
-//                                    sourceImage: controller.transitionImage(for: result.localIdentifier)
-//                                )
-//                            ),
-//                            transitionOut: { finished, isNew in
-//                                if !finished {
-//                                    return MediaEditorScreen.TransitionOut(
-//                                        destinationView: transitionView,
-//                                        destinationRect: transitionView.bounds,
-//                                        destinationCornerRadius: 0.0
-//                                    )
-//                                }
-//                                return nil
-//                            }, completion: { [weak self, weak mainController] result, commit in
-//                                mainController?.dismiss()
-//                                self?.chatDisplayNode.dismissInput()
-//                                
-//                                Queue.mainQueue().after(0.1) {
-//                                    commit({})
-//                                    if case let .sticker(file) = result.media {
-//                                        self?.enqueueStickerFile(file)
-//                                    }
-//                                }
-//                            } as (MediaEditorScreen.Result, @escaping (@escaping () -> Void) -> Void) -> Void
-//                        )
-//                        editorController.dismissed = { [weak controller] in
-//                            controller?.updateHiddenMediaId(nil)
-//                        }
-//                        self.push(editorController)
-//                    }
-//                }
-//            }
-//            present(mediaPickerController, mediaPickerController.mediaPickerContext)
-//        }
-//        mainController.navigationPresentation = .flatModal
-//        mainController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
-//        self.push(mainController)
-//    }
 }

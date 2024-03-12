@@ -361,14 +361,18 @@ open class ItemListControllerNode: ASDisplayNode {
         }
         
         self.listNode.visibleContentOffsetChanged = { [weak self] offset in
+            guard let strongSelf = self else {
+                return
+            }
             var inVoiceOver = false
             if let validLayout = self?.validLayout {
                 inVoiceOver = validLayout.0.inVoiceOver
             }
+            strongSelf.contentOffsetChanged?(offset, inVoiceOver)
             
-            self?.contentOffsetChanged?(offset, inVoiceOver)
-            
-            if let strongSelf = self {
+            if let navigationContentNode = strongSelf.navigationBar.contentNode, case .expansion = navigationContentNode.mode {
+                strongSelf.navigationBar.updateBackgroundAlpha(1.0, transition: .immediate)
+            } else {
                 var previousContentOffsetValue: CGFloat?
                 if let previousContentOffset = strongSelf.previousContentOffset {
                     if case let .known(value) = previousContentOffset {
@@ -378,30 +382,30 @@ open class ItemListControllerNode: ASDisplayNode {
                     }
                 }
                 switch offset {
-                    case let .known(value):
-                        let transition: ContainedViewLayoutTransition
-                        if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue >= 30.0 {
-                            transition = .animated(duration: 0.2, curve: .easeInOut)
-                        } else {
-                            transition = .immediate
-                        }
-                        if let headerItemNode = strongSelf.headerItemNode {
-                            headerItemNode.updateContentOffset(value, transition: transition)
-                            strongSelf.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
-                        } else {
-                            strongSelf.navigationBar.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: transition)
-                        }
-                    case .unknown, .none:
-                        if let headerItemNode = strongSelf.headerItemNode {
-                            headerItemNode.updateContentOffset(1000.0, transition: .immediate)
-                            strongSelf.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
-                        } else {
-                            strongSelf.navigationBar.updateBackgroundAlpha(1.0, transition: .immediate)
-                        }
+                case let .known(value):
+                    let transition: ContainedViewLayoutTransition
+                    if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue >= 30.0 {
+                        transition = .animated(duration: 0.2, curve: .easeInOut)
+                    } else {
+                        transition = .immediate
+                    }
+                    if let headerItemNode = strongSelf.headerItemNode {
+                        headerItemNode.updateContentOffset(value, transition: transition)
+                        strongSelf.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
+                    } else {
+                        strongSelf.navigationBar.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: transition)
+                    }
+                case .unknown, .none:
+                    if let headerItemNode = strongSelf.headerItemNode {
+                        headerItemNode.updateContentOffset(1000.0, transition: .immediate)
+                        strongSelf.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
+                    } else {
+                        strongSelf.navigationBar.updateBackgroundAlpha(1.0, transition: .immediate)
+                    }
                 }
-                
-                strongSelf.previousContentOffset = offset
             }
+            
+            strongSelf.previousContentOffset = offset
         }
         
         self.listNode.beganInteractiveDragging = { [weak self] _ in
