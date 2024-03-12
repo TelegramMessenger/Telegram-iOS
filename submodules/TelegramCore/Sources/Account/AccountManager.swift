@@ -90,6 +90,7 @@ private var declaredEncodables: Void = {
     declareEncodable(ChannelState.self, f: { ChannelState(decoder: $0) })
     declareEncodable(RegularChatState.self, f: { RegularChatState(decoder: $0) })
     declareEncodable(InlineBotMessageAttribute.self, f: { InlineBotMessageAttribute(decoder: $0) })
+    declareEncodable(InlineBusinessBotMessageAttribute.self, f: { InlineBusinessBotMessageAttribute(decoder: $0) })
     declareEncodable(TextEntitiesMessageAttribute.self, f: { TextEntitiesMessageAttribute(decoder: $0) })
     declareEncodable(ReplyMessageAttribute.self, f: { ReplyMessageAttribute(decoder: $0) })
     declareEncodable(QuotedReplyMessageAttribute.self, f: { QuotedReplyMessageAttribute(decoder: $0) })

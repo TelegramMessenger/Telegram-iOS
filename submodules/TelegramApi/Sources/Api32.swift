@@ -8136,12 +8136,14 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func uploadMedia(peer: Api.InputPeer, media: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
+                static func uploadMedia(flags: Int32, businessConnectionId: String?, peer: Api.InputPeer, media: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1369162417)
+                    buffer.appendInt32(345405816)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(businessConnectionId!, buffer: buffer, boxed: false)}
                     peer.serialize(buffer, true)
                     media.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.uploadMedia", parameters: [("peer", String(describing: peer)), ("media", String(describing: media))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.MessageMedia? in
+                    return (FunctionDescription(name: "messages.uploadMedia", parameters: [("flags", String(describing: flags)), ("businessConnectionId", String(describing: businessConnectionId)), ("peer", String(describing: peer)), ("media", String(describing: media))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.MessageMedia? in
                         let reader = BufferReader(buffer)
                         var result: Api.MessageMedia?
                         if let signature = reader.readInt32() {

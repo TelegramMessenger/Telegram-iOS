@@ -705,6 +705,8 @@ private final class NotificationServiceHandler {
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
 
         setupSharedLogger(rootPath: logsPath, path: logsPath)
+        
+        Logger.shared.log("NotificationService \(episode)", "Started handling notification")
 
         initializeAccountManagement()
 

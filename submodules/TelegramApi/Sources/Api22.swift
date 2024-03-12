@@ -513,7 +513,7 @@ public extension Api {
         case updateBotChatBoost(peer: Api.Peer, boost: Api.Boost, qts: Int32)
         case updateBotChatInviteRequester(peer: Api.Peer, date: Int32, userId: Int64, about: String, invite: Api.ExportedChatInvite, qts: Int32)
         case updateBotCommands(peer: Api.Peer, botId: Int64, commands: [Api.BotCommand])
-        case updateBotDeleteBusinessMessage(connectionId: String, messages: [Int32], qts: Int32)
+        case updateBotDeleteBusinessMessage(connectionId: String, peer: Api.Peer, messages: [Int32], qts: Int32)
         case updateBotEditBusinessMessage(connectionId: String, message: Api.Message, qts: Int32)
         case updateBotInlineQuery(flags: Int32, queryId: Int64, userId: Int64, query: String, geo: Api.GeoPoint?, peerType: Api.InlineQueryPeerType?, offset: String)
         case updateBotInlineSend(flags: Int32, userId: Int64, query: String, geo: Api.GeoPoint?, id: String, msgId: Api.InputBotInlineMessageID?)
@@ -707,11 +707,12 @@ public extension Api {
                         item.serialize(buffer, true)
                     }
                     break
-                case .updateBotDeleteBusinessMessage(let connectionId, let messages, let qts):
+                case .updateBotDeleteBusinessMessage(let connectionId, let peer, let messages, let qts):
                     if boxed {
-                        buffer.appendInt32(-1590796039)
+                        buffer.appendInt32(-1607821266)
                     }
                     serializeString(connectionId, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(messages.count))
                     for item in messages {
@@ -1827,8 +1828,8 @@ public extension Api {
                 return ("updateBotChatInviteRequester", [("peer", peer as Any), ("date", date as Any), ("userId", userId as Any), ("about", about as Any), ("invite", invite as Any), ("qts", qts as Any)])
                 case .updateBotCommands(let peer, let botId, let commands):
                 return ("updateBotCommands", [("peer", peer as Any), ("botId", botId as Any), ("commands", commands as Any)])
-                case .updateBotDeleteBusinessMessage(let connectionId, let messages, let qts):
-                return ("updateBotDeleteBusinessMessage", [("connectionId", connectionId as Any), ("messages", messages as Any), ("qts", qts as Any)])
+                case .updateBotDeleteBusinessMessage(let connectionId, let peer, let messages, let qts):
+                return ("updateBotDeleteBusinessMessage", [("connectionId", connectionId as Any), ("peer", peer as Any), ("messages", messages as Any), ("qts", qts as Any)])
                 case .updateBotEditBusinessMessage(let connectionId, let message, let qts):
                 return ("updateBotEditBusinessMessage", [("connectionId", connectionId as Any), ("message", message as Any), ("qts", qts as Any)])
                 case .updateBotInlineQuery(let flags, let queryId, let userId, let query, let geo, let peerType, let offset):
@@ -2217,17 +2218,22 @@ public extension Api {
         public static func parse_updateBotDeleteBusinessMessage(_ reader: BufferReader) -> Update? {
             var _1: String?
             _1 = parseString(reader)
-            var _2: [Int32]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
             }
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _3: [Int32]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            var _4: Int32?
+            _4 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Update.updateBotDeleteBusinessMessage(connectionId: _1!, messages: _2!, qts: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Update.updateBotDeleteBusinessMessage(connectionId: _1!, peer: _2!, messages: _3!, qts: _4!)
             }
             else {
                 return nil
