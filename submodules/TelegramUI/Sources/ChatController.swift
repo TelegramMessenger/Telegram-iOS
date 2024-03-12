@@ -14839,9 +14839,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                         }
                                                         var viewControllers = navigationController.viewControllers
                                                         let lastController = viewControllers.last as! ViewController
-                                                        viewControllers.remove(at: viewControllers.count - 2)
+                                                        if threadId != nil {
+                                                            viewControllers.remove(at: viewControllers.count - 2)
+                                                            lastController.navigationPresentation = .modal
+                                                        }
                                                         viewControllers.insert(chatController, at: viewControllers.count - 1)
-                                                        lastController.navigationPresentation = .modal
                                                         navigationController.setViewControllers(viewControllers, animated: false)
                                                         
                                                         strongSelf.controllerNavigationDisposable.set((chatController.ready.get()
