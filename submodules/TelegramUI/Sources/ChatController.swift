@@ -14923,25 +14923,41 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: threadId, { currentState in
                                                 return currentState.withUpdatedComposeInputState(textInputState)
                                             })
-                                            |> deliverOnMainQueue).startStandalone(completed: {
-                                                if let strongSelf = self {
-                                                    strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+                                            |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                                                                                                         
-                                                    if let navigationController = strongSelf.effectiveNavigationController {
-                                                        let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id: peerId))
+                                                if let navigationController = strongSelf.effectiveNavigationController {
+                                                    let chatController: Signal<ChatController, NoError>
+                                                    if let threadId {
+                                                        chatController = chatControllerForForumThreadImpl(context: strongSelf.context, peerId: peerId, threadId: threadId)
+                                                    } else {
+                                                        chatController = .single(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id: peerId)))
+                                                    }
+                                                    
+                                                    let _ = (chatController
+                                                    |> deliverOnMainQueue).start(next: { [weak self, weak navigationController] chatController in
+                                                        guard let strongSelf = self, let navigationController  else {
+                                                            return
+                                                        }
                                                         var viewControllers = navigationController.viewControllers
+                                                        let lastController = viewControllers.last as! ViewController
+                                                        if threadId != nil {
+                                                            viewControllers.remove(at: viewControllers.count - 2)
+                                                            lastController.navigationPresentation = .modal
+                                                        }
                                                         viewControllers.insert(chatController, at: viewControllers.count - 1)
                                                         navigationController.setViewControllers(viewControllers, animated: false)
                                                         
                                                         strongSelf.controllerNavigationDisposable.set((chatController.ready.get()
                                                         |> filter { $0 }
                                                         |> take(1)
-                                                        |> deliverOnMainQueue).startStrict(next: { _ in
-                                                            if let strongController = controller {
-                                                                strongController.dismiss()
-                                                            }
+                                                        |> deliverOnMainQueue).startStrict(next: { [weak lastController] _ in
+                                                            lastController?.dismiss()
                                                         }))
-                                                    }
+                                                    })
                                                 }
                                             })
                                         }

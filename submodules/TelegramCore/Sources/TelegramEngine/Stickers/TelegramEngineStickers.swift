@@ -106,6 +106,10 @@ public extension TelegramEngine {
             return _internal_deleteStickerFromStickerSet(account: self.account, sticker: sticker)
         }
         
+        public func replaceSticker(previousSticker: FileMediaReference, sticker: ImportSticker) -> Signal<Never, ReplaceStickerError> {
+            return _internal_replaceSticker(account: self.account, previousSticker: previousSticker, sticker: sticker)
+        }
+        
         public func getMyStickerSets() -> Signal<[(StickerPackCollectionInfo, StickerPackItem?)], NoError> {
             return _internal_getMyStickerSets(account: self.account)
         }

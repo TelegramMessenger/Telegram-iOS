@@ -101,6 +101,21 @@ public enum PremiumPrivacySubject {
     case readTime
 }
 
+public enum BoostSubject: Equatable {
+    case stories
+    case channelReactions(reactionCount: Int32)
+    case nameColors(colors: PeerNameColor)
+    case nameIcon
+    case profileColors(colors: PeerNameColor)
+    case profileIcon
+    case emojiStatus
+    case wallpaper
+    case customWallpaper
+    case audioTranscription
+    case emojiPack
+    case noAds
+}
+
 public struct PremiumConfiguration {
     public static var defaultValue: PremiumConfiguration {
         return PremiumConfiguration(

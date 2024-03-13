@@ -55,7 +55,8 @@ swift_library(
         "//submodules/WebPBinding",
         "//submodules/StickerResources",
         "//submodules/StickerPeekUI",
-        "//submodules/TelegramUI/Components/Stickers/StickerPackEditTitleController"
+        "//submodules/TelegramUI/Components/Stickers/StickerPackEditTitleController",
+        "//submodules/TelegramUI/Components/StickerPickerScreen",
     ],
     visibility = [
         "//visibility:public",

@@ -23,6 +23,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import Pasteboard
 import StickerPackEditTitleController
+import EntityKeyboard
 
 private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
     case sticker(index: Int, stableId: Int, stickerItem: StickerPackItem?, isEmpty: Bool, isPremium: Bool, isLocked: Bool, isEditing: Bool, isAdd: Bool)
@@ -537,8 +538,8 @@ private final class StickerPackContainer: ASDisplayNode {
                                 if canEdit {
                                     menuItems.append(.action(ContextMenuActionItem(text: "Edit Sticker", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                         f(.default)
-                                        if let _ = self {
-                                            
+                                        if let self {
+                                            self.openEditSticker(item.file)
                                         }
                                     })))
                                     if !strongSelf.isEditing {
@@ -1137,6 +1138,7 @@ private final class StickerPackContainer: ASDisplayNode {
         self.presentInGlobalOverlay(contextController, nil)
     }
     
+    private let stickerPickerInputData = Promise<StickerPickerInput>()
     private func presentAddStickerOptions() {
         let actionSheet = ActionSheetController(presentationData: self.presentationData)
         var items: [ActionSheetItem] = []
@@ -1155,9 +1157,8 @@ private final class StickerPackContainer: ASDisplayNode {
             guard let self, let controller = self.controller else {
                 return
             }
-            controller.controllerNode.dismiss()
-            
             self.presentAddExistingSticker()
+            controller.controllerNode.dismiss()
         }))
         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -1165,22 +1166,158 @@ private final class StickerPackContainer: ASDisplayNode {
             })
         ])])
         self.presentInGlobalOverlay(actionSheet, nil)
+        
+        
+        let emojiItems = EmojiPagerContentComponent.emojiInputData(
+            context: self.context,
+            animationCache: self.context.animationCache,
+            animationRenderer: self.context.animationRenderer,
+            isStandalone: false,
+            subject: .emoji,
+            hasTrending: true,
+            topReactionItems: [],
+            areUnicodeEmojiEnabled: true,
+            areCustomEmojiEnabled: true,
+            chatPeerId: self.context.account.peerId,
+            hasSearch: true,
+            forceHasPremium: true
+        )
+        
+        let stickerItems = EmojiPagerContentComponent.stickerInputData(
+            context: self.context,
+            animationCache: self.context.animationCache,
+            animationRenderer: self.context.animationRenderer,
+            stickerNamespaces: [Namespaces.ItemCollection.CloudStickerPacks],
+            stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
+            chatPeerId: self.context.account.peerId,
+            hasSearch: true,
+            hasTrending: true,
+            forceHasPremium: true
+        )
+        
+        let signal = combineLatest(
+            queue: .mainQueue(),
+            emojiItems,
+            stickerItems
+        ) |> map { emoji, stickers -> StickerPickerInput in
+            return StickerPickerInputData(emoji: emoji, stickers: stickers, gifs: nil)
+        }
+        
+        self.stickerPickerInputData.set(signal)
     }
     
     private func presentCreateSticker() {
-        let controller = self.context.sharedContext.makeStickerMediaPickerScreen(
-            context: self.context,
+        guard let (info, _, _) = self.currentStickerPack else {
+            return
+        }
+        let context = self.context
+        let presentationData = self.presentationData
+        let updatedPresentationData = self.controller?.updatedPresentationData
+        let navigationController = self.controller?.parentNavigationController as? NavigationController
+        
+        var dismissImpl: (() -> Void)?
+        let mainController = context.sharedContext.makeStickerMediaPickerScreen(
+            context: context,
             getSourceRect: { return .zero },
             completion: { result, transitionView, transitionRect, transitionImage, completion, dismissed in
-                
+                let editorController = context.sharedContext.makeStickerEditorScreen(
+                    context: context,
+                    source: result,
+                    transitionArguments: (transitionView, transitionRect, transitionImage),
+                    completion: { file in
+                        dismissImpl?()
+                        let sticker = ImportSticker(
+                            resource: file.resource,
+                            emojis: ["😀"],
+                            dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
+                            mimeType: file.mimeType,
+                            keywords: ""
+                        )
+                        let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
+                        let _ = (context.engine.stickers.addStickerToStickerSet(packReference: packReference, sticker: sticker)
+                        |> deliverOnMainQueue).start(completed: {
+                            let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
+                            (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
+                            
+                            Queue.mainQueue().after(0.1) {
+                                packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: "Sticker added to **\(info.title)** sticker set.", undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                            }
+                        })
+                    }
+                )
+                navigationController?.pushViewController(editorController)
             },
             dismissed: {}
         )
-        self.controller?.parentNavigationController?.pushViewController(controller)
+        dismissImpl = { [weak mainController] in
+            mainController?.dismiss()
+        }
+        navigationController?.pushViewController(mainController)
     }
     
     private func presentAddExistingSticker() {
+        guard let (info, _, _) = self.currentStickerPack else {
+            return
+        }
+        let presentationData = self.presentationData
+        let updatedPresentationData = self.controller?.updatedPresentationData
+        let navigationController = self.controller?.parentNavigationController as? NavigationController
         
+        let context = self.context
+        let controller = self.context.sharedContext.makeStickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData, completion: { file in
+            let sticker = ImportSticker(
+                resource: file.resource,
+                emojis: ["😀"],
+                dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
+                mimeType: file.mimeType,
+                keywords: ""
+            )
+            let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
+            let _ = (context.engine.stickers.addStickerToStickerSet(packReference: packReference, sticker: sticker)
+            |> deliverOnMainQueue).start(completed: {
+                let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
+                (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
+                
+                Queue.mainQueue().after(0.1) {
+                    packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: "Sticker added to **\(info.title)** sticker set.", undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                }
+            })
+        })
+        navigationController?.pushViewController(controller)
+    }
+    
+    private func openEditSticker(_ initialFile: TelegramMediaFile) {
+        guard let (info, _, _) = self.currentStickerPack else {
+            return
+        }
+        let context = self.context
+        let updatedPresentationData = self.controller?.updatedPresentationData
+        let navigationController = self.controller?.parentNavigationController as? NavigationController
+        
+        self.controller?.dismiss()
+        
+        let controller = context.sharedContext.makeStickerEditorScreen(
+            context: context,
+            source: initialFile,
+            transitionArguments: nil,
+            completion: { file in
+                let sticker = ImportSticker(
+                    resource: file.resource,
+                    emojis: ["😀"],
+                    dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
+                    mimeType: file.mimeType,
+                    keywords: ""
+                )
+                let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
+                
+                let _ = (context.engine.stickers.replaceSticker(previousSticker: .stickerPack(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), media: initialFile), sticker: sticker)
+                |> deliverOnMainQueue).start(completed: {
+                    let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
+                    (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
+                })
+            }
+        )
+        navigationController?.pushViewController(controller)
     }
         
     private func presentEditPackTitle() {
@@ -2408,7 +2545,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
     }
 }
 
-public final class StickerPackScreenImpl: ViewController {
+public final class StickerPackScreenImpl: ViewController, StickerPackScreen {
     private let context: AccountContext
     fileprivate var presentationData: PresentationData
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?

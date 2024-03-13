@@ -60,6 +60,7 @@ public enum ItemListControllerTitle: Equatable {
     case text(String)
     case textWithSubtitle(String, String)
     case sectionControl([String], Int)
+    case textWithTabs(String, [String], Int)
 }
 
 public final class ItemListControllerTabBarItem: Equatable {
@@ -113,6 +114,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
     private var tabBarItemInfo: ItemListControllerTabBarItem?
     private var navigationButtonActions: (left: (() -> Void)?, right: (() -> Void)?, secondaryRight: (() -> Void)?) = (nil, nil, nil)
     private var segmentedTitleView: ItemListControllerSegmentedTitleView?
+    private var tabsNavigationContentNode: ItemListControllerTabsContentNode?
     
     private var presentationData: ItemListPresentationData
     
@@ -318,10 +320,12 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                 strongSelf.title = text
                                 strongSelf.navigationItem.titleView = nil
                                 strongSelf.segmentedTitleView = nil
+                                strongSelf.navigationBar?.setContentNode(nil, animated: false)
                             case let .textWithSubtitle(title, subtitle):
                                 strongSelf.title = ""
                                 strongSelf.navigationItem.titleView = ItemListTextWithSubtitleTitleView(theme: controllerState.presentationData.theme, title: title, subtitle: subtitle)
                                 strongSelf.segmentedTitleView = nil
+                                strongSelf.navigationBar?.setContentNode(nil, animated: false)
                             case let .sectionControl(sections, index):
                                 strongSelf.title = ""
                                 if let segmentedTitleView = strongSelf.segmentedTitleView, segmentedTitleView.segments == sections {
@@ -331,6 +335,21 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                     strongSelf.segmentedTitleView = segmentedTitleView
                                     strongSelf.navigationItem.titleView = strongSelf.segmentedTitleView
                                     segmentedTitleView.indexUpdated = { index in
+                                        if let strongSelf = self {
+                                            strongSelf.titleControlValueChanged?(index)
+                                        }
+                                    }
+                                }
+                                strongSelf.navigationBar?.setContentNode(nil, animated: false)
+                            case let .textWithTabs(title, sections, index):
+                                strongSelf.title = title
+                                if let tabsNavigationContentNode = strongSelf.tabsNavigationContentNode, tabsNavigationContentNode.segments == sections {
+                                    tabsNavigationContentNode.index = index
+                                } else {
+                                    let tabsNavigationContentNode = ItemListControllerTabsContentNode(theme: controllerState.presentationData.theme, segments: sections, selectedIndex: index)
+                                    strongSelf.tabsNavigationContentNode = tabsNavigationContentNode
+                                    strongSelf.navigationBar?.setContentNode(tabsNavigationContentNode, animated: false)
+                                    tabsNavigationContentNode.indexUpdated = { index in
                                         if let strongSelf = self {
                                             strongSelf.titleControlValueChanged?(index)
                                         }

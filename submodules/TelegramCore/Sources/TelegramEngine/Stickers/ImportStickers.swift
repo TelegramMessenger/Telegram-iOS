@@ -384,6 +384,60 @@ func _internal_deleteStickerFromStickerSet(account: Account, sticker: FileMediaR
     }
 }
 
+public enum ReplaceStickerError {
+    case generic
+}
+
+func _internal_replaceSticker(account: Account, previousSticker: FileMediaReference, sticker: ImportSticker) -> Signal<Never, ReplaceStickerError> {
+    guard let previousResource = previousSticker.media.resource as? CloudDocumentMediaResource else {
+        return .fail(.generic)
+    }
+    
+    let uploadSticker: Signal<UploadStickerStatus, ReplaceStickerError>
+    if let resource = sticker.resource as? CloudDocumentMediaResource {
+        uploadSticker = .single(.complete(resource, sticker.mimeType))
+    } else {
+        uploadSticker = account.postbox.loadedPeerWithId(account.peerId)
+        |> castError(ReplaceStickerError.self)
+        |> mapToSignal { peer in
+            return _internal_uploadSticker(account: account, peer: peer, resource: sticker.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, mimeType: sticker.mimeType)
+            |> mapError { _ -> ReplaceStickerError in
+                return .generic
+            }
+        }
+    }
+    return uploadSticker
+    |> mapToSignal { uploadedSticker in
+        guard case let .complete(resource, _) = uploadedSticker else {
+            return .complete()
+        }
+        
+        var flags: Int32 = 0
+        if sticker.keywords.count > 0 {
+            flags |= (1 << 1)
+        }
+        let inputSticker: Api.InputStickerSetItem = .inputStickerSetItem(flags: flags, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.first ?? "", maskCoords: nil, keywords: sticker.keywords)
+       
+        return account.network.request(Api.functions.stickers.replaceSticker(sticker: .inputDocument(id: previousResource.fileId, accessHash: previousResource.accessHash, fileReference: Buffer(data: previousResource.fileReference ?? Data())), newSticker: inputSticker))
+        |> mapError { error -> ReplaceStickerError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Never, ReplaceStickerError> in
+            guard let (info, items) = parseStickerSetInfoAndItems(apiStickerSet: result) else {
+                return .complete()
+            }
+            return account.postbox.transaction { transaction -> Void in
+                if transaction.getItemCollectionInfo(collectionId: info.id) != nil {
+                    transaction.replaceItemCollectionItems(collectionId: info.id, items: items)
+                }
+                cacheStickerPack(transaction: transaction, info: info, items: items)
+            }
+            |> castError(ReplaceStickerError.self)
+            |> ignoreValues
+        }
+    }
+}
+
 func _internal_getMyStickerSets(account: Account) -> Signal<[(StickerPackCollectionInfo, StickerPackItem?)], NoError> {
     return account.network.request(Api.functions.messages.getMyStickers(offsetId: 0, limit: 100))
     |> map(Optional.init)

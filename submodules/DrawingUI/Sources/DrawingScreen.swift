@@ -24,6 +24,7 @@ import EntityKeyboard
 import TelegramUIPreferences
 import FastBlur
 import MediaEditor
+import StickerPickerScreen
 
 public struct DrawingResultData {
     public let data: Data?
@@ -493,7 +494,7 @@ private final class DrawingScreenComponent: CombinedComponent {
     
     let context: AccountContext
     let sourceHint: DrawingScreen.SourceHint?
-    let existingStickerPickerInputData: Promise<StickerPickerInputData>?
+    let existingStickerPickerInputData: Promise<StickerPickerInput>?
     let isVideo: Bool
     let isAvatar: Bool
     let isInteractingWithEntities: Bool
@@ -529,7 +530,7 @@ private final class DrawingScreenComponent: CombinedComponent {
     init(
         context: AccountContext,
         sourceHint: DrawingScreen.SourceHint?,
-        existingStickerPickerInputData: Promise<StickerPickerInputData>?,
+        existingStickerPickerInputData: Promise<StickerPickerInput>?,
         isVideo: Bool,
         isAvatar: Bool,
         isInteractingWithEntities: Bool,
@@ -682,11 +683,11 @@ private final class DrawingScreenComponent: CombinedComponent {
         
         var lastSize: CGFloat = 0.5
         
-        private let stickerPickerInputData: Promise<StickerPickerInputData>
+        private let stickerPickerInputData: Promise<StickerPickerInput>
             
         init(
             context: AccountContext,
-            existingStickerPickerInputData: Promise<StickerPickerInputData>?,
+            existingStickerPickerInputData: Promise<StickerPickerInput>?,
             updateToolState: ActionSlot<DrawingToolState>,
             insertEntity: ActionSlot<DrawingEntity>,
             deselectEntity: ActionSlot<Void>,
@@ -728,7 +729,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             if let existingStickerPickerInputData {
                 self.stickerPickerInputData = existingStickerPickerInputData
             } else {
-                self.stickerPickerInputData = Promise<StickerPickerInputData>()
+                self.stickerPickerInputData = Promise<StickerPickerInput>()
                 
                 let stickerPickerInputData = self.stickerPickerInputData
                 Queue.concurrentDefaultQueue().after(0.5, {
@@ -762,7 +763,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     let signal = combineLatest(queue: .mainQueue(),
                                                emojiItems,
                                                stickerItems
-                    ) |> map { emoji, stickers -> StickerPickerInputData in
+                    ) |> map { emoji, stickers -> StickerPickerInput in
                         return StickerPickerInputData(emoji: emoji, stickers: stickers, gifs: nil)
                     }
                     
@@ -1012,7 +1013,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.currentMode = .sticker
             
             self.updateEntitiesPlayback.invoke(false)
-            let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), hasInteractiveStickers: false)
+            let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), forceDark: true, hasInteractiveStickers: false)
             if let presentGallery = self.presentGallery {
                 controller.presentGallery = presentGallery
             }
@@ -2753,7 +2754,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     private let externalDrawingView: DrawingView?
     private let externalEntitiesView: DrawingEntitiesView?
     private let externalSelectionContainerView: DrawingSelectionContainerView?
-    private let existingStickerPickerInputData: Promise<StickerPickerInputData>?
+    private let existingStickerPickerInputData: Promise<StickerPickerInput>?
     
     public var requestDismiss: () -> Void = {}
     public var requestApply: () -> Void = {}
@@ -2762,7 +2763,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     
     public var presentGallery: (() -> Void)?
     
-    public init(context: AccountContext, sourceHint: SourceHint? = nil, size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool, drawingView: DrawingView?, entitiesView: (UIView & TGPhotoDrawingEntitiesView)?, selectionContainerView: DrawingSelectionContainerView?, existingStickerPickerInputData: Promise<StickerPickerInputData>? = nil) {
+    public init(context: AccountContext, sourceHint: SourceHint? = nil, size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool, drawingView: DrawingView?, entitiesView: (UIView & TGPhotoDrawingEntitiesView)?, selectionContainerView: DrawingSelectionContainerView?, existingStickerPickerInputData: Promise<StickerPickerInput>? = nil) {
         self.context = context
         self.sourceHint = sourceHint
         self.size = size

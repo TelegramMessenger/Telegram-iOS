@@ -56,6 +56,9 @@ import BusinessLocationSetupScreen
 import BusinessHoursSetupScreen
 import AutomaticBusinessMessageSetupScreen
 import CollectibleItemInfoScreen
+import StickerPickerScreen
+import MediaEditor
+import MediaEditorScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2264,7 +2267,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
-    public func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool, openStats: (() -> Void)?) -> ViewController {
+    public func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, subject: BoostSubject, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool, openStats: (() -> Void)?) -> ViewController {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         
         var pushImpl: ((ViewController) -> Void)?
@@ -2272,7 +2275,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let controller = PremiumBoostLevelsScreen(
             context: context,
             peerId: peerId,
-            mode: .owner(subject: .stories),
+            mode: .owner(subject: subject),
             status: boostStatus,
             myBoostStatus: myBoostStatus,
             openStats: openStats,
@@ -2306,9 +2309,47 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, isEditing: isEditing, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
     }
     
-//    func makeStickerEditorScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, initialSticker: TelegramMediaFile?, targetStickerPack: StickerPackReference?) -> ViewController {
-//        
-//    }
+    public func makeStickerEditorScreen(context: AccountContext, source: Any, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile) -> Void) -> ViewController {
+        let subject: MediaEditorScreen.Subject
+        let mode: MediaEditorScreen.Mode.StickerEditorMode
+        if let file = source as? TelegramMediaFile {
+            subject = .sticker(file)
+            mode = .editing
+        } else if let asset = source as? PHAsset {
+            subject = .asset(asset)
+            mode = .addingToPack
+        } else {
+            fatalError()
+        }
+        let controller = MediaEditorScreen(
+            context: context,
+            mode: .stickerEditor(mode: mode),
+            subject: .single(subject),
+            transitionIn: transitionArguments.flatMap { .gallery(
+                MediaEditorScreen.TransitionIn.GalleryTransitionIn(
+                    sourceView: $0.0,
+                    sourceRect: $0.1,
+                    sourceImage: $0.2
+                )
+            ) },
+            transitionOut: { finished, isNew in
+                if !finished, let transitionArguments {
+                    return MediaEditorScreen.TransitionOut(
+                        destinationView: transitionArguments.0,
+                        destinationRect: transitionArguments.0.bounds,
+                        destinationCornerRadius: 0.0
+                    )
+                }
+                return nil
+            }, completion: { result, commit in
+                commit({})
+                if case let .sticker(file) = result.media {
+                    completion(file)
+                }
+            } as (MediaEditorScreen.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+        )
+        return controller
+    }
     
     public func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController {
         return mediaPickerController(context: context, hasSearch: hasSearch, completion: completion)
@@ -2320,6 +2361,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeStickerMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void) -> ViewController {
         return stickerMediaPickerController(context: context, getSourceRect: getSourceRect, completion: completion, dismissed: dismissed)
+    }
+    
+    public func makeStickerPickerScreen(context: AccountContext, inputData: Promise<StickerPickerInput>, completion: @escaping (TelegramMediaFile) -> Void) -> ViewController {
+        let controller = StickerPickerScreen(context: context, inputData: inputData.get(), expanded: true, hasGifs: false, hasInteractiveStickers: false)
+        controller.completion = { content in
+            if let content, case let .file(file, _) = content {
+                completion(file)
+            }
+            return true
+        }
+        return controller
     }
         
     public func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController {

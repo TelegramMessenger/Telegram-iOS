@@ -35,3 +35,11 @@ public final class GalleryControllerActionInteraction {
         self.updateCanReadHistory = updateCanReadHistory
     }
 }
+
+public protocol StickerPackScreen {
+    
+}
+
+public protocol StickerPickerInput {
+    
+}
