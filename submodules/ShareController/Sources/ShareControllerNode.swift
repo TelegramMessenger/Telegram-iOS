@@ -211,7 +211,7 @@ private final class ShareContentInfoView: UIView {
         
         let accentColor = params.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)
         if self.arrowIcon == nil {
-            if let templateImage = UIImage(bundleImageName: "Settings/TextArrowRight") {
+            if let templateImage = UIImage(bundleImageName: "Item List/InlineTextRightArrow") {
                 let scaleFactor: CGFloat = 0.8
                 let imageSize = CGSize(width: floor(templateImage.size.width * scaleFactor), height: floor(templateImage.size.height * scaleFactor))
                 self.arrowIcon = generateImage(imageSize, contextGenerator: { size, context in

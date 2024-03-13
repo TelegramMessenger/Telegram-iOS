@@ -56,12 +56,12 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, accountP
                     var peerStatusSettings: PeerStatusSettings
                     if let peer = transaction.getPeer(peer.id), let associatedPeerId = peer.associatedPeerId, !transaction.isPeerContact(peerId: associatedPeerId) {
                         if let peer = peer as? TelegramSecretChat, case .creator = peer.role {
-                            peerStatusSettings = PeerStatusSettings(flags: [])
+                            peerStatusSettings = PeerStatusSettings(flags: [], managingBot: nil)
                         } else {
-                            peerStatusSettings = PeerStatusSettings(flags: [.canReport])
+                            peerStatusSettings = PeerStatusSettings(flags: [.canReport], managingBot: nil)
                         }
                     } else {
-                        peerStatusSettings = PeerStatusSettings(flags: [])
+                        peerStatusSettings = PeerStatusSettings(flags: [], managingBot: nil)
                     }
                     
                     transaction.updatePeerCachedData(peerIds: [peer.id], update: { peerId, current in

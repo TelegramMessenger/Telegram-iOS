@@ -1073,8 +1073,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.requestBiometryAuth()
                 case "web_app_biometry_update_token":
                     var tokenData: Data?
-                    if let json, let tokenDataValue = json["token"] as? Data {
-                        tokenData = tokenDataValue
+                    if let json, let tokenDataValue = json["token"] as? String {
+                        tokenData = tokenDataValue.data(using: .utf8)
                     }
                     self.requestBiometryUpdateToken(tokenData: tokenData)
                 default:
@@ -1566,9 +1566,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
             data["status"] = isAuthorized ? "authorized" : "failed"
             if isAuthorized {
                 if let tokenData {
-                    data["token"] = tokenData
+                    data["token"] = String(data: tokenData, encoding: .utf8) ?? ""
                 } else {
-                    data["token"] = Data()
+                    data["token"] = ""
                 }
             }
             

@@ -6,33 +6,44 @@ import SwiftSignalKit
 extension PeerStatusSettings {
     init(apiSettings: Api.PeerSettings) {
         switch apiSettings {
-            case let .peerSettings(flags, geoDistance, requestChatTitle, requestChatDate):
-                var result = PeerStatusSettings.Flags()
-                if (flags & (1 << 1)) != 0 {
-                    result.insert(.canAddContact)
-                }
-                if (flags & (1 << 0)) != 0 {
-                    result.insert(.canReport)
-                }
-                if (flags & (1 << 2)) != 0 {
-                    result.insert(.canBlock)
-                }
-                if (flags & (1 << 3)) != 0 {
-                    result.insert(.canShareContact)
-                }
-                if (flags & (1 << 4)) != 0 {
-                    result.insert(.addExceptionWhenAddingContact)
-                }
-                if (flags & (1 << 5)) != 0 {
-                    result.insert(.canReportIrrelevantGeoLocation)
-                }
-                if (flags & (1 << 7)) != 0 {
-                    result.insert(.autoArchived)
-                }
-                if (flags & (1 << 8)) != 0 {
-                    result.insert(.suggestAddMembers)
-                }
-                self = PeerStatusSettings(flags: result, geoDistance: geoDistance, requestChatTitle: requestChatTitle, requestChatDate: requestChatDate, requestChatIsChannel: (flags & (1 << 10)) != 0)
+        case let .peerSettings(flags, geoDistance, requestChatTitle, requestChatDate, businessBotId, businessBotManageUrl):
+            var result = PeerStatusSettings.Flags()
+            if (flags & (1 << 1)) != 0 {
+                result.insert(.canAddContact)
+            }
+            if (flags & (1 << 0)) != 0 {
+                result.insert(.canReport)
+            }
+            if (flags & (1 << 2)) != 0 {
+                result.insert(.canBlock)
+            }
+            if (flags & (1 << 3)) != 0 {
+                result.insert(.canShareContact)
+            }
+            if (flags & (1 << 4)) != 0 {
+                result.insert(.addExceptionWhenAddingContact)
+            }
+            if (flags & (1 << 5)) != 0 {
+                result.insert(.canReportIrrelevantGeoLocation)
+            }
+            if (flags & (1 << 7)) != 0 {
+                result.insert(.autoArchived)
+            }
+            if (flags & (1 << 8)) != 0 {
+                result.insert(.suggestAddMembers)
+            }
+            
+            var managingBot: ManagingBot?
+            if let businessBotId {
+                managingBot = ManagingBot(
+                    id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(businessBotId)),
+                    manageUrl: businessBotManageUrl,
+                    isPaused: (flags & (1 << 11)) != 0,
+                    canReply: (flags & (1 << 12)) != 0
+                )
+            }
+            
+            self = PeerStatusSettings(flags: result, geoDistance: geoDistance, requestChatTitle: requestChatTitle, requestChatDate: requestChatDate, requestChatIsChannel: (flags & (1 << 10)) != 0, managingBot: managingBot)
         }
     }
 }
