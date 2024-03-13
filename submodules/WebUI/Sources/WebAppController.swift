@@ -1513,10 +1513,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     let appBundleId = self.context.sharedContext.applicationBindings.appBundleId
                     
                     Thread { [weak self] in
-                        var key = LocalAuth.getPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
-                        if key == nil {
-                            key = LocalAuth.addPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
-                        }
+                        let key = LocalAuth.getOrCreatePrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
                         
                         let decryptedData: LocalAuth.DecryptionResult
                         if let key {
@@ -1592,10 +1589,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let tokenData {
                 let appBundleId = self.context.sharedContext.applicationBindings.appBundleId
                 Thread { [weak self] in
-                    var key = LocalAuth.getPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
-                    if key == nil {
-                        key = LocalAuth.addPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
-                    }
+                    let key = LocalAuth.getOrCreatePrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
                     
                     var encryptedData: TelegramBotBiometricsState.OpaqueToken?
                     if let key {
