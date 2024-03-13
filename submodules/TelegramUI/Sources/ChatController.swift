@@ -4909,7 +4909,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         let managingBot: Signal<ChatManagingBot?, NoError>
-        if let peerId = self.chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudUser {
+        if let peerId = self.chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudUser, !"".isEmpty {
             managingBot = self.context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Peer.BusinessConnectedBot(id: self.context.account.peerId)
             )
