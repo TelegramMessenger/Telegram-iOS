@@ -186,9 +186,11 @@ final class GreetingMessageListItemComponent: Component {
                     },
                     openPremiumIntro: {
                     },
-                    openPremiumGift: {
+                    openPremiumGift: { _ in
                     },
                     openActiveSessions: {
+                    },
+                    openBirthdaySetup: {
                     },
                     performActiveSessionAction: { _, _ in
                     },

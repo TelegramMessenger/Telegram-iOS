@@ -847,7 +847,6 @@ struct PremiumIntroConfiguration {
             }
             #endif
             
-            
             var businessPerks: [PremiumPerk] = []
             if let values = data["business_promo_order"] as? [String] {
                 for value in values {

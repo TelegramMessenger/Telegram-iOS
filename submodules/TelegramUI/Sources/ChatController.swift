@@ -451,6 +451,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     weak var checksTooltipController: TooltipController?
     weak var copyProtectionTooltipController: TooltipController?
     weak var emojiPackTooltipController: TooltipScreen?
+    weak var birthdayTooltipController: TooltipScreen?
     
     var currentMessageTooltipScreens: [(TooltipScreen, ListViewItemNode)] = []
     
@@ -12239,6 +12240,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             })
         }
+        
+//        #if DEBUG
+//            Queue.mainQueue().after(0.5) {
+//                self.displayBirthdayTooltip()
+//            }
+//        #endif
     }
     
     override public func viewWillDisappear(_ animated: Bool) {
@@ -15965,6 +15972,30 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let _ = ApplicationSpecificNotice.incrementGroupEmojiPackSuggestion(accountManager: self.context.sharedContext.accountManager, peerId: peerId).startStandalone()
             })
         })
+    }
+    
+    func displayBirthdayTooltip() {
+        guard let rect = self.chatDisplayNode.frameForGiftButton(), self.effectiveNavigationController?.topViewController === self, let peer = self.presentationInterfaceState.renderedPeer?.peer.flatMap({ EnginePeer($0) }) else {
+            return
+        }
+        
+        let peerName = peer.compactDisplayTitle
+        let text = "🎂 \(peerName) is having a birthday today. You can give \(peerName) **Telegram Premium** as a birthday gift."
+        
+        let tooltipScreen = TooltipScreen(
+            context: self.context,
+            account: self.context.account,
+            sharedContext: self.context.sharedContext,
+            text: .markdown(text: text),
+            location: .point(rect.offsetBy(dx: 0.0, dy: -3.0), .bottom),
+            displayDuration: .default,
+            cornerRadius: 10.0,
+            shouldDismissOnTouch: { _, _ in
+                return .ignore
+            }
+        )
+        self.present(tooltipScreen, in: .current)
+        self.birthdayTooltipController = tooltipScreen
     }
     
     func displayChecksTooltip() {

@@ -167,7 +167,11 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 if case .scheduledMessages = chatPresentationInterfaceState.subject {
                 } else {
                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
-                    let giftIsEnabled = !premiumConfiguration.isPremiumDisabled && premiumConfiguration.showPremiumGiftInAttachMenu && premiumConfiguration.showPremiumGiftInTextField
+                    var giftIsEnabled = false
+                    giftIsEnabled = !premiumConfiguration.isPremiumDisabled && premiumConfiguration.showPremiumGiftInAttachMenu && premiumConfiguration.showPremiumGiftInTextField
+#if DEBUG
+                    giftIsEnabled = true
+#endif
                     if isTextEmpty, giftIsEnabled, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && !peer.isPremium && !chatPresentationInterfaceState.premiumGiftOptions.isEmpty && chatPresentationInterfaceState.suggestPremiumGift {
                         accessoryItems.append(.gift)
                     }
