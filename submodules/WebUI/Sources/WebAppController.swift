@@ -23,6 +23,7 @@ import PromptUI
 import PhoneNumberFormat
 import QrCodeUI
 import InstantPageUI
+import InstantPageCache
 import LocalAuth
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
@@ -1847,6 +1848,25 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 c.dismiss(completion: nil)
                 
                 self?.controllerNode.webView?.reload()
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_TermsOfUse, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] c, _ in
+                c.dismiss(completion: nil)
+                
+                guard let self, let navigationController = self.getNavigationController() else {
+                    return
+                }
+                
+                let context = self.context
+                let _ = (cachedWebAppTermsPage(context: context)
+                |> deliverOnMainQueue).startStandalone(next: { resolvedUrl in
+                    context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: true, openPeer: { peer, navigation in
+                    }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak self] c, arguments in
+                        self?.push(c)
+                    }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
+                })
             })))
             
             if let _ = attachMenuBot, [.attachMenu, .settings, .generic].contains(source) {
