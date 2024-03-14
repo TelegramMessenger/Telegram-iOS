@@ -1140,6 +1140,7 @@ private final class StickerPackContainer: ASDisplayNode {
     
     private let stickerPickerInputData = Promise<StickerPickerInput>()
     private func presentAddStickerOptions() {
+        
         let actionSheet = ActionSheetController(presentationData: self.presentationData)
         var items: [ActionSheetItem] = []
         items.append(ActionSheetButtonItem(title: "Create a New Sticker", color: .accent, action: { [weak actionSheet, weak self] in
@@ -1167,22 +1168,6 @@ private final class StickerPackContainer: ASDisplayNode {
         ])])
         self.presentInGlobalOverlay(actionSheet, nil)
         
-        
-        let emojiItems = EmojiPagerContentComponent.emojiInputData(
-            context: self.context,
-            animationCache: self.context.animationCache,
-            animationRenderer: self.context.animationRenderer,
-            isStandalone: false,
-            subject: .emoji,
-            hasTrending: true,
-            topReactionItems: [],
-            areUnicodeEmojiEnabled: true,
-            areCustomEmojiEnabled: true,
-            chatPeerId: self.context.account.peerId,
-            hasSearch: true,
-            forceHasPremium: true
-        )
-        
         let stickerItems = EmojiPagerContentComponent.stickerInputData(
             context: self.context,
             animationCache: self.context.animationCache,
@@ -1191,16 +1176,14 @@ private final class StickerPackContainer: ASDisplayNode {
             stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
             chatPeerId: self.context.account.peerId,
             hasSearch: true,
-            hasTrending: true,
+            hasTrending: false,
             forceHasPremium: true
         )
         
-        let signal = combineLatest(
-            queue: .mainQueue(),
-            emojiItems,
-            stickerItems
-        ) |> map { emoji, stickers -> StickerPickerInput in
-            return StickerPickerInputData(emoji: emoji, stickers: stickers, gifs: nil)
+        let signal = stickerItems
+        |> deliverOnMainQueue
+        |> map { stickers -> StickerPickerInput in
+            return StickerPickerInputData(emoji: nil, stickers: stickers, gifs: nil)
         }
         
         self.stickerPickerInputData.set(signal)
