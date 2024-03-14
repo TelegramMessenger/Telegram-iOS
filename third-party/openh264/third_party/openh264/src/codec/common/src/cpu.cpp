@@ -145,6 +145,15 @@ uint32_t WelsCPUFeatureDetect (int32_t* pNumberOfLogicProcessors) {
     }
   }
 
+  if (uiMaxCpuidLevel >= 7) {
+    uiFeatureC = WelsCPUDetectAVX512();
+    if (uiFeatureC & 0x10000) uiCPU |= WELS_CPU_AVX512F;
+    if (uiFeatureC & 0x10000000) uiCPU |= WELS_CPU_AVX512CD;
+    if (uiFeatureC & 0x20000) uiCPU |= WELS_CPU_AVX512DQ;
+    if (uiFeatureC & 0x40000000) uiCPU |= WELS_CPU_AVX512BW;
+    if (uiFeatureC & 0x80000000) uiCPU |= WELS_CPU_AVX512VL;
+  }
+
   if (pNumberOfLogicProcessors != NULL) {
     if (uiCPU & WELS_CPU_HTT) {
       *pNumberOfLogicProcessors = (uiFeatureB & 0x00ff0000) >> 16; // feature bits: 23-16 on returned EBX
@@ -308,49 +317,66 @@ uint32_t WelsCPUFeatureDetect (int32_t* pNumberOfLogicProcessors) {
 }
 
 #elif defined(mips)
-/* for loongson */
+/* Get cpu features from cpuinfo. */
 static uint32_t get_cpu_flags_from_cpuinfo(void)
 {
-    uint32_t flags = 0;
+  uint32_t flags = 0;
 
 # ifdef __linux__
-    FILE* fp = fopen("/proc/cpuinfo", "r");
-    if (!fp)
-        return flags;
+  FILE* fp = fopen("/proc/cpuinfo", "r");
+  if (!fp)
+    return flags;
 
-    char buf[200];
-    memset(buf, 0, sizeof(buf));
-    while (fgets(buf, sizeof(buf), fp)) {
-        if (!strncmp(buf, "model name", strlen("model name"))) {
-            if (strstr(buf, "Loongson-3A") || strstr(buf, "Loongson-3B") ||
-                strstr(buf, "Loongson-2K")) {
-                flags |= WELS_CPU_MMI;
-            }
-            break;
-        }
+  char buf[200];
+  memset(buf, 0, sizeof(buf));
+  while (fgets(buf, sizeof(buf), fp)) {
+    if (!strncmp(buf, "model name", strlen("model name"))) {
+      if (strstr(buf, "Loongson-3A") || strstr(buf, "Loongson-3B") ||
+        strstr(buf, "Loongson-2K")) {
+        flags |= WELS_CPU_MMI;
+      }
+      break;
     }
-    while (fgets(buf, sizeof(buf), fp)) {
-        if(!strncmp(buf, "ASEs implemented", strlen("ASEs implemented"))) {
-            if (strstr(buf, "loongson-mmi") && strstr(buf, "loongson-ext")) {
-                flags |= WELS_CPU_MMI;
-            }
-            if (strstr(buf, "msa")) {
-                flags |= WELS_CPU_MSA;
-            }
-            break;
-        }
+  }
+  while (fgets(buf, sizeof(buf), fp)) {
+    if(!strncmp(buf, "ASEs implemented", strlen("ASEs implemented"))) {
+      if (strstr(buf, "loongson-mmi") && strstr(buf, "loongson-ext")) {
+        flags |= WELS_CPU_MMI;
+      }
+      if (strstr(buf, "msa")) {
+        flags |= WELS_CPU_MSA;
+      }
+      break;
     }
-    fclose(fp);
+  }
+  fclose(fp);
 # endif
 
-    return flags;
+  return flags;
 }
 
 uint32_t WelsCPUFeatureDetect (int32_t* pNumberOfLogicProcessors) {
-    return get_cpu_flags_from_cpuinfo();
+  return get_cpu_flags_from_cpuinfo();
 }
 
-#else /* Neither X86_ASM, HAVE_NEON, HAVE_NEON_AARCH64 nor mips */
+#elif defined(__loongarch__) && defined(__linux__)
+/* The getauxval is used to dynamically identify the characteristics
+ * of the loongarch in the running processor during software execution. */
+#include <sys/auxv.h>
+#define LA_HWCAP_LSX    (1 << 4)
+#define LA_HWCAP_LASX   (1 << 5)
+
+uint32_t WelsCPUFeatureDetect (int32_t* pNumberOfLogicProcessors) {
+  uint32_t flags = 0;
+  uint32_t flag  = (uint32_t)getauxval(AT_HWCAP);
+  if (flag & LA_HWCAP_LSX)
+    flags |= WELS_CPU_LSX;
+  if (flag & LA_HWCAP_LASX)
+    flags |= WELS_CPU_LASX;
+  return flags;
+}
+
+#else /* Neither X86_ASM, HAVE_NEON, HAVE_NEON_AARCH64, loongarch nor mips */
 
 uint32_t WelsCPUFeatureDetect (int32_t* pNumberOfLogicProcessors) {
   return 0;

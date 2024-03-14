@@ -169,6 +169,7 @@ int32_t   iMaxBitsPerFrame;
 double    dPreviousFps;
 
 // bits allocation and status
+int32_t   iLastAllocatedBits;
 int32_t   iRemainingBits;
 int32_t   iBitsPerMb;
 int32_t   iTargetBits;

@@ -189,21 +189,35 @@ static bool get_key_block_lengths(const SSL *ssl, size_t *out_mac_secret_len,
   return true;
 }
 
-int tls1_configure_aead(SSL *ssl, evp_aead_direction_t direction,
-                        Array<uint8_t> *key_block_cache,
-                        const SSL_CIPHER *cipher,
-                        Span<const uint8_t> iv_override) {
+static bool generate_key_block(const SSL *ssl, Span<uint8_t> out,
+                               const SSL_SESSION *session) {
+  auto secret = MakeConstSpan(session->secret, session->secret_length);
+  static const char kLabel[] = "key expansion";
+  auto label = MakeConstSpan(kLabel, sizeof(kLabel) - 1);
+
+  const EVP_MD *digest = ssl_session_get_digest(session);
+  // Note this function assumes that |session|'s key material corresponds to
+  // |ssl->s3->client_random| and |ssl->s3->server_random|.
+  return tls1_prf(digest, out, secret, label, ssl->s3->server_random,
+                  ssl->s3->client_random);
+}
+
+bool tls1_configure_aead(SSL *ssl, evp_aead_direction_t direction,
+                         Array<uint8_t> *key_block_cache,
+                         const SSL_SESSION *session,
+                         Span<const uint8_t> iv_override) {
   size_t mac_secret_len, key_len, iv_len;
-  if (!get_key_block_lengths(ssl, &mac_secret_len, &key_len, &iv_len, cipher)) {
-    return 0;
+  if (!get_key_block_lengths(ssl, &mac_secret_len, &key_len, &iv_len,
+                             session->cipher)) {
+    return false;
   }
 
   // Ensure that |key_block_cache| is set up.
   const size_t key_block_size = 2 * (mac_secret_len + key_len + iv_len);
   if (key_block_cache->empty()) {
     if (!key_block_cache->Init(key_block_size) ||
-        !SSL_generate_key_block(ssl, key_block_cache->data(), key_block_size)) {
-      return 0;
+        !generate_key_block(ssl, MakeSpan(*key_block_cache), session)) {
+      return false;
     }
   }
   assert(key_block_cache->size() == key_block_size);
@@ -224,30 +238,33 @@ int tls1_configure_aead(SSL *ssl, evp_aead_direction_t direction,
 
   if (!iv_override.empty()) {
     if (iv_override.size() != iv_len) {
-      return 0;
+      return false;
     }
     iv = iv_override;
   }
 
-  UniquePtr<SSLAEADContext> aead_ctx = SSLAEADContext::Create(
-      direction, ssl->version, SSL_is_dtls(ssl), cipher, key, mac_secret, iv);
+  UniquePtr<SSLAEADContext> aead_ctx =
+      SSLAEADContext::Create(direction, ssl->version, SSL_is_dtls(ssl),
+                             session->cipher, key, mac_secret, iv);
   if (!aead_ctx) {
-    return 0;
+    return false;
   }
 
   if (direction == evp_aead_open) {
     return ssl->method->set_read_state(ssl, ssl_encryption_application,
-                                       std::move(aead_ctx));
+                                       std::move(aead_ctx),
+                                       /*secret_for_quic=*/{});
   }
 
   return ssl->method->set_write_state(ssl, ssl_encryption_application,
-                                      std::move(aead_ctx));
+                                      std::move(aead_ctx),
+                                      /*secret_for_quic=*/{});
 }
 
-int tls1_change_cipher_state(SSL_HANDSHAKE *hs,
-                             evp_aead_direction_t direction) {
+bool tls1_change_cipher_state(SSL_HANDSHAKE *hs,
+                              evp_aead_direction_t direction) {
   return tls1_configure_aead(hs->ssl, direction, &hs->key_block,
-                             hs->new_cipher, {});
+                             ssl_handshake_session(hs), {});
 }
 
 int tls1_generate_master_secret(SSL_HANDSHAKE *hs, uint8_t *out,
@@ -284,6 +301,11 @@ BSSL_NAMESPACE_END
 using namespace bssl;
 
 size_t SSL_get_key_block_len(const SSL *ssl) {
+  // See |SSL_generate_key_block|.
+  if (SSL_in_init(ssl) || ssl_protocol_version(ssl) > TLS1_2_VERSION) {
+    return 0;
+  }
+
   size_t mac_secret_len, key_len, fixed_iv_len;
   if (!get_key_block_lengths(ssl, &mac_secret_len, &key_len, &fixed_iv_len,
                              SSL_get_current_cipher(ssl))) {
@@ -295,32 +317,28 @@ size_t SSL_get_key_block_len(const SSL *ssl) {
 }
 
 int SSL_generate_key_block(const SSL *ssl, uint8_t *out, size_t out_len) {
-  const SSL_SESSION *session = SSL_get_session(ssl);
-  auto out_span = MakeSpan(out, out_len);
-  auto master_key =
-      MakeConstSpan(session->master_key, session->master_key_length);
-  static const char kLabel[] = "key expansion";
-  auto label = MakeConstSpan(kLabel, sizeof(kLabel) - 1);
+  // Which cipher state to use is ambiguous during a handshake. In particular,
+  // there are points where read and write states are from different epochs.
+  // During a handshake, before ChangeCipherSpec, the encryption states may not
+  // match |ssl->s3->client_random| and |ssl->s3->server_random|.
+  if (SSL_in_init(ssl) || ssl_protocol_version(ssl) > TLS1_2_VERSION) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
+    return 0;
+  }
 
-  const EVP_MD *digest = ssl_session_get_digest(session);
-  return tls1_prf(digest, out_span, master_key, label, ssl->s3->server_random,
-                  ssl->s3->client_random);
+  return generate_key_block(ssl, MakeSpan(out, out_len), SSL_get_session(ssl));
 }
 
 int SSL_export_keying_material(SSL *ssl, uint8_t *out, size_t out_len,
                                const char *label, size_t label_len,
                                const uint8_t *context, size_t context_len,
                                int use_context) {
-  // Exporters may be used in False Start and server 0-RTT, where the handshake
-  // has progressed enough. Otherwise, they may not be used during a handshake.
-  if (SSL_in_init(ssl) &&
-      !SSL_in_false_start(ssl) &&
-      !(SSL_is_server(ssl) && SSL_in_early_data(ssl))) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_HANDSHAKE_NOT_COMPLETE);
-    return 0;
-  }
-
-  if (ssl_protocol_version(ssl) >= TLS1_3_VERSION) {
+  // In TLS 1.3, the exporter may be used whenever the secret has been derived.
+  if (ssl->s3->have_version && ssl_protocol_version(ssl) >= TLS1_3_VERSION) {
+    if (ssl->s3->exporter_secret_len == 0) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_HANDSHAKE_NOT_COMPLETE);
+      return 0;
+    }
     if (!use_context) {
       context = nullptr;
       context_len = 0;
@@ -329,6 +347,13 @@ int SSL_export_keying_material(SSL *ssl, uint8_t *out, size_t out_len,
         ssl, MakeSpan(out, out_len),
         MakeConstSpan(ssl->s3->exporter_secret, ssl->s3->exporter_secret_len),
         MakeConstSpan(label, label_len), MakeConstSpan(context, context_len));
+  }
+
+  // Exporters may be used in False Start, where the handshake has progressed
+  // enough. Otherwise, they may not be used during a handshake.
+  if (SSL_in_init(ssl) && !SSL_in_false_start(ssl)) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_HANDSHAKE_NOT_COMPLETE);
+    return 0;
   }
 
   size_t seed_len = 2 * SSL3_RANDOM_SIZE;
@@ -341,7 +366,6 @@ int SSL_export_keying_material(SSL *ssl, uint8_t *out, size_t out_len,
   }
   Array<uint8_t> seed;
   if (!seed.Init(seed_len)) {
-    OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
     return 0;
   }
 
@@ -356,8 +380,7 @@ int SSL_export_keying_material(SSL *ssl, uint8_t *out, size_t out_len,
 
   const SSL_SESSION *session = SSL_get_session(ssl);
   const EVP_MD *digest = ssl_session_get_digest(session);
-  return tls1_prf(
-      digest, MakeSpan(out, out_len),
-      MakeConstSpan(session->master_key, session->master_key_length),
-      MakeConstSpan(label, label_len), seed, {});
+  return tls1_prf(digest, MakeSpan(out, out_len),
+                  MakeConstSpan(session->secret, session->secret_length),
+                  MakeConstSpan(label, label_len), seed, {});
 }

@@ -70,6 +70,7 @@ struct SPicture {
   bool            bUsedAsRef;                                                     //for ref pic management
   bool            bIsLongRef;     // long term reference frame flag       //for ref pic management
   int8_t          iRefCount;
+  void            (*pSetUnRef)(WelsDec::SPicture*);
 
   bool            bIsComplete;    // indicate whether current picture is complete, not from EC
   /*******************************for future use****************************/

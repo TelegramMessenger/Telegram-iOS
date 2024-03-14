@@ -50,7 +50,7 @@ typedef struct TagRefPicListReorderSyntax {
     uint32_t    uiAbsDiffPicNumMinus1;
     uint16_t    uiLongTermPicNum;
     uint16_t    uiReorderingOfPicNumsIdc;
-  } sReorderingSyn[LIST_A][MAX_REF_PIC_COUNT];
+  } sReorderingSyn[LIST_A][MAX_REF_PIC_COUNT + 1];
   bool          bRefPicListReorderingFlag[LIST_A];
 } SRefPicListReorderSyn, *PRefPicListReorderSyn;
 

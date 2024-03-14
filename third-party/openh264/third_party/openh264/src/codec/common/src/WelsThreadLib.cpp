@@ -39,7 +39,7 @@
  */
 
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__GNU__)
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -48,7 +48,9 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <unistd.h>
-#ifndef __Fuchsia__
+#ifdef __EMSCRIPTEN__
+#include <emscripten/threading.h>
+#elif !defined(__Fuchsia__)
 #include <sys/sysctl.h>
 #endif
 #ifdef __APPLE__
@@ -481,7 +483,7 @@ WELS_THREAD_ERROR_CODE    WelsQueryLogicalProcessInfo (WelsLogicalProcessInfo* p
 #ifdef ANDROID_NDK
   pInfo->ProcessorCount = android_getCpuCount();
   return WELS_THREAD_ERROR_OK;
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__GNU__)
 
   cpu_set_t cpuset;
 
@@ -508,7 +510,7 @@ WELS_THREAD_ERROR_CODE    WelsQueryLogicalProcessInfo (WelsLogicalProcessInfo* p
 #elif defined(__EMSCRIPTEN__)
 
   // There is not yet a way to determine CPU count in emscripten JS environment.
-  pInfo->ProcessorCount = 1;
+  pInfo->ProcessorCount = emscripten_num_logical_cores();
   return WELS_THREAD_ERROR_OK;
 
 #elif defined(__Fuchsia__)

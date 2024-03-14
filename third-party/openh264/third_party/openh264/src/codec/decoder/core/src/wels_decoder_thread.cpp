@@ -39,25 +39,6 @@
  */
 
 
-#ifdef __linux__
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#include <sched.h>
-#elif !defined(_WIN32) && !defined(__CYGWIN__)
-#include <sys/types.h>
-#include <sys/param.h>
-#include <unistd.h>
-#ifndef __Fuchsia__
-#include <sys/sysctl.h>
-#endif
-#ifdef __APPLE__
-#define HW_NCPU_NAME "hw.logicalcpu"
-#else
-#define HW_NCPU_NAME "hw.ncpu"
-#endif
-#endif
-
 #include "wels_decoder_thread.h"
 #include <stdio.h>
 #include <stdlib.h>

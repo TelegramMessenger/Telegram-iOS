@@ -8,31 +8,26 @@ Please note that we cannot answer questions about FIPS, nor about using BoringSS
 
 BoringCrypto has undergone the following validations:
 
-1. 2017-06-15: certificate [#2964](https://csrc.nist.gov/Projects/Cryptographic-Module-Validation-Program/Certificate/2964), [security policy](/crypto/fipsmodule/policydocs/BoringCrypto-Security-Policy-20170615.docx) (in docx format).
-1. 2018-07-30: certificate [#3318](https://csrc.nist.gov/Projects/Cryptographic-Module-Validation-Program/Certificate/3318), [security policy](/crypto/fipsmodule/policydocs/BoringCrypto-Security-Policy-20180730.docx) (in docx format).
+1. 2017-06-15: certificate [#2964](https://csrc.nist.gov/Projects/Cryptographic-Module-Validation-Program/Certificate/2964), [security policy](./policydocs/BoringCrypto-Security-Policy-20170615.docx) (in docx format).
+1. 2018-07-30: certificate [#3318](https://csrc.nist.gov/Projects/Cryptographic-Module-Validation-Program/Certificate/3318), [security policy](./policydocs/BoringCrypto-Security-Policy-20180730.docx) (in docx format).
+1. 2019-08-08: certificate [#3678](https://csrc.nist.gov/Projects/Cryptographic-Module-Validation-Program/Certificate/3678), [security policy](./policydocs/BoringCrypto-Security-Policy-20190808.docx) (in docx format).
+1. 2019-10-20: certificate [#3753](https://csrc.nist.gov/Projects/Cryptographic-Module-Validation-Program/Certificate/3753), [security policy](./policydocs/BoringCrypto-Android-Security-Policy-20191020.docx) (in docx format).
+1. 2021-01-28: certificate [#4156](https://csrc.nist.gov/Projects/Cryptographic-Module-Validation-Program/Certificate/4156), [security policy](./policydocs/BoringCrypto-Android-Security-Policy-20210319.docx) (in docx format).
+1. 2021-04-29: certificate [#4407](https://csrc.nist.gov/projects/cryptographic-module-validation-program/certificate/4407).
 
-## Running CAVP tests
+## Running ACVP tests
 
-CAVP results are calculated by `util/fipstools/cavp`, but that binary is almost always run by `util/fipstools/run_cavp.go`. The latter knows the set of tests to be processed and the flags needed to configure `cavp` for each one. It must be run from the top of a CAVP directory and needs the following options:
+See `util/fipstools/acvp/ACVP.md` for details of how ACVP testing is done.
 
-1. `-oracle-bin`: points to the location of `util/fipstools/cavp`
-2. `-no-fax`: this is needed to suppress checking of the FAX files, which are only included in sample sets.
+## Breaking known-answer and continuous tests
 
-## Breaking power-on and continuous tests
+Each known-answer test (KAT) uses a unique, random input value. `util/fipstools/break-kat.go` contains a listing of those values and can be used to corrupt a given test in a binary. Since changes to the KAT input values will invalidate the integrity test, `BORINGSSL_FIPS_BREAK_TESTS` can be defined in `fips_break_tests.h` to disable it for the purposes of testing.
 
-In order to demonstrate failures of the various FIPS 140 tests, BoringSSL can be built in ways that will trigger such failures. This is controlled by passing `-DFIPS_BREAK_TEST=`(test to break) to CMake, where the following tests can be specified:
+Some FIPS tests cannot be broken by replacing a known string in the binary. For those, when `BORINGSSL_FIPS_BREAK_TESTS` is defined, the environment variable `BORINGSSL_FIPS_BREAK_TEST` can be set to one of a number of values in order to break the corresponding test:
 
-1. AES\_CBC
-1. AES\_GCM
-1. DES
-1. SHA\_1
-1. SHA\_256
-1. SHA\_512
-1. RSA\_SIG
-1. ECDSA\_SIG
-1. DRBG
-1. RSA\_PWCT
-1. ECDSA\_PWCT
+1. `RSA_PWCT`
+1. `ECDSA_PWCT`
+1. `CRNG`
 
 ## Breaking the integrity test
 
@@ -57,12 +52,6 @@ The FIPS PRNGs allow “additional input” to be fed into a given call. We use 
 There is a second interface to the RNG which allows the caller to supply bytes that will be XORed into the generated additional data (`RAND_bytes_with_additional_data`). This is used in the ECDSA code to include the message and private key in the generation of *k*, the ECDSA nonce. This allows ECDSA to be robust to entropy failures while still following the FIPS rules.
 
 FIPS requires that RNG state be zeroed when the process exits. In order to implement this, all per-thread RNG states are tracked in a linked list and a destructor function is included which clears them. In order for this to be safe in the presence of threads, a lock is used to stop all other threads from using the RNG once this process has begun. Thus the main thread exiting may cause other threads to deadlock, and drawing on entropy in a destructor function may also deadlock.
-
-## Self-test optimisation
-
-On Android, the self-tests are optimised in line with [IG](https://csrc.nist.gov/csrc/media/projects/cryptographic-module-validation-program/documents/fips140-2/fips1402ig.pdf) section 9.11. The module will always perform the integrity test at power-on, but the self-tests will test for the presence of a file named after the hex encoded, HMAC-SHA-256 hash of the module in `/dev/boringssl/selftest/`. If such a file is found then the self-tests are skipped. Otherwise, after the self-tests complete successfully, that file will be written. Any I/O errors are ignored and, if they occur when testing for the presence of the file, the module acts as if it's not present.
-
-It is intended that a `tmpfs` be mounted at that location in order to skip running the self tests for every process once they have already passed in a given instance of the operating system.
 
 ## Integrity Test
 
@@ -100,7 +89,7 @@ The most obvious cause of relocations are out-calls from the module to non-crypt
 
 Offsets to these functions cannot be known until the final link because only the linker sees the object files containing them. Thus calls to these functions are rewritten into an IP-relative jump to a redirector function. The redirector functions contain a single jump instruction to the real function and are placed outside of the module and are thus not hashed (see diagram).
 
-![module structure](/crypto/fipsmodule/intcheck1.png)
+![module structure](./intcheck1.png)
 
 In this diagram, the integrity check hashes from `module_start` to `module_end`. Since this does not cover the jump to `memcpy`, it's fine that the linker will poke the final offset into that instruction.
 
@@ -132,7 +121,7 @@ In order to actually implement the integrity test, a constructor function within
 
 Initially the known-good value will be incorrect. Another script (`inject_hash.go`) calculates the correct value from the assembled object and injects it back into the object.
 
-![build process](/crypto/fipsmodule/intcheck2.png)
+![build process](./intcheck2.png)
 
 ### Comparison with OpenSSL's method
 
@@ -152,4 +141,4 @@ Some of the similarities are worth noting:
 
 1.  OpenSSL has all out-calls from the module indirecting via the PLT, which is equivalent to the redirector functions described above.
 
-![OpenSSL build process](/crypto/fipsmodule/intcheck3.png)
+![OpenSSL build process](./intcheck3.png)

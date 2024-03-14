@@ -56,56 +56,42 @@
 
 #include <openssl/asn1.h>
 #include <openssl/asn1t.h>
-#include <openssl/x509.h>
 #include <openssl/obj.h>
+#include <openssl/x509.h>
 
-/*
- * X509_ATTRIBUTE: this has the following form: typedef struct
- * x509_attributes_st { ASN1_OBJECT *object; int single; union { char *ptr;
- * STACK_OF(ASN1_TYPE) *set; ASN1_TYPE *single; } value; } X509_ATTRIBUTE;
- * this needs some extra thought because the CHOICE type is merged with the
- * main structure and because the value can be anything at all we *must* try
- * the SET OF first because the ASN1_ANY type will swallow anything including
- * the whole SET OF structure.
- */
+#include "internal.h"
 
-ASN1_CHOICE(X509_ATTRIBUTE_SET) = {
-        ASN1_SET_OF(X509_ATTRIBUTE, value.set, ASN1_ANY),
-        ASN1_SIMPLE(X509_ATTRIBUTE, value.single, ASN1_ANY)
-} ASN1_CHOICE_END_selector(X509_ATTRIBUTE, X509_ATTRIBUTE_SET, single)
 
 ASN1_SEQUENCE(X509_ATTRIBUTE) = {
-        ASN1_SIMPLE(X509_ATTRIBUTE, object, ASN1_OBJECT),
-        /* CHOICE type merged with parent */
-        ASN1_EX_COMBINE(0, 0, X509_ATTRIBUTE_SET)
+    ASN1_SIMPLE(X509_ATTRIBUTE, object, ASN1_OBJECT),
+    ASN1_SET_OF(X509_ATTRIBUTE, set, ASN1_ANY),
 } ASN1_SEQUENCE_END(X509_ATTRIBUTE)
 
-IMPLEMENT_ASN1_FUNCTIONS(X509_ATTRIBUTE)
-IMPLEMENT_ASN1_DUP_FUNCTION(X509_ATTRIBUTE)
+IMPLEMENT_ASN1_FUNCTIONS_const(X509_ATTRIBUTE)
+IMPLEMENT_ASN1_DUP_FUNCTION_const(X509_ATTRIBUTE)
 
-X509_ATTRIBUTE *X509_ATTRIBUTE_create(int nid, int atrtype, void *value)
-{
-    X509_ATTRIBUTE *ret = NULL;
-    ASN1_TYPE *val = NULL;
+X509_ATTRIBUTE *X509_ATTRIBUTE_create(int nid, int attrtype, void *value) {
+  ASN1_OBJECT *obj = OBJ_nid2obj(nid);
+  if (obj == NULL) {
+    return NULL;
+  }
 
-    if ((ret = X509_ATTRIBUTE_new()) == NULL)
-        return (NULL);
-    /* TODO(fork): const correctness. */
-    ret->object = (ASN1_OBJECT *)OBJ_nid2obj(nid);
-    ret->single = 0;
-    if ((ret->value.set = sk_ASN1_TYPE_new_null()) == NULL)
-        goto err;
-    if ((val = ASN1_TYPE_new()) == NULL)
-        goto err;
-    if (!sk_ASN1_TYPE_push(ret->value.set, val))
-        goto err;
+  X509_ATTRIBUTE *ret = X509_ATTRIBUTE_new();
+  ASN1_TYPE *val = ASN1_TYPE_new();
+  if (ret == NULL || val == NULL) {
+    goto err;
+  }
 
-    ASN1_TYPE_set(val, atrtype, value);
-    return (ret);
- err:
-    if (ret != NULL)
-        X509_ATTRIBUTE_free(ret);
-    if (val != NULL)
-        ASN1_TYPE_free(val);
-    return (NULL);
+  ret->object = obj;
+  if (!sk_ASN1_TYPE_push(ret->set, val)) {
+    goto err;
+  }
+
+  ASN1_TYPE_set(val, attrtype, value);
+  return ret;
+
+err:
+  X509_ATTRIBUTE_free(ret);
+  ASN1_TYPE_free(val);
+  return NULL;
 }

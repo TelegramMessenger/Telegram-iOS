@@ -62,7 +62,7 @@ $output = pop;
 open OUT,">$output";
 *STDOUT=*OUT;
 
-&asm_init($ARGV[0],$x86only = $ARGV[$#ARGV] eq "386");
+&asm_init($ARGV[0]);
 
 $PREFIX="vpaes";
 
@@ -920,4 +920,4 @@ $k_dsbo=0x2c0;		# decryption sbox final output
 
 &asm_finish();
 
-close STDOUT or die "error closing STDOUT";
+close STDOUT or die "error closing STDOUT: $!";

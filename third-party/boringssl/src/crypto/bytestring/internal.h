@@ -54,8 +54,8 @@ OPENSSL_EXPORT int CBS_asn1_ber_to_der(CBS *in, CBS *out,
 // It returns one on success and zero otherwise.
 OPENSSL_EXPORT int CBS_get_asn1_implicit_string(CBS *in, CBS *out,
                                                 uint8_t **out_storage,
-                                                unsigned outer_tag,
-                                                unsigned inner_tag);
+                                                CBS_ASN1_TAG outer_tag,
+                                                CBS_ASN1_TAG inner_tag);
 
 // CBB_finish_i2d calls |CBB_finish| on |cbb| which must have been initialized
 // with |CBB_init|. If |outp| is not NULL then the result is written to |*outp|
@@ -65,28 +65,6 @@ OPENSSL_EXPORT int CBS_get_asn1_implicit_string(CBS *in, CBS *out,
 //
 // This function may be used to help implement legacy i2d ASN.1 functions.
 int CBB_finish_i2d(CBB *cbb, uint8_t **outp);
-
-
-// Unicode utilities.
-
-// The following functions read one Unicode code point from |cbs| with the
-// corresponding encoding and store it in |*out|. They return one on success and
-// zero on error.
-OPENSSL_EXPORT int cbs_get_utf8(CBS *cbs, uint32_t *out);
-OPENSSL_EXPORT int cbs_get_latin1(CBS *cbs, uint32_t *out);
-OPENSSL_EXPORT int cbs_get_ucs2_be(CBS *cbs, uint32_t *out);
-OPENSSL_EXPORT int cbs_get_utf32_be(CBS *cbs, uint32_t *out);
-
-// cbb_get_utf8_len returns the number of bytes needed to represent |u| in
-// UTF-8.
-OPENSSL_EXPORT size_t cbb_get_utf8_len(uint32_t u);
-
-// The following functions encode |u| to |cbb| with the corresponding
-// encoding. They return one on success and zero on error.
-OPENSSL_EXPORT int cbb_add_utf8(CBB *cbb, uint32_t u);
-OPENSSL_EXPORT int cbb_add_latin1(CBB *cbb, uint32_t u);
-OPENSSL_EXPORT int cbb_add_ucs2_be(CBB *cbb, uint32_t u);
-OPENSSL_EXPORT int cbb_add_utf32_be(CBB *cbb, uint32_t u);
 
 
 #if defined(__cplusplus)

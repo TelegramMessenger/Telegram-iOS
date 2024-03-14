@@ -142,6 +142,19 @@ VAACalcSadSsdFunc       VAACalcSadSsd_mmi;
 WELSVP_EXTERN_C_END
 #endif
 
+#ifdef HAVE_LSX
+WELSVP_EXTERN_C_BEGIN
+VAACalcSadBgdFunc       VAACalcSadBgd_lsx;
+VAACalcSadFunc          VAACalcSad_lsx;
+WELSVP_EXTERN_C_END
+#endif
+
+#ifdef HAVE_LASX
+WELSVP_EXTERN_C_BEGIN
+VAACalcSadBgdFunc       VAACalcSadBgd_lasx;
+WELSVP_EXTERN_C_END
+#endif
+
 class CVAACalculation : public IStrategy {
  public:
   CVAACalculation (int32_t iCpuFlag);

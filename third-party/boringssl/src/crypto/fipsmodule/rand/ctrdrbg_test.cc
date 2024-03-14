@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include <openssl/rand.h>
+#include <openssl/ctrdrbg.h>
 #include <openssl/sha.h>
 
 #include "internal.h"
@@ -60,13 +60,23 @@ TEST(CTRDRBGTest, Basic) {
   CTR_DRBG_clear(&drbg);
 }
 
+TEST(CTRDRBGTest, Allocated) {
+  const uint8_t kSeed[CTR_DRBG_ENTROPY_LEN] = {0};
+
+  bssl::UniquePtr<CTR_DRBG_STATE> allocated(CTR_DRBG_new(kSeed, nullptr, 0));
+  ASSERT_TRUE(allocated);
+
+  allocated.reset(CTR_DRBG_new(kSeed, nullptr, 1<<20));
+  ASSERT_FALSE(allocated);
+}
+
 TEST(CTRDRBGTest, Large) {
   const uint8_t kSeed[CTR_DRBG_ENTROPY_LEN] = {0};
 
   CTR_DRBG_STATE drbg;
   ASSERT_TRUE(CTR_DRBG_init(&drbg, kSeed, nullptr, 0));
 
-  std::unique_ptr<uint8_t[]> buf(new uint8_t[CTR_DRBG_MAX_GENERATE_LENGTH]);
+  auto buf = std::make_unique<uint8_t[]>(CTR_DRBG_MAX_GENERATE_LENGTH);
   ASSERT_TRUE(CTR_DRBG_generate(&drbg, buf.get(), CTR_DRBG_MAX_GENERATE_LENGTH,
                                 nullptr, 0));
 

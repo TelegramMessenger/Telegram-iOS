@@ -16,8 +16,11 @@
 
 #include <assert.h>
 
+#include <algorithm>
+
 #include <openssl/bytestring.h>
 #include <openssl/err.h>
+#include <openssl/span.h>
 
 #include "internal.h"
 #include "../crypto/internal.h"
@@ -82,29 +85,29 @@ bool ssl_method_supports_version(const SSL_PROTOCOL_METHOD *method,
 // The following functions map between API versions and wire versions. The
 // public API works on wire versions.
 
+static const char* kUnknownVersion = "unknown";
+
+struct VersionInfo {
+  uint16_t version;
+  const char *name;
+};
+
+static const VersionInfo kVersionNames[] = {
+    {TLS1_3_VERSION, "TLSv1.3"},
+    {TLS1_2_VERSION, "TLSv1.2"},
+    {TLS1_1_VERSION, "TLSv1.1"},
+    {TLS1_VERSION, "TLSv1"},
+    {DTLS1_VERSION, "DTLSv1"},
+    {DTLS1_2_VERSION, "DTLSv1.2"},
+};
+
 static const char *ssl_version_to_string(uint16_t version) {
-  switch (version) {
-    case TLS1_3_VERSION:
-      return "TLSv1.3";
-
-    case TLS1_2_VERSION:
-      return "TLSv1.2";
-
-    case TLS1_1_VERSION:
-      return "TLSv1.1";
-
-    case TLS1_VERSION:
-      return "TLSv1";
-
-    case DTLS1_VERSION:
-      return "DTLSv1";
-
-    case DTLS1_2_VERSION:
-      return "DTLSv1.2";
-
-    default:
-      return "unknown";
+  for (const auto &v : kVersionNames) {
+    if (v.version == version) {
+      return v.name;
+    }
   }
+  return kUnknownVersion;
 }
 
 static uint16_t wire_version_to_api(uint16_t version) {
@@ -193,11 +196,11 @@ bool ssl_get_version_range(const SSL_HANDSHAKE *hs, uint16_t *out_min_version,
     min_version = TLS1_3_VERSION;
   }
 
-  // OpenSSL's API for controlling versions entails blacklisting individual
-  // protocols. This has two problems. First, on the client, the protocol can
-  // only express a contiguous range of versions. Second, a library consumer
-  // trying to set a maximum version cannot disable protocol versions that get
-  // added in a future version of the library.
+  // The |SSL_OP_NO_*| flags disable individual protocols. This has two
+  // problems. First, prior to TLS 1.3, the protocol can only express a
+  // contiguous range of versions. Second, a library consumer trying to set a
+  // maximum version cannot disable protocol versions that get added in a future
+  // version of the library.
   //
   // To account for both of these, OpenSSL interprets the client-side bitmask
   // as a min/max range by picking the lowest contiguous non-empty range of
@@ -260,8 +263,8 @@ uint16_t ssl_protocol_version(const SSL *ssl) {
   return version;
 }
 
-bool ssl_supports_version(SSL_HANDSHAKE *hs, uint16_t version) {
-  SSL *const ssl = hs->ssl;
+bool ssl_supports_version(const SSL_HANDSHAKE *hs, uint16_t version) {
+  const SSL *const ssl = hs->ssl;
   uint16_t protocol_version;
   if (!ssl_method_supports_version(ssl->method, version) ||
       !ssl_protocol_version_from_wire(&protocol_version, version) ||
@@ -273,9 +276,13 @@ bool ssl_supports_version(SSL_HANDSHAKE *hs, uint16_t version) {
   return true;
 }
 
-bool ssl_add_supported_versions(SSL_HANDSHAKE *hs, CBB *cbb) {
+bool ssl_add_supported_versions(const SSL_HANDSHAKE *hs, CBB *cbb,
+                                uint16_t extra_min_version) {
   for (uint16_t version : get_method_versions(hs->ssl->method)) {
+    uint16_t protocol_version;
     if (ssl_supports_version(hs, version) &&
+        ssl_protocol_version_from_wire(&protocol_version, version) &&
+        protocol_version >= extra_min_version &&  //
         !CBB_add_u16(cbb, version)) {
       return false;
     }
@@ -379,6 +386,11 @@ const char *SSL_get_version(const SSL *ssl) {
   return ssl_version_to_string(ssl_version(ssl));
 }
 
+size_t SSL_get_all_version_names(const char **out, size_t max_out) {
+  return GetAllNames(out, max_out, MakeConstSpan(&kUnknownVersion, 1),
+                     &VersionInfo::name, MakeConstSpan(kVersionNames));
+}
+
 const char *SSL_SESSION_get_version(const SSL_SESSION *session) {
   return ssl_version_to_string(session->ssl_version);
 }
@@ -391,4 +403,8 @@ int SSL_SESSION_set_protocol_version(SSL_SESSION *session, uint16_t version) {
   // This picks a representative TLS 1.3 version, but this API should only be
   // used on unit test sessions anyway.
   return api_version_to_wire(&session->ssl_version, version);
+}
+
+int SSL_CTX_set_record_protocol_version(SSL_CTX *ctx, int version) {
+  return version == 0;
 }

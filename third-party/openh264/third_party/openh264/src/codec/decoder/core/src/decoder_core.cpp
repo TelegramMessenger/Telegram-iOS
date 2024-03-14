@@ -465,7 +465,7 @@ int32_t ParseRefPicListReordering (PBitStringAux pBs, PSliceHeader pSh) {
         const uint32_t kuiIdc = uiCode;
 
         //Fixed the referrence list reordering crash issue.(fault kIdc value > 3 case)---
-        if ((iIdx >= MAX_REF_PIC_COUNT) || (kuiIdc > 3)) {
+        if (((iIdx >= MAX_REF_PIC_COUNT) && (kuiIdc != 3)) || (kuiIdc > 3)) {
           return GENERATE_ERROR_NO (ERR_LEVEL_SLICE_HEADER, ERR_INFO_INVALID_REF_REORDERING);
         }
         pRefPicListReordering->sReorderingSyn[iList][iIdx].uiReorderingOfPicNumsIdc = kuiIdc;
@@ -2261,6 +2261,8 @@ int32_t WelsDecodeInitAccessUnitStart (PWelsDecoderContext pCtx, SBufferInfo* pD
   pCtx->bAuReadyFlag = false;
   pCtx->pLastDecPicInfo->bLastHasMmco5 = false;
   bool bTmpNewSeqBegin = CheckNewSeqBeginAndUpdateActiveLayerSps (pCtx);
+  if (bTmpNewSeqBegin)
+    pCtx->iSeqNum++;
   pCtx->bNewSeqBegin = pCtx->bNewSeqBegin || bTmpNewSeqBegin;
   iErr = WelsDecodeAccessUnitStart (pCtx);
   GetVclNalTemporalId (pCtx);

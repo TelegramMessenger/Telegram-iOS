@@ -62,7 +62,6 @@
 
 #include <openssl/err.h>
 #include <openssl/mem.h>
-#include <openssl/type_check.h>
 
 #include "internal.h"
 #include "../../internal.h"
@@ -119,23 +118,20 @@ static void bn_mul_normal(BN_ULONG *r, const BN_ULONG *a, size_t na,
   }
 }
 
-// Here follows specialised variants of bn_add_words() and bn_sub_words(). They
-// have the property performing operations on arrays of different sizes. The
-// sizes of those arrays is expressed through cl, which is the common length (
-// basicall, min(len(a),len(b)) ), and dl, which is the delta between the two
-// lengths, calculated as len(a)-len(b). All lengths are the number of
-// BN_ULONGs...  For the operations that require a result array as parameter,
-// it must have the length cl+abs(dl).
-
+// bn_sub_part_words sets |r| to |a| - |b|. It returns the borrow bit, which is
+// one if the operation underflowed and zero otherwise. |cl| is the common
+// length, that is, the shorter of len(a) or len(b). |dl| is the delta length,
+// that is, len(a) - len(b). |r|'s length matches the larger of |a| and |b|, or
+// cl + abs(dl).
+//
+// TODO(davidben): Make this take |size_t|. The |cl| + |dl| calling convention
+// is confusing.
 static BN_ULONG bn_sub_part_words(BN_ULONG *r, const BN_ULONG *a,
                                   const BN_ULONG *b, int cl, int dl) {
-  BN_ULONG c, t;
-
   assert(cl >= 0);
-  c = bn_sub_words(r, a, b, cl);
-
+  BN_ULONG borrow = bn_sub_words(r, a, b, cl);
   if (dl == 0) {
-    return c;
+    return borrow;
   }
 
   r += cl;
@@ -143,141 +139,21 @@ static BN_ULONG bn_sub_part_words(BN_ULONG *r, const BN_ULONG *a,
   b += cl;
 
   if (dl < 0) {
-    for (;;) {
-      t = b[0];
-      r[0] = 0 - t - c;
-      if (t != 0) {
-        c = 1;
-      }
-      if (++dl >= 0) {
-        break;
-      }
-
-      t = b[1];
-      r[1] = 0 - t - c;
-      if (t != 0) {
-        c = 1;
-      }
-      if (++dl >= 0) {
-        break;
-      }
-
-      t = b[2];
-      r[2] = 0 - t - c;
-      if (t != 0) {
-        c = 1;
-      }
-      if (++dl >= 0) {
-        break;
-      }
-
-      t = b[3];
-      r[3] = 0 - t - c;
-      if (t != 0) {
-        c = 1;
-      }
-      if (++dl >= 0) {
-        break;
-      }
-
-      b += 4;
-      r += 4;
+    // |a| is shorter than |b|. Complete the subtraction as if the excess words
+    // in |a| were zeros.
+    dl = -dl;
+    for (int i = 0; i < dl; i++) {
+      r[i] = CRYPTO_subc_w(0, b[i], borrow, &borrow);
     }
   } else {
-    int save_dl = dl;
-    while (c) {
-      t = a[0];
-      r[0] = t - c;
-      if (t != 0) {
-        c = 0;
-      }
-      if (--dl <= 0) {
-        break;
-      }
-
-      t = a[1];
-      r[1] = t - c;
-      if (t != 0) {
-        c = 0;
-      }
-      if (--dl <= 0) {
-        break;
-      }
-
-      t = a[2];
-      r[2] = t - c;
-      if (t != 0) {
-        c = 0;
-      }
-      if (--dl <= 0) {
-        break;
-      }
-
-      t = a[3];
-      r[3] = t - c;
-      if (t != 0) {
-        c = 0;
-      }
-      if (--dl <= 0) {
-        break;
-      }
-
-      save_dl = dl;
-      a += 4;
-      r += 4;
-    }
-    if (dl > 0) {
-      if (save_dl > dl) {
-        switch (save_dl - dl) {
-          case 1:
-            r[1] = a[1];
-            if (--dl <= 0) {
-              break;
-            }
-            OPENSSL_FALLTHROUGH;
-          case 2:
-            r[2] = a[2];
-            if (--dl <= 0) {
-              break;
-            }
-            OPENSSL_FALLTHROUGH;
-          case 3:
-            r[3] = a[3];
-            if (--dl <= 0) {
-              break;
-            }
-        }
-        a += 4;
-        r += 4;
-      }
-    }
-
-    if (dl > 0) {
-      for (;;) {
-        r[0] = a[0];
-        if (--dl <= 0) {
-          break;
-        }
-        r[1] = a[1];
-        if (--dl <= 0) {
-          break;
-        }
-        r[2] = a[2];
-        if (--dl <= 0) {
-          break;
-        }
-        r[3] = a[3];
-        if (--dl <= 0) {
-          break;
-        }
-
-        a += 4;
-        r += 4;
-      }
+    // |b| is shorter than |a|. Complete the subtraction as if the excess words
+    // in |b| were zeros.
+    for (int i = 0; i < dl; i++) {
+      r[i] = CRYPTO_subc_w(a[i], 0, borrow, &borrow);
     }
   }
 
-  return c;
+  return borrow;
 }
 
 // bn_abs_sub_part_words computes |r| = |a| - |b|, storing the absolute value
@@ -400,8 +276,8 @@ static void bn_mul_recursive(BN_ULONG *r, const BN_ULONG *a, const BN_ULONG *b,
   BN_ULONG c_neg = c - bn_sub_words(&t[n2 * 2], t, &t[n2], n2);
   BN_ULONG c_pos = c + bn_add_words(&t[n2], t, &t[n2], n2);
   bn_select_words(&t[n2], neg, &t[n2 * 2], &t[n2], n2);
-  OPENSSL_STATIC_ASSERT(sizeof(BN_ULONG) <= sizeof(crypto_word_t),
-                        "crypto_word_t is too small");
+  static_assert(sizeof(BN_ULONG) <= sizeof(crypto_word_t),
+                "crypto_word_t is too small");
   c = constant_time_select_w(neg, c_neg, c_pos);
 
   // We now have our three components. Add them together.
@@ -514,8 +390,8 @@ static void bn_mul_part_recursive(BN_ULONG *r, const BN_ULONG *a,
   BN_ULONG c_neg = c - bn_sub_words(&t[n2 * 2], t, &t[n2], n2);
   BN_ULONG c_pos = c + bn_add_words(&t[n2], t, &t[n2], n2);
   bn_select_words(&t[n2], neg, &t[n2 * 2], &t[n2], n2);
-  OPENSSL_STATIC_ASSERT(sizeof(BN_ULONG) <= sizeof(crypto_word_t),
-                        "crypto_word_t is too small");
+  static_assert(sizeof(BN_ULONG) <= sizeof(crypto_word_t),
+                "crypto_word_t is too small");
   c = constant_time_select_w(neg, c_neg, c_pos);
 
   // We now have our three components. Add them together.
@@ -574,7 +450,7 @@ static int bn_mul_impl(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
   static const int kMulNormalSize = 16;
   if (al >= kMulNormalSize && bl >= kMulNormalSize) {
     if (-1 <= i && i <= 1) {
-      // Find the larger power of two less than or equal to the larger length.
+      // Find the largest power of two less than or equal to the larger length.
       int j;
       if (i >= 0) {
         j = BN_num_bits_word((BN_ULONG)al);
@@ -590,6 +466,10 @@ static int bn_mul_impl(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
       if (al > j || bl > j) {
         // We know |al| and |bl| are at most one from each other, so if al > j,
         // bl >= j, and vice versa. Thus we can use |bn_mul_part_recursive|.
+        //
+        // TODO(davidben): This codepath is almost unused in standard
+        // algorithms. Is this optimization necessary? See notes in
+        // https://boringssl-review.googlesource.com/q/I0bd604e2cd6a75c266f64476c23a730ca1721ea6
         assert(al >= j && bl >= j);
         if (!bn_wexpand(t, j * 8) ||
             !bn_wexpand(rr, j * 4)) {

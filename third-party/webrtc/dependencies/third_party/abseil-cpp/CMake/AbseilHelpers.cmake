@@ -80,7 +80,7 @@ endif()
 #     absl::fantastic_lib
 # )
 #
-# TODO: Implement "ALWAYSLINK"
+# TODO(b/320467376): Implement "ALWAYSLINK".
 function(absl_cc_library)
   cmake_parse_arguments(ABSL_CC_LIB
     "DISABLE_INSTALL;PUBLIC;TESTONLY"
@@ -132,10 +132,12 @@ function(absl_cc_library)
   if (${ABSL_BUILD_DLL})
     if(ABSL_ENABLE_INSTALL)
       absl_internal_dll_contains(TARGET ${_NAME} OUTPUT _in_dll)
+      absl_internal_test_dll_contains(TARGET ${_NAME} OUTPUT _in_test_dll)
     else()
       absl_internal_dll_contains(TARGET ${ABSL_CC_LIB_NAME} OUTPUT _in_dll)
+      absl_internal_test_dll_contains(TARGET ${ABSL_CC_LIB_NAME} OUTPUT _in_test_dll)
     endif()
-    if (${_in_dll})
+    if (${_in_dll} OR ${_in_test_dll})
       # This target should be replaced by the DLL
       set(_build_type "dll")
       set(ABSL_CC_LIB_IS_INTERFACE 1)
@@ -150,38 +152,63 @@ function(absl_cc_library)
   endif()
 
   # Generate a pkg-config file for every library:
-  if((_build_type STREQUAL "static" OR _build_type STREQUAL "shared")
-     AND ABSL_ENABLE_INSTALL)
-    if(NOT ABSL_CC_LIB_TESTONLY)
-      if(absl_VERSION)
-        set(PC_VERSION "${absl_VERSION}")
-      else()
-        set(PC_VERSION "head")
-      endif()
-      foreach(dep ${ABSL_CC_LIB_DEPS})
-        if(${dep} MATCHES "^absl::(.*)")
-	  # Join deps with commas.
+  if(ABSL_ENABLE_INSTALL)
+    if(absl_VERSION)
+      set(PC_VERSION "${absl_VERSION}")
+    else()
+      set(PC_VERSION "head")
+    endif()
+    if(NOT _build_type STREQUAL "dll")
+      set(LNK_LIB "${LNK_LIB} -labsl_${_NAME}")
+    endif()
+    foreach(dep ${ABSL_CC_LIB_DEPS})
+      if(${dep} MATCHES "^absl::(.*)")
+        # for DLL builds many libs are not created, but add
+        # the pkgconfigs nevertheless, pointing to the dll.
+        if(_build_type STREQUAL "dll")
+          # hide this MATCHES in an if-clause so it doesn't overwrite
+          # the CMAKE_MATCH_1 from (${dep} MATCHES "^absl::(.*)")
+          if(NOT PC_DEPS MATCHES "abseil_dll")
+            # Join deps with commas.
+            if(PC_DEPS)
+              set(PC_DEPS "${PC_DEPS},")
+            endif()
+            # don't duplicate dll-dep if it exists already
+            set(PC_DEPS "${PC_DEPS} abseil_dll = ${PC_VERSION}")
+            set(LNK_LIB "${LNK_LIB} -labseil_dll")
+          endif()
+        else()
+          # Join deps with commas.
           if(PC_DEPS)
             set(PC_DEPS "${PC_DEPS},")
           endif()
           set(PC_DEPS "${PC_DEPS} absl_${CMAKE_MATCH_1} = ${PC_VERSION}")
         endif()
-      endforeach()
-      foreach(cflag ${ABSL_CC_LIB_COPTS})
-        if(${cflag} MATCHES "^(-Wno|/wd)")
-          # These flags are needed to suppress warnings that might fire in our headers.
-          set(PC_CFLAGS "${PC_CFLAGS} ${cflag}")
-        elseif(${cflag} MATCHES "^(-W|/w[1234eo])")
-          # Don't impose our warnings on others.
-        elseif(${cflag} MATCHES "^-m")
-          # Don't impose CPU instruction requirements on others, as
-          # the code performs feature detection on runtime.
-        else()
-          set(PC_CFLAGS "${PC_CFLAGS} ${cflag}")
-        endif()
-      endforeach()
-      string(REPLACE ";" " " PC_LINKOPTS "${ABSL_CC_LIB_LINKOPTS}")
-      FILE(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/lib/pkgconfig/absl_${_NAME}.pc" CONTENT "\
+      endif()
+    endforeach()
+    set(skip_next_cflag OFF)
+    foreach(cflag ${ABSL_CC_LIB_COPTS})
+      if(skip_next_cflag)
+        set(skip_next_cflag OFF)
+      elseif(${cflag} MATCHES "^-Xarch_")
+        # An -Xarch_ flag implies that its successor only applies to the
+        # specified platform. Filter both of them out before the successor
+        # reaches the "^-m" filter.
+        set(skip_next_cflag ON)
+      elseif(${cflag} MATCHES "^(-Wno|/wd)")
+        # These flags are needed to suppress warnings that might fire in our headers.
+        set(PC_CFLAGS "${PC_CFLAGS} ${cflag}")
+      elseif(${cflag} MATCHES "^(-W|/w[1234eo])")
+        # Don't impose our warnings on others.
+      elseif(${cflag} MATCHES "^-m")
+        # Don't impose CPU instruction requirements on others, as
+        # the code performs feature detection on runtime.
+      else()
+        set(PC_CFLAGS "${PC_CFLAGS} ${cflag}")
+      endif()
+    endforeach()
+    string(REPLACE ";" " " PC_LINKOPTS "${ABSL_CC_LIB_LINKOPTS}")
+    FILE(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/lib/pkgconfig/absl_${_NAME}.pc" CONTENT "\
 prefix=${CMAKE_INSTALL_PREFIX}\n\
 exec_prefix=\${prefix}\n\
 libdir=${CMAKE_INSTALL_FULL_LIBDIR}\n\
@@ -192,11 +219,10 @@ Description: Abseil ${_NAME} library\n\
 URL: https://abseil.io/\n\
 Version: ${PC_VERSION}\n\
 Requires:${PC_DEPS}\n\
-Libs: -L\${libdir} ${PC_LINKOPTS} $<$<NOT:$<BOOL:${ABSL_CC_LIB_IS_INTERFACE}>>:-labsl_${_NAME}>\n\
+Libs: -L\${libdir} $<$<NOT:$<BOOL:${ABSL_CC_LIB_IS_INTERFACE}>>:${LNK_LIB}> ${PC_LINKOPTS}\n\
 Cflags: -I\${includedir}${PC_CFLAGS}\n")
-      INSTALL(FILES "${CMAKE_BINARY_DIR}/lib/pkgconfig/absl_${_NAME}.pc"
-              DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-    endif()
+    INSTALL(FILES "${CMAKE_BINARY_DIR}/lib/pkgconfig/absl_${_NAME}.pc"
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
   endif()
 
   if(NOT ABSL_CC_LIB_IS_INTERFACE)
@@ -269,20 +295,9 @@ Cflags: -I\${includedir}${PC_CFLAGS}\n")
 
     if(ABSL_PROPAGATE_CXX_STD)
       # Abseil libraries require C++14 as the current minimum standard. When
-      # compiled with C++17 (either because it is the compiler's default or
-      # explicitly requested), then Abseil requires C++17.
-      _absl_target_compile_features_if_available(${_NAME} PUBLIC ${ABSL_INTERNAL_CXX_STD_FEATURE})
-    else()
-      # Note: This is legacy (before CMake 3.8) behavior. Setting the
-      # target-level CXX_STANDARD property to ABSL_CXX_STANDARD (which is
-      # initialized by CMAKE_CXX_STANDARD) should have no real effect, since
-      # that is the default value anyway.
-      #
-      # CXX_STANDARD_REQUIRED does guard against the top-level CMake project
-      # not having enabled CMAKE_CXX_STANDARD_REQUIRED (which prevents
-      # "decaying" to an older standard if the requested one isn't available).
-      set_property(TARGET ${_NAME} PROPERTY CXX_STANDARD ${ABSL_CXX_STANDARD})
-      set_property(TARGET ${_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
+      # compiled with a higher standard (either because it is the compiler's
+      # default or explicitly requested), then Abseil requires that standard.
+      target_compile_features(${_NAME} PUBLIC ${ABSL_INTERNAL_CXX_STD_FEATURE})
     endif()
 
     # When being installed, we lose the absl_ prefix.  We want to put it back
@@ -319,16 +334,11 @@ Cflags: -I\${includedir}${PC_CFLAGS}\n")
       # Abseil libraries require C++14 as the current minimum standard.
       # Top-level application CMake projects should ensure a consistent C++
       # standard for all compiled sources by setting CMAKE_CXX_STANDARD.
-      _absl_target_compile_features_if_available(${_NAME} INTERFACE ${ABSL_INTERNAL_CXX_STD_FEATURE})
-
-      # (INTERFACE libraries can't have the CXX_STANDARD property set, so there
-      # is no legacy behavior else case).
+      target_compile_features(${_NAME} INTERFACE ${ABSL_INTERNAL_CXX_STD_FEATURE})
     endif()
   endif()
 
-  # TODO currently we don't install googletest alongside abseil sources, so
-  # installed abseil can't be tested.
-  if(NOT ABSL_CC_LIB_TESTONLY AND ABSL_ENABLE_INSTALL)
+  if(ABSL_ENABLE_INSTALL)
     install(TARGETS ${_NAME} EXPORT ${PROJECT_NAME}Targets
           RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
           LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -394,7 +404,7 @@ function(absl_cc_test)
   target_sources(${_NAME} PRIVATE ${ABSL_CC_TEST_SRCS})
   target_include_directories(${_NAME}
     PUBLIC ${ABSL_COMMON_INCLUDE_DIRS}
-    PRIVATE ${GMOCK_INCLUDE_DIRS} ${GTEST_INCLUDE_DIRS}
+    PRIVATE ${absl_gtest_src_dir}/googletest/include ${absl_gtest_src_dir}/googlemock/include
   )
 
   if (${ABSL_BUILD_DLL})
@@ -402,6 +412,7 @@ function(absl_cc_test)
       PUBLIC
         ${ABSL_CC_TEST_DEFINES}
         ABSL_CONSUME_DLL
+        ABSL_CONSUME_TEST_DLL
         GTEST_LINKED_AS_SHARED_LIBRARY=1
     )
 
@@ -409,6 +420,10 @@ function(absl_cc_test)
     absl_internal_dll_targets(
       DEPS ${ABSL_CC_TEST_DEPS}
       OUTPUT ABSL_CC_TEST_DEPS
+    )
+    absl_internal_dll_targets(
+      DEPS ${ABSL_CC_TEST_LINKOPTS}
+      OUTPUT ABSL_CC_TEST_LINKOPTS
     )
   else()
     target_compile_definitions(${_NAME}
@@ -431,18 +446,7 @@ function(absl_cc_test)
     # Abseil libraries require C++14 as the current minimum standard.
     # Top-level application CMake projects should ensure a consistent C++
     # standard for all compiled sources by setting CMAKE_CXX_STANDARD.
-    _absl_target_compile_features_if_available(${_NAME} PUBLIC ${ABSL_INTERNAL_CXX_STD_FEATURE})
-  else()
-    # Note: This is legacy (before CMake 3.8) behavior. Setting the
-    # target-level CXX_STANDARD property to ABSL_CXX_STANDARD (which is
-    # initialized by CMAKE_CXX_STANDARD) should have no real effect, since
-    # that is the default value anyway.
-    #
-    # CXX_STANDARD_REQUIRED does guard against the top-level CMake project
-    # not having enabled CMAKE_CXX_STANDARD_REQUIRED (which prevents
-    # "decaying" to an older standard if the requested one isn't available).
-    set_property(TARGET ${_NAME} PROPERTY CXX_STANDARD ${ABSL_CXX_STANDARD})
-    set_property(TARGET ${_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
+    target_compile_features(${_NAME} PUBLIC ${ABSL_INTERNAL_CXX_STD_FEATURE})
   endif()
 
   add_test(NAME ${_NAME} COMMAND ${_NAME})

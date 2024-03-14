@@ -288,9 +288,9 @@
 /**
  * backup register
  */
+#if defined(_ABI64) && _MIPS_SIM == _ABI64
 #define BACKUP_REG \
    double __attribute__((aligned(16))) __back_temp[8];         \
-   if (_MIPS_SIM == _ABI64)                                    \
    __asm__ volatile (                                          \
      "gssqc1       $f25,      $f24,       0x00(%[temp])  \n\t" \
      "gssqc1       $f27,      $f26,       0x10(%[temp])  \n\t" \
@@ -299,8 +299,10 @@
      :                                                         \
      : [temp]"r"(__back_temp)                                  \
      : "memory"                                                \
-   );                                                          \
-  else                                                         \
+   );
+#else
+#define BACKUP_REG \
+   double __attribute__((aligned(16))) __back_temp[8];         \
    __asm__ volatile (                                          \
      "gssqc1       $f22,      $f20,       0x00(%[temp])  \n\t" \
      "gssqc1       $f26,      $f24,       0x10(%[temp])  \n\t" \
@@ -309,12 +311,13 @@
      : [temp]"r"(__back_temp)                                  \
      : "memory"                                                \
    );
+#endif
 
 /**
  * recover register
  */
+#if defined(_ABI64) && _MIPS_SIM == _ABI64
 #define RECOVER_REG \
-   if (_MIPS_SIM == _ABI64)                                    \
    __asm__ volatile (                                          \
      "gslqc1       $f25,      $f24,       0x00(%[temp])  \n\t" \
      "gslqc1       $f27,      $f26,       0x10(%[temp])  \n\t" \
@@ -323,8 +326,9 @@
      :                                                         \
      : [temp]"r"(__back_temp)                                  \
      : "memory"                                                \
-   );                                                          \
-   else                                                        \
+   );
+#else
+#define RECOVER_REG \
    __asm__ volatile (                                          \
      "gslqc1       $f22,      $f20,       0x00(%[temp])  \n\t" \
      "gslqc1       $f26,      $f24,       0x10(%[temp])  \n\t" \
@@ -333,6 +337,7 @@
      : [temp]"r"(__back_temp)                                  \
      : "memory"                                                \
    );
+#endif
 
 # define OK             1
 # define NOTOK          0

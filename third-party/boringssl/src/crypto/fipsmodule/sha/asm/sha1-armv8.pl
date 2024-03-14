@@ -40,7 +40,7 @@ $0 =~ m/(.*[\/\\])[^\/\\]+$/; $dir=$1;
 ( $xlate="${dir}../../../perlasm/arm-xlate.pl" and -f $xlate) or
 die "can't locate arm-xlate.pl";
 
-open OUT,"| \"$^X\" $xlate $flavour $output";
+open OUT,"| \"$^X\" \"$xlate\" $flavour \"$output\"";
 *STDOUT=*OUT;
 
 ($ctx,$inp,$num)=("x0","x1","x2");
@@ -61,7 +61,7 @@ $code.=<<___ if ($i<14 && !($i&1));
 	ldr	@Xx[$i+2],[$inp,#`($i+2)*4-64`]
 ___
 $code.=<<___ if ($i<14 && ($i&1));
-#ifdef	__ARMEB__
+#ifdef	__AARCH64EB__
 	ror	@Xx[$i+1],@Xx[$i+1],#32
 #else
 	rev32	@Xx[$i+1],@Xx[$i+1]
@@ -175,19 +175,12 @@ $code.=<<___;
 
 .text
 
-.extern	OPENSSL_armcap_P
-.globl	sha1_block_data_order
-.type	sha1_block_data_order,%function
+.globl	sha1_block_data_order_nohw
+.type	sha1_block_data_order_nohw,%function
 .align	6
-sha1_block_data_order:
-#if __has_feature(hwaddress_sanitizer) && __clang_major__ >= 10
-	adrp	x16,:pg_hi21_nc:OPENSSL_armcap_P
-#else
-	adrp	x16,:pg_hi21:OPENSSL_armcap_P
-#endif
-	ldr	w16,[x16,:lo12:OPENSSL_armcap_P]
-	tst	w16,#ARMV8_SHA1
-	b.ne	.Lv8_entry
+sha1_block_data_order_nohw:
+	// Armv8.3-A PAuth: even though x30 is pushed to stack it is not popped later.
+	AARCH64_VALID_CALL_TARGET
 
 	stp	x29,x30,[sp,#-96]!
 	add	x29,sp,#0
@@ -206,7 +199,7 @@ sha1_block_data_order:
 	movz	$K,#0x7999
 	sub	$num,$num,#1
 	movk	$K,#0x5a82,lsl#16
-#ifdef	__ARMEB__
+#ifdef	__AARCH64EB__
 	ror	$Xx[0],@Xx[0],#32
 #else
 	rev32	@Xx[0],@Xx[0]
@@ -236,7 +229,7 @@ $code.=<<___;
 	ldp	x27,x28,[sp,#80]
 	ldr	x29,[sp],#96
 	ret
-.size	sha1_block_data_order,.-sha1_block_data_order
+.size	sha1_block_data_order_nohw,.-sha1_block_data_order_nohw
 ___
 {{{
 my ($ABCD,$E,$E0,$E1)=map("v$_.16b",(0..3));
@@ -246,10 +239,12 @@ my ($W0,$W1)=("v20.4s","v21.4s");
 my $ABCD_SAVE="v22.16b";
 
 $code.=<<___;
-.type	sha1_block_armv8,%function
+.globl	sha1_block_data_order_hw
+.type	sha1_block_data_order_hw,%function
 .align	6
-sha1_block_armv8:
-.Lv8_entry:
+sha1_block_data_order_hw:
+	// Armv8.3-A PAuth: even though x30 is pushed to stack it is not popped later.
+	AARCH64_VALID_CALL_TARGET
 	stp	x29,x30,[sp,#-16]!
 	add	x29,sp,#0
 
@@ -313,7 +308,7 @@ $code.=<<___;
 
 	ldr	x29,[sp],#16
 	ret
-.size	sha1_block_armv8,.-sha1_block_armv8
+.size	sha1_block_data_order_hw,.-sha1_block_data_order_hw
 .section .rodata
 .align	6
 .Lconst:
@@ -323,8 +318,6 @@ $code.=<<___;
 .long	0xca62c1d6,0xca62c1d6,0xca62c1d6,0xca62c1d6	//K_60_79
 .asciz	"SHA1 block transform for ARMv8, CRYPTOGAMS by <appro\@openssl.org>"
 .align	2
-.comm	OPENSSL_armcap_P,4,4
-.hidden	OPENSSL_armcap_P
 ___
 }}}
 
@@ -356,4 +349,4 @@ foreach(split("\n",$code)) {
 	print $_,"\n";
 }
 
-close STDOUT or die "error closing STDOUT";
+close STDOUT or die "error closing STDOUT: $!";

@@ -174,6 +174,20 @@ void WelsQuant4x4Dc_mmi (int16_t* pDct, int16_t iFF, int16_t iMF);
 void WelsQuantFour4x4_mmi (int16_t* pDct, const int16_t* pFF, const int16_t* pMF);
 void WelsQuantFour4x4Max_mmi (int16_t* pDct, const int16_t* pFF, const int16_t* pMF, int16_t* pMax);
 #endif//HAVE_MMI
+
+#ifdef HAVE_LSX
+void WelsQuantFour4x4_lsx (int16_t* pDct, const int16_t* pFF, const int16_t* pMF);
+void WelsQuantFour4x4Max_lsx (int16_t* pDct, const int16_t* pFF, const int16_t* pMF, int16_t* pMax);
+#endif//HAVE_LSX
+
+#ifdef HAVE_LASX
+/****************************************************************************
+ *  * DCT functions
+ *   ****************************************************************************/
+void WelsDctT4_lasx (int16_t* pDct,  uint8_t* pPixel1, int32_t iStride1, uint8_t* pPixel2, int32_t iStride2);
+void WelsDctFourT4_lasx (int16_t* pDct, uint8_t* pPixel1, int32_t iStride1, uint8_t* pPixel2, int32_t iStride2);
+#endif
+
 #if defined(__cplusplus)
 }
 #endif//__cplusplus

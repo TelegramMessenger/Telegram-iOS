@@ -304,7 +304,11 @@ int32_t WelsWriteSpsSyntax (SWelsSPS* pSps, SBitStringAux* pBitStringAux, int32_
   BsWriteUE (pLocalBitStringAux, pSps->iMbHeight - 1);          // pic_height_in_map_units_minus1
   BsWriteOneBit (pLocalBitStringAux, true/*pSps->bFrameMbsOnlyFlag*/);  // bFrameMbsOnlyFlag
 
-  BsWriteOneBit (pLocalBitStringAux, 0/*pSps->bDirect8x8InferenceFlag*/);       // direct_8x8_inference_flag
+  uint8_t d8x8 = 0;
+  if (pSps->iLevelIdc >= 30)
+    d8x8 = 1;
+  BsWriteOneBit (pLocalBitStringAux, d8x8/*pSps->bDirect8x8InferenceFlag*/);       // direct_8x8_inference_flag
+
   BsWriteOneBit (pLocalBitStringAux, pSps->bFrameCroppingFlag); // bFrameCroppingFlag
   if (pSps->bFrameCroppingFlag) {
     BsWriteUE (pLocalBitStringAux, pSps->sFrameCrop.iCropLeft);         // frame_crop_left_offset

@@ -29,6 +29,8 @@
 #ifndef ABSL_CONTAINER_FLAT_HASH_SET_H_
 #define ABSL_CONTAINER_FLAT_HASH_SET_H_
 
+#include <cstddef>
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -58,9 +60,9 @@ struct FlatHashSetPolicy;
 // * Requires keys that are CopyConstructible
 // * Supports heterogeneous lookup, through `find()` and `insert()`, provided
 //   that the set is provided a compatible heterogeneous hashing function and
-//   equality operator.
+//   equality operator. See below for details.
 // * Invalidates any references and pointers to elements within the table after
-//   `rehash()`.
+//   `rehash()` and when the table is moved.
 // * Contains a `capacity()` member function indicating the number of element
 //   slots (open, deleted, and empty) within the hash set.
 // * Returns `void` from the `erase(iterator)` overload.
@@ -75,6 +77,19 @@ struct FlatHashSetPolicy;
 // Using `absl::flat_hash_set` at interface boundaries in dynamically loaded
 // libraries (e.g. .dll, .so) is unsupported due to way `absl::Hash` values may
 // be randomized across dynamically loaded libraries.
+//
+// To achieve heterogeneous lookup for custom types either `Hash` and `Eq` type
+// parameters can be used or `T` should have public inner types
+// `absl_container_hash` and (optionally) `absl_container_eq`. In either case,
+// `typename Hash::is_transparent` and `typename Eq::is_transparent` should be
+// well-formed. Both types are basically functors:
+// * `Hash` should support `size_t operator()(U val) const` that returns a hash
+// for the given `val`.
+// * `Eq` should support `bool operator()(U lhs, V rhs) const` that returns true
+// if `lhs` is equal to `rhs`.
+//
+// In most cases `T` needs only to provide the `absl_container_hash`. In this
+// case `std::equal_to<void>` will be used instead of `eq` part.
 //
 // NOTE: A `flat_hash_set` stores its keys directly inside its implementation
 // array to avoid memory indirection. Because a `flat_hash_set` is designed to
@@ -227,7 +242,11 @@ class flat_hash_set
   // iterator erase(const_iterator first, const_iterator last):
   //
   //   Erases the elements in the open interval [`first`, `last`), returning an
-  //   iterator pointing to `last`.
+  //   iterator pointing to `last`. The special case of calling
+  //   `erase(begin(), end())` resets the reserved growth such that if
+  //   `reserve(N)` has previously been called and there has been no intervening
+  //   call to `clear()`, then after calling `erase(begin(), end())`, it is safe
+  //   to assume that inserting N elements will not cause a rehash.
   //
   // size_type erase(const key_type& key):
   //
@@ -343,7 +362,7 @@ class flat_hash_set
   // for the past-the-end iterator, which is invalidated.
   //
   // `swap()` requires that the flat hash set's hashing and key equivalence
-  // functions be Swappable, and are exchaged using unqualified calls to
+  // functions be Swappable, and are exchanged using unqualified calls to
   // non-member `swap()`. If the set's allocator has
   // `std::allocator_traits<allocator_type>::propagate_on_container_swap::value`
   // set to `true`, the allocators are also exchanged using an unqualified call
@@ -469,9 +488,11 @@ struct FlatHashSetPolicy {
                                                  std::forward<Args>(args)...);
   }
 
+  // Return std::true_type in case destroy is trivial.
   template <class Allocator>
-  static void destroy(Allocator* alloc, slot_type* slot) {
+  static auto destroy(Allocator* alloc, slot_type* slot) {
     absl::allocator_traits<Allocator>::destroy(*alloc, slot);
+    return IsDestructionTrivial<Allocator, slot_type>();
   }
 
   static T& element(slot_type* slot) { return *slot; }
@@ -485,6 +506,11 @@ struct FlatHashSetPolicy {
   }
 
   static size_t space_used(const T*) { return 0; }
+
+  template <class Hash>
+  static constexpr HashSlotFn get_hash_slot_fn() {
+    return &TypeErasedApplyToSlotFn<Hash, T>;
+  }
 };
 }  // namespace container_internal
 

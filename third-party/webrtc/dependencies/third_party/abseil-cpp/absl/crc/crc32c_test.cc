@@ -15,13 +15,16 @@
 #include "absl/crc/crc32c.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <sstream>
 #include <string>
 
 #include "gtest/gtest.h"
 #include "absl/crc/internal/crc32c.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 
 namespace {
@@ -34,22 +37,22 @@ TEST(CRC32C, RFC3720) {
   // 32 bytes of ones.
   memset(data, 0, sizeof(data));
   EXPECT_EQ(absl::ComputeCrc32c(absl::string_view(data, sizeof(data))),
-            absl::ToCrc32c(0x8a9136aa));
+            absl::crc32c_t{0x8a9136aa});
 
   // 32 bytes of ones.
   memset(data, 0xff, sizeof(data));
   EXPECT_EQ(absl::ComputeCrc32c(absl::string_view(data, sizeof(data))),
-            absl::ToCrc32c(0x62a8ab43));
+            absl::crc32c_t{0x62a8ab43});
 
   // 32 incrementing bytes.
   for (int i = 0; i < 32; ++i) data[i] = static_cast<char>(i);
   EXPECT_EQ(absl::ComputeCrc32c(absl::string_view(data, sizeof(data))),
-            absl::ToCrc32c(0x46dd794e));
+            absl::crc32c_t{0x46dd794e});
 
   // 32 decrementing bytes.
   for (int i = 0; i < 32; ++i) data[i] = static_cast<char>(31 - i);
   EXPECT_EQ(absl::ComputeCrc32c(absl::string_view(data, sizeof(data))),
-            absl::ToCrc32c(0x113fdb5c));
+            absl::crc32c_t{0x113fdb5c});
 
   // An iSCSI - SCSI Read (10) Command PDU.
   constexpr uint8_t cmd[48] = {
@@ -60,7 +63,7 @@ TEST(CRC32C, RFC3720) {
   };
   EXPECT_EQ(absl::ComputeCrc32c(absl::string_view(
                 reinterpret_cast<const char*>(cmd), sizeof(cmd))),
-            absl::ToCrc32c(0xd9963a56));
+            absl::crc32c_t{0xd9963a56});
 }
 
 std::string TestString(size_t len) {
@@ -73,8 +76,8 @@ std::string TestString(size_t len) {
 }
 
 TEST(CRC32C, Compute) {
-  EXPECT_EQ(absl::ComputeCrc32c(""), absl::ToCrc32c(0));
-  EXPECT_EQ(absl::ComputeCrc32c("hello world"), absl::ToCrc32c(0xc99465aa));
+  EXPECT_EQ(absl::ComputeCrc32c(""), absl::crc32c_t{0});
+  EXPECT_EQ(absl::ComputeCrc32c("hello world"), absl::crc32c_t{0xc99465aa});
 }
 
 TEST(CRC32C, Extend) {
@@ -82,15 +85,16 @@ TEST(CRC32C, Extend) {
   std::string extension = "Extension String";
 
   EXPECT_EQ(
-      absl::ExtendCrc32c(absl::ToCrc32c(base), extension),
-      absl::ToCrc32c(0xD2F65090));  // CRC32C of "Hello WorldExtension String"
+      absl::ExtendCrc32c(absl::crc32c_t{base}, extension),
+      absl::crc32c_t{0xD2F65090});  // CRC32C of "Hello WorldExtension String"
 }
 
 TEST(CRC32C, ExtendByZeroes) {
   std::string base = "hello world";
-  absl::crc32c_t base_crc = absl::ToCrc32c(0xc99465aa);
+  absl::crc32c_t base_crc = absl::crc32c_t{0xc99465aa};
 
-  for (const size_t extend_by : {100, 10000, 100000}) {
+  constexpr size_t kExtendByValues[] = {100, 10000, 100000};
+  for (const size_t extend_by : kExtendByValues) {
     SCOPED_TRACE(extend_by);
     absl::crc32c_t crc2 = absl::ExtendCrc32cByZeroes(base_crc, extend_by);
     EXPECT_EQ(crc2, absl::ComputeCrc32c(base + std::string(extend_by, '\0')));
@@ -98,10 +102,13 @@ TEST(CRC32C, ExtendByZeroes) {
 }
 
 TEST(CRC32C, UnextendByZeroes) {
-  for (auto seed_crc : {absl::ToCrc32c(0), absl::ToCrc32c(0xc99465aa)}) {
+  constexpr size_t kExtendByValues[] = {2, 200, 20000, 200000, 20000000};
+  constexpr size_t kUnextendByValues[] = {0, 100, 10000, 100000, 10000000};
+
+  for (auto seed_crc : {absl::crc32c_t{0}, absl::crc32c_t{0xc99465aa}}) {
     SCOPED_TRACE(seed_crc);
-    for (const size_t size_1 : {2, 200, 20000, 200000, 20000000}) {
-      for (const size_t size_2 : {0, 100, 10000, 100000, 10000000}) {
+    for (const size_t size_1 : kExtendByValues) {
+      for (const size_t size_2 : kUnextendByValues) {
         size_t extend_size = std::max(size_1, size_2);
         size_t unextend_size = std::min(size_1, size_2);
         SCOPED_TRACE(extend_size);
@@ -120,7 +127,9 @@ TEST(CRC32C, UnextendByZeroes) {
       }
     }
   }
-  for (const size_t size : {0, 1, 100, 10000}) {
+
+  constexpr size_t kSizes[] = {0, 1, 100, 10000};
+  for (const size_t size : kSizes) {
     SCOPED_TRACE(size);
     std::string string_before = TestString(size);
     std::string string_after = string_before + std::string(size, '\0');
@@ -146,7 +155,8 @@ TEST(CRC32C, Concat) {
 }
 
 TEST(CRC32C, Memcpy) {
-  for (size_t bytes : {0, 1, 20, 500, 100000}) {
+  constexpr size_t kBytesSize[] = {0, 1, 20, 500, 100000};
+  for (size_t bytes : kBytesSize) {
     SCOPED_TRACE(bytes);
     std::string sample_string = TestString(bytes);
     std::string target_buffer = std::string(bytes, '\0');
@@ -183,4 +193,35 @@ TEST(CRC32C, RemoveSuffix) {
 
   EXPECT_EQ(absl::RemoveCrc32cSuffix(crc_ab, crc_b, world.size()), crc_a);
 }
+
+TEST(CRC32C, InsertionOperator) {
+  {
+    std::ostringstream buf;
+    buf << absl::crc32c_t{0xc99465aa};
+    EXPECT_EQ(buf.str(), "c99465aa");
+  }
+  {
+    std::ostringstream buf;
+    buf << absl::crc32c_t{0};
+    EXPECT_EQ(buf.str(), "00000000");
+  }
+  {
+    std::ostringstream buf;
+    buf << absl::crc32c_t{17};
+    EXPECT_EQ(buf.str(), "00000011");
+  }
+}
+
+TEST(CRC32C, AbslStringify) {
+  // StrFormat
+  EXPECT_EQ(absl::StrFormat("%v", absl::crc32c_t{0xc99465aa}), "c99465aa");
+  EXPECT_EQ(absl::StrFormat("%v", absl::crc32c_t{0}), "00000000");
+  EXPECT_EQ(absl::StrFormat("%v", absl::crc32c_t{17}), "00000011");
+
+  // StrCat
+  EXPECT_EQ(absl::StrCat(absl::crc32c_t{0xc99465aa}), "c99465aa");
+  EXPECT_EQ(absl::StrCat(absl::crc32c_t{0}), "00000000");
+  EXPECT_EQ(absl::StrCat(absl::crc32c_t{17}), "00000011");
+}
+
 }  // namespace

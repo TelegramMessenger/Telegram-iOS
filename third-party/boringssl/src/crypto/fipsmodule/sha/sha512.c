@@ -60,8 +60,9 @@
 
 #include <openssl/mem.h>
 
-#include "internal.h"
 #include "../../internal.h"
+#include "../service_indicator/internal.h"
+#include "internal.h"
 
 
 // The 32-bit hash algorithms share a common byte-order neutral collector and
@@ -69,6 +70,8 @@
 // ../digest/md32_common.h. SHA-512 is the only 64-bit hash algorithm, as of
 // this writing, so there is no need for a common collector/padding
 // implementation yet.
+
+static int sha512_final_impl(uint8_t *out, size_t md_len, SHA512_CTX *sha);
 
 int SHA384_Init(SHA512_CTX *sha) {
   sha->h[0] = UINT64_C(0xcbbb9d5dc1059ed8);
@@ -105,6 +108,23 @@ int SHA512_Init(SHA512_CTX *sha) {
   return 1;
 }
 
+int SHA512_256_Init(SHA512_CTX *sha) {
+  sha->h[0] = UINT64_C(0x22312194fc2bf72c);
+  sha->h[1] = UINT64_C(0x9f555fa3c84c64c2);
+  sha->h[2] = UINT64_C(0x2393b86b6f53b151);
+  sha->h[3] = UINT64_C(0x963877195940eabd);
+  sha->h[4] = UINT64_C(0x96283ee2a88effe3);
+  sha->h[5] = UINT64_C(0xbe5e1e2553863992);
+  sha->h[6] = UINT64_C(0x2b0199fc2c85b8aa);
+  sha->h[7] = UINT64_C(0x0eb72ddc81c52ca2);
+
+  sha->Nl = 0;
+  sha->Nh = 0;
+  sha->num = 0;
+  sha->md_len = SHA512_256_DIGEST_LENGTH;
+  return 1;
+}
+
 uint8_t *SHA384(const uint8_t *data, size_t len,
                 uint8_t out[SHA384_DIGEST_LENGTH]) {
   SHA512_CTX ctx;
@@ -125,20 +145,42 @@ uint8_t *SHA512(const uint8_t *data, size_t len,
   return out;
 }
 
+uint8_t *SHA512_256(const uint8_t *data, size_t len,
+                    uint8_t out[SHA512_256_DIGEST_LENGTH]) {
+  SHA512_CTX ctx;
+  SHA512_256_Init(&ctx);
+  SHA512_256_Update(&ctx, data, len);
+  SHA512_256_Final(out, &ctx);
+  OPENSSL_cleanse(&ctx, sizeof(ctx));
+  return out;
+}
+
 #if !defined(SHA512_ASM)
-static void sha512_block_data_order(uint64_t *state, const uint8_t *in,
+static void sha512_block_data_order(uint64_t state[8], const uint8_t *in,
                                     size_t num_blocks);
 #endif
 
 
 int SHA384_Final(uint8_t out[SHA384_DIGEST_LENGTH], SHA512_CTX *sha) {
-  // |SHA384_Init| sets |sha->md_len| to |SHA384_DIGEST_LENGTH|, so this has a
-  // |smaller output.
-  return SHA512_Final(out, sha);
+  // This function must be paired with |SHA384_Init|, which sets |sha->md_len|
+  // to |SHA384_DIGEST_LENGTH|.
+  assert(sha->md_len == SHA384_DIGEST_LENGTH);
+  return sha512_final_impl(out, SHA384_DIGEST_LENGTH, sha);
 }
 
 int SHA384_Update(SHA512_CTX *sha, const void *data, size_t len) {
   return SHA512_Update(sha, data, len);
+}
+
+int SHA512_256_Update(SHA512_CTX *sha, const void *data, size_t len) {
+  return SHA512_Update(sha, data, len);
+}
+
+int SHA512_256_Final(uint8_t out[SHA512_256_DIGEST_LENGTH], SHA512_CTX *sha) {
+  // This function must be paired with |SHA512_256_Init|, which sets
+  // |sha->md_len| to |SHA512_256_DIGEST_LENGTH|.
+  assert(sha->md_len == SHA512_256_DIGEST_LENGTH);
+  return sha512_final_impl(out, SHA512_256_DIGEST_LENGTH, sha);
 }
 
 void SHA512_Transform(SHA512_CTX *c, const uint8_t block[SHA512_CBLOCK]) {
@@ -194,6 +236,15 @@ int SHA512_Update(SHA512_CTX *c, const void *in_data, size_t len) {
 }
 
 int SHA512_Final(uint8_t out[SHA512_DIGEST_LENGTH], SHA512_CTX *sha) {
+  // Ideally we would assert |sha->md_len| is |SHA512_DIGEST_LENGTH| to match
+  // the size hint, but calling code often pairs |SHA384_Init| with
+  // |SHA512_Final| and expects |sha->md_len| to carry the size over.
+  //
+  // TODO(davidben): Add an assert and fix code to match them up.
+  return sha512_final_impl(out, sha->md_len, sha);
+}
+
+static int sha512_final_impl(uint8_t *out, size_t md_len, SHA512_CTX *sha) {
   uint8_t *p = sha->p;
   size_t n = sha->num;
 
@@ -206,22 +257,8 @@ int SHA512_Final(uint8_t out[SHA512_DIGEST_LENGTH], SHA512_CTX *sha) {
   }
 
   OPENSSL_memset(p + n, 0, sizeof(sha->p) - 16 - n);
-  p[sizeof(sha->p) - 1] = (uint8_t)(sha->Nl);
-  p[sizeof(sha->p) - 2] = (uint8_t)(sha->Nl >> 8);
-  p[sizeof(sha->p) - 3] = (uint8_t)(sha->Nl >> 16);
-  p[sizeof(sha->p) - 4] = (uint8_t)(sha->Nl >> 24);
-  p[sizeof(sha->p) - 5] = (uint8_t)(sha->Nl >> 32);
-  p[sizeof(sha->p) - 6] = (uint8_t)(sha->Nl >> 40);
-  p[sizeof(sha->p) - 7] = (uint8_t)(sha->Nl >> 48);
-  p[sizeof(sha->p) - 8] = (uint8_t)(sha->Nl >> 56);
-  p[sizeof(sha->p) - 9] = (uint8_t)(sha->Nh);
-  p[sizeof(sha->p) - 10] = (uint8_t)(sha->Nh >> 8);
-  p[sizeof(sha->p) - 11] = (uint8_t)(sha->Nh >> 16);
-  p[sizeof(sha->p) - 12] = (uint8_t)(sha->Nh >> 24);
-  p[sizeof(sha->p) - 13] = (uint8_t)(sha->Nh >> 32);
-  p[sizeof(sha->p) - 14] = (uint8_t)(sha->Nh >> 40);
-  p[sizeof(sha->p) - 15] = (uint8_t)(sha->Nh >> 48);
-  p[sizeof(sha->p) - 16] = (uint8_t)(sha->Nh >> 56);
+  CRYPTO_store_u64_be(p + sizeof(sha->p) - 16, sha->Nh);
+  CRYPTO_store_u64_be(p + sizeof(sha->p) - 8, sha->Nl);
 
   sha512_block_data_order(sha->h, p, 1);
 
@@ -231,47 +268,20 @@ int SHA512_Final(uint8_t out[SHA512_DIGEST_LENGTH], SHA512_CTX *sha) {
     return 0;
   }
 
-  switch (sha->md_len) {
-    // Let compiler decide if it's appropriate to unroll...
-    case SHA384_DIGEST_LENGTH:
-      for (n = 0; n < SHA384_DIGEST_LENGTH / 8; n++) {
-        uint64_t t = sha->h[n];
-
-        *(out++) = (uint8_t)(t >> 56);
-        *(out++) = (uint8_t)(t >> 48);
-        *(out++) = (uint8_t)(t >> 40);
-        *(out++) = (uint8_t)(t >> 32);
-        *(out++) = (uint8_t)(t >> 24);
-        *(out++) = (uint8_t)(t >> 16);
-        *(out++) = (uint8_t)(t >> 8);
-        *(out++) = (uint8_t)(t);
-      }
-      break;
-    case SHA512_DIGEST_LENGTH:
-      for (n = 0; n < SHA512_DIGEST_LENGTH / 8; n++) {
-        uint64_t t = sha->h[n];
-
-        *(out++) = (uint8_t)(t >> 56);
-        *(out++) = (uint8_t)(t >> 48);
-        *(out++) = (uint8_t)(t >> 40);
-        *(out++) = (uint8_t)(t >> 32);
-        *(out++) = (uint8_t)(t >> 24);
-        *(out++) = (uint8_t)(t >> 16);
-        *(out++) = (uint8_t)(t >> 8);
-        *(out++) = (uint8_t)(t);
-      }
-      break;
-    // ... as well as make sure md_len is not abused.
-    default:
-      // TODO(davidben): This bad |md_len| case is one of the few places a
-      // low-level hash 'final' function can fail. This should never happen.
-      return 0;
+  assert(md_len % 8 == 0);
+  const size_t out_words = md_len / 8;
+  for (size_t i = 0; i < out_words; i++) {
+    CRYPTO_store_u64_be(out, sha->h[i]);
+    out += 8;
   }
 
+  FIPS_service_indicator_update_state();
   return 1;
 }
 
-#ifndef SHA512_ASM
+#if !defined(SHA512_ASM)
+
+#if !defined(SHA512_ASM_NOHW)
 static const uint64_t K512[80] = {
     UINT64_C(0x428a2f98d728ae22), UINT64_C(0x7137449123ef65cd),
     UINT64_C(0xb5c0fbcfec4d3b2f), UINT64_C(0xe9b5dba58189dbbc),
@@ -315,48 +325,16 @@ static const uint64_t K512[80] = {
     UINT64_C(0x5fcb6fab3ad6faec), UINT64_C(0x6c44198c4a475817),
 };
 
-#if defined(__GNUC__) && __GNUC__ >= 2 && !defined(OPENSSL_NO_ASM)
-#if defined(__x86_64) || defined(__x86_64__)
-#define ROTR(a, n)                                              \
-  ({                                                            \
-    uint64_t ret;                                               \
-    __asm__("rorq %1, %0" : "=r"(ret) : "J"(n), "0"(a) : "cc"); \
-    ret;                                                        \
-  })
-#elif(defined(_ARCH_PPC) && defined(__64BIT__)) || defined(_ARCH_PPC64)
-#define ROTR(a, n)                                             \
-  ({                                                           \
-    uint64_t ret;                                              \
-    __asm__("rotrdi %0, %1, %2" : "=r"(ret) : "r"(a), "K"(n)); \
-    ret;                                                       \
-  })
-#elif defined(__aarch64__)
-#define ROTR(a, n)                                          \
-  ({                                                        \
-    uint64_t ret;                                           \
-    __asm__("ror %0, %1, %2" : "=r"(ret) : "r"(a), "I"(n)); \
-    ret;                                                    \
-  })
-#endif
-#elif defined(_MSC_VER) && defined(_WIN64)
-#pragma intrinsic(_rotr64)
-#define ROTR(a, n) _rotr64((a), n)
-#endif
-
-#ifndef ROTR
-#define ROTR(x, s) (((x) >> s) | (x) << (64 - s))
-#endif
-
-static inline uint64_t load_u64_be(const void *ptr) {
-  uint64_t ret;
-  OPENSSL_memcpy(&ret, ptr, sizeof(ret));
-  return CRYPTO_bswap8(ret);
-}
-
-#define Sigma0(x) (ROTR((x), 28) ^ ROTR((x), 34) ^ ROTR((x), 39))
-#define Sigma1(x) (ROTR((x), 14) ^ ROTR((x), 18) ^ ROTR((x), 41))
-#define sigma0(x) (ROTR((x), 1) ^ ROTR((x), 8) ^ ((x) >> 7))
-#define sigma1(x) (ROTR((x), 19) ^ ROTR((x), 61) ^ ((x) >> 6))
+#define Sigma0(x)                                        \
+  (CRYPTO_rotr_u64((x), 28) ^ CRYPTO_rotr_u64((x), 34) ^ \
+   CRYPTO_rotr_u64((x), 39))
+#define Sigma1(x)                                        \
+  (CRYPTO_rotr_u64((x), 14) ^ CRYPTO_rotr_u64((x), 18) ^ \
+   CRYPTO_rotr_u64((x), 41))
+#define sigma0(x) \
+  (CRYPTO_rotr_u64((x), 1) ^ CRYPTO_rotr_u64((x), 8) ^ ((x) >> 7))
+#define sigma1(x) \
+  (CRYPTO_rotr_u64((x), 19) ^ CRYPTO_rotr_u64((x), 61) ^ ((x) >> 6))
 
 #define Ch(x, y, z) (((x) & (y)) ^ ((~(x)) & (z)))
 #define Maj(x, y, z) (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
@@ -365,8 +343,8 @@ static inline uint64_t load_u64_be(const void *ptr) {
 #if defined(__i386) || defined(__i386__) || defined(_M_IX86)
 // This code should give better results on 32-bit CPU with less than
 // ~24 registers, both size and performance wise...
-static void sha512_block_data_order(uint64_t *state, const uint8_t *in,
-                                    size_t num) {
+static void sha512_block_data_order_nohw(uint64_t state[8], const uint8_t *in,
+                                         size_t num) {
   uint64_t A, E, T;
   uint64_t X[9 + 80], *F;
   int i;
@@ -383,7 +361,7 @@ static void sha512_block_data_order(uint64_t *state, const uint8_t *in,
     F[7] = state[7];
 
     for (i = 0; i < 16; i++, F--) {
-      T = load_u64_be(in + i * 8);
+      T = CRYPTO_load_u64_be(in + i * 8);
       F[0] = A;
       F[4] = E;
       F[8] = T;
@@ -438,8 +416,8 @@ static void sha512_block_data_order(uint64_t *state, const uint8_t *in,
     ROUND_00_15(i + j, a, b, c, d, e, f, g, h);        \
   } while (0)
 
-static void sha512_block_data_order(uint64_t *state, const uint8_t *in,
-                                    size_t num) {
+static void sha512_block_data_order_nohw(uint64_t state[8], const uint8_t *in,
+                                         size_t num) {
   uint64_t a, b, c, d, e, f, g, h, s0, s1, T1;
   uint64_t X[16];
   int i;
@@ -455,37 +433,37 @@ static void sha512_block_data_order(uint64_t *state, const uint8_t *in,
     g = state[6];
     h = state[7];
 
-    T1 = X[0] = load_u64_be(in);
+    T1 = X[0] = CRYPTO_load_u64_be(in);
     ROUND_00_15(0, a, b, c, d, e, f, g, h);
-    T1 = X[1] = load_u64_be(in + 8);
+    T1 = X[1] = CRYPTO_load_u64_be(in + 8);
     ROUND_00_15(1, h, a, b, c, d, e, f, g);
-    T1 = X[2] = load_u64_be(in + 2 * 8);
+    T1 = X[2] = CRYPTO_load_u64_be(in + 2 * 8);
     ROUND_00_15(2, g, h, a, b, c, d, e, f);
-    T1 = X[3] = load_u64_be(in + 3 * 8);
+    T1 = X[3] = CRYPTO_load_u64_be(in + 3 * 8);
     ROUND_00_15(3, f, g, h, a, b, c, d, e);
-    T1 = X[4] = load_u64_be(in + 4 * 8);
+    T1 = X[4] = CRYPTO_load_u64_be(in + 4 * 8);
     ROUND_00_15(4, e, f, g, h, a, b, c, d);
-    T1 = X[5] = load_u64_be(in + 5 * 8);
+    T1 = X[5] = CRYPTO_load_u64_be(in + 5 * 8);
     ROUND_00_15(5, d, e, f, g, h, a, b, c);
-    T1 = X[6] = load_u64_be(in + 6 * 8);
+    T1 = X[6] = CRYPTO_load_u64_be(in + 6 * 8);
     ROUND_00_15(6, c, d, e, f, g, h, a, b);
-    T1 = X[7] = load_u64_be(in + 7 * 8);
+    T1 = X[7] = CRYPTO_load_u64_be(in + 7 * 8);
     ROUND_00_15(7, b, c, d, e, f, g, h, a);
-    T1 = X[8] = load_u64_be(in + 8 * 8);
+    T1 = X[8] = CRYPTO_load_u64_be(in + 8 * 8);
     ROUND_00_15(8, a, b, c, d, e, f, g, h);
-    T1 = X[9] = load_u64_be(in + 9 * 8);
+    T1 = X[9] = CRYPTO_load_u64_be(in + 9 * 8);
     ROUND_00_15(9, h, a, b, c, d, e, f, g);
-    T1 = X[10] = load_u64_be(in + 10 * 8);
+    T1 = X[10] = CRYPTO_load_u64_be(in + 10 * 8);
     ROUND_00_15(10, g, h, a, b, c, d, e, f);
-    T1 = X[11] = load_u64_be(in + 11 * 8);
+    T1 = X[11] = CRYPTO_load_u64_be(in + 11 * 8);
     ROUND_00_15(11, f, g, h, a, b, c, d, e);
-    T1 = X[12] = load_u64_be(in + 12 * 8);
+    T1 = X[12] = CRYPTO_load_u64_be(in + 12 * 8);
     ROUND_00_15(12, e, f, g, h, a, b, c, d);
-    T1 = X[13] = load_u64_be(in + 13 * 8);
+    T1 = X[13] = CRYPTO_load_u64_be(in + 13 * 8);
     ROUND_00_15(13, d, e, f, g, h, a, b, c);
-    T1 = X[14] = load_u64_be(in + 14 * 8);
+    T1 = X[14] = CRYPTO_load_u64_be(in + 14 * 8);
     ROUND_00_15(14, c, d, e, f, g, h, a, b);
-    T1 = X[15] = load_u64_be(in + 15 * 8);
+    T1 = X[15] = CRYPTO_load_u64_be(in + 15 * 8);
     ROUND_00_15(15, b, c, d, e, f, g, h, a);
 
     for (i = 16; i < 80; i += 16) {
@@ -522,9 +500,33 @@ static void sha512_block_data_order(uint64_t *state, const uint8_t *in,
 
 #endif
 
+#endif  // !SHA512_ASM_NOHW
+
+static void sha512_block_data_order(uint64_t state[8], const uint8_t *data,
+                                    size_t num) {
+#if defined(SHA512_ASM_HW)
+  if (sha512_hw_capable()) {
+    sha512_block_data_order_hw(state, data, num);
+    return;
+  }
+#endif
+#if defined(SHA512_ASM_AVX)
+  if (sha512_avx_capable()) {
+    sha512_block_data_order_avx(state, data, num);
+    return;
+  }
+#endif
+#if defined(SHA512_ASM_NEON)
+  if (CRYPTO_is_NEON_capable()) {
+    sha512_block_data_order_neon(state, data, num);
+    return;
+  }
+#endif
+  sha512_block_data_order_nohw(state, data, num);
+}
+
 #endif  // !SHA512_ASM
 
-#undef ROTR
 #undef Sigma0
 #undef Sigma1
 #undef sigma0

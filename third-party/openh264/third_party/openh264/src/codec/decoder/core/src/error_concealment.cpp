@@ -76,6 +76,13 @@ void InitErrorCon (PWelsDecoderContext pCtx) {
       pCtx->sCopyFunc.pCopyChromaFunc   = WelsCopy8x8_AArch64_neon; //aligned
     }
 #endif //HAVE_NEON_AARCH64
+
+#if defined(HAVE_LSX)
+     if (pCtx->uiCpuFlag & WELS_CPU_LSX) {
+       pCtx->sCopyFunc.pCopyChromaFunc   = WelsCopy8x8_lsx;   //aligned
+       pCtx->sCopyFunc.pCopyLumaFunc     = WelsCopy16x16_lsx; //aligned
+     }
+#endif// HAVE_LSX
   } //TODO add more methods here
   return;
 }

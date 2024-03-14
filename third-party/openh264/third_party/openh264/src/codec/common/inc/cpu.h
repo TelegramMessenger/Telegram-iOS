@@ -59,6 +59,7 @@ void WelsCPUId (uint32_t uiIndex, uint32_t* pFeatureA, uint32_t* pFeatureB, uint
 
 int32_t WelsCPUSupportAVX (uint32_t eax, uint32_t ecx);
 int32_t WelsCPUSupportFMA (uint32_t eax, uint32_t ecx);
+uint32_t WelsCPUDetectAVX512();
 
 void WelsEmms();
 

@@ -67,7 +67,7 @@
 #include <openssl/rsa.h>
 
 #include "../internal.h"
-#include "../fipsmodule/rsa/internal.h"
+#include "../rsa_extra/internal.h"
 #include "internal.h"
 
 
@@ -97,12 +97,10 @@ typedef struct {
 } RSA_OAEP_LABEL_PARAMS;
 
 static int pkey_rsa_init(EVP_PKEY_CTX *ctx) {
-  RSA_PKEY_CTX *rctx;
-  rctx = OPENSSL_malloc(sizeof(RSA_PKEY_CTX));
+  RSA_PKEY_CTX *rctx = OPENSSL_zalloc(sizeof(RSA_PKEY_CTX));
   if (!rctx) {
     return 0;
   }
-  OPENSSL_memset(rctx, 0, sizeof(RSA_PKEY_CTX));
 
   rctx->nbits = 2048;
   rctx->pad_mode = RSA_PKCS1_PADDING;
@@ -171,7 +169,7 @@ static int setup_tbuf(RSA_PKEY_CTX *ctx, EVP_PKEY_CTX *pk) {
 static int pkey_rsa_sign(EVP_PKEY_CTX *ctx, uint8_t *sig, size_t *siglen,
                          const uint8_t *tbs, size_t tbslen) {
   RSA_PKEY_CTX *rctx = ctx->data;
-  RSA *rsa = ctx->pkey->pkey.rsa;
+  RSA *rsa = ctx->pkey->pkey;
   const size_t key_len = EVP_PKEY_size(ctx->pkey);
 
   if (!sig) {
@@ -210,7 +208,7 @@ static int pkey_rsa_verify(EVP_PKEY_CTX *ctx, const uint8_t *sig,
                            size_t siglen, const uint8_t *tbs,
                            size_t tbslen) {
   RSA_PKEY_CTX *rctx = ctx->data;
-  RSA *rsa = ctx->pkey->pkey.rsa;
+  RSA *rsa = ctx->pkey->pkey;
 
   if (rctx->md) {
     switch (rctx->pad_mode) {
@@ -243,7 +241,7 @@ static int pkey_rsa_verify_recover(EVP_PKEY_CTX *ctx, uint8_t *out,
                                    size_t *out_len, const uint8_t *sig,
                                    size_t sig_len) {
   RSA_PKEY_CTX *rctx = ctx->data;
-  RSA *rsa = ctx->pkey->pkey.rsa;
+  RSA *rsa = ctx->pkey->pkey;
   const size_t key_len = EVP_PKEY_size(ctx->pkey);
 
   if (out == NULL) {
@@ -307,7 +305,7 @@ static int pkey_rsa_verify_recover(EVP_PKEY_CTX *ctx, uint8_t *out,
 static int pkey_rsa_encrypt(EVP_PKEY_CTX *ctx, uint8_t *out, size_t *outlen,
                             const uint8_t *in, size_t inlen) {
   RSA_PKEY_CTX *rctx = ctx->data;
-  RSA *rsa = ctx->pkey->pkey.rsa;
+  RSA *rsa = ctx->pkey->pkey;
   const size_t key_len = EVP_PKEY_size(ctx->pkey);
 
   if (!out) {
@@ -339,7 +337,7 @@ static int pkey_rsa_decrypt(EVP_PKEY_CTX *ctx, uint8_t *out,
                             size_t *outlen, const uint8_t *in,
                             size_t inlen) {
   RSA_PKEY_CTX *rctx = ctx->data;
-  RSA *rsa = ctx->pkey->pkey.rsa;
+  RSA *rsa = ctx->pkey->pkey;
   const size_t key_len = EVP_PKEY_size(ctx->pkey);
 
   if (!out) {

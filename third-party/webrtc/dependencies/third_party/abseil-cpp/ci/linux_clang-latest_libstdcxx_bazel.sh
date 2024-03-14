@@ -48,7 +48,7 @@ if [[ ${USE_BAZEL_CACHE:-0} -ne 0 ]]; then
   # remote_http_cache url, we make changes to the container part of
   # the cache key. Hashing the key is to make it shorter and url-safe.
   container_key=$(echo ${DOCKER_CONTAINER} | sha256sum | head -c 16)
-  BAZEL_EXTRA_ARGS="--remote_http_cache=https://storage.googleapis.com/absl-bazel-remote-cache/${container_key} --google_credentials=/keystore/73103_absl-bazel-remote-cache ${BAZEL_EXTRA_ARGS:-}"
+  BAZEL_EXTRA_ARGS="--remote_cache=https://storage.googleapis.com/absl-bazel-remote-cache/${container_key} --google_credentials=/keystore/73103_absl-bazel-remote-cache ${BAZEL_EXTRA_ARGS:-}"
 fi
 
 # Avoid depending on external sites like GitHub by checking --distdir for
@@ -77,9 +77,10 @@ for std in ${STD}; do
           --copt="--gcc-toolchain=/usr/local" \
           --copt="-DGTEST_REMOVE_LEGACY_TEST_CASEAPI_=1" \
           --copt="${exceptions_mode}" \
+          --copt="-march=haswell" \
           --copt=-Werror \
           --define="absl=1" \
-          --distdir="/bazel-distdir" \
+          --enable_bzlmod=true \
           --features=external_include_paths \
           --keep_going \
           --linkopt="--gcc-toolchain=/usr/local" \

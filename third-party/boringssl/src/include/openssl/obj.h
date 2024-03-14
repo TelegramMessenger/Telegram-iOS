@@ -60,7 +60,7 @@
 #include <openssl/base.h>
 
 #include <openssl/bytestring.h>
-#include <openssl/nid.h>
+#include <openssl/nid.h>  // IWYU pragma: export
 
 #if defined(__cplusplus)
 extern "C" {
@@ -84,17 +84,24 @@ extern "C" {
 
 // Basic operations.
 
-// OBJ_dup returns a duplicate copy of |obj| or NULL on allocation failure.
+// OBJ_dup returns a duplicate copy of |obj| or NULL on allocation failure. The
+// caller must call |ASN1_OBJECT_free| on the result to release it.
 OPENSSL_EXPORT ASN1_OBJECT *OBJ_dup(const ASN1_OBJECT *obj);
 
 // OBJ_cmp returns a value less than, equal to or greater than zero if |a| is
 // less than, equal to or greater than |b|, respectively.
 OPENSSL_EXPORT int OBJ_cmp(const ASN1_OBJECT *a, const ASN1_OBJECT *b);
 
-// OBJ_get0_data returns a pointer to the DER representation of |obj|.
+// OBJ_get0_data returns a pointer to the DER representation of |obj|. This is
+// the contents of the DER-encoded identifier, not including the tag and length.
+// If |obj| does not have an associated object identifier (i.e. it is a nid-only
+// value), this value is the empty string.
 OPENSSL_EXPORT const uint8_t *OBJ_get0_data(const ASN1_OBJECT *obj);
 
-// OBJ_length returns the length of the DER representation of |obj|.
+// OBJ_length returns the length of the DER representation of |obj|. This is the
+// contents of the DER-encoded identifier, not including the tag and length. If
+// |obj| does not have an associated object identifier (i.e. it is a nid-only
+// value), this value is the empty string.
 OPENSSL_EXPORT size_t OBJ_length(const ASN1_OBJECT *obj);
 
 
@@ -124,9 +131,26 @@ OPENSSL_EXPORT int OBJ_txt2nid(const char *s);
 
 // Getting information about nids.
 
-// OBJ_nid2obj returns the ASN1_OBJECT corresponding to |nid|, or NULL if |nid|
-// is unknown.
-OPENSSL_EXPORT const ASN1_OBJECT *OBJ_nid2obj(int nid);
+// OBJ_nid2obj returns the |ASN1_OBJECT| corresponding to |nid|, or NULL if
+// |nid| is unknown.
+//
+// Although the output is not const, this function returns a static, immutable
+// |ASN1_OBJECT|. It is not necessary to release the object with
+// |ASN1_OBJECT_free|.
+//
+// However, functions like |X509_ALGOR_set0| expect to take ownership of a
+// possibly dynamically-allocated |ASN1_OBJECT|. |ASN1_OBJECT_free| is a no-op
+// for static |ASN1_OBJECT|s, so |OBJ_nid2obj| is compatible with such
+// functions.
+//
+// Callers are encouraged to store the result of this function in a const
+// pointer. However, if using functions like |X509_ALGOR_set0|, callers may use
+// a non-const pointer and manage ownership.
+OPENSSL_EXPORT ASN1_OBJECT *OBJ_nid2obj(int nid);
+
+// OBJ_get_undef returns the object for |NID_undef|. Prefer this function over
+// |OBJ_nid2obj| to avoid pulling in the full OID table.
+OPENSSL_EXPORT const ASN1_OBJECT *OBJ_get_undef(void);
 
 // OBJ_nid2sn returns the short name for |nid|, or NULL if |nid| is unknown.
 OPENSSL_EXPORT const char *OBJ_nid2sn(int nid);
@@ -163,8 +187,15 @@ OPENSSL_EXPORT int OBJ_obj2txt(char *out, int out_len, const ASN1_OBJECT *obj,
 
 // Adding objects at runtime.
 
-// OBJ_create adds a known object and returns the nid of the new object, or
+// OBJ_create adds a known object and returns the NID of the new object, or
 // NID_undef on error.
+//
+// WARNING: This function modifies global state. The table cannot contain
+// duplicate OIDs, short names, or long names. If two callers in the same
+// address space add conflicting values, only one registration will take effect.
+// Avoid this function if possible. Instead, callers can process OIDs unknown to
+// BoringSSL by acting on the byte representation directly. See
+// |ASN1_OBJECT_create|, |OBJ_get0_data|, and |OBJ_length|.
 OPENSSL_EXPORT int OBJ_create(const char *oid, const char *short_name,
                               const char *long_name);
 

@@ -15,32 +15,51 @@
 #include "absl/strings/cord.h"
 
 #include <algorithm>
-#include <climits>
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <cstdio>
+#include <cstring>
+#include <iostream>
 #include <iterator>
-#include <map>
-#include <numeric>
+#include <limits>
 #include <random>
+#include <set>
 #include <sstream>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/base/attributes.h"
 #include "absl/base/config.h"
 #include "absl/base/internal/endian.h"
-#include "absl/base/internal/raw_logging.h"
 #include "absl/base/macros.h"
+#include "absl/base/options.h"
 #include "absl/container/fixed_array.h"
+#include "absl/functional/function_ref.h"
 #include "absl/hash/hash.h"
+#include "absl/hash/hash_testing.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/random/random.h"
+#include "absl/strings/cord_buffer.h"
 #include "absl/strings/cord_test_helpers.h"
 #include "absl/strings/cordz_test_helpers.h"
+#include "absl/strings/internal/cord_internal.h"
+#include "absl/strings/internal/cord_rep_crc.h"
+#include "absl/strings/internal/cord_rep_flat.h"
+#include "absl/strings/internal/cordz_statistics.h"
+#include "absl/strings/internal/cordz_update_tracker.h"
+#include "absl/strings/internal/string_constant.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/optional.h"
 
 // convenience local constants
 static constexpr auto FLAT = absl::cord_internal::FLAT;
@@ -58,6 +77,8 @@ using absl::cord_internal::CordRepSubstring;
 using absl::cord_internal::CordzUpdateTracker;
 using absl::cord_internal::kFlatOverhead;
 using absl::cord_internal::kMaxFlatLength;
+using ::testing::ElementsAre;
+using ::testing::Le;
 
 static std::string RandomLowercaseString(RandomEngine* rng);
 static std::string RandomLowercaseString(RandomEngine* rng, size_t length);
@@ -208,9 +229,8 @@ class CordTestPeer {
   }
 
   static Cord MakeSubstring(Cord src, size_t offset, size_t length) {
-    ABSL_RAW_CHECK(src.contents_.is_tree(), "Can not be inlined");
-    ABSL_RAW_CHECK(src.ExpectedChecksum() == absl::nullopt,
-                   "Can not be hardened");
+    CHECK(src.contents_.is_tree()) << "Can not be inlined";
+    CHECK(!src.ExpectedChecksum().has_value()) << "Can not be hardened";
     Cord cord;
     auto* tree = cord_internal::SkipCrcNode(src.contents_.tree());
     auto* rep = CordRepSubstring::Create(CordRep::Ref(tree), offset, length);
@@ -372,7 +392,7 @@ TEST_P(CordTest, GigabyteCordFromExternal) {
   for (int i = 0; i < 1024; ++i) {
     c.Append(from);
   }
-  ABSL_RAW_LOG(INFO, "Made a Cord with %zu bytes!", c.size());
+  LOG(INFO) << "Made a Cord with " << c.size() << " bytes!";
   // Note: on a 32-bit build, this comes out to   2,818,048,000 bytes.
   // Note: on a 64-bit build, this comes out to 171,932,385,280 bytes.
 }
@@ -480,6 +500,93 @@ TEST_P(CordTest, StartsEndsWith) {
   ASSERT_TRUE(!empty.StartsWith("xyz"));
   ASSERT_TRUE(!x.EndsWith("xyz"));
   ASSERT_TRUE(!empty.EndsWith("xyz"));
+}
+
+TEST_P(CordTest, Contains) {
+  auto flat_haystack = absl::Cord("this is a flat cord");
+  auto fragmented_haystack = absl::MakeFragmentedCord(
+      {"this", " ", "is", " ", "a", " ", "fragmented", " ", "cord"});
+
+  EXPECT_TRUE(flat_haystack.Contains(""));
+  EXPECT_TRUE(fragmented_haystack.Contains(""));
+  EXPECT_TRUE(flat_haystack.Contains(absl::Cord("")));
+  EXPECT_TRUE(fragmented_haystack.Contains(absl::Cord("")));
+  EXPECT_TRUE(absl::Cord("").Contains(""));
+  EXPECT_TRUE(absl::Cord("").Contains(absl::Cord("")));
+  EXPECT_FALSE(absl::Cord("").Contains(flat_haystack));
+  EXPECT_FALSE(absl::Cord("").Contains(fragmented_haystack));
+
+  EXPECT_FALSE(flat_haystack.Contains("z"));
+  EXPECT_FALSE(fragmented_haystack.Contains("z"));
+  EXPECT_FALSE(flat_haystack.Contains(absl::Cord("z")));
+  EXPECT_FALSE(fragmented_haystack.Contains(absl::Cord("z")));
+
+  EXPECT_FALSE(flat_haystack.Contains("is an"));
+  EXPECT_FALSE(fragmented_haystack.Contains("is an"));
+  EXPECT_FALSE(flat_haystack.Contains(absl::Cord("is an")));
+  EXPECT_FALSE(fragmented_haystack.Contains(absl::Cord("is an")));
+  EXPECT_FALSE(
+      flat_haystack.Contains(absl::MakeFragmentedCord({"is", " ", "an"})));
+  EXPECT_FALSE(fragmented_haystack.Contains(
+      absl::MakeFragmentedCord({"is", " ", "an"})));
+
+  EXPECT_TRUE(flat_haystack.Contains("is a"));
+  EXPECT_TRUE(fragmented_haystack.Contains("is a"));
+  EXPECT_TRUE(flat_haystack.Contains(absl::Cord("is a")));
+  EXPECT_TRUE(fragmented_haystack.Contains(absl::Cord("is a")));
+  EXPECT_TRUE(
+      flat_haystack.Contains(absl::MakeFragmentedCord({"is", " ", "a"})));
+  EXPECT_TRUE(
+      fragmented_haystack.Contains(absl::MakeFragmentedCord({"is", " ", "a"})));
+}
+
+TEST_P(CordTest, Find) {
+  auto flat_haystack = absl::Cord("this is a flat cord");
+  auto fragmented_haystack = absl::MakeFragmentedCord(
+      {"this", " ", "is", " ", "a", " ", "fragmented", " ", "cord"});
+  auto empty_haystack = absl::Cord("");
+
+  EXPECT_EQ(flat_haystack.Find(""), flat_haystack.char_begin());
+  EXPECT_EQ(fragmented_haystack.Find(""), fragmented_haystack.char_begin());
+  EXPECT_EQ(flat_haystack.Find(absl::Cord("")), flat_haystack.char_begin());
+  EXPECT_EQ(fragmented_haystack.Find(absl::Cord("")),
+            fragmented_haystack.char_begin());
+  EXPECT_EQ(empty_haystack.Find(""), empty_haystack.char_begin());
+  EXPECT_EQ(empty_haystack.Find(absl::Cord("")), empty_haystack.char_begin());
+  EXPECT_EQ(empty_haystack.Find(flat_haystack), empty_haystack.char_end());
+  EXPECT_EQ(empty_haystack.Find(fragmented_haystack),
+            empty_haystack.char_end());
+
+  EXPECT_EQ(flat_haystack.Find("z"), flat_haystack.char_end());
+  EXPECT_EQ(fragmented_haystack.Find("z"), fragmented_haystack.char_end());
+  EXPECT_EQ(flat_haystack.Find(absl::Cord("z")), flat_haystack.char_end());
+  EXPECT_EQ(fragmented_haystack.Find(absl::Cord("z")),
+            fragmented_haystack.char_end());
+
+  EXPECT_EQ(flat_haystack.Find("is an"), flat_haystack.char_end());
+  EXPECT_EQ(fragmented_haystack.Find("is an"), fragmented_haystack.char_end());
+  EXPECT_EQ(flat_haystack.Find(absl::Cord("is an")), flat_haystack.char_end());
+  EXPECT_EQ(fragmented_haystack.Find(absl::Cord("is an")),
+            fragmented_haystack.char_end());
+  EXPECT_EQ(flat_haystack.Find(absl::MakeFragmentedCord({"is", " ", "an"})),
+            flat_haystack.char_end());
+  EXPECT_EQ(
+      fragmented_haystack.Find(absl::MakeFragmentedCord({"is", " ", "an"})),
+      fragmented_haystack.char_end());
+
+  EXPECT_EQ(flat_haystack.Find("is a"),
+            std::next(flat_haystack.char_begin(), 5));
+  EXPECT_EQ(fragmented_haystack.Find("is a"),
+            std::next(fragmented_haystack.char_begin(), 5));
+  EXPECT_EQ(flat_haystack.Find(absl::Cord("is a")),
+            std::next(flat_haystack.char_begin(), 5));
+  EXPECT_EQ(fragmented_haystack.Find(absl::Cord("is a")),
+            std::next(fragmented_haystack.char_begin(), 5));
+  EXPECT_EQ(flat_haystack.Find(absl::MakeFragmentedCord({"is", " ", "a"})),
+            std::next(flat_haystack.char_begin(), 5));
+  EXPECT_EQ(
+      fragmented_haystack.Find(absl::MakeFragmentedCord({"is", " ", "a"})),
+      std::next(fragmented_haystack.char_begin(), 5));
 }
 
 TEST_P(CordTest, Subcord) {
@@ -618,7 +725,7 @@ TEST_P(CordTest, AppendEmptyBufferToTree) {
 TEST_P(CordTest, AppendSmallBuffer) {
   absl::Cord cord;
   absl::CordBuffer buffer = absl::CordBuffer::CreateWithDefaultLimit(3);
-  ASSERT_THAT(buffer.capacity(), ::testing::Le(15));
+  ASSERT_THAT(buffer.capacity(), Le(15));
   memcpy(buffer.data(), "Abc", 3);
   buffer.SetLength(3);
   cord.Append(std::move(buffer));
@@ -632,7 +739,7 @@ TEST_P(CordTest, AppendSmallBuffer) {
   EXPECT_EQ(buffer.length(), 0);    // NOLINT
   EXPECT_GT(buffer.capacity(), 0);  // NOLINT
 
-  EXPECT_THAT(cord.Chunks(), ::testing::ElementsAre("Abcdefgh"));
+  EXPECT_THAT(cord.Chunks(), ElementsAre("Abcdefgh"));
 }
 
 TEST_P(CordTest, AppendAndPrependBufferArePrecise) {
@@ -671,7 +778,7 @@ TEST_P(CordTest, AppendAndPrependBufferArePrecise) {
 TEST_P(CordTest, PrependSmallBuffer) {
   absl::Cord cord;
   absl::CordBuffer buffer = absl::CordBuffer::CreateWithDefaultLimit(3);
-  ASSERT_THAT(buffer.capacity(), ::testing::Le(15));
+  ASSERT_THAT(buffer.capacity(), Le(15));
   memcpy(buffer.data(), "Abc", 3);
   buffer.SetLength(3);
   cord.Prepend(std::move(buffer));
@@ -685,7 +792,7 @@ TEST_P(CordTest, PrependSmallBuffer) {
   EXPECT_EQ(buffer.length(), 0);    // NOLINT
   EXPECT_GT(buffer.capacity(), 0);  // NOLINT
 
-  EXPECT_THAT(cord.Chunks(), ::testing::ElementsAre("defghAbc"));
+  EXPECT_THAT(cord.Chunks(), ElementsAre("defghAbc"));
 }
 
 TEST_P(CordTest, AppendLargeBuffer) {
@@ -707,7 +814,7 @@ TEST_P(CordTest, AppendLargeBuffer) {
   EXPECT_EQ(buffer.length(), 0);    // NOLINT
   EXPECT_GT(buffer.capacity(), 0);  // NOLINT
 
-  EXPECT_THAT(cord.Chunks(), ::testing::ElementsAre(s1, s2));
+  EXPECT_THAT(cord.Chunks(), ElementsAre(s1, s2));
 }
 
 TEST_P(CordTest, PrependLargeBuffer) {
@@ -729,7 +836,7 @@ TEST_P(CordTest, PrependLargeBuffer) {
   EXPECT_EQ(buffer.length(), 0);    // NOLINT
   EXPECT_GT(buffer.capacity(), 0);  // NOLINT
 
-  EXPECT_THAT(cord.Chunks(), ::testing::ElementsAre(s2, s1));
+  EXPECT_THAT(cord.Chunks(), ElementsAre(s2, s1));
 }
 
 class CordAppendBufferTest : public testing::TestWithParam<bool> {
@@ -1245,15 +1352,15 @@ absl::Cord BigCord(size_t len, char v) {
 // Splice block into cord.
 absl::Cord SpliceCord(const absl::Cord& blob, int64_t offset,
                       const absl::Cord& block) {
-  ABSL_RAW_CHECK(offset >= 0, "");
-  ABSL_RAW_CHECK(offset + block.size() <= blob.size(), "");
+  CHECK_GE(offset, 0);
+  CHECK_LE(static_cast<size_t>(offset) + block.size(), blob.size());
   absl::Cord result(blob);
   result.RemoveSuffix(blob.size() - offset);
   result.Append(block);
   absl::Cord suffix(blob);
   suffix.RemovePrefix(offset + block.size());
   result.Append(suffix);
-  ABSL_RAW_CHECK(blob.size() == result.size(), "");
+  CHECK_EQ(blob.size(), result.size());
   return result;
 }
 
@@ -1406,12 +1513,11 @@ TEST_P(CordTest, CompareAfterAssign) {
 // comparison methods from basic_string.
 static void TestCompare(const absl::Cord& c, const absl::Cord& d,
                         RandomEngine* rng) {
-  typedef std::basic_string<uint8_t> ustring;
-  ustring cs(reinterpret_cast<const uint8_t*>(std::string(c).data()), c.size());
-  ustring ds(reinterpret_cast<const uint8_t*>(std::string(d).data()), d.size());
-  // ustring comparison is ideal because we expect Cord comparisons to be
-  // based on unsigned byte comparisons regardless of whether char is signed.
-  int expected = sign(cs.compare(ds));
+  // char_traits<char>::lt is guaranteed to do an unsigned comparison:
+  // https://en.cppreference.com/w/cpp/string/char_traits/cmp. We also expect
+  // Cord comparisons to be based on unsigned byte comparisons regardless of
+  // whether char is signed.
+  int expected = sign(std::string(c).compare(std::string(d)));
   EXPECT_EQ(expected, sign(c.Compare(d))) << c << ", " << d;
 }
 
@@ -1763,6 +1869,8 @@ TEST_P(CordTest, ExternalMemoryGet) {
 // of empty and inlined cords, and flat nodes.
 
 constexpr auto kFairShare = absl::CordMemoryAccounting::kFairShare;
+constexpr auto kTotalMorePrecise =
+    absl::CordMemoryAccounting::kTotalMorePrecise;
 
 // Creates a cord of `n` `c` values, making sure no string stealing occurs.
 absl::Cord MakeCord(size_t n, char c) {
@@ -1774,12 +1882,14 @@ TEST(CordTest, CordMemoryUsageEmpty) {
   absl::Cord cord;
   EXPECT_EQ(sizeof(absl::Cord), cord.EstimatedMemoryUsage());
   EXPECT_EQ(sizeof(absl::Cord), cord.EstimatedMemoryUsage(kFairShare));
+  EXPECT_EQ(sizeof(absl::Cord), cord.EstimatedMemoryUsage(kTotalMorePrecise));
 }
 
 TEST(CordTest, CordMemoryUsageInlined) {
   absl::Cord a("hello");
   EXPECT_EQ(a.EstimatedMemoryUsage(), sizeof(absl::Cord));
   EXPECT_EQ(a.EstimatedMemoryUsage(kFairShare), sizeof(absl::Cord));
+  EXPECT_EQ(a.EstimatedMemoryUsage(kTotalMorePrecise), sizeof(absl::Cord));
 }
 
 TEST(CordTest, CordMemoryUsageExternalMemory) {
@@ -1789,6 +1899,7 @@ TEST(CordTest, CordMemoryUsageExternalMemory) {
       sizeof(absl::Cord) + 1000 + sizeof(CordRepExternal) + sizeof(intptr_t);
   EXPECT_EQ(cord.EstimatedMemoryUsage(), expected);
   EXPECT_EQ(cord.EstimatedMemoryUsage(kFairShare), expected);
+  EXPECT_EQ(cord.EstimatedMemoryUsage(kTotalMorePrecise), expected);
 }
 
 TEST(CordTest, CordMemoryUsageFlat) {
@@ -1798,6 +1909,8 @@ TEST(CordTest, CordMemoryUsageFlat) {
   EXPECT_EQ(cord.EstimatedMemoryUsage(), sizeof(absl::Cord) + flat_size);
   EXPECT_EQ(cord.EstimatedMemoryUsage(kFairShare),
             sizeof(absl::Cord) + flat_size);
+  EXPECT_EQ(cord.EstimatedMemoryUsage(kTotalMorePrecise),
+            sizeof(absl::Cord) + flat_size);
 }
 
 TEST(CordTest, CordMemoryUsageSubStringSharedFlat) {
@@ -1806,6 +1919,8 @@ TEST(CordTest, CordMemoryUsageSubStringSharedFlat) {
       absl::CordTestPeer::Tree(flat)->flat()->AllocatedSize();
   absl::Cord cord = flat.Subcord(500, 1000);
   EXPECT_EQ(cord.EstimatedMemoryUsage(),
+            sizeof(absl::Cord) + sizeof(CordRepSubstring) + flat_size);
+  EXPECT_EQ(cord.EstimatedMemoryUsage(kTotalMorePrecise),
             sizeof(absl::Cord) + sizeof(CordRepSubstring) + flat_size);
   EXPECT_EQ(cord.EstimatedMemoryUsage(kFairShare),
             sizeof(absl::Cord) + sizeof(CordRepSubstring) + flat_size / 2);
@@ -1817,6 +1932,8 @@ TEST(CordTest, CordMemoryUsageFlatShared) {
   const size_t flat_size =
       absl::CordTestPeer::Tree(cord)->flat()->AllocatedSize();
   EXPECT_EQ(cord.EstimatedMemoryUsage(), sizeof(absl::Cord) + flat_size);
+  EXPECT_EQ(cord.EstimatedMemoryUsage(kTotalMorePrecise),
+            sizeof(absl::Cord) + flat_size);
   EXPECT_EQ(cord.EstimatedMemoryUsage(kFairShare),
             sizeof(absl::Cord) + flat_size / 2);
 }
@@ -1834,6 +1951,8 @@ TEST(CordTest, CordMemoryUsageFlatHardenedAndShared) {
 
   absl::Cord cord2(cord);
   EXPECT_EQ(cord2.EstimatedMemoryUsage(),
+            sizeof(absl::Cord) + sizeof(CordRepCrc) + flat_size);
+  EXPECT_EQ(cord2.EstimatedMemoryUsage(kTotalMorePrecise),
             sizeof(absl::Cord) + sizeof(CordRepCrc) + flat_size);
   EXPECT_EQ(cord2.EstimatedMemoryUsage(kFairShare),
             sizeof(absl::Cord) + (sizeof(CordRepCrc) + flat_size / 2) / 2);
@@ -1853,7 +1972,7 @@ TEST(CordTest, CordMemoryUsageBTree) {
   // windows DLL, we may have ODR like effects on the flag, meaning the DLL
   // code will run with the picked up default.
   if (!absl::CordTestPeer::Tree(cord1)->IsBtree()) {
-    ABSL_RAW_LOG(WARNING, "Cord library code not respecting btree flag");
+    LOG(WARNING) << "Cord library code not respecting btree flag";
     return;
   }
 
@@ -1861,6 +1980,8 @@ TEST(CordTest, CordMemoryUsageBTree) {
   size_t rep1_shared_size = sizeof(CordRepBtree) + flats1_size / 2;
 
   EXPECT_EQ(cord1.EstimatedMemoryUsage(), sizeof(absl::Cord) + rep1_size);
+  EXPECT_EQ(cord1.EstimatedMemoryUsage(kTotalMorePrecise),
+            sizeof(absl::Cord) + rep1_size);
   EXPECT_EQ(cord1.EstimatedMemoryUsage(kFairShare),
             sizeof(absl::Cord) + rep1_shared_size);
 
@@ -1875,6 +1996,8 @@ TEST(CordTest, CordMemoryUsageBTree) {
   size_t rep2_size = sizeof(CordRepBtree) + flats2_size;
 
   EXPECT_EQ(cord2.EstimatedMemoryUsage(), sizeof(absl::Cord) + rep2_size);
+  EXPECT_EQ(cord2.EstimatedMemoryUsage(kTotalMorePrecise),
+            sizeof(absl::Cord) + rep2_size);
   EXPECT_EQ(cord2.EstimatedMemoryUsage(kFairShare),
             sizeof(absl::Cord) + rep2_size);
 
@@ -1883,9 +2006,31 @@ TEST(CordTest, CordMemoryUsageBTree) {
 
   EXPECT_EQ(cord.EstimatedMemoryUsage(),
             sizeof(absl::Cord) + sizeof(CordRepBtree) + rep1_size + rep2_size);
+  EXPECT_EQ(cord.EstimatedMemoryUsage(kTotalMorePrecise),
+            sizeof(absl::Cord) + sizeof(CordRepBtree) + rep1_size + rep2_size);
   EXPECT_EQ(cord.EstimatedMemoryUsage(kFairShare),
             sizeof(absl::Cord) + sizeof(CordRepBtree) + rep1_shared_size / 2 +
                 rep2_size);
+}
+
+TEST(CordTest, TestHashFragmentation) {
+  // Make sure we hit these boundary cases precisely.
+  EXPECT_EQ(1024, absl::hash_internal::PiecewiseChunkSize());
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly({
+      absl::Cord(),
+      absl::MakeFragmentedCord({std::string(600, 'a'), std::string(600, 'a')}),
+      absl::MakeFragmentedCord({std::string(1200, 'a')}),
+      absl::MakeFragmentedCord({std::string(900, 'b'), std::string(900, 'b')}),
+      absl::MakeFragmentedCord({std::string(1800, 'b')}),
+      absl::MakeFragmentedCord(
+          {std::string(2000, 'c'), std::string(2000, 'c')}),
+      absl::MakeFragmentedCord({std::string(4000, 'c')}),
+      absl::MakeFragmentedCord({std::string(1024, 'd')}),
+      absl::MakeFragmentedCord({std::string(1023, 'd'), "d"}),
+      absl::MakeFragmentedCord({std::string(1025, 'e')}),
+      absl::MakeFragmentedCord({std::string(1024, 'e'), "e"}),
+      absl::MakeFragmentedCord({std::string(1023, 'e'), "e", "e"}),
+  }));
 }
 
 // Regtest for a change that had to be rolled back because it expanded out
@@ -1901,6 +2046,66 @@ TEST_P(CordTest, CordMemoryUsageInlineRep) {
   EXPECT_EQ(c1.EstimatedMemoryUsage(), c2.EstimatedMemoryUsage());
 }
 
+TEST_P(CordTest, CordMemoryUsageTotalMorePreciseMode) {
+  constexpr size_t kChunkSize = 2000;
+  std::string tmp_str(kChunkSize, 'x');
+  const absl::Cord flat(std::move(tmp_str));
+
+  // Construct `fragmented` with two references into the same
+  // underlying buffer shared with `flat`:
+  absl::Cord fragmented(flat);
+  fragmented.Append(flat);
+
+  // Memory usage of `flat`, minus the top-level Cord object:
+  const size_t flat_internal_usage =
+      flat.EstimatedMemoryUsage() - sizeof(absl::Cord);
+
+  // `fragmented` holds a Cord and a CordRepBtree. That tree points to two
+  // copies of flat's internals, which we expect to dedup:
+  EXPECT_EQ(fragmented.EstimatedMemoryUsage(kTotalMorePrecise),
+            sizeof(absl::Cord) +
+            sizeof(CordRepBtree) +
+            flat_internal_usage);
+
+  // This is a case where kTotal produces an overestimate:
+  EXPECT_EQ(fragmented.EstimatedMemoryUsage(),
+            sizeof(absl::Cord) +
+            sizeof(CordRepBtree) +
+            2 * flat_internal_usage);
+}
+
+TEST_P(CordTest, CordMemoryUsageTotalMorePreciseModeWithSubstring) {
+  constexpr size_t kChunkSize = 2000;
+  std::string tmp_str(kChunkSize, 'x');
+  const absl::Cord flat(std::move(tmp_str));
+
+  // Construct `fragmented` with two references into the same
+  // underlying buffer shared with `flat`.
+  //
+  // This time, each reference is through a Subcord():
+  absl::Cord fragmented;
+  fragmented.Append(flat.Subcord(1, kChunkSize - 2));
+  fragmented.Append(flat.Subcord(1, kChunkSize - 2));
+
+  // Memory usage of `flat`, minus the top-level Cord object:
+  const size_t flat_internal_usage =
+      flat.EstimatedMemoryUsage() - sizeof(absl::Cord);
+
+  // `fragmented` holds a Cord and a CordRepBtree. That tree points to two
+  // CordRepSubstrings, each pointing at flat's internals.
+  EXPECT_EQ(fragmented.EstimatedMemoryUsage(kTotalMorePrecise),
+            sizeof(absl::Cord) +
+            sizeof(CordRepBtree) +
+            2 * sizeof(CordRepSubstring) +
+            flat_internal_usage);
+
+  // This is a case where kTotal produces an overestimate:
+  EXPECT_EQ(fragmented.EstimatedMemoryUsage(),
+            sizeof(absl::Cord) +
+            sizeof(CordRepBtree) +
+            2 * sizeof(CordRepSubstring) +
+            2 * flat_internal_usage);
+}
 }  // namespace
 
 // Regtest for 7510292 (fix a bug introduced by 7465150)
@@ -1925,8 +2130,6 @@ TEST_P(CordTest, DiabolicalGrowth) {
   // This test exercises a diabolical Append(<one char>) on a cord, making the
   // cord shared before each Append call resulting in a terribly fragmented
   // resulting cord.
-  // TODO(b/183983616): Apply some minimum compaction when copying a shared
-  // source cord into a mutable copy for updates in CordRepRing.
   RandomEngine rng(GTEST_FLAG_GET(random_seed));
   const std::string expected = RandomLowercaseString(&rng, 5000);
   absl::Cord cord;
@@ -1938,8 +2141,7 @@ TEST_P(CordTest, DiabolicalGrowth) {
   std::string value;
   absl::CopyCordToString(cord, &value);
   EXPECT_EQ(value, expected);
-  ABSL_RAW_LOG(INFO, "Diabolical size allocated = %zu",
-               cord.EstimatedMemoryUsage());
+  LOG(INFO) << "Diabolical size allocated = " << cord.EstimatedMemoryUsage();
 }
 
 // The following tests check support for >4GB cords in 64-bit binaries, and
@@ -2472,6 +2674,13 @@ TEST_P(CordTest, Format) {
   absl::Format(&c, "And %-3llx bad wolf!", 1);
   MaybeHarden(c);
   EXPECT_EQ(c, "There were 0003 little pigs.And 1   bad wolf!");
+}
+
+TEST_P(CordTest, Stringify) {
+  absl::Cord c =
+      absl::MakeFragmentedCord({"A ", "small ", "fragmented ", "Cord", "."});
+  MaybeHarden(c);
+  EXPECT_EQ(absl::StrCat(c), "A small fragmented Cord.");
 }
 
 TEST_P(CordTest, Hardening) {
@@ -3057,3 +3266,75 @@ TEST_P(CordTest, ChecksummedEmptyCord) {
   EXPECT_EQ(absl::HashOf(c3), absl::HashOf(absl::Cord()));
   EXPECT_EQ(absl::HashOf(c3), absl::HashOf(absl::string_view()));
 }
+
+TEST(CrcCordTest, ChecksummedEmptyCordEstimateMemoryUsage) {
+  absl::Cord cord;
+  cord.SetExpectedChecksum(0);
+  EXPECT_NE(cord.EstimatedMemoryUsage(), 0);
+}
+
+#if defined(GTEST_HAS_DEATH_TEST) && defined(ABSL_INTERNAL_CORD_HAVE_SANITIZER)
+
+// Returns an expected poison / uninitialized death message expression.
+const char* MASanDeathExpr() {
+  return "(use-after-poison|use-of-uninitialized-value)";
+}
+
+TEST(CordSanitizerTest, SanitizesEmptyCord) {
+  absl::Cord cord;
+  const char* data = cord.Flatten().data();
+  EXPECT_DEATH(EXPECT_EQ(data[0], 0), MASanDeathExpr());
+}
+
+TEST(CordSanitizerTest, SanitizesSmallCord) {
+  absl::Cord cord("Hello");
+  const char* data = cord.Flatten().data();
+  EXPECT_DEATH(EXPECT_EQ(data[5], 0), MASanDeathExpr());
+}
+
+TEST(CordSanitizerTest, SanitizesCordOnSetSSOValue) {
+  absl::Cord cord("String that is too big to be an SSO value");
+  cord = "Hello";
+  const char* data = cord.Flatten().data();
+  EXPECT_DEATH(EXPECT_EQ(data[5], 0), MASanDeathExpr());
+}
+
+TEST(CordSanitizerTest, SanitizesCordOnCopyCtor) {
+  absl::Cord src("hello");
+  absl::Cord dst(src);
+  const char* data = dst.Flatten().data();
+  EXPECT_DEATH(EXPECT_EQ(data[5], 0), MASanDeathExpr());
+}
+
+TEST(CordSanitizerTest, SanitizesCordOnMoveCtor) {
+  absl::Cord src("hello");
+  absl::Cord dst(std::move(src));
+  const char* data = dst.Flatten().data();
+  EXPECT_DEATH(EXPECT_EQ(data[5], 0), MASanDeathExpr());
+}
+
+TEST(CordSanitizerTest, SanitizesCordOnAssign) {
+  absl::Cord src("hello");
+  absl::Cord dst;
+  dst = src;
+  const char* data = dst.Flatten().data();
+  EXPECT_DEATH(EXPECT_EQ(data[5], 0), MASanDeathExpr());
+}
+
+TEST(CordSanitizerTest, SanitizesCordOnMoveAssign) {
+  absl::Cord src("hello");
+  absl::Cord dst;
+  dst = std::move(src);
+  const char* data = dst.Flatten().data();
+  EXPECT_DEATH(EXPECT_EQ(data[5], 0), MASanDeathExpr());
+}
+
+TEST(CordSanitizerTest, SanitizesCordOnSsoAssign) {
+  absl::Cord src("hello");
+  absl::Cord dst("String that is too big to be an SSO value");
+  dst = src;
+  const char* data = dst.Flatten().data();
+  EXPECT_DEATH(EXPECT_EQ(data[5], 0), MASanDeathExpr());
+}
+
+#endif  // GTEST_HAS_DEATH_TEST && ABSL_INTERNAL_CORD_HAVE_SANITIZER

@@ -16,8 +16,7 @@ open STDOUT,">$output";
 
 &asm_init($ARGV[0]);
 
-$sse2=0;
-for (@ARGV) { $sse2=1 if (/-DOPENSSL_IA32_SSE2/); }
+$sse2=1;
 
 &external_label("OPENSSL_ia32cap_P") if ($sse2);
 
@@ -30,7 +29,7 @@ for (@ARGV) { $sse2=1 if (/-DOPENSSL_IA32_SSE2/); }
 
 &asm_finish();
 
-close STDOUT or die "error closing STDOUT";
+close STDOUT or die "error closing STDOUT: $!";
 
 sub bn_mul_add_words
 	{

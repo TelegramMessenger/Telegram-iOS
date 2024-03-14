@@ -48,7 +48,7 @@ if [[ ${USE_BAZEL_CACHE:-0} -ne 0 ]]; then
   # remote_http_cache url, we make changes to the container part of
   # the cache key. Hashing the key is to make it shorter and url-safe.
   container_key=$(echo ${DOCKER_CONTAINER} | sha256sum | head -c 16)
-  BAZEL_EXTRA_ARGS="--remote_http_cache=https://storage.googleapis.com/absl-bazel-remote-cache/${container_key} --google_credentials=/keystore/73103_absl-bazel-remote-cache ${BAZEL_EXTRA_ARGS:-}"
+  BAZEL_EXTRA_ARGS="--remote_cache=https://storage.googleapis.com/absl-bazel-remote-cache/${container_key} --google_credentials=/keystore/73103_absl-bazel-remote-cache ${BAZEL_EXTRA_ARGS:-}"
 fi
 
 # Avoid depending on external sites like GitHub by checking --distdir for
@@ -70,8 +70,8 @@ for std in ${STD}; do
         --rm \
         -e CC="/opt/llvm/clang/bin/clang" \
         -e BAZEL_CXXOPTS="-std=${std}:-nostdinc++" \
-        -e BAZEL_LINKOPTS="-L/opt/llvm/libcxx-tsan/lib/x86_64-unknown-linux-gnu:-lc++:-lc++abi:-lm:-Wl,-rpath=/opt/llvm/libcxx-tsan/lib/x86_64-unknown-linux-gnu" \
-        -e CPLUS_INCLUDE_PATH="/opt/llvm/libcxx-tsan/include/x86_64-unknown-linux-gnu/c++/v1:/opt/llvm/libcxx-tsan/include/c++/v1" \
+        -e BAZEL_LINKOPTS="-L/opt/llvm/libcxx-tsan/lib:-lc++:-lc++abi:-lm:-Wl,-rpath=/opt/llvm/libcxx-tsan/lib" \
+        -e CPLUS_INCLUDE_PATH="/opt/llvm/libcxx-tsan/include/c++/v1" \
         ${DOCKER_EXTRA_ARGS:-} \
         ${DOCKER_CONTAINER} \
         /usr/local/bin/bazel test ... \
@@ -82,12 +82,11 @@ for std in ${STD}; do
           --copt="-fsanitize=thread" \
           --copt="-fno-sanitize-blacklist" \
           --copt=-Werror \
-          --distdir="/bazel-distdir" \
+          --enable_bzlmod=true \
           --features=external_include_paths \
           --keep_going \
           --linkopt="-fsanitize=thread" \
           --show_timestamps \
-          --test_env="TSAN_OPTIONS=report_atomic_races=0" \
           --test_env="TSAN_SYMBOLIZER_PATH=/opt/llvm/clang/bin/llvm-symbolizer" \
           --test_env="TZDIR=/abseil-cpp/absl/time/internal/cctz/testdata/zoneinfo" \
           --test_output=errors \

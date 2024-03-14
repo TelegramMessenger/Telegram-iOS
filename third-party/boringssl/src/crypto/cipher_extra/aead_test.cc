@@ -12,6 +12,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. */
 
+#include <assert.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -24,78 +25,133 @@
 #include <openssl/err.h>
 
 #include "../fipsmodule/cipher/internal.h"
+#include "internal.h"
 #include "../internal.h"
+#include "../test/abi_test.h"
 #include "../test/file_test.h"
 #include "../test/test_util.h"
 #include "../test/wycheproof_util.h"
 
+// kLimitedImplementation indicates that tests that assume a generic AEAD
+// interface should not be performed. For example, the key-wrap AEADs only
+// handle inputs that are a multiple of eight bytes in length and the TLS CBC
+// AEADs have the concept of “direction”.
+constexpr uint32_t kLimitedImplementation = 1 << 0;
+// kCanTruncateTags indicates that the AEAD supports truncatating tags to
+// arbitrary lengths.
+constexpr uint32_t kCanTruncateTags = 1 << 1;
+// kVariableNonce indicates that the AEAD supports a variable-length nonce.
+constexpr uint32_t kVariableNonce = 1 << 2;
+// kNondeterministic indicates that the AEAD performs randomised encryption thus
+// one cannot assume that encrypting the same data will result in the same
+// ciphertext.
+constexpr uint32_t kNondeterministic = 1 << 7;
+
+// RequiresADLength encodes an AD length requirement into flags.
+constexpr uint32_t RequiresADLength(size_t length) {
+  assert(length < 16);
+  return static_cast<uint32_t>((length & 0xf) << 3);
+}
+
+// RequiredADLength returns the AD length requirement encoded in |flags|, or
+// zero if there isn't one.
+constexpr size_t RequiredADLength(uint32_t flags) {
+  return (flags >> 3) & 0xf;
+}
+
+constexpr uint32_t RequiresMinimumTagLength(size_t length) {
+  assert(length < 16);
+  return static_cast<uint32_t>((length & 0xf) << 8);
+}
+
+constexpr size_t MinimumTagLength(uint32_t flags) {
+  return ((flags >> 8) & 0xf) == 0 ? 1 : ((flags >> 8) & 0xf);
+}
 
 struct KnownAEAD {
   const char name[40];
   const EVP_AEAD *(*func)(void);
   const char *test_vectors;
-  // limited_implementation indicates that tests that assume a generic AEAD
-  // interface should not be performed. For example, the key-wrap AEADs only
-  // handle inputs that are a multiple of eight bytes in length and the TLS CBC
-  // AEADs have the concept of “direction”.
-  bool limited_implementation;
-  // truncated_tags is true if the AEAD supports truncating tags to arbitrary
-  // lengths.
-  bool truncated_tags;
-  // variable_nonce is true if the AEAD supports a variable nonce length.
-  bool variable_nonce;
-  // ad_len, if non-zero, is the required length of the AD.
-  size_t ad_len;
+  uint32_t flags;
 };
 
 static const struct KnownAEAD kAEADs[] = {
-    {"AES_128_GCM", EVP_aead_aes_128_gcm, "aes_128_gcm_tests.txt", false, true,
-     true, 0},
+    {"AES_128_GCM", EVP_aead_aes_128_gcm, "aes_128_gcm_tests.txt",
+     kCanTruncateTags | kVariableNonce},
+
     {"AES_128_GCM_NIST", EVP_aead_aes_128_gcm, "nist_cavp/aes_128_gcm.txt",
-     false, true, true, 0},
-    {"AES_192_GCM", EVP_aead_aes_192_gcm, "aes_192_gcm_tests.txt", false, true,
-     true, 0},
-    {"AES_256_GCM", EVP_aead_aes_256_gcm, "aes_256_gcm_tests.txt", false, true,
-     true, 0},
+     kCanTruncateTags | kVariableNonce},
+
+    {"AES_192_GCM", EVP_aead_aes_192_gcm, "aes_192_gcm_tests.txt",
+     kCanTruncateTags | kVariableNonce},
+
+    {"AES_256_GCM", EVP_aead_aes_256_gcm, "aes_256_gcm_tests.txt",
+     kCanTruncateTags | kVariableNonce},
+
     {"AES_256_GCM_NIST", EVP_aead_aes_256_gcm, "nist_cavp/aes_256_gcm.txt",
-     false, true, true, 0},
+     kCanTruncateTags | kVariableNonce},
+
     {"AES_128_GCM_SIV", EVP_aead_aes_128_gcm_siv, "aes_128_gcm_siv_tests.txt",
-     false, false, false, 0},
+     0},
+
     {"AES_256_GCM_SIV", EVP_aead_aes_256_gcm_siv, "aes_256_gcm_siv_tests.txt",
-     false, false, false, 0},
+     0},
+
+    {"AES_128_GCM_RandomNonce", EVP_aead_aes_128_gcm_randnonce,
+     "aes_128_gcm_randnonce_tests.txt",
+     kNondeterministic | kCanTruncateTags | RequiresMinimumTagLength(13)},
+
+    {"AES_256_GCM_RandomNonce", EVP_aead_aes_256_gcm_randnonce,
+     "aes_256_gcm_randnonce_tests.txt",
+     kNondeterministic | kCanTruncateTags | RequiresMinimumTagLength(13)},
+
     {"ChaCha20Poly1305", EVP_aead_chacha20_poly1305,
-     "chacha20_poly1305_tests.txt", false, true, false, 0},
+     "chacha20_poly1305_tests.txt", kCanTruncateTags},
+
     {"XChaCha20Poly1305", EVP_aead_xchacha20_poly1305,
-     "xchacha20_poly1305_tests.txt", false, true, false, 0},
+     "xchacha20_poly1305_tests.txt", kCanTruncateTags},
+
     {"AES_128_CBC_SHA1_TLS", EVP_aead_aes_128_cbc_sha1_tls,
-     "aes_128_cbc_sha1_tls_tests.txt", true, false, false, 11},
+     "aes_128_cbc_sha1_tls_tests.txt",
+     kLimitedImplementation | RequiresADLength(11)},
+
     {"AES_128_CBC_SHA1_TLSImplicitIV",
      EVP_aead_aes_128_cbc_sha1_tls_implicit_iv,
-     "aes_128_cbc_sha1_tls_implicit_iv_tests.txt", true, false, false, 11},
-    {"AES_128_CBC_SHA256_TLS", EVP_aead_aes_128_cbc_sha256_tls,
-     "aes_128_cbc_sha256_tls_tests.txt", true, false, false, 11},
+     "aes_128_cbc_sha1_tls_implicit_iv_tests.txt",
+     kLimitedImplementation | RequiresADLength(11)},
+
     {"AES_256_CBC_SHA1_TLS", EVP_aead_aes_256_cbc_sha1_tls,
-     "aes_256_cbc_sha1_tls_tests.txt", true, false, false, 11},
+     "aes_256_cbc_sha1_tls_tests.txt",
+     kLimitedImplementation | RequiresADLength(11)},
+
     {"AES_256_CBC_SHA1_TLSImplicitIV",
      EVP_aead_aes_256_cbc_sha1_tls_implicit_iv,
-     "aes_256_cbc_sha1_tls_implicit_iv_tests.txt", true, false, false, 11},
-    {"AES_256_CBC_SHA256_TLS", EVP_aead_aes_256_cbc_sha256_tls,
-     "aes_256_cbc_sha256_tls_tests.txt", true, false, false, 11},
-    {"AES_256_CBC_SHA384_TLS", EVP_aead_aes_256_cbc_sha384_tls,
-     "aes_256_cbc_sha384_tls_tests.txt", true, false, false, 11},
+     "aes_256_cbc_sha1_tls_implicit_iv_tests.txt",
+     kLimitedImplementation | RequiresADLength(11)},
+
     {"DES_EDE3_CBC_SHA1_TLS", EVP_aead_des_ede3_cbc_sha1_tls,
-     "des_ede3_cbc_sha1_tls_tests.txt", true, false, false, 11},
+     "des_ede3_cbc_sha1_tls_tests.txt",
+     kLimitedImplementation | RequiresADLength(11)},
+
     {"DES_EDE3_CBC_SHA1_TLSImplicitIV",
      EVP_aead_des_ede3_cbc_sha1_tls_implicit_iv,
-     "des_ede3_cbc_sha1_tls_implicit_iv_tests.txt", true, false, false, 11},
+     "des_ede3_cbc_sha1_tls_implicit_iv_tests.txt",
+     kLimitedImplementation | RequiresADLength(11)},
+
     {"AES_128_CTR_HMAC_SHA256", EVP_aead_aes_128_ctr_hmac_sha256,
-     "aes_128_ctr_hmac_sha256.txt", false, true, false, 0},
+     "aes_128_ctr_hmac_sha256.txt", kCanTruncateTags},
+
     {"AES_256_CTR_HMAC_SHA256", EVP_aead_aes_256_ctr_hmac_sha256,
-     "aes_256_ctr_hmac_sha256.txt", false, true, false, 0},
+     "aes_256_ctr_hmac_sha256.txt", kCanTruncateTags},
+
     {"AES_128_CCM_BLUETOOTH", EVP_aead_aes_128_ccm_bluetooth,
-     "aes_128_ccm_bluetooth_tests.txt", false, false, false, 0},
+     "aes_128_ccm_bluetooth_tests.txt", 0},
+
     {"AES_128_CCM_BLUETOOTH_8", EVP_aead_aes_128_ccm_bluetooth_8,
-     "aes_128_ccm_bluetooth_8_tests.txt", false, false, false, 0},
+     "aes_128_ccm_bluetooth_8_tests.txt", 0},
+
+    {"AES_128_CCM_Matter", EVP_aead_aes_128_ccm_matter,
+     "aes_128_ccm_matter_tests.txt", 0},
 };
 
 class PerAEADTest : public testing::TestWithParam<KnownAEAD> {
@@ -142,7 +198,8 @@ TEST_P(PerAEADTest, TestVector) {
         ctx.get(), aead(), key.data(), key.size(), tag_len, evp_aead_seal));
 
     std::vector<uint8_t> out(in.size() + EVP_AEAD_max_overhead(aead()));
-    if (!t->HasAttribute("NO_SEAL")) {
+    if (!t->HasAttribute("NO_SEAL") &&
+        !(GetParam().flags & kNondeterministic)) {
       size_t out_len;
       ASSERT_TRUE(EVP_AEAD_CTX_seal(ctx.get(), out.data(), &out_len, out.size(),
                                     nonce.data(), nonce.size(), in.data(),
@@ -222,7 +279,8 @@ TEST_P(PerAEADTest, TestExtraInput) {
       "crypto/cipher_extra/test/" + std::string(aead_config.test_vectors);
   FileTestGTest(test_vectors.c_str(), [&](FileTest *t) {
     if (t->HasAttribute("NO_SEAL") ||
-        t->HasAttribute("FAILS")) {
+        t->HasAttribute("FAILS") ||
+        (aead_config.flags & kNondeterministic)) {
       t->SkipCurrent();
       return;
     }
@@ -290,7 +348,8 @@ TEST_P(PerAEADTest, TestVectorScatterGather) {
 
     std::vector<uint8_t> out(in.size());
     std::vector<uint8_t> out_tag(EVP_AEAD_max_overhead(aead()));
-    if (!t->HasAttribute("NO_SEAL")) {
+    if (!t->HasAttribute("NO_SEAL") &&
+        !(aead_config.flags & kNondeterministic)) {
       size_t out_tag_len;
       ASSERT_TRUE(EVP_AEAD_CTX_seal_scatter(
           ctx.get(), out.data(), out_tag.data(), &out_tag_len, out_tag.size(),
@@ -322,7 +381,7 @@ TEST_P(PerAEADTest, TestVectorScatterGather) {
 
     // Skip decryption for AEADs that don't implement open_gather().
     if (!ret) {
-      int err = ERR_peek_error();
+      uint32_t err = ERR_peek_error();
       if (ERR_GET_LIB(err) == ERR_LIB_CIPHER &&
           ERR_GET_REASON(err) == CIPHER_R_CTRL_NOT_IMPLEMENTED) {
           t->SkipCurrent();
@@ -408,7 +467,7 @@ TEST_P(PerAEADTest, CleanupAfterInitFailure) {
 }
 
 TEST_P(PerAEADTest, TruncatedTags) {
-  if (!GetParam().truncated_tags) {
+  if (!(GetParam().flags & kCanTruncateTags)) {
     return;
   }
 
@@ -422,9 +481,10 @@ TEST_P(PerAEADTest, TruncatedTags) {
   const size_t nonce_len = EVP_AEAD_nonce_length(aead());
   ASSERT_GE(sizeof(nonce), nonce_len);
 
+  const size_t tag_len = MinimumTagLength(GetParam().flags);
   bssl::ScopedEVP_AEAD_CTX ctx;
   ASSERT_TRUE(EVP_AEAD_CTX_init(ctx.get(), aead(), key, key_len,
-                                1 /* one byte tag */, NULL /* ENGINE */));
+                                tag_len, NULL /* ENGINE */));
 
   const uint8_t plaintext[1] = {'A'};
 
@@ -445,7 +505,7 @@ TEST_P(PerAEADTest, TruncatedTags) {
 
   const size_t overhead_used = ciphertext_len - sizeof(plaintext);
   const size_t expected_overhead =
-      1 + EVP_AEAD_max_overhead(aead()) - EVP_AEAD_max_tag_len(aead());
+      tag_len + EVP_AEAD_max_overhead(aead()) - EVP_AEAD_max_tag_len(aead());
   EXPECT_EQ(overhead_used, expected_overhead)
       << "AEAD is probably ignoring request to truncate tags.";
 
@@ -468,7 +528,7 @@ TEST_P(PerAEADTest, TruncatedTags) {
 }
 
 TEST_P(PerAEADTest, AliasedBuffers) {
-  if (GetParam().limited_implementation) {
+  if (GetParam().flags & kLimitedImplementation) {
     return;
   }
 
@@ -531,8 +591,11 @@ TEST_P(PerAEADTest, AliasedBuffers) {
   ASSERT_TRUE(EVP_AEAD_CTX_seal(ctx.get(), in, &out_len,
                                 sizeof(kPlaintext) + max_overhead, nonce.data(),
                                 nonce_len, in, sizeof(kPlaintext), nullptr, 0));
-  EXPECT_EQ(Bytes(valid_encryption.data(), valid_encryption_len),
-            Bytes(in, out_len));
+
+  if (!(GetParam().flags & kNondeterministic)) {
+    EXPECT_EQ(Bytes(valid_encryption.data(), valid_encryption_len),
+              Bytes(in, out_len));
+  }
 
   OPENSSL_memcpy(in, valid_encryption.data(), valid_encryption_len);
   ASSERT_TRUE(EVP_AEAD_CTX_open(ctx.get(), in, &out_len, valid_encryption_len,
@@ -554,8 +617,9 @@ TEST_P(PerAEADTest, UnalignedInput) {
   ASSERT_GE(sizeof(key) - 1, key_len);
   const size_t nonce_len = EVP_AEAD_nonce_length(aead());
   ASSERT_GE(sizeof(nonce) - 1, nonce_len);
-  const size_t ad_len =
-      GetParam().ad_len != 0 ? GetParam().ad_len : sizeof(ad) - 1;
+  const size_t ad_len = RequiredADLength(GetParam().flags) != 0
+                            ? RequiredADLength(GetParam().flags)
+                            : sizeof(ad) - 1;
   ASSERT_GE(sizeof(ad) - 1, ad_len);
 
   // Encrypt some input.
@@ -618,7 +682,7 @@ TEST_P(PerAEADTest, InvalidNonceLength) {
     // variable-length nonces, it does not allow the empty nonce.
     nonce_lens.push_back(0);
   }
-  if (!GetParam().variable_nonce) {
+  if (!(GetParam().flags & kVariableNonce)) {
     nonce_lens.push_back(valid_nonce_len + 1);
     if (valid_nonce_len != 0) {
       nonce_lens.push_back(valid_nonce_len - 1);
@@ -626,7 +690,9 @@ TEST_P(PerAEADTest, InvalidNonceLength) {
   }
 
   static const uint8_t kZeros[EVP_AEAD_MAX_KEY_LENGTH] = {0};
-  const size_t ad_len = GetParam().ad_len != 0 ? GetParam().ad_len : 16;
+  const size_t ad_len = RequiredADLength(GetParam().flags) != 0
+                            ? RequiredADLength(GetParam().flags)
+                            : 16;
   ASSERT_LE(ad_len, sizeof(kZeros));
 
   for (size_t nonce_len : nonce_lens) {
@@ -643,10 +709,10 @@ TEST_P(PerAEADTest, InvalidNonceLength) {
                                    nonce.data(), nonce.size(), nullptr /* in */,
                                    0, kZeros /* ad */, ad_len));
     uint32_t err = ERR_get_error();
-    EXPECT_EQ(ERR_LIB_CIPHER, ERR_GET_LIB(err));
     // TODO(davidben): Merge these errors. https://crbug.com/boringssl/129.
-    if (ERR_GET_REASON(err) != CIPHER_R_UNSUPPORTED_NONCE_SIZE) {
-      EXPECT_EQ(CIPHER_R_INVALID_NONCE_SIZE, ERR_GET_REASON(err));
+    if (!ErrorEquals(err, ERR_LIB_CIPHER, CIPHER_R_UNSUPPORTED_NONCE_SIZE)) {
+      EXPECT_TRUE(
+          ErrorEquals(err, ERR_LIB_CIPHER, CIPHER_R_INVALID_NONCE_SIZE));
     }
 
     ctx.Reset();
@@ -657,12 +723,120 @@ TEST_P(PerAEADTest, InvalidNonceLength) {
                                    nonce.data(), nonce.size(), kZeros /* in */,
                                    sizeof(kZeros), kZeros /* ad */, ad_len));
     err = ERR_get_error();
-    EXPECT_EQ(ERR_LIB_CIPHER, ERR_GET_LIB(err));
-    if (ERR_GET_REASON(err) != CIPHER_R_UNSUPPORTED_NONCE_SIZE) {
-      EXPECT_EQ(CIPHER_R_INVALID_NONCE_SIZE, ERR_GET_REASON(err));
+    if (!ErrorEquals(err, ERR_LIB_CIPHER, CIPHER_R_UNSUPPORTED_NONCE_SIZE)) {
+      EXPECT_TRUE(
+          ErrorEquals(err, ERR_LIB_CIPHER, CIPHER_R_INVALID_NONCE_SIZE));
     }
   }
 }
+
+#if defined(SUPPORTS_ABI_TEST)
+// CHECK_ABI can't pass enums, i.e. |evp_aead_seal| and |evp_aead_open|. Thus
+// these two wrappers.
+static int aead_ctx_init_for_seal(EVP_AEAD_CTX *ctx, const EVP_AEAD *aead,
+                                  const uint8_t *key, size_t key_len) {
+  return EVP_AEAD_CTX_init_with_direction(ctx, aead, key, key_len, 0,
+                                          evp_aead_seal);
+}
+
+static int aead_ctx_init_for_open(EVP_AEAD_CTX *ctx, const EVP_AEAD *aead,
+                                  const uint8_t *key, size_t key_len) {
+  return EVP_AEAD_CTX_init_with_direction(ctx, aead, key, key_len, 0,
+                                          evp_aead_open);
+}
+
+// CHECK_ABI can pass, at most, eight arguments. Thus these wrappers that
+// figure out the output length from the input length, and take the nonce length
+// from the configuration of the AEAD.
+static int aead_ctx_seal(EVP_AEAD_CTX *ctx, uint8_t *out_ciphertext,
+                         size_t *out_ciphertext_len, const uint8_t *nonce,
+                         const uint8_t *plaintext, size_t plaintext_len,
+                         const uint8_t *ad, size_t ad_len) {
+  const size_t nonce_len = EVP_AEAD_nonce_length(EVP_AEAD_CTX_aead(ctx));
+  return EVP_AEAD_CTX_seal(ctx, out_ciphertext, out_ciphertext_len,
+                           plaintext_len + EVP_AEAD_MAX_OVERHEAD, nonce,
+                           nonce_len, plaintext, plaintext_len, ad, ad_len);
+}
+
+static int aead_ctx_open(EVP_AEAD_CTX *ctx, uint8_t *out_plaintext,
+                         size_t *out_plaintext_len, const uint8_t *nonce,
+                         const uint8_t *ciphertext, size_t ciphertext_len,
+                         const uint8_t *ad, size_t ad_len) {
+  const size_t nonce_len = EVP_AEAD_nonce_length(EVP_AEAD_CTX_aead(ctx));
+  return EVP_AEAD_CTX_open(ctx, out_plaintext, out_plaintext_len,
+                           ciphertext_len, nonce, nonce_len, ciphertext,
+                           ciphertext_len, ad, ad_len);
+}
+
+TEST_P(PerAEADTest, ABI) {
+  uint8_t key[EVP_AEAD_MAX_KEY_LENGTH];
+  OPENSSL_memset(key, 'K', sizeof(key));
+  const size_t key_len = EVP_AEAD_key_length(aead());
+  ASSERT_LE(key_len, sizeof(key));
+
+  bssl::ScopedEVP_AEAD_CTX ctx_seal;
+  ASSERT_TRUE(
+      CHECK_ABI(aead_ctx_init_for_seal, ctx_seal.get(), aead(), key, key_len));
+
+  bssl::ScopedEVP_AEAD_CTX ctx_open;
+  ASSERT_TRUE(
+      CHECK_ABI(aead_ctx_init_for_open, ctx_open.get(), aead(), key, key_len));
+
+  alignas(2) uint8_t plaintext[512];
+  OPENSSL_memset(plaintext, 'P', sizeof(plaintext));
+
+  alignas(2) uint8_t ad_buf[512];
+  OPENSSL_memset(ad_buf, 'A', sizeof(ad_buf));
+  const uint8_t *const ad = ad_buf + 1;
+  ASSERT_LE(RequiredADLength(GetParam().flags), sizeof(ad_buf) - 1);
+  const size_t ad_len = RequiredADLength(GetParam().flags) != 0
+                            ? RequiredADLength(GetParam().flags)
+                            : sizeof(ad_buf) - 1;
+
+  uint8_t nonce[EVP_AEAD_MAX_NONCE_LENGTH];
+  OPENSSL_memset(nonce, 'N', sizeof(nonce));
+  const size_t nonce_len = EVP_AEAD_nonce_length(aead());
+  ASSERT_LE(nonce_len, sizeof(nonce));
+
+  alignas(2) uint8_t ciphertext[sizeof(plaintext) + EVP_AEAD_MAX_OVERHEAD + 1];
+  size_t ciphertext_len;
+  // Knock plaintext, ciphertext, and AD off alignment and give odd lengths for
+  // plaintext and AD. This hopefully triggers any edge-cases in the assembly.
+  ASSERT_TRUE(CHECK_ABI(aead_ctx_seal, ctx_seal.get(), ciphertext + 1,
+                        &ciphertext_len, nonce, plaintext + 1,
+                        sizeof(plaintext) - 1, ad, ad_len));
+
+  alignas(2) uint8_t plaintext2[sizeof(ciphertext) + 1];
+  size_t plaintext2_len;
+  ASSERT_TRUE(CHECK_ABI(aead_ctx_open, ctx_open.get(), plaintext2 + 1,
+                        &plaintext2_len, nonce, ciphertext + 1, ciphertext_len,
+                        ad, ad_len));
+
+  EXPECT_EQ(Bytes(plaintext + 1, sizeof(plaintext) - 1),
+            Bytes(plaintext2 + 1, plaintext2_len));
+}
+
+TEST(ChaChaPoly1305Test, ABI) {
+  if (!chacha20_poly1305_asm_capable()) {
+    return;
+  }
+
+  auto buf = std::make_unique<uint8_t[]>(1024);
+  for (size_t len = 0; len <= 1024; len += 5) {
+    SCOPED_TRACE(len);
+    union chacha20_poly1305_open_data open_ctx = {};
+    CHECK_ABI(chacha20_poly1305_open, buf.get(), buf.get(), len, buf.get(),
+              len % 128, &open_ctx);
+  }
+
+  for (size_t len = 0; len <= 1024; len += 5) {
+    SCOPED_TRACE(len);
+    union chacha20_poly1305_seal_data seal_ctx = {};
+    CHECK_ABI(chacha20_poly1305_seal, buf.get(), buf.get(), len, buf.get(),
+              len % 128, &seal_ctx);
+  }
+}
+#endif  // SUPPORTS_ABI_TEST
 
 TEST(AEADTest, AESCCMLargeAD) {
   static const std::vector<uint8_t> kKey(16, 'A');
@@ -831,4 +1005,8 @@ TEST(AEADTest, WycheproofXChaCha20Poly1305) {
         t->IgnoreInstruction("keySize");
         RunWycheproofTestCase(t, EVP_aead_xchacha20_poly1305());
       });
+}
+
+TEST(AEADTest, FreeNull) {
+  EVP_AEAD_CTX_free(nullptr);
 }

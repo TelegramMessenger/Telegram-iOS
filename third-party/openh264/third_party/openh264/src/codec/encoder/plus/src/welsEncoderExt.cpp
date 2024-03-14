@@ -1282,6 +1282,7 @@ int CWelsH264SVCEncoder::GetOption (ENCODER_OPTION eOptionId, void* pOption) {
     pStatistics->fAverageFrameRate = pEncStatistics->fAverageFrameRate;
     pStatistics->fLatestFrameRate = pEncStatistics->fLatestFrameRate;
     pStatistics->uiBitRate = pEncStatistics->uiBitRate;
+    pStatistics->uiAverageFrameQP = pEncStatistics->uiAverageFrameQP;
 
     pStatistics->uiInputFrameCount = pEncStatistics->uiInputFrameCount;
     pStatistics->uiSkippedFrameCount = pEncStatistics->uiSkippedFrameCount;

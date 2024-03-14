@@ -34,6 +34,7 @@
 #include "cpu.h"
 #include "macros.h"
 #include "intra_pred_common.h"
+#include "sad_common.h"
 
 WELSVP_NAMESPACE_BEGIN
 
@@ -298,6 +299,12 @@ CComplexityAnalysisScreen::CComplexityAnalysisScreen (int32_t iCpuFlag) {
     m_pSadFunc = WelsSampleSad16x16_AArch64_neon;
     m_pIntraFunc[0] =  WelsI16x16LumaPredV_AArch64_neon;
     m_pIntraFunc[1] = WelsI16x16LumaPredH_AArch64_neon;
+  }
+#endif
+
+#if defined (HAVE_LASX)
+  if (iCpuFlag & WELS_CPU_LASX) {
+    m_pSadFunc = WelsSampleSad16x16_lasx;
   }
 #endif
 

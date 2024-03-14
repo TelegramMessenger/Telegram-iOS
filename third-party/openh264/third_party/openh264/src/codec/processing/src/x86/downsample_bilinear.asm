@@ -1948,6 +1948,7 @@ WELS_EXTERN DyadicBilinearQuarterDownsampler_sse
     %assign push_num 0
 %endif
     LOAD_6_PARA
+    PUSH_XMM 8
     SIGN_EXTENSION r1, r1d
     SIGN_EXTENSION r3, r3d
     SIGN_EXTENSION r4, r4d
@@ -2087,6 +2088,7 @@ WELS_EXTERN DyadicBilinearQuarterDownsampler_sse
 %ifndef X86_32
     pop r12
 %endif
+    POP_XMM
     LOAD_6_PARA_POP
 %ifdef X86_32
     pop r6

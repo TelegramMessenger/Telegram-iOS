@@ -161,7 +161,7 @@ public class WelsEncTest extends Activity {
   static {
     try {
       System.loadLibrary ("openh264");
-      System.loadLibrary ("stlport_shared");
+      System.loadLibrary ("c++_shared");
       System.loadLibrary ("welsencdemo");
       Log.v (TAG, "Load libwelsencdemo.so successful");
     } catch (Exception e) {

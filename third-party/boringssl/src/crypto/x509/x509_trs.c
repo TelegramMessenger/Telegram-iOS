@@ -57,270 +57,108 @@
 #include <openssl/err.h>
 #include <openssl/mem.h>
 #include <openssl/obj.h>
-#include <openssl/x509v3.h>
+#include <openssl/x509.h>
 
-static int tr_cmp(const X509_TRUST **a, const X509_TRUST **b);
-static void trtable_free(X509_TRUST *p);
+#include "../internal.h"
+#include "internal.h"
 
-static int trust_1oidany(X509_TRUST *trust, X509 *x, int flags);
-static int trust_1oid(X509_TRUST *trust, X509 *x, int flags);
-static int trust_compat(X509_TRUST *trust, X509 *x, int flags);
+
+typedef struct x509_trust_st X509_TRUST;
+
+struct x509_trust_st {
+  int trust;
+  int (*check_trust)(const X509_TRUST *, X509 *, int);
+  int nid;
+} /* X509_TRUST */;
+
+static int trust_1oidany(const X509_TRUST *trust, X509 *x, int flags);
+static int trust_compat(const X509_TRUST *trust, X509 *x, int flags);
 
 static int obj_trust(int id, X509 *x, int flags);
-static int (*default_trust) (int id, X509 *x, int flags) = obj_trust;
 
-/*
- * WARNING: the following table should be kept in order of trust and without
- * any gaps so we can just subtract the minimum trust value to get an index
- * into the table
- */
+static const X509_TRUST trstandard[] = {
+    {X509_TRUST_COMPAT, trust_compat, 0},
+    {X509_TRUST_SSL_CLIENT, trust_1oidany, NID_client_auth},
+    {X509_TRUST_SSL_SERVER, trust_1oidany, NID_server_auth},
+    {X509_TRUST_EMAIL, trust_1oidany, NID_email_protect},
+    {X509_TRUST_OBJECT_SIGN, trust_1oidany, NID_code_sign},
+    {X509_TRUST_TSA, trust_1oidany, NID_time_stamp}};
 
-static X509_TRUST trstandard[] = {
-    {X509_TRUST_COMPAT, 0, trust_compat, (char *)"compatible", 0, NULL},
-    {X509_TRUST_SSL_CLIENT, 0, trust_1oidany, (char *)"SSL Client",
-     NID_client_auth, NULL},
-    {X509_TRUST_SSL_SERVER, 0, trust_1oidany, (char *)"SSL Server",
-     NID_server_auth, NULL},
-    {X509_TRUST_EMAIL, 0, trust_1oidany, (char *)"S/MIME email",
-     NID_email_protect, NULL},
-    {X509_TRUST_OBJECT_SIGN, 0, trust_1oidany, (char *)"Object Signer",
-     NID_code_sign, NULL},
-    {X509_TRUST_OCSP_SIGN, 0, trust_1oid, (char *)"OCSP responder",
-     NID_OCSP_sign, NULL},
-    {X509_TRUST_OCSP_REQUEST, 0, trust_1oid, (char *)"OCSP request",
-     NID_ad_OCSP, NULL},
-    {X509_TRUST_TSA, 0, trust_1oidany, (char *)"TSA server", NID_time_stamp,
-     NULL}
-};
-
-#define X509_TRUST_COUNT        (sizeof(trstandard)/sizeof(X509_TRUST))
-
-static STACK_OF(X509_TRUST) *trtable = NULL;
-
-static int tr_cmp(const X509_TRUST **a, const X509_TRUST **b)
-{
-    return (*a)->trust - (*b)->trust;
-}
-
-int (*X509_TRUST_set_default(int (*trust) (int, X509 *, int))) (int, X509 *,
-                                                                int) {
-    int (*oldtrust) (int, X509 *, int);
-    oldtrust = default_trust;
-    default_trust = trust;
-    return oldtrust;
-}
-
-int X509_check_trust(X509 *x, int id, int flags)
-{
-    X509_TRUST *pt;
-    int idx;
-    if (id == -1)
-        return 1;
-    /* We get this as a default value */
-    if (id == 0) {
-        int rv;
-        rv = obj_trust(NID_anyExtendedKeyUsage, x, 0);
-        if (rv != X509_TRUST_UNTRUSTED)
-            return rv;
-        return trust_compat(NULL, x, 0);
+static const X509_TRUST *X509_TRUST_get0(int id) {
+  for (size_t i = 0; i < OPENSSL_ARRAY_SIZE(trstandard); i++) {
+    if (trstandard[i].trust == id) {
+      return &trstandard[i];
     }
-    idx = X509_TRUST_get_by_id(id);
-    if (idx == -1)
-        return default_trust(id, x, flags);
-    pt = X509_TRUST_get0(idx);
-    return pt->check_trust(pt, x, flags);
+  }
+  return NULL;
 }
 
-int X509_TRUST_get_count(void)
-{
-    if (!trtable)
-        return X509_TRUST_COUNT;
-    return sk_X509_TRUST_num(trtable) + X509_TRUST_COUNT;
-}
-
-X509_TRUST *X509_TRUST_get0(int idx)
-{
-    if (idx < 0)
-        return NULL;
-    if (idx < (int)X509_TRUST_COUNT)
-        return trstandard + idx;
-    return sk_X509_TRUST_value(trtable, idx - X509_TRUST_COUNT);
-}
-
-int X509_TRUST_get_by_id(int id)
-{
-    X509_TRUST tmp;
-    size_t idx;
-
-    if ((id >= X509_TRUST_MIN) && (id <= X509_TRUST_MAX))
-        return id - X509_TRUST_MIN;
-    tmp.trust = id;
-    if (!trtable)
-        return -1;
-    sk_X509_TRUST_sort(trtable);
-    if (!sk_X509_TRUST_find(trtable, &idx, &tmp)) {
-        return -1;
+int X509_check_trust(X509 *x, int id, int flags) {
+  if (id == -1) {
+    return X509_TRUST_TRUSTED;
+  }
+  // We get this as a default value
+  if (id == 0) {
+    int rv = obj_trust(NID_anyExtendedKeyUsage, x, 0);
+    if (rv != X509_TRUST_UNTRUSTED) {
+      return rv;
     }
-    return idx + X509_TRUST_COUNT;
+    return trust_compat(NULL, x, 0);
+  }
+  const X509_TRUST *pt = X509_TRUST_get0(id);
+  if (pt == NULL) {
+    // Unknown trust IDs are silently reintrepreted as NIDs. This is unreachable
+    // from the certificate verifier itself, but wpa_supplicant relies on it.
+    // Note this relies on commonly-used NIDs and trust IDs not colliding.
+    return obj_trust(id, x, flags);
+  }
+  return pt->check_trust(pt, x, flags);
 }
 
-int X509_TRUST_set(int *t, int trust)
-{
-    if (X509_TRUST_get_by_id(trust) == -1) {
-        OPENSSL_PUT_ERROR(X509, X509_R_INVALID_TRUST);
-        return 0;
-    }
-    *t = trust;
-    return 1;
+int X509_is_valid_trust_id(int trust) {
+  return X509_TRUST_get0(trust) != NULL;
 }
 
-int X509_TRUST_add(int id, int flags, int (*ck) (X509_TRUST *, X509 *, int),
-                   char *name, int arg1, void *arg2)
-{
-    int idx;
-    X509_TRUST *trtmp;
-    char *name_dup;
-
-    /*
-     * This is set according to what we change: application can't set it
-     */
-    flags &= ~X509_TRUST_DYNAMIC;
-    /* This will always be set for application modified trust entries */
-    flags |= X509_TRUST_DYNAMIC_NAME;
-    /* Get existing entry if any */
-    idx = X509_TRUST_get_by_id(id);
-    /* Need a new entry */
-    if (idx == -1) {
-        if (!(trtmp = OPENSSL_malloc(sizeof(X509_TRUST)))) {
-            OPENSSL_PUT_ERROR(X509, ERR_R_MALLOC_FAILURE);
-            return 0;
-        }
-        trtmp->flags = X509_TRUST_DYNAMIC;
-    } else
-        trtmp = X509_TRUST_get0(idx);
-
-    /* Duplicate the supplied name. */
-    name_dup = OPENSSL_strdup(name);
-    if (name_dup == NULL) {
-        OPENSSL_PUT_ERROR(X509, ERR_R_MALLOC_FAILURE);
-        if (idx == -1)
-            OPENSSL_free(trtmp);
-        return 0;
-    }
-
-    /* OPENSSL_free existing name if dynamic */
-    if (trtmp->flags & X509_TRUST_DYNAMIC_NAME)
-        OPENSSL_free(trtmp->name);
-    trtmp->name = name_dup;
-    /* Keep the dynamic flag of existing entry */
-    trtmp->flags &= X509_TRUST_DYNAMIC;
-    /* Set all other flags */
-    trtmp->flags |= flags;
-
-    trtmp->trust = id;
-    trtmp->check_trust = ck;
-    trtmp->arg1 = arg1;
-    trtmp->arg2 = arg2;
-
-    /* If its a new entry manage the dynamic table */
-    if (idx == -1) {
-        if (!trtable && !(trtable = sk_X509_TRUST_new(tr_cmp))) {
-            OPENSSL_PUT_ERROR(X509, ERR_R_MALLOC_FAILURE);
-            trtable_free(trtmp);
-            return 0;
-        }
-        if (!sk_X509_TRUST_push(trtable, trtmp)) {
-            OPENSSL_PUT_ERROR(X509, ERR_R_MALLOC_FAILURE);
-            trtable_free(trtmp);
-            return 0;
-        }
-    }
-    return 1;
+static int trust_1oidany(const X509_TRUST *trust, X509 *x, int flags) {
+  if (x->aux && (x->aux->trust || x->aux->reject)) {
+    return obj_trust(trust->nid, x, flags);
+  }
+  // we don't have any trust settings: for compatibility we return trusted
+  // if it is self signed
+  return trust_compat(trust, x, flags);
 }
 
-static void trtable_free(X509_TRUST *p)
-{
-    if (!p)
-        return;
-    if (p->flags & X509_TRUST_DYNAMIC) {
-        if (p->flags & X509_TRUST_DYNAMIC_NAME)
-            OPENSSL_free(p->name);
-        OPENSSL_free(p);
-    }
-}
-
-void X509_TRUST_cleanup(void)
-{
-    unsigned int i;
-    for (i = 0; i < X509_TRUST_COUNT; i++)
-        trtable_free(trstandard + i);
-    sk_X509_TRUST_pop_free(trtable, trtable_free);
-    trtable = NULL;
-}
-
-int X509_TRUST_get_flags(X509_TRUST *xp)
-{
-    return xp->flags;
-}
-
-char *X509_TRUST_get0_name(X509_TRUST *xp)
-{
-    return xp->name;
-}
-
-int X509_TRUST_get_trust(X509_TRUST *xp)
-{
-    return xp->trust;
-}
-
-static int trust_1oidany(X509_TRUST *trust, X509 *x, int flags)
-{
-    if (x->aux && (x->aux->trust || x->aux->reject))
-        return obj_trust(trust->arg1, x, flags);
-    /*
-     * we don't have any trust settings: for compatibility we return trusted
-     * if it is self signed
-     */
-    return trust_compat(trust, x, flags);
-}
-
-static int trust_1oid(X509_TRUST *trust, X509 *x, int flags)
-{
-    if (x->aux)
-        return obj_trust(trust->arg1, x, flags);
+static int trust_compat(const X509_TRUST *trust, X509 *x, int flags) {
+  if (!x509v3_cache_extensions(x)) {
     return X509_TRUST_UNTRUSTED;
+  }
+  if (x->ex_flags & EXFLAG_SS) {
+    return X509_TRUST_TRUSTED;
+  } else {
+    return X509_TRUST_UNTRUSTED;
+  }
 }
 
-static int trust_compat(X509_TRUST *trust, X509 *x, int flags)
-{
-    X509_check_purpose(x, -1, 0);
-    if (x->ex_flags & EXFLAG_SS)
+static int obj_trust(int id, X509 *x, int flags) {
+  X509_CERT_AUX *ax = x->aux;
+  if (!ax) {
+    return X509_TRUST_UNTRUSTED;
+  }
+  if (ax->reject) {
+    for (size_t i = 0; i < sk_ASN1_OBJECT_num(ax->reject); i++) {
+      const ASN1_OBJECT *obj = sk_ASN1_OBJECT_value(ax->reject, i);
+      if (OBJ_obj2nid(obj) == id) {
+        return X509_TRUST_REJECTED;
+      }
+    }
+  }
+  if (ax->trust) {
+    for (size_t i = 0; i < sk_ASN1_OBJECT_num(ax->trust); i++) {
+      const ASN1_OBJECT *obj = sk_ASN1_OBJECT_value(ax->trust, i);
+      if (OBJ_obj2nid(obj) == id) {
         return X509_TRUST_TRUSTED;
-    else
-        return X509_TRUST_UNTRUSTED;
-}
-
-static int obj_trust(int id, X509 *x, int flags)
-{
-    ASN1_OBJECT *obj;
-    size_t i;
-    X509_CERT_AUX *ax;
-    ax = x->aux;
-    if (!ax)
-        return X509_TRUST_UNTRUSTED;
-    if (ax->reject) {
-        for (i = 0; i < sk_ASN1_OBJECT_num(ax->reject); i++) {
-            obj = sk_ASN1_OBJECT_value(ax->reject, i);
-            if (OBJ_obj2nid(obj) == id)
-                return X509_TRUST_REJECTED;
-        }
+      }
     }
-    if (ax->trust) {
-        for (i = 0; i < sk_ASN1_OBJECT_num(ax->trust); i++) {
-            obj = sk_ASN1_OBJECT_value(ax->trust, i);
-            if (OBJ_obj2nid(obj) == id)
-                return X509_TRUST_TRUSTED;
-        }
-    }
-    return X509_TRUST_UNTRUSTED;
+  }
+  return X509_TRUST_UNTRUSTED;
 }

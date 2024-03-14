@@ -29,7 +29,7 @@ my $xlate;
 ( $xlate="${dir}../../../perlasm/x86_64-xlate.pl" and -f $xlate) or
 die "can't locate x86_64-xlate.pl";
 
-open OUT,"| \"$^X\" $xlate $flavour $output";
+open OUT,"| \"$^X\" \"$xlate\" $flavour \"$output\"";
 *STDOUT=*OUT;
 
 my ($out, $len, $tmp1, $tmp2) = $win64 ? ("%rcx", "%rdx", "%r8", "%r9")
@@ -46,6 +46,7 @@ print<<___;
 .align	16
 CRYPTO_rdrand:
 .cfi_startproc
+	_CET_ENDBR
 	xorq %rax, %rax
 	rdrand $tmp1
 	# An add-with-carry of zero effectively sets %rax to the carry flag.
@@ -64,6 +65,7 @@ CRYPTO_rdrand:
 .align 16
 CRYPTO_rdrand_multiple8_buf:
 .cfi_startproc
+	_CET_ENDBR
 	test $len, $len
 	jz .Lout
 	movq \$8, $tmp1
@@ -84,4 +86,4 @@ CRYPTO_rdrand_multiple8_buf:
 .size CRYPTO_rdrand_multiple8_buf,.-CRYPTO_rdrand_multiple8_buf
 ___
 
-close STDOUT or die "error closing STDOUT";	# flush
+close STDOUT or die "error closing STDOUT: $!";	# flush

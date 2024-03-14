@@ -12,6 +12,8 @@
 // OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 // CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+//go:build ignore
+
 package main
 
 import (
@@ -19,7 +21,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"sort"
@@ -518,24 +519,11 @@ extern "C" {
 		return err
 	}
 
-	return ioutil.WriteFile(path, []byte(formatted), 0666)
+	return os.WriteFile(path, []byte(formatted), 0666)
 }
-
-// TODO(davidben): Replace this with sort.Slice once Go 1.8 is sufficiently
-// common.
-type nidSorter struct {
-	nids []int
-	objs *objects
-	cmp  func(a, b object) bool
-}
-
-func (a nidSorter) obj(i int) object   { return a.objs.byNID[a.nids[i]] }
-func (a nidSorter) Len() int           { return len(a.nids) }
-func (a nidSorter) Swap(i, j int)      { a.nids[i], a.nids[j] = a.nids[j], a.nids[i] }
-func (a nidSorter) Less(i, j int) bool { return a.cmp(a.obj(i), a.obj(j)) }
 
 func sortNIDs(nids []int, objs *objects, cmp func(a, b object) bool) {
-	sort.Sort(&nidSorter{nids, objs, cmp})
+	sort.Slice(nids, func(i, j int) bool { return cmp(objs.byNID[nids[i]], objs.byNID[nids[j]]) })
 }
 
 func writeData(path string, objs *objects) error {
@@ -626,6 +614,12 @@ func writeData(path string, objs *objects) error {
 	// Emit an ASN1_OBJECT for each object.
 	fmt.Fprintf(&b, "\nstatic const ASN1_OBJECT kObjects[NUM_NID] = {\n")
 	for nid, obj := range objs.byNID {
+		// Skip the entry for NID_undef. It is stored separately, so that
+		// OBJ_get_undef avoids pulling in the table.
+		if nid == 0 {
+			continue
+		}
+
 		if len(obj.name) == 0 {
 			fmt.Fprintf(&b, "{NULL, NULL, NID_undef, 0, NULL, 0},\n")
 			continue
@@ -652,7 +646,11 @@ func writeData(path string, objs *objects) error {
 
 	fmt.Fprintf(&b, "\nstatic const uint16_t kNIDsInShortNameOrder[] = {\n")
 	for _, nid := range nids {
-		fmt.Fprintf(&b, "%d /* %s */,\n", nid, objs.byNID[nid].shortName)
+		// Including NID_undef in the table does not do anything. Whether OBJ_sn2nid
+		// finds the object or not, it will return NID_undef.
+		if nid != 0 {
+			fmt.Fprintf(&b, "%d /* %s */,\n", nid, objs.byNID[nid].shortName)
+		}
 	}
 	fmt.Fprintf(&b, "};\n")
 
@@ -668,7 +666,11 @@ func writeData(path string, objs *objects) error {
 
 	fmt.Fprintf(&b, "\nstatic const uint16_t kNIDsInLongNameOrder[] = {\n")
 	for _, nid := range nids {
-		fmt.Fprintf(&b, "%d /* %s */,\n", nid, objs.byNID[nid].longName)
+		// Including NID_undef in the table does not do anything. Whether OBJ_ln2nid
+		// finds the object or not, it will return NID_undef.
+		if nid != 0 {
+			fmt.Fprintf(&b, "%d /* %s */,\n", nid, objs.byNID[nid].longName)
+		}
 	}
 	fmt.Fprintf(&b, "};\n")
 
@@ -710,7 +712,7 @@ func writeData(path string, objs *objects) error {
 		return err
 	}
 
-	return ioutil.WriteFile(path, []byte(formatted), 0666)
+	return os.WriteFile(path, []byte(formatted), 0666)
 }
 
 func main() {
