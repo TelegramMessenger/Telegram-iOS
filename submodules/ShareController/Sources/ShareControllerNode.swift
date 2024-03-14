@@ -9,6 +9,11 @@ import TelegramPresentationData
 import AccountContext
 import TelegramIntents
 import ContextUI
+import ComponentFlow
+import MultilineTextComponent
+import TelegramStringFormatting
+import BundleIconComponent
+import LottieComponent
 
 enum ShareState {
     case preparing(Bool)
@@ -19,6 +24,276 @@ enum ShareState {
 enum ShareExternalState {
     case preparing
     case done
+}
+
+private final class ShareContentInfoView: UIView {
+    private struct Params: Equatable {
+        var environment: ShareControllerEnvironment
+        var theme: PresentationTheme
+        var strings: PresentationStrings
+        var collectibleItemInfo: TelegramCollectibleItemInfo
+        var availableSize: CGSize
+        
+        init(environment: ShareControllerEnvironment, theme: PresentationTheme, strings: PresentationStrings, collectibleItemInfo: TelegramCollectibleItemInfo, availableSize: CGSize) {
+            self.environment = environment
+            self.theme = theme
+            self.strings = strings
+            self.collectibleItemInfo = collectibleItemInfo
+            self.availableSize = availableSize
+        }
+        
+        static func ==(lhs: Params, rhs: Params) -> Bool {
+            if lhs.environment !== rhs.environment {
+                return false
+            }
+            if lhs.theme !== rhs.theme {
+                return false
+            }
+            if lhs.strings !== rhs.strings {
+                return false
+            }
+            if lhs.collectibleItemInfo != rhs.collectibleItemInfo {
+                return false
+            }
+            if lhs.availableSize != rhs.availableSize {
+                return false
+            }
+            return true
+        }
+    }
+    
+    private struct Layout {
+        var params: Params
+        var size: CGSize
+        
+        init(params: Params, size: CGSize) {
+            self.params = params
+            self.size = size
+        }
+    }
+    
+    private let icon = ComponentView<Empty>()
+    private let text = ComponentView<Empty>()
+    private var currencySymbolIcon: UIImage?
+    private var arrowIcon: UIImage?
+    private let backgroundView: BlurredBackgroundView
+    
+    private var currentLayout: Layout?
+    
+    override init(frame: CGRect) {
+        self.backgroundView = BlurredBackgroundView(color: nil, enableBlur: true)
+        
+        super.init(frame: frame)
+        
+        self.addSubview(self.backgroundView)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func update(environment: ShareControllerEnvironment, presentationData: PresentationData, collectibleItemInfo: TelegramCollectibleItemInfo, availableSize: CGSize) -> CGSize {
+        let params = Params(
+            environment: environment,
+            theme: presentationData.theme,
+            strings: presentationData.strings,
+            collectibleItemInfo: collectibleItemInfo,
+            availableSize: availableSize
+        )
+        if let currentLayout = self.currentLayout, currentLayout.params == params {
+            return currentLayout.size
+        }
+        let size = self.updateInternal(params: params)
+        self.currentLayout = Layout(params: params, size: size)
+        return size
+    }
+    
+    private func updateInternal(params: Params) -> CGSize {
+        var username: String = ""
+        if case let .username(value) = params.collectibleItemInfo.subject {
+            username = value
+        }
+        
+        let textText = NSMutableAttributedString()
+        
+        let dateText = stringForDate(timestamp: params.collectibleItemInfo.purchaseDate, strings: params.strings)
+        
+        let (rawCryptoCurrencyText, cryptoCurrencySign, _) = formatCurrencyAmountCustom(params.collectibleItemInfo.cryptoCurrencyAmount, currency: params.collectibleItemInfo.cryptoCurrency, customFormat: CurrencyFormatterEntry(
+            symbol: "~",
+            thousandsSeparator: ",",
+            decimalSeparator: ".",
+            symbolOnLeft: true,
+            spaceBetweenAmountAndSymbol: false,
+            decimalDigits: 9
+        ))
+        var cryptoCurrencyText = rawCryptoCurrencyText
+        while cryptoCurrencyText.hasSuffix("0") {
+            cryptoCurrencyText = String(cryptoCurrencyText[cryptoCurrencyText.startIndex ..< cryptoCurrencyText.index(before: cryptoCurrencyText.endIndex)])
+        }
+        if cryptoCurrencyText.hasSuffix(".") {
+            cryptoCurrencyText = String(cryptoCurrencyText[cryptoCurrencyText.startIndex ..< cryptoCurrencyText.index(before: cryptoCurrencyText.endIndex)])
+        }
+        
+        let (currencyText, currencySign, _) = formatCurrencyAmountCustom(params.collectibleItemInfo.currencyAmount, currency: params.collectibleItemInfo.currency)
+        
+        let rawTextString = params.strings.CollectibleItemInfo_UsernameText("@\(username)", params.strings.CollectibleItemInfo_StoreName, dateText, "\(cryptoCurrencySign)\(cryptoCurrencyText)", "\(currencySign)\(currencyText)")
+        textText.append(NSAttributedString(string: rawTextString.string, font: Font.regular(14.0), textColor: .white))
+        for range in rawTextString.ranges {
+            switch range.index {
+            case 0:
+                textText.addAttribute(.font, value: Font.semibold(14.0), range: range.range)
+            case 1:
+                textText.addAttribute(.font, value: Font.semibold(14.0), range: range.range)
+            case 3:
+                textText.addAttribute(.font, value: Font.semibold(14.0), range: range.range)
+            default:
+                break
+            }
+        }
+        
+        let currencySymbolRange = (textText.string as NSString).range(of: "~")
+        
+        if self.currencySymbolIcon == nil {
+            if let templateImage = UIImage(bundleImageName: "Peer Info/CollectibleTonSymbolInline") {
+                self.currencySymbolIcon = generateImage(CGSize(width: templateImage.size.width, height: templateImage.size.height + 2.0), contextGenerator: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    if let cgImage = templateImage.cgImage {
+                        context.draw(cgImage, in: CGRect(origin: CGPoint(x: 0.0, y: 4.0), size: CGSize(width: templateImage.size.width - 2.0, height: templateImage.size.height - 2.0)))
+                    }
+                })?.withRenderingMode(.alwaysTemplate)
+            }
+        }
+        
+        if currencySymbolRange.location != NSNotFound, let currencySymbolIcon = self.currencySymbolIcon {
+            textText.replaceCharacters(in: currencySymbolRange, with: "$")
+            textText.addAttribute(.attachment, value: currencySymbolIcon, range: currencySymbolRange)
+            
+            final class RunDelegateData {
+                let ascent: CGFloat
+                let descent: CGFloat
+                let width: CGFloat
+                
+                init(ascent: CGFloat, descent: CGFloat, width: CGFloat) {
+                    self.ascent = ascent
+                    self.descent = descent
+                    self.width = width
+                }
+            }
+            let font = Font.semibold(14.0)
+            let runDelegateData = RunDelegateData(
+                ascent: font.ascender,
+                descent: font.descender,
+                width: currencySymbolIcon.size.width + 4.0
+            )
+            var callbacks = CTRunDelegateCallbacks(
+                version: kCTRunDelegateCurrentVersion,
+                dealloc: { dataRef in
+                    Unmanaged<RunDelegateData>.fromOpaque(dataRef).release()
+                },
+                getAscent: { dataRef in
+                    let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                    return data.takeUnretainedValue().ascent
+                },
+                getDescent: { dataRef in
+                    let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                    return data.takeUnretainedValue().descent
+                },
+                getWidth: { dataRef in
+                    let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                    return data.takeUnretainedValue().width
+                }
+            )
+            
+            if let runDelegate = CTRunDelegateCreate(&callbacks, Unmanaged.passRetained(runDelegateData).toOpaque()) {
+                textText.addAttribute(NSAttributedString.Key(rawValue: kCTRunDelegateAttributeName as String), value: runDelegate, range: currencySymbolRange)
+            }
+        }
+        
+        let accentColor = params.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)
+        if self.arrowIcon == nil {
+            if let templateImage = UIImage(bundleImageName: "Item List/InlineTextRightArrow") {
+                let scaleFactor: CGFloat = 0.8
+                let imageSize = CGSize(width: floor(templateImage.size.width * scaleFactor), height: floor(templateImage.size.height * scaleFactor))
+                self.arrowIcon = generateImage(imageSize, contextGenerator: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    if let cgImage = templateImage.cgImage {
+                        context.draw(cgImage, in: CGRect(origin: CGPoint(), size: size))
+                    }
+                })?.withRenderingMode(.alwaysTemplate)
+            }
+        }
+        
+        textText.append(NSAttributedString(string: "\n\(params.strings.CollectibleItemInfo_ShareInlineText_LearnMore)", attributes: [
+            .font: Font.medium(14.0),
+            .foregroundColor: accentColor,
+            NSAttributedString.Key(rawValue: "URL"): ""
+        ]))
+        if let range = textText.string.range(of: ">"), let arrowIcon = self.arrowIcon {
+            textText.addAttribute(.attachment, value: arrowIcon, range: NSRange(range, in: textText.string))
+        }
+        
+        let textInsets = UIEdgeInsets(top: 8.0, left: 50.0, bottom: 8.0, right: 10.0)
+        
+        let textSize = self.text.update(
+            transition: .immediate,
+            component: AnyComponent(MultilineTextComponent(
+                text: .plain(textText),
+                maximumNumberOfLines: 0,
+                lineSpacing: 0.185,
+                highlightColor: accentColor.withMultipliedAlpha(0.1),
+                highlightAction: { attributes in
+                    if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                        return NSAttributedString.Key(rawValue: "URL")
+                    } else {
+                        return nil
+                    }
+                },
+                tapAction: { [weak self] _, _ in
+                    guard let self, let params = self.currentLayout?.params else {
+                        return
+                    }
+                    if let environment = params.environment as? ShareControllerAppEnvironment {
+                        environment.sharedContext.applicationBindings.openUrl(params.collectibleItemInfo.url)
+                    }
+                }
+            )),
+            environment: {},
+            containerSize: CGSize(width: params.availableSize.width - textInsets.left - textInsets.right, height: 1000.0)
+        )
+        let textFrame = CGRect(origin: CGPoint(x: textInsets.left, y: textInsets.top), size: textSize)
+        if let textView = self.text.view {
+            if textView.superview == nil {
+                self.addSubview(textView)
+            }
+            textView.frame = textFrame
+        }
+        
+        let size = CGSize(width: params.availableSize.width, height: textInsets.top + textSize.height + textInsets.bottom)
+        
+        let iconSize = self.icon.update(
+            transition: .immediate,
+            component: AnyComponent(LottieComponent(
+                content: LottieComponent.AppBundleContent(name: "ToastCollectibleUsernameEmoji"),
+                loop: false
+            )),
+            environment: {},
+            containerSize: CGSize(width: 30.0, height: 30.0)
+        )
+        let iconFrame = CGRect(origin: CGPoint(x: floor((textInsets.left - iconSize.width) * 0.5), y: floor((size.height - iconSize.height) * 0.5)), size: iconSize)
+        if let iconView = self.icon.view as? LottieComponent.View {
+            if iconView.superview == nil {
+                self.addSubview(iconView)
+                iconView.playOnce(delay: 0.1)
+            }
+            iconView.frame = iconFrame
+        }
+        
+        self.backgroundView.updateColor(color: UIColor(rgb: 0x1C2023), transition: .immediate)
+        self.backgroundView.update(size: size, cornerRadius: 16.0, transition: .immediate)
+        self.backgroundView.frame = CGRect(origin: CGPoint(), size: size)
+        
+        return size
+    }
 }
 
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
@@ -33,6 +308,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     private let fromForeignApp: Bool
     private let fromPublicChannel: Bool
     private let segmentedValues: [ShareControllerSegmentedValue]?
+    private let collectibleItemInfo: TelegramCollectibleItemInfo?
     var selectedSegmentedIndex: Int = 0
     
     private let defaultAction: ShareControllerAction?
@@ -48,6 +324,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let contentContainerNode: ASDisplayNode
     private let contentBackgroundNode: ASImageNode
+    private var contentInfoView: ShareContentInfoView?
     
     private var contentNode: (ASDisplayNode & ShareContentContainerNode)?
     private var previousContentNode: (ASDisplayNode & ShareContentContainerNode)?
@@ -90,7 +367,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let showNames = ValuePromise<Bool>(true)
     
-    init(controller: ShareController, environment: ShareControllerEnvironment, presentationData: PresentationData, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, fromPublicChannel: Bool, segmentedValues: [ShareControllerSegmentedValue]?, shareStory: (() -> Void)?) {
+    init(controller: ShareController, environment: ShareControllerEnvironment, presentationData: PresentationData, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, fromPublicChannel: Bool, segmentedValues: [ShareControllerSegmentedValue]?, shareStory: (() -> Void)?, collectibleItemInfo: TelegramCollectibleItemInfo?) {
         self.controller = controller
         self.environment = environment
         self.presentationData = presentationData
@@ -102,6 +379,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.presentError = presentError
         self.fromPublicChannel = fromPublicChannel
         self.segmentedValues = segmentedValues
+        self.collectibleItemInfo = collectibleItemInfo
         
         self.presetText = presetText
         
@@ -155,6 +433,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.contentBackgroundNode.displaysAsynchronously = false
         self.contentBackgroundNode.displayWithoutProcessing = true
         self.contentBackgroundNode.image = roundedBackground
+        
+        self.contentInfoView = ShareContentInfoView(frame: CGRect())
         
         self.actionsBackgroundNode = ASImageNode()
         self.actionsBackgroundNode.isLayerBacked = true
@@ -356,6 +636,10 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         self.wrappingScrollNode.addSubnode(self.contentBackgroundNode)
         
+        if let contentInfoView = self.contentInfoView {
+            self.wrappingScrollNode.view.addSubview(contentInfoView)
+        }
+        
         self.wrappingScrollNode.addSubnode(self.contentContainerNode)
         self.contentContainerNode.addSubnode(self.actionSeparatorNode)
         self.contentContainerNode.addSubnode(self.actionsBackgroundNode)
@@ -433,12 +717,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             }
             
             if let searchContentNode = strongSelf.contentNode as? ShareSearchContainerNode {
+                searchContentNode.setDidBeginDragging(nil)
                 searchContentNode.setContentOffsetUpdated(nil)
                 let scrollDelta = topicsContentNode.contentGridNode.scrollView.contentOffset.y - searchContentNode.contentGridNode.scrollView.contentOffset.y
                 if let sourceFrame = searchContentNode.animateOut(peerId: peer.peerId, scrollDelta: scrollDelta) {
                     topicsContentNode.animateIn(sourceFrame: sourceFrame, scrollDelta: scrollDelta)
                 }
             } else if let peersContentNode = strongSelf.peersContentNode {
+                peersContentNode.setDidBeginDragging(nil)
                 peersContentNode.setContentOffsetUpdated(nil)
                 let scrollDelta = topicsContentNode.contentGridNode.scrollView.contentOffset.y - peersContentNode.contentGridNode.scrollView.contentOffset.y
                 if let sourceFrame = peersContentNode.animateOut(peerId: peer.peerId, scrollDelta: scrollDelta) {
@@ -446,6 +732,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 }
             }
             
+            topicsContentNode.setDidBeginDragging({ [weak self] in
+                self?.contentNodeDidBeginDragging()
+            })
             topicsContentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                 self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
             })
@@ -459,6 +748,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         guard let topicsContentNode = self.topicsContentNode else {
             return
         }
+        topicsContentNode.setDidBeginDragging(nil)
         topicsContentNode.setContentOffsetUpdated(nil)
                 
         if let searchContentNode = self.contentNode as? ShareSearchContainerNode {
@@ -472,6 +762,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
 
         if let searchContentNode = self.contentNode as? ShareSearchContainerNode {
+            searchContentNode.setDidBeginDragging({ [weak self] in
+                self?.contentNodeDidBeginDragging()
+            })
             searchContentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                 self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
             })
@@ -487,6 +780,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 })
             }
         } else if let peersContentNode = self.peersContentNode {
+            peersContentNode.setDidBeginDragging({ [weak self] in
+                self?.contentNodeDidBeginDragging()
+            })
             peersContentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                 self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
             })
@@ -579,6 +875,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             
             let previous = self.contentNode
             if let previous = previous {
+                previous.setDidBeginDragging(nil)
                 previous.setContentOffsetUpdated(nil)
                 if animated {
                     transition = .animated(duration: 0.4, curve: .spring)
@@ -597,6 +894,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     previous.removeFromSupernode()
                     self.previousContentNode = nil
                 }
+                
+                self.contentNodeDidBeginDragging()
             } else {
                 transition = .immediate
             }
@@ -607,6 +906,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     contentNode.frame = previous.frame
                     contentNode.updateLayout(size: previous.bounds.size, isLandscape: layout.size.width > layout.size.height, bottomInset: bottomGridInset, transition: .immediate)
                     
+                    contentNode.setDidBeginDragging({ [weak self] in
+                        self?.contentNodeDidBeginDragging()
+                    })
                     contentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                         self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
                     })
@@ -635,6 +937,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     }
                 } else {
                     if let contentNode = self.contentNode {
+                        contentNode.setDidBeginDragging({ [weak self] in
+                            self?.contentNodeDidBeginDragging()
+                        })
                         contentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                             self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
                         })
@@ -737,6 +1042,13 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
+    private func contentNodeDidBeginDragging() {
+        if let contentInfoView = self.contentInfoView, contentInfoView.alpha != 0.0 {
+            Transition.easeInOut(duration: 0.2).setAlpha(view: contentInfoView, alpha: 0.0)
+            Transition.easeInOut(duration: 0.2).setScale(view: contentInfoView, scale: 0.5)
+        }
+    }
+    
     private func contentNodeOffsetUpdated(_ contentOffset: CGFloat, transition: ContainedViewLayoutTransition) {
         if let (layout, _, _) = self.containerLayout {
             var insets = layout.insets(options: [.statusBar, .input])
@@ -769,6 +1081,25 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 backgroundFrame.size.height = buttonHeight + 32.0
             }
             transition.updateFrame(node: self.contentBackgroundNode, frame: backgroundFrame)
+            
+            if let contentInfoView = self.contentInfoView, let collectibleItemInfo = self.collectibleItemInfo {
+                let contentInfoSize = contentInfoView.update(
+                    environment: self.environment,
+                    presentationData: self.presentationData,
+                    collectibleItemInfo: collectibleItemInfo,
+                    availableSize: CGSize(width: backgroundFrame.width, height: 1000.0)
+                )
+                let contentInfoFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY - 8.0 - contentInfoSize.height), size: contentInfoSize)
+                
+                if contentInfoView.bounds.isEmpty {
+                    if contentInfoFrame.minY < 0.0 {
+                        contentInfoView.alpha = 0.0
+                    }
+                }
+                
+                transition.updatePosition(layer: contentInfoView.layer, position: contentInfoFrame.center)
+                transition.updateBounds(layer: contentInfoView.layer, bounds: CGRect(origin: CGPoint(), size: contentInfoFrame.size))
+            }
             
             if let animateContentNodeOffsetFromBackgroundOffset = self.animateContentNodeOffsetFromBackgroundOffset {
                 self.animateContentNodeOffsetFromBackgroundOffset = nil
@@ -1019,6 +1350,11 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         self.animatingOut = true
         
+        if let contentInfoView = self.contentInfoView, contentInfoView.alpha != 0.0 {
+            Transition.easeInOut(duration: 0.2).setAlpha(view: contentInfoView, alpha: 0.0)
+            Transition.easeInOut(duration: 0.2).setScale(view: contentInfoView, scale: 0.5)
+        }
+        
         if self.contentNode != nil {
             var dimCompleted = false
             var offsetCompleted = false
@@ -1223,6 +1559,12 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             return result
         }
         if self.bounds.contains(point) {
+            if let contentInfoView = self.contentInfoView, contentInfoView.alpha != 0.0 {
+                if let result = contentInfoView.hitTest(self.view.convert(point, to: contentInfoView), with: event) {
+                    return result
+                }
+            }
+            
             if !self.contentBackgroundNode.bounds.contains(self.convert(point, to: self.contentBackgroundNode)) && !self.cancelButtonNode.bounds.contains(self.convert(point, to: self.cancelButtonNode)) {
                 return self.dimNode.view
             }

@@ -1111,7 +1111,7 @@ final class ShareWithPeersScreenComponent: Component {
                                             self.hapticFeedback.impact(.light)
                                         } else {
                                             self.postingAvailabilityDisposable.set((component.context.engine.messages.checkStoriesUploadAvailability(target: .peer(peer.id))
-                                                                                    |> deliverOnMainQueue).start(next: { [weak self] status in
+                                            |> deliverOnMainQueue).start(next: { [weak self] status in
                                                 guard let self, let component = self.component else {
                                                     return
                                                 }
@@ -1134,7 +1134,7 @@ final class ShareWithPeersScreenComponent: Component {
                                                             if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
                                                                 previousController.dismiss()
                                                             }
-                                                            let controller = component.context.sharedContext.makePremiumBoostLevelsController(context: component.context, peerId: peer.id, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: true, openStats: nil)
+                                                            let controller = component.context.sharedContext.makePremiumBoostLevelsController(context: component.context, peerId: peer.id, subject: .stories, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: true, openStats: nil)
                                                             navigationController.pushViewController(controller)
                                                         }
                                                         self.hapticFeedback.impact(.light)

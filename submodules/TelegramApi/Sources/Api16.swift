@@ -898,26 +898,28 @@ public extension Api {
 }
 public extension Api {
     enum PeerSettings: TypeConstructorDescription {
-        case peerSettings(flags: Int32, geoDistance: Int32?, requestChatTitle: String?, requestChatDate: Int32?)
+        case peerSettings(flags: Int32, geoDistance: Int32?, requestChatTitle: String?, requestChatDate: Int32?, businessBotId: Int64?, businessBotManageUrl: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate):
+                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate, let businessBotId, let businessBotManageUrl):
                     if boxed {
-                        buffer.appendInt32(-1525149427)
+                        buffer.appendInt32(-1395233698)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 6) != 0 {serializeInt32(geoDistance!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 9) != 0 {serializeString(requestChatTitle!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 9) != 0 {serializeInt32(requestChatDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 13) != 0 {serializeInt64(businessBotId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 13) != 0 {serializeString(businessBotManageUrl!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate):
-                return ("peerSettings", [("flags", flags as Any), ("geoDistance", geoDistance as Any), ("requestChatTitle", requestChatTitle as Any), ("requestChatDate", requestChatDate as Any)])
+                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate, let businessBotId, let businessBotManageUrl):
+                return ("peerSettings", [("flags", flags as Any), ("geoDistance", geoDistance as Any), ("requestChatTitle", requestChatTitle as Any), ("requestChatDate", requestChatDate as Any), ("businessBotId", businessBotId as Any), ("businessBotManageUrl", businessBotManageUrl as Any)])
     }
     }
     
@@ -930,12 +932,18 @@ public extension Api {
             if Int(_1!) & Int(1 << 9) != 0 {_3 = parseString(reader) }
             var _4: Int32?
             if Int(_1!) & Int(1 << 9) != 0 {_4 = reader.readInt32() }
+            var _5: Int64?
+            if Int(_1!) & Int(1 << 13) != 0 {_5 = reader.readInt64() }
+            var _6: String?
+            if Int(_1!) & Int(1 << 13) != 0 {_6 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 6) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 9) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 9) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2, requestChatTitle: _3, requestChatDate: _4)
+            let _c5 = (Int(_1!) & Int(1 << 13) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 13) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2, requestChatTitle: _3, requestChatDate: _4, businessBotId: _5, businessBotManageUrl: _6)
             }
             else {
                 return nil

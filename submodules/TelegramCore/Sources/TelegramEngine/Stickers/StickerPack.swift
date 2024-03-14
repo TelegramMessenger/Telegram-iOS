@@ -55,6 +55,9 @@ extension StickerPackCollectionInfo {
                 if (flags & (1 << 10)) != 0 {
                     setFlags.insert(.isAvailableAsChannelStatus)
                 }
+                if (flags & (1 << 11)) != 0 {
+                    setFlags.insert(.isCreator)
+                }
                 
                 var thumbnailRepresentation: TelegramMediaImageRepresentation?
                 var immediateThumbnailData: Data?

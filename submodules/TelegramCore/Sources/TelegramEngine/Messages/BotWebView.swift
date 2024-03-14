@@ -319,3 +319,42 @@ func _internal_invokeBotCustomMethod(postbox: Postbox, network: Network, botId: 
     |> castError(InvokeBotCustomMethodError.self)
     |> switchToLatest
 }
+
+public struct TelegramBotBiometricsState: Codable, Equatable {
+    public struct OpaqueToken: Codable, Equatable {
+        public let publicKey: Data
+        public let data: Data
+        
+        public init(publicKey: Data, data: Data) {
+            self.publicKey = publicKey
+            self.data = data
+        }
+    }
+    
+    public var accessRequested: Bool
+    public var accessGranted: Bool
+    public var opaqueToken: OpaqueToken?
+    
+    public static var `default`: TelegramBotBiometricsState {
+        return TelegramBotBiometricsState(
+            accessRequested: false,
+            accessGranted: false,
+            opaqueToken: nil
+        )
+    }
+    
+    public init(accessRequested: Bool, accessGranted: Bool, opaqueToken: OpaqueToken?) {
+        self.accessRequested = accessRequested
+        self.accessGranted = accessGranted
+        self.opaqueToken = opaqueToken
+    }
+}
+
+func _internal_updateBotBiometricsState(account: Account, peerId: EnginePeer.Id, update: @escaping (TelegramBotBiometricsState) -> TelegramBotBiometricsState) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        let previousState = transaction.getPreferencesEntry(key: PreferencesKeys.botBiometricsState(peerId: peerId))?.get(TelegramBotBiometricsState.self) ?? TelegramBotBiometricsState.default
+        
+        transaction.setPreferencesEntry(key: PreferencesKeys.botBiometricsState(peerId: peerId), value: PreferencesEntry(update(previousState)))
+    }
+    |> ignoreValues
+}

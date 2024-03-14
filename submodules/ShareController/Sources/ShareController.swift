@@ -450,6 +450,7 @@ public final class ShareController: ViewController {
     private let immediatePeerId: PeerId?
     private let segmentedValues: [ShareControllerSegmentedValue]?
     private let fromForeignApp: Bool
+    private let collectibleItemInfo: TelegramCollectibleItemInfo?
     
     private let peers = Promise<([(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool)], EnginePeer)>()
     private let peersDisposable = MetaDisposable()
@@ -484,7 +485,7 @@ public final class ShareController: ViewController {
     
     public var parentNavigationController: NavigationController?
     
-    public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, forceTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil, shareAsLink: Bool = false) {
+    public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, forceTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil, shareAsLink: Bool = false, collectibleItemInfo: TelegramCollectibleItemInfo? = nil) {
         self.init(
             environment: ShareControllerAppEnvironment(sharedContext: context.sharedContext),
             currentContext: ShareControllerAppAccountContext(context: context),
@@ -503,11 +504,12 @@ public final class ShareController: ViewController {
             updatedPresentationData: updatedPresentationData,
             forceTheme: forceTheme,
             forcedActionTitle: forcedActionTitle,
-            shareAsLink: shareAsLink
+            shareAsLink: shareAsLink,
+            collectibleItemInfo: collectibleItemInfo
         )
     }
     
-    public init(environment: ShareControllerEnvironment, currentContext: ShareControllerAccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [ShareControllerSwitchableAccount] = [], immediatePeerId: PeerId? = nil, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, forceTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil, shareAsLink: Bool = false) {
+    public init(environment: ShareControllerEnvironment, currentContext: ShareControllerAccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [ShareControllerSwitchableAccount] = [], immediatePeerId: PeerId? = nil, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, forceTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil, shareAsLink: Bool = false, collectibleItemInfo: TelegramCollectibleItemInfo? = nil) {
         self.environment = environment
         self.currentContext = currentContext
         self.subject = subject
@@ -520,6 +522,7 @@ public final class ShareController: ViewController {
         self.segmentedValues = segmentedValues
         self.forceTheme = forceTheme
         self.shareAsLink = shareAsLink
+        self.collectibleItemInfo = collectibleItemInfo
         
         self.presentationData = updatedPresentationData?.initial ?? environment.presentationData
         if let forceTheme = self.forceTheme {
@@ -717,7 +720,7 @@ public final class ShareController: ViewController {
                 return
             }
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, fromForeignApp: self.fromForeignApp, forceTheme: self.forceTheme, fromPublicChannel: fromPublicChannel, segmentedValues: self.segmentedValues, shareStory: self.shareStory)
+        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, fromForeignApp: self.fromForeignApp, forceTheme: self.forceTheme, fromPublicChannel: fromPublicChannel, segmentedValues: self.segmentedValues, shareStory: self.shareStory, collectibleItemInfo: self.collectibleItemInfo)
         self.controllerNode.completed = self.completed
         self.controllerNode.enqueued = self.enqueued
         self.controllerNode.present = { [weak self] c in

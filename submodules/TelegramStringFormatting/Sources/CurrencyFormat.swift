@@ -1,15 +1,15 @@
 import Foundation
 import AppBundle
 
-private final class CurrencyFormatterEntry {
-    let symbol: String
-    let thousandsSeparator: String
-    let decimalSeparator: String
-    let symbolOnLeft: Bool
-    let spaceBetweenAmountAndSymbol: Bool
-    let decimalDigits: Int
+public final class CurrencyFormatterEntry {
+    public let symbol: String
+    public let thousandsSeparator: String
+    public let decimalSeparator: String
+    public let symbolOnLeft: Bool
+    public let spaceBetweenAmountAndSymbol: Bool
+    public let decimalDigits: Int
     
-    init(symbol: String, thousandsSeparator: String, decimalSeparator: String, symbolOnLeft: Bool, spaceBetweenAmountAndSymbol: Bool, decimalDigits: Int) {
+    public init(symbol: String, thousandsSeparator: String, decimalSeparator: String, symbolOnLeft: Bool, spaceBetweenAmountAndSymbol: Bool, decimalDigits: Int) {
         self.symbol = symbol
         self.thousandsSeparator = thousandsSeparator
         self.decimalSeparator = decimalSeparator
@@ -191,8 +191,8 @@ public func formatCurrencyAmount(_ amount: Int64, currency: String) -> String {
     }
 }
 
-public func formatCurrencyAmountCustom(_ amount: Int64, currency: String) -> (String, String, Bool) {
-    if let entry = currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] {
+public func formatCurrencyAmountCustom(_ amount: Int64, currency: String, customFormat: CurrencyFormatterEntry? = nil) -> (String, String, Bool) {
+    if let entry = customFormat ?? currencyFormatterEntries[currency] ?? currencyFormatterEntries["USD"] {
         var result = ""
         if amount < 0 {
             result.append("-")

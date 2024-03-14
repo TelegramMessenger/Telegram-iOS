@@ -33,12 +33,13 @@ private final class RequestData {
     let tag: MediaResourceFetchTag?
     let continueInBackground: Bool
     let automaticFloodWait: Bool
+    let onFloodWaitError: ((String) -> Void)?
     let expectedResponseSize: Int32?
     let deserializeResponse: (Buffer) -> Any?
     let completed: (Any, NetworkResponseInfo) -> Void
     let error: (MTRpcError, Double) -> Void
     
-    init(id: Int32, consumerId: Int64, resourceId: String?, target: MultiplexedRequestTarget, functionDescription: FunctionDescription, payload: Buffer, tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool, expectedResponseSize: Int32?, deserializeResponse: @escaping (Buffer) -> Any?, completed: @escaping (Any, NetworkResponseInfo) -> Void, error: @escaping (MTRpcError, Double) -> Void) {
+    init(id: Int32, consumerId: Int64, resourceId: String?, target: MultiplexedRequestTarget, functionDescription: FunctionDescription, payload: Buffer, tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool, onFloodWaitError: ((String) -> Void)?, expectedResponseSize: Int32?, deserializeResponse: @escaping (Buffer) -> Any?, completed: @escaping (Any, NetworkResponseInfo) -> Void, error: @escaping (MTRpcError, Double) -> Void) {
         self.id = id
         self.consumerId = consumerId
         self.resourceId = resourceId
@@ -47,6 +48,7 @@ private final class RequestData {
         self.tag = tag
         self.continueInBackground = continueInBackground
         self.automaticFloodWait = automaticFloodWait
+        self.onFloodWaitError = onFloodWaitError
         self.expectedResponseSize = expectedResponseSize
         self.payload = payload
         self.deserializeResponse = deserializeResponse
@@ -155,12 +157,12 @@ private final class MultiplexedRequestManagerContext {
         }
     }
     
-    func request(to target: MultiplexedRequestTarget, consumerId: Int64, resourceId: String?, data: (FunctionDescription, Buffer, (Buffer) -> Any?), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool, expectedResponseSize: Int32?, completed: @escaping (Any, NetworkResponseInfo) -> Void, error: @escaping (MTRpcError, Double) -> Void) -> Disposable {
+    func request(to target: MultiplexedRequestTarget, consumerId: Int64, resourceId: String?, data: (FunctionDescription, Buffer, (Buffer) -> Any?), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool, onFloodWaitError: ((String) -> Void)? = nil, expectedResponseSize: Int32?, completed: @escaping (Any, NetworkResponseInfo) -> Void, error: @escaping (MTRpcError, Double) -> Void) -> Disposable {
         let targetKey = MultiplexedRequestTargetKey(target: target, continueInBackground: continueInBackground)
         
         let requestId = self.nextId
         self.nextId += 1
-        self.queuedRequests.append(RequestData(id: requestId, consumerId: consumerId, resourceId: resourceId, target: target, functionDescription: data.0, payload: data.1, tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, expectedResponseSize: expectedResponseSize, deserializeResponse: { buffer in
+        self.queuedRequests.append(RequestData(id: requestId, consumerId: consumerId, resourceId: resourceId, target: target, functionDescription: data.0, payload: data.1, tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError, expectedResponseSize: expectedResponseSize, deserializeResponse: { buffer in
             return data.2(buffer)
         }, completed: { result, info in
             completed(result, info)
@@ -254,7 +256,7 @@ private final class MultiplexedRequestManagerContext {
                 let requestId = request.id
                 selectedContext.requests.append(ExecutingRequestData(requestId: requestId, disposable: disposable))
                 let queue = self.queue
-                disposable.set(selectedContext.worker.rawRequest((request.functionDescription, request.payload, request.deserializeResponse), automaticFloodWait: request.automaticFloodWait, expectedResponseSize: request.expectedResponseSize).start(next: { [weak self, weak selectedContext] result, info in
+                disposable.set(selectedContext.worker.rawRequest((request.functionDescription, request.payload, request.deserializeResponse), automaticFloodWait: request.automaticFloodWait, onFloodWaitError: request.onFloodWaitError, expectedResponseSize: request.expectedResponseSize).start(next: { [weak self, weak selectedContext] result, info in
                     queue.async {
                         guard let strongSelf = self else {
                             return
@@ -354,13 +356,13 @@ final class MultiplexedRequestManager {
         return disposable
     }
     
-    func request<T>(to target: MultiplexedRequestTarget, consumerId: Int64, resourceId: String?, data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool = true, expectedResponseSize: Int32?) -> Signal<T, MTRpcError> {
+    func request<T>(to target: MultiplexedRequestTarget, consumerId: Int64, resourceId: String?, data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil, expectedResponseSize: Int32?) -> Signal<T, MTRpcError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.context.with { context in
                 disposable.set(context.request(to: target, consumerId: consumerId, resourceId: resourceId, data: (data.0, data.1, { buffer in
                     return data.2.parse(buffer)
-                }), tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, expectedResponseSize: expectedResponseSize, completed: { result, _ in
+                }), tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError, expectedResponseSize: expectedResponseSize, completed: { result, _ in
                     if let result = result as? T {
                         subscriber.putNext(result)
                         subscriber.putCompletion()
@@ -375,13 +377,13 @@ final class MultiplexedRequestManager {
         }
     }
     
-    func requestWithAdditionalInfo<T>(to target: MultiplexedRequestTarget, consumerId: Int64, resourceId: String?, data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool = true, expectedResponseSize: Int32?) -> Signal<(T, NetworkResponseInfo), (MTRpcError, Double)> {
+    func requestWithAdditionalInfo<T>(to target: MultiplexedRequestTarget, consumerId: Int64, resourceId: String?, data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil, expectedResponseSize: Int32?) -> Signal<(T, NetworkResponseInfo), (MTRpcError, Double)> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.context.with { context in
                 disposable.set(context.request(to: target, consumerId: consumerId, resourceId: resourceId, data: (data.0, data.1, { buffer in
                     return data.2.parse(buffer)
-                }), tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, expectedResponseSize: expectedResponseSize, completed: { result, info in
+                }), tag: tag, continueInBackground: continueInBackground, automaticFloodWait: automaticFloodWait, onFloodWaitError: onFloodWaitError, expectedResponseSize: expectedResponseSize, completed: { result, info in
                     if let result = result as? T {
                         subscriber.putNext((result, info))
                         subscriber.putCompletion()

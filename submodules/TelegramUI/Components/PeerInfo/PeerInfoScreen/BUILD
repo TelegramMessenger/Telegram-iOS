@@ -140,6 +140,7 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/TelegramUI/Components/Settings/PeerNameColorItem",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
+        "//submodules/TelegramUI/Components/TextLoadingEffect",
     ],
     visibility = [
         "//visibility:public",

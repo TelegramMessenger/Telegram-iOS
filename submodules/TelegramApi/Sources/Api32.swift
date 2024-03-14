@@ -222,6 +222,21 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
+                static func disablePeerConnectedBot(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1581481689)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.disablePeerConnectedBot", parameters: [("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
                 static func finishTakeoutSession(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(489050862)
@@ -1249,6 +1264,22 @@ public extension Api.functions.account {
                         var result: Api.account.PrivacyRules?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.account.PrivacyRules
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
+                static func toggleConnectedBotPaused(peer: Api.InputPeer, paused: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1684934807)
+                    peer.serialize(buffer, true)
+                    paused.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.toggleConnectedBotPaused", parameters: [("peer", String(describing: peer)), ("paused", String(describing: paused))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })
@@ -3934,6 +3965,21 @@ public extension Api.functions.folders {
                     })
                 }
 }
+public extension Api.functions.fragment {
+                static func getCollectibleInfo(collectible: Api.InputCollectible) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.fragment.CollectibleInfo>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1105295942)
+                    collectible.serialize(buffer, true)
+                    return (FunctionDescription(name: "fragment.getCollectibleInfo", parameters: [("collectible", String(describing: collectible))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.fragment.CollectibleInfo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.fragment.CollectibleInfo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.fragment.CollectibleInfo
+                        }
+                        return result
+                    })
+                }
+}
 public extension Api.functions.help {
                 static func acceptTermsOfService(id: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
@@ -5852,6 +5898,22 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getMyStickers(offsetId: Int64, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.MyStickers>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-793386500)
+                    serializeInt64(offsetId, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getMyStickers", parameters: [("offsetId", String(describing: offsetId)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.MyStickers? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.MyStickers?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.MyStickers
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getOldFeaturedStickers(offset: Int32, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FeaturedStickers>) {
                     let buffer = Buffer()
                     buffer.appendInt32(2127598753)
@@ -7385,12 +7447,22 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func sendQuickReplyMessages(peer: Api.InputPeer, shortcutId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendQuickReplyMessages(peer: Api.InputPeer, shortcutId: Int32, id: [Int32], randomId: [Int64]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(857029332)
+                    buffer.appendInt32(1819610593)
                     peer.serialize(buffer, true)
                     serializeInt32(shortcutId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.sendQuickReplyMessages", parameters: [("peer", String(describing: peer)), ("shortcutId", String(describing: shortcutId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(id.count))
+                    for item in id {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(randomId.count))
+                    for item in randomId {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }
+                    return (FunctionDescription(name: "messages.sendQuickReplyMessages", parameters: [("peer", String(describing: peer)), ("shortcutId", String(describing: shortcutId)), ("id", String(describing: id)), ("randomId", String(describing: randomId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -8095,12 +8167,14 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func uploadMedia(peer: Api.InputPeer, media: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
+                static func uploadMedia(flags: Int32, businessConnectionId: String?, peer: Api.InputPeer, media: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1369162417)
+                    buffer.appendInt32(345405816)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(businessConnectionId!, buffer: buffer, boxed: false)}
                     peer.serialize(buffer, true)
                     media.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.uploadMedia", parameters: [("peer", String(describing: peer)), ("media", String(describing: media))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.MessageMedia? in
+                    return (FunctionDescription(name: "messages.uploadMedia", parameters: [("flags", String(describing: flags)), ("businessConnectionId", String(describing: businessConnectionId)), ("peer", String(describing: peer)), ("media", String(describing: media))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.MessageMedia? in
                         let reader = BufferReader(buffer)
                         var result: Api.MessageMedia?
                         if let signature = reader.readInt32() {
@@ -9435,6 +9509,22 @@ public extension Api.functions.stickers {
                     stickerset.serialize(buffer, true)
                     serializeString(title, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "stickers.renameStickerSet", parameters: [("stickerset", String(describing: stickerset)), ("title", String(describing: title))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.StickerSet? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.StickerSet?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.StickerSet
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stickers {
+                static func replaceSticker(sticker: Api.InputDocument, newSticker: Api.InputStickerSetItem) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1184253338)
+                    sticker.serialize(buffer, true)
+                    newSticker.serialize(buffer, true)
+                    return (FunctionDescription(name: "stickers.replaceSticker", parameters: [("sticker", String(describing: sticker)), ("newSticker", String(describing: newSticker))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.StickerSet? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.StickerSet?
                         if let signature = reader.readInt32() {

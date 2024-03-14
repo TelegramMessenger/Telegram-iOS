@@ -28,7 +28,7 @@ private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme) -> StickerPackPreviewGridItem {
-        return StickerPackPreviewGridItem(context: context, stickerItem: self.stickerItem, interaction: interaction, theme: theme, isPremium: false, isLocked: false, isEmpty: false)
+        return StickerPackPreviewGridItem(context: context, stickerItem: self.stickerItem, interaction: interaction, theme: theme, isPremium: false, isLocked: false, isEmpty: false, isEditing: false)
     }
 }
 
@@ -144,7 +144,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         
         super.init()
         
-        self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: false, addStickerPack: { _, _ in }, removeStickerPack: { _ in }, emojiSelected: { _, _ in }, emojiLongPressed: { _, _, _, _ in })
+        self.interaction = StickerPackPreviewInteraction(playAnimatedStickers: false, addStickerPack: { _, _ in }, removeStickerPack: { _ in }, emojiSelected: { _, _ in }, emojiLongPressed: { _, _, _, _ in }, addPressed: {})
         
         self.backgroundColor = nil
         self.isOpaque = false

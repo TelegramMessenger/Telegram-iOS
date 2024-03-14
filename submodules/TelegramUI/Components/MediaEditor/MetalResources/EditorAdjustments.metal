@@ -200,5 +200,5 @@ fragment half4 adjustmentsFragmentShader(RasterizerData in [[stage_in]],
         result.rgb = result.rgb + noise * adjustments.grain * 0.04;
     }
     
-    return result;
+    return half4(result.rgb * result.a, result.a);
 }

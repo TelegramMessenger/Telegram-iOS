@@ -407,7 +407,7 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
             
             let rowsCount = ceil(CGFloat(numItems) / CGFloat(itemsPerRow))
             
-            contentSize = CGSize(width: params.width, height: 48.0 * rowsCount)
+            contentSize = CGSize(width: params.width, height: 10.0 + 42.0 * rowsCount)
             insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -518,6 +518,7 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     var origin = CGPoint(x: sideInset, y: 10.0)
                     
                     i = 0
+                    var validIds = Set<Int32>()
                     for item in items {
                         let iconItemNode: PeerNameColorIconItemNode
                         let indexKey: Int32
@@ -544,6 +545,20 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                             i = 0
                             origin.x = sideInset
                             origin.y += iconSize.height + 10.0
+                        }
+                        
+                        validIds.insert(indexKey)
+                    }
+                    
+                    var removeKeys: [Int32] = []
+                    for (id, _) in strongSelf.itemNodes {
+                        if !validIds.contains(id) {
+                            removeKeys.append(id)
+                        }
+                    }
+                    for id in removeKeys {
+                        if let itemNode = strongSelf.itemNodes.removeValue(forKey: id) {
+                            itemNode.removeFromSupernode()
                         }
                     }
                 }

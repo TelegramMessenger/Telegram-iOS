@@ -456,6 +456,7 @@ public enum PremiumPerk: CaseIterable {
     case businessQuickReplies
     case businessAwayMessage
     case businessChatBots
+    case businessIntro
     
     public static var allCases: [PremiumPerk] {
         return [
@@ -488,10 +489,11 @@ public enum PremiumPerk: CaseIterable {
         return [
             .businessLocation,
             .businessHours,
-            .businessGreetingMessage,
             .businessQuickReplies,
+            .businessGreetingMessage,
             .businessAwayMessage,
-            .businessChatBots,
+            .businessIntro,
+            .businessChatBots
 //            .emojiStatus,
 //            .folderTags,
 //            .stories,
@@ -567,6 +569,8 @@ public enum PremiumPerk: CaseIterable {
             return "away_message"
         case .businessChatBots:
             return "business_bots"
+        case .businessIntro:
+            return "business_intro"
         }
     }
     
@@ -629,6 +633,8 @@ public enum PremiumPerk: CaseIterable {
             return strings.Business_AwayMessages
         case .businessChatBots:
             return strings.Business_Chatbots
+        case .businessIntro:
+            return strings.Business_Intro
         }
     }
     
@@ -691,6 +697,8 @@ public enum PremiumPerk: CaseIterable {
             return strings.Business_AwayMessagesInfo
         case .businessChatBots:
             return strings.Business_ChatbotsInfo
+        case .businessIntro:
+            return strings.Business_IntroInfo
         }
     }
     
@@ -753,6 +761,8 @@ public enum PremiumPerk: CaseIterable {
             return "Premium/BusinessPerk/Away"
         case .businessChatBots:
             return "Premium/BusinessPerk/Chatbots"
+        case .businessIntro:
+            return "Premium/BusinessPerk/Intro"
         }
     }
 }
@@ -782,12 +792,13 @@ struct PremiumIntroConfiguration {
             .premiumStickers,
             .business
         ], businessPerks: [
+            .businessLocation,
+            .businessHours,
+            .businessQuickReplies,
             .businessGreetingMessage,
             .businessAwayMessage,
-            .businessQuickReplies,
-            .businessChatBots,
-            .businessHours,
-            .businessLocation
+            .businessIntro,
+            .businessChatBots
 //            .emojiStatus,
 //            .folderTags,
 //            .stories
@@ -852,6 +863,9 @@ struct PremiumIntroConfiguration {
             }
             if businessPerks.count < 4 {
                 businessPerks = PremiumIntroConfiguration.defaultValue.businessPerks
+            }
+            if !businessPerks.contains(.businessIntro) {
+                businessPerks.append(.businessIntro)
             }
             
             return PremiumIntroConfiguration(perks: perks, businessPerks: businessPerks)
@@ -2134,6 +2148,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     UIColor(rgb: 0xdb374b),
                     UIColor(rgb: 0xbc4395),
                     UIColor(rgb: 0x9b4fed),
+                    UIColor(rgb: 0x8958ff),
                     UIColor(rgb: 0x8958ff)
                 ]
                 
@@ -2244,6 +2259,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     demoSubject = .businessAwayMessage
                                 case .businessChatBots:
                                     demoSubject = .businessChatBots
+                                case .businessIntro:
+                                    demoSubject = .businessIntro
                                 default:
                                     fatalError()
                                 }
@@ -3243,7 +3260,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         if let emojiFile = state?.emojiFile, let controller = environment?.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
                             for attribute in emojiFile.attributes {
                                 if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
-                                    let controller = accountContext.sharedContext.makeStickerPackScreen(context: accountContext, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: loadedEmojiPack.flatMap { [$0] } ?? [], parentNavigationController: navigationController, sendSticker: { _, _, _ in
+                                    let controller = accountContext.sharedContext.makeStickerPackScreen(context: accountContext, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: loadedEmojiPack.flatMap { [$0] } ?? [], isEditing: false, parentNavigationController: navigationController, sendSticker: { _, _, _ in
                                         return false
                                     })
                                     presentController(controller)

@@ -663,6 +663,8 @@ public func PeerNameColorScreen(
             },
             clearGroup: { _ in
             },
+            editAction: { _ in
+            },
             pushController: { c in
             },
             presentController: { c in

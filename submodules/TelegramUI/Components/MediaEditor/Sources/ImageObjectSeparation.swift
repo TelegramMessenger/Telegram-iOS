@@ -55,67 +55,126 @@ public func cutoutStickerImage(from image: UIImage, onlyCheck: Bool = false) -> 
     }
 }
 
-public enum CutoutResult {
-    case image(UIImage)
-    case pixelBuffer(CVPixelBuffer)
+public struct CutoutResult {
+    public enum Image {
+        case image(UIImage, CIImage)
+        case pixelBuffer(CVPixelBuffer)
+    }
+    
+    public let index: Int
+    public let extractedImage: Image?
+    public let maskImage: Image?
+    public let backgroundImage: Image?
 }
 
-public func cutoutImage(from image: UIImage, atPoint point: CGPoint?, asImage: Bool) -> Signal<CutoutResult?, NoError> {
-    if #available(iOS 17.0, *) {
-        guard let cgImage = image.cgImage else {
-            return .single(nil)
-        }
-        return Signal { subscriber in
-            let ciContext = CIContext(options: nil)
-            let inputImage = CIImage(cgImage: cgImage)
+public enum CutoutTarget {
+    case point(CGPoint?)
+    case index(Int)
+    case all
+}
+
+public func cutoutImage(
+    from image: UIImage,
+    editedImage: UIImage? = nil,
+    values: MediaEditorValues?,
+    target: CutoutTarget,
+    includeExtracted: Bool = true,
+    completion: @escaping ([CutoutResult]) -> Void
+) {
+    if #available(iOS 17.0, *), let cgImage = image.cgImage {
+        let ciContext = CIContext(options: nil)
+        let inputImage = CIImage(cgImage: cgImage)
+        
+        queue.async {
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             let request = VNGenerateForegroundInstanceMaskRequest { [weak handler] request, error in
                 guard let handler, let result = request.results?.first as? VNInstanceMaskObservation else {
-                    subscriber.putNext(nil)
-                    subscriber.putCompletion()
+                    completion([])
                     return
                 }
 
-                let instances = IndexSet(instances(atPoint: point, inObservation: result).prefix(1))
-                if let mask = try? result.generateScaledMaskForImage(forInstances: instances, from: handler) {
-                    if asImage {
-                        let filter = CIFilter.blendWithMask()
-                        filter.inputImage = inputImage
-                        filter.backgroundImage = CIImage(color: .clear)
-                        filter.maskImage = CIImage(cvPixelBuffer: mask)
-                        if let output  = filter.outputImage, let cgImage = ciContext.createCGImage(output, from: inputImage.extent) {
-                            let image = UIImage(cgImage: cgImage)
-                            subscriber.putNext(.image(image))
-                            subscriber.putCompletion()
-                            return
+                let targetInstances: IndexSet
+                switch target {
+                case let .point(point):
+                    targetInstances = instances(atPoint: point, inObservation: result)
+                case let .index(index):
+                    targetInstances = IndexSet([index])
+                case .all:
+                    targetInstances = result.allInstances
+                }
+                
+                var results: [CutoutResult] = []
+                for instance in targetInstances {
+                    if let mask = try? result.generateScaledMaskForImage(forInstances: IndexSet(integer: instance), from: handler) {
+                        let extractedImage: CutoutResult.Image?
+                        if includeExtracted {
+                            let filter = CIFilter.blendWithMask()
+                            filter.backgroundImage = CIImage(color: .clear)
+                            
+                            let dimensions: CGSize
+                            var maskImage = CIImage(cvPixelBuffer: mask)
+                            if let editedImage = editedImage?.cgImage.flatMap({ CIImage(cgImage: $0) }) {
+                                filter.inputImage = editedImage
+                                dimensions = editedImage.extent.size
+                                
+                                if let values {
+                                    let initialScale: CGFloat
+                                    if maskImage.extent.height > maskImage.extent.width {
+                                        initialScale = dimensions.width / maskImage.extent.width
+                                    } else {
+                                        initialScale = dimensions.width / maskImage.extent.height
+                                    }
+                                    
+                                    let dimensions = editedImage.extent.size
+                                    maskImage = maskImage.transformed(by: CGAffineTransform(translationX: -maskImage.extent.width / 2.0, y: -maskImage.extent.height / 2.0))
+                                    
+                                    var transform = CGAffineTransform.identity
+                                    let position = values.cropOffset
+                                    let rotation = values.cropRotation
+                                    let scale = values.cropScale
+                                    transform = transform.translatedBy(x: dimensions.width / 2.0 + position.x, y: dimensions.height / 2.0 + position.y * -1.0)
+                                    transform = transform.rotated(by: -rotation)
+                                    transform = transform.scaledBy(x: scale * initialScale, y: scale * initialScale)
+                                    maskImage = maskImage.transformed(by: transform)
+                                }
+                            } else {
+                                filter.inputImage = inputImage
+                                dimensions = inputImage.extent.size
+                            }
+                            filter.maskImage = maskImage
+                            
+                            if let output = filter.outputImage, let cgImage = ciContext.createCGImage(output, from: CGRect(origin: .zero, size: dimensions)) {
+                                extractedImage = .image(UIImage(cgImage: cgImage), output)
+                            } else {
+                                extractedImage = nil
+                            }
+                        } else {
+                            extractedImage = nil
                         }
-                    } else {
-                        let filter = CIFilter.blendWithMask()
-                        filter.inputImage = CIImage(color: .white)
-                        filter.backgroundImage = CIImage(color: .black)
-                        filter.maskImage = CIImage(cvPixelBuffer: mask)
-                        if let output  = filter.outputImage, let cgImage = ciContext.createCGImage(output, from: inputImage.extent) {
-                            let image = UIImage(cgImage: cgImage)
-                            subscriber.putNext(.image(image))
-                            subscriber.putCompletion()
-                            return
+                        
+                        let maskFilter = CIFilter.blendWithMask()
+                        maskFilter.inputImage = CIImage(color: .white)
+                        maskFilter.backgroundImage = CIImage(color: .black)
+                        maskFilter.maskImage = CIImage(cvPixelBuffer: mask)
+                        let maskImage: CutoutResult.Image?
+                        if let maskOutput = maskFilter.outputImage?.cropped(to: inputImage.extent), let maskCgImage = ciContext.createCGImage(maskOutput, from: inputImage.extent) {
+                            maskImage = .image(UIImage(cgImage: maskCgImage), maskOutput)
+                        } else {
+                            maskImage = nil
                         }
-//                        subscriber.putNext(.pixelBuffer(mask))
-//                        subscriber.putCompletion()
+                        
+                        if extractedImage != nil || maskImage != nil {
+                            results.append(CutoutResult(index: instance, extractedImage: extractedImage, maskImage: maskImage, backgroundImage: nil))
+                        }
                     }
                 }
-                subscriber.putNext(nil)
-                subscriber.putCompletion()
+                completion(results)
             }
             
             try? handler.perform([request])
-            return ActionDisposable {
-                request.cancel()
-            }
         }
-        |> runOn(queue)
     } else {
-        return .single(nil)
+        completion([])
     }
 }
 

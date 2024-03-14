@@ -124,6 +124,8 @@ public final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainer
                         maybeFile = foundItem.file
                     case let .pack(fileValue):
                         maybeFile = fileValue
+                    case .image:
+                        break
                     }
                 }
                 guard let file = maybeFile else {

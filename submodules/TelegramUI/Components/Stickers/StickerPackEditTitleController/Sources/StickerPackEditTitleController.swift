@@ -275,6 +275,7 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
         self.textInputNode.returnKeyType = returnKeyType
         self.textInputNode.autocorrectionType = .default
         self.textInputNode.tintColor = theme.actionSheet.controlAccentColor
+        self.textInputNode.textColor = theme.actionSheet.inputTextColor
                 
         self.clearButton = HighlightableButtonNode()
         self.clearButton.imageNode.displaysAsynchronously = false
@@ -308,7 +309,9 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
         self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 12.0, color: self.theme.actionSheet.inputHollowBackgroundColor, strokeColor: self.theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
         self.textInputNode.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.textInputNode.tintColor = self.theme.actionSheet.controlAccentColor
-        self.clearButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: theme.actionSheet.inputClearButtonColor), for: [])
+        self.textInputNode.textColor = self.theme.actionSheet.inputTextColor
+        self.textInputNode.typingAttributes = [NSAttributedString.Key.font: Font.regular(14.0), NSAttributedString.Key.foregroundColor: self.theme.actionSheet.inputTextColor]
+        self.clearButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: self.theme.actionSheet.inputClearButtonColor), for: [])
     }
     
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -725,15 +728,18 @@ private final class ImportStickerPackTitleAlertContentNode: AlertContentNode {
     }
 }
 
-func importStickerPackTitleController(context: AccountContext, title: String, text: String, placeholder: String, value: String?, maxLength: Int, apply: @escaping (String?) -> Void, cancel: @escaping () -> Void) -> AlertController {
-    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+public func stickerPackEditTitleController(context: AccountContext, forceDark: Bool = false, title: String, text: String, placeholder: String, actionTitle: String? = nil, value: String?, maxLength: Int, apply: @escaping (String?) -> Void, cancel: @escaping () -> Void) -> AlertController {
+    var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    if forceDark {
+        presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+    }
     var dismissImpl: ((Bool) -> Void)?
     var applyImpl: (() -> Void)?
     
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
         cancel()
-    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Next, action: {
+    }), TextAlertAction(type: .defaultAction, title: actionTitle ?? presentationData.strings.Common_Next, action: {
         applyImpl?()
     })]
     
@@ -759,6 +765,10 @@ func importStickerPackTitleController(context: AccountContext, title: String, te
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
     let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
+        var presentationData = presentationData
+        if forceDark {
+            presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+        }
         controller?.theme = AlertControllerTheme(presentationData: presentationData)
         contentNode?.inputFieldNode.updateTheme(presentationData.theme)
     })
@@ -784,7 +794,7 @@ func importStickerPackTitleController(context: AccountContext, title: String, te
 }
 
 
-func importStickerPackShortNameController(context: AccountContext, title: String, text: String, placeholder: String, value: String?, maxLength: Int, existingAlertController: AlertController?, apply: @escaping (String?) -> Void) -> AlertController {
+public func importStickerPackShortNameController(context: AccountContext, title: String, text: String, placeholder: String, value: String?, maxLength: Int, existingAlertController: AlertController?, apply: @escaping (String?) -> Void) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     var dismissImpl: ((Bool) -> Void)?
     var applyImpl: (() -> Void)?

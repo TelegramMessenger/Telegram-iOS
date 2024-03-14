@@ -159,9 +159,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                         controller.presentThemeSelection()
                     }
                     if let botStart = params.botStart {
-                        controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
-                            return state.updatedBotStartPayload(botStart.payload)
-                        })
+                        controller.startBot(botStart.payload)
                     }
                     if let attachBotStart = params.attachBotStart {
                         controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload, justInstalled: attachBotStart.justInstalled)

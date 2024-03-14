@@ -11347,6 +11347,9 @@ Sorry for the inconvenience.";
 "Premium.Business.Away.Title" = "Away Messages";
 "Premium.Business.Away.Text" = "Define messages that are automatically sent when you are off.";
 
+"Premium.Business.Intro.Title" = "Intro";
+"Premium.Business.Intro.Text" = "Customize the message people see before they start a chat with you.";
+
 "Premium.Business.Chatbots.Title" = "Chatbots";
 "Premium.Business.Chatbots.Text" = "Add any third party chatbots that will process customer interactions.";
 
@@ -11360,6 +11363,7 @@ Sorry for the inconvenience.";
 "Business.GreetingMessages" = "Greeting Messages";
 "Business.AwayMessages" = "Away Messages";
 "Business.Chatbots" = "Chatbots";
+"Business.Intro" = "Intro";
 
 "Business.LocationInfo" = "Display the location of your business on your account.";
 "Business.OpeningHoursInfo" = "Show to your customers when you are open for business.";
@@ -11367,6 +11371,7 @@ Sorry for the inconvenience.";
 "Business.GreetingMessagesInfo" = "Create greetings that will be automatically sent to new customers.";
 "Business.AwayMessagesInfo" = "Define messages that are automatically sent when you are off.";
 "Business.ChatbotsInfo" = "Add any third-party chatbots that will process customer interactions.";
+"Business.IntroInfo" = "Customize the message people see before they start a chat with you.";
 
 "Business.MoreFeaturesTitle" = "MORE BUSINESS FEATURES";
 "Business.MoreFeaturesInfo" = "Check this section later for new business features.";
@@ -11594,3 +11599,20 @@ Sorry for the inconvenience.";
 
 "Chat.QuickReplyMediaMessageLimitReachedText_1" = "There can be at most %d message in this chat.";
 "Chat.QuickReplyMediaMessageLimitReachedText_any" = "There can be at most %d messages in this chat.";
+
+"CollectibleItemInfo.StoreName" = "Fragment";
+"CollectibleItemInfo.UsernameTitle" = "%@ is a collectible username that belongs to";
+"CollectibleItemInfo.UsernameText" = "The %1$@ username was acquired on %2$@ on %3$@ for %4$@ (%5$@).";
+"CollectibleItemInfo.PhoneTitle" = "%@ is a collectible phone number that belongs to";
+"CollectibleItemInfo.PhoneText" = "The %1$@ phone number was acquired on %2$@ on %3$@ for %4$@ (%5$@).";
+"CollectibleItemInfo.ButtonOpenInfo" = "Learn More";
+"CollectibleItemInfo.ButtonCopyUsername" = "Copy Link";
+"CollectibleItemInfo.ButtonCopyPhone" = "Copy Phone Number";
+"CollectibleItemInfo.ShareInlineText.LearnMore" = "Learn more >";
+
+"Stickers.Edit" = "EDIT";
+
+"ChannelBoost.Table.NoAds" = "Switch Off Ads";
+
+"ChannelBoost.NoAds" = "Switch Off Ads";
+"ChannelBoost.EnableNoAdsLevelText" = "Your channel needs **Level %1$@** to switch off ads.";

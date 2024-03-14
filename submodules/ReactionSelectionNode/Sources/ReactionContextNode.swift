@@ -1595,6 +1595,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
                 }
             },
+            editAction: { _ in },
             pushController: { _ in
             },
             presentController: { _ in
@@ -1728,6 +1729,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                     isPremiumLocked: false,
                                     isEmbedded: false,
                                     hasClear: false,
+                                    hasEdit: false,
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
@@ -1777,6 +1779,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                             isPremiumLocked: false,
                                             isEmbedded: false,
                                             hasClear: false,
+                                            hasEdit: false,
                                             collapsedLineCount: 3,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
@@ -1836,6 +1839,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             isPremiumLocked: false,
                             isEmbedded: false,
                             hasClear: false,
+                            hasEdit: false,
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
@@ -1868,6 +1872,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                     isPremiumLocked: false,
                                     isEmbedded: false,
                                     hasClear: false,
+                                    hasEdit: false,
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
@@ -2558,6 +2563,23 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.contentTopInset = 0.0
         self.currentContentHeight = self.emojiContentHeight
         self.isExpanded = true
+        self.isExpandedUpdated(.animated(duration: 0.4, curve: .spring))
+    }
+    
+    public func collapse() {
+        if self.hapticFeedback == nil {
+            self.hapticFeedback = HapticFeedback()
+        }
+        self.hapticFeedback?.tap()
+        
+        self.longPressRecognizer?.isEnabled = false
+        
+        self.animateFromExtensionDistance = 0.0
+        self.extensionDistance = 0.0
+        self.visibleExtensionDistance = 0.0
+        self.contentTopInset = self.titleLabelHeight ?? 0.0
+        self.currentContentHeight = 46.0
+        self.isExpanded = false
         self.isExpandedUpdated(.animated(duration: 0.4, curve: .spring))
     }
     

@@ -244,7 +244,7 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         bubbleInsets = layoutConstants.image.bubbleInsets
                     }
                     
-                    sizeCalculation = .constrained(CGSize(width: constrainedSize.width - bubbleInsets.left - bubbleInsets.right, height: constrainedSize.height))
+                    sizeCalculation = .constrained(CGSize(width: max(0.0, constrainedSize.width - bubbleInsets.left - bubbleInsets.right), height: constrainedSize.height))
                 case .mosaic:
                     bubbleInsets = UIEdgeInsets()
                     sizeCalculation = .unconstrained

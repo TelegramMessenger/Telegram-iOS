@@ -34,6 +34,10 @@ public final class SolidRoundedButtonTheme: Equatable {
         self.disabledForegroundColor = disabledForegroundColor
     }
     
+    public func withUpdated(disabledBackgroundColor: UIColor, disabledForegroundColor: UIColor) -> SolidRoundedButtonTheme {
+        return SolidRoundedButtonTheme(backgroundColor: self.backgroundColor, backgroundColors: self.backgroundColors, foregroundColor: self.foregroundColor, disabledBackgroundColor: disabledBackgroundColor, disabledForegroundColor: disabledForegroundColor)
+    }
+    
     public static func ==(lhs: SolidRoundedButtonTheme, rhs: SolidRoundedButtonTheme) -> Bool {
         if lhs.backgroundColor != rhs.backgroundColor {
             return false

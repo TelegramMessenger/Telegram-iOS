@@ -1,10 +1,9 @@
 import Foundation
 import UIKit
-import SegmentedControlNode
+import Display
 import TelegramPresentationData
 import ComponentFlow
 import TabSelectorComponent
-import Display
 
 public final class ItemListControllerSegmentedTitleView: UIView {
     private let tabSelector = ComponentView<Empty>()

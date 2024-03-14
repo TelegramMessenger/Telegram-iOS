@@ -388,7 +388,7 @@ func _internal_sendMessageShortcut(account: Account, peerId: PeerId, id: Int32) 
         guard let peer, let inputPeer = apiInputPeer(peer) else {
             return .complete()
         }
-        return account.network.request(Api.functions.messages.sendQuickReplyMessages(peer: inputPeer, shortcutId: id))
+        return account.network.request(Api.functions.messages.sendQuickReplyMessages(peer: inputPeer, shortcutId: id, id: [], randomId: []))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

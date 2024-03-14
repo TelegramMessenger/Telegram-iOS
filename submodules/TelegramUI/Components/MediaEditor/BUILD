@@ -69,6 +69,8 @@ swift_library(
         "//submodules/YuvConversion:YuvConversion",
         "//submodules/FastBlur:FastBlur",
         "//submodules/WallpaperBackgroundNode",
+        "//submodules/ImageTransparency",
+        "//submodules/FFMpegBinding",
     ],
     visibility = [
         "//visibility:public",

@@ -82,6 +82,7 @@ public final class QrCodeScanScreen: ViewController {
     public enum Subject {
         case authTransfer(activeSessionsContext: ActiveSessionsContext)
         case peer
+        case cryptoAddress
         case custom(info: String)
     }
     
@@ -264,6 +265,8 @@ public final class QrCodeScanScreen: ViewController {
                             strongSelf.controllerNode.updateFocusedRect(nil)
                         }))
                     }
+                case .cryptoAddress:
+                    break
                 case .peer:
                     if let _ = URL(string: code) {
                         strongSelf.controllerNode.resolveCode(code: code, completion: { [weak self] result in
@@ -479,6 +482,9 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, UIScrollVie
             case .peer:
                 title = ""
                 text = ""
+            case .cryptoAddress:
+                title = ""
+                text = ""
             case let .custom(info):
                 title = presentationData.strings.AuthSessions_AddDevice_ScanTitle
                 text = info
@@ -596,6 +602,8 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, UIScrollVie
                     filteredCodes = codes.filter { $0.message.hasPrefix("tg://") }
                 case .peer:
                     filteredCodes = codes.filter { $0.message.hasPrefix("https://t.me/") || $0.message.hasPrefix("t.me/") }
+                case .cryptoAddress:
+                    filteredCodes = codes.filter { $0.message.hasPrefix("ton://") }
                 case .custom:
                     filteredCodes = codes
             }

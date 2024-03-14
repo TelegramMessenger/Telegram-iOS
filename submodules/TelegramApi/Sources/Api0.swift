@@ -6,6 +6,7 @@ public enum Api {
     public enum channels {}
     public enum chatlists {}
     public enum contacts {}
+    public enum fragment {}
     public enum help {}
     public enum messages {}
     public enum payments {}
@@ -28,6 +29,7 @@ public enum Api {
         public enum chatlists {}
         public enum contacts {}
         public enum folders {}
+        public enum fragment {}
         public enum help {}
         public enum langpack {}
         public enum messages {}
@@ -321,6 +323,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1736378792] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordEmpty($0) }
     dict[-763367294] = { return Api.InputCheckPasswordSRP.parse_inputCheckPasswordSRP($0) }
     dict[1968737087] = { return Api.InputClientProxy.parse_inputClientProxy($0) }
+    dict[-1562241884] = { return Api.InputCollectible.parse_inputCollectiblePhone($0) }
+    dict[-476815191] = { return Api.InputCollectible.parse_inputCollectibleUsername($0) }
     dict[-208488460] = { return Api.InputContact.parse_inputPhoneContact($0) }
     dict[-55902537] = { return Api.InputDialogPeer.parse_inputDialogPeer($0) }
     dict[1684014375] = { return Api.InputDialogPeer.parse_inputDialogPeerFolder($0) }
@@ -491,7 +495,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[340088945] = { return Api.MediaArea.parse_mediaAreaSuggestedReaction($0) }
     dict[-1098720356] = { return Api.MediaArea.parse_mediaAreaVenue($0) }
     dict[64088654] = { return Api.MediaAreaCoordinates.parse_mediaAreaCoordinates($0) }
-    dict[-1502839044] = { return Api.Message.parse_message($0) }
+    dict[592953125] = { return Api.Message.parse_message($0) }
     dict[-1868117372] = { return Api.Message.parse_messageEmpty($0) }
     dict[721967202] = { return Api.Message.parse_messageService($0) }
     dict[-872240531] = { return Api.MessageAction.parse_messageActionBoostApply($0) }
@@ -667,7 +671,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-901375139] = { return Api.PeerLocated.parse_peerLocated($0) }
     dict[-118740917] = { return Api.PeerLocated.parse_peerSelfLocated($0) }
     dict[-1721619444] = { return Api.PeerNotifySettings.parse_peerNotifySettings($0) }
-    dict[-1525149427] = { return Api.PeerSettings.parse_peerSettings($0) }
+    dict[-1395233698] = { return Api.PeerSettings.parse_peerSettings($0) }
     dict[-1707742823] = { return Api.PeerStories.parse_peerStories($0) }
     dict[-1770029977] = { return Api.PhoneCall.parse_phoneCall($0) }
     dict[912311057] = { return Api.PhoneCall.parse_phoneCallAccepted($0) }
@@ -884,7 +888,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1873947492] = { return Api.Update.parse_updateBotChatBoost($0) }
     dict[299870598] = { return Api.Update.parse_updateBotChatInviteRequester($0) }
     dict[1299263278] = { return Api.Update.parse_updateBotCommands($0) }
-    dict[-1590796039] = { return Api.Update.parse_updateBotDeleteBusinessMessage($0) }
+    dict[-1607821266] = { return Api.Update.parse_updateBotDeleteBusinessMessage($0) }
     dict[1420915171] = { return Api.Update.parse_updateBotEditBusinessMessage($0) }
     dict[1232025500] = { return Api.Update.parse_updateBotInlineQuery($0) }
     dict[317794823] = { return Api.Update.parse_updateBotInlineSend($0) }
@@ -1125,6 +1129,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1891070632] = { return Api.contacts.TopPeers.parse_topPeers($0) }
     dict[-1255369827] = { return Api.contacts.TopPeers.parse_topPeersDisabled($0) }
     dict[-567906571] = { return Api.contacts.TopPeers.parse_topPeersNotModified($0) }
+    dict[1857945489] = { return Api.fragment.CollectibleInfo.parse_collectibleInfo($0) }
     dict[-585598930] = { return Api.help.AppConfig.parse_appConfig($0) }
     dict[2094949405] = { return Api.help.AppConfig.parse_appConfigNotModified($0) }
     dict[-860107216] = { return Api.help.AppUpdate.parse_appUpdate($0) }
@@ -1203,6 +1208,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1938715001] = { return Api.messages.Messages.parse_messages($0) }
     dict[1951620897] = { return Api.messages.Messages.parse_messagesNotModified($0) }
     dict[978610270] = { return Api.messages.Messages.parse_messagesSlice($0) }
+    dict[-83926371] = { return Api.messages.MyStickers.parse_myStickers($0) }
     dict[863093588] = { return Api.messages.PeerDialogs.parse_peerDialogs($0) }
     dict[1753266509] = { return Api.messages.PeerSettings.parse_peerSettings($0) }
     dict[-963811691] = { return Api.messages.QuickReplies.parse_quickReplies($0) }
@@ -1315,7 +1321,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
@@ -1586,6 +1592,8 @@ public extension Api {
             case let _1 as Api.InputCheckPasswordSRP:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputClientProxy:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.InputCollectible:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputContact:
                 _1.serialize(buffer, boxed)
@@ -2043,6 +2051,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.TopPeers:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.fragment.CollectibleInfo:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.help.AppConfig:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.AppUpdate:
@@ -2148,6 +2158,8 @@ public extension Api {
             case let _1 as Api.messages.MessageViews:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Messages:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.MyStickers:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.PeerDialogs:
                 _1.serialize(buffer, boxed)

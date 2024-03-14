@@ -2999,6 +2999,16 @@ final class PostboxImpl {
         
         let startTime = CFAbsoluteTimeGetCurrent()
         
+        #if os(macOS)
+        #if DEBUG || BETA
+        var crashDisposable: Disposable?
+        crashDisposable = (Signal<Void, NoError>.single(Void())
+           |> delay(0.1, queue: .concurrentDefaultQueue())).startStandalone(next: { _ in
+                preconditionFailure()
+           })
+        #endif
+        #endif
+
         self.valueBox.begin()
         let transaction = Transaction(queue: self.queue, postbox: self)
         self.afterBegin(transaction: transaction)
@@ -3012,6 +3022,12 @@ final class PostboxImpl {
         if transactionDuration > 0.1 {
             postboxLog("Postbox transaction took \(transactionDuration * 1000.0) ms, from: \(file), on:\(line)")
         }
+        
+        #if os(macOS)
+        #if DEBUG || BETA
+        crashDisposable?.dispose()
+        #endif
+        #endif
         
         let _ = self.isInTransaction.swap(false)
         

@@ -232,6 +232,11 @@ NSObject * _Nullable makeLuminanceToAlphaFilter() {
     return [(id<GraphicsFilterProtocol>)NSClassFromString(@"CAFilter") filterWithName:@"luminanceToAlpha"];
 }
 
+NSObject * _Nullable makeMonochromeFilter() {
+    return [(id<GraphicsFilterProtocol>)NSClassFromString(@"CAFilter") filterWithName:@"colorMonochrome"];
+}
+
+
 void setLayerDisableScreenshots(CALayer * _Nonnull layer, bool disableScreenshots) {
     static UITextField *textField = nil;
     static UIView *secureView = nil;

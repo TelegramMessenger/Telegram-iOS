@@ -94,6 +94,9 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
     public func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
     }
     
+    public func setDidBeginDragging(_ f: (() -> Void)?) {
+    }
+    
     public func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {
         self.contentOffsetUpdated = f
     }
@@ -306,6 +309,9 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
     }
     
     public func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
+    }
+    
+    public func setDidBeginDragging(_ f: (() -> Void)?) {
     }
     
     public func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {

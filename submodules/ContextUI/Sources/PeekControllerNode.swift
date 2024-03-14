@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import TelegramPresentationData
 
 private let animationDurationFactor: Double = 1.0
@@ -28,11 +29,11 @@ final class PeekControllerNode: ViewControllerTracingNode {
     
     private var topAccessoryNode: ASDisplayNode?
     private var fullScreenAccessoryNode: (PeekControllerAccessoryNode & ASDisplayNode)?
-
-    private var actionsContainerNode: ContextActionsContainerNode
+        
+    private var actionsStackNode: ContextControllerActionsStackNode
     
     private var hapticFeedback = HapticFeedback()
-
+    
     private var initialContinueGesturePoint: CGPoint?
     private var didMoveFromInitialGesturePoint = false
     private var highlightedActionNode: ContextActionNodeProtocol?
@@ -55,12 +56,12 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.darkDimNode.isUserInteractionEnabled = false
         
         switch content.menuActivation() {
-            case .drag:
-                self.dimNode.backgroundColor = nil
-                self.blurView.alpha = 1.0
-            case .press:
-                self.dimNode.backgroundColor = UIColor(white: self.theme.isDark ? 0.0 : 1.0, alpha: 0.5)
-                self.blurView.alpha = 0.0
+        case .drag:
+            self.dimNode.backgroundColor = nil
+            self.blurView.alpha = 1.0
+        case .press:
+            self.dimNode.backgroundColor = UIColor(white: self.theme.isDark ? 0.0 : 1.0, alpha: 0.5)
+            self.blurView.alpha = 0.0
         }
         
         self.containerBackgroundNode = ASImageNode()
@@ -75,28 +76,50 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.fullScreenAccessoryNode = content.fullScreenAccessoryNode(blurView: blurView)
         self.fullScreenAccessoryNode?.alpha = 0.0
         
-        var feedbackTapImpl: (() -> Void)?
         var activatedActionImpl: (() -> Void)?
-        var requestLayoutImpl: (() -> Void)?
-        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: ContextController.Items(content: .list(content.menuItems()), animationCache: nil), getController: { [weak controller] in
-            return controller
-        }, actionSelected: { result in
-            activatedActionImpl?()
-        }, requestLayout: {
-            requestLayoutImpl?()
-        }, feedbackTap: {
-            feedbackTapImpl?()
-        }, blurBackground: true)
-        self.actionsContainerNode.alpha = 0.0
+        var requestLayoutImpl: ((ContainedViewLayoutTransition) -> Void)?
 
-        super.init()
+        self.actionsStackNode = ContextControllerActionsStackNode(
+            getController: { [weak controller] in
+                return controller
+            },
+            requestDismiss: { result in
+                activatedActionImpl?()
+            },
+            requestUpdate: { transition in
+                requestLayoutImpl?(transition)
+            }
+        )
+        self.actionsStackNode.alpha = 0.0
         
-        feedbackTapImpl = { [weak self] in
-            self?.hapticFeedback.tap()
+        let items = ContextController.Items(
+            id: 0,
+            content: .list(content.menuItems()),
+            context: nil,
+            reactionItems: [],
+            selectedReactionItems: Set(),
+            reactionsTitle: nil,
+            reactionsLocked: false,
+            animationCache: nil,
+            alwaysAllowPremiumReactions: false,
+            allPresetReactionsAreAvailable: false,
+            getEmojiContent: nil,
+            disablePositionLock: false,
+            tip: nil,
+            tipSignal: nil,
+            dismissed: nil
+        )
+        if let item = makeContextControllerActionsStackItem(items: items).first {
+            self.actionsStackNode.replace(
+                item: item,
+                animated: false
+            )
         }
-
-        requestLayoutImpl = { [weak self] in
-            self?.updateLayout()
+        
+        super.init()
+                
+        requestLayoutImpl = { [weak self] transition in
+            self?.updateLayout(transition: transition)
         }
         
         if content.presentation() == .freeform {
@@ -112,7 +135,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.containerNode.addSubnode(self.contentNode)
         
         self.addSubnode(self.containerNode)
-        self.addSubnode(self.actionsContainerNode)
+        self.addSubnode(self.actionsStackNode)
         
         if let fullScreenAccessoryNode = self.fullScreenAccessoryNode {
             self.fullScreenAccessoryNode?.dismiss = { [weak self] in
@@ -139,11 +162,39 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimNodeTap(_:))))
         self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
     }
-
-    func updateLayout() {
+    
+    func updateLayout(transition: ContainedViewLayoutTransition = .immediate) {
         if let layout = self.validLayout {
-            self.containerLayoutUpdated(layout, transition: .immediate)
+            self.containerLayoutUpdated(layout, transition: transition)
         }
+    }
+    
+    func replaceItem(items: Signal<ContextController.Items, NoError>) {
+        let _ = (items
+        |> deliverOnMainQueue).start(next: { [weak self] items in
+            guard let self else {
+                return
+            }
+            if let item = makeContextControllerActionsStackItem(items: items).first {
+                self.actionsStackNode.replace(item: item, animated: false)
+            }
+        })
+    }
+    
+    func pushItems(items: Signal<ContextController.Items, NoError>) {
+        let _ = (items
+        |> deliverOnMainQueue).start(next: { [weak self] items in
+            guard let self else {
+                return
+            }
+            if let item = makeContextControllerActionsStackItem(items: items).first {
+                self.actionsStackNode.push(item: item, currentScrollingState: nil, positionLock: nil, animated: true)
+            }
+        })
+    }
+    
+    func popItems() {
+        self.actionsStackNode.pop()
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -172,12 +223,18 @@ final class PeekControllerNode: ViewControllerTracingNode {
         }
         
         let actionsSideInset: CGFloat = layout.safeInsets.left + 11.0
-        let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, presentation: .inline, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: .immediate)
+        
+        let actionsSize = self.actionsStackNode.update(
+            presentationData: self.presentationData,
+            constrainedSize: CGSize(width: layout.size.width - actionsSideInset * 2.0, height: layout.size.height),
+            presentation: .inline,
+            transition: transition
+        )
         
         let containerFrame: CGRect
         let actionsFrame: CGRect
         if layout.size.width > layout.size.height {
-            if self.actionsContainerNode.alpha.isZero {
+            if self.actionsStackNode.alpha.isZero {
                 containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
             } else {
                 containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 3.0), y: floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
@@ -194,12 +251,11 @@ final class PeekControllerNode: ViewControllerTracingNode {
         }
         transition.updateFrame(node: self.containerNode, frame: containerFrame)
                 
-        self.actionsContainerNode.updateSize(containerSize: actionsSize, contentSize: actionsSize)
-        transition.updateFrame(node: self.actionsContainerNode, frame: actionsFrame)
+        transition.updateFrame(node: self.actionsStackNode, frame: actionsFrame)
         
         if let fullScreenAccessoryNode = self.fullScreenAccessoryNode {
-            fullScreenAccessoryNode.updateLayout(size: layout.size, transition: transition)
             transition.updateFrame(node: fullScreenAccessoryNode, frame: CGRect(origin: .zero, size: layout.size))
+            fullScreenAccessoryNode.updateLayout(size: layout.size, transition: transition)
         }
         
         self.contentNodeHasValidLayout = true
@@ -244,11 +300,11 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.containerNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.25, removeOnCompletion: false)
            
-        if !self.actionsContainerNode.alpha.isZero {
-            let actionsOffset = CGPoint(x: rect.midX - self.actionsContainerNode.position.x, y: rect.midY - self.actionsContainerNode.position.y)
-            self.actionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false)
-            self.actionsContainerNode.layer.animateSpring(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping, removeOnCompletion: false)
-            self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint()), to: NSValue(cgPoint: actionsOffset), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+        if !self.actionsStackNode.alpha.isZero {
+            let actionsOffset = CGPoint(x: rect.midX - self.actionsStackNode.position.x, y: rect.midY - self.actionsStackNode.position.y)
+            self.actionsStackNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false)
+            self.actionsStackNode.layer.animateSpring(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping, removeOnCompletion: false)
+            self.actionsStackNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint()), to: NSValue(cgPoint: actionsOffset), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
         }
         
         if let fullScreenAccessoryNode = self.fullScreenAccessoryNode, !fullScreenAccessoryNode.alpha.isZero {
@@ -289,7 +345,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
             initialPoint = localPoint
             self.initialContinueGesturePoint = localPoint
         }
-        if !self.actionsContainerNode.alpha.isZero {
+        if !self.actionsStackNode.alpha.isZero {
             if !self.didMoveFromInitialGesturePoint {
                 let distance = abs(localPoint.y - initialPoint.y)
                 if distance > 12.0 {
@@ -297,16 +353,19 @@ final class PeekControllerNode: ViewControllerTracingNode {
                 }
             }
             if self.didMoveFromInitialGesturePoint {
-                let actionPoint = self.view.convert(localPoint, to: self.actionsContainerNode.view)
-                let actionNode = self.actionsContainerNode.actionNode(at: actionPoint)
-                if self.highlightedActionNode !== actionNode {
-                    self.highlightedActionNode?.setIsHighlighted(false)
-                    self.highlightedActionNode = actionNode
-                    if let actionNode = actionNode {
-                        actionNode.setIsHighlighted(true)
-                        self.hapticFeedback.tap()
-                    }
-                }
+                let actionPoint = self.view.convert(localPoint, to: self.actionsStackNode.view)
+                self.actionsStackNode.highlightGestureMoved(location: actionPoint)
+            }
+        }
+    }
+    
+    func endDragging(_ location: CGPoint) {
+        if self.didMoveFromInitialGesturePoint {
+            self.actionsStackNode.highlightGestureFinished(performAction: true)
+        } else if self.actionsStackNode.alpha.isZero {
+            if let fullScreenAccessoryNode = self.fullScreenAccessoryNode, !fullScreenAccessoryNode.alpha.isZero {
+            } else {
+                self.requestDismiss()
             }
         }
     }
@@ -322,6 +381,11 @@ final class PeekControllerNode: ViewControllerTracingNode {
                 self.blurView.layer.animateAlpha(from: previousBlurAlpha, to: self.blurView.alpha, duration: 0.3)
             }
             return
+        } else {
+            if let fullScreenAccessoryNode = self.fullScreenAccessoryNode {
+                fullScreenAccessoryNode.alpha = 1.0
+                fullScreenAccessoryNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            }
         }
         if case .press = self.content.menuActivation() {
             self.hapticFeedback.impact()
@@ -338,29 +402,17 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.darkDimNode.alpha = 1.0
         self.darkDimNode.layer.animateAlpha(from: previousDarkDimAlpha, to: 1.0, duration: 0.3)
         
-        self.actionsContainerNode.alpha = 1.0
-        self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
-        self.actionsContainerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
-        
-        let localContentSourceFrame = self.containerNode.frame
-        self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localContentSourceFrame.center.x - self.actionsContainerNode.position.x, y: localContentSourceFrame.center.y - self.actionsContainerNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+        Queue.mainQueue().justDispatch {
+            self.actionsStackNode.alpha = 1.0
+            self.actionsStackNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
+            self.actionsStackNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
+            
+            let localContentSourceFrame = self.containerNode.frame
+            self.actionsStackNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localContentSourceFrame.center.x - self.actionsStackNode.position.x, y: localContentSourceFrame.center.y - self.actionsStackNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+        }
         
         if let layout = self.validLayout {
             self.containerLayoutUpdated(layout, transition: .animated(duration: springDuration, curve: .spring))
-        }
-    }
-    
-    func endDragging(_ location: CGPoint) {
-        if self.didMoveFromInitialGesturePoint {
-            if let highlightedActionNode = self.highlightedActionNode {
-                self.highlightedActionNode = nil
-                highlightedActionNode.performAction()
-            }
-        } else if self.actionsContainerNode.alpha.isZero {
-            if let fullScreenAccessoryNode = self.fullScreenAccessoryNode, !fullScreenAccessoryNode.alpha.isZero {
-            } else {
-                self.requestDismiss()
-            }
         }
     }
     
@@ -376,19 +428,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.containerNode.addSubnode(self.contentNode)
         self.contentNodeHasValidLayout = false
         
-        let previousActionsContainerNode = self.actionsContainerNode
-        self.actionsContainerNode = ContextActionsContainerNode(presentationData: self.presentationData, items: ContextController.Items(content: .list(content.menuItems()), animationCache: nil), getController: { [weak self] in
-            return self?.controller
-        }, actionSelected: { [weak self] result in
-            self?.requestDismiss()
-        }, requestLayout: { [weak self] in
-            self?.updateLayout()
-        }, feedbackTap: { [weak self] in
-            self?.hapticFeedback.tap()
-        }, blurBackground: true)
-        self.actionsContainerNode.alpha = 0.0
-        self.insertSubnode(self.actionsContainerNode, aboveSubnode: previousActionsContainerNode)
-        previousActionsContainerNode.removeFromSupernode()
+        self.replaceItem(items: .single(ContextController.Items(content: .list(content.menuItems()))))
         
         self.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
         self.contentNode.layer.animateSpring(from: 0.35 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)

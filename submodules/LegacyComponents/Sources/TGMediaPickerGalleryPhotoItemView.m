@@ -248,11 +248,11 @@
 
         }]];
         
-        if (!item.asFile) {
-            [_facesDisposable setDisposable:[[TGPaintFaceDetector detectFacesInItem:item.editableMediaItem editingContext:item.editingContext] startStrictWithNext:nil file:__FILE_NAME__ line:__LINE__]];
-            
-            return;
-        }
+//        if (!item.asFile) {
+//            [_facesDisposable setDisposable:[[TGPaintFaceDetector detectFacesInItem:item.editableMediaItem editingContext:item.editingContext] startStrictWithNext:nil file:__FILE_NAME__ line:__LINE__]];
+//            
+//            return;
+//        }
         
         _fileInfoLabel.text = nil;
         
