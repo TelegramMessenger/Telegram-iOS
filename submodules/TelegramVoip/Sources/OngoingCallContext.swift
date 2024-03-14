@@ -945,7 +945,7 @@ public final class OngoingCallContext {
                     }
                     
                     var directConnection: OngoingCallDirectConnection?
-                    if version == "9.0.0" {
+                    if version == "9.0.0" && !"".isEmpty {
                         if #available(iOS 12.0, *) {
                             for connection in filteredConnections {
                                 if connection.username == "reflector" && connection.reflectorId == 1 && !connection.hasTcp && connection.hasTurn {

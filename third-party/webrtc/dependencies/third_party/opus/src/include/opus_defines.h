@@ -64,7 +64,7 @@ extern "C" {
 /**Export control for opus functions */
 
 #ifndef OPUS_EXPORT
-# if defined(WIN32)
+# if defined(_WIN32)
 #  if defined(OPUS_BUILD) && defined(DLL_EXPORT)
 #   define OPUS_EXPORT __declspec(dllexport)
 #  else
@@ -169,15 +169,32 @@ extern "C" {
 #define OPUS_SET_PHASE_INVERSION_DISABLED_REQUEST 4046
 #define OPUS_GET_PHASE_INVERSION_DISABLED_REQUEST 4047
 #define OPUS_GET_IN_DTX_REQUEST              4049
+#define OPUS_SET_DRED_DURATION_REQUEST 4050
+#define OPUS_GET_DRED_DURATION_REQUEST 4051
+#define OPUS_SET_DNN_BLOB_REQUEST 4052
+/*#define OPUS_GET_DNN_BLOB_REQUEST 4053 */
 
 /** Defines for the presence of extended APIs. */
 #define OPUS_HAVE_OPUS_PROJECTION_H
 
 /* Macros to trigger compilation errors when the wrong types are provided to a CTL */
 #define __opus_check_int(x) (((void)((x) == (opus_int32)0)), (opus_int32)(x))
+
+#ifdef DISABLE_PTR_CHECK
+/* Disable checks to prevent ubsan from complaining about NULL checks
+   in test_opus_api. */
+#define __opus_check_int_ptr(ptr) (ptr)
+#define __opus_check_uint_ptr(ptr) (ptr)
+#define __opus_check_uint8_ptr(ptr) (ptr)
+#define __opus_check_val16_ptr(ptr) (ptr)
+#define __opus_check_void_ptr(ptr) (ptr)
+#else
 #define __opus_check_int_ptr(ptr) ((ptr) + ((ptr) - (opus_int32*)(ptr)))
 #define __opus_check_uint_ptr(ptr) ((ptr) + ((ptr) - (opus_uint32*)(ptr)))
+#define __opus_check_uint8_ptr(ptr) ((ptr) + ((ptr) - (opus_uint8*)(ptr)))
 #define __opus_check_val16_ptr(ptr) ((ptr) + ((ptr) - (opus_val16*)(ptr)))
+#define __opus_check_void_ptr(x) ((void)((void *)0 == (x)), (x))
+#endif
 /** @endcond */
 
 /** @defgroup opus_ctlvalues Pre-defined values for CTL interface
@@ -482,7 +499,8 @@ extern "C" {
   * @param[in] x <tt>opus_int32</tt>: Allowed values:
   * <dl>
   * <dt>0</dt><dd>Disable inband FEC (default).</dd>
-  * <dt>1</dt><dd>Enable inband FEC.</dd>
+  * <dt>1</dt><dd>Inband FEC enabled. If the packet loss rate is sufficiently high, Opus will automatically switch to SILK even at high rates to enable use of that FEC.</dd>
+  * <dt>2</dt><dd>Inband FEC enabled, but does not necessarily switch to SILK if we have music.</dd>
   * </dl>
   * @hideinitializer */
 #define OPUS_SET_INBAND_FEC(x) OPUS_SET_INBAND_FEC_REQUEST, __opus_check_int(x)
@@ -491,7 +509,8 @@ extern "C" {
   * @param[out] x <tt>opus_int32 *</tt>: Returns one of the following values:
   * <dl>
   * <dt>0</dt><dd>Inband FEC disabled (default).</dd>
-  * <dt>1</dt><dd>Inband FEC enabled.</dd>
+  * <dt>1</dt><dd>Inband FEC enabled. If the packet loss rate is sufficiently high, Opus will automatically switch to SILK even at high rates to enable use of that FEC.</dd>
+  * <dt>2</dt><dd>Inband FEC enabled, but does not necessarily switch to SILK if we have music.</dd>
   * </dl>
   * @hideinitializer */
 #define OPUS_GET_INBAND_FEC(x) OPUS_GET_INBAND_FEC_REQUEST, __opus_check_int_ptr(x)
@@ -617,6 +636,18 @@ extern "C" {
   * </dl>
   * @hideinitializer */
 #define OPUS_GET_PREDICTION_DISABLED(x) OPUS_GET_PREDICTION_DISABLED_REQUEST, __opus_check_int_ptr(x)
+
+/** If non-zero, enables Deep Redundancy (DRED) and use the specified maximum number of 10-ms redundant frames
+  * @hideinitializer */
+#define OPUS_SET_DRED_DURATION(x) OPUS_SET_DRED_DURATION_REQUEST, __opus_check_int(x)
+/** Gets the encoder's configured Deep Redundancy (DRED) maximum number of frames.
+  * @hideinitializer */
+#define OPUS_GET_DRED_DURATION(x) OPUS_GET_DRED_DURATION_REQUEST, __opus_check_int_ptr(x)
+
+/** Provide external DNN weights from binary object (only when explicitly built without the weights)
+  * @hideinitializer */
+#define OPUS_SET_DNN_BLOB(data, len) OPUS_SET_DNN_BLOB_REQUEST, __opus_check_void_ptr(data), __opus_check_int(len)
+
 
 /**@}*/
 
