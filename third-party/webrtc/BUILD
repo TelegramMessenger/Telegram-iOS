@@ -3161,7 +3161,7 @@ common_flags = [
     "-Ithird-party/openh264",
     "-DWEBRTC_NS_FLOAT",
     "-DRTC_DISABLE_TRACE_EVENTS",
-    "-DWEBRTC_OPUS_SUPPORT_120MS_PTIME=1",
+    #"-DWEBRTC_OPUS_SUPPORT_120MS_PTIME=1",
     "-DWEBRTC_APM_DEBUG_DUMP=0",
     "-DBWE_TEST_LOGGING_COMPILE_TIME_ENABLE=0",
     "-DABSL_ALLOCATOR_NOTHROW=1",
@@ -3173,6 +3173,8 @@ common_flags = [
     "-Wno-shorten-64-to-32",
     "-Wno-macro-redefined",
     "-D__APPLE__",
+    "-DWEBRTC_OPUS_USE_CODEC_PLC",
+    "-DWEBRTC_OPUS_SUPPORT_DRED",
 ]
 
 arm_specific_flags = [
@@ -3517,6 +3519,47 @@ cc_library(
     hdrs = [":field_trials_header/experiments/registered_field_trials.h"],
     includes = [
         "field_trials_header",
+    ],
+)
+
+opus_header_list = [
+    "opus_defines.h",
+    "opus_multistream.h",
+    "opus_projection.h",
+    "opus_types.h",
+    "opus.h",
+]
+
+'''genrule(
+    name = "copy_opus_headers",
+    srcs = [
+        "/third-party/opus/Public/opus/{}".format(x) for x in opus_header_list
+    ],
+    cmd_bash = 
+    """
+    set -ex
+    cp $(location /third-party/opus/Public/opus/opus_defines.h) 
+    """,
+    outs = [
+        ":opus_headers/third_party/opus/src/include/{}".format(x) for x in opus_header_list
+    ],
+    visibility = [
+        "//visibility:public",
+    ]
+)'''
+
+cc_library(
+    name = "opus_headers",
+    srcs = [],
+    hdrs = [
+        ":opus_headers/third_party/opus/src/include/opus.h",
+        ":opus_headers/third_party/opus/src/include/opus_defines.h",
+        ":opus_headers/third_party/opus/src/include/opus_multistream.h",
+        ":opus_headers/third_party/opus/src/include/opus_projection.h",
+        ":opus_headers/third_party/opus/src/include/opus_types.h",
+    ],
+    includes = [
+        "opus_headers",
     ],
 )
 
