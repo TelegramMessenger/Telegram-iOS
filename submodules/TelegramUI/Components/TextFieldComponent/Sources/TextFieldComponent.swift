@@ -74,9 +74,11 @@ public final class TextFieldComponent: Component {
             case textFocusChanged
         }
         
+        public weak var view: View?
         public let kind: Kind
         
-        public init(kind: Kind) {
+        public init(view: View?, kind: Kind) {
+            self.view = view
             self.kind = kind
         }
     }
@@ -270,7 +272,7 @@ public final class TextFieldComponent: Component {
             self.updateEntities()
             
             if currentAttributedText != updatedAttributedText && !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -283,7 +285,7 @@ public final class TextFieldComponent: Component {
                 return state.insertText(text)
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -296,7 +298,7 @@ public final class TextFieldComponent: Component {
                 return TextFieldComponent.InputState(inputText: text, selectionRange: selectionRange)
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -324,7 +326,7 @@ public final class TextFieldComponent: Component {
                     }
                 }
                 if !self.isUpdating {
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
                 }
                 component.paste(.text)
                 return false
@@ -395,7 +397,7 @@ public final class TextFieldComponent: Component {
             
             self.updateEntities()
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -417,7 +419,7 @@ public final class TextFieldComponent: Component {
                 return
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(kind: .textFocusChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged)))
             }
             if component.isOneLineWhenUnfocused {
                 Queue.mainQueue().justDispatch {
@@ -428,7 +430,7 @@ public final class TextFieldComponent: Component {
         
         public func chatInputTextNodeDidFinishEditing() {
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(kind: .textFocusChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged)))
             }
         }
         
@@ -762,7 +764,7 @@ public final class TextFieldComponent: Component {
                 return TextFieldComponent.InputState(inputText: string, selectionRange: string.length ..< string.length)
             }
             if updateState && !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         

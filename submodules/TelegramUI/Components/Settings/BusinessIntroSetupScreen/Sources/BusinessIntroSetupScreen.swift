@@ -21,6 +21,7 @@ import LottieComponent
 import EntityKeyboard
 import PeerAllowedReactionsScreen
 import EmojiActionIconComponent
+import TextFieldComponent
 
 final class BusinessIntroSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -69,6 +70,8 @@ final class BusinessIntroSetupScreenComponent: Component {
         private let textInputState = ListMultilineTextFieldItemComponent.ExternalState()
         private let textInputTag = NSObject()
         private var resetText: String?
+        
+        private var recenterOnTag: NSObject?
         
         private var stickerFile: TelegramMediaFile?
         private var stickerContent: EmojiPagerContentComponent?
@@ -170,8 +173,8 @@ final class BusinessIntroSetupScreenComponent: Component {
                     stickerNamespaces: [Namespaces.ItemCollection.CloudStickerPacks],
                     stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
                     chatPeerId: nil,
-                    hasSearch: true,
-                    hasTrending: true,
+                    hasSearch: false,
+                    hasTrending: false,
                     forceHasPremium: true
                 )
                 self.stickerContentDisposable = (stickerContent
@@ -296,6 +299,20 @@ final class BusinessIntroSetupScreenComponent: Component {
             
             contentHeight += environment.navigationHeight
             contentHeight += 26.0
+            
+            self.recenterOnTag = nil
+            if let hint = transition.userData(TextFieldComponent.AnimationHint.self), let targetView = hint.view {
+                if let titleView = self.introSection.findTaggedView(tag: self.titleInputTag) {
+                    if targetView.isDescendant(of: titleView) {
+                        self.recenterOnTag = self.titleInputTag
+                    }
+                }
+                if let textView = self.introSection.findTaggedView(tag: self.textInputTag) {
+                    if targetView.isDescendant(of: textView) {
+                        self.recenterOnTag = self.textInputTag
+                    }
+                }
+            }
             
             var introSectionItems: [AnyComponentWithIdentity<Empty>] = []
             introSectionItems.append(AnyComponentWithIdentity(id: introSectionItems.count, component: AnyComponent(Rectangle(color: .clear, height: 346.0, tag: self.introPlaceholderTag))))
@@ -572,7 +589,8 @@ final class BusinessIntroSetupScreenComponent: Component {
                 }
             }
             
-            contentHeight += max(inputHeight, environment.safeInsets.bottom)
+            let combinedBottomInset = max(inputHeight, environment.safeInsets.bottom)
+            contentHeight += combinedBottomInset
             
             let previousBounds = self.scrollView.bounds
             
@@ -593,6 +611,25 @@ final class BusinessIntroSetupScreenComponent: Component {
                 if bounds.maxY != previousBounds.maxY {
                     let offsetY = previousBounds.maxY - bounds.maxY
                     transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: offsetY), to: CGPoint(), additive: true)
+                }
+            }
+            
+            if let recenterOnTag = self.recenterOnTag {
+                self.recenterOnTag = nil
+                
+                if let targetView = self.introSection.findTaggedView(tag: recenterOnTag) {
+                    let caretRect = targetView.convert(targetView.bounds, to: self.scrollView)
+                    var scrollViewBounds = self.scrollView.bounds
+                    let minButtonDistance: CGFloat = 16.0
+                    if -scrollViewBounds.minY + caretRect.maxY > availableSize.height - combinedBottomInset - minButtonDistance {
+                        scrollViewBounds.origin.y = -(availableSize.height - combinedBottomInset - minButtonDistance - caretRect.maxY)
+                        if scrollViewBounds.origin.y < 0.0 {
+                            scrollViewBounds.origin.y = 0.0
+                        }
+                    }
+                    if self.scrollView.bounds != scrollViewBounds {
+                        transition.setBounds(view: self.scrollView, bounds: scrollViewBounds)
+                    }
                 }
             }
             
