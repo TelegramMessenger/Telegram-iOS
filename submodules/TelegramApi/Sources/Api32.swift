@@ -222,6 +222,21 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
+                static func disablePeerConnectedBot(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1581481689)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.disablePeerConnectedBot", parameters: [("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
                 static func finishTakeoutSession(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(489050862)
@@ -1249,6 +1264,22 @@ public extension Api.functions.account {
                         var result: Api.account.PrivacyRules?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.account.PrivacyRules
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
+                static func toggleConnectedBotPaused(peer: Api.InputPeer, paused: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1684934807)
+                    peer.serialize(buffer, true)
+                    paused.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.toggleConnectedBotPaused", parameters: [("peer", String(describing: peer)), ("paused", String(describing: paused))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })
