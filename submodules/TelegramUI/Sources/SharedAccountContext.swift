@@ -59,6 +59,7 @@ import CollectibleItemInfoScreen
 import StickerPickerScreen
 import MediaEditor
 import MediaEditorScreen
+import BusinessIntroSetupScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1925,6 +1926,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError> {
         return QuickReplySetupScreen.initialData(context: context)
+    }
+    
+    public func makeBusinessIntroSetupScreen(context: AccountContext) -> ViewController {
+        return BusinessIntroSetupScreen(context: context)
     }
     
     public func makeCollectibleItemInfoScreen(context: AccountContext, initialData: CollectibleItemInfoScreenInitialData) -> ViewController {

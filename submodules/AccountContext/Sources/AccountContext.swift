@@ -856,6 +856,9 @@ public protocol AutomaticBusinessMessageSetupScreenInitialData: AnyObject {
 public protocol ChatbotSetupScreenInitialData: AnyObject {
 }
 
+public protocol BusinessIntroSetupScreenInitialData: AnyObject {
+}
+
 public protocol CollectibleItemInfoScreenInitialData: AnyObject {
     var collectibleItemInfo: TelegramCollectibleItemInfo { get }
 }
@@ -960,6 +963,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeAutomaticBusinessMessageSetupScreenInitialData(context: AccountContext) -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError>
     func makeQuickReplySetupScreen(context: AccountContext, initialData: QuickReplySetupScreenInitialData) -> ViewController
     func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError>
+    func makeBusinessIntroSetupScreen(context: AccountContext) -> ViewController
     func makeCollectibleItemInfoScreen(context: AccountContext, initialData: CollectibleItemInfoScreenInitialData) -> ViewController
     func makeCollectibleItemInfoScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, subject: CollectibleItemInfoScreenSubject) -> Signal<CollectibleItemInfoScreenInitialData?, NoError>
     func navigateToChatController(_ params: NavigateToChatControllerParams)

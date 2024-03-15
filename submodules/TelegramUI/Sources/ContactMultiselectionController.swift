@@ -332,12 +332,20 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     }
                 }
                 
+                if let addedToken = addedToken {
+                    strongSelf.contactsNode.editableTokens.append(addedToken)
+                } else if let removedTokenId = removedTokenId {
+                    strongSelf.contactsNode.editableTokens = strongSelf.contactsNode.editableTokens.filter { token in
+                        return token.id != removedTokenId
+                    }
+                }
+                
                 if let updatedCount = updatedCount {
                     switch strongSelf.mode {
-                        case .groupCreation, .peerSelection, .chatSelection:
-                            strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0 || strongSelf.params.alwaysEnabled
-                        case .channelCreation, .premiumGifting, .requestedUsersSelection:
-                            break
+                    case .groupCreation, .peerSelection, .chatSelection:
+                        strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0 || !strongSelf.contactsNode.editableTokens.isEmpty || strongSelf.params.alwaysEnabled
+                    case .channelCreation, .premiumGifting, .requestedUsersSelection:
+                        break
                     }
                     
                     switch strongSelf.mode {
@@ -355,13 +363,6 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     }
                 }
                 
-                if let addedToken = addedToken {
-                    strongSelf.contactsNode.editableTokens.append(addedToken)
-                } else if let removedTokenId = removedTokenId {
-                    strongSelf.contactsNode.editableTokens = strongSelf.contactsNode.editableTokens.filter { token in
-                        return token.id != removedTokenId
-                    }
-                }
                 strongSelf.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
                 
                 if displayCountAlert {

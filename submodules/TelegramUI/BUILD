@@ -436,9 +436,12 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/BusinessLocationSetupScreen",
         "//submodules/TelegramUI/Components/Settings/BusinessHoursSetupScreen",
         "//submodules/TelegramUI/Components/Settings/AutomaticBusinessMessageSetupScreen",
+        "//submodules/TelegramUI/Components/Settings/BusinessIntroSetupScreen",
         "//submodules/TelegramUI/Components/Settings/QuickReplyNameAlertController",
         "//submodules/TelegramUI/Components/Settings/CollectibleItemInfoScreen",
         "//submodules/TelegramUI/Components/StickerPickerScreen",
+        "//submodules/TelegramUI/Components/Chat/ChatEmptyNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMediaInputStickerGridItem",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

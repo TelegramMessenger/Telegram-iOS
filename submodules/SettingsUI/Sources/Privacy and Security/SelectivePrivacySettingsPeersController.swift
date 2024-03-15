@@ -248,7 +248,7 @@ private func selectivePrivacyPeersControllerEntries(presentationData: Presentati
     return entries
 }
 
-public func selectivePrivacyPeersController(context: AccountContext, title: String, initialPeers: [EnginePeer.Id: SelectivePrivacyPeer], updated: @escaping ([EnginePeer.Id: SelectivePrivacyPeer]) -> Void) -> ViewController {
+public func selectivePrivacyPeersController(context: AccountContext, title: String, initialPeers: [EnginePeer.Id: SelectivePrivacyPeer], displayPremiumCategory: Bool, updated: @escaping ([EnginePeer.Id: SelectivePrivacyPeer]) -> Void) -> ViewController {
     let statePromise = ValuePromise(SelectivePrivacyPeersControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: SelectivePrivacyPeersControllerState())
     let updateState: ((SelectivePrivacyPeersControllerState) -> SelectivePrivacyPeersControllerState) -> Void = { f in
@@ -307,7 +307,33 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
         
         removePeerDisposable.set(applyPeers.start())
     }, addPeer: {
-        let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true, searchChannels: false), options: []))
+        enum AdditionalCategoryId: Int {
+            case premiumUsers
+        }
+        
+        //TODO:localize
+        var additionalCategories: [ChatListNodeAdditionalCategory] = []
+        
+        if displayPremiumCategory {
+            additionalCategories = [
+                ChatListNodeAdditionalCategory(
+                    id: AdditionalCategoryId.premiumUsers.rawValue,
+                    icon: generatePremiumCategoryIcon(size: CGSize(width: 40.0, height: 40.0), cornerRadius: 12.0),
+                    smallIcon: generatePremiumCategoryIcon(size: CGSize(width: 22.0, height: 22.0), cornerRadius: 6.0),
+                    title: "Premium Users"
+                )
+            ]
+        }
+        let selectedCategories = Set<Int>()
+        
+        let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
+            title: "Add Users",
+            searchPlaceholder: "Search users and groups",
+            selectedChats: Set(),
+            additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
+            chatListFilters: nil,
+            onlyUsers: false
+        )), options: []))
         addPeerDisposable.set((controller.result
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak controller] result in

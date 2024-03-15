@@ -30,6 +30,7 @@ import MediaEditor
 import PeerInfoScreen
 import PeerInfoStoryGridScreen
 import ShareWithPeersScreen
+import ChatEmptyNode
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData

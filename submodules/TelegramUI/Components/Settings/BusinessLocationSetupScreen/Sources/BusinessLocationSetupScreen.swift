@@ -509,7 +509,6 @@ final class BusinessLocationSetupScreenComponent: Component {
             contentHeight += mapSectionSize.height
             
             var deleteSectionHeight: CGFloat = 0.0
-            
             deleteSectionHeight += sectionSpacing
             let deleteSectionSize = self.deleteSection.update(
                 transition: transition,

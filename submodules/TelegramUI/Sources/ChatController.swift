@@ -121,6 +121,8 @@ import TopMessageReactions
 import PeerInfoScreen
 import AudioWaveform
 import PeerNameColorScreen
+import ChatEmptyNode
+import ChatMediaInputStickerGridItem
 
 public enum ChatControllerPeekActions {
     case standard

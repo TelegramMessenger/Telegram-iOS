@@ -19,6 +19,8 @@ import ChatMessageInstantVideoItemNode
 import ChatMessageAnimatedStickerItemNode
 import ChatMessageTransitionNode
 import ChatMessageBubbleItemNode
+import ChatEmptyNode
+import ChatMediaInputStickerGridItem
 
 private func convertAnimatingSourceRect(_ rect: CGRect, fromView: UIView, toView: UIView?) -> CGRect {
     if let presentationLayer = fromView.layer.presentation() {

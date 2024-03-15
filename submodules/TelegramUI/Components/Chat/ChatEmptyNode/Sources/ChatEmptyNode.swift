@@ -19,6 +19,7 @@ import MultilineTextComponent
 import BalancedTextComponent
 import Markdown
 import ReactionSelectionNode
+import ChatMediaInputStickerGridItem
 
 private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
@@ -79,11 +80,11 @@ private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNod
     }
 }
 
-protocol ChatEmptyNodeStickerContentNode: ASDisplayNode {
+public protocol ChatEmptyNodeStickerContentNode: ASDisplayNode {
     var stickerNode: ChatMediaInputStickerGridItemNode { get }
 }
 
-final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeStickerContentNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
+public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeStickerContentNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
     private let context: AccountContext
     private let interaction: ChatPanelInterfaceInteraction?
     
@@ -91,15 +92,16 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
     private let textNode: ImmediateTextNode
     
     private var stickerItem: ChatMediaInputStickerGridItem?
-    let stickerNode: ChatMediaInputStickerGridItemNode
+    public var stickerNode: ChatMediaInputStickerGridItemNode
     
     private var currentTheme: PresentationTheme?
     private var currentStrings: PresentationStrings?
     
     private var didSetupSticker = false
     private let disposable = MetaDisposable()
+    private var currentCustomStickerFile: TelegramMediaFile?
         
-    init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
+    public init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
         self.context = context
         self.interaction = interaction
         
@@ -126,7 +128,7 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
         self.addSubnode(self.stickerNode)
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.stickerTapGesture(_:)))
@@ -138,7 +140,7 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
         self.disposable.dispose()
     }
     
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
     }
     
@@ -149,17 +151,28 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
         let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), false, self.view, self.stickerNode.bounds, nil, [])
     }
     
-    func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+    public func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let isFirstTime = self.currentTheme == nil
+        
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
-            
-            let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
-            
+        }
+        
+        var customStickerFile: TelegramMediaFile?
+        
+        let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
+        if case let .emptyChat(emptyChat) = subject, case let .customGreeting(stickerFile, title, text) = emptyChat {
+            customStickerFile = stickerFile
+            self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: serviceColor.primaryText)
+            self.textNode.attributedText = NSAttributedString(string: text, font: messageFont, textColor: serviceColor.primaryText)
+        } else {
             self.titleNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_EmptyPlaceholder, font: titleFont, textColor: serviceColor.primaryText)
-            
             self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_GreetingText, font: messageFont, textColor: serviceColor.primaryText)
         }
+        
+        let previousCustomStickerFile = self.currentCustomStickerFile
+        self.currentCustomStickerFile = customStickerFile
         
         let stickerSize: CGSize
         let inset: CGFloat
@@ -170,17 +183,32 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
             stickerSize = CGSize(width: 160.0, height: 160.0)
             inset = 15.0
         }
-        if let item = self.stickerItem {
+        if let item = self.stickerItem, previousCustomStickerFile == customStickerFile {
             self.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
-        } else if !self.didSetupSticker {
+        } else if !self.didSetupSticker || previousCustomStickerFile != customStickerFile {
             let sticker: Signal<TelegramMediaFile?, NoError>
-            if let preloadedSticker = interfaceState.greetingData?.sticker {
+            if let customStickerFile {
+                sticker = .single(customStickerFile)
+            } else if let preloadedSticker = interfaceState.greetingData?.sticker {
                 sticker = preloadedSticker
             } else {
                 sticker = self.context.engine.stickers.randomGreetingSticker()
                 |> map { item -> TelegramMediaFile? in
                     return item?.file
                 }
+            }
+            
+            if !isFirstTime, case let .emptyChat(emptyChat) = subject, case .customGreeting = emptyChat {
+                let previousStickerNode = self.stickerNode
+                previousStickerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousStickerNode] _ in
+                    previousStickerNode?.removeFromSupernode()
+                })
+                previousStickerNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
+                
+                self.stickerNode = ChatMediaInputStickerGridItemNode()
+                self.addSubnode(self.stickerNode)
+                self.stickerNode.layer.animateSpring(from: 0.001 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+                self.stickerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
             
             self.didSetupSticker = true
@@ -216,6 +244,10 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
                     let stickerPackItem = StickerPackItem(index: index, file: sticker, indexKeys: [])
                     let item = ChatMediaInputStickerGridItem(context: strongSelf.context, collectionId: collectionId, stickerPackInfo: nil, index: ItemCollectionViewEntryIndex(collectionIndex: 0, collectionId: collectionId, itemIndex: index), stickerItem: stickerPackItem, canManagePeerSpecificPack: nil, interfaceInteraction: nil, inputNodeInteraction: inputNodeInteraction, hasAccessory: false, theme: interfaceState.theme, large: true, selected: {})
                     strongSelf.stickerItem = item
+                    
+                    if isFirstTime {
+                        
+                    }
                     strongSelf.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
                     strongSelf.stickerNode.isVisibleInGrid = true
                     strongSelf.stickerNode.updateIsPanelVisible(true)
@@ -252,7 +284,7 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
     }
 }
 
-final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerContentNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
+public final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerContentNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
     private let context: AccountContext
     private let interaction: ChatPanelInterfaceInteraction?
     
@@ -260,7 +292,7 @@ final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerC
     private let textNode: ImmediateTextNode
     
     private var stickerItem: ChatMediaInputStickerGridItem?
-    let stickerNode: ChatMediaInputStickerGridItemNode
+    public let stickerNode: ChatMediaInputStickerGridItemNode
     
     private var currentTheme: PresentationTheme?
     private var currentStrings: PresentationStrings?
@@ -268,7 +300,7 @@ final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerC
     private var didSetupSticker = false
     private let disposable = MetaDisposable()
     
-    init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
+    public init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
         self.context = context
         self.interaction = interaction
         
@@ -295,7 +327,7 @@ final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerC
         self.addSubnode(self.stickerNode)
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.stickerTapGesture(_:)))
@@ -307,7 +339,7 @@ final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerC
         self.disposable.dispose()
     }
     
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
     }
     
@@ -318,7 +350,7 @@ final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerC
         let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), false, self.view, self.stickerNode.bounds, nil, [])
     }
     
-    func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+    public func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
@@ -844,7 +876,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
     }
 }
 
-final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
+public final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
     private let context: AccountContext
     
     private let titleNode: ImmediateTextNode
@@ -855,7 +887,7 @@ final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeContent, 
     
     private let iconView: ComponentView<Empty>
             
-    init(context: AccountContext) {
+    public init(context: AccountContext) {
         self.context = context
         
         self.titleNode = ImmediateTextNode()
@@ -880,7 +912,7 @@ final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeContent, 
         self.addSubnode(self.textNode)
     }
     
-    func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+    public func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
             self.currentTheme = interfaceState.theme
@@ -955,7 +987,7 @@ final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeContent, 
     }
 }
 
-final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatEmptyNodeContent {
+public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatEmptyNodeContent {
     private let isPremiumDisabled: Bool
     private let interaction: ChatPanelInterfaceInteraction?
     
@@ -969,7 +1001,7 @@ final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatEmptyNod
     private var currentTheme: PresentationTheme?
     private var currentStrings: PresentationStrings?
             
-    init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
+    public init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         self.isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         
@@ -1016,7 +1048,7 @@ final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatEmptyNod
         }
     }
     
-    func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+    public func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
         
         let maxWidth = min(200.0, size.width)
@@ -1139,9 +1171,18 @@ private enum ChatEmptyNodeContentType: Equatable {
     case premiumRequired
 }
 
-final class ChatEmptyNode: ASDisplayNode {
-    enum Subject {
-        case emptyChat(ChatHistoryNodeLoadState.EmptyType)
+public final class ChatEmptyNode: ASDisplayNode {
+    public enum Subject {
+        public enum EmptyType: Equatable {
+            case generic
+            case joined
+            case clearedHistory
+            case topic
+            case botInfo
+            case customGreeting(sticker: TelegramMediaFile?, title: String, text: String)
+        }
+        
+        case emptyChat(EmptyType)
         case detailsPlaceholder
     }
     private let context: AccountContext
@@ -1159,7 +1200,7 @@ final class ChatEmptyNode: ASDisplayNode {
     
     private var content: (ChatEmptyNodeContentType, ASDisplayNode & ChatEmptyNodeContent)?
     
-    init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
+    public init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
         self.context = context
         self.interaction = interaction
         
@@ -1172,14 +1213,14 @@ final class ChatEmptyNode: ASDisplayNode {
         self.addSubnode(self.backgroundNode)
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         guard let result = super.hitTest(point, with: event) else {
             return nil
         }
         return result
     }
     
-    func animateFromLoadingNode(_ loadingNode: ChatLoadingNode) {
+    public func animateFromLoadingNode(_ loadingNode: ChatLoadingNode) {
         guard let (_, node) = self.content else {
             return
         }
@@ -1204,7 +1245,7 @@ final class ChatEmptyNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: Subject, loadingNode: ChatLoadingNode?, backgroundNode: WallpaperBackgroundNode?, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: Subject, loadingNode: ChatLoadingNode?, backgroundNode: WallpaperBackgroundNode?, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         self.wallpaperBackgroundNode = backgroundNode
         
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
@@ -1224,7 +1265,9 @@ final class ChatEmptyNode: ASDisplayNode {
         case .detailsPlaceholder:
             contentType = .regular
         case let .emptyChat(emptyType):
-            if case .customChatContents = interfaceState.subject {
+            if case .customGreeting = emptyType {
+                contentType = .greeting
+            } else if case .customChatContents = interfaceState.subject {
                 contentType = .cloud
             } else if case .replyThread = interfaceState.chatLocation {
                 if case .topic = emptyType {

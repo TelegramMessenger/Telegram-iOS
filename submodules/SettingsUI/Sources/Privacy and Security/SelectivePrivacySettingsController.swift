@@ -909,6 +909,34 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     return entries
 }
 
+func generatePremiumCategoryIcon(size: CGSize, cornerRadius: CGFloat) -> UIImage {
+    return generateImage(size, contextGenerator: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        let path = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius)
+        context.addPath(path.cgPath)
+        context.clip()
+        
+        let colorsArray: [CGColor] = [
+            UIColor(rgb: 0xF161DD).cgColor,
+            UIColor(rgb: 0xF161DD).cgColor,
+            UIColor(rgb: 0x8d77ff).cgColor,
+            UIColor(rgb: 0xb56eec).cgColor,
+            UIColor(rgb: 0xb56eec).cgColor
+        ]
+        var locations: [CGFloat] = [0.0, 0.15, 0.5, 0.85, 1.0]
+        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
+
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
+        
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Premium/ButtonIcon"), color: UIColor(rgb: 0xffffff)), let cgImage = image.cgImage {
+            let imageSize = image.size.aspectFitted(CGSize(width: floor(size.width * 0.6), height: floor(size.height * 0.6)))
+            context.draw(cgImage, in: CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - imageSize.width) / 2.0), y: floorToScreenPixels((bounds.height - imageSize.height) / 2.0)), size: imageSize))
+        }
+    })!
+}
+
 func selectivePrivacySettingsController(
     context: AccountContext,
     kind: SelectivePrivacySettingsKind,
@@ -1041,7 +1069,41 @@ func selectivePrivacySettingsController(
             return state
         }
         if peerIds.isEmpty {
-            let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true, searchChannels: false), options: []))
+            enum AdditionalCategoryId: Int {
+                case premiumUsers
+            }
+            
+            var displayPremiumCategory = false
+            switch kind {
+            case .groupInvitations:
+                displayPremiumCategory = true
+            default:
+                break
+            }
+            
+            //TODO:localize
+            var additionalCategories: [ChatListNodeAdditionalCategory] = []
+            
+            if displayPremiumCategory {
+                additionalCategories = [
+                    ChatListNodeAdditionalCategory(
+                        id: AdditionalCategoryId.premiumUsers.rawValue,
+                        icon: generatePremiumCategoryIcon(size: CGSize(width: 40.0, height: 40.0), cornerRadius: 12.0),
+                        smallIcon: generatePremiumCategoryIcon(size: CGSize(width: 22.0, height: 22.0), cornerRadius: 6.0),
+                        title: "Premium Users"
+                    )
+                ]
+            }
+            let selectedCategories = Set<Int>()
+            
+            let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
+                title: "Add Users",
+                searchPlaceholder: "Search users and groups",
+                selectedChats: Set(),
+                additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
+                chatListFilters: nil,
+                onlyUsers: false
+            )), options: []))
             addPeerDisposable.set((controller.result
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak controller] result in
@@ -1128,7 +1190,15 @@ func selectivePrivacySettingsController(
             }))
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         } else {
-            let controller = selectivePrivacyPeersController(context: context, title: title, initialPeers: peerIds, updated: { updatedPeerIds in
+            var displayPremiumCategory = false
+            switch kind {
+            case .groupInvitations:
+                displayPremiumCategory = true
+            default:
+                break
+            }
+            
+            let controller = selectivePrivacyPeersController(context: context, title: title, initialPeers: peerIds, displayPremiumCategory: displayPremiumCategory, updated: { updatedPeerIds in
                 updateState { state in
                     if enable {
                         switch target {
