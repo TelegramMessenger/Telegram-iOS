@@ -3485,17 +3485,12 @@ fft4g_sources = [
     "fft4g/fft4g.cc",
 ]
 
-opus_headers = [
-    "dependencies/third_party/opus/src/include/opus.h",
-    "dependencies/third_party/opus/src/include/opus_multistream.h",
-]
-
 raw_combined_sources = webrtc_sources
 combined_sources = [
     webrtc_source_dir + "/" + path for path in raw_combined_sources
 ] + arch_specific_sources + [
     webrtc_source_dir + "/" + "sdk/" + path for path in ios_sources + ios_objc_sources
-] + absl_sources + fft4g_sources + rnnoise_sources + pffft_sources + crc32c_sources + dcsctp_sources + opus_headers
+] + absl_sources + fft4g_sources + rnnoise_sources + pffft_sources + crc32c_sources + dcsctp_sources
 
 genrule(
     name = "generate_field_trials_header",
@@ -3530,15 +3525,19 @@ opus_header_list = [
     "opus.h",
 ]
 
-'''genrule(
+genrule(
     name = "copy_opus_headers",
     srcs = [
-        "/third-party/opus/Public/opus/{}".format(x) for x in opus_header_list
+        "//third-party/opus:Public/opus/{}".format(x) for x in opus_header_list
     ],
     cmd_bash = 
     """
     set -ex
-    cp $(location /third-party/opus/Public/opus/opus_defines.h) 
+    cp $(location //third-party/opus:Public/opus/opus_defines.h) $(location :opus_headers/third_party/opus/src/include/opus_defines.h)
+    cp $(location //third-party/opus:Public/opus/opus_multistream.h) $(location :opus_headers/third_party/opus/src/include/opus_multistream.h)
+    cp $(location //third-party/opus:Public/opus/opus_projection.h) $(location :opus_headers/third_party/opus/src/include/opus_projection.h)
+    cp $(location //third-party/opus:Public/opus/opus_types.h) $(location :opus_headers/third_party/opus/src/include/opus_types.h)
+    cp $(location //third-party/opus:Public/opus/opus.h) $(location :opus_headers/third_party/opus/src/include/opus.h)
     """,
     outs = [
         ":opus_headers/third_party/opus/src/include/{}".format(x) for x in opus_header_list
@@ -3546,7 +3545,7 @@ opus_header_list = [
     visibility = [
         "//visibility:public",
     ]
-)'''
+)
 
 cc_library(
     name = "opus_headers",
@@ -3583,6 +3582,7 @@ objc_library(
         "-Ithird-party/webrtc/" + webrtc_source_dir + "/" + "sdk/objc",
         "-Ithird-party/webrtc/" + webrtc_source_dir + "/" + "sdk/objc/base",
         "-Ithird-party/webrtc/additional-files",
+        "-Ithird-party/webrtc/opus_headers",
         "-DBSD=1",
         "-DUSE_KISS_FFT",
         "-DHAVE_PTHREAD",
@@ -3612,6 +3612,7 @@ objc_library(
         "//submodules/ffmpeg:ffmpeg",
         "//third-party/openh264:openh264",
         ":field_trials_header",
+        ":opus_headers",
     ],
     sdk_frameworks = [
         "AVFoundation",
