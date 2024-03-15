@@ -23,6 +23,7 @@ import PromptUI
 import PhoneNumberFormat
 import QrCodeUI
 import InstantPageUI
+import InstantPageCache
 import LocalAuth
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
@@ -1073,8 +1074,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.requestBiometryAuth()
                 case "web_app_biometry_update_token":
                     var tokenData: Data?
-                    if let json, let tokenDataValue = json["token"] as? String, !tokenDataValue.isEmpty {
-                        tokenData = tokenDataValue.data(using: .utf8)
+                    if let json, let tokenDataValue = json["token"] as? Data {
+                        tokenData = tokenDataValue
                     }
                     self.requestBiometryUpdateToken(tokenData: tokenData)
                 default:
@@ -1513,7 +1514,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     let appBundleId = self.context.sharedContext.applicationBindings.appBundleId
                     
                     Thread { [weak self] in
-                        let key = LocalAuth.getOrCreatePrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
+                        var key = LocalAuth.getPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
+                        if key == nil {
+                            key = LocalAuth.addPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
+                        }
                         
                         let decryptedData: LocalAuth.DecryptionResult
                         if let key {
@@ -1563,9 +1567,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
             data["status"] = isAuthorized ? "authorized" : "failed"
             if isAuthorized {
                 if let tokenData {
-                    data["token"] = String(data: tokenData, encoding: .utf8) ?? ""
+                    data["token"] = tokenData
                 } else {
-                    data["token"] = ""
+                    data["token"] = Data()
                 }
             }
             
@@ -1589,7 +1593,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let tokenData {
                 let appBundleId = self.context.sharedContext.applicationBindings.appBundleId
                 Thread { [weak self] in
-                    let key = LocalAuth.getOrCreatePrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
+                    var key = LocalAuth.getPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
+                    if key == nil {
+                        key = LocalAuth.addPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
+                    }
                     
                     var encryptedData: TelegramBotBiometricsState.OpaqueToken?
                     if let key {
@@ -1612,28 +1619,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 state.opaqueToken = encryptedData
                                 return state
                             })
-                            
-                            var data: [String: Any] = [:]
-                            data["status"] = "updated"
-                            
-                            guard let jsonData = try? JSONSerialization.data(withJSONObject: data) else {
-                                return
-                            }
-                            guard let jsonDataString = String(data: jsonData, encoding: .utf8) else {
-                                return
-                            }
-                            self.webView?.sendEvent(name: "biometry_token_updated", data: jsonDataString)
-                        } else {
-                            var data: [String: Any] = [:]
-                            data["status"] = "failed"
-                            
-                            guard let jsonData = try? JSONSerialization.data(withJSONObject: data) else {
-                                return
-                            }
-                            guard let jsonDataString = String(data: jsonData, encoding: .utf8) else {
-                                return
-                            }
-                            self.webView?.sendEvent(name: "biometry_token_updated", data: jsonDataString)
                         }
                     }
                 }.start()
@@ -1643,17 +1628,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     state.opaqueToken = nil
                     return state
                 })
-                
-                var data: [String: Any] = [:]
-                data["status"] = "removed"
-                
-                guard let jsonData = try? JSONSerialization.data(withJSONObject: data) else {
-                    return
-                }
-                guard let jsonDataString = String(data: jsonData, encoding: .utf8) else {
-                    return
-                }
-                self.webView?.sendEvent(name: "biometry_token_updated", data: jsonDataString)
             }
         }
     }
@@ -1874,6 +1848,25 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 c.dismiss(completion: nil)
                 
                 self?.controllerNode.webView?.reload()
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_TermsOfUse, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] c, _ in
+                c.dismiss(completion: nil)
+                
+                guard let self, let navigationController = self.getNavigationController() else {
+                    return
+                }
+                
+                let context = self.context
+                let _ = (cachedWebAppTermsPage(context: context)
+                |> deliverOnMainQueue).startStandalone(next: { resolvedUrl in
+                    context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: true, openPeer: { peer, navigation in
+                    }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak self] c, arguments in
+                        self?.push(c)
+                    }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
+                })
             })))
             
             if let _ = attachMenuBot, [.attachMenu, .settings, .generic].contains(source) {

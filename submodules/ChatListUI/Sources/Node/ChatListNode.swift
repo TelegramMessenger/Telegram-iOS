@@ -101,8 +101,9 @@ public final class ChatListNodeInteraction {
     let openStorageManagement: () -> Void
     let openPasswordSetup: () -> Void
     let openPremiumIntro: () -> Void
-    let openPremiumGift: () -> Void
+    let openPremiumGift: ([EnginePeer.Id]) -> Void
     let openActiveSessions: () -> Void
+    let openBirthdaySetup: () -> Void
     let performActiveSessionAction: (NewSessionReview, Bool) -> Void
     let openChatFolderUpdates: () -> Void
     let hideChatFolderUpdates: () -> Void
@@ -154,8 +155,9 @@ public final class ChatListNodeInteraction {
         openStorageManagement: @escaping () -> Void,
         openPasswordSetup: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void,
-        openPremiumGift: @escaping () -> Void,
+        openPremiumGift: @escaping ([EnginePeer.Id]) -> Void,
         openActiveSessions: @escaping () -> Void,
+        openBirthdaySetup: @escaping () -> Void,
         performActiveSessionAction: @escaping (NewSessionReview, Bool) -> Void,
         openChatFolderUpdates: @escaping () -> Void,
         hideChatFolderUpdates: @escaping () -> Void,
@@ -196,6 +198,7 @@ public final class ChatListNodeInteraction {
         self.openPremiumIntro = openPremiumIntro
         self.openPremiumGift = openPremiumGift
         self.openActiveSessions = openActiveSessions
+        self.openBirthdaySetup = openBirthdaySetup
         self.performActiveSessionAction = performActiveSessionAction
         self.openChatFolderUpdates = openChatFolderUpdates
         self.hideChatFolderUpdates = hideChatFolderUpdates
@@ -732,7 +735,11 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
                         case .xmasPremiumGift:
-                            nodeInteraction?.openPremiumGift()
+                            nodeInteraction?.openPremiumGift([])
+                        case .setupBirthday:
+                            nodeInteraction?.openBirthdaySetup()
+                        case let .birthdayPremiumGift(peers):
+                            nodeInteraction?.openPremiumGift(peers.map { $0.id })
                         case .reviewLogin:
                             break
                         }
@@ -1064,7 +1071,11 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
                         case .xmasPremiumGift:
-                            nodeInteraction?.openPremiumGift()
+                            nodeInteraction?.openPremiumGift([])
+                        case .setupBirthday:
+                            nodeInteraction?.openBirthdaySetup()
+                        case let .birthdayPremiumGift(peers):
+                            nodeInteraction?.openPremiumGift(peers.map { $0.id })
                         case .reviewLogin:
                             break
                         }
@@ -1682,11 +1693,11 @@ public final class ChatListNode: ListView {
             }
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
             self.push?(controller)
-        }, openPremiumGift: { [weak self] in
+        }, openPremiumGift: { [weak self] peerIds in
             guard let self else {
                 return
             }
-            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList, completion: nil)
+            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(peerIds), completion: nil)
             self.push?(controller)
         }, openActiveSessions: { [weak self] in
             guard let self else {
@@ -1707,6 +1718,8 @@ public final class ChatListNode: ListView {
                 let recentSessionsController = self.context.sharedContext.makeRecentSessionsController(context: self.context, activeSessionsContext: activeSessionsContext)
                 self.push?(recentSessionsController)
             })
+        }, openBirthdaySetup: {
+            
         }, performActiveSessionAction: { [weak self] newSessionReview, isPositive in
             guard let self else {
                 return
@@ -1782,6 +1795,12 @@ public final class ChatListNode: ListView {
             switch notice {
             case .xmasPremiumGift:
                 let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .xmasPremiumGift).startStandalone()
+                self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_PremiumGiftInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
+                    return true
+                }))
+            case .setupBirthday:
+                //TODO:localize
+                let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .setupBirthday).startStandalone()
                 self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_PremiumGiftInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
                     return true
                 }))
@@ -1899,7 +1918,9 @@ public final class ChatListNode: ListView {
                         return .single(.setupPassword)
                     }
                 }
-                if suggestions.contains(.xmasPremiumGift) {
+                if suggestions.contains(.setupBirthday) {
+                    return .single(.setupBirthday)
+                } else if suggestions.contains(.xmasPremiumGift) {
                     return .single(.xmasPremiumGift)
                 } else if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium) || suggestions.contains(.restorePremium), let inAppPurchaseManager = context.inAppPurchaseManager {
                     return inAppPurchaseManager.availableProducts

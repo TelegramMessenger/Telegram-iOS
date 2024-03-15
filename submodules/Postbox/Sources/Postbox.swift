@@ -2999,7 +2999,6 @@ final class PostboxImpl {
         
         let startTime = CFAbsoluteTimeGetCurrent()
         
-
         self.valueBox.begin()
         let transaction = Transaction(queue: self.queue, postbox: self)
         self.afterBegin(transaction: transaction)
@@ -3013,7 +3012,6 @@ final class PostboxImpl {
         if transactionDuration > 0.1 {
             postboxLog("Postbox transaction took \(transactionDuration * 1000.0) ms, from: \(file), on:\(line)")
         }
-        
         
         let _ = self.isInTransaction.swap(false)
         

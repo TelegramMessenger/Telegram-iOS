@@ -719,7 +719,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     
     @objc private func createActionButtonPressed() {
         var proceedImpl: ((String, String?) -> Void)?
-        let titleController = stickerPackEditTitleController(context: self.context, title: self.presentationData.strings.ImportStickerPack_ChooseName, text: self.presentationData.strings.ImportStickerPack_ChooseNameDescription, placeholder: self.presentationData.strings.ImportStickerPack_NamePlaceholder, value: nil, maxLength: 128, apply: { [weak self] title in
+        let titleController = stickerPackEditTitleController(context: self.context, title: self.presentationData.strings.ImportStickerPack_ChooseName, text: self.presentationData.strings.ImportStickerPack_ChooseNameDescription, placeholder: self.presentationData.strings.ImportStickerPack_NamePlaceholder, value: nil, maxLength: 64, apply: { [weak self] title in
             if let strongSelf = self, let title = title {
                 strongSelf.shortNameSuggestionDisposable.set((strongSelf.context.engine.stickers.getStickerSetShortNameSuggestion(title: title)
                 |> deliverOnMainQueue).start(next: { suggestedShortName in
@@ -735,7 +735,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             guard let strongSelf = self else {
                 return
             }
-            let controller = importStickerPackShortNameController(context: strongSelf.context, title: strongSelf.presentationData.strings.ImportStickerPack_ChooseLink, text: strongSelf.presentationData.strings.ImportStickerPack_ChooseLinkDescription, placeholder: "", value: suggestedShortName, maxLength: 60, existingAlertController: titleController, apply: { [weak self] shortName in
+            let controller = importStickerPackShortNameController(context: strongSelf.context, title: strongSelf.presentationData.strings.ImportStickerPack_ChooseLink, text: strongSelf.presentationData.strings.ImportStickerPack_ChooseLinkDescription, placeholder: "", value: suggestedShortName, maxLength: 64, existingAlertController: titleController, apply: { [weak self] shortName in
                 if let shortName = shortName {
                     self?.createStickerSet(title: title, shortName: shortName)
                 }

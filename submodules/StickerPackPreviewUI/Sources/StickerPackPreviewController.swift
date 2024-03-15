@@ -297,8 +297,8 @@ public func preloadedStickerPackThumbnail(account: Account, info: StickerPackCol
         let signal = Signal<Bool, NoError> { subscriber in
             let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)).start()
             let dataDisposable: Disposable
-            if info.flags.contains(.isAnimated) || info.flags.contains(.isVideo) {
-                dataDisposable = chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: thumbnail.resource, isVideo: info.flags.contains(.isVideo), width: 80, height: 80, synchronousLoad: false).start(next: { data in
+            if thumbnail.typeHint != .generic {
+                dataDisposable = chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: thumbnail.resource, isVideo: thumbnail.typeHint == .video, width: 80, height: 80, synchronousLoad: false).start(next: { data in
                     if data.complete {
                         subscriber.putNext(true)
                         subscriber.putCompletion()

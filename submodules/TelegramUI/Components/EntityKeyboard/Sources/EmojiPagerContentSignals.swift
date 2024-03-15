@@ -1162,11 +1162,6 @@ public extension EmojiPagerContentComponent {
                 }
             } else if case .stickerAlt = subject {
                 for reactionItem in topReactionItems {
-//                    if existingIds.contains(reactionItem.reaction) {
-//                        continue
-//                    }
-//                    existingIds.insert(reactionItem.reaction)
-                    
                     let icon: EmojiPagerContentComponent.Item.Icon
                     if case .reaction(onlyTop: true) = subject {
                         icon = .none
@@ -1612,6 +1607,7 @@ public extension EmojiPagerContentComponent {
         hasSearch: Bool,
         hasTrending: Bool,
         forceHasPremium: Bool,
+        hasEdit: Bool = false,
         searchIsPlaceholderOnly: Bool = true,
         isProfilePhotoEmojiSelection: Bool = false,
         isGroupPhotoEmojiSelection: Bool = false,
@@ -1944,11 +1940,11 @@ public extension EmojiPagerContentComponent {
                     
                     var title = ""
                     var headerItem: EntityKeyboardAnimationData?
-                    var hasEdit = false
+                    var groupHasEdit = false
                     inner: for (id, info, _) in view.collectionInfos {
                         if id == groupId, let info = info as? StickerPackCollectionInfo {
                             title = info.title
-                            hasEdit = info.flags.contains(.isCreator)
+                            groupHasEdit = info.flags.contains(.isCreator)
                             
                             if let thumbnail = info.thumbnail {
                                 let type: EntityKeyboardAnimationData.ItemType
@@ -1974,7 +1970,7 @@ public extension EmojiPagerContentComponent {
                             break inner
                         }
                     }
-                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: title, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: true, hasEdit: hasEdit, headerItem: headerItem, items: [resultItem]))
+                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: title, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: true, hasEdit: hasEdit && groupHasEdit, headerItem: headerItem, items: [resultItem]))
                 }
             }
             

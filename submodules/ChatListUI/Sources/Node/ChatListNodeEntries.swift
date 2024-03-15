@@ -86,6 +86,8 @@ public enum ChatListNotice: Equatable {
     case premiumAnnualDiscount(discount: Int32)
     case premiumRestore(discount: Int32)
     case xmasPremiumGift
+    case setupBirthday
+    case birthdayPremiumGift(peers: [EnginePeer])
     case reviewLogin(newSessionReview: NewSessionReview, totalCount: Int)
 }
 

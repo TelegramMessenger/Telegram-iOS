@@ -159,7 +159,7 @@ final class WebAppWebView: WKWebView {
         self.interactiveTransitionGestureRecognizerTest = { point -> Bool in
             return point.x > 30.0
         }
-        self.allowsBackForwardNavigationGestures = true
+        self.allowsBackForwardNavigationGestures = false
         if #available(iOS 16.4, *) {
             self.isInspectable = true
         } 

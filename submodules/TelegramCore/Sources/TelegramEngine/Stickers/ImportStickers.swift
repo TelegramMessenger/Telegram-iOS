@@ -194,7 +194,7 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
                         flags |= (1 << 1)
                     }
                     
-                    inputStickers.append(.inputStickerSetItem(flags: flags, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.first ?? "", maskCoords: nil, keywords: sticker.keywords))
+                    inputStickers.append(.inputStickerSetItem(flags: flags, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.joined(), maskCoords: nil, keywords: sticker.keywords))
                 }
                 var thumbnailDocument: Api.InputDocument?
                 if thumbnail != nil, let resource = resources.last {
@@ -307,7 +307,7 @@ func _internal_addStickerToStickerSet(account: Account, packReference: StickerPa
         if sticker.keywords.count > 0 {
             flags |= (1 << 1)
         }
-        let inputSticker: Api.InputStickerSetItem = .inputStickerSetItem(flags: flags, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.first ?? "", maskCoords: nil, keywords: sticker.keywords)
+        let inputSticker: Api.InputStickerSetItem = .inputStickerSetItem(flags: flags, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.joined(), maskCoords: nil, keywords: sticker.keywords)
        
         return account.network.request(Api.functions.stickers.addStickerToSet(stickerset: packReference.apiInputStickerSet, sticker: inputSticker))
         |> mapError { error -> AddStickerToSetError in
@@ -416,7 +416,7 @@ func _internal_replaceSticker(account: Account, previousSticker: FileMediaRefere
         if sticker.keywords.count > 0 {
             flags |= (1 << 1)
         }
-        let inputSticker: Api.InputStickerSetItem = .inputStickerSetItem(flags: flags, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.first ?? "", maskCoords: nil, keywords: sticker.keywords)
+        let inputSticker: Api.InputStickerSetItem = .inputStickerSetItem(flags: flags, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.joined(), maskCoords: nil, keywords: sticker.keywords)
        
         return account.network.request(Api.functions.stickers.replaceSticker(sticker: .inputDocument(id: previousResource.fileId, accessHash: previousResource.accessHash, fileReference: Buffer(data: previousResource.fileReference ?? Data())), newSticker: inputSticker))
         |> mapError { error -> ReplaceStickerError in

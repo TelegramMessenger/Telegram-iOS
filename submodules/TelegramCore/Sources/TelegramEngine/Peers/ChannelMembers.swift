@@ -90,19 +90,15 @@ func _internal_channelMembers(postbox: Postbox, network: Network, accountPeerId:
                         var items: [RenderedChannelParticipant] = []
                         switch result {
                             case let .channelParticipants(_, participants, chats, users):
-                                postboxLog("channel users insertion started, count: \(participants.count)")
                                 let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
-                                postboxLog("channel users parsed")
                                 updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
-                                postboxLog("channel users postbox updated, started mapping ids")
                                 var peers: [PeerId: Peer] = [:]
                                 for id in parsedPeers.allIds {
                                     if let peer = transaction.getPeer(id) {
                                         peers[peer.id] = peer
                                     }
                                 }
-                                postboxLog("channel users finish mapping, started updating participants")
-
+                                
                                 for participant in CachedChannelParticipants(apiParticipants: participants).participants {
                                     if let peer = parsedPeers.get(participant.peerId) {
                                         var renderedPresences: [PeerId: PeerPresence] = [:]
@@ -112,7 +108,6 @@ func _internal_channelMembers(postbox: Postbox, network: Network, accountPeerId:
                                         items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers, presences: renderedPresences))
                                     }
                                 }
-                                postboxLog("channel participants finish updating")
                             case .channelParticipantsNotModified:
                                 return nil
                         }

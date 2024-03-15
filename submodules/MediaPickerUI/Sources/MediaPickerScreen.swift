@@ -2248,7 +2248,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         if !items.isEmpty {
                             items.append(.separator)
                         }
-                        items.append(.action(ContextMenuActionItem(text: hasGeneric ? strings.Attachment_EnableSpoiler : strings.Attachment_DisableSpoiler, icon: { _ in return nil }, animationName: "anim_spoiler", action: { [weak self]  _, f in
+                        items.append(.action(ContextMenuActionItem(text: hasGeneric ? strings.Attachment_EnableSpoiler : strings.Attachment_DisableSpoiler, icon: { _ in return nil }, iconAnimation: ContextMenuActionItem.IconAnimation(
+                            name: "anim_spoiler",
+                            loop: true
+                        ), action: { [weak self]  _, f in
                             f(.default)
                             guard let strongSelf = self else {
                                 return

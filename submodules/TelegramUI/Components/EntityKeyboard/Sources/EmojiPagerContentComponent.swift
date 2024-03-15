@@ -7540,12 +7540,12 @@ private final class FadingMaskLayer: SimpleLayer {
 }
 
 public struct StickerPickerInputData: StickerPickerInput, Equatable {
-    public var emoji: EmojiPagerContentComponent
+    public var emoji: EmojiPagerContentComponent?
     public var stickers: EmojiPagerContentComponent?
     public var gifs: GifPagerContentComponent?
     
     public init(
-        emoji: EmojiPagerContentComponent,
+        emoji: EmojiPagerContentComponent?,
         stickers: EmojiPagerContentComponent?,
         gifs: GifPagerContentComponent?
     ) {

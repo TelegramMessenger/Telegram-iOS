@@ -1140,6 +1140,7 @@ private final class StickerPackContainer: ASDisplayNode {
     
     private let stickerPickerInputData = Promise<StickerPickerInput>()
     private func presentAddStickerOptions() {
+        //TODO:localize
         let actionSheet = ActionSheetController(presentationData: self.presentationData)
         var items: [ActionSheetItem] = []
         items.append(ActionSheetButtonItem(title: "Create a New Sticker", color: .accent, action: { [weak actionSheet, weak self] in
@@ -1167,22 +1168,6 @@ private final class StickerPackContainer: ASDisplayNode {
         ])])
         self.presentInGlobalOverlay(actionSheet, nil)
         
-        
-        let emojiItems = EmojiPagerContentComponent.emojiInputData(
-            context: self.context,
-            animationCache: self.context.animationCache,
-            animationRenderer: self.context.animationRenderer,
-            isStandalone: false,
-            subject: .emoji,
-            hasTrending: true,
-            topReactionItems: [],
-            areUnicodeEmojiEnabled: true,
-            areCustomEmojiEnabled: true,
-            chatPeerId: self.context.account.peerId,
-            hasSearch: true,
-            forceHasPremium: true
-        )
-        
         let stickerItems = EmojiPagerContentComponent.stickerInputData(
             context: self.context,
             animationCache: self.context.animationCache,
@@ -1191,16 +1176,14 @@ private final class StickerPackContainer: ASDisplayNode {
             stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
             chatPeerId: self.context.account.peerId,
             hasSearch: true,
-            hasTrending: true,
+            hasTrending: false,
             forceHasPremium: true
         )
         
-        let signal = combineLatest(
-            queue: .mainQueue(),
-            emojiItems,
-            stickerItems
-        ) |> map { emoji, stickers -> StickerPickerInput in
-            return StickerPickerInputData(emoji: emoji, stickers: stickers, gifs: nil)
+        let signal = stickerItems
+        |> deliverOnMainQueue
+        |> map { stickers -> StickerPickerInput in
+            return StickerPickerInputData(emoji: nil, stickers: stickers, gifs: nil)
         }
         
         self.stickerPickerInputData.set(signal)
@@ -1224,7 +1207,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     context: context,
                     source: result,
                     transitionArguments: (transitionView, transitionRect, transitionImage),
-                    completion: { file in
+                    completion: { file, commit in
                         dismissImpl?()
                         let sticker = ImportSticker(
                             resource: file.resource,
@@ -1236,6 +1219,8 @@ private final class StickerPackContainer: ASDisplayNode {
                         let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
                         let _ = (context.engine.stickers.addStickerToStickerSet(packReference: packReference, sticker: sticker)
                         |> deliverOnMainQueue).start(completed: {
+                            commit()
+                            
                             let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
                             (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
                             
@@ -1300,7 +1285,7 @@ private final class StickerPackContainer: ASDisplayNode {
             context: context,
             source: initialFile,
             transitionArguments: nil,
-            completion: { file in
+            completion: { file, commit in
                 let sticker = ImportSticker(
                     resource: file.resource,
                     emojis: ["😀"],
@@ -1312,6 +1297,8 @@ private final class StickerPackContainer: ASDisplayNode {
                 
                 let _ = (context.engine.stickers.replaceSticker(previousSticker: .stickerPack(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), media: initialFile), sticker: sticker)
                 |> deliverOnMainQueue).start(completed: {
+                    commit()
+                    
                     let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
                     (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
                 })
@@ -1327,7 +1314,7 @@ private final class StickerPackContainer: ASDisplayNode {
         let context = self.context
         //TODO:localize
         var dismissImpl: (() -> Void)?
-        let controller = stickerPackEditTitleController(context: context, title: "Edit Sticker Set Name", text: "Choose a new name for your set.", placeholder: self.presentationData.strings.ImportStickerPack_NamePlaceholder, actionTitle: presentationData.strings.Common_Done, value: self.updatedTitle ?? info.title, maxLength: 128, apply: { [weak self] title in
+        let controller = stickerPackEditTitleController(context: context, title: "Edit Sticker Set Name", text: "Choose a new name for your set.", placeholder: self.presentationData.strings.ImportStickerPack_NamePlaceholder, actionTitle: presentationData.strings.Common_Done, value: self.updatedTitle ?? info.title, maxLength: 64, apply: { [weak self] title in
             guard let self, let title else {
                 return
             }

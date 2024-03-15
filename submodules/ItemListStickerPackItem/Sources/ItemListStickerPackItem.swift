@@ -488,8 +488,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             var thumbnailItem: StickerPackThumbnailItem?
             var resourceReference: MediaResourceReference?
             if let thumbnail = item.packInfo.thumbnail {
-                if item.packInfo.flags.contains(.isAnimated) || item.packInfo.flags.contains(.isVideo)  {
-                    thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions, item.packInfo.flags.contains(.isVideo), item.packInfo.flags.contains(.isCustomTemplateEmoji))
+                if thumbnail.typeHint != .generic {
+                    thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions, thumbnail.typeHint == .video, item.packInfo.flags.contains(.isCustomTemplateEmoji))
                 } else {
                     thumbnailItem = .still(thumbnail)
                 }
@@ -844,7 +844,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         var imageSize = PixelDimensions(width: 512, height: 512)
                         var immediateThumbnailData: Data?
                         if let data = item.packInfo.immediateThumbnailData {
-                            if item.packInfo.flags.contains(.isVideo) {
+                            if item.packInfo.thumbnail?.typeHint == .video || item.topItem?.file.isVideoSticker == true {
                                 imageSize = PixelDimensions(width: 100, height: 100)
                             }
                             immediateThumbnailData = data

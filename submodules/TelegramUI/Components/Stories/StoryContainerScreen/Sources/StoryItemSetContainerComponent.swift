@@ -2690,7 +2690,7 @@ public final class StoryItemSetContainerComponent: Component {
                 self.bottomContentGradientLayer.colors = colors
                 self.bottomContentGradientLayer.type = .axial
                 
-                self.contentDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
+                self.contentDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.3)
             }
             
             let wasPanning = self.component?.isPanning ?? false

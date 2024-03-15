@@ -19,9 +19,8 @@ public func printOpenFiles() {
     var flags: Int32 = 0
     var fd: Int32 = 0
     var buf = Data(count: Int(MAXPATHLEN) + 1)
-    let maxFd = min(1024, FD_SETSIZE)
     
-    while fd < maxFd {
+    while fd < FD_SETSIZE {
         errno = 0;
         flags = fcntl(fd, F_GETFD, 0);
         if flags == -1 && errno != 0 {

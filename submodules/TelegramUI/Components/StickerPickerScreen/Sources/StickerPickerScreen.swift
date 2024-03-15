@@ -30,6 +30,7 @@ private final class StickerSelectionComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let deviceMetrics: DeviceMetrics
+    let topInset: CGFloat
     let bottomInset: CGFloat
     let content: StickerPickerInputData
     let backgroundColor: UIColor
@@ -41,6 +42,7 @@ private final class StickerSelectionComponent: Component {
         theme: PresentationTheme,
         strings: PresentationStrings,
         deviceMetrics: DeviceMetrics,
+        topInset: CGFloat,
         bottomInset: CGFloat,
         content: StickerPickerInputData,
         backgroundColor: UIColor,
@@ -51,6 +53,7 @@ private final class StickerSelectionComponent: Component {
         self.theme = theme
         self.strings = strings
         self.deviceMetrics = deviceMetrics
+        self.topInset = topInset
         self.bottomInset = bottomInset
         self.content = content
         self.backgroundColor = backgroundColor
@@ -66,6 +69,9 @@ private final class StickerSelectionComponent: Component {
             return false
         }
         if lhs.deviceMetrics != rhs.deviceMetrics {
+            return false
+        }
+        if lhs.topInset != rhs.topInset {
             return false
         }
         if lhs.bottomInset != rhs.bottomInset {
@@ -235,12 +241,13 @@ private final class StickerSelectionComponent: Component {
             self.backgroundColor = component.backgroundColor
             let panelBackgroundColor = component.backgroundColor.withMultipliedAlpha(0.85)
             self.panelBackgroundView.updateColor(color: panelBackgroundColor, transition: .immediate)
-            self.panelSeparatorView.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.1)
+            self.panelSeparatorView.backgroundColor = component.separatorColor
             
             self.component = component
             self.state = state
             
             let topPanelHeight: CGFloat = 42.0
+            let topInset = component.topInset
             
             let controller = component.getController()
             let defaultToEmoji = controller?.defaultToEmoji ?? false
@@ -248,7 +255,7 @@ private final class StickerSelectionComponent: Component {
             let context = component.context
             let stickerPeekBehavior = EmojiContentPeekBehaviorImpl(
                 context: context,
-                forceTheme: defaultDarkColorPresentationTheme,
+                forceTheme: controller?.forceDark == true ? defaultDarkColorPresentationTheme : nil,
                 interaction: nil,
                 chatPeerId: nil,
                 present: { c, a in
@@ -258,19 +265,20 @@ private final class StickerSelectionComponent: Component {
                 }
             )
             
+            let isFullscreen = controller?.isFullscreen == true
             let keyboardSize = self.keyboardView.update(
                 transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
                     theme: component.theme,
                     strings: component.strings,
                     isContentInFocus: true,
-                    containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: 0.0, bottom: component.bottomInset, right: 0.0),
+                    containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0 + topInset, left: 0.0, bottom: component.bottomInset, right: 0.0),
                     topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                     emojiContent: component.content.emoji,
                     stickerContent: component.content.stickers,
                     maskContent: nil,
                     gifContent: component.content.gifs,
-                    hasRecentGifs: true,
+                    hasRecentGifs: !isFullscreen,
                     availableGifSearchEmojies: [],
                     defaultToEmojiTab: defaultToEmoji,
                     externalTopPanelContainer: self.panelHostView,
@@ -313,7 +321,10 @@ private final class StickerSelectionComponent: Component {
                             mappedMode = .gif
                         }
                         
-                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        if controller?.forceDark == true {
+                            presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                        }
                         let searchContainerNode = PaneSearchContainerNode(
                             context: context,
                             theme: presentationData.theme,
@@ -344,7 +355,7 @@ private final class StickerSelectionComponent: Component {
                     deviceMetrics: component.deviceMetrics,
                     hiddenInputHeight: 0.0,
                     inputHeight: 0.0,
-                    displayBottomPanel: controller?.isFullscreen == false,
+                    displayBottomPanel: !isFullscreen,
                     isExpanded: true,
                     clipContentToTopPanel: false,
                     useExternalSearchContainer: false
@@ -365,26 +376,34 @@ private final class StickerSelectionComponent: Component {
                     self.keyboardClippingView.clipsToBounds = false
                 }
                 
-                transition.setFrame(view: self.keyboardClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelHeight)))
-                self.keyboardClippingView.hitEdgeInsets = UIEdgeInsets(top: -topPanelHeight, left: 0.0, bottom: 0.0, right: 0.0)
+                transition.setFrame(view: self.keyboardClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelHeight - topInset)))
+                self.keyboardClippingView.hitEdgeInsets = UIEdgeInsets(top: -topPanelHeight - topInset, left: 0.0, bottom: 0.0, right: 0.0)
                 
-                transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelHeight), size: keyboardSize))
-                transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
+                transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelHeight - topInset), size: keyboardSize))
+                transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
                 
-                transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: keyboardSize.width, height: topPanelHeight)))
+                transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: keyboardSize.width, height: topPanelHeight + topInset)))
                 self.panelBackgroundView.update(size: self.panelBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
                 
                 let topPanelAlpha: CGFloat
                 if self.searchVisible || self.keyboardContentId == AnyHashable("gifs") {
                     topPanelAlpha = 0.0
+                    if isFullscreen, let navigationBar = controller?.navigationBar, navigationBar.alpha > 0.0 {
+                        transition.setAlpha(view: navigationBar.view, alpha: 0.0)
+                    }
+                } else if isFullscreen {
+                    topPanelAlpha = 1.0
+                    if let navigationBar = controller?.navigationBar, navigationBar.alpha < 1.0 {
+                        transition.setAlpha(view: navigationBar.view, alpha: 1.0)
+                    }
                 } else {
                     topPanelAlpha = max(0.0, min(1.0, (self.topPanelScrollingOffset / 20.0)))
                 }
-                
+            
                 transition.setAlpha(view: self.panelBackgroundView, alpha: topPanelAlpha)
                 transition.setAlpha(view: self.panelSeparatorView, alpha: topPanelAlpha)
                 
-                transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight), size: CGSize(width: keyboardSize.width, height: UIScreenPixel)))
+                transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + topInset - UIScreenPixel), size: CGSize(width: keyboardSize.width, height: UIScreenPixel)))
             }
             
             return availableSize
@@ -642,35 +661,36 @@ public class StickerPickerScreen: ViewController {
                                         
                     inputData.gifs = gifData?.component
                     
-                    let emoji = inputData.emoji
-                    if let emojiSearchResult = emojiSearchState.result {
-                        var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
-                        if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
-                            emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
-                                text: presentationData.strings.EmojiSearch_SearchEmojiEmptyResult,
-                                iconFile: nil
-                            )
+                    if let emoji = inputData.emoji {
+                        if let emojiSearchResult = emojiSearchState.result {
+                            var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
+                            if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
+                                emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
+                                    text: presentationData.strings.EmojiSearch_SearchEmojiEmptyResult,
+                                    iconFile: nil
+                                )
+                            }
+                            
+                            let defaultSearchState: EmojiPagerContentComponent.SearchState = emojiSearchResult.isPreset ? .active : .empty(hasResults: true)
+                            inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: emojiSearchResult.version), emptySearchResults: emptySearchResults, searchState: emojiSearchState.isSearching ? .searching : defaultSearchState)
+                        } else if emojiSearchState.isSearching {
+                            inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emoji.contentItemGroups, itemContentUniqueId: emoji.itemContentUniqueId, emptySearchResults: emoji.emptySearchResults, searchState: .searching)
                         }
-                        let defaultSearchState: EmojiPagerContentComponent.SearchState = emojiSearchResult.isPreset ? .active : .empty(hasResults: true)
-                        inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emojiSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: emojiSearchResult.id, version: emojiSearchResult.version), emptySearchResults: emptySearchResults, searchState: emojiSearchState.isSearching ? .searching : defaultSearchState)
-                    } else if emojiSearchState.isSearching {
-                        inputData.emoji = emoji.withUpdatedItemGroups(panelItemGroups: emoji.panelItemGroups, contentItemGroups: emoji.contentItemGroups, itemContentUniqueId: emoji.itemContentUniqueId, emptySearchResults: emoji.emptySearchResults, searchState: .searching)
                     }
                     
-                    if let stickerSearchResult = stickerSearchState.result {
-                        var stickerSearchResults: EmojiPagerContentComponent.EmptySearchResults?
-                        if !stickerSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
-                            stickerSearchResults = EmojiPagerContentComponent.EmptySearchResults(
-                                text: presentationData.strings.EmojiSearch_SearchStickersEmptyResult,
-                                iconFile: nil
-                            )
-                        }
-                        if let stickers = inputData.stickers {
+                    if let stickers = inputData.stickers {
+                        if let stickerSearchResult = stickerSearchState.result {
+                            var stickerSearchResults: EmojiPagerContentComponent.EmptySearchResults?
+                            if !stickerSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
+                                stickerSearchResults = EmojiPagerContentComponent.EmptySearchResults(
+                                    text: presentationData.strings.EmojiSearch_SearchStickersEmptyResult,
+                                    iconFile: nil
+                                )
+                            }
+                            
                             let defaultSearchState: EmojiPagerContentComponent.SearchState = stickerSearchResult.isPreset ? .active : .empty(hasResults: true)
                             inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickerSearchResult.groups, itemContentUniqueId: EmojiPagerContentComponent.ContentId(id: stickerSearchResult.id, version: stickerSearchResult.version), emptySearchResults: stickerSearchResults, searchState: stickerSearchState.isSearching ? .searching : defaultSearchState)
-                        }
-                    } else if stickerSearchState.isSearching {
-                        if let stickers = inputData.stickers {
+                        } else if stickerSearchState.isSearching {
                             inputData.stickers = stickers.withUpdatedItemGroups(panelItemGroups: stickers.panelItemGroups, contentItemGroups: stickers.contentItemGroups, itemContentUniqueId: stickers.itemContentUniqueId, emptySearchResults: stickers.emptySearchResults, searchState: .searching)
                         }
                     }
@@ -778,9 +798,9 @@ public class StickerPickerScreen: ViewController {
                                     text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
                                 }
                                 controller.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { [weak controller] action in
-                                    if case .info = action {
-                                        let premiumController = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs, forceDark: true, dismissed: nil)
-                                        controller?.push(premiumController)
+                                    if case .info = action, let controller {
+                                        let premiumController = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs, forceDark: controller.forceDark, dismissed: nil)
+                                        controller.push(premiumController)
                                         return true
                                     }
                                     return false
@@ -802,7 +822,7 @@ public class StickerPickerScreen: ViewController {
                 return
             }
             
-            content.emoji.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
+            content.emoji?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
                 performItemAction: { [weak self] groupId, item, _, _, _, _ in
                     guard let strongSelf = self, let controller = strongSelf.controller else {
                         return
@@ -846,10 +866,10 @@ public class StickerPickerScreen: ViewController {
                                 for featuredStickerPack in stickerPacks {
                                     if featuredStickerPack.topItems.contains(where: { $0.file.fileId == file.fileId }) {
                                         if let componentView = self.hostView.componentView as? StickerSelectionComponent.View {
-                                            if let pagerView = componentView.keyboardView.view as? EntityKeyboardComponent.View, let emojiInputInteraction = self.content?.emoji.inputInteractionHolder.inputInteraction {
+                                            if let pagerView = componentView.keyboardView.view as? EntityKeyboardComponent.View, let emojiInputInteraction = self.content?.emoji?.inputInteractionHolder.inputInteraction, let controller = self.controller {
                                                 pagerView.openCustomSearch(content: EmojiSearchContent(
                                                     context: context,
-                                                    forceTheme: defaultDarkPresentationTheme,
+                                                    forceTheme: controller.forceDark ? defaultDarkPresentationTheme : nil,
                                                     items: stickerPacks,
                                                     initialFocusId: featuredStickerPack.info.id,
                                                     hasPremiumForUse: hasPremium,
@@ -858,7 +878,6 @@ public class StickerPickerScreen: ViewController {
                                                 ))
                                             }
                                         }
-                                    
                                         break
                                     }
                                 }
@@ -943,7 +962,10 @@ public class StickerPickerScreen: ViewController {
                     guard let strongSelf = self, let controller = strongSelf.controller else {
                         return
                     }
-                    let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                    var presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
+                    if controller.forceDark {
+                        presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                    }
                     let context = controller.context
                     if groupId == AnyHashable("recent") {
                         let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
@@ -1243,7 +1265,7 @@ public class StickerPickerScreen: ViewController {
             if let controller = self.controller {
                 stickerPeekBehavior = EmojiContentPeekBehaviorImpl(
                     context: controller.context,
-                    forceTheme: defaultDarkColorPresentationTheme,
+                    forceTheme: controller.forceDark ? defaultDarkColorPresentationTheme : nil,
                     interaction: nil,
                     chatPeerId: nil,
                     present: { [weak controller] c, a in
@@ -1348,7 +1370,10 @@ public class StickerPickerScreen: ViewController {
                     }
                     let context = controller.context
                     if groupId == AnyHashable("recent") {
-                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        if controller.forceDark {
+                            presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                        }
                         let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                         var items: [ActionSheetItem] = []
                         items.append(ActionSheetButtonItem(title: presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
@@ -1532,7 +1557,7 @@ public class StickerPickerScreen: ViewController {
             
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             
-            if let controller = self.controller, !controller.isFullscreen {
+            if let controller = self.controller {
                 controller.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
             }
         }
@@ -1711,10 +1736,11 @@ public class StickerPickerScreen: ViewController {
                             theme: self.theme,
                             strings: self.presentationData.strings,
                             deviceMetrics: layout.deviceMetrics,
+                            topInset: controller.isFullscreen ? navigationHeight : 0.0,
                             bottomInset: bottomInset,
                             content: content,
                             backgroundColor: self.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.85),
-                            separatorColor: self.theme.list.blocksBackgroundColor,
+                            separatorColor: self.theme.rootController.navigationBar.separatorColor,
                             getController: { [weak self] in
                                 if let self {
                                     return self.controller
@@ -1752,12 +1778,12 @@ public class StickerPickerScreen: ViewController {
         }
         
         private var defaultTopInset: CGFloat {
-            guard let (layout, navigationBarHeight) = self.currentLayout else {
+            guard let (layout, _) = self.currentLayout else {
                 return 210.0
             }
             
             if let controller = self.controller, controller.isFullscreen {
-                return navigationBarHeight
+                return 0.0
             }
             
             if case .compact = layout.metrics.widthClass {
@@ -1978,6 +2004,7 @@ public class StickerPickerScreen: ViewController {
     
     private let context: AccountContext
     private let theme: PresentationTheme
+    fileprivate let forceDark: Bool
     private let inputData: Signal<StickerPickerInput, NoError>
     fileprivate let defaultToEmoji: Bool
     let isFullscreen: Bool
@@ -2002,6 +2029,7 @@ public class StickerPickerScreen: ViewController {
         self.context = context
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.theme = forceDark ? defaultDarkColorPresentationTheme : presentationData.theme
+        self.forceDark = forceDark
         self.inputData = inputData
         self.isFullscreen = expanded
         self.defaultToEmoji = defaultToEmoji

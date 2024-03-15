@@ -2115,7 +2115,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 
         let limit: Int32 = 10
         var reachedLimitImpl: ((Int32) -> Void)?
-        let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .premiumGifting, options: [], isPeerEnabled: { peer in
+        
+        let mode: ContactMultiselectionControllerMode
+        if case let .chatList(peerIds) = source {
+            mode = .premiumGifting(topSectionTitle: "🎂 BIRTHDAY TODAY", topSectionPeers: peerIds)
+        } else {
+            mode = .premiumGifting(topSectionTitle: nil, topSectionPeers: [])
+        }
+        
+        let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: mode, options: [], isPeerEnabled: { peer in
             if case let .user(user) = peer, user.botInfo == nil && !peer.isService && !user.flags.contains(.isSupport) {
                 return true
             } else {
@@ -2314,7 +2322,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, isEditing: isEditing, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
     }
     
-    public func makeStickerEditorScreen(context: AccountContext, source: Any, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile) -> Void) -> ViewController {
+    public func makeStickerEditorScreen(context: AccountContext, source: Any, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, @escaping () -> Void) -> Void) -> ViewController {
         let subject: MediaEditorScreen.Subject
         let mode: MediaEditorScreen.Mode.StickerEditorMode
         if let file = source as? TelegramMediaFile {
@@ -2347,9 +2355,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
                 return nil
             }, completion: { result, commit in
-                commit({})
                 if case let .sticker(file) = result.media {
-                    completion(file)
+                    completion(file, {
+                        commit({})
+                    })
                 }
             } as (MediaEditorScreen.Result, @escaping (@escaping () -> Void) -> Void) -> Void
         )

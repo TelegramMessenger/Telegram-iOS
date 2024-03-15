@@ -11616,3 +11616,6 @@ Sorry for the inconvenience.";
 
 "ChannelBoost.NoAds" = "Switch Off Ads";
 "ChannelBoost.EnableNoAdsLevelText" = "Your channel needs **Level %1$@** to switch off ads.";
+
+"WebApp.TermsOfUse" = "Terms of Use";
+"WebApp.TermsOfUse_URL" = "https://telegram.org/tos/mini-apps";
