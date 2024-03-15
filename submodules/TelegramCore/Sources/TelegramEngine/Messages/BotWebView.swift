@@ -358,3 +358,43 @@ func _internal_updateBotBiometricsState(account: Account, peerId: EnginePeer.Id,
     }
     |> ignoreValues
 }
+
+func _internal_toggleChatManagingBotIsPaused(account: Account, chatId: EnginePeer.Id) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        transaction.updatePeerCachedData(peerIds: Set([chatId]), update: { _, current in
+            guard let current = current as? CachedUserData else {
+                return current
+            }
+            
+            if var peerStatusSettings = current.peerStatusSettings {
+                if let managingBot = peerStatusSettings.managingBot {
+                    peerStatusSettings.managingBot?.isPaused = !managingBot.isPaused
+                }
+                
+                return current.withUpdatedPeerStatusSettings(peerStatusSettings)
+            } else {
+                return current
+            }
+        })
+    }
+    |> ignoreValues
+}
+
+func _internal_removeChatManagingBot(account: Account, chatId: EnginePeer.Id) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        transaction.updatePeerCachedData(peerIds: Set([chatId]), update: { _, current in
+            guard let current = current as? CachedUserData else {
+                return current
+            }
+            
+            if var peerStatusSettings = current.peerStatusSettings {
+                peerStatusSettings.managingBot = nil
+                
+                return current.withUpdatedPeerStatusSettings(peerStatusSettings)
+            } else {
+                return current
+            }
+        })
+    }
+    |> ignoreValues
+}

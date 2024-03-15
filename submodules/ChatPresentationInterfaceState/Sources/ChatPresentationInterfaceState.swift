@@ -231,17 +231,52 @@ public enum ChatRecordedMediaPreview: Equatable {
     case video(Video)
 }
 
+public final class ChatManagingBot: Equatable {
+    public let bot: EnginePeer
+    public let isPaused: Bool
+    public let canReply: Bool
+    public let settingsUrl: String?
+    
+    public init(bot: EnginePeer, isPaused: Bool, canReply: Bool, settingsUrl: String?) {
+        self.bot = bot
+        self.isPaused = isPaused
+        self.canReply = canReply
+        self.settingsUrl = settingsUrl
+    }
+    
+    public static func ==(lhs: ChatManagingBot, rhs: ChatManagingBot) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        if lhs.bot != rhs.bot {
+            return false
+        }
+        if lhs.isPaused != rhs.isPaused {
+            return false
+        }
+        if lhs.canReply != rhs.canReply {
+            return false
+        }
+        if lhs.settingsUrl != rhs.settingsUrl {
+            return false
+        }
+        return true
+    }
+}
+
 public struct ChatContactStatus: Equatable {
     public var canAddContact: Bool
     public var canReportIrrelevantLocation: Bool
     public var peerStatusSettings: PeerStatusSettings?
     public var invitedBy: Peer?
+    public var managingBot: ChatManagingBot?
     
-    public init(canAddContact: Bool, canReportIrrelevantLocation: Bool, peerStatusSettings: PeerStatusSettings?, invitedBy: Peer?) {
+    public init(canAddContact: Bool, canReportIrrelevantLocation: Bool, peerStatusSettings: PeerStatusSettings?, invitedBy: Peer?, managingBot: ChatManagingBot?) {
         self.canAddContact = canAddContact
         self.canReportIrrelevantLocation = canReportIrrelevantLocation
         self.peerStatusSettings = peerStatusSettings
         self.invitedBy = invitedBy
+        self.managingBot = managingBot
     }
     
     public var isEmpty: Bool {
@@ -268,6 +303,9 @@ public struct ChatContactStatus: Equatable {
             return false
         }
         if !arePeersEqual(lhs.invitedBy, rhs.invitedBy) {
+            return false
+        }
+        if lhs.managingBot != rhs.managingBot {
             return false
         }
         return true

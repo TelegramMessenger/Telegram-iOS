@@ -22,12 +22,15 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
     public struct ManagingBot: Codable, Equatable {
         public var id: PeerId
         public var manageUrl: String?
+        public var isPaused: Bool
+        public var canReply: Bool
         
-        public init(id: PeerId, manageUrl: String?) {
+        public init(id: PeerId, manageUrl: String?, isPaused: Bool, canReply: Bool) {
             self.id = id
             self.manageUrl = manageUrl
+            self.isPaused = isPaused
+            self.canReply = canReply
         }
-        
     }
     
     public var flags: PeerStatusSettings.Flags

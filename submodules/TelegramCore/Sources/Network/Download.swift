@@ -103,7 +103,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         self.context.authTokenForDatacenter(withIdRequired: self.datacenterId, authToken:self.mtProto.requiredAuthToken, masterDatacenterId: self.mtProto.authTokenMasterDatacenterId)
     }
     
-    static func uploadPart(multiplexedManager: MultiplexedRequestManager, datacenterId: Int, consumerId: Int64, tag: MediaResourceFetchTag?, fileId: Int64, index: Int, data: Data, asBigPart: Bool, bigTotalParts: Int? = nil, useCompression: Bool = false) -> Signal<Void, UploadPartError> {
+    static func uploadPart(multiplexedManager: MultiplexedRequestManager, datacenterId: Int, consumerId: Int64, tag: MediaResourceFetchTag?, fileId: Int64, index: Int, data: Data, asBigPart: Bool, bigTotalParts: Int? = nil, useCompression: Bool = false, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<Void, UploadPartError> {
         let saveFilePart: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>)
         if asBigPart {
             let totalParts: Int32
@@ -117,7 +117,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             saveFilePart = Api.functions.upload.saveFilePart(fileId: fileId, filePart: Int32(index), bytes: Buffer(data: data))
         }
         
-        return multiplexedManager.request(to: .main(datacenterId), consumerId: consumerId, resourceId: nil, data: wrapMethodBody(saveFilePart, useCompression: useCompression), tag: tag, continueInBackground: true, expectedResponseSize: nil)
+        return multiplexedManager.request(to: .main(datacenterId), consumerId: consumerId, resourceId: nil, data: wrapMethodBody(saveFilePart, useCompression: useCompression), tag: tag, continueInBackground: true, onFloodWaitError: onFloodWaitError, expectedResponseSize: nil)
         |> mapError { error -> UploadPartError in
             if error.errorCode == 400 {
                 return .invalidMedia
@@ -130,7 +130,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    func uploadPart(fileId: Int64, index: Int, data: Data, asBigPart: Bool, bigTotalParts: Int? = nil, useCompression: Bool = false) -> Signal<Void, UploadPartError> {
+    func uploadPart(fileId: Int64, index: Int, data: Data, asBigPart: Bool, bigTotalParts: Int? = nil, useCompression: Bool = false, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<Void, UploadPartError> {
         return Signal<Void, MTRpcError> { subscriber in
             let request = MTRequest()
             
@@ -159,6 +159,13 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             request.dependsOnPasswordEntry = false
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
+                guard let errorContext = errorContext else {
+                    return true
+                }
+                if let onFloodWaitError, errorContext.floodWaitSeconds > 0, let errorText = errorContext.floodWaitErrorText {
+                    onFloodWaitError(errorText)
+                }
+                
                 return true
             }
             
@@ -295,7 +302,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         |> retryRequest
     }
     
-    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), expectedResponseSize: Int32? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
+    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), expectedResponseSize: Int32? = nil, automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil) -> Signal<T, MTRpcError> {
         return Signal { subscriber in
             let request = MTRequest()
             request.expectedResponseSize = expectedResponseSize ?? 0
@@ -313,6 +320,9 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 guard let errorContext = errorContext else {
                     return true
+                }
+                if let onFloodWaitError, errorContext.floodWaitSeconds > 0, let errorText = errorContext.floodWaitErrorText {
+                    onFloodWaitError(errorText)
                 }
                 if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
                     return false
@@ -344,7 +354,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    func requestWithAdditionalData<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false, expectedResponseSize: Int32? = nil) -> Signal<(T, Double), (MTRpcError, Double)> {
+    func requestWithAdditionalData<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil, failOnServerErrors: Bool = false, expectedResponseSize: Int32? = nil) -> Signal<(T, Double), (MTRpcError, Double)> {
         return Signal { subscriber in
             let request = MTRequest()
             request.expectedResponseSize = expectedResponseSize ?? 0
@@ -362,6 +372,9 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 guard let errorContext = errorContext else {
                     return true
+                }
+                if let onFloodWaitError, errorContext.floodWaitSeconds > 0, let errorText = errorContext.floodWaitErrorText {
+                    onFloodWaitError(errorText)
                 }
                 if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
                     return false
@@ -396,7 +409,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false, logPrefix: String = "", expectedResponseSize: Int32? = nil) -> Signal<(Any, NetworkResponseInfo), (MTRpcError, Double)> {
+    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true, onFloodWaitError: ((String) -> Void)? = nil, failOnServerErrors: Bool = false, logPrefix: String = "", expectedResponseSize: Int32? = nil) -> Signal<(Any, NetworkResponseInfo), (MTRpcError, Double)> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
@@ -415,6 +428,9 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             request.shouldContinueExecutionWithErrorContext = { errorContext in
                 guard let errorContext = errorContext else {
                     return true
+                }
+                if let onFloodWaitError, errorContext.floodWaitSeconds > 0, let errorText = errorContext.floodWaitErrorText {
+                    onFloodWaitError(errorText)
                 }
                 if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
                     return false

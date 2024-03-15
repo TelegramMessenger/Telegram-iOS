@@ -156,6 +156,18 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
         }
     }
     
+    if authorTitle == nil {
+        for attribute in message.attributes {
+            if let attribute = attribute as? InlineBusinessBotMessageAttribute {
+                if let title = attribute.title {
+                    authorTitle = title
+                } else if let peerId = attribute.peerId, let peer = message.peers[peerId] {
+                    authorTitle = peer.debugDisplayTitle
+                }
+            }
+        }
+    }
+    
     if let subject = associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
         authorTitle = nil
     }

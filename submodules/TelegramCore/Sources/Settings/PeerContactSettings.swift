@@ -35,7 +35,9 @@ extension PeerStatusSettings {
             
                 var managingBot: ManagingBot?
                 if let businessBotId {
-                    managingBot = ManagingBot(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(businessBotId)), manageUrl: businessBotManageUrl)
+                    let businessBotPaused = (flags & (1 << 11)) != 0
+                    let businessBotCanReply = (flags & (1 << 12)) != 0
+                    managingBot = ManagingBot(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(businessBotId)), manageUrl: businessBotManageUrl, isPaused: businessBotPaused, canReply: businessBotCanReply)
                 }
             
                 self = PeerStatusSettings(flags: result, geoDistance: geoDistance, requestChatTitle: requestChatTitle, requestChatDate: requestChatDate, requestChatIsChannel: (flags & (1 << 10)) != 0, managingBot: managingBot)

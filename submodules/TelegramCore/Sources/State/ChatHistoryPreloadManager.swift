@@ -360,11 +360,11 @@ final class ChatHistoryPreloadManager {
             guard let strongSelf = self else {
                 return
             }
-            #if DEBUG
+            /*#if DEBUG
             if "".isEmpty {
                 return
             }
-            #endif
+            #endif*/
             
             var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
             for item in loadItems {

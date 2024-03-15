@@ -1494,6 +1494,14 @@ public extension TelegramEngine {
         public func updateBotBiometricsState(peerId: EnginePeer.Id, update: @escaping (TelegramBotBiometricsState) -> TelegramBotBiometricsState) {
             let _ = _internal_updateBotBiometricsState(account: self.account, peerId: peerId, update: update).startStandalone()
         }
+        
+        public func toggleChatManagingBotIsPaused(chatId: EnginePeer.Id) {
+            let _ = _internal_toggleChatManagingBotIsPaused(account: self.account, chatId: chatId).startStandalone()
+        }
+        
+        public func removeChatManagingBot(chatId: EnginePeer.Id) {
+            let _ = _internal_removeChatManagingBot(account: self.account, chatId: chatId).startStandalone()
+        }
     }
 }
 
