@@ -392,7 +392,7 @@ final class EmojiStickerAccessoryNode: SparseNode, PeekControllerAccessoryNode {
             items.append(reaction)
         }
         
-        let selectedItems = ValuePromise<Set<MessageReaction.Reaction>>()
+        let selectedItems = ValuePromise<Set<MessageReaction.Reaction>>(Set())
         //TODO:localize
         let reactionContextNode = ReactionContextNode(
             context: self.context,
@@ -440,6 +440,7 @@ final class EmojiStickerAccessoryNode: SparseNode, PeekControllerAccessoryNode {
                 layoutImpl?(transition)
             }
         )
+        reactionContextNode.hideBackground = true
         reactionContextNode.displayTail = true
         reactionContextNode.forceTailToRight = true
         reactionContextNode.forceDark = true

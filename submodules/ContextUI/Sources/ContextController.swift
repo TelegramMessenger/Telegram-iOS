@@ -48,8 +48,6 @@ public enum ContextMenuActionItemTextColor {
 public enum ContextMenuActionResult {
     case `default`
     case dismissWithoutContent
-    /// Temporary
-    static var safeStreamRecordingDismissWithoutContent: ContextMenuActionResult { .dismissWithoutContent }
     
     case custom(ContainedViewLayoutTransition)
 }
@@ -116,9 +114,11 @@ public final class ContextMenuActionItem {
     
     public struct IconAnimation: Equatable {
         public var name: String
+        public var loop: Bool
         
-        public init(name: String) {
+        public init(name: String, loop: Bool = false) {
             self.name = name
+            self.loop = loop
         }
     }
 

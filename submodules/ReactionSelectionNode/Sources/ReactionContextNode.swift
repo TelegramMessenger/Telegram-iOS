@@ -332,6 +332,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     public var displayTail: Bool = true
     public var forceTailToRight: Bool = false
     public var forceDark: Bool = false
+    public var hideBackground: Bool = false
     
     private var didAnimateIn: Bool = false
     public private(set) var isAnimatingOut: Bool = false
@@ -1900,7 +1901,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             externalExpansionView: self.view,
             customContentView: nil,
             useOpaqueTheme: false,
-            hideBackground: false,
+            hideBackground: self.hideBackground,
             stateContext: nil,
             addImage: nil
         )

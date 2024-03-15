@@ -5676,11 +5676,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
         }
-        
-//        mediaEditor.stop()
-//        mediaEditor.invalidate()
-//        self.node.entitiesView.invalidate()
-    
+            
         let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
@@ -5772,36 +5768,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }
                     })))
                               
-                    let thumbSize = CGSize(width: 24.0, height: 24.0)
-                    for (pack, firstItem) in self.myStickerPacks {
-                        let thumbnailResource = pack.thumbnail?.resource ?? firstItem?.file.resource
-                        let thumbnailIconSource: ContextMenuActionItemIconSource?
-                        if let thumbnailResource {
-                            var resourceId: Int64 = 0
-                            if let resource = thumbnailResource as? CloudDocumentMediaResource {
-                                resourceId = resource.fileId
-                            }
-                            let thumbnailFile = firstItem?.file ?? TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: resourceId), partialReference: nil, resource: thumbnailResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/webp", size: thumbnailResource.size ?? 0, attributes: [])
-
-                            let _ = freeMediaFileInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: .stickerPack(stickerPack: .id(id: pack.id.id, accessHash: pack.accessHash), media: thumbnailFile)).start()
-                            thumbnailIconSource = ContextMenuActionItemIconSource(
-                                size: thumbSize,
-                                signal: chatMessageStickerPackThumbnail(postbox: self.context.account.postbox, resource: thumbnailResource)
-                                |> map { generator -> UIImage? in
-                                    return generator(TransformImageArguments(corners: ImageCorners(), imageSize: thumbSize, boundingSize: thumbSize, intrinsicInsets: .zero))?.generateImage()
-                                }
-                            )
-                        } else {
-                            thumbnailIconSource = nil
+                    contextItems.append(.custom(StickerPackListContextItem(context: self.context, packs: self.myStickerPacks, packSelected: { [weak self] pack in
+                        guard let self else {
+                            return
                         }
-                        contextItems.append(.action(ContextMenuActionItem(text: pack.title, icon: { _ in return nil }, iconSource: thumbnailIconSource, iconPosition: .left, action: { [weak self] _, f in
-                            guard let self else {
-                                return
-                            }
-                            f(.default)
-                            self.uploadSticker(file, action: .addToStickerPack(pack: .id(id: pack.id.id, accessHash: pack.accessHash), title: pack.title))
-                        })))
-                    }
+                        self.uploadSticker(file, action: .addToStickerPack(pack: .id(id: pack.id.id, accessHash: pack.accessHash), title: pack.title))
+                    }), false))
 
                     let items = ContextController.Items(
                         id: 1,
@@ -5877,7 +5849,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
         
         var dismissImpl: (() -> Void)?
-        let controller = stickerPackEditTitleController(context: self.context, forceDark: true, title: "New Sticker Set", text: "Choose a name for your sticker set.", placeholder: presentationData.strings.ImportStickerPack_NamePlaceholder, actionTitle: presentationData.strings.Common_Done, value: nil, maxLength: 128, apply: { [weak self] title in
+        let controller = stickerPackEditTitleController(context: self.context, forceDark: true, title: "New Sticker Set", text: "Choose a name for your sticker set.", placeholder: presentationData.strings.ImportStickerPack_NamePlaceholder, actionTitle: presentationData.strings.Common_Done, value: nil, maxLength: 64, apply: { [weak self] title in
             guard let self else {
                 return
             }
@@ -5972,7 +5944,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     case let .createStickerPack(title):
                         let sticker = ImportSticker(
                             resource: resource,
-                            emojis: ["😀"],
+                            emojis: ["😀😂"],
                             dimensions: dimensions,
                             mimeType: "image/webp",
                             keywords: ""
@@ -5991,7 +5963,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     case let .addToStickerPack(pack, _):
                         let sticker = ImportSticker(
                             resource: resource,
-                            emojis: ["😀"],
+                            emojis: ["😀😂"],
                             dimensions: dimensions,
                             mimeType: "image/webp",
                             keywords: ""

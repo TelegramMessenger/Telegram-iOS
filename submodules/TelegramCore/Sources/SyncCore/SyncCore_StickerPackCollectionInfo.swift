@@ -21,12 +21,6 @@ public struct StickerPackCollectionInfoFlags: OptionSet {
         if flags.contains(StickerPackCollectionInfoFlags.isOfficial) {
             rawValue |= StickerPackCollectionInfoFlags.isOfficial.rawValue
         }
-        if flags.contains(StickerPackCollectionInfoFlags.isAnimated) {
-            rawValue |= StickerPackCollectionInfoFlags.isAnimated.rawValue
-        }
-        if flags.contains(StickerPackCollectionInfoFlags.isVideo) {
-            rawValue |= StickerPackCollectionInfoFlags.isVideo.rawValue
-        }
         if flags.contains(StickerPackCollectionInfoFlags.isEmoji) {
             rawValue |= StickerPackCollectionInfoFlags.isEmoji.rawValue
         }
@@ -39,8 +33,6 @@ public struct StickerPackCollectionInfoFlags: OptionSet {
     
     public static let isMasks = StickerPackCollectionInfoFlags(rawValue: 1 << 0)
     public static let isOfficial = StickerPackCollectionInfoFlags(rawValue: 1 << 1)
-    public static let isAnimated = StickerPackCollectionInfoFlags(rawValue: 1 << 2)
-    public static let isVideo = StickerPackCollectionInfoFlags(rawValue: 1 << 3)
     public static let isEmoji = StickerPackCollectionInfoFlags(rawValue: 1 << 4)
     public static let isAvailableAsChannelStatus = StickerPackCollectionInfoFlags(rawValue: 1 << 5)
     public static let isCustomTemplateEmoji = StickerPackCollectionInfoFlags(rawValue: 1 << 6)

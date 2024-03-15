@@ -45,7 +45,7 @@ public enum PremiumGiftSource: Equatable {
     case profile
     case attachMenu
     case settings
-    case chatList
+    case chatList([EnginePeer.Id])
     case channelBoost
     case deeplink(String?)
 }

@@ -255,7 +255,7 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
     
     private let maxLength: Int
     
-    init(theme: PresentationTheme, placeholder: String, maxLength: Int, keyboardType: UIKeyboardType = .default, returnKeyType: UIReturnKeyType = .done) {
+    init(theme: PresentationTheme, placeholder: String, maxLength: Int, keyboardType: UIKeyboardType = .default, returnKeyType: UIReturnKeyType = .done, hasClearButton: Bool = false) {
         self.theme = theme
         self.maxLength = maxLength
         
@@ -367,6 +367,10 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
         }
         if string == "\n" {
             self.complete?()
+            return false
+        }
+        
+        if string == " " && updatedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return false
         }
         
@@ -506,7 +510,7 @@ private final class ImportStickerPackTitleAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], title: String, text: String, placeholder: String, value: String?, maxLength: Int, asciiOnly: Bool = false) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction], title: String, text: String, placeholder: String, value: String?, maxLength: Int, asciiOnly: Bool = false, hasClearButton: Bool) {
         self.strings = strings
         self.alertTheme = theme
         self.theme = ptheme
@@ -524,7 +528,7 @@ private final class ImportStickerPackTitleAlertContentNode: AlertContentNode {
         self.activityIndicator = ActivityIndicator(type: .custom(ptheme.rootController.navigationBar.secondaryTextColor, 20.0, 1.5, false), speed: .slow)
         self.activityIndicator.isHidden = true
                 
-        self.inputFieldNode = ImportStickerPackTitleInputFieldNode(theme: ptheme, placeholder: placeholder, maxLength: maxLength, keyboardType: asciiOnly ? .asciiCapable : .default, returnKeyType: asciiOnly ? .done : .next)
+        self.inputFieldNode = ImportStickerPackTitleInputFieldNode(theme: ptheme, placeholder: placeholder, maxLength: maxLength, keyboardType: asciiOnly ? .asciiCapable : .default, returnKeyType: asciiOnly ? .done : .next, hasClearButton: hasClearButton)
         if asciiOnly {
             self.inputFieldNode.prefix = "t.me/addstickers/"
         }
@@ -743,7 +747,7 @@ public func stickerPackEditTitleController(context: AccountContext, forceDark: B
         applyImpl?()
     })]
     
-    let contentNode = ImportStickerPackTitleAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, text: text, placeholder: placeholder, value: value, maxLength: maxLength)
+    let contentNode = ImportStickerPackTitleAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, text: text, placeholder: placeholder, value: value, maxLength: maxLength, hasClearButton: false)
     contentNode.complete = {
         applyImpl?()
     }
@@ -805,7 +809,7 @@ public func importStickerPackShortNameController(context: AccountContext, title:
         applyImpl?()
     })]
     
-    let contentNode = ImportStickerPackTitleAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, text: text, placeholder: placeholder, value: value, maxLength: maxLength, asciiOnly: true)
+    let contentNode = ImportStickerPackTitleAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, text: text, placeholder: placeholder, value: value, maxLength: maxLength, asciiOnly: true, hasClearButton: true)
     contentNode.complete = {
         applyImpl?()
     }

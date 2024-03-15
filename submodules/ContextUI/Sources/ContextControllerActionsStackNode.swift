@@ -74,7 +74,7 @@ public protocol ContextControllerActionsStackItem: AnyObject {
     var dismissed: (() -> Void)? { get }
 }
 
-protocol ContextControllerActionsListItemNode: ASDisplayNode {
+public protocol ContextControllerActionsListItemNode: ASDisplayNode {
     func update(presentationData: PresentationData, constrainedSize: CGSize) -> (minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void)
     
     func canBeHighlighted() -> Bool
@@ -82,7 +82,7 @@ protocol ContextControllerActionsListItemNode: ASDisplayNode {
     func performAction()
 }
 
-private final class ContextControllerActionsListActionItemNode: HighlightTrackingButtonNode, ContextControllerActionsListItemNode {
+public final class ContextControllerActionsListActionItemNode: HighlightTrackingButtonNode, ContextControllerActionsListItemNode {
     private let getController: () -> ContextControllerProtocol?
     private let requestDismiss: (ContextMenuActionResult) -> Void
     private let requestUpdateAction: (AnyHashable, ContextMenuActionItem) -> Void
@@ -103,7 +103,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     
     private var iconDisposable: Disposable?
     
-    init(
+    public init(
         getController: @escaping () -> ContextControllerProtocol?,
         requestDismiss: @escaping (ContextMenuActionResult) -> Void,
         requestUpdateAction: @escaping (AnyHashable, ContextMenuActionItem) -> Void,
@@ -168,7 +168,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.iconDisposable?.dispose()
     }
     
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
         
         self.view.isExclusiveTouch = true
@@ -196,19 +196,19 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         ))
     }
     
-    func canBeHighlighted() -> Bool {
+    public func canBeHighlighted() -> Bool {
         return self.item.action != nil
     }
     
-    func updateIsHighlighted(isHighlighted: Bool) {
+    public func updateIsHighlighted(isHighlighted: Bool) {
         self.highlightBackgroundNode.alpha = isHighlighted ? 1.0 : 0.0
     }
     
-    func performAction() {
+    public func performAction() {
         self.pressed()
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.titleLabelNode.tapAttributeAction != nil {
             if let result = self.titleLabelNode.hitTest(self.view.convert(point, to: self.titleLabelNode.view), with: event) {
                 return result
@@ -223,7 +223,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.accessibilityLabel = item.text
     }
     
-    func update(presentationData: PresentationData, constrainedSize: CGSize) -> (minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void) {
+    public func update(presentationData: PresentationData, constrainedSize: CGSize) -> (minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void) {
         let sideInset: CGFloat = 16.0
         let verticalInset: CGFloat = 11.0
         let titleSubtitleSpacing: CGFloat = 1.0
@@ -365,8 +365,8 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: iconAnimation.name),
                     color: titleColor,
-                    startingPosition: .end,
-                    loop: false
+                    startingPosition: iconAnimation.loop ? .begin : .end,
+                    loop: iconAnimation.loop
                 )),
                 environment: {},
                 containerSize: animatedIconSize

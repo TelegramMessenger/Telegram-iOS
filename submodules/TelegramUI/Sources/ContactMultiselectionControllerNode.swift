@@ -169,11 +169,17 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             }
             self.contentNode = .chats(chatListNode)
         } else {
-            var displayTopPeers = false
-            if case .premiumGifting = mode {
-                displayTopPeers = true
+            let displayTopPeers: ContactListPresentation.TopPeers
+            if case let .premiumGifting(topSectionTitle, topSectionPeers) = mode {
+                if let topSectionTitle {
+                    displayTopPeers = .custom(title: topSectionTitle, peerIds: topSectionPeers)
+                } else {
+                    displayTopPeers = .recent
+                }
             } else if case .requestedUsersSelection = mode {
-                displayTopPeers = true
+                displayTopPeers = .recent
+            } else {
+                displayTopPeers = .none
             }
             let contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList, topPeers: displayTopPeers)), filters: filters, onlyWriteable: onlyWriteable, selectionState: ContactListNodeGroupSelectionState())
             self.contentNode = .contacts(contactListNode)

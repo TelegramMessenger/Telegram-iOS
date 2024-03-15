@@ -1162,11 +1162,6 @@ public extension EmojiPagerContentComponent {
                 }
             } else if case .stickerAlt = subject {
                 for reactionItem in topReactionItems {
-//                    if existingIds.contains(reactionItem.reaction) {
-//                        continue
-//                    }
-//                    existingIds.insert(reactionItem.reaction)
-                    
                     let icon: EmojiPagerContentComponent.Item.Icon
                     if case .reaction(onlyTop: true) = subject {
                         icon = .none
