@@ -140,6 +140,18 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                     excludePeers: [],
                     color: nil
                 ))
+            } else if chatSelection.disableChannels {
+                chatListFilter = .filter(id: Int32.max, title: "", emoticon: nil, data: ChatListFilterData(
+                    isShared: false,
+                    hasSharedLinks: false,
+                    categories: [.contacts, .nonContacts, .groups, .bots],
+                    excludeMuted: false,
+                    excludeRead: false,
+                    excludeArchived: false,
+                    includePeers: ChatListFilterIncludePeers(),
+                    excludePeers: [],
+                    color: nil
+                ))
             }
             
             placeholder = placeholderValue
@@ -278,7 +290,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             } else {
                                 searchChatList = true
                                 searchGroups = true
-                                searchChannels = true
+                                searchChannels = !chatSelection.disableChannels
                             }
                             globalSearch = false
                         case .premiumGifting, .requestedUsersSelection:

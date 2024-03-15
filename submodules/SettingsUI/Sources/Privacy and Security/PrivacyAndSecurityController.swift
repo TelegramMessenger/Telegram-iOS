@@ -475,11 +475,24 @@ private func countForSelectivePeers(_ peers: [PeerId: SelectivePrivacyPeer]) -> 
 
 private func stringForSelectiveSettings(strings: PresentationStrings, settings: SelectivePrivacySettings) -> String {
     switch settings {
-        case let .disableEveryone(enableFor, enableForCloseFriends):
-            if enableFor.isEmpty && !enableForCloseFriends {
+        case let .disableEveryone(enableFor, enableForCloseFriends, enableForPremium):
+            if enableFor.isEmpty && !enableForCloseFriends && !enableForPremium {
                 return strings.PrivacySettings_LastSeenNobody
             } else {
-                if enableForCloseFriends {
+                if enableForCloseFriends && enableForPremium {
+                    //TODO:localize
+                    if enableFor.isEmpty {
+                        return "Close Friends, Premium"
+                    } else {
+                        return "Close Friends, Premium +\(countForSelectivePeers(enableFor))"
+                    }
+                } else if enableForPremium {
+                    if enableFor.isEmpty {
+                        return "Premium Users"
+                    } else {
+                        return "Premium Users +\(countForSelectivePeers(enableFor))"
+                    }
+                } else if enableForCloseFriends {
                     if enableFor.isEmpty {
                         return strings.PrivacySettings_LastSeenCloseFriendsPlus("\(countForSelectivePeers(enableFor))").string
                     } else {
@@ -499,15 +512,27 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
             } else {
                 return strings.PrivacySettings_LastSeenEverybodyMinus("\(countForSelectivePeers(disableFor))").string
             }
-        case let .enableContacts(enableFor, disableFor):
-            if !enableFor.isEmpty && !disableFor.isEmpty {
-                return strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(disableFor))", "\(countForSelectivePeers(enableFor))").string
-            } else if !enableFor.isEmpty {
-                return strings.PrivacySettings_LastSeenContactsPlus("\(countForSelectivePeers(enableFor))").string
-            } else if !disableFor.isEmpty {
-                return strings.PrivacySettings_LastSeenContactsMinus("\(countForSelectivePeers(disableFor))").string
+        case let .enableContacts(enableFor, disableFor, enableForPremium):
+            if enableForPremium {
+                if !enableFor.isEmpty && !disableFor.isEmpty {
+                    return "Premium, " + strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(disableFor))", "\(countForSelectivePeers(enableFor))").string
+                } else if !enableFor.isEmpty {
+                    return "Premium, " + strings.PrivacySettings_LastSeenContactsPlus("\(countForSelectivePeers(enableFor))").string
+                } else if !disableFor.isEmpty {
+                    return "Premium, " + strings.PrivacySettings_LastSeenContactsMinus("\(countForSelectivePeers(disableFor))").string
+                } else {
+                    return "Premium, " + strings.PrivacySettings_LastSeenContacts
+                }
             } else {
-                return strings.PrivacySettings_LastSeenContacts
+                if !enableFor.isEmpty && !disableFor.isEmpty {
+                    return strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(disableFor))", "\(countForSelectivePeers(enableFor))").string
+                } else if !enableFor.isEmpty {
+                    return strings.PrivacySettings_LastSeenContactsPlus("\(countForSelectivePeers(enableFor))").string
+                } else if !disableFor.isEmpty {
+                    return strings.PrivacySettings_LastSeenContactsMinus("\(countForSelectivePeers(disableFor))").string
+                } else {
+                    return strings.PrivacySettings_LastSeenContacts
+                }
             }
     }
 }

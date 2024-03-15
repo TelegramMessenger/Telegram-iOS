@@ -311,7 +311,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                 placeholder: "Enter Title",
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
-                characterLimit: 256,
+                characterLimit: 32,
                 allowEmptyLines: false,
                 updated: { _ in
                 },
@@ -331,7 +331,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                 placeholder: "Enter Message",
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
-                characterLimit: 256,
+                characterLimit: 70,
                 allowEmptyLines: false,
                 updated: { _ in
                 },
