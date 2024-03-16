@@ -655,6 +655,11 @@ class PrivacyAndSecurityControllerImpl: ItemListController, ASAuthorizationContr
     }
     
     @available(iOS 13.0, *)
+    public func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        Logger.shared.log("AppleSignIn", "Failed with error: \(error.localizedDescription)")
+    }
+    
+    @available(iOS 13.0, *)
     public func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         return self.view.window!
     }
