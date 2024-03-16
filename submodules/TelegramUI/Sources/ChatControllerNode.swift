@@ -42,6 +42,7 @@ import UIKitRuntimeUtils
 import ChatInlineSearchResultsListComponent
 import ComponentDisplayAdapters
 import ComponentFlow
+import ChatEmptyNode
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -990,7 +991,20 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.emptyNode = emptyNode
             self.historyNodeContainer.supernode?.insertSubnode(emptyNode, aboveSubnode: self.historyNodeContainer)
             if let (size, insets) = self.validEmptyNodeLayout {
-                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, subject: .emptyChat(emptyType), loadingNode: wasLoading && self.loadingNode.supernode != nil ? self.loadingNode : nil, backgroundNode: self.backgroundNode, size: size, insets: insets, transition: .immediate)
+                let mappedType: ChatEmptyNode.Subject.EmptyType
+                switch emptyType {
+                case .generic:
+                    mappedType = .generic
+                case .joined:
+                    mappedType = .joined
+                case .clearedHistory:
+                    mappedType = .clearedHistory
+                case .topic:
+                    mappedType = .topic
+                case .botInfo:
+                    mappedType = .botInfo
+                }
+                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, subject: .emptyChat(mappedType), loadingNode: wasLoading && self.loadingNode.supernode != nil ? self.loadingNode : nil, backgroundNode: self.backgroundNode, size: size, insets: insets, transition: .immediate)
             }
             if animated {
                 emptyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -1842,7 +1856,20 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         emptyNodeInsets.bottom += inputPanelsHeight
         self.validEmptyNodeLayout = (contentBounds.size, emptyNodeInsets)
         if let emptyNode = self.emptyNode, let emptyType = self.emptyType {
-            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, subject: .emptyChat(emptyType), loadingNode: nil, backgroundNode: self.backgroundNode, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
+            let mappedType: ChatEmptyNode.Subject.EmptyType
+            switch emptyType {
+            case .generic:
+                mappedType = .generic
+            case .joined:
+                mappedType = .joined
+            case .clearedHistory:
+                mappedType = .clearedHistory
+            case .topic:
+                mappedType = .topic
+            case .botInfo:
+                mappedType = .botInfo
+            }
+            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, subject: .emptyChat(mappedType), loadingNode: nil, backgroundNode: self.backgroundNode, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
             transition.updateFrame(node: emptyNode, frame: contentBounds)
             emptyNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
         }

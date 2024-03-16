@@ -27,6 +27,7 @@ public final class TextFieldComponent: Component {
     public final class ExternalState {
         public fileprivate(set) var isEditing: Bool = false
         public fileprivate(set) var hasText: Bool = false
+        public fileprivate(set) var text: NSAttributedString = NSAttributedString()
         public fileprivate(set) var textLength: Int = 0
         public var initialText: NSAttributedString?
         
@@ -73,9 +74,11 @@ public final class TextFieldComponent: Component {
             case textFocusChanged
         }
         
+        public weak var view: View?
         public let kind: Kind
         
-        public init(kind: Kind) {
+        public init(view: View?, kind: Kind) {
+            self.view = view
             self.kind = kind
         }
     }
@@ -87,6 +90,7 @@ public final class TextFieldComponent: Component {
     }
     
     public let context: AccountContext
+    public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let externalState: ExternalState
     public let fontSize: CGFloat
@@ -105,6 +109,7 @@ public final class TextFieldComponent: Component {
     
     public init(
         context: AccountContext,
+        theme: PresentationTheme,
         strings: PresentationStrings,
         externalState: ExternalState,
         fontSize: CGFloat,
@@ -122,6 +127,7 @@ public final class TextFieldComponent: Component {
         paste: @escaping (PasteData) -> Void
     ) {
         self.context = context
+        self.theme = theme
         self.strings = strings
         self.externalState = externalState
         self.fontSize = fontSize
@@ -140,6 +146,12 @@ public final class TextFieldComponent: Component {
     }
     
     public static func ==(lhs: TextFieldComponent, rhs: TextFieldComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
         if lhs.strings !== rhs.strings {
             return false
         }
@@ -219,7 +231,6 @@ public final class TextFieldComponent: Component {
             self.textView.translatesAutoresizingMaskIntoConstraints = false
             self.textView.backgroundColor = nil
             self.textView.layer.isOpaque = false
-            self.textView.keyboardAppearance = .dark
             self.textView.indicatorStyle = .white
             self.textView.scrollIndicatorInsets = UIEdgeInsets(top: 9.0, left: 0.0, bottom: 9.0, right: 0.0)
             
@@ -231,10 +242,6 @@ public final class TextFieldComponent: Component {
             
             self.textView.customDelegate = self
             self.addSubview(self.textView)
-            
-            if #available(iOS 13.0, *) {
-                self.textView.overrideUserInterfaceStyle = .dark
-            }
             
             self.textView.typingAttributes = [
                 NSAttributedString.Key.font: Font.regular(17.0),
@@ -265,7 +272,7 @@ public final class TextFieldComponent: Component {
             self.updateEntities()
             
             if currentAttributedText != updatedAttributedText && !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -278,7 +285,7 @@ public final class TextFieldComponent: Component {
                 return state.insertText(text)
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -291,7 +298,7 @@ public final class TextFieldComponent: Component {
                 return TextFieldComponent.InputState(inputText: text, selectionRange: selectionRange)
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -319,7 +326,7 @@ public final class TextFieldComponent: Component {
                     }
                 }
                 if !self.isUpdating {
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
                 }
                 component.paste(.text)
                 return false
@@ -390,7 +397,7 @@ public final class TextFieldComponent: Component {
             
             self.updateEntities()
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -412,7 +419,7 @@ public final class TextFieldComponent: Component {
                 return
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(kind: .textFocusChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged)))
             }
             if component.isOneLineWhenUnfocused {
                 Queue.mainQueue().justDispatch {
@@ -423,7 +430,7 @@ public final class TextFieldComponent: Component {
         
         public func chatInputTextNodeDidFinishEditing() {
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(kind: .textFocusChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged)))
             }
         }
         
@@ -724,7 +731,7 @@ public final class TextFieldComponent: Component {
                 }
             }
             
-            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: component.theme)
             let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
             let controller = chatTextLinkEditController(sharedContext: component.context.sharedContext, updatedPresentationData: updatedPresentationData, account: component.context.account, text: text.string, link: link, apply: { [weak self] link in
                 if let self {
@@ -757,7 +764,7 @@ public final class TextFieldComponent: Component {
                 return TextFieldComponent.InputState(inputText: string, selectionRange: string.length ..< string.length)
             }
             if updateState && !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -1048,8 +1055,16 @@ public final class TextFieldComponent: Component {
                 self.isUpdating = false
             }
             
+            let previousComponent = self.component
             self.component = component
             self.state = state
+            
+            if previousComponent?.theme !== component.theme {
+                self.textView.keyboardAppearance = component.theme.overallDarkAppearance ? .dark : .light
+                if #available(iOS 13.0, *) {
+                    self.textView.overrideUserInterfaceStyle = component.theme.overallDarkAppearance ? .dark : .light
+                }
+            }
             
             if let initialText = component.externalState.initialText {
                 component.externalState.initialText = nil
@@ -1128,6 +1143,7 @@ public final class TextFieldComponent: Component {
             component.externalState.hasText = self.textView.textStorage.length != 0
             component.externalState.isEditing = isEditing
             component.externalState.textLength = self.textView.textStorage.string.count
+            component.externalState.text = NSAttributedString(attributedString: self.textView.textStorage)
             
             if let inputView = component.customInputView {
                 if self.textView.inputView == nil {

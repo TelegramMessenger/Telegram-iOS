@@ -32,6 +32,7 @@ import ListActionItemComponent
 import EmojiStatusSelectionComponent
 import EmojiStatusComponent
 import EntityKeyboard
+import EmojiActionIconComponent
 
 public enum PremiumSource: Equatable {
     public static func == (lhs: PremiumSource, rhs: PremiumSource) -> Bool {
@@ -2240,6 +2241,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         }
                                         push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext, initialData: initialData))
                                     })
+                                case .businessIntro:
+                                    push(accountContext.sharedContext.makeBusinessIntroSetupScreen(context: accountContext))
                                 default:
                                     fatalError()
                                 }
@@ -3711,89 +3714,6 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
                 }
             }
         }
-    }
-}
-
-
-
-
-private final class EmojiActionIconComponent: Component {
-    let context: AccountContext
-    let color: UIColor
-    let fileId: Int64?
-    let file: TelegramMediaFile?
-    
-    init(
-        context: AccountContext,
-        color: UIColor,
-        fileId: Int64?,
-        file: TelegramMediaFile?
-    ) {
-        self.context = context
-        self.color = color
-        self.fileId = fileId
-        self.file = file
-    }
-    
-    static func ==(lhs: EmojiActionIconComponent, rhs: EmojiActionIconComponent) -> Bool {
-        if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.color != rhs.color {
-            return false
-        }
-        if lhs.fileId != rhs.fileId {
-            return false
-        }
-        if lhs.file != rhs.file {
-            return false
-        }
-        return true
-    }
-    
-    final class View: UIView {
-        private let icon = ComponentView<Empty>()
-        
-        func update(component: EmojiActionIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            let size = CGSize(width: 24.0, height: 24.0)
-            
-            let _ = self.icon.update(
-                transition: .immediate,
-                component: AnyComponent(EmojiStatusComponent(
-                    context: component.context,
-                    animationCache: component.context.animationCache,
-                    animationRenderer: component.context.animationRenderer,
-                    content: component.fileId.flatMap { .animation(
-                        content: .customEmoji(fileId: $0),
-                        size: CGSize(width: size.width * 2.0, height: size.height * 2.0),
-                        placeholderColor: .lightGray,
-                        themeColor: component.color,
-                        loopMode: .forever
-                    ) } ?? .premium(color: component.color),
-                    isVisibleForAnimations: false,
-                    action: nil
-                )),
-                environment: {},
-                containerSize: size
-            )
-            let iconFrame = CGRect(origin: CGPoint(), size: size)
-            if let iconView = self.icon.view {
-                if iconView.superview == nil {
-                    self.addSubview(iconView)
-                }
-                iconView.frame = iconFrame
-            }
-            
-            return size
-        }
-    }
-    
-    func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
 

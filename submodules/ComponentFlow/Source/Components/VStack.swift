@@ -13,11 +13,13 @@ public final class VStack<ChildEnvironment: Equatable>: CombinedComponent {
     private let items: [AnyComponentWithIdentity<ChildEnvironment>]
     private let alignment: VStackAlignment
     private let spacing: CGFloat
+    private let fillWidth: Bool
 
-    public init(_ items: [AnyComponentWithIdentity<ChildEnvironment>], alignment: VStackAlignment = .center, spacing: CGFloat) {
+    public init(_ items: [AnyComponentWithIdentity<ChildEnvironment>], alignment: VStackAlignment = .center, spacing: CGFloat, fillWidth: Bool = false) {
         self.items = items
         self.alignment = alignment
         self.spacing = spacing
+        self.fillWidth = fillWidth
     }
 
     public static func ==(lhs: VStack<ChildEnvironment>, rhs: VStack<ChildEnvironment>) -> Bool {
@@ -28,6 +30,9 @@ public final class VStack<ChildEnvironment: Equatable>: CombinedComponent {
             return false
         }
         if lhs.spacing != rhs.spacing {
+            return false
+        }
+        if lhs.fillWidth != rhs.fillWidth {
             return false
         }
         return true
@@ -48,6 +53,9 @@ public final class VStack<ChildEnvironment: Equatable>: CombinedComponent {
             }
 
             var size = CGSize(width: 0.0, height: 0.0)
+            if context.component.fillWidth {
+                size.width = context.availableSize.width
+            }
             for child in updatedChildren {
                 size.height += child.size.height
                 size.width = max(size.width, child.size.width)

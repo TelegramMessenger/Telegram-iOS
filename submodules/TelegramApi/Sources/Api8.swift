@@ -1,4 +1,80 @@
 public extension Api {
+    enum InputFile: TypeConstructorDescription {
+        case inputFile(id: Int64, parts: Int32, name: String, md5Checksum: String)
+        case inputFileBig(id: Int64, parts: Int32, name: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputFile(let id, let parts, let name, let md5Checksum):
+                    if boxed {
+                        buffer.appendInt32(-181407105)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt32(parts, buffer: buffer, boxed: false)
+                    serializeString(name, buffer: buffer, boxed: false)
+                    serializeString(md5Checksum, buffer: buffer, boxed: false)
+                    break
+                case .inputFileBig(let id, let parts, let name):
+                    if boxed {
+                        buffer.appendInt32(-95482955)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt32(parts, buffer: buffer, boxed: false)
+                    serializeString(name, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputFile(let id, let parts, let name, let md5Checksum):
+                return ("inputFile", [("id", id as Any), ("parts", parts as Any), ("name", name as Any), ("md5Checksum", md5Checksum as Any)])
+                case .inputFileBig(let id, let parts, let name):
+                return ("inputFileBig", [("id", id as Any), ("parts", parts as Any), ("name", name as Any)])
+    }
+    }
+    
+        public static func parse_inputFile(_ reader: BufferReader) -> InputFile? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputFile.inputFile(id: _1!, parts: _2!, name: _3!, md5Checksum: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputFileBig(_ reader: BufferReader) -> InputFile? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputFile.inputFileBig(id: _1!, parts: _2!, name: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum InputFileLocation: TypeConstructorDescription {
         case inputDocumentFileLocation(id: Int64, accessHash: Int64, fileReference: Buffer, thumbSize: String)
         case inputEncryptedFileLocation(id: Int64, accessHash: Int64)

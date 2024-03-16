@@ -905,7 +905,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if hasFirstResponder(self) {
                     view.deactivateInput()
                 } else {
-                    self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(kind: .textFocusChanged)))
+                    self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(view: nil, kind: .textFocusChanged)))
                 }
             }
         }
@@ -2690,7 +2690,7 @@ public final class StoryItemSetContainerComponent: Component {
                 self.bottomContentGradientLayer.colors = colors
                 self.bottomContentGradientLayer.type = .axial
                 
-                self.contentDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.3)
+                self.contentDimView.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
             }
             
             let wasPanning = self.component?.isPanning ?? false

@@ -24,6 +24,7 @@ public final class ListSectionComponent: Component {
     public let header: AnyComponent<Empty>?
     public let footer: AnyComponent<Empty>?
     public let items: [AnyComponentWithIdentity<Empty>]
+    public let itemUpdateOrder: [AnyHashable]?
     public let displaySeparators: Bool
     public let extendsItemHighlightToSection: Bool
     
@@ -33,6 +34,7 @@ public final class ListSectionComponent: Component {
         header: AnyComponent<Empty>?,
         footer: AnyComponent<Empty>?,
         items: [AnyComponentWithIdentity<Empty>],
+        itemUpdateOrder: [AnyHashable]? = nil,
         displaySeparators: Bool = true,
         extendsItemHighlightToSection: Bool = false
     ) {
@@ -41,6 +43,7 @@ public final class ListSectionComponent: Component {
         self.header = header
         self.footer = footer
         self.items = items
+        self.itemUpdateOrder = itemUpdateOrder
         self.displaySeparators = displaySeparators
         self.extendsItemHighlightToSection = extendsItemHighlightToSection
     }
@@ -59,6 +62,9 @@ public final class ListSectionComponent: Component {
             return false
         }
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.itemUpdateOrder != rhs.itemUpdateOrder {
             return false
         }
         if lhs.displaySeparators != rhs.displaySeparators {
@@ -204,7 +210,41 @@ public final class ListSectionComponent: Component {
             
             var innerContentHeight: CGFloat = 0.0
             var validItemIds: [AnyHashable] = []
+            
+            struct ReadyItem {
+                var index: Int
+                var itemId: AnyHashable
+                var itemView: ItemView
+                var itemTransition: Transition
+                var itemSize: CGSize
+                
+                init(index: Int, itemId: AnyHashable, itemView: ItemView, itemTransition: Transition, itemSize: CGSize) {
+                    self.index = index
+                    self.itemId = itemId
+                    self.itemView = itemView
+                    self.itemTransition = itemTransition
+                    self.itemSize = itemSize
+                }
+            }
+            
+            var readyItems: [ReadyItem] = []
+            var itemUpdateOrder: [Int] = []
+            if let itemUpdateOrderValue = component.itemUpdateOrder {
+                for id in itemUpdateOrderValue {
+                    if let index = component.items.firstIndex(where: { $0.id == id }) {
+                        if !itemUpdateOrder.contains(index) {
+                            itemUpdateOrder.append(index)
+                        }
+                    }
+                }
+            }
             for i in 0 ..< component.items.count {
+                if !itemUpdateOrder.contains(i) {
+                    itemUpdateOrder.append(i)
+                }
+            }
+            
+            for i in itemUpdateOrder {
                 let item = component.items[i]
                 let itemId = item.id
                 validItemIds.append(itemId)
@@ -226,17 +266,29 @@ public final class ListSectionComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: availableSize.width, height: availableSize.height)
                 )
-                let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: innerContentHeight), size: itemSize)
-                if let itemComponentView = itemView.contents.view {
+                
+                readyItems.append(ReadyItem(
+                    index: i,
+                    itemId: itemId,
+                    itemView: itemView,
+                    itemTransition: itemTransition,
+                    itemSize: itemSize
+                ))
+            }
+            
+            for readyItem in readyItems.sorted(by: { $0.index < $1.index }) {
+                let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: innerContentHeight), size: readyItem.itemSize)
+                if let itemComponentView = readyItem.itemView.contents.view {
                     if itemComponentView.superview == nil {
-                        itemView.addSubview(itemComponentView)
-                        self.contentItemContainerView.addSubview(itemView)
-                        self.contentSeparatorContainerLayer.addSublayer(itemView.separatorLayer)
-                        self.contentHighlightContainerLayer.addSublayer(itemView.highlightLayer)
-                        transition.animateAlpha(view: itemView, from: 0.0, to: 1.0)
-                        transition.animateAlpha(layer: itemView.separatorLayer, from: 0.0, to: 1.0)
-                        transition.animateAlpha(layer: itemView.highlightLayer, from: 0.0, to: 1.0)
+                        readyItem.itemView.addSubview(itemComponentView)
+                        self.contentItemContainerView.addSubview(readyItem.itemView)
+                        self.contentSeparatorContainerLayer.addSublayer(readyItem.itemView.separatorLayer)
+                        self.contentHighlightContainerLayer.addSublayer(readyItem.itemView.highlightLayer)
+                        transition.animateAlpha(view: readyItem.itemView, from: 0.0, to: 1.0)
+                        transition.animateAlpha(layer: readyItem.itemView.separatorLayer, from: 0.0, to: 1.0)
+                        transition.animateAlpha(layer: readyItem.itemView.highlightLayer, from: 0.0, to: 1.0)
                         
+                        let itemId = readyItem.itemId
                         if let itemComponentView = itemComponentView as? ChildView {
                             itemComponentView.customUpdateIsHighlighted = { [weak self] isHighlighted in
                                 guard let self else {
@@ -250,20 +302,20 @@ public final class ListSectionComponent: Component {
                     if let itemComponentView = itemComponentView as? ChildView {
                         separatorInset = itemComponentView.separatorInset
                     }
-                    itemTransition.setFrame(view: itemView, frame: itemFrame)
+                    readyItem.itemTransition.setFrame(view: readyItem.itemView, frame: itemFrame)
                     
-                    let itemSeparatorTopOffset: CGFloat = i == 0 ? 0.0 : -UIScreenPixel
+                    let itemSeparatorTopOffset: CGFloat = readyItem.index == 0 ? 0.0 : -UIScreenPixel
                     let itemHighlightFrame = CGRect(origin: CGPoint(x: itemFrame.minX, y: itemFrame.minY + itemSeparatorTopOffset), size: CGSize(width: itemFrame.width, height: itemFrame.height - itemSeparatorTopOffset))
-                    itemTransition.setFrame(layer: itemView.highlightLayer, frame: itemHighlightFrame)
+                    readyItem.itemTransition.setFrame(layer: readyItem.itemView.highlightLayer, frame: itemHighlightFrame)
                     
-                    itemTransition.setFrame(view: itemComponentView, frame: CGRect(origin: CGPoint(), size: itemFrame.size))
+                    readyItem.itemTransition.setFrame(view: itemComponentView, frame: CGRect(origin: CGPoint(), size: itemFrame.size))
                     
                     let itemSeparatorFrame = CGRect(origin: CGPoint(x: separatorInset, y: itemFrame.maxY - UIScreenPixel), size: CGSize(width: availableSize.width - separatorInset, height: UIScreenPixel))
-                    itemTransition.setFrame(layer: itemView.separatorLayer, frame: itemSeparatorFrame)
+                    readyItem.itemTransition.setFrame(layer: readyItem.itemView.separatorLayer, frame: itemSeparatorFrame)
                     
                     let separatorAlpha: CGFloat
                     if component.displaySeparators {
-                        if i != component.items.count - 1 {
+                        if readyItem.index != component.items.count - 1 {
                             separatorAlpha = 1.0
                         } else {
                             separatorAlpha = 0.0
@@ -271,11 +323,12 @@ public final class ListSectionComponent: Component {
                     } else {
                         separatorAlpha = 0.0
                     }
-                    itemTransition.setAlpha(layer: itemView.separatorLayer, alpha: separatorAlpha)
-                    itemView.separatorLayer.backgroundColor = component.theme.list.itemBlocksSeparatorColor.cgColor
+                    readyItem.itemTransition.setAlpha(layer: readyItem.itemView.separatorLayer, alpha: separatorAlpha)
+                    readyItem.itemView.separatorLayer.backgroundColor = component.theme.list.itemBlocksSeparatorColor.cgColor
                 }
-                innerContentHeight += itemSize.height
+                innerContentHeight += readyItem.itemSize.height
             }
+            
             var removedItemIds: [AnyHashable] = []
             for (id, itemView) in self.itemViews {
                 if !validItemIds.contains(id) {

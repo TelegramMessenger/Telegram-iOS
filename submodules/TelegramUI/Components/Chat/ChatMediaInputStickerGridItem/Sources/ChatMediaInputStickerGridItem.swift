@@ -14,25 +14,25 @@ import ShimmerEffect
 import ChatControllerInteraction
 import ChatPresentationInterfaceState
 
-enum ChatMediaInputStickerGridSectionAccessory {
+public enum ChatMediaInputStickerGridSectionAccessory {
     case none
     case setup
     case clear
 }
 
-final class ChatMediaInputStickerGridSection: GridSection {
-    let collectionId: ItemCollectionId
-    let collectionInfo: StickerPackCollectionInfo?
-    let accessory: ChatMediaInputStickerGridSectionAccessory
-    let interaction: ChatMediaInputNodeInteraction
-    let theme: PresentationTheme
-    let height: CGFloat = 26.0
+public final class ChatMediaInputStickerGridSection: GridSection {
+    public let collectionId: ItemCollectionId
+    public let collectionInfo: StickerPackCollectionInfo?
+    public let accessory: ChatMediaInputStickerGridSectionAccessory
+    public let interaction: ChatMediaInputNodeInteraction
+    public let theme: PresentationTheme
+    public let height: CGFloat = 26.0
     
-    var hashValue: Int {
+    public var hashValue: Int {
         return self.collectionId.hashValue
     }
     
-    init(collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo?, accessory: ChatMediaInputStickerGridSectionAccessory, theme: PresentationTheme, interaction: ChatMediaInputNodeInteraction) {
+    public init(collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo?, accessory: ChatMediaInputStickerGridSectionAccessory, theme: PresentationTheme, interaction: ChatMediaInputNodeInteraction) {
         self.collectionId = collectionId
         self.collectionInfo = collectionInfo
         self.accessory = accessory
@@ -40,7 +40,7 @@ final class ChatMediaInputStickerGridSection: GridSection {
         self.interaction = interaction
     }
     
-    func isEqual(to: GridSection) -> Bool {
+    public func isEqual(to: GridSection) -> Bool {
         if let to = to as? ChatMediaInputStickerGridSection {
             return self.collectionId == to.collectionId && self.theme === to.theme
         } else {
@@ -48,20 +48,20 @@ final class ChatMediaInputStickerGridSection: GridSection {
         }
     }
     
-    func node() -> ASDisplayNode {
+    public func node() -> ASDisplayNode {
         return ChatMediaInputStickerGridSectionNode(collectionInfo: self.collectionInfo, accessory: self.accessory, theme: self.theme, interaction: self.interaction)
     }
 }
 
 private let sectionTitleFont = Font.medium(12.0)
 
-final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
-    let titleNode: ASTextNode
-    let setupNode: HighlightableButtonNode?
-    let interaction: ChatMediaInputNodeInteraction
-    let accessory: ChatMediaInputStickerGridSectionAccessory
+public final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
+    public let titleNode: ASTextNode
+    public let setupNode: HighlightableButtonNode?
+    public let interaction: ChatMediaInputNodeInteraction
+    public let accessory: ChatMediaInputStickerGridSectionAccessory
     
-    init(collectionInfo: StickerPackCollectionInfo?, accessory: ChatMediaInputStickerGridSectionAccessory, theme: PresentationTheme, interaction: ChatMediaInputNodeInteraction) {
+    public init(collectionInfo: StickerPackCollectionInfo?, accessory: ChatMediaInputStickerGridSectionAccessory, theme: PresentationTheme, interaction: ChatMediaInputNodeInteraction) {
         self.interaction = interaction
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -91,7 +91,7 @@ final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
         self.setupNode?.addTarget(self, action: #selector(self.setupPressed), forControlEvents: .touchUpInside)
     }
     
-    override func layout() {
+    override public func layout() {
         super.layout()
         
         let bounds = self.bounds
@@ -116,20 +116,20 @@ final class ChatMediaInputStickerGridSectionNode: ASDisplayNode {
     }
 }
 
-final class ChatMediaInputStickerGridItem: GridItem {
-    let context: AccountContext
-    let index: ItemCollectionViewEntryIndex
-    let stickerItem: StickerPackItem
-    let selected: () -> Void
-    let interfaceInteraction: ChatControllerInteraction?
-    let inputNodeInteraction: ChatMediaInputNodeInteraction
-    let theme: PresentationTheme
-    let large: Bool
-    let isLocked: Bool
+public final class ChatMediaInputStickerGridItem: GridItem {
+    public let context: AccountContext
+    public let index: ItemCollectionViewEntryIndex
+    public let stickerItem: StickerPackItem
+    public let selected: () -> Void
+    public let interfaceInteraction: ChatControllerInteraction?
+    public let inputNodeInteraction: ChatMediaInputNodeInteraction
+    public let theme: PresentationTheme
+    public let large: Bool
+    public let isLocked: Bool
     
-    let section: GridSection?
+    public let section: GridSection?
     
-    init(context: AccountContext, collectionId: ItemCollectionId, stickerPackInfo: StickerPackCollectionInfo?, index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, canManagePeerSpecificPack: Bool?, interfaceInteraction: ChatControllerInteraction?, inputNodeInteraction: ChatMediaInputNodeInteraction, hasAccessory: Bool, theme: PresentationTheme, large: Bool = false, isLocked: Bool = false, selected: @escaping () -> Void) {
+    public init(context: AccountContext, collectionId: ItemCollectionId, stickerPackInfo: StickerPackCollectionInfo?, index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, canManagePeerSpecificPack: Bool?, interfaceInteraction: ChatControllerInteraction?, inputNodeInteraction: ChatMediaInputNodeInteraction, hasAccessory: Bool, theme: PresentationTheme, large: Bool = false, isLocked: Bool = false, selected: @escaping () -> Void) {
         self.context = context
         self.index = index
         self.stickerItem = stickerItem
@@ -145,7 +145,7 @@ final class ChatMediaInputStickerGridItem: GridItem {
         self.section = ChatMediaInputStickerGridSection(collectionId: collectionId, collectionInfo: stickerPackInfo, accessory: accessory, theme: theme, interaction: inputNodeInteraction)
     }
     
-    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
+    public func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = ChatMediaInputStickerGridItemNode()
         node.interfaceInteraction = self.interfaceInteraction
         node.inputNodeInteraction = self.inputNodeInteraction
@@ -153,7 +153,7 @@ final class ChatMediaInputStickerGridItem: GridItem {
         return node
     }
     
-    func update(node: GridItemNode) {
+    public func update(node: GridItemNode) {
         guard let node = node as? ChatMediaInputStickerGridItemNode else {
             assertionFailure()
             return
@@ -164,26 +164,26 @@ final class ChatMediaInputStickerGridItem: GridItem {
     }
 }
 
-final class ChatMediaInputStickerGridItemNode: GridItemNode {
+public final class ChatMediaInputStickerGridItemNode: GridItemNode {
     private var currentState: (AccountContext, StickerPackItem, CGSize)?
     private var currentSize: CGSize?
-    let imageNode: TransformImageNode
-    private(set) var animationNode: AnimatedStickerNode?
-    private(set) var placeholderNode: StickerShimmerEffectNode?
+    public let imageNode: TransformImageNode
+    public private(set) var animationNode: AnimatedStickerNode?
+    public private(set) var placeholderNode: StickerShimmerEffectNode?
     
     private var lockBackground: UIVisualEffectView?
     private var lockTintView: UIView?
     private var lockIconNode: ASImageNode?
-    var isLocked: Bool?
+    public var isLocked: Bool?
     
     private var didSetUpAnimationNode = false
     private var item: ChatMediaInputStickerGridItem?
     
     private let stickerFetchedDisposable = MetaDisposable()
     
-    var currentIsPreviewing = false
+    public var currentIsPreviewing = false
     
-    override var isVisibleInGrid: Bool {
+    override public var isVisibleInGrid: Bool {
         didSet {
             self.updateVisibility()
         }
@@ -192,15 +192,15 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     private var isPanelVisible = false
     private var isPlaying = false
     
-    var interfaceInteraction: ChatControllerInteraction?
-    var inputNodeInteraction: ChatMediaInputNodeInteraction?
-    var selected: (() -> Void)?
+    public var interfaceInteraction: ChatControllerInteraction?
+    public var inputNodeInteraction: ChatMediaInputNodeInteraction?
+    public var selected: (() -> Void)?
     
-    var stickerPackItem: StickerPackItem? {
+    public var stickerPackItem: StickerPackItem? {
         return self.currentState?.1
     }
     
-    override init() {
+    override public init() {
         self.imageNode = TransformImageNode()
         self.placeholderNode = StickerShimmerEffectNode()
         self.placeholderNode?.isUserInteractionEnabled = false
@@ -244,13 +244,13 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         }
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    override func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {
+    override public func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {
         guard let item = item as? ChatMediaInputStickerGridItem else {
             return
         }
@@ -392,13 +392,13 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         }
     }
     
-    override func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
+    override public func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
         if let placeholderNode = self.placeholderNode {
             placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: absoluteRect.minX + placeholderNode.frame.minX, y: absoluteRect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
         }
     }
     
-    @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
+    @objc private func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
         if self.imageNode.layer.animation(forKey: "opacity") != nil {
             return
         }
@@ -411,18 +411,18 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         }
     }
     
-    func transitionNode() -> ASDisplayNode? {
+    public func transitionNode() -> ASDisplayNode? {
         return self.imageNode
     }
     
-    func updateIsPanelVisible(_ isPanelVisible: Bool) {
+    public func updateIsPanelVisible(_ isPanelVisible: Bool) {
         if self.isPanelVisible != isPanelVisible {
             self.isPanelVisible = isPanelVisible
             self.updateVisibility()
         }
     }
     
-    func updateVisibility() {
+    public func updateVisibility() {
         guard let item = self.item else {
             return
         }
@@ -444,7 +444,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         }
     }
     
-    func updatePreviewing(animated: Bool) {
+    public func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, item, _) = self.currentState, let interaction = self.inputNodeInteraction {
             isPreviewing = interaction.previewedStickerPackItemFile?.id == item.file.id

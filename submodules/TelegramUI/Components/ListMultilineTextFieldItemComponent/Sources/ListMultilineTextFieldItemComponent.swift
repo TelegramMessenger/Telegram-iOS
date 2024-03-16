@@ -11,6 +11,7 @@ import AccountContext
 public final class ListMultilineTextFieldItemComponent: Component {
     public final class ExternalState {
         public fileprivate(set) var hasText: Bool = false
+        public fileprivate(set) var text: NSAttributedString = NSAttributedString()
         
         public init() {
         }
@@ -127,7 +128,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
         }
     }
     
-    public final class View: UIView, UITextFieldDelegate, ListSectionComponent.ChildView, ComponentTaggedView {
+    public final class View: UIView, ListSectionComponent.ChildView, ComponentTaggedView {
         private let textField = ComponentView<Empty>()
         private let textFieldExternalState = TextFieldComponent.ExternalState()
         
@@ -154,17 +155,6 @@ public final class ListMultilineTextFieldItemComponent: Component {
         
         required public init?(coder: NSCoder) {
             preconditionFailure()
-        }
-        
-        public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-            return true
-        }
-        
-        @objc private func textDidChange() {
-            if !self.isUpdating {
-                self.state?.updated(transition: self.component?.textUpdateTransition ?? .immediate)
-            }
-            self.component?.updated?(self.currentText)
         }
         
         public func setText(text: String, updateState: Bool) {
@@ -206,6 +196,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
                 transition: transition,
                 component: AnyComponent(TextFieldComponent(
                     context: component.context,
+                    theme: component.theme,
                     strings: component.strings,
                     externalState: self.textFieldExternalState,
                     fontSize: 17.0,
@@ -266,6 +257,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
             self.separatorInset = 16.0
             
             component.externalState?.hasText = self.textFieldExternalState.hasText
+            component.externalState?.text = self.textFieldExternalState.text
             
             return size
         }

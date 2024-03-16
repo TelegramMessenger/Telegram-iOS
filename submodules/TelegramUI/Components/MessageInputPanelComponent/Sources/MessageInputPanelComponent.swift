@@ -776,6 +776,7 @@ public final class MessageInputPanelComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(TextFieldComponent(
                     context: component.context,
+                    theme: component.theme,
                     strings: component.strings,
                     externalState: self.textFieldExternalState,
                     fontSize: 17.0,

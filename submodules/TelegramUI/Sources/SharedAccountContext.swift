@@ -59,6 +59,7 @@ import CollectibleItemInfoScreen
 import StickerPickerScreen
 import MediaEditor
 import MediaEditorScreen
+import BusinessIntroSetupScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1927,6 +1928,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return QuickReplySetupScreen.initialData(context: context)
     }
     
+    public func makeBusinessIntroSetupScreen(context: AccountContext) -> ViewController {
+        return BusinessIntroSetupScreen(context: context)
+    }
+    
     public func makeCollectibleItemInfoScreen(context: AccountContext, initialData: CollectibleItemInfoScreenInitialData) -> ViewController {
         return CollectibleItemInfoScreen(context: context, initialData: initialData as! CollectibleItemInfoScreen.InitialData)
     }
@@ -2228,7 +2233,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     let presence = current.presence
                     var disabledFor: [PeerId: SelectivePrivacyPeer] = [:]
                     switch presence {
-                    case let .enableEveryone(disabledForValue), let .enableContacts(_, disabledForValue):
+                    case let .enableEveryone(disabledForValue), let .enableContacts(_, disabledForValue, _):
                         disabledFor = disabledForValue
                     default:
                         break

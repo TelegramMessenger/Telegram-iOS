@@ -213,6 +213,20 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     }
     
     private func updateTitle() {
+        var updatedCount: Int = 0
+        switch self.contactsNode.contentNode {
+        case let .contacts(contactsNode):
+            if let selectionState = contactsNode.selectionState {
+                updatedCount = selectionState.selectedPeerIndices.count
+            }
+        case let .chats(chatsNode):
+            chatsNode.updateState { state in
+                updatedCount = state.selectedPeerIds.count
+                return state
+            }
+            break
+        }
+        
         switch self.mode {
         case .groupCreation:
             let maxCount: Int32 = self.limitsConfiguration?.maxSupergroupMemberCount ?? 5000
@@ -227,7 +241,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
             self.rightNavigationButton = rightNavigationButton
             self.navigationItem.rightBarButtonItem = self.rightNavigationButton
-            rightNavigationButton.isEnabled = true //count != 0 || self.params.alwaysEnabled
+            rightNavigationButton.isEnabled = true
         case .premiumGifting:
             let maxCount: Int32 = self.limit ?? 10
             var count = 0
@@ -262,6 +276,13 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
             self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             rightNavigationButton.isEnabled = self.params.alwaysEnabled
+        }
+        
+        switch self.mode {
+        case .groupCreation, .peerSelection, .chatSelection:
+            self.rightNavigationButton?.isEnabled = updatedCount != 0 || !self.contactsNode.editableTokens.isEmpty || self.params.alwaysEnabled
+        case .channelCreation, .premiumGifting, .requestedUsersSelection:
+            break
         }
     }
     
@@ -355,29 +376,6 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     }
                 }
                 
-                if let updatedCount = updatedCount {
-                    switch strongSelf.mode {
-                        case .groupCreation, .peerSelection, .chatSelection:
-                            strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0 || strongSelf.params.alwaysEnabled
-                        case .channelCreation, .premiumGifting, .requestedUsersSelection:
-                            break
-                    }
-                    
-                    switch strongSelf.mode {
-                        case .groupCreation:
-                            let maxCount: Int32 = strongSelf.limitsConfiguration?.maxSupergroupMemberCount ?? 5000
-                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Compose_NewGroupTitle, counter: "\(updatedCount)/\(maxCount)")
-                        case .premiumGifting:
-                            let maxCount: Int32 = strongSelf.limit ?? 10
-                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Premium_Gift_ContactSelection_Title, counter: "\(updatedCount)/\(maxCount)")
-                        case .requestedUsersSelection:
-                            let maxCount: Int32 = strongSelf.limit ?? 10
-                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.RequestPeer_SelectUsers, counter: "\(updatedCount)/\(maxCount)")
-                        case .peerSelection, .channelCreation, .chatSelection:
-                            break
-                    }
-                }
-                
                 if let addedToken = addedToken {
                     strongSelf.contactsNode.editableTokens.append(addedToken)
                 } else if let removedTokenId = removedTokenId {
@@ -385,7 +383,12 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                         return token.id != removedTokenId
                     }
                 }
+                
+                let _ = updatedCount
+                
                 strongSelf.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
+                
+                strongSelf.updateTitle()
                 
                 if displayCountAlert {
                     strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.CreateGroup_SoftUserLimitAlert, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
@@ -503,6 +506,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     }
                 }
                 strongSelf.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
+                
+                strongSelf.updateTitle()
             }
         }
         
@@ -530,6 +535,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 }
                 strongSelf.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
             }
+            
+            strongSelf.updateTitle()
         }
         
         self.contactsNode.additionalCategorySelected = { [weak self] id in
@@ -593,6 +600,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     }
                 }
                 strongSelf.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
+                
+                strongSelf.updateTitle()
             }
         }
         self.contactsNode.complete = { [weak self] in

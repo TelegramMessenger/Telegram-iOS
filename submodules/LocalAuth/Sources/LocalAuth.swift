@@ -21,6 +21,23 @@ public struct LocalAuth {
         case error(Error)
     }
     
+    #if targetEnvironment(simulator)
+    public final class PrivateKey {
+        public let publicKeyRepresentation: Data
+        
+        fileprivate init() {
+            self.publicKeyRepresentation = Data(count: 32)
+        }
+        
+        public func encrypt(data: Data) -> Data? {
+            return data
+        }
+        
+        public func decrypt(data: Data) -> DecryptionResult {
+            return .result(data)
+        }
+    }
+    #else
     public final class PrivateKey {
         private let privateKey: SecKey
         private let publicKey: SecKey
@@ -64,6 +81,7 @@ public struct LocalAuth {
             return .result(result)
         }
     }
+    #endif
     
     public static var biometricAuthentication: LocalAuthBiometricAuthentication? {
         let context = LAContext()
@@ -157,7 +175,18 @@ public struct LocalAuth {
         return seedId;
     }
     
-    public static func getPrivateKey(baseAppBundleId: String, keyId: Data) -> PrivateKey? {
+    public static func getOrCreatePrivateKey(baseAppBundleId: String, keyId: Data) -> PrivateKey? {
+        if let key = self.getPrivateKey(baseAppBundleId: baseAppBundleId, keyId: keyId) {
+            return key
+        } else {
+            return self.addPrivateKey(baseAppBundleId: baseAppBundleId, keyId: keyId)
+        }
+    }
+    
+    private static func getPrivateKey(baseAppBundleId: String, keyId: Data) -> PrivateKey? {
+        #if targetEnvironment(simulator)
+        return PrivateKey()
+        #else
         guard let bundleSeedId = self.bundleSeedId() else {
             return nil
         }
@@ -196,6 +225,7 @@ public struct LocalAuth {
         let result = PrivateKey(privateKey: privateKey, publicKey: publicKey, publicKeyRepresentation: publicKeyRepresentation as Data)
         
         return result
+        #endif
     }
     
     public static func removePrivateKey(baseAppBundleId: String, keyId: Data) -> Bool {
@@ -221,7 +251,10 @@ public struct LocalAuth {
         return true
     }
     
-    public static func addPrivateKey(baseAppBundleId: String, keyId: Data) -> PrivateKey? {
+    private static func addPrivateKey(baseAppBundleId: String, keyId: Data) -> PrivateKey? {
+        #if targetEnvironment(simulator)
+        return PrivateKey()
+        #else
         guard let bundleSeedId = self.bundleSeedId() else {
             return nil
         }
@@ -262,5 +295,6 @@ public struct LocalAuth {
         
         let result = PrivateKey(privateKey: privateKey, publicKey: publicKey, publicKeyRepresentation: publicKeyRepresentation as Data)
         return result
+        #endif
     }
 }

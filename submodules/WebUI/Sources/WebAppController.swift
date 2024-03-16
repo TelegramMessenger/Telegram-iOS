@@ -1074,8 +1074,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.requestBiometryAuth()
                 case "web_app_biometry_update_token":
                     var tokenData: Data?
-                    if let json, let tokenDataValue = json["token"] as? Data {
-                        tokenData = tokenDataValue
+                    if let json, let tokenDataValue = json["token"] as? String, !tokenDataValue.isEmpty {
+                        tokenData = tokenDataValue.data(using: .utf8)
                     }
                     self.requestBiometryUpdateToken(tokenData: tokenData)
                 default:
@@ -1514,10 +1514,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     let appBundleId = self.context.sharedContext.applicationBindings.appBundleId
                     
                     Thread { [weak self] in
-                        var key = LocalAuth.getPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
-                        if key == nil {
-                            key = LocalAuth.addPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
-                        }
+                        let key = LocalAuth.getOrCreatePrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
                         
                         let decryptedData: LocalAuth.DecryptionResult
                         if let key {
@@ -1567,9 +1564,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
             data["status"] = isAuthorized ? "authorized" : "failed"
             if isAuthorized {
                 if let tokenData {
-                    data["token"] = tokenData
+                    data["token"] = String(data: tokenData, encoding: .utf8) ?? ""
                 } else {
-                    data["token"] = Data()
+                    data["token"] = ""
                 }
             }
             
@@ -1593,10 +1590,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let tokenData {
                 let appBundleId = self.context.sharedContext.applicationBindings.appBundleId
                 Thread { [weak self] in
-                    var key = LocalAuth.getPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
-                    if key == nil {
-                        key = LocalAuth.addPrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
-                    }
+                    let key = LocalAuth.getOrCreatePrivateKey(baseAppBundleId: appBundleId, keyId: keyId)
                     
                     var encryptedData: TelegramBotBiometricsState.OpaqueToken?
                     if let key {
@@ -1619,6 +1613,28 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 state.opaqueToken = encryptedData
                                 return state
                             })
+                            
+                            var data: [String: Any] = [:]
+                            data["status"] = "updated"
+                            
+                            guard let jsonData = try? JSONSerialization.data(withJSONObject: data) else {
+                                return
+                            }
+                            guard let jsonDataString = String(data: jsonData, encoding: .utf8) else {
+                                return
+                            }
+                            self.webView?.sendEvent(name: "biometry_token_updated", data: jsonDataString)
+                        } else {
+                            var data: [String: Any] = [:]
+                            data["status"] = "failed"
+                            
+                            guard let jsonData = try? JSONSerialization.data(withJSONObject: data) else {
+                                return
+                            }
+                            guard let jsonDataString = String(data: jsonData, encoding: .utf8) else {
+                                return
+                            }
+                            self.webView?.sendEvent(name: "biometry_token_updated", data: jsonDataString)
                         }
                     }
                 }.start()
@@ -1628,6 +1644,17 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     state.opaqueToken = nil
                     return state
                 })
+                
+                var data: [String: Any] = [:]
+                data["status"] = "removed"
+                
+                guard let jsonData = try? JSONSerialization.data(withJSONObject: data) else {
+                    return
+                }
+                guard let jsonDataString = String(data: jsonData, encoding: .utf8) else {
+                    return
+                }
+                self.webView?.sendEvent(name: "biometry_token_updated", data: jsonDataString)
             }
         }
     }

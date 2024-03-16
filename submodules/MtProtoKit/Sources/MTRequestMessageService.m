@@ -808,7 +808,7 @@
                             }
                             restartRequest = true;
                         }
-                        else if (rpcError.errorCode == 420 || [rpcError.errorDescription rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound) {
+                        else if (rpcError.errorCode == 420 || [rpcError.errorDescription rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound || [rpcError.errorDescription rangeOfString:@"FLOOD_PREMIUM_WAIT_"].location != NSNotFound) {
                             if (request.errorContext == nil)
                                 request.errorContext = [[MTRequestErrorContext alloc] init];
                             
@@ -821,6 +821,32 @@
                                 if ([scanner scanInt:&errorWaitTime])
                                 {
                                     request.errorContext.floodWaitSeconds = errorWaitTime;
+                                    request.errorContext.floodWaitErrorText = rpcError.errorDescription;
+                                    
+                                    if (request.shouldContinueExecutionWithErrorContext != nil)
+                                    {
+                                        if (request.shouldContinueExecutionWithErrorContext(request.errorContext))
+                                        {
+                                            restartRequest = true;
+                                            request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (CFAbsoluteTime)errorWaitTime);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        restartRequest = true;
+                                        request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (CFAbsoluteTime)errorWaitTime);
+                                    }
+                                }
+                            } else if ([rpcError.errorDescription rangeOfString:@"FLOOD_PREMIUM_WAIT_"].location != NSNotFound) {
+                                int errorWaitTime = 0;
+                                
+                                NSScanner *scanner = [[NSScanner alloc] initWithString:rpcError.errorDescription];
+                                [scanner scanUpToString:@"FLOOD_PREMIUM_WAIT_" intoString:nil];
+                                [scanner scanString:@"FLOOD_PREMIUM_WAIT_" intoString:nil];
+                                if ([scanner scanInt:&errorWaitTime])
+                                {
+                                    request.errorContext.floodWaitSeconds = errorWaitTime;
+                                    request.errorContext.floodWaitErrorText = rpcError.errorDescription;
                                     
                                     if (request.shouldContinueExecutionWithErrorContext != nil)
                                     {

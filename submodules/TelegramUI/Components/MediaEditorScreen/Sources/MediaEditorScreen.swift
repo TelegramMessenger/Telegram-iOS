@@ -448,7 +448,7 @@ final class MediaEditorScreenComponent: Component {
             self.currentInputMode = .text
             if hasFirstResponder(self) {
                 if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
-                    self.nextTransitionUserData = TextFieldComponent.AnimationHint(kind: .textFocusChanged)
+                    self.nextTransitionUserData = TextFieldComponent.AnimationHint(view: nil, kind: .textFocusChanged)
                     if view.isActive {
                         view.deactivateInput(force: true)
                     } else {
@@ -456,7 +456,7 @@ final class MediaEditorScreenComponent: Component {
                     }
                 }
             } else {
-                self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(kind: .textFocusChanged)))
+                self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(view: nil, kind: .textFocusChanged)))
             }
         }
         
