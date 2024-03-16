@@ -78,7 +78,7 @@ private final class StickerPackListContextItemNode: ASDisplayNode, ContextMenuCu
             })
             let actionNode = ContextControllerActionsListActionItemNode(getController: getController, requestDismiss: actionSelected, requestUpdateAction: { _, _ in }, item: action)
             actionNodes.append(actionNode)
-            if actionNodes.count != packs.count {
+            if actionNodes.count != item.packs.count {
                 let separatorNode = ASDisplayNode()
                 separatorNode.backgroundColor = presentationData.theme.contextMenu.itemSeparatorColor
                 separatorNodes.append(separatorNode)
