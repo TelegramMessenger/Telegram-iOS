@@ -109,6 +109,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-867328308] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleCustom($0) }
     dict[-1007487743] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleOutsideWorkHours($0) }
     dict[-451302485] = { return Api.BusinessGreetingMessage.parse_businessGreetingMessage($0) }
+    dict[1510606445] = { return Api.BusinessIntro.parse_businessIntro($0) }
     dict[-1403249929] = { return Api.BusinessLocation.parse_businessLocation($0) }
     dict[554733559] = { return Api.BusinessRecipients.parse_businessRecipients($0) }
     dict[302717625] = { return Api.BusinessWeeklyOpen.parse_businessWeeklyOpen($0) }
@@ -312,6 +313,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1462213465] = { return Api.InputBotInlineResult.parse_inputBotInlineResultPhoto($0) }
     dict[-2094959136] = { return Api.InputBusinessAwayMessage.parse_inputBusinessAwayMessage($0) }
     dict[26528571] = { return Api.InputBusinessGreetingMessage.parse_inputBusinessGreetingMessage($0) }
+    dict[163867085] = { return Api.InputBusinessIntro.parse_inputBusinessIntro($0) }
     dict[1871393450] = { return Api.InputBusinessRecipients.parse_inputBusinessRecipients($0) }
     dict[-212145112] = { return Api.InputChannel.parse_inputChannel($0) }
     dict[-292807034] = { return Api.InputChannel.parse_inputChannelEmpty($0) }
@@ -889,13 +891,13 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[299870598] = { return Api.Update.parse_updateBotChatInviteRequester($0) }
     dict[1299263278] = { return Api.Update.parse_updateBotCommands($0) }
     dict[-1607821266] = { return Api.Update.parse_updateBotDeleteBusinessMessage($0) }
-    dict[1420915171] = { return Api.Update.parse_updateBotEditBusinessMessage($0) }
+    dict[132077692] = { return Api.Update.parse_updateBotEditBusinessMessage($0) }
     dict[1232025500] = { return Api.Update.parse_updateBotInlineQuery($0) }
     dict[317794823] = { return Api.Update.parse_updateBotInlineSend($0) }
     dict[347625491] = { return Api.Update.parse_updateBotMenuButton($0) }
     dict[-1407069234] = { return Api.Update.parse_updateBotMessageReaction($0) }
     dict[164329305] = { return Api.Update.parse_updateBotMessageReactions($0) }
-    dict[-2142069794] = { return Api.Update.parse_updateBotNewBusinessMessage($0) }
+    dict[-1646578564] = { return Api.Update.parse_updateBotNewBusinessMessage($0) }
     dict[-1934976362] = { return Api.Update.parse_updateBotPrecheckoutQuery($0) }
     dict[-1246823043] = { return Api.Update.parse_updateBotShippingQuery($0) }
     dict[-997782967] = { return Api.Update.parse_updateBotStopped($0) }
@@ -1028,7 +1030,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1831650802] = { return Api.UrlAuthResult.parse_urlAuthResultRequest($0) }
     dict[559694904] = { return Api.User.parse_user($0) }
     dict[-742634630] = { return Api.User.parse_userEmpty($0) }
-    dict[587153029] = { return Api.UserFull.parse_userFull($0) }
+    dict[1728822428] = { return Api.UserFull.parse_userFull($0) }
     dict[-2100168954] = { return Api.UserProfilePhoto.parse_userProfilePhoto($0) }
     dict[1326562017] = { return Api.UserProfilePhoto.parse_userProfilePhotoEmpty($0) }
     dict[164646985] = { return Api.UserStatus.parse_userStatusEmpty($0) }
@@ -1419,6 +1421,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BusinessGreetingMessage:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.BusinessIntro:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.BusinessLocation:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BusinessRecipients:
@@ -1580,6 +1584,8 @@ public extension Api {
             case let _1 as Api.InputBusinessAwayMessage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputBusinessGreetingMessage:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.InputBusinessIntro:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputBusinessRecipients:
                 _1.serialize(buffer, boxed)

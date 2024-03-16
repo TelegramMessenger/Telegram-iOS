@@ -1355,6 +1355,22 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
+                static func updateBusinessIntro(flags: Int32, intro: Api.InputBusinessIntro?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1508585420)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {intro!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "account.updateBusinessIntro", parameters: [("flags", String(describing: flags)), ("intro", String(describing: intro))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
                 static func updateBusinessLocation(flags: Int32, geoPoint: Api.InputGeoPoint?, address: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1637149926)
