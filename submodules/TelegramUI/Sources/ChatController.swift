@@ -15979,6 +15979,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
+        //TODO:localize
         let peerName = peer.compactDisplayTitle
         let text = "🎂 \(peerName) is having a birthday today. You can give \(peerName) **Telegram Premium** as a birthday gift."
         

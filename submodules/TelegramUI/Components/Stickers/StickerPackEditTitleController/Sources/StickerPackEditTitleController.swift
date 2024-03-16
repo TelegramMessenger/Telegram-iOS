@@ -287,8 +287,9 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
         super.init()
                 
         self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.clearButton)
-        
+        if hasClearButton {
+            self.addSubnode(self.clearButton)
+        }
         self.clearButton.addTarget(self, action: #selector(self.clearPressed), forControlEvents: .touchUpInside)
     }
     

@@ -1720,22 +1720,31 @@ extension ChatControllerImpl {
             context: self.context,
             getSourceRect: { return .zero },
             completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
-                guard let self, let asset = result as? PHAsset else {
+                guard let self else {
                     return
                 }
+                let subject: Signal<MediaEditorScreen.Subject?, NoError>
+                if let asset = result as? PHAsset {
+                    subject = .single(.asset(asset))
+                } else if let image = result as? UIImage {
+                    subject = .single(.image(image, PixelDimensions(image.size), nil, .bottomRight))
+                } else {
+                    subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
+                }
+                
                 let editorController = MediaEditorScreen(
                     context: self.context,
                     mode: .stickerEditor(mode: .generic),
-                    subject: .single(.asset(asset)),
-                    transitionIn: .gallery(
+                    subject: subject,
+                    transitionIn: transitionView.flatMap({ .gallery(
                         MediaEditorScreen.TransitionIn.GalleryTransitionIn(
-                            sourceView: transitionView,
+                            sourceView: $0,
                             sourceRect: transitionRect,
                             sourceImage: transitionImage
                         )
-                    ),
+                    ) }),
                     transitionOut: { finished, isNew in
-                        if !finished {
+                        if !finished, let transitionView {
                             return MediaEditorScreen.TransitionOut(
                                 destinationView: transitionView,
                                 destinationRect: transitionView.bounds,

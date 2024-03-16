@@ -2795,35 +2795,36 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                     })
                                 }))
                             )
-                            menuItems.append(
-                                .action(ContextMenuActionItem(text: presentationData.strings.StickerPack_ViewPack, icon: { theme in
-                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
-                                }, action: { _, f in
-                                    f(.default)
-                                    
-                                    guard let strongSelf = self else {
-                                        return
+                            
+                            loop: for attribute in file.attributes {
+                                switch attribute {
+                                case let .CustomEmoji(_, _, _, packReference), let .Sticker(_, packReference, _):
+                                    if let packReference = packReference {
+                                        menuItems.append(
+                                            .action(ContextMenuActionItem(text: presentationData.strings.StickerPack_ViewPack, icon: { theme in
+                                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
+                                            }, action: { _, f in
+                                                f(.default)
+                                                
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                
+                                                let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, parentNavigationController: interaction.navigationController(), sendSticker: { file, sourceView, sourceRect in
+                                                    sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
+                                                    return true
+                                                })
+                                                
+                                                interaction.navigationController()?.view.window?.endEditing(true)
+                                                interaction.presentController(controller, nil)
+                                            }))
+                                        )
                                     }
-                                    
-                                loop: for attribute in file.attributes {
-                                    switch attribute {
-                                    case let .CustomEmoji(_, _, _, packReference), let .Sticker(_, packReference, _):
-                                        if let packReference = packReference {
-                                            let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, parentNavigationController: interaction.navigationController(), sendSticker: { file, sourceView, sourceRect in
-                                                sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
-                                                return true
-                                            })
-                                            
-                                            interaction.navigationController()?.view.window?.endEditing(true)
-                                            interaction.presentController(controller, nil)
-                                        }
-                                        break loop
-                                    default:
-                                        break
-                                    }
+                                    break loop
+                                default:
+                                    break
                                 }
-                                }))
-                            )
+                            }
                         }
                         
                         guard let view = view else {

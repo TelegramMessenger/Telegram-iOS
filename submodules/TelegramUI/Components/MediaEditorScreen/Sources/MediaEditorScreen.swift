@@ -3184,8 +3184,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             } else {
-                if case .message = self.actualSubject, let layout = self.validLayout {
-                    self.layer.animatePosition(from: CGPoint(x: 0.0, y: layout.size.height), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                var animateIn = false
+                if let subject {
+                    switch subject {
+                    case .empty, .message, .sticker:
+                        animateIn = true
+                    default:
+                        break
+                    }
+                }
+                if animateIn, let layout = self.validLayout {
+                    self.layer.animatePosition(from: CGPoint(x: 0.0, y: layout.size.height), to: .zero, duration: 0.35, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                     completion()
                 } else if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                     view.animateIn(from: .camera, completion: completion)
@@ -4089,7 +4098,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     if let controller = self.controller, case .stickerEditor = controller.mode {
                                         hasInteractiveStickers = false
                                     }
-                                    let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), forceDark: true, defaultToEmoji: self.defaultToEmoji, hasGifs: hasInteractiveStickers, hasInteractiveStickers: hasInteractiveStickers)
+                                    let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), forceDark: true, defaultToEmoji: self.defaultToEmoji, hasGifs: true, hasInteractiveStickers: hasInteractiveStickers)
                                     controller.completion = { [weak self] content in
                                         if let self {
                                             if let content {
@@ -4447,6 +4456,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
     
     public enum Subject {
+        case empty(PixelDimensions)
         case image(UIImage, PixelDimensions, UIImage?, PIPPosition)
         case video(String, UIImage?, Bool, String?, UIImage?, PixelDimensions, Double, [(Bool, Double)], PIPPosition)
         case asset(PHAsset)
@@ -4456,6 +4466,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         var dimensions: PixelDimensions {
             switch self {
+            case let .empty(dimensions):
+                return dimensions
             case let .image(_, dimensions, _, _), let .video(_, _, _, _, _, dimensions, _, _, _):
                 return dimensions
             case let .asset(asset):
@@ -4471,6 +4483,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         var editorSubject: MediaEditor.Subject {
             switch self {
+            case let .empty(dimensions):
+                let image = generateImage(dimensions.cgSize, opaque: false, scale: 1.0, rotatedContext: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                })!
+                return .image(image, dimensions)
             case let .image(image, dimensions, _, _):
                 return .image(image, dimensions)
             case let .video(videoPath, transitionImage, mirror, additionalVideoPath, _, dimensions, duration, _, _):
@@ -4492,6 +4509,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         var isVideo: Bool {
             switch self {
+            case .empty:
+                return false
             case .image:
                 return false
             case .video:
@@ -5401,6 +5420,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             var videoIsMirrored = false
             let duration: Double
             switch subject {
+            case let .empty(dimensions):
+                let image = generateImage(dimensions.cgSize, opaque: false, scale: 1.0, rotatedContext: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                })!
+                let tempImagePath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).jpg"
+                if let data = image.jpegData(compressionQuality: 0.85) {
+                    try? data.write(to: URL(fileURLWithPath: tempImagePath))
+                }
+                videoResult = .single(.imageFile(path: tempImagePath))
+                duration = 3.0
+                
+                firstFrame = .single((image, nil))
             case let .image(image, _, _, _):
                 let tempImagePath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).jpg"
                 if let data = image.jpegData(compressionQuality: 0.85) {
@@ -5684,8 +5715,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         if let image = mediaEditor.resultImage {
             makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
                 if let self, let resultImage {
-                    Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
-                    
                     let dimensions = CGSize(width: 512, height: 512)
                     let scaledImage = generateImage(dimensions, contextGenerator: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -5703,16 +5732,29 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
     }
     
+
     func presentStickerPreview(image: UIImage) {
+        guard let mediaEditor = self.node.mediaEditor else {
+            return
+        }
+        
         let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-        Queue.concurrentDefaultQueue().async {
-            if let data = try? WebP.convert(toWebP: image, quality: 97.0) {
-                self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+        
+        var isVideo = false
+        if mediaEditor.resultIsVideo {
+            isVideo = true
+            self.performSave(toStickerResource: resource)
+        } else {
+            Queue.concurrentDefaultQueue().async {
+                if let data = try? WebP.convert(toWebP: image, quality: 97.0) {
+                    self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                }
             }
         }
+            
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
         
-        let file = stickerFile(resource: resource, size: Int64(0), dimensions: PixelDimensions(image.size))
+        let file = stickerFile(resource: resource, size: Int64(0), dimensions: PixelDimensions(image.size), isVideo: isVideo)
         
         var menuItems: [ContextMenuItem] = []
         if case let .stickerEditor(mode) = self.mode {
@@ -5931,7 +5973,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 case .progress:
                     return .single(status)
                 case let .complete(resource, _):
-                    let file = stickerFile(resource: resource, size: file.size ?? 0, dimensions: dimensions)
+                    let file = stickerFile(resource: resource, size: file.size ?? 0, dimensions: dimensions, isVideo: file.mimeType == "video/webm")
                     switch action {
                     case .addToFavorites:
                         return context.engine.stickers.toggleStickerSaved(file: file, saved: true)
@@ -5997,7 +6039,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
                 let result: MediaEditorScreen.Result
                 if case .upload = action {
-                    let file = stickerFile(resource: resource, size: resource.size ?? 0, dimensions: dimensions)
+                    let file = stickerFile(resource: resource, size: resource.size ?? 0, dimensions: dimensions, isVideo: file.mimeType == "video/webm")
                     result = MediaEditorScreen.Result(
                         media: .sticker(file: file),
                         mediaAreas: [],
@@ -6061,12 +6103,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if !authorized {
                 return
             }
+            self?.hapticFeedback.impact(.light)
             self?.performSave()
         })
     }
     
-    private func performSave() {
-        guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject, self.isSavingAvailable else {
+    private func performSave(toStickerResource: MediaResource? = nil) {
+        guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject else {
             return
         }
             
@@ -6076,14 +6119,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
                 
-        self.hapticFeedback.impact(.light)
+        let isSticker = toStickerResource != nil
         
-        self.previousSavedValues = mediaEditor.values
-        self.isSavingAvailable = false
-        self.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
+        if !isSticker {
+            self.previousSavedValues = mediaEditor.values
+            self.isSavingAvailable = false
+            self.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
+        }
         
-        let tempVideoPath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).mp4"
+        let fileExtension = isSticker ? "webm" : "mp4"
         let saveToPhotos: (String, Bool) -> Void = { path, isVideo in
+            let tempVideoPath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).\(fileExtension)"
             PHPhotoLibrary.shared().performChanges({
                 if isVideo {
                     if let _ = try? FileManager.default.copyItem(atPath: path, toPath: tempVideoPath) {
@@ -6108,6 +6154,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             let exportSubject: Signal<MediaEditorVideoExport.Subject, NoError>
             switch subject {
+            case let .empty(dimensions):
+                let image = generateImage(dimensions.cgSize, opaque: false, scale: 1.0, rotatedContext: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                })!
+                exportSubject = .single(.image(image: image))
             case let .video(path, _, _, _, _, _, _, _, _):
                 let asset = AVURLAsset(url: NSURL(fileURLWithPath: path) as URL)
                 exportSubject = .single(.video(asset: asset, isStory: true))
@@ -6171,8 +6222,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if case let .video(video, _) = exportSubject {
                     duration = video.duration.seconds
                 }
-                let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values, duration: duration, forceFullHd: true, frameRate: 60.0)
-                let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).mp4"
+                let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values, duration: duration, forceFullHd: true, frameRate: 60.0, isSticker: isSticker)
+                let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).\(fileExtension)"
                 let videoExport = MediaEditorVideoExport(postbox: self.context.account.postbox, subject: exportSubject, configuration: configuration, outputPath: outputPath, textScale: 2.0)
                 self.videoExport = videoExport
                 
@@ -6879,11 +6930,11 @@ extension MediaScrubberComponent.Track {
     }
 }
 
-private func stickerFile(resource: TelegramMediaResource, size: Int64, dimensions: PixelDimensions) -> TelegramMediaFile {
+private func stickerFile(resource: TelegramMediaResource, size: Int64, dimensions: PixelDimensions, isVideo: Bool) -> TelegramMediaFile {
     var fileAttributes: [TelegramMediaFileAttribute] = []
-    fileAttributes.append(.FileName(fileName: "sticker.webp"))
+    fileAttributes.append(.FileName(fileName: isVideo ? "sticker.webm" : "sticker.webp"))
     fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
     fileAttributes.append(.ImageSize(size: dimensions))
     
-    return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/webp", size: size, attributes: fileAttributes)
+    return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: isVideo ? "video/webm" : "image/webp", size: size, attributes: fileAttributes)
 }
