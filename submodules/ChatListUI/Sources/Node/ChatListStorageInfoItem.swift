@@ -3,13 +3,14 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
+import TelegramCore
 import TelegramPresentationData
 import ListSectionHeaderNode
 import AppBundle
 import ItemListUI
 import Markdown
 import AccountContext
-import TelegramCore
+import MergedAvatarsNode
 
 class ChatListStorageInfoItem: ListViewItem {
     enum Action {
@@ -90,6 +91,8 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
     private let arrowNode: ASImageNode
     private let separatorNode: ASDisplayNode
     
+    private var avatarsNode: MergedAvatarsNode?
+    
     private var closeButton: HighlightableButtonNode?
     
     private var okButtonText: TextNode?
@@ -168,6 +171,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
             
             let titleString: NSAttributedString
             let textString: NSAttributedString
+            var avatarPeers: [EnginePeer] = []
             
             var okButtonLayout: (TextNodeLayout, () -> TextNode)?
             var cancelButtonLayout: (TextNodeLayout, () -> TextNode)?
@@ -229,14 +233,15 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 let title: String
                 let text: String
                 if peers.count == 1, let peer = peers.first {
-                    title = "It's \(peer.compactDisplayTitle)'s [birthday]() today! 🎂"
+                    title = "It's \(peer.compactDisplayTitle)'s **birthday** today! 🎂"
                     text = "Gift them Telegram Premium."
                 } else {
-                    title = "\(peers.count) contacts have [birthdays]() today! 🎂"
+                    title = "\(peers.count) contacts have **birthdays** today! 🎂"
                     text = "Gift them Telegram Premium."
                 }
                 titleString = parseMarkdownIntoAttributedString(title, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.accentTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), linkAttribute: { _ in return nil }))
                 textString = NSAttributedString(string: text, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+                avatarPeers = Array(peers.prefix(3))
             case let .reviewLogin(newSessionReview, totalCount):
                 spacing = 2.0
                 alignment = .center
@@ -254,9 +259,15 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 cancelButtonLayout = makeCancelButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.ChatList_SessionReview_PanelReject, font: titleFont, textColor: item.theme.list.itemDestructiveColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
             }
             
-            let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0), alignment: alignment, lineSpacing: 0.18))
+            var leftInset: CGFloat = sideInset
+            if !avatarPeers.isEmpty {
+                let avatarsWidth = 30.0 + CGFloat(avatarPeers.count - 1) * 16.0
+                leftInset += avatarsWidth + 4.0
+            }
             
-            let textLayout = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, maximumNumberOfLines: 10, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0), alignment: alignment, lineSpacing: 0.18))
+            let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: 100.0), alignment: alignment, lineSpacing: 0.18))
+            
+            let textLayout = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, maximumNumberOfLines: 10, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: 100.0), alignment: alignment, lineSpacing: 0.18))
             
             var contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.0.size.height + textLayout.0.size.height)
             if let okButtonLayout {
@@ -279,7 +290,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                     if case .center = alignment {
                         strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((params.width - titleLayout.0.size.width) * 0.5), y: verticalInset), size: titleLayout.0.size)
                     } else {
-                        strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: titleLayout.0.size)
+                        strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.0.size)
                     }
                     
                     let _ = textLayout.1()
@@ -287,7 +298,26 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                     if case .center = alignment {
                         strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.0.size.width) * 0.5), y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
                     } else {
-                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
+                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
+                    }
+                    
+                    if !avatarPeers.isEmpty {
+                        let avatarsNode: MergedAvatarsNode
+                        if let current = strongSelf.avatarsNode {
+                            avatarsNode = current
+                        } else {
+                            avatarsNode = MergedAvatarsNode()
+                            strongSelf.addSubnode(avatarsNode)
+                            strongSelf.avatarsNode = avatarsNode
+                        }
+                        let avatarSize = CGSize(width: 30.0, height: 30.0)
+                        avatarsNode.update(context: item.context, peers: avatarPeers.map { $0._asPeer() }, synchronousLoad: false, imageSize: avatarSize.width, imageSpacing: 16.0, borderWidth: 2.0 - UIScreenPixel, avatarFontSize: 10.0)
+                        let avatarsSize = CGSize(width: avatarSize.width + 16.0 * CGFloat(avatarPeers.count - 1), height: avatarSize.height)
+                        avatarsNode.updateLayout(size: avatarsSize)
+                        avatarsNode.frame = CGRect(origin: CGPoint(x: sideInset - 6.0, y: floor((layout.size.height - avatarsSize.height) / 2.0)), size: avatarsSize)
+                    } else if let avatarsNode = strongSelf.avatarsNode {
+                        avatarsNode.removeFromSupernode()
+                        strongSelf.avatarsNode = nil
                     }
                     
                     if let image = strongSelf.arrowNode.image {

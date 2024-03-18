@@ -2118,6 +2118,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         let mode: ContactMultiselectionControllerMode
         if case let .chatList(peerIds) = source {
+            //TODO:localize
             mode = .premiumGifting(topSectionTitle: "🎂 BIRTHDAY TODAY", topSectionPeers: peerIds)
         } else {
             mode = .premiumGifting(topSectionTitle: nil, topSectionPeers: [])
@@ -2322,7 +2323,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, isEditing: isEditing, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
     }
     
-    public func makeStickerEditorScreen(context: AccountContext, source: Any, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, @escaping () -> Void) -> Void) -> ViewController {
+    public func makeStickerEditorScreen(context: AccountContext, source: Any?, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, @escaping () -> Void) -> Void) -> ViewController {
         let subject: MediaEditorScreen.Subject
         let mode: MediaEditorScreen.Mode.StickerEditorMode
         if let file = source as? TelegramMediaFile {
@@ -2331,8 +2332,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         } else if let asset = source as? PHAsset {
             subject = .asset(asset)
             mode = .addingToPack
+        } else if let image = source as? UIImage {
+            subject = .image(image, PixelDimensions(image.size), nil, .bottomRight)
+            mode = .addingToPack
         } else {
-            fatalError()
+            subject = .empty(PixelDimensions(width: 1080, height: 1920))
+            mode = .addingToPack
         }
         let controller = MediaEditorScreen(
             context: context,
@@ -2373,7 +2378,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return storyMediaPickerController(context: context, getSourceRect: getSourceRect, completion: completion, dismissed: dismissed, groupsPresented: groupsPresented)
     }
     
-    public func makeStickerMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void) -> ViewController {
+    public func makeStickerMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any?, UIView?, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void) -> ViewController {
         return stickerMediaPickerController(context: context, getSourceRect: getSourceRect, completion: completion, dismissed: dismissed)
     }
     

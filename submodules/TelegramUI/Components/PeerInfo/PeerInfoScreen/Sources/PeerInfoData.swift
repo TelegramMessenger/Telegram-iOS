@@ -33,6 +33,8 @@ final class PeerInfoState {
     let updatingBio: String?
     let avatarUploadProgress: AvatarUploadProgress?
     let highlightedButton: PeerInfoHeaderButtonKey?
+    let isEditingBirthDate: Bool
+    let updatingBirthDate: BirthdayPickerComponent.BirthDate?
     
     init(
         isEditing: Bool,
@@ -40,7 +42,9 @@ final class PeerInfoState {
         updatingAvatar: PeerInfoUpdatingAvatar?,
         updatingBio: String?,
         avatarUploadProgress: AvatarUploadProgress?,
-        highlightedButton: PeerInfoHeaderButtonKey?
+        highlightedButton: PeerInfoHeaderButtonKey?,
+        isEditingBirthDate: Bool,
+        updatingBirthDate: BirthdayPickerComponent.BirthDate?
     ) {
         self.isEditing = isEditing
         self.selectedMessageIds = selectedMessageIds
@@ -48,6 +52,8 @@ final class PeerInfoState {
         self.updatingBio = updatingBio
         self.avatarUploadProgress = avatarUploadProgress
         self.highlightedButton = highlightedButton
+        self.isEditingBirthDate = isEditingBirthDate
+        self.updatingBirthDate = updatingBirthDate
     }
     
     func withIsEditing(_ isEditing: Bool) -> PeerInfoState {
@@ -57,7 +63,9 @@ final class PeerInfoState {
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
-            highlightedButton: self.highlightedButton
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate
         )
     }
     
@@ -68,7 +76,9 @@ final class PeerInfoState {
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
-            highlightedButton: self.highlightedButton
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate
         )
     }
     
@@ -79,7 +89,9 @@ final class PeerInfoState {
             updatingAvatar: updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
-            highlightedButton: self.highlightedButton
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate
         )
     }
     
@@ -90,7 +102,9 @@ final class PeerInfoState {
             updatingAvatar: self.updatingAvatar,
             updatingBio: updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
-            highlightedButton: self.highlightedButton
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate
         )
     }
     
@@ -101,7 +115,9 @@ final class PeerInfoState {
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: avatarUploadProgress,
-            highlightedButton: self.highlightedButton
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate
         )
     }
     
@@ -112,7 +128,35 @@ final class PeerInfoState {
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
-            highlightedButton: highlightedButton
+            highlightedButton: highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate
+        )
+    }
+    
+    func withIsEditingBirthDate(_ isEditingBirthDate: Bool) -> PeerInfoState {
+        return PeerInfoState(
+            isEditing: self.isEditing,
+            selectedMessageIds: self.selectedMessageIds,
+            updatingAvatar: self.updatingAvatar,
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate
+        )
+    }
+    
+    func withUpdatingBirthDate(_ updatingBirthDate: BirthdayPickerComponent.BirthDate?) -> PeerInfoState {
+        return PeerInfoState(
+            isEditing: self.isEditing,
+            selectedMessageIds: self.selectedMessageIds,
+            updatingAvatar: self.updatingAvatar,
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: updatingBirthDate
         )
     }
 }

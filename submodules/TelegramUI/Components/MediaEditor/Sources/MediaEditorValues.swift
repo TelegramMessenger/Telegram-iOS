@@ -1525,9 +1525,9 @@ func targetSize(cropSize: CGSize, rotateSideward: Bool = false) -> CGSize {
     return CGSize(width: renderWidth, height: renderHeight)
 }
 
-public func recommendedVideoExportConfiguration(values: MediaEditorValues, duration: Double, image: Bool = false, forceFullHd: Bool = false, frameRate: Float) -> MediaEditorVideoExport.Configuration {
+public func recommendedVideoExportConfiguration(values: MediaEditorValues, duration: Double, image: Bool = false, forceFullHd: Bool = false, frameRate: Float, isSticker: Bool = false) -> MediaEditorVideoExport.Configuration {
     let compressionProperties: [String: Any]
-    let codecType: AVVideoCodecType
+    let codecType: Any
     
     var videoBitrate: Int = 3700
     var audioBitrate: Int = 64
@@ -1548,6 +1548,7 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
     let height: Int
     
     var useHEVC = hasHEVCHardwareEncoder
+    var useVP9 = false
     if let qualityPreset = values.qualityPreset {
         let maxSize = CGSize(width: qualityPreset.maximumDimensions, height: qualityPreset.maximumDimensions)
         var resultSize = values.originalDimensions.cgSize
@@ -1566,7 +1567,11 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
         
         useHEVC = false
     } else {
-        if values.videoIsFullHd {
+        if isSticker {
+            width = 512
+            height = 512
+            useVP9 = true
+        } else if values.videoIsFullHd {
             width = 1080
             height = 1920
         } else {
@@ -1575,7 +1580,10 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
         }
     }
     
-    if useHEVC {
+    if useVP9 {
+        codecType = "VP9"
+        compressionProperties = [:]
+    } else if useHEVC {
         codecType = AVVideoCodecType.hevc
         compressionProperties = [
             AVVideoAverageBitRateKey: videoBitrate * 1000,
@@ -1597,12 +1605,17 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
         AVVideoHeightKey: height
     ]
     
-    let audioSettings: [String: Any] = [
-        AVFormatIDKey: kAudioFormatMPEG4AAC,
-        AVSampleRateKey: 44100,
-        AVEncoderBitRateKey: audioBitrate * 1000,
-        AVNumberOfChannelsKey: audioNumberOfChannels
-    ]
+    let audioSettings: [String: Any]
+    if isSticker {
+        audioSettings = [:]
+    } else {
+        audioSettings = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: 44100,
+            AVEncoderBitRateKey: audioBitrate * 1000,
+            AVNumberOfChannelsKey: audioNumberOfChannels
+        ]
+    }
     
     return MediaEditorVideoExport.Configuration(
         videoSettings: videoSettings,

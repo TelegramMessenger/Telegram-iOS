@@ -5,8 +5,14 @@ import TelegramPresentationData
 
 final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
     enum Label {
+        enum LabelColor {
+            case generic
+            case accent
+        }
+        
         case none
         case text(String)
+        case coloredText(String, LabelColor)
         case badge(String, UIColor)
         case semitransparentBadge(String, UIColor)
         case titleBadge(String, UIColor)
@@ -16,14 +22,14 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
             switch self {
             case .none, .image:
                 return ""
-            case let .text(text), let .badge(text, _), let .semitransparentBadge(text, _), let .titleBadge(text, _):
+            case let .text(text), let .coloredText(text, _), let .badge(text, _), let .semitransparentBadge(text, _), let .titleBadge(text, _):
                 return text
             }
         }
         
         var badgeColor: UIColor? {
             switch self {
-            case .none, .text, .image:
+            case .none, .text, .coloredText, .image:
                 return nil
             case let .badge(_, color), let .semitransparentBadge(_, color), let .titleBadge(_, color):
                 return color
@@ -159,6 +165,14 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         } else if case .titleBadge = item.label {
             labelColorValue = presentationData.theme.list.itemCheckColors.foregroundColor
             labelFont = Font.medium(11.0)
+        } else if case let .coloredText(_, color) = item.label {
+            switch color {
+            case .generic:
+                labelColorValue = presentationData.theme.list.itemSecondaryTextColor
+            case .accent:
+                labelColorValue = presentationData.theme.list.itemAccentColor
+            }
+            labelFont = titleFont
         } else {
             labelColorValue = presentationData.theme.list.itemSecondaryTextColor
             labelFont = titleFont

@@ -1076,15 +1076,17 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         })))
         
-        if let (info, _, _) = self.currentStickerPack, info.flags.contains(.isCreator) {
+        if let (info, packItems, _) = self.currentStickerPack, info.flags.contains(.isCreator) {
             //TODO:localize
             items.append(.separator)
-            items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, f in
-                f(.default)
-                self?.updateIsEditing(true)
-            })))
+            if packItems.count > 0 {
+                items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, f in
+                    f(.default)
+                    self?.updateIsEditing(true)
+                })))
+            }
             
             items.append(.action(ContextMenuActionItem(text: "Edit Name", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
@@ -1206,7 +1208,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 let editorController = context.sharedContext.makeStickerEditorScreen(
                     context: context,
                     source: result,
-                    transitionArguments: (transitionView, transitionRect, transitionImage),
+                    transitionArguments: transitionView.flatMap { ($0, transitionRect, transitionImage) },
                     completion: { file, commit in
                         dismissImpl?()
                         let sticker = ImportSticker(

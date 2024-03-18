@@ -1919,7 +1919,15 @@ public final class ChatListNode: ListView {
                     }
                 }
                 if suggestions.contains(.setupBirthday) {
-                    return .single(.setupBirthday)
+                    return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                    |> map { peer in
+                        if let peer {
+                            return .birthdayPremiumGift(peers: [peer])
+                        } else {
+                            return .setupBirthday
+                        }
+                    }
+                    //return .single(.setupBirthday)
                 } else if suggestions.contains(.xmasPremiumGift) {
                     return .single(.xmasPremiumGift)
                 } else if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium) || suggestions.contains(.restorePremium), let inAppPurchaseManager = context.inAppPurchaseManager {

@@ -986,7 +986,11 @@ private final class GroupHeaderLayer: UIView {
         
         var textConstrainedWidth = constrainedSize.width - titleHorizontalOffset - 10.0
         if let actionButtonSize = actionButtonSize {
-            textConstrainedWidth -= actionButtonSize.width - 10.0
+            if actionButtonIsCompact {
+                textConstrainedWidth -= actionButtonSize.width * 2.0 + 10.0
+            } else {
+                textConstrainedWidth -= actionButtonSize.width + 10.0
+            }
         }
         if clearWidth > 0.0 {
             textConstrainedWidth -= clearWidth + 8.0

@@ -193,6 +193,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     
     public var customSelection: ((MediaPickerScreen, Any) -> Void)? = nil
     
+    public var createFromScratch: () -> Void = {}
+    public var presentFilePicker: () -> Void = {}
+    
     private var completed = false
     public var legacyCompletion: (_ signals: [Any], _ silently: Bool, _ scheduleTime: Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void = { _, _, _, _, _ in }
     
@@ -1673,6 +1676,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             } else if collection == nil {
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
                 
+                if [.story, .createSticker].contains(mode) {
+                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
+                    self.navigationItem.rightBarButtonItem?.action = #selector(self.rightButtonPressed)
+                    self.navigationItem.rightBarButtonItem?.target = self
+                }
 //                if mode == .story || mode == .addImage {
 //                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
 //                    self.navigationItem.rightBarButtonItem?.action = #selector(self.rightButtonPressed)
@@ -1993,7 +2001,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.selectionCount = count
     
         var moreIsVisible = false
-        if case let .media(media) = self.subject {
+        if case let .assets(_, mode) = self.subject, [.story, .createSticker].contains(mode) {
+            moreIsVisible = true
+        } else if case let .media(media) = self.subject {
             self.titleView.title = media.count == 1 ? self.presentationData.strings.Attachment_Pasteboard : self.presentationData.strings.Attachment_SelectedMedia(count)
             self.titleView.segmentsHidden = true
             moreIsVisible = true
@@ -2181,6 +2191,33 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     }
     
     @objc private func searchOrMorePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
+        //TODO:localize
+        if case let .assets(_, mode) = self.subject, [.story, .addImage, .createSticker].contains(mode) {
+            var items: [ContextMenuItem] = []
+            if mode != .addImage {
+                items.append(.action(ContextMenuActionItem(text: "Create", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, f in
+                    f(.default)
+                    
+                    self?.createFromScratch()
+                })))
+            }
+            
+            items.append(.action(ContextMenuActionItem(text: "Select from Files", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/File"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, f in
+                f(.default)
+                
+                self?.presentFilePicker()
+            })))
+            
+            let contextController = ContextController(presentationData: self.presentationData, source: .reference(MediaPickerContextReferenceContentSource(controller: self, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            self.presentInGlobalOverlay(contextController)
+            
+            return
+        }
+        
         switch self.moreButtonNode.iconNode.iconState {
             case .search:
 //            self.presentSearch(activateOnDisplay: true)
@@ -2611,7 +2648,7 @@ public func storyMediaPickerController(
 public func stickerMediaPickerController(
     context: AccountContext,
     getSourceRect: @escaping () -> CGRect,
-    completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void,
+    completion: @escaping (Any?, UIView?, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void,
     dismissed: @escaping () -> Void
 ) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
@@ -2621,7 +2658,7 @@ public func stickerMediaPickerController(
     })
     controller.forceSourceRect = true
     controller.getSourceRect = getSourceRect
-    controller.requestController = { _, present in
+    controller.requestController = { [weak controller] _, present in
         let mediaPickerController = MediaPickerScreen(context: context, updatedPresentationData: updatedPresentationData, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .createSticker), mainButtonState: nil, mainButtonAction: nil)
         mediaPickerController.customSelection = { controller, result in
             if let result = result as? PHAsset {
@@ -2645,6 +2682,14 @@ public func stickerMediaPickerController(
                     })
                 }
             }
+        }
+        mediaPickerController.createFromScratch = { [weak controller] in
+            completion(nil, nil, .zero, nil, { _ in return nil }, { [weak controller] in
+                controller?.dismiss(animated: true)
+            })
+        }
+        mediaPickerController.presentFilePicker = {
+            
         }
         present(mediaPickerController, mediaPickerController.mediaPickerContext)
     }

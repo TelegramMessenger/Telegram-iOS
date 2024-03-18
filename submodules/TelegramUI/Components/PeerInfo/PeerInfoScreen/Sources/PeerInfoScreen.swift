@@ -583,6 +583,8 @@ private final class PeerInfoInteraction {
     let openPeerMention: (String, ChatControllerInteractionNavigateToPeer) -> Void
     let openBotApp: (AttachMenuBot) -> Void
     let openEditing: () -> Void
+    let updateBirthDate: (BirthdayPickerComponent.BirthDate?) -> Void
+    let updateIsEditingBirthdate: (Bool) -> Void
     
     init(
         openUsername: @escaping (String, Bool, Promise<Bool>?) -> Void,
@@ -637,7 +639,9 @@ private final class PeerInfoInteraction {
         displayTopicsLimited: @escaping (TopicsLimitedReason) -> Void,
         openPeerMention: @escaping (String, ChatControllerInteractionNavigateToPeer) -> Void,
         openBotApp: @escaping (AttachMenuBot) -> Void,
-        openEditing: @escaping () -> Void
+        openEditing: @escaping () -> Void,
+        updateBirthDate: @escaping (BirthdayPickerComponent.BirthDate?) -> Void,
+        updateIsEditingBirthdate: @escaping (Bool) -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -692,6 +696,8 @@ private final class PeerInfoInteraction {
         self.openPeerMention = openPeerMention
         self.openBotApp = openBotApp
         self.openEditing = openEditing
+        self.updateBirthDate = updateBirthDate
+        self.updateIsEditingBirthdate = updateIsEditingBirthdate
     }
 }
 
@@ -979,6 +985,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     enum Section: Int, CaseIterable {
         case help
         case bio
+        case birthday
         case info
         case account
         case logout
@@ -998,6 +1005,10 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     let ItemAddAccountHelp = 6
     let ItemLogout = 7
     let ItemPeerColor = 8
+    let ItemBirthday = 9
+    let ItemBirthdayPicker = 10
+    let ItemBirthdayRemove = 11
+    let ItemBirthdayHelp = 12
     
     items[.help]!.append(PeerInfoScreenCommentItem(id: ItemNameHelp, text: presentationData.strings.EditProfile_NameAndPhotoOrVideoHelp))
     
@@ -1009,6 +1020,71 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         }, maxLength: Int(data.globalSettings?.userLimits.maxAboutLength ?? 70)))
         items[.bio]!.append(PeerInfoScreenCommentItem(id: ItemBioHelp, text: presentationData.strings.Settings_About_Help))
     }
+    
+    //TODO:localize
+    var birthDateString: String
+    if let updatingBirthDate = state.updatingBirthDate {
+        var components: [String] = []
+        components.append("\(updatingBirthDate.day)")
+       
+        let month: String
+        switch updatingBirthDate.month {
+        case 1:
+            month = "Jan"
+        case 2:
+            month = "Feb"
+        case 3:
+            month = "Mar"
+        case 4:
+            month = "Apr"
+        case 5:
+            month = "May"
+        case 6:
+            month = "Jun"
+        case 7:
+            month = "Jul"
+        case 8:
+            month = "Aug"
+        case 9:
+            month = "Sep"
+        case 10:
+            month = "Oct"
+        case 11:
+            month = "Nov"
+        case 12:
+            month = "Dec"
+        default:
+            month = ""
+        }
+        components.append(month)
+        
+        if let year = updatingBirthDate.year {
+            components.append("\(year)")
+        }
+        
+        birthDateString = components.joined(separator: " ")
+    } else {
+        birthDateString = "Add"
+    }
+    
+    let isEditingBirthDate = state.isEditingBirthDate
+    items[.birthday]!.append(PeerInfoScreenDisclosureItem(id: ItemBirthday, label: .coloredText(birthDateString, isEditingBirthDate ? .accent : .generic), text: "Date of Birth", icon: nil, hasArrow: false, action: {
+        if !isEditingBirthDate {
+            interaction.updateBirthDate(BirthdayPickerComponent.BirthDate(year: nil, month: 1, day: 1))
+        }
+        interaction.updateIsEditingBirthdate(!isEditingBirthDate)
+    }))
+    if isEditingBirthDate, let birthDate = state.updatingBirthDate {
+        items[.birthday]!.append(PeerInfoScreenBirthdatePickerItem(id: ItemBirthdayPicker, value: birthDate, valueUpdated: { value in
+            interaction.updateBirthDate(value)
+        }))
+        items[.birthday]!.append(PeerInfoScreenActionItem(id: ItemBirthdayRemove, text: "Remove Date of Birth", alignment: .natural, action: {
+            interaction.updateBirthDate(nil)
+            interaction.updateIsEditingBirthdate(false)
+        }))
+    }
+    items[.birthday]!.append(PeerInfoScreenCommentItem(id: ItemBirthdayHelp, text: "Date of birth is only visible to your contacts."))
+    
     
     if let user = data.peer as? TelegramUser {
         items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPhoneNumber, label: .text(user.phone.flatMap({ formatPhoneNumber(context: context, number: $0) }) ?? ""), text: presentationData.strings.Settings_PhoneNumber, action: {
@@ -2297,7 +2373,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         updatingAvatar: nil,
         updatingBio: nil,
         avatarUploadProgress: nil,
-        highlightedButton: nil
+        highlightedButton: nil,
+        isEditingBirthDate: false,
+        updatingBirthDate: nil
     )
     private var forceIsContactPromise = ValuePromise<Bool>(false)
     private let nearbyPeerDistance: Int32?
@@ -2566,6 +2644,22 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             openEditing: { [weak self] in
                 self?.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
+            },
+            updateBirthDate: { [weak self] birthDate in
+                if let self {
+                    self.state = self.state.withUpdatingBirthDate(birthDate)
+                    if let (layout, navigationHeight) = self.validLayout {
+                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                    }
+                }
+            },
+            updateIsEditingBirthdate: { [weak self] value in
+                if let self {
+                    self.state = self.state.withIsEditingBirthDate(value)
+                    if let (layout, navigationHeight) = self.validLayout {
+                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.2, curve: .easeInOut), additive: false)
+                    }
+                }
             }
         )
         

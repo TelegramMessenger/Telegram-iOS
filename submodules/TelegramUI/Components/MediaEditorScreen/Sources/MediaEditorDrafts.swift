@@ -163,6 +163,8 @@ extension MediaEditorScreen {
                 }
                 
                 switch subject {
+                case .empty:
+                    break
                 case let .image(image, dimensions, _, _):
                     innerSaveDraft(media: .image(image: image, dimensions: dimensions))
                 case let .video(path, _, _, _, _, dimensions, _, _, _):

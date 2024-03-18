@@ -164,6 +164,29 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     strongSelf.requestLayout(transition: .immediate)
                 }
             })
+        case let .premiumGifting(_, topSectionPeers):
+            if !topSectionPeers.isEmpty {
+                let _ = (self.context.engine.data.get(
+                    EngineDataList(
+                        topSectionPeers.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                    )
+                )
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] peerList in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let peers = peerList.compactMap { $0 }
+                    strongSelf.contactsNode.editableTokens.append(contentsOf: peers.map { peer -> EditableTokenListToken in
+                        return EditableTokenListToken(id: peer.id, title: peerTokenTitle(accountPeerId: params.context.account.peerId, peer: peer._asPeer(), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder), fixedPosition: nil, subject: .peer(peer))
+                    })
+                    strongSelf._peersReady.set(.single(true))
+                    if strongSelf.isNodeLoaded {
+                        strongSelf.requestLayout(transition: .immediate)
+                    }
+                })
+            } else {
+                self._peersReady.set(.single(true))
+            }
         default:
             self._peersReady.set(.single(true))
         }

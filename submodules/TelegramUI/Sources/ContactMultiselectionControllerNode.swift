@@ -182,9 +182,11 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             self.contentNode = .chats(chatListNode)
         } else {
             let displayTopPeers: ContactListPresentation.TopPeers
+            var selectedPeers: [EnginePeer.Id] = []
             if case let .premiumGifting(topSectionTitle, topSectionPeers) = mode {
-                if let topSectionTitle {
+                if let topSectionTitle, !topSectionPeers.isEmpty {
                     displayTopPeers = .custom(title: topSectionTitle, peerIds: topSectionPeers)
+                    selectedPeers = topSectionPeers
                 } else {
                     displayTopPeers = .recent
                 }
@@ -195,6 +197,16 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             }
             let contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList, topPeers: displayTopPeers)), filters: filters, onlyWriteable: onlyWriteable, selectionState: ContactListNodeGroupSelectionState())
             self.contentNode = .contacts(contactListNode)
+            
+            if !selectedPeers.isEmpty {
+                contactListNode.updateSelectionState { state in
+                    var state = state ?? ContactListNodeGroupSelectionState()
+                    for peerId in selectedPeers {
+                        state = state.withToggledPeerId(.peer(peerId))
+                    }
+                    return state
+                }
+            }
         }
         
         self.tokenListNode = EditableTokenListNode(context: self.context, presentationTheme: self.presentationData.theme, theme: EditableTokenListNodeTheme(backgroundColor: .clear, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, tokenBackgroundColor: self.presentationData.theme.list.itemCheckColors.strokeColor.withAlphaComponent(0.25), selectedTextColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, selectedBackgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, accentColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.rootController.keyboardColor), placeholder: placeholder, shortPlaceholder: shortPlaceholder)
