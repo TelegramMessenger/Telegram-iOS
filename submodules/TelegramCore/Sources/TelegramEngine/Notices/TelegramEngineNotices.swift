@@ -20,5 +20,21 @@ public extension TelegramEngine {
             }
             |> ignoreValues
         }
+        
+        public func getServerProvidedSuggestions() -> Signal<[ServerProvidedSuggestion], NoError> {
+            return _internal_getServerProvidedSuggestions(account: self.account)
+        }
+        
+        public func dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion) -> Signal<Never, NoError> {
+            return _internal_dismissServerProvidedSuggestion(account: self.account, suggestion: suggestion)
+        }
+        
+        public func getPeerSpecificServerProvidedSuggestions(peerId: EnginePeer.Id) -> Signal<[PeerSpecificServerProvidedSuggestion], NoError> {
+            return _internal_getPeerSpecificServerProvidedSuggestions(postbox: self.account.postbox, peerId: peerId)
+        }
+        
+        public func dismissPeerSpecificServerProvidedSuggestion(peerId: PeerId, suggestion: PeerSpecificServerProvidedSuggestion) -> Signal<Never, NoError> {
+            return _internal_dismissPeerSpecificServerProvidedSuggestion(account: self.account, peerId: peerId, suggestion: suggestion)
+        }
     }
 }

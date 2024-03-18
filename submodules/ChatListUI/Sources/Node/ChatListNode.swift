@@ -738,7 +738,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPremiumGift([])
                         case .setupBirthday:
                             nodeInteraction?.openBirthdaySetup()
-                        case let .birthdayPremiumGift(peers):
+                        case let .birthdayPremiumGift(peers, _):
                             nodeInteraction?.openPremiumGift(peers.map { $0.id })
                         case .reviewLogin:
                             break
@@ -1074,7 +1074,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPremiumGift([])
                         case .setupBirthday:
                             nodeInteraction?.openBirthdaySetup()
-                        case let .birthdayPremiumGift(peers):
+                        case let .birthdayPremiumGift(peers, _):
                             nodeInteraction?.openPremiumGift(peers.map { $0.id })
                         case .reviewLogin:
                             break
@@ -1675,7 +1675,7 @@ public final class ChatListNode: ListView {
             }
             Queue.mainQueue().after(0.6) { [weak self] in
                 if let self {
-                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .setupPassword).startStandalone()
+                    let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupPassword).startStandalone()
                 }
             }
             let controller = self.context.sharedContext.makeSetupTwoFactorAuthController(context: self.context)
@@ -1686,9 +1686,9 @@ public final class ChatListNode: ListView {
             }
             Queue.mainQueue().after(0.6) { [weak self] in
                 if let self {
-                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .annualPremium).startStandalone()
-                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .upgradePremium).startStandalone()
-                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .restorePremium).startStandalone()
+                    let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .annualPremium).startStandalone()
+                    let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .upgradePremium).startStandalone()
+                    let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .restorePremium).startStandalone()
                 }
             }
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
@@ -1794,13 +1794,13 @@ public final class ChatListNode: ListView {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             switch notice {
             case .xmasPremiumGift:
-                let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .xmasPremiumGift).startStandalone()
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .xmasPremiumGift).startStandalone()
                 self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_PremiumGiftInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
                     return true
                 }))
             case .setupBirthday:
                 //TODO:localize
-                let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .setupBirthday).startStandalone()
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupBirthday).startStandalone()
                 self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_PremiumGiftInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
                     return true
                 }))
@@ -1896,11 +1896,12 @@ public final class ChatListNode: ListView {
             let twoStepData: Signal<TwoStepVerificationConfiguration?, NoError> = .single(nil) |> then(context.engine.auth.twoStepVerificationConfiguration() |> map(Optional.init))
             
             let suggestedChatListNoticeSignal: Signal<ChatListNotice?, NoError> = combineLatest(
-                getServerProvidedSuggestions(account: context.account),
+                context.engine.notices.getServerProvidedSuggestions(),
                 twoStepData,
-                newSessionReviews(postbox: context.account.postbox)
+                newSessionReviews(postbox: context.account.postbox),
+                context.account.stateManager.contactBirthdays
             )
-            |> mapToSignal { suggestions, configuration, newSessionReviews -> Signal<ChatListNotice?, NoError> in
+            |> mapToSignal { suggestions, configuration, newSessionReviews, birthdays -> Signal<ChatListNotice?, NoError> in
                 if let newSessionReview = newSessionReviews.first {
                     return .single(.reviewLogin(newSessionReview: newSessionReview, totalCount: newSessionReviews.count))
                 }
@@ -1919,15 +1920,20 @@ public final class ChatListNode: ListView {
                     }
                 }
                 if suggestions.contains(.setupBirthday) {
-                    return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-                    |> map { peer in
-                        if let peer {
-                            return .birthdayPremiumGift(peers: [peer])
-                        } else {
-                            return .setupBirthday
+                    return .single(.setupBirthday)
+                } else if !birthdays.isEmpty {
+                    return context.engine.data.get(
+                        EngineDataMap(birthdays.keys.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                    )
+                    |> map { result -> ChatListNotice? in
+                        var peers: [EnginePeer] = []
+                        for (peerId, _) in birthdays {
+                            if let maybePeer = result[peerId], let peer = maybePeer {
+                                peers.append(peer)
+                            }
                         }
+                        return .birthdayPremiumGift(peers: peers, birthdays: birthdays)
                     }
-                    //return .single(.setupBirthday)
                 } else if suggestions.contains(.xmasPremiumGift) {
                     return .single(.xmasPremiumGift)
                 } else if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium) || suggestions.contains(.restorePremium), let inAppPurchaseManager = context.inAppPurchaseManager {

@@ -2314,7 +2314,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
             }))
             
-            self.suggestAutoarchiveDisposable.set((getServerProvidedSuggestions(account: self.context.account)
+            self.suggestAutoarchiveDisposable.set((self.context.engine.notices.getServerProvidedSuggestions()
             |> deliverOnMainQueue).startStrict(next: { [weak self] values in
                 guard let strongSelf = self else {
                     return
@@ -2331,13 +2331,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.dismissAutoarchiveDisposable.set(dismissServerProvidedSuggestion(account: strongSelf.context.account, suggestion: .autoarchivePopular).startStrict())
+                        strongSelf.dismissAutoarchiveDisposable.set(strongSelf.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .autoarchivePopular).startStrict())
                     }),
                     TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.ChatList_AutoarchiveSuggestion_OpenSettings, action: {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.dismissAutoarchiveDisposable.set(dismissServerProvidedSuggestion(account: strongSelf.context.account, suggestion: .autoarchivePopular).startStrict())
+                        strongSelf.dismissAutoarchiveDisposable.set(strongSelf.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .autoarchivePopular).startStrict())
                         strongSelf.push(strongSelf.context.sharedContext.makePrivacyAndSecurityController(context: strongSelf.context))
                     })
                 ], actionLayout: .vertical, parseMarkdown: true), in: .window(.root))

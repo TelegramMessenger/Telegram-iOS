@@ -34,7 +34,7 @@ final class PeerInfoState {
     let avatarUploadProgress: AvatarUploadProgress?
     let highlightedButton: PeerInfoHeaderButtonKey?
     let isEditingBirthDate: Bool
-    let updatingBirthDate: BirthdayPickerComponent.BirthDate?
+    let updatingBirthDate: TelegramBirthday??
     
     init(
         isEditing: Bool,
@@ -44,7 +44,7 @@ final class PeerInfoState {
         avatarUploadProgress: AvatarUploadProgress?,
         highlightedButton: PeerInfoHeaderButtonKey?,
         isEditingBirthDate: Bool,
-        updatingBirthDate: BirthdayPickerComponent.BirthDate?
+        updatingBirthDate: TelegramBirthday??
     ) {
         self.isEditing = isEditing
         self.selectedMessageIds = selectedMessageIds
@@ -147,7 +147,7 @@ final class PeerInfoState {
         )
     }
     
-    func withUpdatingBirthDate(_ updatingBirthDate: BirthdayPickerComponent.BirthDate?) -> PeerInfoState {
+    func withUpdatingBirthDate(_ updatingBirthDate: TelegramBirthday??) -> PeerInfoState {
         return PeerInfoState(
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
@@ -630,7 +630,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         hasPassport,
         (context.watchManager?.watchAppInstalled ?? .single(false)),
         context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
-        getServerProvidedSuggestions(account: context.account),
+        context.engine.notices.getServerProvidedSuggestions(),
         context.engine.data.get(
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)

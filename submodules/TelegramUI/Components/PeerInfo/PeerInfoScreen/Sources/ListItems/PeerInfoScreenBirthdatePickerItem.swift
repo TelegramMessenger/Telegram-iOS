@@ -9,13 +9,13 @@ import ComponentFlow
 
 final class PeerInfoScreenBirthdatePickerItem: PeerInfoScreenItem {
     let id: AnyHashable
-    let value: BirthdayPickerComponent.BirthDate
-    let valueUpdated: (BirthdayPickerComponent.BirthDate) -> Void
+    let value: TelegramBirthday
+    let valueUpdated: (TelegramBirthday) -> Void
     
     init(
         id: AnyHashable,
-        value: BirthdayPickerComponent.BirthDate,
-        valueUpdated: @escaping (BirthdayPickerComponent.BirthDate) -> Void
+        value: TelegramBirthday,
+        valueUpdated: @escaping (TelegramBirthday) -> Void
     ) {
         self.id = id
         self.value = value
@@ -111,41 +111,17 @@ public final class BirthdayPickerComponent: Component {
             self.selectionColor = presentationTheme.list.itemHighlightedBackgroundColor
         }
     }
-    
-    public struct BirthDate: Equatable {
-        let year: Int?
-        let month: Int
-        let day: Int
         
-        init(year: Int?, month: Int, day: Int) {
-            self.year = year
-            self.month = month
-            self.day = day
-        }
-        
-        func withUpdated(year: Int?) -> BirthDate {
-            return BirthDate(year: year, month: self.month, day: self.day)
-        }
-        
-        func withUpdated(month: Int) -> BirthDate {
-            return BirthDate(year: self.year, month: month, day: self.day)
-        }
-        
-        func withUpdated(day: Int) -> BirthDate {
-            return BirthDate(year: self.year, month: self.month, day: day)
-        }
-    }
-    
     public let theme: Theme
     public let strings: PresentationStrings
-    public let value: BirthDate
-    public let valueUpdated: (BirthDate) -> Void
+    public let value: TelegramBirthday
+    public let valueUpdated: (TelegramBirthday) -> Void
         
     public init(
         theme: Theme,
         strings: PresentationStrings,
-        value: BirthDate,
-        valueUpdated: @escaping (BirthDate) -> Void
+        value: TelegramBirthday,
+        valueUpdated: @escaping (TelegramBirthday) -> Void
     ) {
         self.theme = theme
         self.strings = strings
@@ -176,12 +152,12 @@ public final class BirthdayPickerComponent: Component {
         }
         
         private let calendar = Calendar(identifier: .gregorian)
-        private var value = BirthdayPickerComponent.BirthDate(year: nil, month: 1, day: 1)
-        private let minYear = 1900
-        private let maxYear: Int
+        private var value = TelegramBirthday(day: 1, month: 1, year: nil)
+        private let minYear: Int32 = 1900
+        private let maxYear: Int32
         
         override init(frame: CGRect) {
-            self.maxYear = self.calendar.component(.year, from: Date())
+            self.maxYear = Int32(self.calendar.component(.year, from: Date()))
             
             super.init(frame: frame)
             
@@ -207,12 +183,12 @@ public final class BirthdayPickerComponent: Component {
                 self.pickerView.reloadAllComponents()
                 
                 if let year = component.value.year {
-                    self.pickerView.selectRow(year - self.minYear, inComponent: PickerComponent.year.rawValue, animated: false)
+                    self.pickerView.selectRow(Int(year - self.minYear), inComponent: PickerComponent.year.rawValue, animated: false)
                 } else {
-                    self.pickerView.selectRow(self.maxYear - self.minYear + 1, inComponent: PickerComponent.year.rawValue, animated: false)
+                    self.pickerView.selectRow(Int(self.maxYear - self.minYear + 1), inComponent: PickerComponent.year.rawValue, animated: false)
                 }
-                self.pickerView.selectRow(component.value.month - 1, inComponent: PickerComponent.month.rawValue, animated: false)
-                self.pickerView.selectRow(component.value.day - 1, inComponent: PickerComponent.day.rawValue, animated: false)
+                self.pickerView.selectRow(Int(component.value.month) - 1, inComponent: PickerComponent.month.rawValue, animated: false)
+                self.pickerView.selectRow(Int(component.value.day) - 1, inComponent: PickerComponent.day.rawValue, animated: false)
             }
             
             return availableSize
@@ -227,12 +203,12 @@ public final class BirthdayPickerComponent: Component {
             case PickerComponent.day.rawValue:
                 let year = self.value.year ?? 2024
                 let month = self.value.month
-                let range = Calendar.current.range(of: .day, in: .month, for: Calendar.current.date(from: DateComponents(year: year, month: month))!)!
+                let range = Calendar.current.range(of: .day, in: .month, for: Calendar.current.date(from: DateComponents(year: Int(year), month: Int(month)))!)!
                 return range.upperBound - range.lowerBound
             case PickerComponent.month.rawValue:
                 return 12
             case PickerComponent.year.rawValue:
-                return self.maxYear - self.minYear + 2
+                return Int(self.maxYear - self.minYear + 2)
             default:
                 return 0
             }
@@ -279,7 +255,7 @@ public final class BirthdayPickerComponent: Component {
                 if row == self.maxYear - self.minYear + 1 {
                     string = "⎯"
                 } else {
-                    string = "\(self.minYear + row)"
+                    string = "\(self.minYear + Int32(row))"
                 }
             default:
                 break
@@ -291,14 +267,14 @@ public final class BirthdayPickerComponent: Component {
         public func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
             switch component {
             case PickerComponent.day.rawValue:
-                self.value = self.value.withUpdated(day: row + 1)
+                self.value = self.value.withUpdated(day: Int32(row) + 1)
             case PickerComponent.month.rawValue:
-                self.value = self.value.withUpdated(month: row + 1)
+                self.value = self.value.withUpdated(month: Int32(row) + 1)
             case PickerComponent.year.rawValue:
                 if row == self.maxYear - self.minYear + 1 {
                     self.value = self.value.withUpdated(year: nil)
                 } else {
-                    self.value = self.value.withUpdated(year: self.minYear + row)
+                    self.value = self.value.withUpdated(year: self.minYear + Int32(row))
                 }
             default:
                 break
@@ -334,5 +310,19 @@ public final class BirthdayPickerComponent: Component {
 
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private extension TelegramBirthday {
+    func withUpdated(day: Int32) -> TelegramBirthday {
+        return TelegramBirthday(day: day, month: self.month, year: self.year)
+    }
+    
+    func withUpdated(month: Int32) -> TelegramBirthday {
+        return TelegramBirthday(day: self.day, month: month, year: self.year)
+    }
+    
+    func withUpdated(year: Int32?) -> TelegramBirthday {
+        return TelegramBirthday(day: self.day, month: self.month, year: year)
     }
 }
