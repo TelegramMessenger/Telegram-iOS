@@ -98,6 +98,7 @@ final class StoryItemContentComponent: Component {
         private var mediaAreasEffectView: StoryItemLoadingEffectView?
         
         private var currentMessageMedia: EngineMedia?
+        private var currentMessageMetadataMedia: EngineMedia?
         private var fetchDisposable: Disposable?
         private var priorityDisposable: Disposable?
         
@@ -432,6 +433,8 @@ final class StoryItemContentComponent: Component {
                 effectiveDuration = videoPlaybackStatus.duration
             } else if case let .file(file) = self.currentMessageMedia, let duration = file.duration {
                 effectiveDuration = Double(max(1, duration))
+            } else if case let .file(file) = self.currentMessageMetadataMedia, let duration = file.duration {
+                effectiveDuration = Double(max(1, duration))
             } else {
                 effectiveDuration = 1.0
             }
@@ -455,6 +458,8 @@ final class StoryItemContentComponent: Component {
             if videoPlaybackStatus.duration > 0.0 {
                 effectiveDuration = videoPlaybackStatus.duration
             } else if case let .file(file) = self.currentMessageMedia, let duration = file.duration {
+                effectiveDuration = Double(max(1, duration))
+            } else if case let .file(file) = self.currentMessageMetadataMedia, let duration = file.duration {
                 effectiveDuration = Double(max(1, duration))
             } else {
                 effectiveDuration = 1.0
@@ -634,6 +639,7 @@ final class StoryItemContentComponent: Component {
                     videoNode.view.removeFromSuperview()
                 }
             }
+            self.currentMessageMetadataMedia = component.item.media
             
             var fetchPriorityResourceId: String?
             switch messageMedia {
@@ -738,6 +744,16 @@ final class StoryItemContentComponent: Component {
                     dimensions = file.dimensions?.cgSize
                 default:
                     break
+                }
+                if dimensions == nil {
+                    switch component.item.media {
+                    case let .image(image):
+                        dimensions = image.representations.last?.dimensions.cgSize
+                    case let .file(file):
+                        dimensions = file.dimensions?.cgSize
+                    default:
+                        break
+                    }
                 }
                 
                 if let dimensions {

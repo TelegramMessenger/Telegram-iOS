@@ -315,6 +315,62 @@ public extension Api {
     }
 }
 public extension Api {
+    enum InputBusinessBotRecipients: TypeConstructorDescription {
+        case inputBusinessBotRecipients(flags: Int32, users: [Api.InputUser]?, excludeUsers: [Api.InputUser]?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputBusinessBotRecipients(let flags, let users, let excludeUsers):
+                    if boxed {
+                        buffer.appendInt32(-991587810)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 4) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users!.count))
+                    for item in users! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 6) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(excludeUsers!.count))
+                    for item in excludeUsers! {
+                        item.serialize(buffer, true)
+                    }}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputBusinessBotRecipients(let flags, let users, let excludeUsers):
+                return ("inputBusinessBotRecipients", [("flags", flags as Any), ("users", users as Any), ("excludeUsers", excludeUsers as Any)])
+    }
+    }
+    
+        public static func parse_inputBusinessBotRecipients(_ reader: BufferReader) -> InputBusinessBotRecipients? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.InputUser]?
+            if Int(_1!) & Int(1 << 4) != 0 {if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputUser.self)
+            } }
+            var _3: [Api.InputUser]?
+            if Int(_1!) & Int(1 << 6) != 0 {if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputUser.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 4) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 6) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputBusinessBotRecipients.inputBusinessBotRecipients(flags: _1!, users: _2, excludeUsers: _3)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputBusinessGreetingMessage: TypeConstructorDescription {
         case inputBusinessGreetingMessage(shortcutId: Int32, recipients: Api.InputBusinessRecipients, noActivityDays: Int32)
     

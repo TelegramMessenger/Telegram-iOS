@@ -1421,9 +1421,9 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
-                static func updateConnectedBot(flags: Int32, bot: Api.InputUser, recipients: Api.InputBusinessRecipients) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func updateConnectedBot(flags: Int32, bot: Api.InputUser, recipients: Api.InputBusinessBotRecipients) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1674751363)
+                    buffer.appendInt32(1138250269)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     bot.serialize(buffer, true)
                     recipients.serialize(buffer, true)

@@ -108,6 +108,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-910564679] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleAlways($0) }
     dict[-867328308] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleCustom($0) }
     dict[-1007487743] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleOutsideWorkHours($0) }
+    dict[-1198722189] = { return Api.BusinessBotRecipients.parse_businessBotRecipients($0) }
     dict[-451302485] = { return Api.BusinessGreetingMessage.parse_businessGreetingMessage($0) }
     dict[1510606445] = { return Api.BusinessIntro.parse_businessIntro($0) }
     dict[-1403249929] = { return Api.BusinessLocation.parse_businessLocation($0) }
@@ -211,7 +212,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1713193015] = { return Api.ChatReactions.parse_chatReactionsSome($0) }
     dict[-1390068360] = { return Api.CodeSettings.parse_codeSettings($0) }
     dict[-870702050] = { return Api.Config.parse_config($0) }
-    dict[-404121113] = { return Api.ConnectedBot.parse_connectedBot($0) }
+    dict[-1123645951] = { return Api.ConnectedBot.parse_connectedBot($0) }
     dict[341499403] = { return Api.Contact.parse_contact($0) }
     dict[383348795] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[2104790276] = { return Api.DataJSON.parse_dataJSON($0) }
@@ -312,6 +313,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1336154098] = { return Api.InputBotInlineResult.parse_inputBotInlineResultGame($0) }
     dict[-1462213465] = { return Api.InputBotInlineResult.parse_inputBotInlineResultPhoto($0) }
     dict[-2094959136] = { return Api.InputBusinessAwayMessage.parse_inputBusinessAwayMessage($0) }
+    dict[-991587810] = { return Api.InputBusinessBotRecipients.parse_inputBusinessBotRecipients($0) }
     dict[26528571] = { return Api.InputBusinessGreetingMessage.parse_inputBusinessGreetingMessage($0) }
     dict[163867085] = { return Api.InputBusinessIntro.parse_inputBusinessIntro($0) }
     dict[1871393450] = { return Api.InputBusinessRecipients.parse_inputBusinessRecipients($0) }
@@ -1419,6 +1421,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BusinessAwayMessageSchedule:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.BusinessBotRecipients:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.BusinessGreetingMessage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BusinessIntro:
@@ -1582,6 +1586,8 @@ public extension Api {
             case let _1 as Api.InputBotInlineResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputBusinessAwayMessage:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.InputBusinessBotRecipients:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputBusinessGreetingMessage:
                 _1.serialize(buffer, boxed)

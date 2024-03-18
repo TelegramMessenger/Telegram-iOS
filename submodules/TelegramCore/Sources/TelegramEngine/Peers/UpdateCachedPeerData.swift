@@ -258,7 +258,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                     previous = CachedUserData()
                                 }
                                 switch fullUser {
-                                    case let .userFull(userFullFlags, _, _, userFullAbout, userFullSettings, personalPhoto, profilePhoto, fallbackPhoto, _, userFullBotInfo, userFullPinnedMsgId, userFullCommonChatsCount, _, userFullTtlPeriod, userFullThemeEmoticon, _, _, _, userPremiumGiftOptions, userWallpaper, stories, businessWorkHours, businessLocation, greetingMessage, awayMessage, _):
+                                    case let .userFull(userFullFlags, _, _, userFullAbout, userFullSettings, personalPhoto, profilePhoto, fallbackPhoto, _, userFullBotInfo, userFullPinnedMsgId, userFullCommonChatsCount, _, userFullTtlPeriod, userFullThemeEmoticon, _, _, _, userPremiumGiftOptions, userWallpaper, stories, businessWorkHours, businessLocation, greetingMessage, awayMessage, businessIntro):
                                         let _ = stories
                                         let botInfo = userFullBotInfo.flatMap(BotInfo.init(apiBotInfo:))
                                         let isBlocked = (userFullFlags & (1 << 0)) != 0
@@ -336,6 +336,11 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             mappedAwayMessage = TelegramBusinessAwayMessage(apiAwayMessage: awayMessage)
                                         }
                                     
+                                        var mappedBusinessIntro: TelegramBusinessIntro?
+                                        if let businessIntro {
+                                            mappedBusinessIntro = TelegramBusinessIntro(apiBusinessIntro: businessIntro)
+                                        }
+                                    
                                         return previous.withUpdatedAbout(userFullAbout)
                                             .withUpdatedBotInfo(botInfo)
                                             .withUpdatedEditableBotInfo(editableBotInfo)
@@ -362,6 +367,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             .withUpdatedGreetingMessage(mappedGreetingMessage)
                                             .withUpdatedAwayMessage(mappedAwayMessage)
                                             .withUpdatedConnectedBot(mappedConnectedBot)
+                                            .withUpdatedBusinessIntro(mappedBusinessIntro)
                                 }
                             })
                         }

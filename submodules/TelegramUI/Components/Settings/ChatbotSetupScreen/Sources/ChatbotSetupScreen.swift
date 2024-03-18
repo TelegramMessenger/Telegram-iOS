@@ -101,10 +101,12 @@ final class ChatbotSetupScreenComponent: Component {
         
         var categories: Set<Category>
         var peers: [Peer]
+        var excludePeers: [Peer]
         
-        init(categories: Set<Category>, peers: [Peer]) {
+        init(categories: Set<Category>, peers: [Peer], excludePeers: [Peer]) {
             self.categories = categories
             self.peers = peers
+            self.excludePeers = excludePeers
         }
     }
     
@@ -136,7 +138,8 @@ final class ChatbotSetupScreenComponent: Component {
         private var hasAccessToAllChatsByDefault: Bool = true
         private var additionalPeerList = AdditionalPeerList(
             categories: Set(),
-            peers: []
+            peers: [],
+            excludePeers: []
         )
         
         private var replyToMessages: Bool = true
@@ -194,6 +197,7 @@ final class ChatbotSetupScreenComponent: Component {
             let recipients = TelegramBusinessRecipients(
                 categories: mappedCategories,
                 additionalPeers: Set(self.additionalPeerList.peers.map(\.peer.id)),
+                excludePeers: Set(self.additionalPeerList.excludePeers.map(\.peer.id)),
                 exclude: self.hasAccessToAllChatsByDefault
             )
             
@@ -457,9 +461,17 @@ final class ChatbotSetupScreenComponent: Component {
                         }
                     }
                     
+                    var excludePeers: [AdditionalPeerList.Peer] = []
+                    for peerId in initialRecipients.excludePeers {
+                        if let peer = component.initialData.additionalPeers[peerId] {
+                            excludePeers.append(peer)
+                        }
+                    }
+                    
                     self.additionalPeerList = AdditionalPeerList(
                         categories: mappedCategories,
-                        peers: additionalPeers
+                        peers: additionalPeers,
+                        excludePeers: excludePeers
                     )
                     
                     self.hasAccessToAllChatsByDefault = initialRecipients.exclude

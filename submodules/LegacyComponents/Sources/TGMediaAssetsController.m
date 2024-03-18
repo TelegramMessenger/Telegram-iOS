@@ -549,6 +549,9 @@
         
         if (allowGrouping)
         {
+            if (_groupingChangedDisposable) {
+                [_groupingChangedDisposable dispose];
+            }
             _groupingChangedDisposable = [[SMetaDisposable alloc] init];
             [_groupingChangedDisposable setDisposable:[_selectionContext.groupingChangedSignal startStrictWithNext:^(NSNumber *next)
             {
@@ -591,6 +594,7 @@
     [_tooltipDismissDisposable dispose];
     [_timersChangedDisposable dispose];
     [_adjustmentsChangedDisposable dispose];
+    [_groupingChangedDisposable dispose];
 }
 
 - (void)loadView

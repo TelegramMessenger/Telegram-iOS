@@ -360,7 +360,8 @@ func _internal_updateBotBiometricsState(account: Account, peerId: EnginePeer.Id,
 }
 
 func _internal_toggleChatManagingBotIsPaused(account: Account, chatId: EnginePeer.Id) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> Void in
+    return account.postbox.transaction { transaction -> Bool in
+        var isPaused = false
         transaction.updatePeerCachedData(peerIds: Set([chatId]), update: { _, current in
             guard let current = current as? CachedUserData else {
                 return current
@@ -368,7 +369,8 @@ func _internal_toggleChatManagingBotIsPaused(account: Account, chatId: EnginePee
             
             if var peerStatusSettings = current.peerStatusSettings {
                 if let managingBot = peerStatusSettings.managingBot {
-                    peerStatusSettings.managingBot?.isPaused = !managingBot.isPaused
+                    isPaused = !managingBot.isPaused
+                    peerStatusSettings.managingBot?.isPaused = isPaused
                 }
                 
                 return current.withUpdatedPeerStatusSettings(peerStatusSettings)
@@ -376,8 +378,23 @@ func _internal_toggleChatManagingBotIsPaused(account: Account, chatId: EnginePee
                 return current
             }
         })
+        return isPaused
     }
-    |> ignoreValues
+    |> mapToSignal { isPaused -> Signal<Never, NoError> in
+        return account.postbox.transaction { transaction -> Api.InputPeer? in
+            return transaction.getPeer(chatId).flatMap(apiInputPeer)
+        }
+        |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+            guard let inputPeer else {
+                return .complete()
+            }
+            return account.network.request(Api.functions.account.toggleConnectedBotPaused(peer: inputPeer, paused: isPaused ? .boolTrue : .boolFalse))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> ignoreValues
+        }
+    }
 }
 
 func _internal_removeChatManagingBot(account: Account, chatId: EnginePeer.Id) -> Signal<Never, NoError> {
@@ -396,5 +413,19 @@ func _internal_removeChatManagingBot(account: Account, chatId: EnginePeer.Id) ->
             }
         })
     }
-    |> ignoreValues
+    |> mapToSignal { _ -> Signal<Never, NoError> in
+        return account.postbox.transaction { transaction -> Api.InputPeer? in
+            return transaction.getPeer(chatId).flatMap(apiInputPeer)
+        }
+        |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+            guard let inputPeer else {
+                return .complete()
+            }
+            return account.network.request(Api.functions.account.disablePeerConnectedBot(peer: inputPeer))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> ignoreValues
+        }
+    }
 }

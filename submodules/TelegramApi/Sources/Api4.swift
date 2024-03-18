@@ -664,13 +664,13 @@ public extension Api {
 }
 public extension Api {
     enum ConnectedBot: TypeConstructorDescription {
-        case connectedBot(flags: Int32, botId: Int64, recipients: Api.BusinessRecipients)
+        case connectedBot(flags: Int32, botId: Int64, recipients: Api.BusinessBotRecipients)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .connectedBot(let flags, let botId, let recipients):
                     if boxed {
-                        buffer.appendInt32(-404121113)
+                        buffer.appendInt32(-1123645951)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(botId, buffer: buffer, boxed: false)
@@ -691,9 +691,9 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: Api.BusinessRecipients?
+            var _3: Api.BusinessBotRecipients?
             if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.BusinessRecipients
+                _3 = Api.parse(reader, signature: signature) as? Api.BusinessBotRecipients
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil

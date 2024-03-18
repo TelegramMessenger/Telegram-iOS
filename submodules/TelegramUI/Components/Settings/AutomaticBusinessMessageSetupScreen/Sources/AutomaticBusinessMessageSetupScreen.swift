@@ -251,6 +251,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             let recipients = TelegramBusinessRecipients(
                 categories: mappedCategories,
                 additionalPeers: Set(self.additionalPeerList.peers.map(\.peer.id)),
+                excludePeers: Set(),
                 exclude: self.hasAccessToAllChatsByDefault
             )
             
