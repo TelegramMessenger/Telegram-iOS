@@ -232,6 +232,12 @@ public final class AccountStateManager {
             return self.appUpdateInfoPromise.get()
         }
         
+        private let contactBirthdaysValue = Atomic<[EnginePeer.Id: TelegramBirthday]>(value: [:])
+        private let contactBirthdaysPromise = Promise<[EnginePeer.Id: TelegramBirthday]>([:])
+        public var contactBirthdays: Signal<[EnginePeer.Id: TelegramBirthday], NoError> {
+            return self.contactBirthdaysPromise.get()
+        }
+        
         private let appliedIncomingReadMessagesPipe = ValuePipe<[MessageId]>()
         public var appliedIncomingReadMessages: Signal<[MessageId], NoError> {
             return self.appliedIncomingReadMessagesPipe.signal()
@@ -1550,6 +1556,17 @@ public final class AccountStateManager {
             }
         }
         
+        func modifyContactBirthdays(_ f: @escaping ([EnginePeer.Id: TelegramBirthday]) -> ([EnginePeer.Id: TelegramBirthday])) {
+            self.queue.async {
+                let current = self.contactBirthdaysValue.with { $0 }
+                let updated = f(current)
+                if (current != updated) {
+                    let _ = self.contactBirthdaysValue.swap(updated)
+                    self.contactBirthdaysPromise.set(.single(updated))
+                }
+            }
+        }
+        
         public func updatedPeersNearby() -> Signal<[PeerNearby], NoError> {
             let queue = self.queue
             return Signal { [weak self] subscriber in
@@ -1677,6 +1694,12 @@ public final class AccountStateManager {
     public var appUpdateInfo: Signal<AppUpdateInfo?, NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.appUpdateInfo.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    public var contactBirthdays: Signal<[EnginePeer.Id: TelegramBirthday], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.contactBirthdays.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
     
@@ -1825,6 +1848,12 @@ public final class AccountStateManager {
     func modifyAppUpdateInfo(_ f: @escaping (AppUpdateInfo?) -> (AppUpdateInfo?)) {
         self.impl.with { impl in
             impl.modifyAppUpdateInfo(f)
+        }
+    }
+    
+    func modifyContactBirthdays(_ f: @escaping ([EnginePeer.Id: TelegramBirthday]) -> ([EnginePeer.Id: TelegramBirthday])) {
+        self.impl.with { impl in
+            impl.modifyContactBirthdays(f)
         }
     }
     

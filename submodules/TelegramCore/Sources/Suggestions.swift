@@ -37,10 +37,7 @@ public func getServerProvidedSuggestions(account: Account) -> Signal<[ServerProv
         guard let data = appConfiguration.data, let listItems = data["pending_suggestions"] as? [String] else {
             return []
         }
-        
-//        var list = listItems
-//        list.append(ServerProvidedSuggestion.setupBirthday.rawValue)
-        
+                
         return listItems.compactMap { item -> ServerProvidedSuggestion? in
             return ServerProvidedSuggestion(rawValue: item)
         }.filter { !dismissedSuggestions.contains($0) }
