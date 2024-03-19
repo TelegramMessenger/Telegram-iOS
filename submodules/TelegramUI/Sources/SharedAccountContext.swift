@@ -1928,8 +1928,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return QuickReplySetupScreen.initialData(context: context)
     }
     
-    public func makeBusinessIntroSetupScreen(context: AccountContext) -> ViewController {
-        return BusinessIntroSetupScreen(context: context)
+    public func makeBusinessIntroSetupScreen(context: AccountContext, initialData: BusinessIntroSetupScreenInitialData) -> ViewController {
+        return BusinessIntroSetupScreen(context: context, initialData: initialData as! BusinessIntroSetupScreen.InitialData)
+    }
+    
+    public func makeBusinessIntroSetupScreenInitialData(context: AccountContext) -> Signal<BusinessIntroSetupScreenInitialData, NoError> {
+        return BusinessIntroSetupScreen.initialData(context: context)
     }
     
     public func makeCollectibleItemInfoScreen(context: AccountContext, initialData: CollectibleItemInfoScreenInitialData) -> ViewController {

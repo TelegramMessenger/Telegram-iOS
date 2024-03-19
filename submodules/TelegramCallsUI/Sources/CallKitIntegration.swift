@@ -364,7 +364,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         
         if let outputMode = self.pendingVoiceChatOutputMode {
             self.pendingVoiceChatOutputMode = nil
-            ManagedAudioSession.shared?.applyVoiceChatOutputModeInCurrentAudioSession(outputMode: outputMode)
+            sharedManagedAudioSession?.applyVoiceChatOutputModeInCurrentAudioSession(outputMode: outputMode)
         }
     }
     
@@ -377,7 +377,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     
     func applyVoiceChatOutputMode(outputMode: AudioSessionOutputMode) {
         if self.isAudioSessionActive {
-            ManagedAudioSession.shared?.applyVoiceChatOutputModeInCurrentAudioSession(outputMode: outputMode)
+            sharedManagedAudioSession?.applyVoiceChatOutputModeInCurrentAudioSession(outputMode: outputMode)
         } else {
             self.pendingVoiceChatOutputMode = outputMode
         }

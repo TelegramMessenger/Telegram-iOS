@@ -1109,7 +1109,7 @@ func selectivePrivacySettingsController(
                     )
                 ]
             }
-            let selectedCategories = Set<Int>()
+            let selectedCategories = Set<Int>([AdditionalCategoryId.premiumUsers.rawValue])
             
             let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
                 title: "Add Users",

@@ -163,6 +163,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 if strongSelf.isNodeLoaded {
                     strongSelf.requestLayout(transition: .immediate)
                 }
+                
+                strongSelf.updateTitle()
             })
         case let .premiumGifting(_, topSectionPeers):
             if !topSectionPeers.isEmpty {
@@ -238,10 +240,11 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 count = chatsNode.currentState.selectedPeerIds.count
             }
             self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.Compose_NewGroupTitle, counter: "\(count)/\(maxCount)")
-            let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
-            self.rightNavigationButton = rightNavigationButton
-            self.navigationItem.rightBarButtonItem = self.rightNavigationButton
-            rightNavigationButton.isEnabled = true
+            if self.rightNavigationButton == nil {
+                let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                self.rightNavigationButton = rightNavigationButton
+                self.navigationItem.rightBarButtonItem = self.rightNavigationButton
+            }
         case .premiumGifting:
             let maxCount: Int32 = self.limit ?? 10
             var count = 0
@@ -258,31 +261,35 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.RequestPeer_SelectUsers, counter: "\(count)/\(maxCount)")
         case .channelCreation:
             self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.GroupInfo_AddParticipantTitle, counter: "")
-            let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
-            self.rightNavigationButton = rightNavigationButton
-            self.navigationItem.rightBarButtonItem = self.rightNavigationButton
-            rightNavigationButton.isEnabled = true
+            if self.rightNavigationButton == nil {
+                let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                self.rightNavigationButton = rightNavigationButton
+                self.navigationItem.rightBarButtonItem = self.rightNavigationButton
+            }
         case .peerSelection:
             self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder, counter: "")
-            let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
-            self.rightNavigationButton = rightNavigationButton
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
-            self.navigationItem.rightBarButtonItem = self.rightNavigationButton
-            rightNavigationButton.isEnabled = false
+            if self.rightNavigationButton == nil {
+                let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                self.rightNavigationButton = rightNavigationButton
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
+                self.navigationItem.rightBarButtonItem = self.rightNavigationButton
+            }
         case let .chatSelection(chatSelection):
             self.titleView.title = CounterContollerTitle(title: chatSelection.title, counter: "")
-            let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
-            self.rightNavigationButton = rightNavigationButton
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
-            self.navigationItem.rightBarButtonItem = self.rightNavigationButton
-            rightNavigationButton.isEnabled = self.params.alwaysEnabled
+            if self.rightNavigationButton == nil {
+                let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
+                self.rightNavigationButton = rightNavigationButton
+                self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
+                self.navigationItem.rightBarButtonItem = self.rightNavigationButton
+            }
         }
         
         switch self.mode {
-        case .groupCreation, .peerSelection, .chatSelection:
-            self.rightNavigationButton?.isEnabled = updatedCount != 0 || !self.contactsNode.editableTokens.isEmpty || self.params.alwaysEnabled
-        case .channelCreation, .premiumGifting, .requestedUsersSelection:
-            break
+        case .peerSelection, .chatSelection:
+            let hasEditableTokens = !self.contactsNode.editableTokens.isEmpty
+            self.rightNavigationButton?.isEnabled = updatedCount != 0 || hasEditableTokens || self.params.alwaysEnabled
+        case .groupCreation, .channelCreation, .premiumGifting, .requestedUsersSelection:
+            self.rightNavigationButton?.isEnabled = true
         }
     }
     

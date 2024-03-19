@@ -190,7 +190,7 @@ extension SelectivePrivacySettings {
         var disableFor: [PeerId: SelectivePrivacyPeer] = [:]
         var enableFor: [PeerId: SelectivePrivacyPeer] = [:]
         var enableForCloseFriends: Bool = false
-        let enableForPremium: Bool = false
+        var enableForPremium: Bool = false
         
         for rule in apiRules {
             switch rule {
@@ -232,6 +232,8 @@ extension SelectivePrivacySettings {
                     }
                 case .privacyValueAllowCloseFriends:
                     enableForCloseFriends = true
+                case .privacyValueAllowPremium:
+                    enableForPremium = true
             }
         }
         

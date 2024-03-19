@@ -129,7 +129,8 @@ final class ChatIntroItemComponent: Component {
                 threadData: nil,
                 isGeneralThreadClosed: nil,
                 replyMessage: nil,
-                accountPeerColor: nil
+                accountPeerColor: nil,
+                businessIntro: nil
             )
             
             transition.setFrame(view: emptyNode.view, frame: CGRect(origin: CGPoint(), size: size))

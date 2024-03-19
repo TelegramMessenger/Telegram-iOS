@@ -27,11 +27,14 @@ final class BusinessIntroSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let initialData: BusinessIntroSetupScreen.InitialData
 
     init(
-        context: AccountContext
+        context: AccountContext,
+        initialData: BusinessIntroSetupScreen.InitialData
     ) {
         self.context = context
+        self.initialData = initialData
     }
 
     static func ==(lhs: BusinessIntroSetupScreenComponent, rhs: BusinessIntroSetupScreenComponent) -> Bool {
@@ -116,8 +119,20 @@ final class BusinessIntroSetupScreenComponent: Component {
             guard let component = self.component, let environment = self.environment else {
                 return true
             }
-            let _ = component
             let _ = environment
+            
+            let title = self.titleInputState.text.string
+            let text = self.textInputState.text.string
+            
+            let intro: TelegramBusinessIntro?
+            if !title.isEmpty || !text.isEmpty || self.stickerFile != nil {
+                intro = TelegramBusinessIntro(title: title, text: text, stickerFile: self.stickerFile)
+            } else {
+                intro = nil
+            }
+            if intro != component.initialData.intro {
+                let _ = component.context.engine.accountData.updateBusinessIntro(intro: intro).startStandalone()
+            }
             
             return true
         }
@@ -163,6 +178,11 @@ final class BusinessIntroSetupScreenComponent: Component {
             }
             
             if self.component == nil {
+                if let intro = component.initialData.intro {
+                    self.resetTitle = intro.title
+                    self.resetText = intro.text
+                    self.stickerFile = intro.stickerFile
+                }
             }
             
             if self.stickerContentDisposable == nil {
@@ -651,15 +671,25 @@ final class BusinessIntroSetupScreenComponent: Component {
 }
 
 public final class BusinessIntroSetupScreen: ViewControllerComponentContainer {
+    public final class InitialData: BusinessIntroSetupScreenInitialData {
+        fileprivate let intro: TelegramBusinessIntro?
+        
+        fileprivate init(intro: TelegramBusinessIntro?) {
+            self.intro = intro
+        }
+    }
+    
     private let context: AccountContext
     
     public init(
-        context: AccountContext
+        context: AccountContext,
+        initialData: InitialData
     ) {
         self.context = context
         
         super.init(context: context, component: BusinessIntroSetupScreenComponent(
-            context: context
+            context: context,
+            initialData: initialData
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -695,5 +725,21 @@ public final class BusinessIntroSetupScreen: ViewControllerComponentContainer {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+    }
+    
+    public static func initialData(context: AccountContext) -> Signal<BusinessIntroSetupScreenInitialData, NoError> {
+        return context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.BusinessIntro(id: context.account.peerId)
+        )
+        |> map { intro -> BusinessIntroSetupScreenInitialData in
+            let value: TelegramBusinessIntro?
+            switch intro {
+            case let .known(intro):
+                value = intro
+            case .unknown:
+                value = nil
+            }
+            return InitialData(intro: value)
+        }
     }
 }

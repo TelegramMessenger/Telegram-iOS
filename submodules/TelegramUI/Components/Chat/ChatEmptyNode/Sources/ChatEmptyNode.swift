@@ -166,6 +166,10 @@ public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNod
             customStickerFile = stickerFile
             self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: serviceColor.primaryText)
             self.textNode.attributedText = NSAttributedString(string: text, font: messageFont, textColor: serviceColor.primaryText)
+        } else if let businessIntro = interfaceState.businessIntro {
+            self.titleNode.attributedText = NSAttributedString(string: !businessIntro.title.isEmpty ? businessIntro.title : interfaceState.strings.Conversation_EmptyPlaceholder, font: titleFont, textColor: serviceColor.primaryText)
+            self.textNode.attributedText = NSAttributedString(string: !businessIntro.text.isEmpty ? businessIntro.text : interfaceState.strings.Conversation_GreetingText, font: messageFont, textColor: serviceColor.primaryText)
+            customStickerFile = businessIntro.stickerFile
         } else {
             self.titleNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_EmptyPlaceholder, font: titleFont, textColor: serviceColor.primaryText)
             self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_GreetingText, font: messageFont, textColor: serviceColor.primaryText)
@@ -1291,8 +1295,6 @@ public final class ChatEmptyNode: ASDisplayNode {
                         contentType = .premiumRequired
                     } else {
                         if peer.isDeleted || peer.botInfo != nil || peer.flags.contains(.isSupport) || peer.isScam || interfaceState.peerIsBlocked {
-                            contentType = .regular
-                        } else if case .clearedHistory = emptyType {
                             contentType = .regular
                         } else {
                             contentType = .greeting

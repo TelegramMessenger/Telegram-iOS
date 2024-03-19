@@ -77,6 +77,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-69724536] = { return Api.BaseTheme.parse_baseThemeDay($0) }
     dict[-1212997976] = { return Api.BaseTheme.parse_baseThemeNight($0) }
     dict[1834973166] = { return Api.BaseTheme.parse_baseThemeTinted($0) }
+    dict[1821253126] = { return Api.Birthday.parse_birthday($0) }
     dict[-1132882121] = { return Api.Bool.parse_boolFalse($0) }
     dict[-1720552011] = { return Api.Bool.parse_boolTrue($0) }
     dict[706514033] = { return Api.Boost.parse_boost($0) }
@@ -214,6 +215,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-870702050] = { return Api.Config.parse_config($0) }
     dict[-1123645951] = { return Api.ConnectedBot.parse_connectedBot($0) }
     dict[341499403] = { return Api.Contact.parse_contact($0) }
+    dict[496600883] = { return Api.ContactBirthday.parse_contactBirthday($0) }
     dict[383348795] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[2104790276] = { return Api.DataJSON.parse_dataJSON($0) }
     dict[414687501] = { return Api.DcOption.parse_dcOption($0) }
@@ -403,6 +405,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[483901197] = { return Api.InputPhoto.parse_inputPhotoEmpty($0) }
     dict[941870144] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyAbout($0) }
     dict[-786326563] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyAddedByPhone($0) }
+    dict[-698740276] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyBirthday($0) }
     dict[-1107622874] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyChatInvite($0) }
     dict[-1529000952] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyForwards($0) }
     dict[-88417185] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyPhoneCall($0) }
@@ -415,6 +418,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2079962673] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowChatParticipants($0) }
     dict[793067081] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowCloseFriends($0) }
     dict[218751099] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowContacts($0) }
+    dict[2009975281] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowPremium($0) }
     dict[320652927] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowUsers($0) }
     dict[-697604407] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowAll($0) }
     dict[-380694650] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowChatParticipants($0) }
@@ -712,6 +716,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1303143084] = { return Api.PrepaidGiveaway.parse_prepaidGiveaway($0) }
     dict[-1534675103] = { return Api.PrivacyKey.parse_privacyKeyAbout($0) }
     dict[1124062251] = { return Api.PrivacyKey.parse_privacyKeyAddedByPhone($0) }
+    dict[536913176] = { return Api.PrivacyKey.parse_privacyKeyBirthday($0) }
     dict[1343122938] = { return Api.PrivacyKey.parse_privacyKeyChatInvite($0) }
     dict[1777096355] = { return Api.PrivacyKey.parse_privacyKeyForwards($0) }
     dict[1030105979] = { return Api.PrivacyKey.parse_privacyKeyPhoneCall($0) }
@@ -724,6 +729,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1796427406] = { return Api.PrivacyRule.parse_privacyValueAllowChatParticipants($0) }
     dict[-135735141] = { return Api.PrivacyRule.parse_privacyValueAllowCloseFriends($0) }
     dict[-123988] = { return Api.PrivacyRule.parse_privacyValueAllowContacts($0) }
+    dict[-320241333] = { return Api.PrivacyRule.parse_privacyValueAllowPremium($0) }
     dict[-1198497870] = { return Api.PrivacyRule.parse_privacyValueAllowUsers($0) }
     dict[-1955338397] = { return Api.PrivacyRule.parse_privacyValueDisallowAll($0) }
     dict[1103656293] = { return Api.PrivacyRule.parse_privacyValueDisallowChatParticipants($0) }
@@ -1032,7 +1038,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1831650802] = { return Api.UrlAuthResult.parse_urlAuthResultRequest($0) }
     dict[559694904] = { return Api.User.parse_user($0) }
     dict[-742634630] = { return Api.User.parse_userEmpty($0) }
-    dict[1728822428] = { return Api.UserFull.parse_userFull($0) }
+    dict[-321200917] = { return Api.UserFull.parse_userFull($0) }
     dict[-2100168954] = { return Api.UserProfilePhoto.parse_userProfilePhoto($0) }
     dict[1326562017] = { return Api.UserProfilePhoto.parse_userProfilePhotoEmpty($0) }
     dict[164646985] = { return Api.UserStatus.parse_userStatusEmpty($0) }
@@ -1125,6 +1131,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[279670215] = { return Api.chatlists.ExportedInvites.parse_exportedInvites($0) }
     dict[182326673] = { return Api.contacts.Blocked.parse_blocked($0) }
     dict[-513392236] = { return Api.contacts.Blocked.parse_blockedSlice($0) }
+    dict[290452237] = { return Api.contacts.ContactBirthdays.parse_contactBirthdays($0) }
     dict[-353862078] = { return Api.contacts.Contacts.parse_contacts($0) }
     dict[-1219778094] = { return Api.contacts.Contacts.parse_contactsNotModified($0) }
     dict[-1290580579] = { return Api.contacts.Found.parse_found($0) }
@@ -1325,7 +1332,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
@@ -1396,6 +1403,8 @@ public extension Api {
             case let _1 as Api.BankCardOpenUrl:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BaseTheme:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.Birthday:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Bool:
                 _1.serialize(buffer, boxed)
@@ -1484,6 +1493,8 @@ public extension Api {
             case let _1 as Api.ConnectedBot:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Contact:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.ContactBirthday:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ContactStatus:
                 _1.serialize(buffer, boxed)
@@ -2052,6 +2063,8 @@ public extension Api {
             case let _1 as Api.chatlists.ExportedInvites:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Blocked:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.contacts.ContactBirthdays:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Contacts:
                 _1.serialize(buffer, boxed)

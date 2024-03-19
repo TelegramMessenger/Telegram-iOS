@@ -426,7 +426,9 @@ func _internal_updateSelectiveAccountPrivacySettings(account: Account, type: Upd
                 if enableForCloseFriends {
                     rules.append(.inputPrivacyValueAllowCloseFriends)
                 }
-                let _ = enableForPremium
+                if enableForPremium {
+                    rules.append(.inputPrivacyValueAllowPremium)
+                }
             case let .enableContacts(enableFor, disableFor, enableForPremium):
                 let enablePeers = apiUserAndGroupIds(peerIds: enableFor)
                 let disablePeers = apiUserAndGroupIds(peerIds: disableFor)
@@ -446,6 +448,9 @@ func _internal_updateSelectiveAccountPrivacySettings(account: Account, type: Upd
                 }
             
                 rules.append(Api.InputPrivacyRule.inputPrivacyValueAllowContacts)
+                if enableForPremium {
+                    rules.append(.inputPrivacyValueAllowPremium)
+                }
                 let _ = enableForPremium
             case let .enableEveryone(disableFor):
                 let disablePeers = apiUserAndGroupIds(peerIds: disableFor)

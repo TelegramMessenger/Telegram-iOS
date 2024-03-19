@@ -2242,7 +2242,14 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext, initialData: initialData))
                                     })
                                 case .businessIntro:
-                                    push(accountContext.sharedContext.makeBusinessIntroSetupScreen(context: accountContext))
+                                    let _ = (accountContext.sharedContext.makeBusinessIntroSetupScreenInitialData(context: accountContext)
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                        guard let accountContext else {
+                                            return
+                                        }
+                                        push(accountContext.sharedContext.makeBusinessIntroSetupScreen(context: accountContext, initialData: initialData))
+                                    })
                                 default:
                                     fatalError()
                                 }

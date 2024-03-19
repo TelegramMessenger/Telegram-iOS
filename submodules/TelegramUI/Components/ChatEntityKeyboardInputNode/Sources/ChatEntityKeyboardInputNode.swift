@@ -2506,7 +2506,8 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             threadData: nil,
             isGeneralThreadClosed: nil,
             replyMessage: nil,
-            accountPeerColor: nil
+            accountPeerColor: nil,
+            businessIntro: nil
         )
 
         let _ = inputNode.updateLayout(

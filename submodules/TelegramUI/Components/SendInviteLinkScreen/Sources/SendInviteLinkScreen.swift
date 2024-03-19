@@ -14,6 +14,8 @@ import SolidRoundedButtonComponent
 import PresentationDataUtils
 import Markdown
 import UndoUI
+import AnimatedAvatarSetNode
+import AvatarNode
 
 private final class SendInviteLinkScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -79,8 +81,15 @@ private final class SendInviteLinkScreenComponent: Component {
         private let scrollContentClippingView: SparseContainerView
         private let scrollContentView: UIView
         
-        private let iconBackgroundView: UIView
-        private let iconView: UIImageView
+        private var avatarsNode: AnimatedAvatarSetNode?
+        private let avatarsContext = AnimatedAvatarSetContext()
+        
+        private var premiumTitle: ComponentView<Empty>?
+        private var premiumText: ComponentView<Empty>?
+        private var premiumButton: ComponentView<Empty>?
+        private var premiumSeparatorLeft: SimpleLayer?
+        private var premiumSeparatorRight: SimpleLayer?
+        private var premiumSeparatorText: ComponentView<Empty>?
         
         private let title = ComponentView<Empty>()
         private let leftButton = ComponentView<Empty>()
@@ -121,9 +130,6 @@ private final class SendInviteLinkScreenComponent: Component {
             
             self.scrollContentView = UIView()
             
-            self.iconBackgroundView = UIView()
-            self.iconView = UIImageView(image: UIImage(bundleImageName: "Chat/Links/LargeLink")?.withRenderingMode(.alwaysTemplate))
-            
             self.itemContainerView = UIView()
             self.itemContainerView.clipsToBounds = true
             self.itemContainerView.layer.cornerRadius = 10.0
@@ -154,9 +160,6 @@ private final class SendInviteLinkScreenComponent: Component {
             
             self.addSubview(self.scrollContentClippingView)
             self.scrollContentClippingView.addSubview(self.scrollView)
-            
-            self.scrollContentView.addSubview(self.iconBackgroundView)
-            self.scrollContentView.addSubview(self.iconView)
             
             self.scrollView.addSubview(self.scrollContentView)
             
@@ -235,7 +238,7 @@ private final class SendInviteLinkScreenComponent: Component {
         
         func animateIn() {
             self.dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            let animateOffset: CGFloat = self.backgroundLayer.frame.minY
+            let animateOffset: CGFloat = self.bounds.height - self.backgroundLayer.frame.minY
             self.scrollContentClippingView.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             self.backgroundLayer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             self.navigationBarContainer.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
@@ -245,7 +248,7 @@ private final class SendInviteLinkScreenComponent: Component {
         }
         
         func animateOut(completion: @escaping () -> Void) {
-            let animateOffset: CGFloat = self.backgroundLayer.frame.minY
+            let animateOffset: CGFloat = self.bounds.height - self.backgroundLayer.frame.minY
             
             self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
             self.scrollContentClippingView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { _ in
@@ -276,11 +279,11 @@ private final class SendInviteLinkScreenComponent: Component {
             self.state = state
             self.environment = environment
             
+            let hasPremiumRestrictedUsers = "".isEmpty
+            
             if themeUpdated {
                 self.dimView.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
                 self.backgroundLayer.backgroundColor = environment.theme.list.blocksBackgroundColor.cgColor
-                self.iconBackgroundView.backgroundColor = environment.theme.list.itemCheckColors.fillColor
-                self.iconView.tintColor = environment.theme.list.itemCheckColors.foregroundColor
                 self.itemContainerView.backgroundColor = environment.theme.list.itemBlocksBackgroundColor
                 
                 var locations: [NSNumber] = []
@@ -296,11 +299,34 @@ private final class SendInviteLinkScreenComponent: Component {
             transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize))
             
             var contentHeight: CGFloat = 0.0
+            contentHeight += 102.0
+            
+            let avatarsNode: AnimatedAvatarSetNode
+            if let current = self.avatarsNode {
+                avatarsNode = current
+            } else {
+                avatarsNode = AnimatedAvatarSetNode()
+                self.avatarsNode = avatarsNode
+                self.scrollContentView.addSubview(avatarsNode.view)
+            }
+            
+            let avatarsContent = self.avatarsContext.update(peers: component.peers.count <= 3 ? component.peers : Array(component.peers.prefix(upTo: 3)), animated: false)
+            let avatarsSize = avatarsNode.update(
+                context: component.context,
+                content: avatarsContent,
+                itemSize: CGSize(width: 60.0, height: 60.0),
+                customSpacing: 50.0,
+                font: avatarPlaceholderFont(size: 28.0),
+                animated: false,
+                synchronousLoad: true
+            )
+            let avatarsFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - avatarsSize.width) * 0.5), y: 26.0), size: avatarsSize)
+            transition.setFrame(view: avatarsNode.view, frame: avatarsFrame)
             
             let leftButtonSize = self.leftButton.update(
                 transition: transition,
                 component: AnyComponent(Button(
-                    content: AnyComponent(Text(text: environment.strings.SendInviteLink_SkipAction, font: Font.regular(17.0), color: environment.theme.list.itemAccentColor)),
+                    content: AnyComponent(Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: environment.theme.list.itemAccentColor)),
                     action: { [weak self] in
                         guard let self, let controller = self.environment?.controller() else {
                             return
@@ -317,61 +343,295 @@ private final class SendInviteLinkScreenComponent: Component {
                     self.navigationBarContainer.addSubview(leftButtonView)
                 }
                 transition.setFrame(view: leftButtonView, frame: leftButtonFrame)
+            }
+            
+            if hasPremiumRestrictedUsers {
+                var premiumItemsTransition = transition
                 
-                leftButtonView.isHidden = (self.selectedItems.isEmpty || component.link == nil) ? true : false
+                let premiumTitle: ComponentView<Empty>
+                if let current = self.premiumTitle {
+                    premiumTitle = current
+                } else {
+                    premiumTitle = ComponentView()
+                    self.premiumTitle = premiumTitle
+                    premiumItemsTransition = premiumItemsTransition.withAnimation(.none)
+                }
+                
+                let premiumText: ComponentView<Empty>
+                if let current = self.premiumText {
+                    premiumText = current
+                } else {
+                    premiumText = ComponentView()
+                    self.premiumText = premiumText
+                }
+                
+                let premiumButton: ComponentView<Empty>
+                if let current = self.premiumButton {
+                    premiumButton = current
+                } else {
+                    premiumButton = ComponentView()
+                    self.premiumButton = premiumButton
+                }
+                
+                let premiumSeparatorText: ComponentView<Empty>
+                if let current = self.premiumSeparatorText {
+                    premiumSeparatorText = current
+                } else {
+                    premiumSeparatorText = ComponentView()
+                    self.premiumSeparatorText = premiumSeparatorText
+                }
+                
+                let premiumSeparatorLeft: SimpleLayer
+                if let current = self.premiumSeparatorLeft {
+                    premiumSeparatorLeft = current
+                } else {
+                    premiumSeparatorLeft = SimpleLayer()
+                    self.premiumSeparatorLeft = premiumSeparatorLeft
+                    self.scrollContentView.layer.addSublayer(premiumSeparatorLeft)
+                }
+                
+                let premiumSeparatorRight: SimpleLayer
+                if let current = self.premiumSeparatorRight {
+                    premiumSeparatorRight = current
+                } else {
+                    premiumSeparatorRight = SimpleLayer()
+                    self.premiumSeparatorRight = premiumSeparatorRight
+                    self.scrollContentView.layer.addSublayer(premiumSeparatorRight)
+                }
+                
+                premiumSeparatorLeft.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
+                premiumSeparatorRight.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
+                
+                //TODO:localize
+                let premiumTitleSize = premiumTitle.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: "Upgrade to Premium", font: Font.semibold(24.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
+                )
+                let premiumTitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - premiumTitleSize.width) * 0.5), y: contentHeight), size: premiumTitleSize)
+                if let premiumTitleView = premiumTitle.view {
+                    if premiumTitleView.superview == nil {
+                        self.scrollContentView.addSubview(premiumTitleView)
+                    }
+                    transition.setFrame(view: premiumTitleView, frame: premiumTitleFrame)
+                }
+                
+                contentHeight += premiumTitleSize.height
+                contentHeight += 8.0
+                
+                //TODO:localize
+                let text: String
+                if component.peers.count == 1 {
+                    text = "**\(component.peers[0].compactDisplayTitle)** accepts invitations to groups from contacts and **Premium** users."
+                } else {
+                    let extraCount = component.peers.count - 3
+                    
+                    var peersText = ""
+                    for i in 0 ..< min(3, component.peers.count) {
+                        if extraCount == 0 && i == component.peers.count - 1 {
+                            peersText.append(", and ")
+                        } else if i != 0 {
+                            peersText.append(", ")
+                        }
+                        peersText.append("**")
+                        peersText.append(component.peers[i].compactDisplayTitle)
+                        peersText.append("**")
+                    }
+                    
+                    if extraCount >= 1 {
+                        if extraCount == 1 {
+                            text = "\(peersText), and **\(extraCount)** more person only accept invitations to groups from contacts and **Premium** users."
+                        } else {
+                            text = "\(peersText), and **\(extraCount)** more people only accept invitations to groups from contacts and **Premium** users."
+                        }
+                    } else {
+                        text = "\(peersText) only accept invitations to groups from contacts and **Premium** users."
+                    }
+                }
+                
+                let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
+                let bold = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
+                
+                let premiumTextSize = premiumText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .markdown(text: text, attributes: MarkdownAttributes(
+                            body: body,
+                            bold: bold,
+                            link: body,
+                            linkAttribute: { _ in nil }
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 16.0 * 2.0, height: 1000.0)
+                )
+                let premiumTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - premiumTextSize.width) * 0.5), y: contentHeight), size: premiumTextSize)
+                if let premiumTextView = premiumText.view {
+                    if premiumTextView.superview == nil {
+                        self.scrollContentView.addSubview(premiumTextView)
+                    }
+                    transition.setFrame(view: premiumTextView, frame: premiumTextFrame)
+                }
+                
+                contentHeight += premiumTextSize.height
+                contentHeight += 22.0
+                
+                let premiumButtonTitle = "Subscribe to Telegram Premium"
+                let premiumButtonSize = premiumButton.update(
+                    transition: transition,
+                    component: AnyComponent(SolidRoundedButtonComponent(
+                        title: premiumButtonTitle,
+                        badge: nil,
+                        theme: SolidRoundedButtonComponent.Theme(
+                            backgroundColor: .black,
+                            backgroundColors: [
+                                UIColor(rgb: 0x0077ff),
+                                UIColor(rgb: 0x6b93ff),
+                                UIColor(rgb: 0x8878ff),
+                                UIColor(rgb: 0xe46ace)
+                            ],
+                            foregroundColor: .white
+                        ),
+                        font: .bold,
+                        fontSize: 17.0,
+                        height: 50.0,
+                        cornerRadius: 11.0,
+                        gloss: false,
+                        animationName: nil,
+                        iconPosition: .right,
+                        iconSpacing: 4.0,
+                        action: { [weak self] in
+                            guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                                return
+                            }
+                            
+                            let navigationController = controller.navigationController as? NavigationController
+                            
+                            controller.dismiss()
+                            
+                            //TODO:localize
+                            let premiumController = component.context.sharedContext.makePremiumIntroController(context: component.context, source: .settings, forceDark: false, dismissed: nil)
+                            navigationController?.pushViewController(premiumController)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
+                )
+                
+                let premiumButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: premiumButtonSize)
+                if let premiumButtonView = premiumButton.view {
+                    if premiumButtonView.superview == nil {
+                        self.scrollContentView.addSubview(premiumButtonView)
+                    }
+                    transition.setFrame(view: premiumButtonView, frame: premiumButtonFrame)
+                }
+                contentHeight += premiumButtonSize.height
+                contentHeight += 19.0
+                
+                let premiumSeparatorTextSize = premiumSeparatorText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: "or", font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
+                )
+                let premiumSeparatorTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - premiumSeparatorTextSize.width) * 0.5), y: contentHeight), size: premiumSeparatorTextSize)
+                if let premiumSeparatorTextView = premiumSeparatorText.view {
+                    if premiumSeparatorTextView.superview == nil {
+                        self.scrollContentView.addSubview(premiumSeparatorTextView)
+                    }
+                    transition.setFrame(view: premiumSeparatorTextView, frame: premiumSeparatorTextFrame)
+                }
+                
+                let separatorWidth: CGFloat = 72.0
+                let separatorSpacing: CGFloat = 10.0
+                
+                transition.setFrame(layer: premiumSeparatorLeft, frame: CGRect(origin: CGPoint(x: premiumSeparatorTextFrame.minX - separatorSpacing - separatorWidth, y: premiumSeparatorTextFrame.midY + 1.0), size: CGSize(width: separatorWidth, height: UIScreenPixel)))
+                transition.setFrame(layer: premiumSeparatorRight, frame: CGRect(origin: CGPoint(x: premiumSeparatorTextFrame.maxX + separatorSpacing, y: premiumSeparatorTextFrame.midY + 1.0), size: CGSize(width: separatorWidth, height: UIScreenPixel)))
+                
+                contentHeight += 31.0
+            } else {
+                if let premiumTitle = self.premiumTitle {
+                    self.premiumTitle = nil
+                    premiumTitle.view?.removeFromSuperview()
+                }
+                if let premiumText = self.premiumText {
+                    self.premiumText = nil
+                    premiumText.view?.removeFromSuperview()
+                }
+                if let premiumButton = self.premiumButton {
+                    self.premiumButton = nil
+                    premiumButton.view?.removeFromSuperview()
+                }
+                if let premiumSeparatorLeft = self.premiumSeparatorLeft {
+                    self.premiumSeparatorLeft = nil
+                    premiumSeparatorLeft.removeFromSuperlayer()
+                }
+                if let premiumSeparatorRight = self.premiumSeparatorRight {
+                    self.premiumSeparatorRight = nil
+                    premiumSeparatorRight.removeFromSuperlayer()
+                }
+                if let premiumSeparatorText = self.premiumSeparatorText {
+                    self.premiumSeparatorText = nil
+                    premiumSeparatorText.view?.removeFromSuperview()
+                }
             }
             
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.link != nil ? environment.strings.SendInviteLink_InviteTitle : environment.strings.SendInviteLink_LinkUnavailableTitle, font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                    text: .plain(NSAttributedString(string: component.link != nil ? environment.strings.SendInviteLink_InviteTitle : environment.strings.SendInviteLink_LinkUnavailableTitle, font: Font.semibold(24.0), textColor: environment.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: 18.0), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: contentHeight), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
-                    self.navigationBarContainer.addSubview(titleView)
+                    self.scrollContentView.addSubview(titleView)
                 }
                 transition.setFrame(view: titleView, frame: titleFrame)
             }
             
-            contentHeight += 44.0
-            
-            contentHeight += 22.0
-            
-            let iconBackgroundSize = CGSize(width: 68.0, height: 48.0)
-            let iconBackgroundFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconBackgroundSize.width) * 0.5), y: contentHeight), size: iconBackgroundSize)
-            transition.setFrame(view: self.iconBackgroundView, frame: iconBackgroundFrame)
-            transition.setCornerRadius(layer: self.iconBackgroundView.layer, cornerRadius: min(iconBackgroundFrame.width, iconBackgroundFrame.height) * 0.5)
-            if let icon = self.iconView.image {
-                let scaleFraction: CGFloat = 0.5
-                let iconSize = CGSize(width: floor(icon.size.width * scaleFraction), height: floor(icon.size.height * scaleFraction))
-                transition.setFrame(view: self.iconView, frame: CGRect(origin: CGPoint(x: floor(iconBackgroundFrame.minX + (iconBackgroundFrame.width - iconSize.width) * 0.5), y: floor(iconBackgroundFrame.minY + (iconBackgroundFrame.height - iconSize.height) * 0.5)), size: iconSize))
-            }
-            
-            contentHeight += iconBackgroundSize.height
-            
-            contentHeight += 26.0
+            contentHeight += titleSize.height
+            contentHeight += 8.0
             
             let text: String
-            if component.link != nil {
-                if component.peers.count == 1 {
-                    text = environment.strings.SendInviteLink_TextAvailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+            if hasPremiumRestrictedUsers {
+                if component.link != nil {
+                    //TODO:localize
+                    text = "You can try to send an invite link instead."
                 } else {
-                    text = environment.strings.SendInviteLink_TextAvailableMultipleUsers(Int32(component.peers.count))
+                    if component.peers.count == 1 {
+                        text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                    } else {
+                        text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
+                    }
                 }
             } else {
-                if component.peers.count == 1 {
-                    text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                if component.link != nil {
+                    if component.peers.count == 1 {
+                        text = environment.strings.SendInviteLink_TextAvailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                    } else {
+                        text = environment.strings.SendInviteLink_TextAvailableMultipleUsers(Int32(component.peers.count))
+                    }
                 } else {
-                    text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
+                    if component.peers.count == 1 {
+                        text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                    } else {
+                        text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
+                    }
                 }
             }
             
-            let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor)
-            let bold = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor)
+            let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
+            let bold = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
             
             let descriptionTextSize = self.descriptionText.update(
                 transition: .immediate,
@@ -397,7 +657,7 @@ private final class SendInviteLinkScreenComponent: Component {
             }
             
             contentHeight += descriptionTextFrame.height
-            contentHeight += 13.0
+            contentHeight += 22.0
             
             var singleItemHeight: CGFloat = 0.0
             
@@ -486,7 +746,6 @@ private final class SendInviteLinkScreenComponent: Component {
             } else {
                 actionButtonTitle = environment.strings.SendInviteLink_ActionClose
             }
-            
             let actionButtonSize = self.actionButton.update(
                 transition: transition,
                 component: AnyComponent(SolidRoundedButtonComponent(
@@ -532,7 +791,7 @@ private final class SendInviteLinkScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
             )
-            let bottomPanelHeight = 14.0 + environment.safeInsets.bottom + actionButtonSize.height
+            let bottomPanelHeight = 15.0 + environment.safeInsets.bottom + actionButtonSize.height
             let actionButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
             if let actionButtonView = self.actionButton.view {
                 if actionButtonView.superview == nil {
@@ -558,7 +817,7 @@ private final class SendInviteLinkScreenComponent: Component {
             transition.setPosition(layer: self.backgroundLayer, position: CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
             transition.setBounds(layer: self.backgroundLayer, bounds: CGRect(origin: CGPoint(), size: availableSize))
             
-            let scrollClippingFrame = CGRect(origin: CGPoint(x: sideInset, y: containerInset + 56.0), size: CGSize(width: availableSize.width - sideInset * 2.0, height: actionButtonFrame.minY - 24.0 - (containerInset + 56.0)))
+            let scrollClippingFrame = CGRect(origin: CGPoint(x: sideInset, y: containerInset), size: CGSize(width: availableSize.width - sideInset * 2.0, height: actionButtonFrame.minY - 24.0 - (containerInset)))
             transition.setPosition(view: self.scrollContentClippingView, position: scrollClippingFrame.center)
             transition.setBounds(view: self.scrollContentClippingView, bounds: CGRect(origin: CGPoint(x: scrollClippingFrame.minX, y: scrollClippingFrame.minY), size: scrollClippingFrame.size))
             
