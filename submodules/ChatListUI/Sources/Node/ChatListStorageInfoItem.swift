@@ -228,7 +228,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 //TODO:localize
                 titleString = NSAttributedString(string: "Add your birthday! 🎂", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
                 textString = NSAttributedString(string: "Let your contacts know when you're celebrating.", font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
-            case let .birthdayPremiumGift(peers):
+            case let .birthdayPremiumGift(peers, _):
                 //TODO:localize
                 let title: String
                 let text: String

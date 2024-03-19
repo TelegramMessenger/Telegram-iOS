@@ -87,7 +87,7 @@ public enum ChatListNotice: Equatable {
     case premiumRestore(discount: Int32)
     case xmasPremiumGift
     case setupBirthday
-    case birthdayPremiumGift(peers: [EnginePeer])
+    case birthdayPremiumGift(peers: [EnginePeer], birthdays: [EnginePeer.Id: TelegramBirthday])
     case reviewLogin(newSessionReview: NewSessionReview, totalCount: Int)
 }
 

@@ -117,12 +117,13 @@ public struct AccountPrivacySettings: Equatable {
     public let phoneDiscoveryEnabled: Bool
     public let voiceMessages: SelectivePrivacySettings
     public let bio: SelectivePrivacySettings
+    public let birthday: SelectivePrivacySettings
     
     public let globalSettings: GlobalPrivacySettings
     public let accountRemovalTimeout: Int32
     public let messageAutoremoveTimeout: Int32?
     
-    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, bio: SelectivePrivacySettings, globalSettings: GlobalPrivacySettings, accountRemovalTimeout: Int32, messageAutoremoveTimeout: Int32?) {
+    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, bio: SelectivePrivacySettings, birthday: SelectivePrivacySettings, globalSettings: GlobalPrivacySettings, accountRemovalTimeout: Int32, messageAutoremoveTimeout: Int32?) {
         self.presence = presence
         self.groupInvitations = groupInvitations
         self.voiceCalls = voiceCalls
@@ -133,6 +134,7 @@ public struct AccountPrivacySettings: Equatable {
         self.phoneDiscoveryEnabled = phoneDiscoveryEnabled
         self.voiceMessages = voiceMessages
         self.bio = bio
+        self.birthday = birthday
         self.globalSettings = globalSettings
         self.accountRemovalTimeout = accountRemovalTimeout
         self.messageAutoremoveTimeout = messageAutoremoveTimeout
@@ -167,6 +169,9 @@ public struct AccountPrivacySettings: Equatable {
             return false
         }
         if lhs.bio != rhs.bio {
+            return false
+        }
+        if lhs.birthday != rhs.birthday {
             return false
         }
         if lhs.globalSettings != rhs.globalSettings {

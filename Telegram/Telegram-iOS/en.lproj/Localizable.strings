@@ -11619,3 +11619,9 @@ Sorry for the inconvenience.";
 
 "WebApp.TermsOfUse" = "Terms of Use";
 "WebApp.TermsOfUse_URL" = "https://telegram.org/tos/mini-apps";
+
+"Privacy.Birthday" = "Date of Birth";
+"Privacy.Birthday.WhoCanSeeMyBio" = "WHO CAN SEE MY DATE OF BIRTH";
+"Privacy.Birthday.CustomHelp" = "You can restrict who can see your date of birth with granular precision.";
+"Privacy.Birthday.AlwaysShareWith.Title" = "Always Share With";
+"Privacy.Birthday.NeverShareWith.Title" = "Never Share With";

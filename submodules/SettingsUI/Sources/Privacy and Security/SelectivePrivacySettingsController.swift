@@ -21,6 +21,7 @@ enum SelectivePrivacySettingsKind {
     case phoneNumber
     case voiceMessages
     case bio
+    case birthday
 }
 
 private enum SelectivePrivacySettingType {
@@ -789,6 +790,11 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             settingInfoText = presentationData.strings.Privacy_Bio_CustomHelp
             disableForText = presentationData.strings.PrivacyLastSeenSettings_NeverShareWith
             enableForText = presentationData.strings.PrivacyLastSeenSettings_AlwaysShareWith
+        case .birthday:
+            settingTitle = presentationData.strings.Privacy_Birthday_WhoCanSeeMyBio
+            settingInfoText = presentationData.strings.Privacy_Birthday_CustomHelp
+            disableForText = presentationData.strings.PrivacyLastSeenSettings_NeverShareWith
+            enableForText = presentationData.strings.PrivacyLastSeenSettings_AlwaysShareWith
     }
     
     if case .forwards = kind {
@@ -997,7 +1003,6 @@ func selectivePrivacySettingsController(
         }
     }
     
-    //TODO:replace hideReadTimeEnabled with actual value
     let initialState = SelectivePrivacySettingsControllerState(setting: SelectivePrivacySettingType(current), enableFor: initialEnableFor, enableForPremium: initialEnableForPremium, disableFor: initialDisableFor, enableForCloseFriends: initialEnableForCloseFriends, saving: false, callDataSaving: callSettings?.1.dataSaving, callP2PMode: callSettings != nil ? SelectivePrivacySettingType(callSettings!.0) : nil, callP2PEnableFor: initialCallP2PEnableFor, callP2PDisableFor: initialCallP2PDisableFor, callP2PEnableForCloseFriends: initialCallEnableForCloseFriends, callIntegrationAvailable: callIntegrationAvailable, callIntegrationEnabled: callSettings?.1.enableSystemIntegration, phoneDiscoveryEnabled: phoneDiscoveryEnabled, hideReadTimeEnabled: globalSettings?.hideReadTime, uploadedPhoto: nil)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -1038,6 +1043,8 @@ func selectivePrivacySettingsController(
                     title = strings.Privacy_VoiceMessages_AlwaysAllow_Title
                 case .bio:
                     title = strings.Privacy_Bio_AlwaysShareWith_Title
+                case .birthday:
+                    title = strings.Privacy_Birthday_AlwaysShareWith_Title
             }
         } else {
             switch kind {
@@ -1057,6 +1064,8 @@ func selectivePrivacySettingsController(
                     title = strings.Privacy_VoiceMessages_NeverAllow_Title
                 case .bio:
                     title = strings.Privacy_Bio_NeverShareWith_Title
+                case .birthday:
+                    title = strings.Privacy_Birthday_NeverShareWith_Title
             }
         }
         var peerIds: [EnginePeer.Id: SelectivePrivacyPeer] = [:]
@@ -1366,6 +1375,8 @@ func selectivePrivacySettingsController(
                 title = presentationData.strings.Privacy_VoiceMessages
             case .bio:
                 title = presentationData.strings.Privacy_Bio
+            case .birthday:
+                title = presentationData.strings.Privacy_Birthday
         }
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: selectivePrivacySettingsControllerEntries(presentationData: presentationData, kind: kind, state: state, peerName: peerName ?? "", phoneNumber: phoneNumber, peer: peer, publicPhoto: publicPhoto), style: .blocks, animateChanges: true)
@@ -1455,6 +1466,8 @@ func selectivePrivacySettingsController(
                     type = .voiceMessages
                 case .bio:
                     type = .bio
+                case .birthday:
+                    type = .birthday
             }
             
             let updateSettingsSignal = context.engine.privacy.updateSelectiveAccountPrivacySettings(type: type, settings: settings)

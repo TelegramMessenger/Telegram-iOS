@@ -583,7 +583,7 @@ private final class PeerInfoInteraction {
     let openPeerMention: (String, ChatControllerInteractionNavigateToPeer) -> Void
     let openBotApp: (AttachMenuBot) -> Void
     let openEditing: () -> Void
-    let updateBirthDate: (BirthdayPickerComponent.BirthDate?) -> Void
+    let updateBirthDate: (TelegramBirthday??) -> Void
     let updateIsEditingBirthdate: (Bool) -> Void
     
     init(
@@ -640,7 +640,7 @@ private final class PeerInfoInteraction {
         openPeerMention: @escaping (String, ChatControllerInteractionNavigateToPeer) -> Void,
         openBotApp: @escaping (AttachMenuBot) -> Void,
         openEditing: @escaping () -> Void,
-        updateBirthDate: @escaping (BirthdayPickerComponent.BirthDate?) -> Void,
+        updateBirthDate: @escaping (TelegramBirthday??) -> Void,
         updateIsEditingBirthdate: @escaping (Bool) -> Void
     ) {
         self.openUsername = openUsername
@@ -778,7 +778,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                 }
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_KeepPhoneNumber(phoneNumber).string, action: {
-                let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePhoneNumber).startStandalone()
+                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .validatePhoneNumber).startStandalone()
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_ChangePhoneNumber, action: {
                 interaction.openSettings(.phoneNumber)
@@ -787,7 +787,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: presentationData.strings.Settings_CheckPasswordTitle, text: .markdown(presentationData.strings.Settings_CheckPasswordText), linkAction: { _ in
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_KeepPassword, action: {
-                let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePassword).startStandalone()
+                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .validatePassword).startStandalone()
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_TryEnterPassword, action: {
                 interaction.openSettings(.rememberPassword)
@@ -1021,14 +1021,22 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         items[.bio]!.append(PeerInfoScreenCommentItem(id: ItemBioHelp, text: presentationData.strings.Settings_About_Help))
     }
     
+    
+    var birthday: TelegramBirthday?
+    if let updatingBirthDate = state.updatingBirthDate {
+        birthday = updatingBirthDate
+    } else {
+        birthday = (data.cachedData as? CachedUserData)?.birthday
+    }
+    
     //TODO:localize
     var birthDateString: String
-    if let updatingBirthDate = state.updatingBirthDate {
+    if let birthday {
         var components: [String] = []
-        components.append("\(updatingBirthDate.day)")
+        components.append("\(birthday.day)")
        
         let month: String
-        switch updatingBirthDate.month {
+        switch birthday.month {
         case 1:
             month = "Jan"
         case 2:
@@ -1058,7 +1066,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         }
         components.append(month)
         
-        if let year = updatingBirthDate.year {
+        if let year = birthday.year {
             components.append("\(year)")
         }
         
@@ -1069,22 +1077,21 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     
     let isEditingBirthDate = state.isEditingBirthDate
     items[.birthday]!.append(PeerInfoScreenDisclosureItem(id: ItemBirthday, label: .coloredText(birthDateString, isEditingBirthDate ? .accent : .generic), text: "Date of Birth", icon: nil, hasArrow: false, action: {
-        if !isEditingBirthDate {
-            interaction.updateBirthDate(BirthdayPickerComponent.BirthDate(year: nil, month: 1, day: 1))
+        if !isEditingBirthDate, birthday == nil {
+            interaction.updateBirthDate(TelegramBirthday(day: 1, month: 1, year: nil))
         }
         interaction.updateIsEditingBirthdate(!isEditingBirthDate)
     }))
-    if isEditingBirthDate, let birthDate = state.updatingBirthDate {
-        items[.birthday]!.append(PeerInfoScreenBirthdatePickerItem(id: ItemBirthdayPicker, value: birthDate, valueUpdated: { value in
+    if isEditingBirthDate, let birthday {
+        items[.birthday]!.append(PeerInfoScreenBirthdatePickerItem(id: ItemBirthdayPicker, value: birthday, valueUpdated: { value in
             interaction.updateBirthDate(value)
         }))
         items[.birthday]!.append(PeerInfoScreenActionItem(id: ItemBirthdayRemove, text: "Remove Date of Birth", alignment: .natural, action: {
-            interaction.updateBirthDate(nil)
+            interaction.updateBirthDate(.some(nil))
             interaction.updateIsEditingBirthdate(false)
         }))
     }
     items[.birthday]!.append(PeerInfoScreenCommentItem(id: ItemBirthdayHelp, text: "Date of birth is only visible to your contacts."))
-    
     
     if let user = data.peer as? TelegramUser {
         items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPhoneNumber, label: .text(user.phone.flatMap({ formatPhoneNumber(context: context, number: $0) }) ?? ""), text: presentationData.strings.Settings_PhoneNumber, action: {
@@ -3602,6 +3609,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             let firstName = strongSelf.headerNode.editingContentNode.editingTextForKey(.firstName) ?? ""
                             let lastName = strongSelf.headerNode.editingContentNode.editingTextForKey(.lastName) ?? ""
                             let bio = strongSelf.state.updatingBio
+                            let birthday = strongSelf.state.updatingBirthDate
                             
                             if let bio = bio {
                                 if Int32(bio.count) > strongSelf.context.userLimits.maxAboutLength {
@@ -3615,17 +3623,25 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             
                             let peerBio = cachedData.about ?? ""
                                                         
-                            if (peer.firstName ?? "") != firstName || (peer.lastName ?? "") != lastName || (bio ?? "") != peerBio {
+                            if (peer.firstName ?? "") != firstName || (peer.lastName ?? "") != lastName || (bio ?? "") != peerBio || (cachedData.birthday != birthday) {
                                 var updateNameSignal: Signal<Void, NoError> = .complete()
                                 var hasProgress = false
-                                if peer.firstName != firstName || peer.lastName != lastName {
+                                if (peer.firstName ?? "") != firstName || (peer.lastName ?? "") != lastName {
                                     updateNameSignal = context.engine.accountData.updateAccountPeerName(firstName: firstName, lastName: lastName)
                                     hasProgress = true
                                 }
                                 var updateBioSignal: Signal<Void, NoError> = .complete()
-                                if let bio = bio, bio != cachedData.about {
+                                if let bio, bio != cachedData.about {
                                     updateBioSignal = context.engine.accountData.updateAbout(about: bio)
                                     |> `catch` { _ -> Signal<Void, NoError> in
+                                        return .complete()
+                                    }
+                                    hasProgress = true
+                                }
+                                var updatedBirthdaySignal: Signal<Never, NoError> = .complete()
+                                if let birthday, birthday != cachedData.birthday {
+                                    updatedBirthdaySignal = context.engine.accountData.updateBirthday(birthday: birthday)
+                                    |> `catch` { _ -> Signal<Never, NoError> in
                                         return .complete()
                                     }
                                     hasProgress = true
@@ -3642,7 +3658,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 if hasProgress {
                                     strongSelf.controller?.present(statusController, in: .window(.root))
                                 }
-                                strongSelf.activeActionDisposable.set((combineLatest(updateNameSignal, updateBioSignal) |> deliverOnMainQueue
+                                strongSelf.activeActionDisposable.set((combineLatest(updateNameSignal, updateBioSignal, updatedBirthdaySignal) |> deliverOnMainQueue
                                 |> deliverOnMainQueue).startStrict(completed: {
                                     dismissStatus?()
                                     
@@ -3897,7 +3913,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                     }
                 } else {
-                    strongSelf.state = strongSelf.state.withIsEditing(false).withUpdatingBio(nil)
+                    strongSelf.state = strongSelf.state.withIsEditing(false).withUpdatingBio(nil).withUpdatingBirthDate(nil).withIsEditingBirthDate(false)
                     if let (layout, navigationHeight) = strongSelf.validLayout {
                         strongSelf.scrollNode.view.setContentOffset(CGPoint(), animated: false)
                         strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
@@ -9021,7 +9037,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 guard let self else {
                     return
                 }
-                let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .setupPassword).startStandalone()
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupPassword).startStandalone()
             })
             
             let controller = self.context.sharedContext.makeSetupTwoFactorAuthController(context: self.context)
@@ -9133,7 +9149,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: .single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: configuration, password: nil)))))
             }
             controller.passwordRemembered = {
-                let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePassword).startStandalone()
+                let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .validatePassword).startStandalone()
             }
             push(controller)
         case .emojiStatus:
@@ -11108,7 +11124,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
             }
             
-            let tabBarItem: Signal<(String, UIImage?, UIImage?, String?, Bool, Bool), NoError> = combineLatest(queue: .mainQueue(), self.context.sharedContext.presentationData, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), getServerProvidedSuggestions(account: self.context.account), accountTabBarAvatar, accountTabBarAvatarBadge)
+            let tabBarItem: Signal<(String, UIImage?, UIImage?, String?, Bool, Bool), NoError> = combineLatest(queue: .mainQueue(), self.context.sharedContext.presentationData, notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), context.engine.notices.getServerProvidedSuggestions(), accountTabBarAvatar, accountTabBarAvatarBadge)
             |> map { presentationData, notificationsAuthorizationStatus, notificationsWarningSuppressed, suggestions, accountTabBarAvatar, accountTabBarAvatarBadge -> (String, UIImage?, UIImage?, String?, Bool, Bool) in
                 let notificationsWarning = shouldDisplayNotificationsPermissionWarning(status: notificationsAuthorizationStatus, suppressed:  notificationsWarningSuppressed)
                 let phoneNumberWarning = suggestions.contains(.validatePhoneNumber)
@@ -12019,6 +12035,10 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             previousSecondaryContentNode.frame = previousSecondaryContentNodeFrame
             previousSecondaryContentNode.alpha = self.previousSecondaryContentNodeAlpha
             bottomNavigationBar.clippingNode.addSubnode(previousSecondaryContentNode)
+        }
+        
+        if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView, let iconView = previousTitleView.titleCredibilityIconView.componentView {
+            iconView.frame = iconView.bounds
         }
     }
 }

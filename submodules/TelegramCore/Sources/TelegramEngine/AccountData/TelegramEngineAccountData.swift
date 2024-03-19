@@ -35,6 +35,10 @@ public extension TelegramEngine {
             return _internal_updateAbout(account: self.account, about: about)
         }
         
+        public func updateBirthday(birthday: TelegramBirthday?) -> Signal<Never, UpdateBirthdayError> {
+            return _internal_updateBirthday(account: self.account, birthday: birthday)
+        }
+        
         public func observeAvailableColorOptions(scope: PeerColorsScope) -> Signal<EngineAvailableColorOptions, NoError> {
             return _internal_observeAvailableColorOptions(postbox: self.account.postbox, scope: scope)
         }

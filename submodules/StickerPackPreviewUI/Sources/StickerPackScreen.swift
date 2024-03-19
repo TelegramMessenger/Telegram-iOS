@@ -1155,8 +1155,8 @@ private final class StickerPackContainer: ASDisplayNode {
             controller.controllerNode.dismiss()
         }))
         items.append(ActionSheetButtonItem(title: "Add an Existing Sticker", color: .accent, action: { [weak actionSheet, weak self] in
-           actionSheet?.dismissAnimated()
-          
+            actionSheet?.dismissAnimated()
+            
             guard let self, let controller = self.controller else {
                 return
             }

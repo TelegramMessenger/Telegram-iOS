@@ -1337,7 +1337,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         stickerPacks: [packReference],
                         loadedStickerPacks: [],
                         isEditing: true,
-                        parentNavigationController: nil,
+                        parentNavigationController: interaction.getNavigationController(),
                         sendSticker: { [weak interaction] fileReference, sourceView, sourceRect in
                             return interaction?.sendSticker(fileReference, false, false, nil, false, sourceView, sourceRect, nil, []) ?? false
                         }
