@@ -95,7 +95,7 @@ private class TextField: UITextField, UIScrollViewDelegate {
     override func deleteBackward() {
         super.deleteBackward()
         
-        if let scrollView = self.scrollView {
+        if let scrollView = self.scrollView, self.fixEditingRect {
             if scrollView.contentSize.width <= scrollView.frame.width && scrollView.contentOffset.x > -scrollView.contentInset.left {
                 scrollView.contentOffset = CGPoint(x: max(scrollView.contentOffset.x - 5.0, -scrollView.contentInset.left), y: 0.0)
                 self.updatePrefixPosition()
@@ -116,6 +116,9 @@ private class TextField: UITextField, UIScrollViewDelegate {
     
     var fixAutoScroll: CGPoint?
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard self.fixEditingRect else {
+            return
+        }
         if let fixAutoScroll = self.fixAutoScroll {
             self.scrollView?.setContentOffset(fixAutoScroll, animated: true)
             self.scrollView?.setContentOffset(fixAutoScroll, animated: false)
@@ -161,28 +164,37 @@ private class TextField: UITextField, UIScrollViewDelegate {
     }
     
     override func textRect(forBounds bounds: CGRect) -> CGRect {
-        if bounds.size.width.isZero {
-            return CGRect(origin: CGPoint(), size: CGSize())
-        }
-        var rect = bounds.insetBy(dx: 0.0, dy: 4.0)
-        if #available(iOS 14.0, *) {
-        } else {
-            rect.origin.y += 1.0
-        }
-        if !self.prefixWidth.isZero && self.scrollView?.superview == nil {
-            var offset = self.prefixWidth
-            if let scrollView = self.scrollView {
-                offset = scrollView.contentOffset.x * -1.0
+        if self.fixEditingRect {
+            if bounds.size.width.isZero {
+                return CGRect(origin: CGPoint(), size: CGSize())
             }
-            rect.origin.x += offset
-            rect.size.width -= offset
-         }
-        rect.size.width = max(rect.size.width, 10.0)
-        return rect
+            var rect = bounds.insetBy(dx: 0.0, dy: 4.0)
+            if #available(iOS 14.0, *) {
+            } else {
+                rect.origin.y += 1.0
+            }
+            if !self.prefixWidth.isZero && self.scrollView?.superview == nil {
+                var offset = self.prefixWidth
+                if let scrollView = self.scrollView {
+                    offset = scrollView.contentOffset.x * -1.0
+                }
+                rect.origin.x += offset
+                rect.size.width -= offset
+            }
+            rect.size.width = max(rect.size.width, 10.0)
+            return rect
+        } else {
+            return super.textRect(forBounds: bounds)
+        }
     }
     
+    var fixEditingRect = false
     override func editingRect(forBounds bounds: CGRect) -> CGRect {
-        return self.textRect(forBounds: bounds)
+        if self.fixEditingRect {
+            return self.textRect(forBounds: bounds)
+        } else {
+            return super.editingRect(forBounds: bounds)
+        }
     }
     
     override func layoutSubviews() {
@@ -196,12 +208,14 @@ private class TextField: UITextField, UIScrollViewDelegate {
         let textRect = self.textRect(forBounds: bounds)
 
         let labelSize = self.placeholderLabel.updateLayout(textRect.size)
-        self.placeholderLabel.frame = CGRect(origin: CGPoint(x: textRect.minX + 3.0, y: floorToScreenPixels((bounds.height - labelSize.height) / 2.0)), size: labelSize)
+        self.placeholderLabel.frame = CGRect(origin: CGPoint(x: textRect.minX + (self.fixEditingRect ? 3.0 : 0.0), y: floorToScreenPixels((bounds.height - labelSize.height) / 2.0)), size: labelSize)
         
         let prefixSize = self.prefixLabel.updateLayout(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
         let prefixBounds = bounds.insetBy(dx: 4.0, dy: 4.0)
         self.prefixLabel.frame = CGRect(origin: CGPoint(x: self.prefixPosition ?? prefixBounds.minX, y: floorToScreenPixels((bounds.height - prefixSize.height) / 2.0)), size: prefixSize)
-        self.updatePrefixWidth(prefixSize.width + 3.0)
+        if self.fixEditingRect {
+            self.updatePrefixWidth(prefixSize.width + 3.0)
+        }
     }
 }
 
@@ -276,7 +290,8 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
         self.textInputNode.autocorrectionType = .default
         self.textInputNode.tintColor = theme.actionSheet.controlAccentColor
         self.textInputNode.textColor = theme.actionSheet.inputTextColor
-                
+        self.textInputNode.fixEditingRect = hasClearButton
+        
         self.clearButton = HighlightableButtonNode()
         self.clearButton.imageNode.displaysAsynchronously = false
         self.clearButton.imageNode.displayWithoutProcessing = true
@@ -325,7 +340,7 @@ private final class ImportStickerPackTitleInputFieldNode: ASDisplayNode, UITextF
         let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top), size: CGSize(width: width - backgroundInsets.left - backgroundInsets.right, height: panelHeight - backgroundInsets.top - backgroundInsets.bottom))
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         
-        transition.updateFrame(view: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right - 22.0, height: backgroundFrame.size.height)))
+        transition.updateFrame(view: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right - (self.clearButton.supernode != nil ? 22.0 : 0.0), height: backgroundFrame.size.height)))
         
         if let image = self.clearButton.image(for: []) {
             transition.updateFrame(node: self.clearButton, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX - 8.0 - image.size.width, y: backgroundFrame.minY + floor((backgroundFrame.size.height - image.size.height) / 2.0)), size: image.size))

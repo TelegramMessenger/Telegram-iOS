@@ -395,7 +395,16 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     let arrowIsHidden = strongSelf.arrowNode.isHidden
+                    var hasCloseButton = false
                     if case .xmasPremiumGift = item.notice {
+                        hasCloseButton = true
+                    } else if case .setupBirthday = item.notice {
+                        hasCloseButton = true
+                    } else if case .birthdayPremiumGift = item.notice {
+                        hasCloseButton = true
+                    }
+                    
+                    if hasCloseButton {
                         strongSelf.arrowNode.isHidden = true
                         
                         let closeButton: HighlightableButtonNode

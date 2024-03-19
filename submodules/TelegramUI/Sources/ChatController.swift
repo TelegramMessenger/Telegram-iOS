@@ -11781,7 +11781,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 switch action {
                 case .info:
-                    let controller = context.sharedContext.makePremiumIntroController(context: self.context, source: .reactions, forceDark: false, dismissed: nil)
+                    let context = self.context
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .fasterDownload, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .fasterDownload, forceDark: false, dismissed: nil)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
                     self.push(controller)
                     return true
                 default:
