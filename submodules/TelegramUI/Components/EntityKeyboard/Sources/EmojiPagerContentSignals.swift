@@ -1828,6 +1828,7 @@ public extension EmojiPagerContentComponent {
                 }
             }
             
+            var addedCreateStickerButton = false
             if let recentStickers = recentStickers {
                 let groupId = "recent"
                 for item in recentStickers.items {
@@ -1861,7 +1862,7 @@ public extension EmojiPagerContentComponent {
                     }
                 }
                 
-                if !forceHasPremium, let groupIndex = itemGroupIndexById[groupId] {
+                if hasEdit && !addedCreateStickerButton, let groupIndex = itemGroupIndexById[groupId] {
                     let resultItem = EmojiPagerContentComponent.Item(
                         animationData: nil,
                         content: .icon(.add),
@@ -1871,6 +1872,7 @@ public extension EmojiPagerContentComponent {
                         tintMode: .none
                     )
                     itemGroups[groupIndex].items.insert(resultItem, at: 0)
+                    addedCreateStickerButton = true
                 }
             }
               
@@ -1879,6 +1881,7 @@ public extension EmojiPagerContentComponent {
                 avatarPeer = peerSpecificPack.peer
                 
                 var processedIds = Set<MediaId>()
+                let groupId = "peerSpecific"
                 for item in peerSpecificPack.items {
                     if isPremiumDisabled && item.file.isPremiumSticker {
                         continue
@@ -1903,13 +1906,25 @@ public extension EmojiPagerContentComponent {
                         tintMode: tintMode
                     )
                     
-                    let groupId = "peerSpecific"
                     if let groupIndex = itemGroupIndexById[groupId] {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
                         itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: peerSpecificPack.peer.compactDisplayTitle, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, hasEdit: false, headerItem: nil, items: [resultItem]))
                     }
+                }
+                
+                if hasEdit && !addedCreateStickerButton, let groupIndex = itemGroupIndexById[groupId] {
+                    let resultItem = EmojiPagerContentComponent.Item(
+                        animationData: nil,
+                        content: .icon(.add),
+                        itemFile: nil,
+                        subgroupId: nil,
+                        icon: .none,
+                        tintMode: .none
+                    )
+                    itemGroups[groupIndex].items.insert(resultItem, at: 0)
+                    addedCreateStickerButton = true
                 }
             }
             
@@ -1971,6 +1986,19 @@ public extension EmojiPagerContentComponent {
                         }
                     }
                     itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: title, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: true, hasEdit: hasEdit && groupHasEdit, headerItem: headerItem, items: [resultItem]))
+                    
+                    if hasEdit && !addedCreateStickerButton, let groupIndex = itemGroupIndexById[groupId] {
+                        let resultItem = EmojiPagerContentComponent.Item(
+                            animationData: nil,
+                            content: .icon(.add),
+                            itemFile: nil,
+                            subgroupId: nil,
+                            icon: .none,
+                            tintMode: .none
+                        )
+                        itemGroups[groupIndex].items.insert(resultItem, at: 0)
+                        addedCreateStickerButton = true
+                    }
                 }
             }
             

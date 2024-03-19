@@ -10,13 +10,13 @@ public enum CachedStickerPackResult {
 }
 
 func cacheStickerPack(transaction: Transaction, info: StickerPackCollectionInfo, items: [StickerPackItem], reference: StickerPackReference? = nil) {
-    if let entry = CodableEntry(CachedStickerPack(info: info, items: items, hash: info.hash)) {
-        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(info.id)), entry: entry)
-    }
-    if let entry = CodableEntry(CachedStickerPack(info: info, items: items, hash: info.hash)) {
-        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(shortName: info.shortName.lowercased())), entry: entry)
+    guard let entry = CodableEntry(CachedStickerPack(info: info, items: items, hash: info.hash)) else {
+        return
     }
     
+    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(info.id)), entry: entry)
+    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(shortName: info.shortName.lowercased())), entry: entry)
+        
     if let reference = reference {
         var namespace: Int32?
         var id: ItemCollectionId.Id?
@@ -57,9 +57,7 @@ func cacheStickerPack(transaction: Transaction, info: StickerPackCollectionInfo,
                 id = info.id.id
         }
         if let namespace = namespace, let id = id {
-            if let entry = CodableEntry(CachedStickerPack(info: info, items: items, hash: info.hash)) {
-                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id))), entry: entry)
-            }
+            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id))), entry: entry)
         }
     }
 }

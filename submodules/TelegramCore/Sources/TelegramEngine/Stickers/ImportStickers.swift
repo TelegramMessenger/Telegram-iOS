@@ -270,6 +270,11 @@ func _internal_deleteStickerSet(account: Account, packReference: StickerPackRefe
     }
     |> mapToSignal { _ in
         return account.postbox.transaction { transaction in
+            if let (info, _, _) = cachedStickerPack(transaction: transaction, reference: packReference) {
+                transaction.removeItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(info.id)))
+                transaction.removeItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(shortName: info.shortName.lowercased())))
+            }
+            
             if case let .id(id, _) = packReference {
                 transaction.removeItemCollection(collectionId: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id))
             }

@@ -1149,7 +1149,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         return
                     }
                     guard let file = item.itemFile else {
-                        if groupId == AnyHashable("recent"), case .icon(.add) = item.content {
+                        if case .icon(.add) = item.content {
                             interaction.openStickerEditor()
                         }
                         return
