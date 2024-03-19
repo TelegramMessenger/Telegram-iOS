@@ -4165,14 +4165,14 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
             if isContact {
                 return (strings.ChatList_PeerTypeContact, false, false, nil)
             } else {
-                return (strings.ChatList_PeerTypeNonContact, false, false, nil)
+                return (strings.ChatList_PeerTypeNonContactUser, false, false, nil)
             }
         }
     } else if case .secretChat = peer {
         if isContact {
             return (strings.ChatList_PeerTypeContact, false, false, nil)
         } else {
-            return (strings.ChatList_PeerTypeNonContact, false, false, nil)
+            return (strings.ChatList_PeerTypeNonContactUser, false, false, nil)
         }
     } else if case .legacyGroup = peer {
         return (strings.ChatList_PeerTypeGroup, false, false, nil)
@@ -4183,7 +4183,7 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
             return (strings.ChatList_PeerTypeChannel, false, false, nil)
         }
     }
-    return (strings.ChatList_PeerTypeNonContact, false, false, nil)
+    return (strings.ChatList_PeerTypeNonContactUser, false, false, nil)
 }
 
 public class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {

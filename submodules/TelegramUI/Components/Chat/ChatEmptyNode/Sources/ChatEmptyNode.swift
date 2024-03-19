@@ -1175,6 +1175,250 @@ private enum ChatEmptyNodeContentType: Equatable {
     case premiumRequired
 }
 
+private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
+    private struct Params: Equatable {
+        var theme: PresentationTheme
+        var strings: PresentationStrings
+        var chatWallpaper: TelegramWallpaper
+        var peer: EnginePeer
+        var constrainedSize: CGSize
+        
+        init(theme: PresentationTheme, strings: PresentationStrings, chatWallpaper: TelegramWallpaper, peer: EnginePeer, constrainedSize: CGSize) {
+            self.theme = theme
+            self.strings = strings
+            self.chatWallpaper = chatWallpaper
+            self.peer = peer
+            self.constrainedSize = constrainedSize
+        }
+        
+        static func ==(lhs: Params, rhs: Params) -> Bool {
+            if lhs.theme !== rhs.theme {
+                return false
+            }
+            if lhs.strings !== rhs.strings {
+                return false
+            }
+            if lhs.chatWallpaper != rhs.chatWallpaper {
+                return false
+            }
+            if lhs.constrainedSize != rhs.constrainedSize {
+                return false
+            }
+            return true
+        }
+    }
+    
+    private struct Layout {
+        var params: Params
+        var size: CGSize
+        
+        init(params: Params, size: CGSize) {
+            self.params = params
+            self.size = size
+        }
+    }
+    
+    private let textNode: ImmediateTextNode
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
+    private let textMaskNode: LinkHighlightingNode
+    
+    private let badgeTextNode: ImmediateTextNode
+    private let badgeBackgroundView: UIImageView
+    
+    private var currentLayout: Layout?
+    
+    var action: (() -> Void)?
+    
+    override init(pointerStyle: PointerStyle? = nil) {
+        self.textNode = ImmediateTextNode()
+        self.textNode.textAlignment = .center
+        self.textNode.maximumNumberOfLines = 0
+        
+        self.textMaskNode = LinkHighlightingNode(color: .white)
+        self.textMaskNode.innerRadius = 5.0
+        self.textMaskNode.outerRadius = 10.0
+        self.textMaskNode.inset = 0.0
+        
+        self.badgeTextNode = ImmediateTextNode()
+        self.badgeBackgroundView = UIImageView()
+        
+        super.init(pointerStyle: pointerStyle)
+        
+        self.addSubnode(self.textNode)
+        
+        self.view.addSubview(self.badgeBackgroundView)
+        self.addSubnode(self.badgeTextNode)
+        
+        self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
+        
+        self.highligthedChanged = { [weak self] highlighted in
+            if let self, self.bounds.width > 0.0 {
+                let animateScale = true
+                
+                let topScale: CGFloat = (self.bounds.width - 8.0) / self.bounds.width
+                let maxScale: CGFloat = (self.bounds.width + 2.0) / self.bounds.width
+                
+                if highlighted {
+                    self.layer.removeAnimation(forKey: "transform.scale")
+                    
+                    if animateScale {
+                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                        transition.setScale(layer: self.layer, scale: topScale)
+                    }
+                } else {
+                    if animateScale {
+                        let transition = Transition(animation: .none)
+                        transition.setScale(layer: self.layer, scale: 1.0)
+                        
+                        self.layer.animateScale(from: topScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            
+                            self.layer.animateScale(from: maxScale, to: 1.0, duration: 0.1, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue)
+                        })
+                    }
+                }
+            }
+        }
+    }
+    
+    @objc private func pressed() {
+        self.action?()
+    }
+    
+    func update(
+        theme: PresentationTheme,
+        strings: PresentationStrings,
+        chatWallpaper: TelegramWallpaper,
+        peer: EnginePeer,
+        wallpaperBackgroundNode: WallpaperBackgroundNode?,
+        constrainedSize: CGSize
+    ) -> CGSize {
+        let params = Params(
+            theme: theme,
+            strings: strings,
+            chatWallpaper: chatWallpaper,
+            peer: peer,
+            constrainedSize: constrainedSize
+        )
+        if let currentLayout = self.currentLayout, currentLayout.params == params {
+            return currentLayout.size
+        } else {
+            let size = self.updateInternal(params: params, wallpaperBackgroundNode: wallpaperBackgroundNode)
+            self.currentLayout = Layout(params: params, size: size)
+            return size
+        }
+    }
+    
+    private func updateInternal(params: Params, wallpaperBackgroundNode: WallpaperBackgroundNode?) -> CGSize {
+        let serviceColor = serviceMessageColorComponents(theme: params.theme, wallpaper: params.chatWallpaper)
+        
+        //TODO:localize
+        let textString = NSMutableAttributedString()
+        textString.append(NSAttributedString(string: "\(params.peer.compactDisplayTitle) added the message above for all empty chats", font: Font.regular(13.0), textColor: serviceColor.primaryText))
+        textString.append(NSAttributedString(string: "  .how?", font: Font.regular(11.0), textColor: .clear))
+        self.textNode.attributedText = textString
+        
+        let maxTextSize = CGSize(width: min(300.0, params.constrainedSize.width - 8.0 * 2.0), height: params.constrainedSize.height - 8.0 * 2.0)
+        
+        var bestSize: (availableWidth: CGFloat, info: TextNodeLayout)
+        let info = self.textNode.updateLayoutFullInfo(maxTextSize)
+        bestSize = (maxTextSize.width, info)
+        if info.numberOfLines > 1 {
+            let measureIncrement = 8.0
+            var measureWidth = info.size.width
+            measureWidth -= measureIncrement
+            while measureWidth > 0.0 {
+                let otherInfo = self.textNode.updateLayoutFullInfo(CGSize(width: measureWidth, height: maxTextSize.height))
+                if otherInfo.numberOfLines > bestSize.info.numberOfLines {
+                    break
+                }
+                if (otherInfo.size.width - otherInfo.trailingLineWidth) < (bestSize.info.size.width - bestSize.info.trailingLineWidth) {
+                    bestSize = (measureWidth, otherInfo)
+                }
+                
+                measureWidth -= measureIncrement
+            }
+            
+            let bestInfo = self.textNode.updateLayoutFullInfo(CGSize(width: bestSize.availableWidth, height: maxTextSize.height))
+            bestSize = (maxTextSize.width, bestInfo)
+        }
+        
+        let textLayout = bestSize.info
+        
+        var labelRects = textLayout.linesRects()
+        if labelRects.count > 1 {
+            let sortedIndices = (0 ..< labelRects.count).sorted(by: { labelRects[$0].width > labelRects[$1].width })
+            for i in 0 ..< sortedIndices.count {
+                let index = sortedIndices[i]
+                for j in -1 ... 1 {
+                    if j != 0 && index + j >= 0 && index + j < sortedIndices.count {
+                        if abs(labelRects[index + j].width - labelRects[index].width) < 16.0 {
+                            labelRects[index + j].size.width = max(labelRects[index + j].width, labelRects[index].width)
+                            labelRects[index].size.width = labelRects[index + j].size.width
+                        }
+                    }
+                }
+            }
+        }
+        for i in 0 ..< labelRects.count {
+            labelRects[i] = labelRects[i].insetBy(dx: -6.0, dy: floor((labelRects[i].height - 20.0) / 2.0))
+            labelRects[i].size.height = 20.0
+            labelRects[i].origin.x = floor((textLayout.size.width - labelRects[i].width) / 2.0)
+        }
+        self.textMaskNode.updateRects(labelRects)
+        
+        let size = CGSize(width: textLayout.size.width + 4.0 * 2.0, height: textLayout.size.height + 4.0 * 2.0)
+        let textFrame = CGRect(origin: CGPoint(x: 4.0, y: 4.0), size: textLayout.size)
+        self.textNode.frame = textFrame
+        
+        //TODO:localize
+        self.badgeTextNode.attributedText = NSAttributedString(string: "how?", font: Font.regular(11.0), textColor: serviceColor.primaryText)
+        let badgeTextSize = self.badgeTextNode.updateLayout(CGSize(width: 200.0, height: 100.0))
+        if let lastLineFrame = labelRects.last {
+            let badgeTextFrame = CGRect(origin: CGPoint(x: lastLineFrame.maxX - badgeTextSize.width - 2.0, y: textFrame.maxY - badgeTextSize.height), size: badgeTextSize)
+            self.badgeTextNode.frame = badgeTextFrame
+            
+            let badgeBackgroundFrame = badgeTextFrame.insetBy(dx: -4.0, dy: -1.0)
+            if badgeBackgroundFrame.height != self.badgeBackgroundView.image?.size.height {
+                self.badgeBackgroundView.image = generateStretchableFilledCircleImage(diameter: badgeBackgroundFrame.height, color: serviceColor.primaryText.withMultipliedAlpha(0.1))
+            }
+            self.badgeBackgroundView.frame = badgeBackgroundFrame
+        }
+        
+        self.textMaskNode.frame = CGRect(origin: CGPoint(x: textFrame.minX - self.textMaskNode.inset + 4.0, y: textFrame.minY - self.textMaskNode.inset - 11.0), size: CGSize())
+        
+        if let wallpaperBackgroundNode {
+            if self.backgroundContent == nil, let backgroundContent = wallpaperBackgroundNode.makeBubbleBackground(for: .free) {
+
+                self.backgroundContent = backgroundContent
+                backgroundContent.view.mask = self.textMaskNode.view
+                self.insertSubnode(backgroundContent, at: 0)
+            }
+            
+            if let backgroundContent = self.backgroundContent {
+                backgroundContent.frame = CGRect(origin: CGPoint(x: -4.0, y: 0.0), size: CGSize(width: size.width + 4.0 * 2.0, height: size.height))
+            }
+        } else if let backgroundContent = self.backgroundContent {
+            self.backgroundContent = nil
+            backgroundContent.removeFromSupernode()
+        }
+        
+        return size
+    }
+    
+    func updateAbsolutePosition(rect: CGRect, containerSize: CGSize, transition: ContainedViewLayoutTransition) {
+        guard let backgroundContent = self.backgroundContent else {
+            return
+        }
+        var backgroundFrame = backgroundContent.frame
+        backgroundFrame.origin.x += rect.minX
+        backgroundFrame.origin.y += rect.minY
+        backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
+    }
+}
+
 public final class ChatEmptyNode: ASDisplayNode {
     public enum Subject {
         public enum EmptyType: Equatable {
@@ -1203,6 +1447,7 @@ public final class ChatEmptyNode: ASDisplayNode {
     private var currentStrings: PresentationStrings?
     
     private var content: (ChatEmptyNodeContentType, ASDisplayNode & ChatEmptyNodeContent)?
+    private var attachedDescriptionNode: EmptyAttachedDescriptionNode?
     
     public init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
         self.context = context
@@ -1247,6 +1492,12 @@ public final class ChatEmptyNode: ASDisplayNode {
             backgroundContent.cornerRadius = initialFrame.size.width / 2.0
             transition.updateCornerRadius(layer: backgroundContent.layer, cornerRadius: targetCornerRadius)
         }
+        
+        if let attachedDescriptionNode = self.attachedDescriptionNode {
+            attachedDescriptionNode.layer.animatePosition(from: initialFrame.center, to: attachedDescriptionNode.position, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+            attachedDescriptionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            attachedDescriptionNode.layer.animateScale(from: 0.001, to: 1.0, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+        }
     }
     
     public func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: Subject, loadingNode: ChatLoadingNode?, backgroundNode: WallpaperBackgroundNode?, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
@@ -1265,6 +1516,7 @@ public final class ChatEmptyNode: ASDisplayNode {
         }
         
         let contentType: ChatEmptyNodeContentType
+        var displayAttachedDescription = false
         switch subject {
         case .detailsPlaceholder:
             contentType = .regular
@@ -1298,6 +1550,9 @@ public final class ChatEmptyNode: ASDisplayNode {
                             contentType = .regular
                         } else {
                             contentType = .greeting
+                            if interfaceState.businessIntro != nil {
+                                displayAttachedDescription = true
+                            }
                         }
                     }
                 } else {
@@ -1368,6 +1623,46 @@ public final class ChatEmptyNode: ASDisplayNode {
         transition.updateFrame(node: self.backgroundNode, frame: contentFrame)
         self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(20.0, self.backgroundNode.bounds.height / 2.0), transition: transition)
         
+        if displayAttachedDescription, let peer = interfaceState.renderedPeer?.chatMainPeer {
+            let attachedDescriptionNode: EmptyAttachedDescriptionNode
+            if let current = self.attachedDescriptionNode {
+                attachedDescriptionNode = current
+            } else {
+                attachedDescriptionNode = EmptyAttachedDescriptionNode()
+                self.attachedDescriptionNode = attachedDescriptionNode
+                self.addSubnode(attachedDescriptionNode)
+                
+                attachedDescriptionNode.action = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .settings, forceDark: false, dismissed: nil)
+                    self.interaction?.chatController()?.push(controller)
+                }
+            }
+            
+            let attachedDescriptionSize = attachedDescriptionNode.update(
+                theme: interfaceState.theme,
+                strings: interfaceState.strings,
+                chatWallpaper: interfaceState.chatWallpaper,
+                peer: EnginePeer(peer),
+                wallpaperBackgroundNode: backgroundNode,
+                constrainedSize: CGSize(width: size.width - insets.left - insets.right, height: 200.0)
+            )
+            let attachedDescriptionFrame = CGRect(origin: CGPoint(x: floor((size.width - attachedDescriptionSize.width) * 0.5), y: contentFrame.maxY + 4.0), size: attachedDescriptionSize)
+            transition.updateFrame(node: attachedDescriptionNode, frame: attachedDescriptionFrame)
+            
+            if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = attachedDescriptionNode.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += rect.minY
+                attachedDescriptionNode.updateAbsolutePosition(rect: backgroundFrame, containerSize: containerSize, transition: .immediate)
+            }
+        } else if let attachedDescriptionNode = self.attachedDescriptionNode {
+            self.attachedDescriptionNode = nil
+            attachedDescriptionNode.removeFromSupernode()
+        }
+    
         if backgroundNode?.hasExtraBubbleBackground() == true {
             if self.backgroundContent == nil, let backgroundContent = backgroundNode?.makeBubbleBackground(for: .free) {
                 backgroundContent.clipsToBounds = true
@@ -1408,6 +1703,13 @@ public final class ChatEmptyNode: ASDisplayNode {
             backgroundFrame.origin.x += rect.minX
             backgroundFrame.origin.y += rect.minY
             backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
+        }
+        
+        if let attachedDescriptionNode = self.attachedDescriptionNode {
+            var backgroundFrame = attachedDescriptionNode.frame
+            backgroundFrame.origin.x += rect.minX
+            backgroundFrame.origin.y += rect.minY
+            attachedDescriptionNode.updateAbsolutePosition(rect: backgroundFrame, containerSize: containerSize, transition: transition)
         }
     }
 }

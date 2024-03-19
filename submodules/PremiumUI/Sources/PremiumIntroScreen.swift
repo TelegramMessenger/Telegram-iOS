@@ -633,7 +633,7 @@ public enum PremiumPerk: CaseIterable {
         case .businessAwayMessage:
             return strings.Business_AwayMessages
         case .businessChatBots:
-            return strings.Business_Chatbots
+            return strings.Business_ChatbotsItem
         case .businessIntro:
             return strings.Business_Intro
         }

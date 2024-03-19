@@ -91,10 +91,11 @@ private final class SendInviteLinkScreenComponent: Component {
         private var premiumSeparatorRight: SimpleLayer?
         private var premiumSeparatorText: ComponentView<Empty>?
         
-        private let title = ComponentView<Empty>()
         private let leftButton = ComponentView<Empty>()
-        private let descriptionText = ComponentView<Empty>()
-        private let actionButton = ComponentView<Empty>()
+        
+        private var title: ComponentView<Empty>?
+        private var descriptionText: ComponentView<Empty>?
+        private var actionButton: ComponentView<Empty>?
         
         private let itemContainerView: UIView
         private var items: [AnyHashable: ComponentView<Empty>] = [:]
@@ -242,7 +243,7 @@ private final class SendInviteLinkScreenComponent: Component {
             self.scrollContentClippingView.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             self.backgroundLayer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             self.navigationBarContainer.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-            if let actionButtonView = self.actionButton.view {
+            if let actionButtonView = self.actionButton?.view {
                 actionButtonView.layer.animatePosition(from: CGPoint(x: 0.0, y: animateOffset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             }
         }
@@ -256,7 +257,7 @@ private final class SendInviteLinkScreenComponent: Component {
             })
             self.backgroundLayer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
             self.navigationBarContainer.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
-            if let actionButtonView = self.actionButton.view {
+            if let actionButtonView = self.actionButton?.view {
                 actionButtonView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
             }
         }
@@ -280,6 +281,7 @@ private final class SendInviteLinkScreenComponent: Component {
             self.environment = environment
             
             let hasPremiumRestrictedUsers = "".isEmpty
+            let hasInviteLink = "".isEmpty
             
             if themeUpdated {
                 self.dimView.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
@@ -372,35 +374,6 @@ private final class SendInviteLinkScreenComponent: Component {
                     premiumButton = ComponentView()
                     self.premiumButton = premiumButton
                 }
-                
-                let premiumSeparatorText: ComponentView<Empty>
-                if let current = self.premiumSeparatorText {
-                    premiumSeparatorText = current
-                } else {
-                    premiumSeparatorText = ComponentView()
-                    self.premiumSeparatorText = premiumSeparatorText
-                }
-                
-                let premiumSeparatorLeft: SimpleLayer
-                if let current = self.premiumSeparatorLeft {
-                    premiumSeparatorLeft = current
-                } else {
-                    premiumSeparatorLeft = SimpleLayer()
-                    self.premiumSeparatorLeft = premiumSeparatorLeft
-                    self.scrollContentView.layer.addSublayer(premiumSeparatorLeft)
-                }
-                
-                let premiumSeparatorRight: SimpleLayer
-                if let current = self.premiumSeparatorRight {
-                    premiumSeparatorRight = current
-                } else {
-                    premiumSeparatorRight = SimpleLayer()
-                    self.premiumSeparatorRight = premiumSeparatorRight
-                    self.scrollContentView.layer.addSublayer(premiumSeparatorRight)
-                }
-                
-                premiumSeparatorLeft.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
-                premiumSeparatorRight.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
                 
                 //TODO:localize
                 let premiumTitleSize = premiumTitle.update(
@@ -531,31 +504,78 @@ private final class SendInviteLinkScreenComponent: Component {
                     transition.setFrame(view: premiumButtonView, frame: premiumButtonFrame)
                 }
                 contentHeight += premiumButtonSize.height
-                contentHeight += 19.0
                 
-                let premiumSeparatorTextSize = premiumSeparatorText.update(
-                    transition: .immediate,
-                    component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "or", font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor))
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
-                )
-                let premiumSeparatorTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - premiumSeparatorTextSize.width) * 0.5), y: contentHeight), size: premiumSeparatorTextSize)
-                if let premiumSeparatorTextView = premiumSeparatorText.view {
-                    if premiumSeparatorTextView.superview == nil {
-                        self.scrollContentView.addSubview(premiumSeparatorTextView)
+                if hasInviteLink {
+                    let premiumSeparatorText: ComponentView<Empty>
+                    if let current = self.premiumSeparatorText {
+                        premiumSeparatorText = current
+                    } else {
+                        premiumSeparatorText = ComponentView()
+                        self.premiumSeparatorText = premiumSeparatorText
                     }
-                    transition.setFrame(view: premiumSeparatorTextView, frame: premiumSeparatorTextFrame)
+                    
+                    let premiumSeparatorLeft: SimpleLayer
+                    if let current = self.premiumSeparatorLeft {
+                        premiumSeparatorLeft = current
+                    } else {
+                        premiumSeparatorLeft = SimpleLayer()
+                        self.premiumSeparatorLeft = premiumSeparatorLeft
+                        self.scrollContentView.layer.addSublayer(premiumSeparatorLeft)
+                    }
+                    
+                    let premiumSeparatorRight: SimpleLayer
+                    if let current = self.premiumSeparatorRight {
+                        premiumSeparatorRight = current
+                    } else {
+                        premiumSeparatorRight = SimpleLayer()
+                        self.premiumSeparatorRight = premiumSeparatorRight
+                        self.scrollContentView.layer.addSublayer(premiumSeparatorRight)
+                    }
+                    
+                    premiumSeparatorLeft.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
+                    premiumSeparatorRight.backgroundColor = environment.theme.list.itemPlainSeparatorColor.cgColor
+                    
+                    contentHeight += 19.0
+                    
+                    let premiumSeparatorTextSize = premiumSeparatorText.update(
+                        transition: .immediate,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: "or", font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor))
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
+                    )
+                    let premiumSeparatorTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - premiumSeparatorTextSize.width) * 0.5), y: contentHeight), size: premiumSeparatorTextSize)
+                    if let premiumSeparatorTextView = premiumSeparatorText.view {
+                        if premiumSeparatorTextView.superview == nil {
+                            self.scrollContentView.addSubview(premiumSeparatorTextView)
+                        }
+                        transition.setFrame(view: premiumSeparatorTextView, frame: premiumSeparatorTextFrame)
+                    }
+                    
+                    let separatorWidth: CGFloat = 72.0
+                    let separatorSpacing: CGFloat = 10.0
+                    
+                    transition.setFrame(layer: premiumSeparatorLeft, frame: CGRect(origin: CGPoint(x: premiumSeparatorTextFrame.minX - separatorSpacing - separatorWidth, y: premiumSeparatorTextFrame.midY + 1.0), size: CGSize(width: separatorWidth, height: UIScreenPixel)))
+                    transition.setFrame(layer: premiumSeparatorRight, frame: CGRect(origin: CGPoint(x: premiumSeparatorTextFrame.maxX + separatorSpacing, y: premiumSeparatorTextFrame.midY + 1.0), size: CGSize(width: separatorWidth, height: UIScreenPixel)))
+                    
+                    contentHeight += 31.0
+                } else {
+                    if let premiumSeparatorLeft = self.premiumSeparatorLeft {
+                        self.premiumSeparatorLeft = nil
+                        premiumSeparatorLeft.removeFromSuperlayer()
+                    }
+                    if let premiumSeparatorRight = self.premiumSeparatorRight {
+                        self.premiumSeparatorRight = nil
+                        premiumSeparatorRight.removeFromSuperlayer()
+                    }
+                    if let premiumSeparatorText = self.premiumSeparatorText {
+                        self.premiumSeparatorText = nil
+                        premiumSeparatorText.view?.removeFromSuperview()
+                    }
+                    
+                    contentHeight += 14.0
                 }
-                
-                let separatorWidth: CGFloat = 72.0
-                let separatorSpacing: CGFloat = 10.0
-                
-                transition.setFrame(layer: premiumSeparatorLeft, frame: CGRect(origin: CGPoint(x: premiumSeparatorTextFrame.minX - separatorSpacing - separatorWidth, y: premiumSeparatorTextFrame.midY + 1.0), size: CGSize(width: separatorWidth, height: UIScreenPixel)))
-                transition.setFrame(layer: premiumSeparatorRight, frame: CGRect(origin: CGPoint(x: premiumSeparatorTextFrame.maxX + separatorSpacing, y: premiumSeparatorTextFrame.midY + 1.0), size: CGSize(width: separatorWidth, height: UIScreenPixel)))
-                
-                contentHeight += 31.0
             } else {
                 if let premiumTitle = self.premiumTitle {
                     self.premiumTitle = nil
@@ -569,241 +589,278 @@ private final class SendInviteLinkScreenComponent: Component {
                     self.premiumButton = nil
                     premiumButton.view?.removeFromSuperview()
                 }
-                if let premiumSeparatorLeft = self.premiumSeparatorLeft {
-                    self.premiumSeparatorLeft = nil
-                    premiumSeparatorLeft.removeFromSuperlayer()
-                }
-                if let premiumSeparatorRight = self.premiumSeparatorRight {
-                    self.premiumSeparatorRight = nil
-                    premiumSeparatorRight.removeFromSuperlayer()
-                }
-                if let premiumSeparatorText = self.premiumSeparatorText {
-                    self.premiumSeparatorText = nil
-                    premiumSeparatorText.view?.removeFromSuperview()
-                }
             }
-            
-            let titleSize = self.title.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.link != nil ? environment.strings.SendInviteLink_InviteTitle : environment.strings.SendInviteLink_LinkUnavailableTitle, font: Font.semibold(24.0), textColor: environment.theme.list.itemPrimaryTextColor))
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
-            )
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: contentHeight), size: titleSize)
-            if let titleView = self.title.view {
-                if titleView.superview == nil {
-                    self.scrollContentView.addSubview(titleView)
-                }
-                transition.setFrame(view: titleView, frame: titleFrame)
-            }
-            
-            contentHeight += titleSize.height
-            contentHeight += 8.0
-            
-            let text: String
-            if hasPremiumRestrictedUsers {
-                if component.link != nil {
-                    //TODO:localize
-                    text = "You can try to send an invite link instead."
-                } else {
-                    if component.peers.count == 1 {
-                        text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
-                    } else {
-                        text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
-                    }
-                }
-            } else {
-                if component.link != nil {
-                    if component.peers.count == 1 {
-                        text = environment.strings.SendInviteLink_TextAvailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
-                    } else {
-                        text = environment.strings.SendInviteLink_TextAvailableMultipleUsers(Int32(component.peers.count))
-                    }
-                } else {
-                    if component.peers.count == 1 {
-                        text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
-                    } else {
-                        text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
-                    }
-                }
-            }
-            
-            let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
-            let bold = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
-            
-            let descriptionTextSize = self.descriptionText.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .markdown(text: text, attributes: MarkdownAttributes(
-                        body: body,
-                        bold: bold,
-                        link: body,
-                        linkAttribute: { _ in nil }
-                    )),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 0
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 16.0 * 2.0, height: 1000.0)
-            )
-            let descriptionTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - descriptionTextSize.width) * 0.5), y: contentHeight), size: descriptionTextSize)
-            if let descriptionTextView = self.descriptionText.view {
-                if descriptionTextView.superview == nil {
-                    self.scrollContentView.addSubview(descriptionTextView)
-                }
-                transition.setFrame(view: descriptionTextView, frame: descriptionTextFrame)
-            }
-            
-            contentHeight += descriptionTextFrame.height
-            contentHeight += 22.0
-            
-            var singleItemHeight: CGFloat = 0.0
-            
-            var itemsHeight: CGFloat = 0.0
-            var validIds: [AnyHashable] = []
-            for i in 0 ..< component.peers.count {
-                let peer = component.peers[i]
-                
-                for _ in 0 ..< 1 {
-                    //let id: AnyHashable = AnyHashable("\(peer.id)_\(j)")
-                    let id = AnyHashable(peer.id)
-                    validIds.append(id)
-                    
-                    let item: ComponentView<Empty>
-                    var itemTransition = transition
-                    if let current = self.items[id] {
-                        item = current
-                    } else {
-                        itemTransition = .immediate
-                        item = ComponentView()
-                        self.items[id] = item
-                    }
-                    
-                    let itemSize = item.update(
-                        transition: itemTransition,
-                        component: AnyComponent(PeerListItemComponent(
-                            context: component.context,
-                            theme: environment.theme,
-                            strings: environment.strings,
-                            sideInset: 0.0,
-                            title: peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
-                            peer: peer,
-                            presence: component.peerPresences[peer.id],
-                            selectionState: component.link == nil ? .none : .editing(isSelected: self.selectedItems.contains(peer.id)),
-                            hasNext: i != component.peers.count - 1,
-                            action: { [weak self] peer in
-                                guard let self else {
-                                    return
-                                }
-                                if self.selectedItems.contains(peer.id) {
-                                    self.selectedItems.remove(peer.id)
-                                } else {
-                                    self.selectedItems.insert(peer.id)
-                                }
-                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
-                            }
-                        )),
-                        environment: {},
-                        containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
-                    )
-                    let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: itemsHeight), size: itemSize)
-                    
-                    if let itemView = item.view {
-                        if itemView.superview == nil {
-                            self.itemContainerView.addSubview(itemView)
-                        }
-                        itemTransition.setFrame(view: itemView, frame: itemFrame)
-                    }
-                    
-                    itemsHeight += itemSize.height
-                    singleItemHeight = itemSize.height
-                }
-            }
-            var removeIds: [AnyHashable] = []
-            for (id, item) in self.items {
-                if !validIds.contains(id) {
-                    removeIds.append(id)
-                    item.view?.removeFromSuperview()
-                }
-            }
-            for id in removeIds {
-                self.items.removeValue(forKey: id)
-            }
-            transition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: itemsHeight)))
-            
-            var initialContentHeight = contentHeight
-            initialContentHeight += min(itemsHeight, floor(singleItemHeight * 2.5))
-            
-            contentHeight += itemsHeight
-            contentHeight += 24.0
-            initialContentHeight += 24.0
-            
-            let actionButtonTitle: String
-            if component.link != nil {
-                actionButtonTitle = self.selectedItems.isEmpty ? environment.strings.SendInviteLink_ActionSkip : environment.strings.SendInviteLink_ActionInvite
-            } else {
-                actionButtonTitle = environment.strings.SendInviteLink_ActionClose
-            }
-            let actionButtonSize = self.actionButton.update(
-                transition: transition,
-                component: AnyComponent(SolidRoundedButtonComponent(
-                    title: actionButtonTitle,
-                    badge: (self.selectedItems.isEmpty || component.link == nil) ? nil : "\(self.selectedItems.count)",
-                    theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
-                    font: .bold,
-                    fontSize: 17.0,
-                    height: 50.0,
-                    cornerRadius: 11.0,
-                    gloss: false,
-                    animationName: nil,
-                    iconPosition: .right,
-                    iconSpacing: 4.0,
-                    action: { [weak self] in
-                        guard let self, let component = self.component, let controller = self.environment?.controller() else {
-                            return
-                        }
-                        if self.selectedItems.isEmpty {
-                            controller.dismiss()
-                        } else if let link = component.link {
-                            let selectedPeers = component.peers.filter { self.selectedItems.contains($0.id) }
-                            
-                            let _ = enqueueMessagesToMultiplePeers(account: component.context.account, peerIds: Array(self.selectedItems), threadIds: [:], messages: [.message(text: link, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
-                            let text: String
-                            if selectedPeers.count == 1 {
-                                text = environment.strings.Conversation_ShareLinkTooltip_Chat_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
-                            } else if selectedPeers.count == 2 {
-                                text = environment.strings.Conversation_ShareLinkTooltip_TwoChats_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), selectedPeers[1].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
-                            } else {
-                                text = environment.strings.Conversation_ShareLinkTooltip_ManyChats_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), "\(selectedPeers.count - 1)").string
-                            }
-                            
-                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                            controller.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: false, text: text), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
-                            
-                            controller.dismiss()
-                        } else {
-                            controller.dismiss()
-                        }
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
-            )
-            let bottomPanelHeight = 15.0 + environment.safeInsets.bottom + actionButtonSize.height
-            let actionButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
-            if let actionButtonView = self.actionButton.view {
-                if actionButtonView.superview == nil {
-                    self.addSubview(actionButtonView)
-                }
-                transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
-            }
-            
-            contentHeight += bottomPanelHeight
-            initialContentHeight += bottomPanelHeight
             
             let containerInset: CGFloat = environment.statusBarHeight + 10.0
+            
+            var initialContentHeight = contentHeight
+            let clippingY: CGFloat
+            
+            if hasInviteLink {
+                let title: ComponentView<Empty>
+                if let current = self.title {
+                    title = current
+                } else {
+                    title = ComponentView()
+                    self.title = title
+                }
+                
+                let descriptionText: ComponentView<Empty>
+                if let current = self.descriptionText {
+                    descriptionText = current
+                } else {
+                    descriptionText = ComponentView()
+                    self.descriptionText = descriptionText
+                }
+                
+                let actionButton: ComponentView<Empty>
+                if let current = self.actionButton {
+                    actionButton = current
+                } else {
+                    actionButton = ComponentView()
+                    self.actionButton = actionButton
+                }
+                
+                let titleSize = title.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: component.link != nil ? environment.strings.SendInviteLink_InviteTitle : environment.strings.SendInviteLink_LinkUnavailableTitle, font: Font.semibold(24.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
+                )
+                let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: contentHeight), size: titleSize)
+                if let titleView = title.view {
+                    if titleView.superview == nil {
+                        self.scrollContentView.addSubview(titleView)
+                    }
+                    transition.setFrame(view: titleView, frame: titleFrame)
+                }
+                
+                contentHeight += titleSize.height
+                contentHeight += 8.0
+                
+                let text: String
+                if hasPremiumRestrictedUsers {
+                    if component.link != nil {
+                        //TODO:localize
+                        text = "You can try to send an invite link instead."
+                    } else {
+                        if component.peers.count == 1 {
+                            text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                        } else {
+                            text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
+                        }
+                    }
+                } else {
+                    if component.link != nil {
+                        if component.peers.count == 1 {
+                            text = environment.strings.SendInviteLink_TextAvailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                        } else {
+                            text = environment.strings.SendInviteLink_TextAvailableMultipleUsers(Int32(component.peers.count))
+                        }
+                    } else {
+                        if component.peers.count == 1 {
+                            text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                        } else {
+                            text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
+                        }
+                    }
+                }
+                
+                let body = MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
+                let bold = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.itemPrimaryTextColor)
+                
+                let descriptionTextSize = descriptionText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .markdown(text: text, attributes: MarkdownAttributes(
+                            body: body,
+                            bold: bold,
+                            link: body,
+                            linkAttribute: { _ in nil }
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 16.0 * 2.0, height: 1000.0)
+                )
+                let descriptionTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - descriptionTextSize.width) * 0.5), y: contentHeight), size: descriptionTextSize)
+                if let descriptionTextView = descriptionText.view {
+                    if descriptionTextView.superview == nil {
+                        self.scrollContentView.addSubview(descriptionTextView)
+                    }
+                    transition.setFrame(view: descriptionTextView, frame: descriptionTextFrame)
+                }
+                
+                contentHeight += descriptionTextFrame.height
+                contentHeight += 22.0
+                
+                var singleItemHeight: CGFloat = 0.0
+                
+                var itemsHeight: CGFloat = 0.0
+                var validIds: [AnyHashable] = []
+                for i in 0 ..< component.peers.count {
+                    let peer = component.peers[i]
+                    
+                    for _ in 0 ..< 1 {
+                        //let id: AnyHashable = AnyHashable("\(peer.id)_\(j)")
+                        let id = AnyHashable(peer.id)
+                        validIds.append(id)
+                        
+                        let item: ComponentView<Empty>
+                        var itemTransition = transition
+                        if let current = self.items[id] {
+                            item = current
+                        } else {
+                            itemTransition = .immediate
+                            item = ComponentView()
+                            self.items[id] = item
+                        }
+                        
+                        let itemSize = item.update(
+                            transition: itemTransition,
+                            component: AnyComponent(PeerListItemComponent(
+                                context: component.context,
+                                theme: environment.theme,
+                                strings: environment.strings,
+                                sideInset: 0.0,
+                                title: peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
+                                peer: peer,
+                                presence: component.peerPresences[peer.id],
+                                selectionState: component.link == nil ? .none : .editing(isSelected: self.selectedItems.contains(peer.id)),
+                                hasNext: i != component.peers.count - 1,
+                                action: { [weak self] peer in
+                                    guard let self else {
+                                        return
+                                    }
+                                    if self.selectedItems.contains(peer.id) {
+                                        self.selectedItems.remove(peer.id)
+                                    } else {
+                                        self.selectedItems.insert(peer.id)
+                                    }
+                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
+                                }
+                            )),
+                            environment: {},
+                            containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                        )
+                        let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: itemsHeight), size: itemSize)
+                        
+                        if let itemView = item.view {
+                            if itemView.superview == nil {
+                                self.itemContainerView.addSubview(itemView)
+                            }
+                            itemTransition.setFrame(view: itemView, frame: itemFrame)
+                        }
+                        
+                        itemsHeight += itemSize.height
+                        singleItemHeight = itemSize.height
+                    }
+                }
+                var removeIds: [AnyHashable] = []
+                for (id, item) in self.items {
+                    if !validIds.contains(id) {
+                        removeIds.append(id)
+                        item.view?.removeFromSuperview()
+                    }
+                }
+                for id in removeIds {
+                    self.items.removeValue(forKey: id)
+                }
+                transition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: itemsHeight)))
+                
+                initialContentHeight += singleItemHeight + 16.0
+                initialContentHeight += min(itemsHeight, floor(singleItemHeight * 2.5))
+                
+                contentHeight += itemsHeight
+                contentHeight += 24.0
+                initialContentHeight += 24.0
+                
+                let actionButtonTitle: String
+                if component.link != nil {
+                    actionButtonTitle = self.selectedItems.isEmpty ? environment.strings.SendInviteLink_ActionSkip : environment.strings.SendInviteLink_ActionInvite
+                } else {
+                    actionButtonTitle = environment.strings.SendInviteLink_ActionClose
+                }
+                let actionButtonSize = actionButton.update(
+                    transition: transition,
+                    component: AnyComponent(SolidRoundedButtonComponent(
+                        title: actionButtonTitle,
+                        badge: (self.selectedItems.isEmpty || component.link == nil) ? nil : "\(self.selectedItems.count)",
+                        theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
+                        font: .bold,
+                        fontSize: 17.0,
+                        height: 50.0,
+                        cornerRadius: 11.0,
+                        gloss: false,
+                        animationName: nil,
+                        iconPosition: .right,
+                        iconSpacing: 4.0,
+                        action: { [weak self] in
+                            guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                                return
+                            }
+                            if self.selectedItems.isEmpty {
+                                controller.dismiss()
+                            } else if let link = component.link {
+                                let selectedPeers = component.peers.filter { self.selectedItems.contains($0.id) }
+                                
+                                let _ = enqueueMessagesToMultiplePeers(account: component.context.account, peerIds: Array(self.selectedItems), threadIds: [:], messages: [.message(text: link, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
+                                let text: String
+                                if selectedPeers.count == 1 {
+                                    text = environment.strings.Conversation_ShareLinkTooltip_Chat_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
+                                } else if selectedPeers.count == 2 {
+                                    text = environment.strings.Conversation_ShareLinkTooltip_TwoChats_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), selectedPeers[1].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
+                                } else {
+                                    text = environment.strings.Conversation_ShareLinkTooltip_ManyChats_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), "\(selectedPeers.count - 1)").string
+                                }
+                                
+                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                controller.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: false, text: text), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
+                                
+                                controller.dismiss()
+                            } else {
+                                controller.dismiss()
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
+                )
+                let bottomPanelHeight = 15.0 + environment.safeInsets.bottom + actionButtonSize.height
+                let actionButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - bottomPanelHeight), size: actionButtonSize)
+                if let actionButtonView = actionButton.view {
+                    if actionButtonView.superview == nil {
+                        self.addSubview(actionButtonView)
+                    }
+                    transition.setFrame(view: actionButtonView, frame: actionButtonFrame)
+                }
+                
+                contentHeight += bottomPanelHeight
+                initialContentHeight += bottomPanelHeight
+                
+                clippingY = actionButtonFrame.minY - 24.0
+            } else {
+                if let title = self.title {
+                    self.title = nil
+                    title.view?.removeFromSuperview()
+                }
+                if let descriptionText = self.descriptionText {
+                    self.descriptionText = nil
+                    descriptionText.view?.removeFromSuperview()
+                }
+                if let actionButton = self.actionButton {
+                    self.actionButton = nil
+                    actionButton.view?.removeFromSuperview()
+                }
+                
+                initialContentHeight += environment.safeInsets.bottom
+                
+                clippingY = availableSize.height
+            }
+            
             let topInset: CGFloat = max(0.0, availableSize.height - containerInset - initialContentHeight)
             
             let scrollContentHeight = max(topInset + contentHeight, availableSize.height - containerInset)
@@ -817,12 +874,12 @@ private final class SendInviteLinkScreenComponent: Component {
             transition.setPosition(layer: self.backgroundLayer, position: CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
             transition.setBounds(layer: self.backgroundLayer, bounds: CGRect(origin: CGPoint(), size: availableSize))
             
-            let scrollClippingFrame = CGRect(origin: CGPoint(x: sideInset, y: containerInset), size: CGSize(width: availableSize.width - sideInset * 2.0, height: actionButtonFrame.minY - 24.0 - (containerInset)))
+            let scrollClippingFrame = CGRect(origin: CGPoint(x: sideInset, y: containerInset), size: CGSize(width: availableSize.width - sideInset * 2.0, height: clippingY - containerInset))
             transition.setPosition(view: self.scrollContentClippingView, position: scrollClippingFrame.center)
             transition.setBounds(view: self.scrollContentClippingView, bounds: CGRect(origin: CGPoint(x: scrollClippingFrame.minX, y: scrollClippingFrame.minY), size: scrollClippingFrame.size))
             
             self.ignoreScrolling = true
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height - containerInset)))
+            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height)))
             let contentSize = CGSize(width: availableSize.width, height: scrollContentHeight)
             if contentSize != self.scrollView.contentSize {
                 self.scrollView.contentSize = contentSize

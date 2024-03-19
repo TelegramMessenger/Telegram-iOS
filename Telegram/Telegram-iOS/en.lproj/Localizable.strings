@@ -11362,7 +11362,7 @@ Sorry for the inconvenience.";
 "Business.QuickReplies" = "Quick Replies";
 "Business.GreetingMessages" = "Greeting Messages";
 "Business.AwayMessages" = "Away Messages";
-"Business.Chatbots" = "Chatbots";
+"Business.ChatbotsItem" = "Chatbots";
 "Business.Intro" = "Intro";
 
 "Business.LocationInfo" = "Display the location of your business on your account.";
@@ -11409,6 +11409,7 @@ Sorry for the inconvenience.";
 "ChatList.ItemMenuEdit" = "Edit";
 "ChatList.ItemMenuDelete" = "Delete";
 "ChatList.PeerTypeNonContact" = "non-contact";
+"ChatList.PeerTypeNonContactUser" = "non-contact";
 
 "ChatListFilter.TagLabelNoTag" = "NO TAG";
 "ChatListFilter.TagLabelPremiumExpired" = "PREMIUM EXPIRED";
@@ -11575,7 +11576,7 @@ Sorry for the inconvenience.";
 "BusinessLocationSetup.AlertUnsavedChanges.Text" = "You have unsaved changes.";
 "BusinessLocationSetup.AlertUnsavedChanges.ResetAction" = "Revert";
 
-"ChatbotSetup.Title" = "Chatbots";
+"ChatbotSetup.TitleItem" = "Chatbots";
 "ChatbotSetup.Text" = "Add a bot to your account to help you automatically process and respond to the messages you receive. [Learn More >]()";
 "ChatbotSetup.TextLink" = "https://telegram.org";
 

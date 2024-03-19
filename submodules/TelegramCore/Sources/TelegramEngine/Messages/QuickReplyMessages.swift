@@ -811,7 +811,7 @@ extension TelegramBusinessRecipients {
             self.init(
                 categories: categories,
                 additionalPeers: Set((users ?? []).map( { PeerId(namespace: Namespaces.Peer.CloudUser, id: ._internalFromInt64Value($0)) })),
-                excludePeers: Set((excludeUsers ?? []).map(PeerId.init)),
+                excludePeers: Set((excludeUsers ?? []).map( { PeerId(namespace: Namespaces.Peer.CloudUser, id: ._internalFromInt64Value($0)) })),
                 exclude: (flags & (1 << 5)) != 0
             )
         }
