@@ -33,6 +33,8 @@ swift_library(
         "//submodules/TelegramStringFormatting",
         "//submodules/AvatarNode",
         "//submodules/PhoneNumberFormat",
+        "//submodules/UndoUI",
+        "//submodules/TelegramUI/Components/LottieComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -894,7 +894,7 @@ private final class MultipartFetchManager {
                     case .fatal:
                         strongSelf.finishWithError(.generic)
                     case .revalidateMediaReference:
-                        if !strongSelf.revalidatingMediaReference && !strongSelf.revalidatedMediaReference {
+                        if !strongSelf.revalidatingMediaReference {
                             strongSelf.revalidatingMediaReference = true
                             for (_, part) in strongSelf.fetchingParts {
                                 part.disposable.dispose()

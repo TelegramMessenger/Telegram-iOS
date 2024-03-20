@@ -995,7 +995,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue
+- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version
+                        customParameters:(NSDictionary<NSString *, id> * _Nonnull)customParameters
+                                   queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue
                                    proxy:(VoipProxyServerWebrtc * _Nullable)proxy
                              networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving
                             derivedState:(NSData * _Nonnull)derivedState
@@ -1105,6 +1107,15 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         
         std::vector<tgcalls::Endpoint> endpoints;
         
+        NSData *customParametersJsonData = [NSJSONSerialization dataWithJSONObject:customParameters options:0 error:nil];
+        std::string customParametersString = "{}";
+        if (customParametersJsonData) {
+            NSString *customParametersJson = [[NSString alloc] initWithData:customParametersJsonData encoding:NSUTF8StringEncoding];
+            if (customParametersJson && customParametersJson.length != 0) {
+                customParametersString = std::string(customParametersJson.UTF8String);
+            }
+        }
+        
         tgcalls::Config config = {
             .initializationTimeout = _callConnectTimeout,
             .receiveTimeout = _callPacketTimeout,
@@ -1116,12 +1127,13 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .enableNS = true,
             .enableAGC = true,
             .enableCallUpgrade = false,
-            .logPath = std::string(logPath.length == 0 ? "" : logPath.UTF8String),
-            .statsLogPath = std::string(statsLogPath.length == 0 ? "" : statsLogPath.UTF8String),
+            .logPath = { std::string(logPath.length == 0 ? "" : logPath.UTF8String) },
+            .statsLogPath = { std::string(statsLogPath.length == 0 ? "" : statsLogPath.UTF8String) },
             .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer],
             .enableHighBitrateVideo = true,
             .preferredVideoCodecs = preferredVideoCodecs,
-            .protocolVersion = [OngoingCallThreadLocalContextWebrtc protocolVersionFromLibraryVersion:version]
+            .protocolVersion = [OngoingCallThreadLocalContextWebrtc protocolVersionFromLibraryVersion:version],
+            .customParameters = customParametersString
         };
         
         auto encryptionKeyValue = std::make_shared<std::array<uint8_t, 256>>();
