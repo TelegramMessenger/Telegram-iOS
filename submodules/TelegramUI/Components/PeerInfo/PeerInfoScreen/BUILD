@@ -142,6 +142,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/TextLoadingEffect",
         "//submodules/TelegramUI/Components/Settings/BirthdayPickerScreen",
+        "//submodules/ConfettiEffect",
     ],
     visibility = [
         "//visibility:public",

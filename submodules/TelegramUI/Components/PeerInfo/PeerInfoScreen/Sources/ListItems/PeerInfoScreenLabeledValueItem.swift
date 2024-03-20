@@ -22,6 +22,7 @@ enum PeerInfoScreenLabeledValueTextBehavior: Equatable {
 
 enum PeerInfoScreenLabeledValueIcon {
     case qrCode
+    case premiumGift
 }
 
 private struct TextLinkItemSource: Equatable {
@@ -445,6 +446,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             switch icon {
             case .qrCode:
                 iconImage = UIImage(bundleImageName: "Settings/QrIcon")
+            case .premiumGift:
+                iconImage = UIImage(bundleImageName: "Premium/Gift")
             }
             self.iconNode.image = generateTintedImage(image: iconImage, color: presentationData.theme.list.itemAccentColor)
             self.iconNode.isHidden = false
