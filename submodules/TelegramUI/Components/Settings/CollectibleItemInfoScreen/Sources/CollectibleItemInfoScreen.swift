@@ -16,6 +16,8 @@ import AvatarNode
 import TelegramPresentationData
 import PhoneNumberFormat
 import BundleIconComponent
+import UndoUI
+import LottieComponent
 
 private final class PeerBadgeComponent: Component {
     let context: AccountContext
@@ -164,6 +166,7 @@ private final class CollectibleItemInfoScreenContentComponent: Component {
         private let copyButton = ComponentView<Empty>()
         
         private var component: CollectibleItemInfoScreenContentComponent?
+        private var environment: EnvironmentType?
         
         private var currencySymbolIcon: UIImage?
         
@@ -179,9 +182,10 @@ private final class CollectibleItemInfoScreenContentComponent: Component {
             self.component = component
             
             let environment = environment[EnvironmentType.self].value
+            self.environment = environment
             
             let sideInset: CGFloat = 16.0
-            let contentSideInset: CGFloat = sideInset + 16.0
+            let contentSideInset: CGFloat = sideInset + 4.0
             
             var contentHeight: CGFloat = 0.0
             contentHeight += 30.0
@@ -202,19 +206,27 @@ private final class CollectibleItemInfoScreenContentComponent: Component {
             contentHeight += iconBackgroundSize.height
             contentHeight += 16.0
             
+            let iconAnimationName: String
+            switch component.initialData.subject {
+            case .username:
+                iconAnimationName = "anim_collectible_username"
+            case .phoneNumber:
+                iconAnimationName = "anim_collectible_generic"
+            }
             let iconSize = self.icon.update(
                 transition: transition,
-                component: AnyComponent(BundleIconComponent(
-                    name: "Peer Info/CollectibleUsernameInfoTitleIcon",
-                    tintColor: environment.theme.list.itemCheckColors.foregroundColor
+                component: AnyComponent(LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: iconAnimationName),
+                    loop: false
                 )),
                 environment: {},
-                containerSize: iconBackgroundFrame.size
+                containerSize: CGSize(width: floor(iconBackgroundFrame.size.width * 0.8), height: floor(iconBackgroundFrame.size.height * 0.8))
             )
             let iconFrame = CGRect(origin: CGPoint(x: iconBackgroundFrame.minX + floor((iconBackgroundFrame.width - iconSize.width) * 0.5), y: iconBackgroundFrame.minY + floor((iconBackgroundFrame.height - iconSize.height) * 0.5)), size: iconSize)
-            if let iconView = self.icon.view {
+            if let iconView = self.icon.view as? LottieComponent.View {
                 if iconView.superview == nil {
                     self.addSubview(iconView)
+                    iconView.playOnce(delay: 0.1)
                 }
                 transition.setFrame(view: iconView, frame: iconFrame)
             }
@@ -488,7 +500,6 @@ private final class CollectibleItemInfoScreenContentComponent: Component {
                 copyButtonTitle = environment.strings.CollectibleItemInfo_ButtonCopyPhone
             }
                 
-                
             let copyButtonSize = self.copyButton.update(
                 transition: transition,
                 component: AnyComponent(PlainButtonComponent(
@@ -500,17 +511,24 @@ private final class CollectibleItemInfoScreenContentComponent: Component {
                     minSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0),
                     contentInsets: UIEdgeInsets(),
                     action: { [weak self] in
-                        guard let self, let component = self.component else {
+                        guard let self, let component = self.component, let environment = self.environment else {
                             return
                         }
                         
+                        let toastText: String
                         switch component.initialData.subject {
                         case let .username(username):
                             UIPasteboard.general.string = "https://t.me/\(username.username)"
+                            toastText = environment.strings.Conversation_LinkCopied
                         case let .phoneNumber(phoneNumber):
                             let formattedPhoneNumber = formatPhoneNumber(context: component.context, number: phoneNumber.phoneNumber)
                             UIPasteboard.general.string = formattedPhoneNumber
+                            //TODO:localize
+                            toastText = "Phone number copied to clipboard."
                         }
+                        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                        environment.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: toastText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                         
                         component.dismiss()
                     },

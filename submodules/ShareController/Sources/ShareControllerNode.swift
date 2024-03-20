@@ -223,7 +223,7 @@ private final class ShareContentInfoView: UIView {
             }
         }
         
-        textText.append(NSAttributedString(string: "\n\(params.strings.CollectibleItemInfo_ShareInlineText_LearnMore)", attributes: [
+        textText.append(NSAttributedString(string: " \(params.strings.CollectibleItemInfo_ShareInlineText_LearnMore)", attributes: [
             .font: Font.medium(14.0),
             .foregroundColor: accentColor,
             NSAttributedString.Key(rawValue: "URL"): ""

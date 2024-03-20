@@ -1235,9 +1235,8 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
         self.textNode.maximumNumberOfLines = 0
         
         self.textMaskNode = LinkHighlightingNode(color: .white)
-        self.textMaskNode.innerRadius = 5.0
-        self.textMaskNode.outerRadius = 10.0
         self.textMaskNode.inset = 0.0
+        self.textMaskNode.useModernPathCalculation = true
         
         self.badgeTextNode = ImmediateTextNode()
         self.badgeBackgroundView = UIImageView()
@@ -1363,11 +1362,36 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
             }
         }
         for i in 0 ..< labelRects.count {
-            labelRects[i] = labelRects[i].insetBy(dx: -6.0, dy: floor((labelRects[i].height - 20.0) / 2.0))
-            labelRects[i].size.height = 20.0
+            labelRects[i] = labelRects[i].insetBy(dx: -6.0, dy: 0.0)
+            if i == 0 {
+                labelRects[i].origin.y -= 2.0
+                labelRects[i].size.height += 2.0
+            }
+            if i == labelRects.count - 1 {
+                labelRects[i].size.height += 2.0
+            } else {
+                let deltaY = labelRects[i + 1].minY - labelRects[i].maxY
+                let topDelta = deltaY * 0.5 + 2.0
+                let bottomDelta = deltaY * 0.5 - 2.0
+                labelRects[i].size.height += topDelta
+                labelRects[i + 1].origin.y -= bottomDelta
+                labelRects[i + 1].size.height += bottomDelta
+            }
             labelRects[i].origin.x = floor((textLayout.size.width - labelRects[i].width) / 2.0)
         }
+        for i in 0 ..< labelRects.count {
+            labelRects[i].origin.y -= 12.0
+        }
+        if !labelRects.isEmpty {
+            self.textMaskNode.innerRadius = labelRects[0].height * 0.5
+            self.textMaskNode.outerRadius = labelRects[0].height * 0.5
+        }
         self.textMaskNode.updateRects(labelRects)
+        
+        /*if self.textMaskNode.supernode == nil {
+            self.addSubnode(self.textMaskNode)
+            self.textMaskNode.alpha = 0.5
+        }*/
         
         let size = CGSize(width: textLayout.size.width + 4.0 * 2.0, height: textLayout.size.height + 4.0 * 2.0)
         let textFrame = CGRect(origin: CGPoint(x: 4.0, y: 4.0), size: textLayout.size)
@@ -1387,7 +1411,7 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
             self.badgeBackgroundView.frame = badgeBackgroundFrame
         }
         
-        self.textMaskNode.frame = CGRect(origin: CGPoint(x: textFrame.minX - self.textMaskNode.inset + 4.0, y: textFrame.minY - self.textMaskNode.inset - 11.0), size: CGSize())
+        self.textMaskNode.frame = textFrame.offsetBy(dx: 3.0, dy: 0.0)
         
         if let wallpaperBackgroundNode {
             if self.backgroundContent == nil, let backgroundContent = wallpaperBackgroundNode.makeBubbleBackground(for: .free) {
