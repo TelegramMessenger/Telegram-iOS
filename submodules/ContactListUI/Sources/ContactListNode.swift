@@ -569,7 +569,11 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                 } else {
                     allSelected = false
                 }
-                let header: ListViewItemHeader? = ChatListSearchItemHeader(type: .text(title.uppercased(), AnyHashable(10 * sectionId + (allSelected ? 1 : 0))), theme: theme, strings: strings, actionTitle: allSelected ? strings.Premium_Gift_ContactSelection_DeselectAll.uppercased() : strings.Premium_Gift_ContactSelection_SelectAll.uppercased(), action: {
+                var actionTitle: String?
+                if peerIds.count > 1 {
+                    actionTitle = allSelected ? strings.Premium_Gift_ContactSelection_DeselectAll.uppercased() : strings.Premium_Gift_ContactSelection_SelectAll.uppercased()
+                }
+                let header: ListViewItemHeader? = ChatListSearchItemHeader(type: .text(title.uppercased(), AnyHashable(10 * sectionId + (allSelected ? 1 : 0))), theme: theme, strings: strings, actionTitle: actionTitle, action: {
                     interaction.toggleSelection(topPeers.filter { peerIds.contains($0.id) }, !allSelected)
                 })
                 
@@ -596,7 +600,26 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                 sectionId += 1
             }
             
-            let hasDeselectAll = !(selectionState?.selectedPeerIndices ?? [:]).isEmpty
+            var hasDeselectAll = !(selectionState?.selectedPeerIndices ?? [:]).isEmpty
+            if !sections.isEmpty, let selectionState {
+                var hasNonBirthdayPeers = false
+                var allBirthdayPeerIds = Set<EnginePeer.Id>()
+                for (_, peerIds) in sections {
+                    for peerId in peerIds {
+                        allBirthdayPeerIds.insert(peerId)
+                    }
+                }
+                for id in selectionState.selectedPeerIndices.keys {
+                    if case let .peer(peerId) = id, !allBirthdayPeerIds.contains(peerId) {
+                        hasNonBirthdayPeers = true
+                        break
+                    }
+                }
+                if !hasNonBirthdayPeers {
+                    hasDeselectAll = false
+                }
+            }
+            
             let header: ListViewItemHeader? = ChatListSearchItemHeader(type: .text(strings.Premium_Gift_ContactSelection_FrequentContacts.uppercased(), AnyHashable(hasDeselectAll ? 1 : 0)), theme: theme, strings: strings, actionTitle: hasDeselectAll ? strings.Premium_Gift_ContactSelection_DeselectAll.uppercased() : nil, action: {
                 interaction.deselectAll()
             })

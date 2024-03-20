@@ -1947,19 +1947,6 @@ public final class ChatListNode: ListView {
                 
                 if suggestions.contains(.setupBirthday) && birthday == nil {
                     return .single(.setupBirthday)
-                } else if !todayBirthdayPeerIds.isEmpty && todayBirthdayPeerIds.map({ $0.toInt64() }) != dismissedBirthdayPeerIds {
-                    return context.engine.data.get(
-                        EngineDataMap(todayBirthdayPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
-                    )
-                    |> map { result -> ChatListNotice? in
-                        var todayBirthdayPeers: [EnginePeer] = []
-                        for (peerId, _) in birthdays {
-                            if let maybePeer = result[peerId], let peer = maybePeer {
-                                todayBirthdayPeers.append(peer)
-                            }
-                        }
-                        return .birthdayPremiumGift(peers: todayBirthdayPeers, birthdays: birthdays)
-                    }
                 } else if suggestions.contains(.xmasPremiumGift) {
                     return .single(.xmasPremiumGift)
                 } else if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium) || suggestions.contains(.restorePremium), let inAppPurchaseManager = context.inAppPurchaseManager {
@@ -1988,11 +1975,32 @@ public final class ChatListNode: ListView {
                                     break
                                 }
                             }
-                            
                             return nil
                         } else {
+                            if !GlobalExperimentalSettings.isAppStoreBuild {
+                                if suggestions.contains(.restorePremium) {
+                                    return .premiumRestore(discount: 0)
+                                } else if suggestions.contains(.annualPremium) {
+                                    return .premiumAnnualDiscount(discount: 0)
+                                } else if suggestions.contains(.upgradePremium) {
+                                    return .premiumUpgrade(discount: 0)
+                                }
+                            }
                             return nil
                         }
+                    }
+                } else if !todayBirthdayPeerIds.isEmpty && todayBirthdayPeerIds.map({ $0.toInt64() }) != dismissedBirthdayPeerIds {
+                    return context.engine.data.get(
+                        EngineDataMap(todayBirthdayPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                    )
+                    |> map { result -> ChatListNotice? in
+                        var todayBirthdayPeers: [EnginePeer] = []
+                        for (peerId, _) in birthdays {
+                            if let maybePeer = result[peerId], let peer = maybePeer {
+                                todayBirthdayPeers.append(peer)
+                            }
+                        }
+                        return .birthdayPremiumGift(peers: todayBirthdayPeers, birthdays: birthdays)
                     }
                 } else {
                     return .single(nil)

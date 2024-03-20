@@ -48,6 +48,7 @@ public final class ListSectionHeaderNode: ASDisplayNode {
         if (self.action != nil) != (self.actionButton != nil) {
             if let _ = self.action {
                 let actionButtonLabel = ImmediateTextNode()
+                actionButtonLabel.displaysAsynchronously = false
                 self.addSubnode(actionButtonLabel)
                 self.actionButtonLabel = actionButtonLabel
                 let actionButton = HighlightableButtonNode()
