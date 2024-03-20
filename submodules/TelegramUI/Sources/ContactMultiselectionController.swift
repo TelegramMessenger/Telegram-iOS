@@ -166,8 +166,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 
                 strongSelf.updateTitle()
             })
-        case let .premiumGifting(birthdays):
-            if let birthdays {
+        case let .premiumGifting(birthdays, selectToday):
+            if let birthdays, selectToday {
                 let today = Calendar(identifier: .gregorian).component(.day, from: Date())
                 var todayPeers: [EnginePeer.Id] = []
                 for (peerId, birthday) in birthdays {

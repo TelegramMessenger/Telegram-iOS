@@ -556,7 +556,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
     case let .custom(sections):
         if !topPeers.isEmpty {
             var index: Int = 0
-            var sectionId: Int = 0
+            var sectionId: Int = 1
             for (title, peerIds) in sections {
                 var allSelected = true
                 if let selectedPeerIndices = selectionState?.selectedPeerIndices, !selectedPeerIndices.isEmpty {
@@ -575,6 +575,9 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                 
                 for peerId in peerIds {
                     if let peer = topPeers.first(where: { $0.id == peerId }) {
+                        if existingPeerIds.contains(.peer(peer.id)) {
+                            continue
+                        }
                         existingPeerIds.insert(.peer(peer.id))
                         
                         let selection: ContactsPeerItemSelection
@@ -591,6 +594,30 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                     }
                 }
                 sectionId += 1
+            }
+            
+            let hasDeselectAll = !(selectionState?.selectedPeerIndices ?? [:]).isEmpty
+            let header: ListViewItemHeader? = ChatListSearchItemHeader(type: .text(strings.Premium_Gift_ContactSelection_FrequentContacts.uppercased(), AnyHashable(hasDeselectAll ? 1 : 0)), theme: theme, strings: strings, actionTitle: hasDeselectAll ? strings.Premium_Gift_ContactSelection_DeselectAll.uppercased() : nil, action: {
+                interaction.deselectAll()
+            })
+            
+            for peer in topPeers.prefix(15) {
+                if existingPeerIds.contains(.peer(peer.id)) {
+                    continue
+                }
+                existingPeerIds.insert(.peer(peer.id))
+                
+                let selection: ContactsPeerItemSelection
+                if let selectionState = selectionState {
+                    selection = .selectable(selected: selectionState.selectedPeerIndices[.peer(peer.id)] != nil)
+                } else {
+                    selection = .none
+                }
+                
+                let presence = presences[peer.id]
+                entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, true, nil, false))
+                
+                index += 1
             }
         }
     case .none:
@@ -1573,16 +1600,18 @@ public final class ContactListNode: ASDisplayNode {
                     for (_, sectionPeers) in sections {
                         peerIds.append(contentsOf: sectionPeers)
                     }
-                    
-                    topPeers = context.engine.data.get(
-                        EngineDataMap(peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
-                    )
-                    |> map { peers in
+                    topPeers = combineLatest(
+                        context.engine.data.get(EngineDataMap(peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))),
+                        context.engine.peers.recentPeers()
+                    ) |> map { peers, recentPeers in
                         var result: [EnginePeer] = []
                         for peer in peers.values {
                             if let peer {
                                 result.append(peer)
                             }
+                        }
+                        if case let .peers(peers) = recentPeers {
+                            result.append(contentsOf: peers.map(EnginePeer.init))
                         }
                         return result
                     }

@@ -111,7 +111,6 @@ private final class BirthdayPickerSheetContentComponent: Component {
                 transition.setFrame(view: cancelView, frame: cancelFrame)
             }
             
-            //TODO:localize
             let buttonSize = self.button.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(

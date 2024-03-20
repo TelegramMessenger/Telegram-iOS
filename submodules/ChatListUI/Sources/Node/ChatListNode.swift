@@ -1698,21 +1698,6 @@ public final class ChatListNode: ListView {
             guard let self else {
                 return
             }
-            if let birthdays {
-                let today = Calendar(identifier: .gregorian).component(.day, from: Date())
-                var todayBirthdayPeerIds: [EnginePeer.Id] = []
-                for (peerId, birthday) in birthdays {
-                    if birthday.day == today {
-                        todayBirthdayPeerIds.append(peerId)
-                    }
-                }
-                let peerIds = todayBirthdayPeerIds.sorted { lhs, rhs in
-                    return lhs < rhs
-                }
-                Queue.mainQueue().after(0.4) {
-                    let _ = ApplicationSpecificNotice.setDismissedBirthdayPremiumGifts(accountManager: self.context.sharedContext.accountManager, values: peerIds.map { $0.toInt64() }).start()
-                }
-            }
             let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(birthdays), completion: nil)
             controller.navigationPresentation = .modal
             self.push?(controller)
@@ -1819,9 +1804,8 @@ public final class ChatListNode: ListView {
                     return true
                 }))
             case .setupBirthday:
-                //TODO:localize
                 let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupBirthday).startStandalone()
-                self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can set your date of birth later in **Settings**.", timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
+                self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_BirthdayInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
                     return true
                 }))
             case let .birthdayPremiumGift(peers, _):

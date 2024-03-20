@@ -183,9 +183,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         } else {
             let displayTopPeers: ContactListPresentation.TopPeers
             var selectedPeers: [EnginePeer.Id] = []
-            if case let .premiumGifting(birthdays) = mode {
+            if case let .premiumGifting(birthdays, selectToday) = mode {
                 if let birthdays {
-                    //TODO:localize
                     let today = Calendar(identifier: .gregorian).component(.day, from: Date())
                     var sections: [(String, [EnginePeer.Id])] = []
                     var todayPeers: [EnginePeer.Id] = []
@@ -195,7 +194,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                     for (peerId, birthday) in birthdays {
                         if birthday.day == today {
                             todayPeers.append(peerId)
-                            selectedPeers.append(peerId)
+                            if selectToday {
+                                selectedPeers.append(peerId)
+                            }
                         } else if birthday.day == today - 1 || birthday.day > today + 5 {
                             yesterdayPeers.append(peerId)
                         } else if birthday.day == today + 1 || birthday.day < today + 5 {
@@ -204,13 +205,13 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                     }
                     
                     if !todayPeers.isEmpty {
-                        sections.append(("🎂 BIRTHDAY TODAY", todayPeers))
+                        sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayToday, todayPeers))
                     }
                     if !yesterdayPeers.isEmpty {
-                        sections.append(("BIRTHDAY YESTERDAY", yesterdayPeers))
+                        sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayYesterday, yesterdayPeers))
                     }
                     if !tomorrowPeers.isEmpty {
-                        sections.append(("BIRTHDAY TOMORROW", tomorrowPeers))
+                        sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayTomorrow, tomorrowPeers))
                     }
                     
                     displayTopPeers = .custom(sections)

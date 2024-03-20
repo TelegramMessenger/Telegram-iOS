@@ -10675,6 +10675,9 @@ Sorry for the inconvenience.";
 "Premium.Gift.ContactSelection.DeselectAll" = "DESELECT ALL";
 "Premium.Gift.ContactSelection.SelectAll" = "SELECT ALL";
 "Premium.Gift.ContactSelection.MaximumReached" = "You can select up to %@ users.";
+"Premium.Gift.ContactSelection.BirthdayToday" = "🎂 BIRTHDAY TODAY";
+"Premium.Gift.ContactSelection.BirthdayYesterday" = "BIRTHDAY YESTERDAY";
+"Premium.Gift.ContactSelection.BirthdayTomorrow" = "BIRTHDAY TOMORROW";
 
 "Premium.Gift.GiftMultipleSubscriptionsFormat" = "%1$@ for %2$@";
 "Premium.Gift.GiftMultipleSubscriptions_1" = "Gift %@ Subscription";
@@ -11642,3 +11645,15 @@ Sorry for the inconvenience.";
 "Birthday.Added" = "Date of birth added.";
 
 "Chat.BirthdayTooltip" = "🎂 %1$@ is having a birthday today. You can give %2$@ **Telegram Premium** as a birthday gift.";
+
+"ChatList.AddBirthdayTitle" = "Add your birthday! 🎂";
+"ChatList.AddBirthdayText" = "Let your contacts know when you're celebrating.";
+
+"ChatList.BirthdaySingleTitle" = "It's %@ **birthday** today! 🎂";
+"ChatList.BirthdaySingleText" = "Gift them Telegram Premium.";
+
+"ChatList.BirthdayMultipleTitle_1" = "%@ contact have **birthday** today! 🎂";
+"ChatList.BirthdayMultipleTitle_any" = "%@ contacts have **birthdays** today! 🎂";
+"ChatList.BirthdayMultipleText" = "Gift them Telegram Premium.";
+
+"ChatList.BirthdayInSettingsInfo" = "You can set your date of birth later in **Settings**.";

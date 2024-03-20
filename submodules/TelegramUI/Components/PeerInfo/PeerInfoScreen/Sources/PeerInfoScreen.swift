@@ -1032,7 +1032,6 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         birthday = (data.cachedData as? CachedUserData)?.birthday
     }
     
-    //TODO:localize
     var birthDateString: String
     if let birthday {
         birthDateString = stringForCompactBirthday(birthday, strings: presentationData.strings)
@@ -9040,8 +9039,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .settings, forceDark: false, dismissed: nil)
             self.controller?.push(controller)
         case .premiumGift:
-            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings, completion: nil)
-            self.controller?.push(controller)
+            let _ = (self.context.account.stateManager.contactBirthdays
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] birthdays in
+                guard let self else {
+                    return
+                }
+                let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings(birthdays), completion: nil)
+                self.controller?.push(controller)
+            })
         case .stickers:
             if let settings = self.data?.globalSettings {
                 push(installedStickerPacksController(context: self.context, mode: .general, archivedPacks: settings.archivedStickerPacks, updatedPacks: { [weak self] packs in

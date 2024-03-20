@@ -5794,14 +5794,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             
             let _ = context.engine.accountData.updateBirthday(birthday: value).startStandalone()
             
-            //TODO:localize
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             self.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: self.presentationData.strings.Birthday_Added, cancel: nil, destructive: false), elevatedLayout: false, action: { _ in
                 return true
             }), in: .current)
         })
         self.push(controller)
-        //self.present(controller, in: .current)
     }
     
     private var storyCameraTransitionInCoordinator: StoryCameraTransitionInCoordinator?
