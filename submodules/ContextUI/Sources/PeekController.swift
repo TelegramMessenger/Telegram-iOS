@@ -117,7 +117,7 @@ public final class PeekController: ViewController, ContextControllerProtocol {
             self.visibilityUpdated?(true)
             
             if self.activateImmediately {
-                self.controllerNode.activateMenu()
+                self.controllerNode.activateMenu(immediately: true)
             }
         }
     }

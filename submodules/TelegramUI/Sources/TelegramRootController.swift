@@ -147,6 +147,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         return self.chatListController
     }
     
+    public func getPrivacySettings() -> Promise<AccountPrivacySettings?>? {
+        return self.accountSettingsController?.privacySettings
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let needsRootWallpaperBackgroundNode: Bool
         if case .regular = layout.metrics.widthClass {
@@ -222,6 +226,11 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
+        
+//        Queue.mainQueue().after(0.3) {
+//            let controller = self.context.sharedContext.makeStickerEditorScreen(context: self.context, source: nil, transitionArguments: nil, completion: { _ , _ in })
+//            self.chatListController?.push(controller)
+//        }
     }
         
     public func updateRootControllers(showCallsTab: Bool) {
@@ -658,6 +667,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         if let index = rootTabController.controllers.firstIndex(where: { $0 is PeerInfoScreenImpl }) {
             rootTabController.selectedIndex = index
         }
+    }
+    
+    public func openBirthdaySetup() {
+        self.accountSettingsController?.openBirthdaySetup()
     }
 }
 

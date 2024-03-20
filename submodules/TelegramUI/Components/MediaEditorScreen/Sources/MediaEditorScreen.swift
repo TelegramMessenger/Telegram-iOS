@@ -3187,7 +3187,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 var animateIn = false
                 if let subject {
                     switch subject {
-                    case .empty, .message, .sticker:
+                    case .empty, .message, .sticker, .image:
                         animateIn = true
                     default:
                         break
@@ -5713,20 +5713,21 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
         
         if let image = mediaEditor.resultImage {
-            makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
+            let values = mediaEditor.values.withUpdatedQualityPreset(.sticker)
+            makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, outputDimensions: CGSize(width: 512, height: 512), values: values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
                 if let self, let resultImage {
-                    let dimensions = CGSize(width: 512, height: 512)
-                    let scaledImage = generateImage(dimensions, contextGenerator: { size, context in
-                        context.clear(CGRect(origin: CGPoint(), size: size))
-                        
-                        context.addPath(CGPath(roundedRect: CGRect(origin: .zero, size: size), cornerWidth: size.width / 8.0, cornerHeight: size.width / 8.0, transform: nil))
-                        context.clip()
-                        
-                        let scaledSize = resultImage.size.aspectFilled(size)
-                        context.draw(resultImage.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - scaledSize.width) / 2.0), y: floor((size.height - scaledSize.height) / 2.0)), size: scaledSize))
-                    }, opaque: false, scale: 1.0)!
+//                    let dimensions = CGSize(width: 512, height: 512)
+//                    let scaledImage = generateImage(dimensions, contextGenerator: { size, context in
+//                        context.clear(CGRect(origin: CGPoint(), size: size))
+//                        
+//                        context.addPath(CGPath(roundedRect: CGRect(origin: .zero, size: size), cornerWidth: size.width / 8.0, cornerHeight: size.width / 8.0, transform: nil))
+//                        context.clip()
+//                        
+//                        let scaledSize = resultImage.size.aspectFilled(size)
+//                        context.draw(resultImage.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - scaledSize.width) / 2.0), y: floor((size.height - scaledSize.height) / 2.0)), size: scaledSize))
+//                    }, opaque: false, scale: 1.0)!
                     
-                    self.presentStickerPreview(image: scaledImage)
+                    self.presentStickerPreview(image: resultImage)
                 }
             })
         }
@@ -5761,10 +5762,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             switch mode {
             case .generic:
                 menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
-                    f(.default)
                     guard let self else {
                         return
                     }
+                    if self.videoExport != nil {
+                        return
+                    }
+                    f(.default)
+                    
                     self.completion(MediaEditorScreen.Result(
                         media: .sticker(file: file),
                         mediaAreas: [],
@@ -5936,7 +5941,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             if let navigationController {
                                 Queue.mainQueue().after(0.2) {
                                     let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-                                    let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [.result(info: info, items: items, installed: true)], isEditing: false, parentNavigationController: nil, sendSticker: nil)
+                                    let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [.result(info: info, items: items, installed: true)], isEditing: false, parentNavigationController: navigationController, sendSticker: nil)
                                     (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                 }
                             }
@@ -5955,7 +5960,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     private func uploadSticker(_ file: TelegramMediaFile, action: StickerAction) {
         let context = self.context
         let dimensions = PixelDimensions(width: 512, height: 512)
-        let mimeType = "image/webp"
+        let mimeType = file.mimeType
                 
         self.updateEditProgress(0.0, cancel: { [weak self] in
             self?.stickerUploadDisposable.set(nil)
@@ -5988,7 +5993,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             resource: resource,
                             emojis: ["😀😂"],
                             dimensions: dimensions,
-                            mimeType: "image/webp",
+                            mimeType: mimeType,
                             keywords: ""
                         )
                         return context.engine.stickers.createStickerSet(title: title, shortName: "", stickers: [sticker], thumbnail: nil, type: .stickers(content: .image), software: nil)
@@ -6007,7 +6012,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             resource: resource,
                             emojis: ["😀😂"],
                             dimensions: dimensions,
-                            mimeType: "image/webp",
+                            mimeType: mimeType,
                             keywords: ""
                         )
                         return context.engine.stickers.addStickerToStickerSet(packReference: pack, sticker: sticker)
@@ -6071,7 +6076,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 let navigationController = self.navigationController as? NavigationController
                                 if let navigationController {
                                     Queue.mainQueue().after(0.2) {
-                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, parentNavigationController: nil, sendSticker: nil)
+                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, parentNavigationController: navigationController, sendSticker: nil)
                                         (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                         
                                         Queue.mainQueue().after(0.1) {
@@ -6107,12 +6112,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self?.performSave()
         })
     }
-    
+        
     private func performSave(toStickerResource: MediaResource? = nil) {
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject else {
             return
         }
-            
+        
         let context = self.context
         
         let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
@@ -6235,14 +6240,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         switch status {
                         case .completed:
                             self.videoExport = nil
-                            saveToPhotos(outputPath, true)
-                            self.node.presentSaveTooltip()
+                            if let toStickerResource, let data = try? Data(contentsOf: URL(fileURLWithPath: outputPath)) {
+                                self.context.account.postbox.mediaBox.storeResourceData(toStickerResource.id, data: data)
+                            } else {
+                                saveToPhotos(outputPath, true)
+                                self.node.presentSaveTooltip()
+                            }
                             
                             if let mediaEditor = self.node.mediaEditor, mediaEditor.maybeUnpauseVideo() {
                                 self.node.entitiesView.play()
                             }
                         case let .progress(progress):
-                            if self.videoExport != nil {
+                            if !isSticker && self.videoExport != nil {
                                 self.node.updateVideoExportProgress(progress)
                             }
                         case .failed:

@@ -112,11 +112,12 @@ public enum MediaQualityPreset: Int32 {
     case profile
     case profileHigh
     case profileVeryHigh
+    case sticker
     case passthrough
 
     var hasAudio: Bool {
         switch self {
-        case .animation, .profileLow, .profile, .profileHigh, .profileVeryHigh:
+        case .animation, .profileLow, .profile, .profileHigh, .profileVeryHigh, .sticker:
             return false
         default:
             return true
@@ -141,6 +142,8 @@ public enum MediaQualityPreset: Int32 {
             return 720.0
         case .profile, .profileHigh, .profileVeryHigh:
             return 800.0
+        case .sticker:
+            return 512.0
         default:
             return 848.0
         }
@@ -168,6 +171,8 @@ public enum MediaQualityPreset: Int32 {
             return 2000
         case .profileVeryHigh:
             return 2400
+        case .sticker:
+            return 1000
         default:
             return 900
         }
@@ -431,6 +436,10 @@ public final class MediaEditorValues: Codable, Equatable {
     
     var isStory: Bool {
         return self.qualityPreset == nil
+    }
+    
+    var isSticker: Bool {
+        return self.qualityPreset == .sticker
     }
     
     public init(
@@ -1529,6 +1538,8 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
     let compressionProperties: [String: Any]
     let codecType: Any
     
+    var values = values
+    
     var videoBitrate: Int = 3700
     var audioBitrate: Int = 64
     var audioNumberOfChannels = 2
@@ -1546,6 +1557,8 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
 
     let width: Int
     let height: Int
+    
+    var frameRate = frameRate
     
     var useHEVC = hasHEVCHardwareEncoder
     var useVP9 = false
@@ -1571,6 +1584,8 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
             width = 512
             height = 512
             useVP9 = true
+            frameRate = 30
+            values = values.withUpdatedQualityPreset(.sticker)
         } else if values.videoIsFullHd {
             width = 1080
             height = 1920

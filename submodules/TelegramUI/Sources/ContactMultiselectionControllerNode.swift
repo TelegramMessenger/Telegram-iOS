@@ -183,10 +183,37 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         } else {
             let displayTopPeers: ContactListPresentation.TopPeers
             var selectedPeers: [EnginePeer.Id] = []
-            if case let .premiumGifting(topSectionTitle, topSectionPeers) = mode {
-                if let topSectionTitle, !topSectionPeers.isEmpty {
-                    displayTopPeers = .custom(title: topSectionTitle, peerIds: topSectionPeers)
-                    selectedPeers = topSectionPeers
+            if case let .premiumGifting(birthdays) = mode {
+                if let birthdays {
+                    //TODO:localize
+                    let today = Calendar(identifier: .gregorian).component(.day, from: Date())
+                    var sections: [(String, [EnginePeer.Id])] = []
+                    var todayPeers: [EnginePeer.Id] = []
+                    var yesterdayPeers: [EnginePeer.Id] = []
+                    var tomorrowPeers: [EnginePeer.Id] = []
+                    
+                    for (peerId, birthday) in birthdays {
+                        if birthday.day == today {
+                            todayPeers.append(peerId)
+                            selectedPeers.append(peerId)
+                        } else if birthday.day == today - 1 || birthday.day > today + 5 {
+                            yesterdayPeers.append(peerId)
+                        } else if birthday.day == today + 1 || birthday.day < today + 5 {
+                            tomorrowPeers.append(peerId)
+                        }
+                    }
+                    
+                    if !todayPeers.isEmpty {
+                        sections.append(("🎂 BIRTHDAY TODAY", todayPeers))
+                    }
+                    if !yesterdayPeers.isEmpty {
+                        sections.append(("BIRTHDAY YESTERDAY", yesterdayPeers))
+                    }
+                    if !tomorrowPeers.isEmpty {
+                        sections.append(("BIRTHDAY TOMORROW", tomorrowPeers))
+                    }
+                    
+                    displayTopPeers = .custom(sections)
                 } else {
                     displayTopPeers = .recent
                 }

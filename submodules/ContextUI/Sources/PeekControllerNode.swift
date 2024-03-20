@@ -370,7 +370,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         }
     }
     
-    func activateMenu() {
+    func activateMenu(immediately: Bool = false) {
         if self.content.menuItems().isEmpty {
             if let fullScreenAccessoryNode = self.fullScreenAccessoryNode {
                 fullScreenAccessoryNode.alpha = 1.0
@@ -402,7 +402,11 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.darkDimNode.alpha = 1.0
         self.darkDimNode.layer.animateAlpha(from: previousDarkDimAlpha, to: 1.0, duration: 0.3)
         
-        Queue.mainQueue().justDispatch {
+        if let layout = self.validLayout {
+            self.containerLayoutUpdated(layout, transition: .animated(duration: springDuration, curve: .spring))
+        }
+        
+        let animateIn = {
             self.actionsStackNode.alpha = 1.0
             self.actionsStackNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
             self.actionsStackNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
@@ -410,9 +414,10 @@ final class PeekControllerNode: ViewControllerTracingNode {
             let localContentSourceFrame = self.containerNode.frame
             self.actionsStackNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localContentSourceFrame.center.x - self.actionsStackNode.position.x, y: localContentSourceFrame.center.y - self.actionsStackNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
         }
-        
-        if let layout = self.validLayout {
-            self.containerLayoutUpdated(layout, transition: .animated(duration: springDuration, curve: .spring))
+        if immediately {
+            animateIn()
+        } else {
+            Queue.mainQueue().after(0.15, animateIn)
         }
     }
     

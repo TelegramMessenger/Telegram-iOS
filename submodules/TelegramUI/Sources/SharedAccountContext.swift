@@ -1845,6 +1845,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return SettingsUI.makePrivacyAndSecurityController(context: context)
     }
     
+    public func makeBirthdayPrivacyController(context: AccountContext, settings: Promise<AccountPrivacySettings?>, openedFromBirthdayScreen: Bool, present: @escaping (ViewController) -> Void) {
+        SettingsUI.makeBirthdayPrivacyController(context: context, settings: settings, openedFromBirthdayScreen: openedFromBirthdayScreen, present: present)
+    }
+    
     public func makeSetupTwoFactorAuthController(context: AccountContext) -> ViewController {
         return SettingsUI.makeSetupTwoFactorAuthController(context: context)
     }
@@ -2117,11 +2121,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         var reachedLimitImpl: ((Int32) -> Void)?
         
         let mode: ContactMultiselectionControllerMode
-        if case let .chatList(peerIds) = source {
+        if case let .chatList(birthdays) = source, let birthdays {
             //TODO:localize
-            mode = .premiumGifting(topSectionTitle: "🎂 BIRTHDAY TODAY", topSectionPeers: peerIds)
+            mode = .premiumGifting(birthdays: birthdays)
         } else {
-            mode = .premiumGifting(topSectionTitle: nil, topSectionPeers: [])
+            mode = .premiumGifting(birthdays: nil)
         }
         
         let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: mode, options: [], isPeerEnabled: { peer in

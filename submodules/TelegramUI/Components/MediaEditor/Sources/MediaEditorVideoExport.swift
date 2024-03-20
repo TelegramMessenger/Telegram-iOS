@@ -68,6 +68,14 @@ public final class MediaEditorVideoExport {
             self.frameRate = frameRate
         }
         
+        var isSticker: Bool {
+            if let codec = self.videoSettings[AVVideoCodecKey] as? String, codec == "VP9" {
+                return true
+            } else {
+                return false
+            }
+        }
+        
         var timeRange: CMTimeRange? {
             if let videoTrimRange = self.values.videoTrimRange {
                 return CMTimeRange(start: CMTime(seconds: videoTrimRange.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), end: CMTime(seconds: videoTrimRange.upperBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
@@ -123,7 +131,7 @@ public final class MediaEditorVideoExport {
         }
         
         var composerDimensions: CGSize {
-            if self.values.isStory {
+            if self.values.isStory || self.values.isSticker {
                 return CGSize(width: 1080.0, height: 1920.0)
             } else {
                 let maxSize = CGSize(width: 1920.0, height: 1920.0)
@@ -274,7 +282,9 @@ public final class MediaEditorVideoExport {
         }
         
         let duration: CMTime
-        if let mainAsset {
+        if self.configuration.isSticker {
+            duration = CMTime(seconds: 3.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+        } else if let mainAsset {
             if let trimmedDuration = self.configuration.timeRange?.duration {
                 duration = trimmedDuration
             } else {
@@ -451,8 +461,8 @@ public final class MediaEditorVideoExport {
             }
         }
         
-        if let codec = self.configuration.videoSettings[AVVideoCodecKey] as? String, codec == "VP9" {
-            self.writer = MediaEditorFFMpegWriter()
+        if self.configuration.isSticker {
+            self.writer = MediaEditorVideoFFMpegWriter()
         } else {
             self.writer = MediaEditorVideoAVAssetWriter()
         }

@@ -13,6 +13,7 @@ import TelegramPresentationData
 import ShimmerEffect
 import StickerPeekUI
 import TextFormat
+import Accelerate
 
 final class StickerPackPreviewInteraction {
     var previewedItem: StickerPreviewPeekItem?
@@ -43,12 +44,13 @@ final class StickerPackPreviewGridItem: GridItem {
     let isPremium: Bool
     let isLocked: Bool
     let isEmpty: Bool
+    let isEditable: Bool
     let isEditing: Bool
     let isAdd: Bool
     
     let section: GridSection? = nil
         
-    init(context: AccountContext, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isPremium: Bool, isLocked: Bool, isEmpty: Bool, isEditing: Bool, isAdd: Bool = false) {
+    init(context: AccountContext, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isPremium: Bool, isLocked: Bool, isEmpty: Bool, isEditable: Bool, isEditing: Bool, isAdd: Bool = false) {
         self.context = context
         self.stickerItem = stickerItem
         self.interaction = interaction
@@ -56,13 +58,14 @@ final class StickerPackPreviewGridItem: GridItem {
         self.isPremium = isPremium
         self.isLocked = isLocked
         self.isEmpty = isEmpty
+        self.isEditable = isEditable
         self.isEditing = isEditing
         self.isAdd = isAdd
     }
     
     func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPackPreviewGridItemNode()
-        node.setup(context: self.context, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty, isEditing: self.isEditing, isAdd: self.isAdd)
+        node.setup(context: self.context, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty, isEditable: self.isEditable, isEditing: self.isEditing, isAdd: self.isAdd)
         return node
     }
     
@@ -71,7 +74,7 @@ final class StickerPackPreviewGridItem: GridItem {
             assertionFailure()
             return
         }
-        node.setup(context: self.context, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty, isEditing: self.isEditing, isAdd: self.isAdd)
+        node.setup(context: self.context, stickerItem: self.stickerItem, interaction: self.interaction, theme: self.theme, isLocked: self.isLocked, isPremium: self.isPremium, isEmpty: self.isEmpty, isEditable: self.isEditable, isEditing: self.isEditing, isAdd: self.isAdd)
     }
 }
 
@@ -81,19 +84,20 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     private var currentState: (AccountContext, StickerPackItem?, Bool, Bool)?
     private var isLocked: Bool?
     private var isPremium: Bool?
+    private var isEditable: Bool?
     private var isEmpty: Bool?
     private let containerNode: ASDisplayNode
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
     private var placeholderNode: StickerShimmerEffectNode
     
-    private var lockBackground: UIVisualEffectView?
-    private var lockTintView: UIView?
+    private var lockBackground: UIImageView?
     private var lockIconNode: ASImageNode?
     
     private var theme: PresentationTheme?
     
     private var isEditing = false
+    private var averageColor: UIColor?
     
     override var isVisibleInGrid: Bool {
         didSet {
@@ -138,24 +142,28 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         
         var firstTime = true
         self.imageNode.imageUpdated = { [weak self] image in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, let image else {
                 return
             }
             
-            if image != nil {
-                if let stickerItem = strongSelf.currentState?.1 {
-                    if stickerItem.file.isVideoSticker || stickerItem.file.isAnimatedSticker {
-                        strongSelf.removePlaceholder(animated: !firstTime)
+            if let stickerItem = strongSelf.currentState?.1 {
+                if stickerItem.file.isVideoSticker || stickerItem.file.isAnimatedSticker {
+                    strongSelf.removePlaceholder(animated: !firstTime)
+                } else {
+                    let current = CACurrentMediaTime()
+                    if let setupTimestamp = strongSelf.setupTimestamp, current - setupTimestamp > 0.3 {
+                        strongSelf.removePlaceholder(animated: true)
                     } else {
-                        let current = CACurrentMediaTime()
-                        if let setupTimestamp = strongSelf.setupTimestamp, current - setupTimestamp > 0.3 {
-                            strongSelf.removePlaceholder(animated: true)
-                        } else {
-                            strongSelf.removePlaceholder(animated: false)
-                        }
+                        strongSelf.removePlaceholder(animated: false)
                     }
                 }
-                firstTime = false
+            }
+            firstTime = false
+            
+            if let self, self.isPremium == true || self.isEditable == true, let averageColor = getAverageColor(image: image) {
+                self.averageColor = averageColor
+                self.lockBackground?.tintColor = averageColor
+                self.lockBackground?.alpha = 1.0
             }
         }
     }
@@ -192,7 +200,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     }
     
     private var setupTimestamp: Double?
-    func setup(context: AccountContext, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isLocked: Bool, isPremium: Bool, isEmpty: Bool, isEditing: Bool, isAdd: Bool) {
+    func setup(context: AccountContext, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isLocked: Bool, isPremium: Bool, isEmpty: Bool, isEditable: Bool, isEditing: Bool, isAdd: Bool) {
         self.interaction = interaction
         self.theme = theme
         
@@ -239,23 +247,21 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             self.isHidden = false
         }
         
-        if self.currentState == nil || self.currentState!.0 !== context || self.currentState!.1 != stickerItem || self.isLocked != isLocked || self.isPremium != isPremium || self.isEmpty != isEmpty {
+        if self.currentState == nil || self.currentState!.0 !== context || self.currentState!.1 != stickerItem || self.isLocked != isLocked || self.isPremium != isPremium || self.isEmpty != isEmpty || self.isEditing != isEditing || self.isEditable != isEditable {
             self.isLocked = isLocked
+            self.isPremium = isPremium
+            self.isEditable = isEditable
                         
-            if isLocked || isEditing {
-                let lockBackground: UIVisualEffectView
+            if isPremium || isEditing {
+                let lockBackground: UIImageView
                 let lockIconNode: ASImageNode
                 if let currentBackground = self.lockBackground, let currentIcon = self.lockIconNode {
                     lockBackground = currentBackground
                     lockIconNode = currentIcon
                 } else {
-                    let effect: UIBlurEffect
-                    if #available(iOS 10.0, *) {
-                        effect = UIBlurEffect(style: .regular)
-                    } else {
-                        effect = UIBlurEffect(style: .light)
-                    }
-                    lockBackground = UIVisualEffectView(effect: effect)
+                    lockBackground = UIImageView()
+                    lockBackground.alpha = self.averageColor != nil ? 1.0 : 0.0
+                    lockBackground.tintColor = self.averageColor ?? .white
                     lockBackground.clipsToBounds = true
                     lockBackground.isUserInteractionEnabled = false
                     lockIconNode = ASImageNode()
@@ -279,16 +285,11 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                         lockIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
                     }
                     
-                    let lockTintView = UIView()
-                    lockTintView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.15)
-                    lockBackground.contentView.addSubview(lockTintView)
-                    
                     self.lockBackground = lockBackground
-                    self.lockTintView = lockTintView
                     self.lockIconNode = lockIconNode
                     
                     self.view.addSubview(lockBackground)
-                    lockBackground.contentView.addSubview(lockIconNode.view)
+                    lockBackground.addSubview(lockIconNode.view)
                     
                     if !isFirstTime {
                         lockBackground.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
@@ -296,7 +297,6 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                 }
             } else if let lockBackground = self.lockBackground {
                 self.lockBackground = nil
-                self.lockTintView = nil
                 self.lockIconNode = nil
                 
                 lockBackground.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
@@ -475,7 +475,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             self.placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.file.immediateThumbnailData, size: placeholderFrame.size, enableEffect: context.sharedContext.energyUsageSettings.fullTranslucency)
         }
         
-        if let lockBackground = self.lockBackground, let lockTintView = self.lockTintView, let lockIconNode = self.lockIconNode {
+        if let lockBackground = self.lockBackground, let lockIconNode = self.lockIconNode {
             let lockSize: CGSize
             let lockBackgroundFrame: CGRect
             if let (_, _, _, isEditing) = self.currentState, isEditing {
@@ -483,14 +483,16 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                 lockBackgroundFrame = CGRect(origin: CGPoint(x: 3.0, y: 3.0), size: lockSize)
             } else {
                 lockSize = CGSize(width: 16.0, height: 16.0)
-                lockBackgroundFrame = CGRect(origin: CGPoint(x: bounds.width - lockSize.width, y: bounds.height - lockSize.height), size: lockSize)
+                lockBackgroundFrame = CGRect(origin: CGPoint(x: bounds.width - lockSize.width - 1.0, y: bounds.height - lockSize.height - 1.0), size: lockSize)
+            }
+            if lockBackground.image == nil {
+                lockBackground.image = generateFilledCircleImage(diameter: lockSize.width, color: .white)?.withRenderingMode(.alwaysTemplate)
             }
             lockBackground.frame = lockBackgroundFrame
             lockBackground.layer.cornerRadius = lockSize.width / 2.0
             if #available(iOS 13.0, *) {
                 lockBackground.layer.cornerCurve = .circular
             }
-            lockTintView.frame = CGRect(origin: CGPoint(), size: lockBackgroundFrame.size)
             if let icon = lockIconNode.image {
                 let iconSize = CGSize(width: icon.size.width - 4.0, height: icon.size.height - 4.0)
                 lockIconNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((lockBackgroundFrame.width - iconSize.width) / 2.0), y: floorToScreenPixels((lockBackgroundFrame.height - iconSize.height) / 2.0)), size: iconSize)
@@ -535,3 +537,95 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     }
 }
 
+private func getAverageColor(image: UIImage) -> UIColor? {
+    let blurredWidth = 16
+    let blurredHeight = 16
+    let blurredBytesPerRow = blurredWidth * 4
+    guard let context = DrawingContext(size: CGSize(width: CGFloat(blurredWidth), height: CGFloat(blurredHeight)), scale: 1.0, opaque: true, bytesPerRow: blurredBytesPerRow) else {
+        return nil
+    }
+    
+    let size = CGSize(width: CGFloat(blurredWidth), height: CGFloat(blurredHeight))
+    
+    if let cgImage = image.cgImage {
+        context.withFlippedContext { c in
+            c.setFillColor(UIColor.white.cgColor)
+            c.fill(CGRect(origin: CGPoint(), size: size))
+            c.draw(cgImage, in: CGRect(origin: CGPoint(x: -size.width / 2.0, y: -size.height / 2.0), size: CGSize(width: size.width * 1.8, height: size.height * 1.8)))
+        }
+    }
+        
+    var destinationBuffer = vImage_Buffer()
+    destinationBuffer.width = UInt(blurredWidth)
+    destinationBuffer.height = UInt(blurredHeight)
+    destinationBuffer.data = context.bytes
+    destinationBuffer.rowBytes = context.bytesPerRow
+    
+    vImageBoxConvolve_ARGB8888(&destinationBuffer,
+                               &destinationBuffer,
+                               nil,
+                               0, 0,
+                               UInt32(15),
+                               UInt32(15),
+                               nil,
+                               vImage_Flags(kvImageTruncateKernel))
+    
+    let divisor: Int32 = 0x1000
+
+    let rwgt: CGFloat = 0.3086
+    let gwgt: CGFloat = 0.6094
+    let bwgt: CGFloat = 0.0820
+
+    let adjustSaturation: CGFloat = 1.7
+
+    let a = (1.0 - adjustSaturation) * rwgt + adjustSaturation
+    let b = (1.0 - adjustSaturation) * rwgt
+    let c = (1.0 - adjustSaturation) * rwgt
+    let d = (1.0 - adjustSaturation) * gwgt
+    let e = (1.0 - adjustSaturation) * gwgt + adjustSaturation
+    let f = (1.0 - adjustSaturation) * gwgt
+    let g = (1.0 - adjustSaturation) * bwgt
+    let h = (1.0 - adjustSaturation) * bwgt
+    let i = (1.0 - adjustSaturation) * bwgt + adjustSaturation
+
+    let satMatrix: [CGFloat] = [
+        a, b, c, 0,
+        d, e, f, 0,
+        g, h, i, 0,
+        0, 0, 0, 1
+    ]
+
+    var matrix: [Int16] = satMatrix.map { value in
+        return Int16(value * CGFloat(divisor))
+    }
+
+    vImageMatrixMultiply_ARGB8888(&destinationBuffer, &destinationBuffer, &matrix, divisor, nil, nil, vImage_Flags(kvImageDoNotTile))
+    
+    context.withFlippedContext { c in
+        c.setFillColor(UIColor.white.withMultipliedAlpha(0.1).cgColor)
+        c.fill(CGRect(origin: CGPoint(), size: size))
+    }
+    
+    var sumR: UInt64 = 0
+    var sumG: UInt64 = 0
+    var sumB: UInt64 = 0
+    var sumA: UInt64 = 0
+    
+    for y in 0 ..< blurredHeight {
+        let row = context.bytes.assumingMemoryBound(to: UInt8.self).advanced(by: y * blurredBytesPerRow)
+        for x in 0 ..< blurredWidth {
+            let pixel = row.advanced(by: x * 4)
+            sumB += UInt64(pixel.advanced(by: 0).pointee)
+            sumG += UInt64(pixel.advanced(by: 1).pointee)
+            sumR += UInt64(pixel.advanced(by: 2).pointee)
+            sumA += UInt64(pixel.advanced(by: 3).pointee)
+        }
+    }
+    sumR /= UInt64(blurredWidth * blurredHeight)
+    sumG /= UInt64(blurredWidth * blurredHeight)
+    sumB /= UInt64(blurredWidth * blurredHeight)
+    sumA /= UInt64(blurredWidth * blurredHeight)
+    sumA = 255
+    
+    return UIColor(red: CGFloat(sumR) / 255.0, green: CGFloat(sumG) / 255.0, blue: CGFloat(sumB) / 255.0, alpha: CGFloat(sumA) / 255.0)
+}

@@ -49,6 +49,7 @@ import StoryContainerScreen
 import FullScreenEffectView
 import PeerInfoStoryGridScreen
 import ArchiveInfoScreen
+import BirthdayPickerScreen
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
@@ -1162,6 +1163,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.setCurrentRemovingItemId(nil)
                 })
             }
+        }
+        
+        self.chatListDisplayNode.mainContainerNode.openBirthdaySetup = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.openBirthdaySetup()
         }
         
         self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, threadId, messageId, deactivateOnAction in
@@ -5759,6 +5767,41 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         Queue.mainQueue().after(0.3) {
             self.view.addSubview(ConfettiView(frame: self.view.bounds))
         }
+    }
+    
+    func openBirthdaySetup() {
+        let context = self.context
+        let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupBirthday).startStandalone()
+                
+        let settingsPromise: Promise<AccountPrivacySettings?>
+        if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let current = rootController.getPrivacySettings() {
+            settingsPromise = current
+        } else {
+            settingsPromise = Promise()
+            settingsPromise.set(.single(nil) |> then(context.engine.privacy.requestAccountPrivacySettings() |> map(Optional.init)))
+        }
+        let controller = BirthdayPickerScreen(context: context, settings: settingsPromise.get(), openSettings: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.context.sharedContext.makeBirthdayPrivacyController(context: self.context, settings: settingsPromise, openedFromBirthdayScreen: true, present: { [weak self] c in
+                self?.push(c)
+            })
+        }, completion: { [weak self] value in
+            guard let self else {
+                return
+            }
+            
+            let _ = context.engine.accountData.updateBirthday(birthday: value).startStandalone()
+            
+            //TODO:localize
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            self.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: self.presentationData.strings.Birthday_Added, cancel: nil, destructive: false), elevatedLayout: false, action: { _ in
+                return true
+            }), in: .current)
+        })
+        self.push(controller)
+        //self.present(controller, in: .current)
     }
     
     private var storyCameraTransitionInCoordinator: StoryCameraTransitionInCoordinator?

@@ -253,7 +253,7 @@ final class VideoFinishPass: RenderPass {
             y: canvasSize.height / 2.0 + values.cropOffset.y
         )
         
-        self.isStory = values.isStory
+        self.isStory = values.isStory || values.isSticker
         self.isSticker = values.gradientColors?.first?.alpha == 0.0
         self.mainPosition = VideoFinishPass.VideoPosition(position: position, size: self.mainPosition.size, scale: values.cropScale, rotation: values.cropRotation, baseScale: self.mainPosition.baseScale)
             

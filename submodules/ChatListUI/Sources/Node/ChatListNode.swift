@@ -101,7 +101,7 @@ public final class ChatListNodeInteraction {
     let openStorageManagement: () -> Void
     let openPasswordSetup: () -> Void
     let openPremiumIntro: () -> Void
-    let openPremiumGift: ([EnginePeer.Id]) -> Void
+    let openPremiumGift: ([EnginePeer.Id: TelegramBirthday]?) -> Void
     let openActiveSessions: () -> Void
     let openBirthdaySetup: () -> Void
     let performActiveSessionAction: (NewSessionReview, Bool) -> Void
@@ -155,7 +155,7 @@ public final class ChatListNodeInteraction {
         openStorageManagement: @escaping () -> Void,
         openPasswordSetup: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void,
-        openPremiumGift: @escaping ([EnginePeer.Id]) -> Void,
+        openPremiumGift: @escaping ([EnginePeer.Id: TelegramBirthday]?) -> Void,
         openActiveSessions: @escaping () -> Void,
         openBirthdaySetup: @escaping () -> Void,
         performActiveSessionAction: @escaping (NewSessionReview, Bool) -> Void,
@@ -735,11 +735,11 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
                         case .xmasPremiumGift:
-                            nodeInteraction?.openPremiumGift([])
+                            nodeInteraction?.openPremiumGift(nil)
                         case .setupBirthday:
                             nodeInteraction?.openBirthdaySetup()
-                        case let .birthdayPremiumGift(peers, _):
-                            nodeInteraction?.openPremiumGift(peers.map { $0.id })
+                        case let .birthdayPremiumGift(_, birthdays):
+                            nodeInteraction?.openPremiumGift(birthdays)
                         case .reviewLogin:
                             break
                         }
@@ -1071,11 +1071,11 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
                         case .xmasPremiumGift:
-                            nodeInteraction?.openPremiumGift([])
+                            nodeInteraction?.openPremiumGift(nil)
                         case .setupBirthday:
                             nodeInteraction?.openBirthdaySetup()
-                        case let .birthdayPremiumGift(peers, _):
-                            nodeInteraction?.openPremiumGift(peers.map { $0.id })
+                        case let .birthdayPremiumGift(_, birthdays):
+                            nodeInteraction?.openPremiumGift(birthdays)
                         case .reviewLogin:
                             break
                         }
@@ -1195,6 +1195,7 @@ public final class ChatListNode: ListView {
     public var hidePsa: ((EnginePeer.Id) -> Void)?
     public var activateChatPreview: ((ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     public var openStories: ((ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void)?
+    public var openBirthdaySetup: (() -> Void)?
     
     private var theme: PresentationTheme
     
@@ -1693,11 +1694,27 @@ public final class ChatListNode: ListView {
             }
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
             self.push?(controller)
-        }, openPremiumGift: { [weak self] peerIds in
+        }, openPremiumGift: { [weak self] birthdays in
             guard let self else {
                 return
             }
-            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(peerIds), completion: nil)
+            if let birthdays {
+                let today = Calendar(identifier: .gregorian).component(.day, from: Date())
+                var todayBirthdayPeerIds: [EnginePeer.Id] = []
+                for (peerId, birthday) in birthdays {
+                    if birthday.day == today {
+                        todayBirthdayPeerIds.append(peerId)
+                    }
+                }
+                let peerIds = todayBirthdayPeerIds.sorted { lhs, rhs in
+                    return lhs < rhs
+                }
+                Queue.mainQueue().after(0.4) {
+                    let _ = ApplicationSpecificNotice.setDismissedBirthdayPremiumGifts(accountManager: self.context.sharedContext.accountManager, values: peerIds.map { $0.toInt64() }).start()
+                }
+            }
+            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(birthdays), completion: nil)
+            controller.navigationPresentation = .modal
             self.push?(controller)
         }, openActiveSessions: { [weak self] in
             guard let self else {
@@ -1718,8 +1735,11 @@ public final class ChatListNode: ListView {
                 let recentSessionsController = self.context.sharedContext.makeRecentSessionsController(context: self.context, activeSessionsContext: activeSessionsContext)
                 self.push?(recentSessionsController)
             })
-        }, openBirthdaySetup: {
-            
+        }, openBirthdaySetup: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.openBirthdaySetup?()
         }, performActiveSessionAction: { [weak self] newSessionReview, isPositive in
             guard let self else {
                 return
@@ -1801,6 +1821,14 @@ public final class ChatListNode: ListView {
             case .setupBirthday:
                 //TODO:localize
                 let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupBirthday).startStandalone()
+                self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can set your date of birth later in **Settings**.", timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
+                    return true
+                }))
+            case let .birthdayPremiumGift(peers, _):
+                let peerIds = peers.sorted { lhs, rhs in
+                    return lhs.id < rhs.id
+                }
+                let _ = ApplicationSpecificNotice.setDismissedBirthdayPremiumGifts(accountManager: self.context.sharedContext.accountManager, values: peerIds.map { $0.id.toInt64() }).start()
                 self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_PremiumGiftInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
                     return true
                 }))
@@ -1899,9 +1927,10 @@ public final class ChatListNode: ListView {
                 context.engine.notices.getServerProvidedSuggestions(),
                 twoStepData,
                 newSessionReviews(postbox: context.account.postbox),
-                context.account.stateManager.contactBirthdays
+                context.account.stateManager.contactBirthdays,
+                ApplicationSpecificNotice.dismissedBirthdayPremiumGifts(accountManager: context.sharedContext.accountManager)
             )
-            |> mapToSignal { suggestions, configuration, newSessionReviews, birthdays -> Signal<ChatListNotice?, NoError> in
+            |> mapToSignal { suggestions, configuration, newSessionReviews, birthdays, dismissedBirthdayPeerIds -> Signal<ChatListNotice?, NoError> in
                 if let newSessionReview = newSessionReviews.first {
                     return .single(.reviewLogin(newSessionReview: newSessionReview, totalCount: newSessionReviews.count))
                 }
@@ -1919,20 +1948,32 @@ public final class ChatListNode: ListView {
                         return .single(.setupPassword)
                     }
                 }
+                
+                let today = Calendar(identifier: .gregorian).component(.day, from: Date())
+                var todayBirthdayPeerIds: [EnginePeer.Id] = []
+                for (peerId, birthday) in birthdays {
+                    if birthday.day == today {
+                        todayBirthdayPeerIds.append(peerId)
+                    }
+                }
+                todayBirthdayPeerIds.sort { lhs, rhs in
+                    return lhs < rhs
+                }
+                
                 if suggestions.contains(.setupBirthday) {
                     return .single(.setupBirthday)
-                } else if !birthdays.isEmpty {
+                } else if !todayBirthdayPeerIds.isEmpty && todayBirthdayPeerIds.map({ $0.toInt64() }) != dismissedBirthdayPeerIds {
                     return context.engine.data.get(
-                        EngineDataMap(birthdays.keys.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                        EngineDataMap(todayBirthdayPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
                     )
                     |> map { result -> ChatListNotice? in
-                        var peers: [EnginePeer] = []
+                        var todayBirthdayPeers: [EnginePeer] = []
                         for (peerId, _) in birthdays {
                             if let maybePeer = result[peerId], let peer = maybePeer {
-                                peers.append(peer)
+                                todayBirthdayPeers.append(peer)
                             }
                         }
-                        return .birthdayPremiumGift(peers: peers, birthdays: birthdays)
+                        return .birthdayPremiumGift(peers: todayBirthdayPeers, birthdays: birthdays)
                     }
                 } else if suggestions.contains(.xmasPremiumGift) {
                     return .single(.xmasPremiumGift)

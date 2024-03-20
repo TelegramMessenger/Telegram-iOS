@@ -26,7 +26,7 @@ func compressFrame(width: Int, height: Int, rgbData: Data, unpremultiply: Bool) 
     var rgbData = rgbData
     rgbData.withUnsafeMutableBytes { (buffer: UnsafeMutableRawBufferPointer) -> Void in
         if let baseAddress = buffer.baseAddress {
-            encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), baseAddress.assumingMemoryBound(to: UInt8.self), Int32(width), Int32(height), Int32(bytesPerRow), unpremultiply)
+            encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), baseAddress.assumingMemoryBound(to: UInt8.self), Int32(width), Int32(height), Int32(bytesPerRow), true, unpremultiply)
         }
     }
     

@@ -10673,6 +10673,7 @@ Sorry for the inconvenience.";
 "Premium.Gift.ContactSelection.Proceed" = "Proceed";
 "Premium.Gift.ContactSelection.FrequentContacts" = "FREQUENT CONTACTS";
 "Premium.Gift.ContactSelection.DeselectAll" = "DESELECT ALL";
+"Premium.Gift.ContactSelection.SelectAll" = "SELECT ALL";
 "Premium.Gift.ContactSelection.MaximumReached" = "You can select up to %@ users.";
 
 "Premium.Gift.GiftMultipleSubscriptionsFormat" = "%1$@ for %2$@";
@@ -11625,3 +11626,18 @@ Sorry for the inconvenience.";
 "Privacy.Birthday.CustomHelp" = "You can restrict who can see your date of birth with granular precision.";
 "Privacy.Birthday.AlwaysShareWith.Title" = "Always Share With";
 "Privacy.Birthday.NeverShareWith.Title" = "Never Share With";
+"Privacy.Birthday.Setup" = "You haven't entered your date of birth yet.\n[Add my birthday >]()";
+
+"Settings.Birthday" = "Date of Birth";
+"Settings.Birthday.Add" = "Add";
+"Settings.Birthday.Remove" = "Remove Date of Birth";
+"Settings.Birthday.Help" = "Choose who can see your birthday in [Settings]().";
+"Settings.Birthday.ContactsHelp" = "Only your contacts can see your birthday. [Change >]()";
+
+"Birthday.Title" = "Date of Birth";
+"Birthday.Help" = "Choose who can see your birthday in [Settings]().";
+"Birthday.HelpContacts" = "Only your contacts will see your birthday. [Change >]()";
+"Birthday.Save" = "Save";
+"Birthday.Added" = "Date of birth added.";
+
+"Chat.BirthdayTooltip" = "🎂 %1$@ is having a birthday today. You can give %2$@ **Telegram Premium** as a birthday gift.";

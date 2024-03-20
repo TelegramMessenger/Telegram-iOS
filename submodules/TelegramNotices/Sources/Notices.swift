@@ -200,6 +200,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case dismissedLastSeenBadge = 66
     case dismissedMessagePrivacyBadge = 67
     case dismissedBusinessBadge = 68
+    case dismissedBirthdayPremiumGifts = 69
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -234,6 +235,7 @@ private struct ApplicationSpecificNoticeKeys {
     private static let peerInviteRequestsNamespace: Int32 = 8
     private static let dismissedPremiumGiftNamespace: Int32 = 9
     private static let groupEmojiPackNamespace: Int32 = 9
+    private static let dismissedBirthdayPremiumGiftTipNamespace: Int32 = 10
     
     static func inlineBotLocationRequestNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: inlineBotLocationRequestNamespace), key: noticeKey(peerId: peerId, key: 0))
@@ -533,6 +535,14 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func dismissedBusinessBadge() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedBusinessBadge.key)
+    }
+    
+    static func dismissedBirthdayPremiumGifts() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedBirthdayPremiumGifts.key)
+    }
+    
+    static func dismissedBirthdayPremiumGiftTip(peerId: PeerId) -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: dismissedBirthdayPremiumGiftTipNamespace), key: noticeKey(peerId: peerId, key: 0))
     }
 }
 
@@ -1565,31 +1575,24 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    public static func dismissedPremiumGiftSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId) -> Signal<Int32, NoError> {
+    public static func dismissedPremiumGiftSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId) -> Signal<Int32?, NoError> {
         return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedPremiumGiftNotice(peerId: peerId))
-        |> map { view -> Int32 in
-            if let value = view.value?.get(ApplicationSpecificCounterNotice.self) {
+        |> map { view -> Int32? in
+            if let value = view.value?.get(ApplicationSpecificTimestampNotice.self) {
                 return value.value
             } else {
-                return 0
+                return nil
             }
         }
     }
     
-    public static func incrementDismissedPremiumGiftSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId, count: Int32 = 1) -> Signal<Int32, NoError> {
-        return accountManager.transaction { transaction -> Int32 in
-            var currentValue: Int32 = 0
-            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.dismissedPremiumGiftNotice(peerId: peerId))?.get(ApplicationSpecificCounterNotice.self) {
-                currentValue = value.value
-            }
-            let previousValue = currentValue
-            currentValue += count
-            
-            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+    public static func incrementDismissedPremiumGiftSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId, timestamp: Int32) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificTimestampNotice(value: timestamp)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedPremiumGiftNotice(peerId: peerId), entry)
             }
-            return previousValue
         }
+        |> ignoreValues
     }
     
     public static func groupEmojiPackSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId) -> Signal<Int32, NoError> {
@@ -2248,5 +2251,44 @@ public struct ApplicationSpecificNotice {
             }
         }
         |> take(1)
+    }
+    
+    public static func dismissedBirthdayPremiumGifts(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<[Int64]?, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedBirthdayPremiumGifts())
+        |> map { view -> [Int64]? in
+            if let value = view.value?.get(ApplicationSpecificInt64ArrayNotice.self) {
+                return value.values
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public static func setDismissedBirthdayPremiumGifts(accountManager: AccountManager<TelegramAccountManagerTypes>, values: [Int64]) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificInt64ArrayNotice(values: values)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedBirthdayPremiumGifts(), entry)
+            }
+        }
+    }
+    
+    public static func dismissedBirthdayPremiumGiftTip(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId) -> Signal<Int32?, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedBirthdayPremiumGiftTip(peerId: peerId))
+        |> map { view -> Int32? in
+            if let value = view.value?.get(ApplicationSpecificTimestampNotice.self) {
+                return value.value
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public static func incrementDismissedBirthdayPremiumGiftTip(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId, timestamp: Int32) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificTimestampNotice(value: timestamp)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedBirthdayPremiumGiftTip(peerId: peerId), entry)
+            }
+        }
+        |> ignoreValues
     }
 }

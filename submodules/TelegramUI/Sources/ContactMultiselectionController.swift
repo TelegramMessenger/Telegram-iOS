@@ -164,11 +164,19 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     strongSelf.requestLayout(transition: .immediate)
                 }
             })
-        case let .premiumGifting(_, topSectionPeers):
-            if !topSectionPeers.isEmpty {
+        case let .premiumGifting(birthdays):
+            if let birthdays {
+                let today = Calendar(identifier: .gregorian).component(.day, from: Date())
+                var todayPeers: [EnginePeer.Id] = []
+                for (peerId, birthday) in birthdays {
+                    if birthday.day == today {
+                        todayPeers.append(peerId)
+                    }
+                }
+                
                 let _ = (self.context.engine.data.get(
                     EngineDataList(
-                        topSectionPeers.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                        todayPeers.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
                     )
                 )
                 |> deliverOnMainQueue).startStandalone(next: { [weak self] peerList in
@@ -626,6 +634,31 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 }
                 self.contactsNode.editableTokens = []
                 self.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
+            }
+            contactsNode.updatedSelection = { [weak self] peers, value in
+                guard let self else {
+                    return
+                }
+                var tokens = self.contactsNode.editableTokens
+                if value {
+                    var existingPeerIds = Set<EnginePeer.Id>()
+                    for token in tokens {
+                        if let peerId = token.id as? EnginePeer.Id {
+                            existingPeerIds.insert(peerId)
+                        }
+                    }
+                    for peer in peers {
+                        if !existingPeerIds.contains(peer.id) {
+                            tokens.append(EditableTokenListToken(id: peer.id, title: peerTokenTitle(accountPeerId: self.context.account.peerId, peer: peer._asPeer(), strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder), fixedPosition: nil, subject: .peer(peer)))
+                        }
+                    }
+                } else {
+                    let peerIds = Set(peers.map { AnyHashable($0.id) })
+                    tokens = tokens.filter { !peerIds.contains($0.id) }
+                }
+                self.contactsNode.editableTokens = tokens
+                self.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
+
             }
         case .chats:
             break
