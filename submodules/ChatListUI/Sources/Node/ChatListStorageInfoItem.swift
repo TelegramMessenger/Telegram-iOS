@@ -225,19 +225,17 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 titleString = parseMarkdownIntoAttributedString(item.strings.ChatList_PremiumXmasGiftTitle, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.accentTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), linkAttribute: { _ in return nil }))
                 textString = NSAttributedString(string: item.strings.ChatList_PremiumXmasGiftText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             case .setupBirthday:
-                //TODO:localize
-                titleString = NSAttributedString(string: "Add your birthday! 🎂", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
-                textString = NSAttributedString(string: "Let your contacts know when you're celebrating.", font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+                titleString = NSAttributedString(string: item.strings.ChatList_AddBirthdayTitle, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
+                textString = NSAttributedString(string: item.strings.ChatList_AddBirthdayText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             case let .birthdayPremiumGift(peers, _):
-                //TODO:localize
                 let title: String
                 let text: String
                 if peers.count == 1, let peer = peers.first {
-                    title = "It's \(peer.compactDisplayTitle)'s **birthday** today! 🎂"
-                    text = "Gift them Telegram Premium."
+                    title = item.strings.ChatList_BirthdaySingleTitle(peer.compactDisplayTitle).string
+                    text = item.strings.ChatList_BirthdaySingleText
                 } else {
-                    title = "\(peers.count) contacts have **birthdays** today! 🎂"
-                    text = "Gift them Telegram Premium."
+                    title = item.strings.ChatList_BirthdayMultipleTitle(Int32(peers.count))
+                    text = item.strings.ChatList_BirthdayMultipleText
                 }
                 titleString = parseMarkdownIntoAttributedString(title, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.accentTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), linkAttribute: { _ in return nil }))
                 textString = NSAttributedString(string: text, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)

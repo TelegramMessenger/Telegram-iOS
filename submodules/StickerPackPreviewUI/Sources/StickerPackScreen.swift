@@ -56,12 +56,12 @@ private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isEditing: Bool) -> GridItem {
+    func item(context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, isEditable: Bool, isEditing: Bool) -> GridItem {
         switch self {
         case let .sticker(_, _, stickerItem, isEmpty, isPremium, isLocked, _, isAdd):
-            return StickerPackPreviewGridItem(context: context, stickerItem: stickerItem, interaction: interaction, theme: theme, isPremium: isPremium, isLocked: isLocked, isEmpty: isEmpty, isEditing: isEditing, isAdd: isAdd)
+            return StickerPackPreviewGridItem(context: context, stickerItem: stickerItem, interaction: interaction, theme: theme, isPremium: isPremium, isLocked: isLocked, isEmpty: isEmpty, isEditable: isEditable, isEditing: isEditing, isAdd: isAdd)
         case .add:
-            return StickerPackPreviewGridItem(context: context, stickerItem: nil, interaction: interaction, theme: theme, isPremium: false, isLocked: false, isEmpty: false, isEditing: false, isAdd: true)
+            return StickerPackPreviewGridItem(context: context, stickerItem: nil, interaction: interaction, theme: theme, isPremium: false, isLocked: false, isEmpty: false, isEditable: false, isEditing: false, isAdd: true)
         case let .emojis(_, _, info, items, title, isInstalled):
             return StickerPackEmojisItem(context: context, animationCache: animationCache, animationRenderer: animationRenderer, interaction: interaction, info: info, items: items, theme: theme, strings: strings, title: title, isInstalled: isInstalled, isEmpty: false)
         }
@@ -74,24 +74,24 @@ private struct StickerPackPreviewGridTransaction {
     let updates: [GridNodeUpdateItem]
     let scrollToItem: GridNodeScrollToItem?
     
-    init(previousList: [StickerPackPreviewGridEntry], list: [StickerPackPreviewGridEntry], context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, scrollToItem: GridNodeScrollToItem?, isEditing: Bool) {
+    init(previousList: [StickerPackPreviewGridEntry], list: [StickerPackPreviewGridEntry], context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, scrollToItem: GridNodeScrollToItem?, isEditable: Bool, isEditing: Bool) {
         let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: previousList, rightList: list)
         
         self.deletions = deleteIndices
-        self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction, theme: theme, strings: strings, animationCache: animationCache, animationRenderer: animationRenderer, isEditing: isEditing), previousIndex: $0.2) }
-        self.updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction, theme: theme, strings: strings, animationCache: animationCache, animationRenderer: animationRenderer, isEditing: isEditing)) }
+        self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction, theme: theme, strings: strings, animationCache: animationCache, animationRenderer: animationRenderer, isEditable: isEditable, isEditing: isEditing), previousIndex: $0.2) }
+        self.updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction, theme: theme, strings: strings, animationCache: animationCache, animationRenderer: animationRenderer, isEditable: isEditable, isEditing: isEditing)) }
         
         self.scrollToItem = scrollToItem
     }
     
-    init(list: [StickerPackPreviewGridEntry], context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, scrollToItem: GridNodeScrollToItem?, isEditing: Bool) {
+    init(list: [StickerPackPreviewGridEntry], context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, scrollToItem: GridNodeScrollToItem?, isEditable: Bool, isEditing: Bool) {
         self.deletions = []
         self.insertions = []
         
         var index = 0
         var updates: [GridNodeUpdateItem] = []
         for i in 0 ..< list.count {
-            updates.append(GridNodeUpdateItem(index: i, previousIndex: i, item: list[i].item(context: context, interaction: interaction, theme: theme, strings: strings, animationCache: animationCache, animationRenderer: animationRenderer, isEditing: isEditing)))
+            updates.append(GridNodeUpdateItem(index: i, previousIndex: i, item: list[i].item(context: context, interaction: interaction, theme: theme, strings: strings, animationCache: animationCache, animationRenderer: animationRenderer, isEditable: isEditable, isEditing: isEditing)))
             index += 1
         }
         self.updates = updates
@@ -989,11 +989,17 @@ private final class StickerPackContainer: ASDisplayNode {
         guard let controller = self.controller else {
             return
         }
+        
+        var isEditable = false
+        if let info = self.currentStickerPack?.0, info.flags.contains(.isCreator) {
+            isEditable = true
+        }
+        
         let transaction: StickerPackPreviewGridTransaction
         if reload {
-            transaction = StickerPackPreviewGridTransaction(list: self.currentEntries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil, isEditing: self.isEditing)
+            transaction = StickerPackPreviewGridTransaction(list: self.currentEntries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil, isEditable: isEditable, isEditing: self.isEditing)
         } else {
-            transaction = StickerPackPreviewGridTransaction(previousList: self.currentEntries, list: self.currentEntries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil, isEditing: self.isEditing)
+            transaction = StickerPackPreviewGridTransaction(previousList: self.currentEntries, list: self.currentEntries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil, isEditable: isEditable, isEditing: self.isEditing)
         }
         self.enqueueTransaction(transaction)
     }
@@ -1546,6 +1552,7 @@ private final class StickerPackContainer: ASDisplayNode {
         var scrollToItem: GridNodeScrollToItem?
         let titleFont = Font.semibold(17.0)
         
+        var isEditable = false
         if contents.count > 1 {
             self.onLoading()
             
@@ -1649,6 +1656,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 self.controller?.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.StickerPack_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 self.controller?.dismiss(animated: true, completion: nil)
             case let .result(info, items, installed):
+                isEditable = info.flags.contains(.isCreator)
                 self.onReady()
                 if !items.isEmpty && self.currentStickerPack == nil {
                     if let _ = self.validLayout, abs(self.expandScrollProgress - 1.0) < .ulpOfOne {
@@ -1754,13 +1762,13 @@ private final class StickerPackContainer: ASDisplayNode {
         }
         
         if let controller = self.controller {
-            let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: scrollToItem, isEditing: self.isEditing)
+            let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: scrollToItem, isEditable: isEditable, isEditing: self.isEditing)
             self.enqueueTransaction(transaction)
         }
     }
     
     func updateEntries() {
-        guard let (_, items, _) = self.currentStickerPack else {
+        guard let (info, items, _) = self.currentStickerPack else {
             return
         }
         let hasPremium = self.context.isPremium
@@ -1833,7 +1841,7 @@ private final class StickerPackContainer: ASDisplayNode {
         self.currentEntries = entries
         
         if let controller = self.controller {
-            let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil, isEditing: self.isEditing)
+            let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil, isEditable: info.flags.contains(.isCreator), isEditing: self.isEditing)
             self.enqueueTransaction(transaction)
         }
     }

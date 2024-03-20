@@ -913,6 +913,9 @@ public final class PeerInfoNavigationSourceTag {
 
 public protocol PeerInfoScreen: ViewController {
     var peerId: PeerId { get }
+    var privacySettings: Promise<AccountPrivacySettings?> { get }
+    
+    func openBirthdaySetup()
 }
 
 public extension Peer {

@@ -583,8 +583,9 @@ private final class PeerInfoInteraction {
     let openPeerMention: (String, ChatControllerInteractionNavigateToPeer) -> Void
     let openBotApp: (AttachMenuBot) -> Void
     let openEditing: () -> Void
-    let updateBirthDate: (TelegramBirthday??) -> Void
+    let updateBirthdate: (TelegramBirthday??) -> Void
     let updateIsEditingBirthdate: (Bool) -> Void
+    let openBirthdatePrivacy: () -> Void
     
     init(
         openUsername: @escaping (String, Bool, Promise<Bool>?) -> Void,
@@ -640,8 +641,9 @@ private final class PeerInfoInteraction {
         openPeerMention: @escaping (String, ChatControllerInteractionNavigateToPeer) -> Void,
         openBotApp: @escaping (AttachMenuBot) -> Void,
         openEditing: @escaping () -> Void,
-        updateBirthDate: @escaping (TelegramBirthday??) -> Void,
-        updateIsEditingBirthdate: @escaping (Bool) -> Void
+        updateBirthdate: @escaping (TelegramBirthday??) -> Void,
+        updateIsEditingBirthdate: @escaping (Bool) -> Void,
+        openBirthdatePrivacy: @escaping () -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -696,8 +698,9 @@ private final class PeerInfoInteraction {
         self.openPeerMention = openPeerMention
         self.openBotApp = openBotApp
         self.openEditing = openEditing
-        self.updateBirthDate = updateBirthDate
+        self.updateBirthdate = updateBirthdate
         self.updateIsEditingBirthdate = updateIsEditingBirthdate
+        self.openBirthdatePrivacy = openBirthdatePrivacy
     }
 }
 
@@ -1029,69 +1032,34 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         birthday = (data.cachedData as? CachedUserData)?.birthday
     }
     
-    //TODO:localize
     var birthDateString: String
     if let birthday {
-        var components: [String] = []
-        components.append("\(birthday.day)")
-       
-        let month: String
-        switch birthday.month {
-        case 1:
-            month = "Jan"
-        case 2:
-            month = "Feb"
-        case 3:
-            month = "Mar"
-        case 4:
-            month = "Apr"
-        case 5:
-            month = "May"
-        case 6:
-            month = "Jun"
-        case 7:
-            month = "Jul"
-        case 8:
-            month = "Aug"
-        case 9:
-            month = "Sep"
-        case 10:
-            month = "Oct"
-        case 11:
-            month = "Nov"
-        case 12:
-            month = "Dec"
-        default:
-            month = ""
-        }
-        components.append(month)
-        
-        if let year = birthday.year {
-            components.append("\(year)")
-        }
-        
-        birthDateString = components.joined(separator: " ")
+        birthDateString = stringForCompactBirthday(birthday, strings: presentationData.strings)
     } else {
-        birthDateString = "Add"
+        birthDateString = presentationData.strings.Settings_Birthday_Add
     }
     
     let isEditingBirthDate = state.isEditingBirthDate
-    items[.birthday]!.append(PeerInfoScreenDisclosureItem(id: ItemBirthday, label: .coloredText(birthDateString, isEditingBirthDate ? .accent : .generic), text: "Date of Birth", icon: nil, hasArrow: false, action: {
-        if !isEditingBirthDate, birthday == nil {
-            interaction.updateBirthDate(TelegramBirthday(day: 1, month: 1, year: nil))
-        }
+    items[.birthday]!.append(PeerInfoScreenDisclosureItem(id: ItemBirthday, label: .coloredText(birthDateString, isEditingBirthDate ? .accent : .generic), text: presentationData.strings.Settings_Birthday, icon: nil, hasArrow: false, action: {
         interaction.updateIsEditingBirthdate(!isEditingBirthDate)
     }))
     if isEditingBirthDate, let birthday {
         items[.birthday]!.append(PeerInfoScreenBirthdatePickerItem(id: ItemBirthdayPicker, value: birthday, valueUpdated: { value in
-            interaction.updateBirthDate(value)
+            interaction.updateBirthdate(value)
         }))
-        items[.birthday]!.append(PeerInfoScreenActionItem(id: ItemBirthdayRemove, text: "Remove Date of Birth", alignment: .natural, action: {
-            interaction.updateBirthDate(.some(nil))
+        items[.birthday]!.append(PeerInfoScreenActionItem(id: ItemBirthdayRemove, text: presentationData.strings.Settings_Birthday_Remove, alignment: .natural, action: {
+            interaction.updateBirthdate(.some(nil))
             interaction.updateIsEditingBirthdate(false)
         }))
     }
-    items[.birthday]!.append(PeerInfoScreenCommentItem(id: ItemBirthdayHelp, text: "Date of birth is only visible to your contacts."))
+    
+    var birthdayIsForContactsOnly = false
+    if let birthdayPrivacy = data.globalSettings?.privacySettings?.birthday, case .enableContacts = birthdayPrivacy {
+        birthdayIsForContactsOnly = true
+    }
+    items[.birthday]!.append(PeerInfoScreenCommentItem(id: ItemBirthdayHelp, text: birthdayIsForContactsOnly ? presentationData.strings.Settings_Birthday_ContactsHelp : presentationData.strings.Settings_Birthday_Help, linkAction: { _ in
+        interaction.openBirthdatePrivacy()
+    }))
     
     if let user = data.peer as? TelegramUser {
         items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPhoneNumber, label: .text(user.phone.flatMap({ formatPhoneNumber(context: context, number: $0) }) ?? ""), text: presentationData.strings.Settings_PhoneNumber, action: {
@@ -1235,6 +1203,11 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
     
         if let cachedData = data.cachedData as? CachedUserData {
+            if let birthday = cachedData.birthday {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 400, label: "date of birth", text: stringForFullBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, action: nil, longTapAction: nil, contextAction: nil, requestLayout: {
+                }))
+            }
+            
             if user.isFake {
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: "", text: user.botInfo != nil ? presentationData.strings.UserInfo_FakeBotWarning : presentationData.strings.UserInfo_FakeUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: {
                     interaction.requestLayout(false)
@@ -2357,7 +2330,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private var searchDisplayController: SearchDisplayController?
     
     private var _interaction: PeerInfoInteraction?
-    private var interaction: PeerInfoInteraction {
+    fileprivate var interaction: PeerInfoInteraction {
         return self._interaction!
     }
     
@@ -2410,7 +2383,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     fileprivate let accountsAndPeers = Promise<[(AccountContext, EnginePeer, Int32)]>()
     fileprivate let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)?>()
     private let notificationExceptions = Promise<NotificationExceptionsList?>()
-    private let privacySettings = Promise<AccountPrivacySettings?>()
+    fileprivate let privacySettings = Promise<AccountPrivacySettings?>()
     private let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
     private let blockedPeers = Promise<BlockedPeersContext?>(nil)
     private let hasTwoStepAuth = Promise<Bool?>(nil)
@@ -2652,20 +2625,29 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             openEditing: { [weak self] in
                 self?.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
             },
-            updateBirthDate: { [weak self] birthDate in
+            updateBirthdate: { [weak self] birthDate in
                 if let self {
                     self.state = self.state.withUpdatingBirthDate(birthDate)
                     if let (layout, navigationHeight) = self.validLayout {
-                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: birthDate == .some(nil) ? .animated(duration: 0.2, curve: .easeInOut) : .immediate, additive: false)
                     }
                 }
             },
             updateIsEditingBirthdate: { [weak self] value in
                 if let self {
+                    if value, let data = self.data?.cachedData as? CachedUserData, data.birthday == nil {
+                        self.state = self.state.withUpdatingBirthDate(TelegramBirthday(day: 1, month: 1, year: nil))
+                    }
                     self.state = self.state.withIsEditingBirthDate(value)
+                    
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.2, curve: .easeInOut), additive: false)
                     }
+                }
+            },
+            openBirthdatePrivacy: { [weak self] in
+                if let self {
+                    self.openBirthdatePrivacy()
                 }
             }
         )
@@ -4556,10 +4538,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: paneAreaExpansionFinalPoint), animated: animated)
             }
         }
-    }
-    
-    @objc private func editingCancelPressed() {
-        self.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
     }
     
     private func openStories(fromAvatar: Bool) {
@@ -7555,6 +7533,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         })
     }
     
+    private func openBirthdatePrivacy() {
+        guard let _ = self.data?.globalSettings?.privacySettings else {
+            return
+        }
+        self.context.sharedContext.makeBirthdayPrivacyController(context: self.context, settings: self.privacySettings, openedFromBirthdayScreen: true, present: { [weak self] c in
+            self?.controller?.push(c)
+        })
+    }
+    
     private func editingOpenPublicLinkSetup() {
         if let peer = self.data?.peer as? TelegramUser, peer.botInfo != nil {
             let controller = usernameSetupController(context: self.context, mode: .bot(self.peerId))
@@ -9052,8 +9039,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .settings, forceDark: false, dismissed: nil)
             self.controller?.push(controller)
         case .premiumGift:
-            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings, completion: nil)
-            self.controller?.push(controller)
+            let _ = (self.context.account.stateManager.contactBirthdays
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] birthdays in
+                guard let self else {
+                    return
+                }
+                let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings(birthdays), completion: nil)
+                self.controller?.push(controller)
+            })
         case .stickers:
             if let settings = self.data?.globalSettings {
                 push(installedStickerPacksController(context: self.context, mode: .general, archivedPacks: settings.archivedStickerPacks, updatedPacks: { [weak self] packs in
@@ -10920,6 +10914,10 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         return self._readyProxy
     }
     
+    public var privacySettings: Promise<AccountPrivacySettings?> {
+        return self.controllerNode.privacySettings
+    }
+    
     override public var customNavigationData: CustomViewControllerNavigationData? {
         get {
             if !self.isSettings {
@@ -11589,6 +11587,11 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 )
             ]
         }
+    }
+    
+    public func openBirthdaySetup() {
+        self.controllerNode.interaction.updateIsEditingBirthdate(true)
+        self.controllerNode.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
     }
     
     public static func openSavedMessagesMoreMenu(context: AccountContext, sourceController: ViewController, isViewingAsTopics: Bool, sourceView: UIView, gesture: ContextGesture?) {

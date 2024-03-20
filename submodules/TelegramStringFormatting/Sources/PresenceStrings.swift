@@ -146,6 +146,42 @@ public func stringForCompactDate(timestamp: Int32, strings: PresentationStrings,
     return "\(shortStringForDayOfWeek(strings: strings, day: timeinfo.tm_wday)) \(timeinfo.tm_mday) \(monthAtIndex(Int(timeinfo.tm_mon), strings: strings))"
 }
 
+public func stringForCompactBirthday(_ birthday: TelegramBirthday, strings: PresentationStrings) -> String {
+    var components: [String] = []
+    components.append("\(birthday.day)")
+    components.append(monthAtIndex(Int(birthday.month) - 1, strings: strings))
+    if let year = birthday.year {
+        components.append("\(year)")
+    }
+
+    return components.joined(separator: " ")
+}
+
+public func stringForFullBirthday(_ birthday: TelegramBirthday, strings: PresentationStrings, showAge: Bool = false) -> String {
+    var components: [String] = []
+    components.append("\(birthday.day)")
+    components.append(stringForMonth(strings: strings, month: birthday.month - 1))
+    if let year = birthday.year {
+        components.append("\(year)")
+    
+        if showAge {
+            var dateComponents = DateComponents()
+            dateComponents.day = Int(birthday.day)
+            dateComponents.month = Int(birthday.month)
+            dateComponents.year = Int(year)
+             
+            let calendar = Calendar.current
+            if let birthDate = calendar.date(from: dateComponents) {
+                if let age = calendar.dateComponents([.year], from: birthDate, to: Date()).year {
+                    components.append("(\(age))")
+                }
+            }
+        }
+    }
+
+    return components.joined(separator: " ")
+}
+
 public enum RelativeTimestampFormatDay {
     case today
     case yesterday

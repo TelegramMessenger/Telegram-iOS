@@ -5,9 +5,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface FFMpegVideoWriter : NSObject
 
-- (void)setupWithOutputPath:(NSString *)outputPath width:(int)width height:(int)height;
-- (void)encodeFrame:(CVPixelBufferRef)pixelBuffer;
-- (void)finalizeVideo;
+- (bool)setupWithOutputPath:(NSString *)outputPath width:(int)width height:(int)height;
+- (bool)encodeFrame:(CVPixelBufferRef)pixelBuffer;
+- (bool)finalizeVideo;
 
 @end
 

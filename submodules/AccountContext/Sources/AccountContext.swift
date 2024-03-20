@@ -844,7 +844,9 @@ public protocol TelegramRootControllerInterface: NavigationController {
     
     func getContactsController() -> ViewController?
     func getChatsController() -> ViewController?
+    func getPrivacySettings() -> Promise<AccountPrivacySettings?>?
     func openSettings()
+    func openBirthdaySetup()
 }
 
 public protocol QuickReplySetupScreenInitialData: AnyObject {
@@ -946,6 +948,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeCreateGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String?, mode: CreateGroupMode, completion: ((PeerId, @escaping () -> Void) -> Void)?) -> ViewController
     func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?) -> ViewController
     func makePrivacyAndSecurityController(context: AccountContext) -> ViewController
+    func makeBirthdayPrivacyController(context: AccountContext, settings: Promise<AccountPrivacySettings?>, openedFromBirthdayScreen: Bool, present: @escaping (ViewController) -> Void)
     func makeSetupTwoFactorAuthController(context: AccountContext) -> ViewController
     func makeStorageManagementController(context: AccountContext) -> ViewController
     func makeAttachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, send: @escaping (AnyMediaReference) -> Void) -> AttachmentFileController

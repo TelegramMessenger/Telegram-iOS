@@ -44,8 +44,8 @@ public enum PremiumIntroSource {
 public enum PremiumGiftSource: Equatable {
     case profile
     case attachMenu
-    case settings
-    case chatList([EnginePeer.Id])
+    case settings([EnginePeer.Id: TelegramBirthday]?)
+    case chatList([EnginePeer.Id: TelegramBirthday]?)
     case channelBoost
     case deeplink(String?)
 }

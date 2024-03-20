@@ -183,10 +183,38 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         } else {
             let displayTopPeers: ContactListPresentation.TopPeers
             var selectedPeers: [EnginePeer.Id] = []
-            if case let .premiumGifting(topSectionTitle, topSectionPeers) = mode {
-                if let topSectionTitle, !topSectionPeers.isEmpty {
-                    displayTopPeers = .custom(title: topSectionTitle, peerIds: topSectionPeers)
-                    selectedPeers = topSectionPeers
+            if case let .premiumGifting(birthdays, selectToday) = mode {
+                if let birthdays {
+                    let today = Calendar(identifier: .gregorian).component(.day, from: Date())
+                    var sections: [(String, [EnginePeer.Id])] = []
+                    var todayPeers: [EnginePeer.Id] = []
+                    var yesterdayPeers: [EnginePeer.Id] = []
+                    var tomorrowPeers: [EnginePeer.Id] = []
+                    
+                    for (peerId, birthday) in birthdays {
+                        if birthday.day == today {
+                            todayPeers.append(peerId)
+                            if selectToday {
+                                selectedPeers.append(peerId)
+                            }
+                        } else if birthday.day == today - 1 || birthday.day > today + 5 {
+                            yesterdayPeers.append(peerId)
+                        } else if birthday.day == today + 1 || birthday.day < today + 5 {
+                            tomorrowPeers.append(peerId)
+                        }
+                    }
+                    
+                    if !todayPeers.isEmpty {
+                        sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayToday, todayPeers))
+                    }
+                    if !yesterdayPeers.isEmpty {
+                        sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayYesterday, yesterdayPeers))
+                    }
+                    if !tomorrowPeers.isEmpty {
+                        sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayTomorrow, tomorrowPeers))
+                    }
+                    
+                    displayTopPeers = .custom(sections)
                 } else {
                     displayTopPeers = .recent
                 }

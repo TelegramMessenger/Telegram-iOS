@@ -204,10 +204,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 context.sharedContext.applicationBindings.dismissNativeController()
                                 navigationController?.pushViewController(infoController)
                             }
-                        case let .chat(_, subject, peekData):
+                        case let .chat(textInputState, subject, peekData):
                             context.sharedContext.applicationBindings.dismissNativeController()
                             if let navigationController = navigationController {
-                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: subject, peekData: peekData))
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: subject, updateTextInputState: !peer.id.isGroupOrChannel ? textInputState : nil, peekData: peekData))
                             }
                         case let .withBotStartPayload(payload):
                             context.sharedContext.applicationBindings.dismissNativeController()
@@ -694,6 +694,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var threadId: Int64?
                         var appName: String?
                         var startApp: String?
+                        var text: String?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -725,6 +726,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         appName = value
                                     } else if queryItem.name == "startapp" {
                                         startApp = value
+                                    } else if queryItem.name == "text" {
+                                        text = value
                                     }
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     voiceChat = ""
@@ -739,7 +742,11 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         }
                         
                         if let phone = phone {
-                            convertedUrl = "https://t.me/+\(phone)"
+                            var result = "https://t.me/+\(phone)"
+                            if let text = text {
+                                result += "?text=\(text)"
+                            }
+                            convertedUrl = result
                         } else if let domain = domain {
                             var result = "https://t.me/\(domain)"
                             if let appName {
@@ -803,6 +810,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 if let choose = choose {
                                     result += "&choose=\(choose)"
                                 }
+                            }
+                            if let text = text {
+                                result += "?text=\(text)"
                             }
                             convertedUrl = result
                         }

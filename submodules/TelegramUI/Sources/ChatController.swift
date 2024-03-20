@@ -5476,6 +5476,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var currentSendAsPeerId: PeerId?
                         var autoremoveTimeout: Int32?
                         var copyProtectionEnabled: Bool = false
+                        var hasBirthdayToday = false
                         if let peer = peerView.peers[peerView.peerId] {
                             copyProtectionEnabled = peer.isCopyProtectionEnabled
                             if let cachedGroupData = peerView.cachedData as? CachedGroupData {
@@ -5514,6 +5515,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 if let botInfo = cachedUserData.botInfo, !botInfo.commands.isEmpty {
                                     hasBotCommands = true
+                                }
+                                if let birthday = cachedUserData.birthday {
+                                    let today = Calendar.current.dateComponents(Set([.day, .month]), from: Date())
+                                    if today.day == Int(birthday.day) && today.month == Int(birthday.month) {
+                                        hasBirthdayToday = true
+                                    }
                                 }
                             }
                         }
@@ -5618,6 +5625,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 .updatedHasSavedChats(hasSavedChats)
                                 .updatedAppliedBoosts(appliedBoosts)
                                 .updatedBoostsToUnrestrict(boostsToUnrestrict)
+                                .updatedHasBirthdayToday(hasBirthdayToday)
                                 .updatedBusinessIntro(businessIntro)
                                 .updatedInterfaceState { interfaceState in
                                     var interfaceState = interfaceState
@@ -7736,10 +7744,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
             } else if peerId.namespace != Namespaces.Peer.SecretChat && peerId != context.account.peerId && self.subject != .scheduledMessages {
                 self.premiumGiftSuggestionDisposable = (ApplicationSpecificNotice.dismissedPremiumGiftSuggestion(accountManager: self.context.sharedContext.accountManager, peerId: peerId)
-                |> deliverOnMainQueue).startStrict(next: { [weak self] counter in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] timestamp in
                     if let strongSelf = self {
+                        let currentTime = Int32(Date().timeIntervalSince1970)
                         strongSelf.updateChatPresentationInterfaceState(animated: strongSelf.willAppear, interactive: strongSelf.willAppear, { state in
-                            return state.updatedSuggestPremiumGift(counter == 0)
+                            var suggest = true
+                            if let timestamp, currentTime < timestamp + 60 * 60 * 24 {
+                                suggest = false
+                            }
+                            return state.updatedSuggestPremiumGift(suggest)
                         })
                     }
                 })
@@ -11255,7 +11268,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             strongSelf.presentAttachmentMenu(subject: .gift)
             Queue.mainQueue().after(0.5) {
-                let _ = ApplicationSpecificNotice.incrementDismissedPremiumGiftSuggestion(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId).startStandalone()
+                let _ = ApplicationSpecificNotice.incrementDismissedPremiumGiftSuggestion(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId, timestamp: Int32(Date().timeIntervalSince1970)).startStandalone()
             }
         }, openPremiumRequiredForMessaging: { [weak self] in
             guard let self else {
@@ -12353,12 +12366,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             })
         }
-        
-//        #if DEBUG
-//            Queue.mainQueue().after(0.5) {
-//                self.displayBirthdayTooltip()
-//            }
-//        #endif
     }
     
     override public func viewWillDisappear(_ animated: Bool) {
@@ -15386,7 +15393,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             switch navigation {
-                case let .chat(_, subject, peekData):
+                case let .chat(textInputState, subject, peekData):
                     dismissWebAppContollers()
                     if case .peer(peerId.id) = strongSelf.chatLocation {
                         if let subject = subject, case let .message(messageSubject, _, timecode) = subject {
@@ -15400,7 +15407,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if case let .channel(channel) = peerId, channel.flags.contains(.isForum) {
                             strongSelf.context.sharedContext.navigateToForumChannel(context: strongSelf.context, peerId: peerId.id, navigationController: navigationController)
                         } else {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: subject, keepStack: .always, peekData: peekData))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: subject, updateTextInputState: !peerId.id.isGroupOrChannel ? textInputState : nil, keepStack: .always, peekData: peekData))
                         }
                     }
                     commit()
@@ -15871,6 +15878,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
+        if self.birthdayTooltipController != nil {
+            return
+        }
+        
         let rect: CGRect? = self.chatDisplayNode.frameForInputActionButton()
         
         let updatedMode: ChatTextInputMediaRecordingButtonMode = self.presentationInterfaceState.interfaceState.mediaRecordingMode
@@ -16087,29 +16098,46 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
+    private var didDisplayBirthdayTooltip = false
     func displayBirthdayTooltip() {
-        guard let rect = self.chatDisplayNode.frameForGiftButton(), self.effectiveNavigationController?.topViewController === self, let peer = self.presentationInterfaceState.renderedPeer?.peer.flatMap({ EnginePeer($0) }) else {
+        guard !self.didDisplayBirthdayTooltip, let rect = self.chatDisplayNode.frameForGiftButton(), self.effectiveNavigationController?.topViewController === self, let peer = self.presentationInterfaceState.renderedPeer?.peer.flatMap({ EnginePeer($0) }) else {
             return
         }
         
-        //TODO:localize
-        let peerName = peer.compactDisplayTitle
-        let text = "🎂 \(peerName) is having a birthday today. You can give \(peerName) **Telegram Premium** as a birthday gift."
+        self.didDisplayBirthdayTooltip = true
         
-        let tooltipScreen = TooltipScreen(
-            context: self.context,
-            account: self.context.account,
-            sharedContext: self.context.sharedContext,
-            text: .markdown(text: text),
-            location: .point(rect.offsetBy(dx: 0.0, dy: -3.0), .bottom),
-            displayDuration: .default,
-            cornerRadius: 10.0,
-            shouldDismissOnTouch: { _, _ in
-                return .ignore
+        let _ = (ApplicationSpecificNotice.dismissedBirthdayPremiumGiftTip(accountManager: self.context.sharedContext.accountManager, peerId: peer.id)
+        |> take(1)
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] timestamp in
+            if let self {
+                let currentTime = Int32(Date().timeIntervalSince1970)
+                if let timestamp, currentTime < timestamp + 60 * 60 * 24 {
+                    return
+                }
+                
+                let peerName = peer.compactDisplayTitle
+                let text = self.presentationData.strings.Chat_BirthdayTooltip(peerName, peerName).string
+                
+                let tooltipScreen = TooltipScreen(
+                    context: self.context,
+                    account: self.context.account,
+                    sharedContext: self.context.sharedContext,
+                    text: .markdown(text: text),
+                    location: .point(rect.offsetBy(dx: 0.0, dy: -3.0), .bottom),
+                    displayDuration: .custom(6.0),
+                    cornerRadius: 10.0,
+                    shouldDismissOnTouch: { _, _ in
+                        return .dismiss(consume: false)
+                    }
+                )
+                self.birthdayTooltipController = tooltipScreen
+                Queue.mainQueue().after(0.35) {
+                    self.present(tooltipScreen, in: .current)
+                }
+                
+                let _ = ApplicationSpecificNotice.incrementDismissedBirthdayPremiumGiftTip(accountManager: self.context.sharedContext.accountManager, peerId: peer.id, timestamp: Int32(Date().timeIntervalSince1970)).startStandalone()
             }
-        )
-        self.present(tooltipScreen, in: .current)
-        self.birthdayTooltipController = tooltipScreen
+        })
     }
     
     func displayChecksTooltip() {

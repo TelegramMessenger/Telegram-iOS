@@ -28,7 +28,7 @@ private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme) -> StickerPackPreviewGridItem {
-        return StickerPackPreviewGridItem(context: context, stickerItem: self.stickerItem, interaction: interaction, theme: theme, isPremium: false, isLocked: false, isEmpty: false, isEditing: false)
+        return StickerPackPreviewGridItem(context: context, stickerItem: self.stickerItem, interaction: interaction, theme: theme, isPremium: false, isLocked: false, isEmpty: false, isEditable: false, isEditing: false)
     }
 }
 

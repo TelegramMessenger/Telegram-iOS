@@ -60,6 +60,7 @@ import StickerPickerScreen
 import MediaEditor
 import MediaEditorScreen
 import BusinessIntroSetupScreen
+import TelegramNotices
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1845,6 +1846,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return SettingsUI.makePrivacyAndSecurityController(context: context)
     }
     
+    public func makeBirthdayPrivacyController(context: AccountContext, settings: Promise<AccountPrivacySettings?>, openedFromBirthdayScreen: Bool, present: @escaping (ViewController) -> Void) {
+        SettingsUI.makeBirthdayPrivacyController(context: context, settings: settings, openedFromBirthdayScreen: openedFromBirthdayScreen, present: present)
+    }
+    
     public func makeSetupTwoFactorAuthController(context: AccountContext) -> ViewController {
         return SettingsUI.makeSetupTwoFactorAuthController(context: context)
     }
@@ -2121,11 +2126,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         var reachedLimitImpl: ((Int32) -> Void)?
         
         let mode: ContactMultiselectionControllerMode
-        if case let .chatList(peerIds) = source {
-            //TODO:localize
-            mode = .premiumGifting(topSectionTitle: "🎂 BIRTHDAY TODAY", topSectionPeers: peerIds)
+        var currentBirthdays: [EnginePeer.Id: TelegramBirthday]?
+        if case let .chatList(birthdays) = source, let birthdays, !birthdays.isEmpty {
+            mode = .premiumGifting(birthdays: birthdays, selectToday: true)
+            currentBirthdays = birthdays
+        } else if case let .settings(birthdays) = source, let birthdays, !birthdays.isEmpty {
+            mode = .premiumGifting(birthdays: birthdays, selectToday: false)
+            currentBirthdays = birthdays
         } else {
-            mode = .premiumGifting(topSectionTitle: nil, topSectionPeers: [])
+            mode = .premiumGifting(birthdays: nil, selectToday: false)
         }
         
         let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: mode, options: [], isPeerEnabled: { peer in
@@ -2173,6 +2182,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, completion: {
                 filterImpl?()
                 completion?()
+                
+                if let currentBirthdays {
+                    let today = Calendar(identifier: .gregorian).component(.day, from: Date())
+                    var todayBirthdayPeerIds: [EnginePeer.Id] = []
+                    for (peerId, birthday) in currentBirthdays {
+                        if birthday.day == today {
+                            todayBirthdayPeerIds.append(peerId)
+                        }
+                    }
+                    let peerIds = todayBirthdayPeerIds.sorted { lhs, rhs in
+                        return lhs < rhs
+                    }
+                    let _ = ApplicationSpecificNotice.setDismissedBirthdayPremiumGifts(accountManager: context.sharedContext.accountManager, values: peerIds.map { $0.toInt64() }).start()
+                }
             })
             pushImpl = { [weak giftController] c in
                 giftController?.push(c)

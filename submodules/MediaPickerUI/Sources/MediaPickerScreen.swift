@@ -2688,8 +2688,38 @@ public func stickerMediaPickerController(
                 controller?.dismiss(animated: true)
             })
         }
-        mediaPickerController.presentFilePicker = {
-            
+        mediaPickerController.presentFilePicker = { [weak controller] in
+            controller?.present(legacyICloudFilePicker(theme: presentationData.theme, mode: .import, documentTypes: ["public.image"], forceDarkTheme: false, dismissed: {
+            }, completion: { urls in
+                if let url = urls.first {
+                    let isScopedResource = url.startAccessingSecurityScopedResource()
+                    Logger.shared.log("MediaPicker", "isScopedResource = \(isScopedResource)")
+                    
+                    let coordinator = NSFileCoordinator(filePresenter: nil)
+                    var error: NSError?
+                    coordinator.coordinate(readingItemAt: url, options: .forUploading, error: &error, byAccessor: { sourceUrl in
+                        let fileName =  "img_\(sourceUrl.lastPathComponent)"
+                        let copyPath = NSTemporaryDirectory() + fileName
+                        
+                        try? FileManager.default.removeItem(atPath: copyPath)
+                        do {
+                            try FileManager.default.copyItem(at: sourceUrl, to: URL(fileURLWithPath: copyPath))
+                        } catch let e {
+                            Logger.shared.log("MediaPicker", "copy file error \(e)")
+                            if isScopedResource {
+                                url.stopAccessingSecurityScopedResource()
+                            }
+                            return
+                        }
+                        
+                        if let image = UIImage(contentsOfFile: copyPath) {
+                            completion(image,  nil, .zero, nil, { _ in return nil }, {})
+                        }
+                    })
+                }
+            }), in: .window(.root))
+                                
+            controller?.dismiss(animated: true)
         }
         present(mediaPickerController, mediaPickerController.mediaPickerContext)
     }
