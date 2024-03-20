@@ -191,9 +191,95 @@ public class ManagedAudioSessionControl {
     }
 }
 
-public final class ManagedAudioSession: NSObject {
-    public private(set) static var shared: ManagedAudioSession?
+public final class ManagedAudioSessionClientParams {
+    public let audioSessionType: ManagedAudioSessionType
+    public let outputMode: AudioSessionOutputMode
+    public let once: Bool
+    public let activateImmediately: Bool
+    public let manualActivate: (ManagedAudioSessionControl) -> Void
+    public let deactivate: (Bool) -> Signal<Void, NoError>
+    public let headsetConnectionStatusChanged: (Bool) -> Void
+    public let availableOutputsChanged: ([AudioSessionOutput], AudioSessionOutput?) -> Void
     
+    public init(
+        audioSessionType: ManagedAudioSessionType,
+        outputMode: AudioSessionOutputMode = .system,
+        once: Bool = false,
+        activateImmediately: Bool = false,
+        manualActivate: @escaping (ManagedAudioSessionControl) -> Void,
+        deactivate: @escaping (Bool) -> Signal<Void, NoError>,
+        headsetConnectionStatusChanged: @escaping (Bool) -> Void,
+        availableOutputsChanged: @escaping ([AudioSessionOutput], AudioSessionOutput?) -> Void
+    ) {
+        self.audioSessionType = audioSessionType
+        self.outputMode = outputMode
+        self.once = once
+        self.activateImmediately = activateImmediately
+        self.manualActivate = manualActivate
+        self.deactivate = deactivate
+        self.headsetConnectionStatusChanged = headsetConnectionStatusChanged
+        self.availableOutputsChanged = availableOutputsChanged
+    }
+}
+
+public protocol ManagedAudioSession: AnyObject {
+    func getIsHeadsetPluggedIn() -> Bool
+    func headsetConnected() -> Signal<Bool, NoError>
+    func isActive() -> Signal<Bool, NoError>
+    func isPlaybackActive() -> Signal<Bool, NoError>
+    func isOtherAudioPlaying() -> Bool
+    
+    func push(params: ManagedAudioSessionClientParams) -> Disposable
+    func dropAll()
+    func applyVoiceChatOutputModeInCurrentAudioSession(outputMode: AudioSessionOutputMode)
+    func callKitActivatedAudioSession()
+    func callKitDeactivatedAudioSession()
+}
+
+public extension ManagedAudioSession {
+    func push(
+        audioSessionType: ManagedAudioSessionType,
+        outputMode: AudioSessionOutputMode = .system,
+        once: Bool = false,
+        activate: @escaping (AudioSessionActivationState) -> Void,
+        deactivate: @escaping (Bool) -> Signal<Void, NoError>
+    ) -> Disposable {
+        return self.push(audioSessionType: audioSessionType, once: once, manualActivate: { control in
+            control.setupAndActivate(synchronous: false, { state in
+                activate(state)
+            })
+        }, deactivate: deactivate)
+    }
+    
+    func push(
+        audioSessionType: ManagedAudioSessionType,
+        outputMode: AudioSessionOutputMode = .system,
+        once: Bool = false,
+        activateImmediately: Bool = false,
+        manualActivate: @escaping (ManagedAudioSessionControl) -> Void,
+        deactivate: @escaping (Bool) -> Signal<Void, NoError>,
+        headsetConnectionStatusChanged: @escaping (Bool) -> Void = { _ in },
+        availableOutputsChanged: @escaping ([AudioSessionOutput], AudioSessionOutput?) -> Void = { _, _ in }
+    ) -> Disposable {
+        return self.push(params: ManagedAudioSessionClientParams(
+            audioSessionType: audioSessionType,
+            outputMode: outputMode,
+            once: once,
+            activateImmediately: activateImmediately,
+            manualActivate: manualActivate,
+            deactivate: deactivate,
+            headsetConnectionStatusChanged: headsetConnectionStatusChanged,
+            availableOutputsChanged: availableOutputsChanged
+        ))
+    }
+}
+
+private var sharedManagedAudioSessionValue: ManagedAudioSession?
+public var sharedManagedAudioSession: ManagedAudioSession? {
+    return sharedManagedAudioSessionValue
+}
+
+public final class ManagedAudioSessionImpl: NSObject, ManagedAudioSession {
     private var nextId: Int32 = 0
     private let queue: Queue
     private let hasLoudspeaker: Bool
@@ -215,11 +301,6 @@ public final class ManagedAudioSession: NSObject {
     }
     
     private let outputsToHeadphonesSubscribers = Bag<(Bool) -> Void>()
-    
-    private let volumeUpDetectedPromise = Promise<Void>()
-    public var volumeUpDetected: Signal<Void, NoError> {
-        return self.volumeUpDetectedPromise.get()
-    }
     
     private var availableOutputsValue: [AudioSessionOutput] = []
     private var currentOutputValue: AudioSessionOutput?
@@ -275,29 +356,16 @@ public final class ManagedAudioSession: NSObject {
             })
         })
         
-        AVAudioSession.sharedInstance().addObserver(self, forKeyPath: "outputVolume", options: [.new, .old], context: nil)
-        
         queue.async {
             self.isHeadsetPluggedInValue = self.isHeadsetPluggedIn()
             self.updateCurrentAudioRouteInfo()
         }
         
-        ManagedAudioSession.shared = self
+        sharedManagedAudioSessionValue = self
     }
     
     deinit {
         self.deactivateTimer?.invalidate()
-        AVAudioSession.sharedInstance().removeObserver(self, forKeyPath: "outputVolume")
-    }
-    
-    public override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
-        if keyPath == "outputVolume", let change {
-            if let oldValue = (change[.oldKey] as? NSNumber)?.doubleValue, let newValue = (change[.newKey] as? NSNumber)?.doubleValue {
-                if oldValue < newValue || newValue == 1.0 {
-                    self.volumeUpDetectedPromise.set(.single(Void()))
-                }
-            }
-        }
     }
     
     private func updateCurrentAudioRouteInfo() {
@@ -472,15 +540,16 @@ public final class ManagedAudioSession: NSObject {
         return AVAudioSession.sharedInstance().secondaryAudioShouldBeSilencedHint
     }
     
-    public func push(audioSessionType: ManagedAudioSessionType, outputMode: AudioSessionOutputMode = .system, once: Bool = false, activate: @escaping (AudioSessionActivationState) -> Void, deactivate: @escaping (Bool) -> Signal<Void, NoError>) -> Disposable {
-        return self.push(audioSessionType: audioSessionType, once: once, manualActivate: { control in
-            control.setupAndActivate(synchronous: false, { state in
-                activate(state)
-            })
-        }, deactivate: deactivate)
-    }
-    
-    public func push(audioSessionType: ManagedAudioSessionType, outputMode: AudioSessionOutputMode = .system, once: Bool = false, activateImmediately: Bool = false, manualActivate: @escaping (ManagedAudioSessionControl) -> Void, deactivate: @escaping (Bool) -> Signal<Void, NoError>, headsetConnectionStatusChanged: @escaping (Bool) -> Void = { _ in }, availableOutputsChanged: @escaping ([AudioSessionOutput], AudioSessionOutput?) -> Void = { _, _ in }) -> Disposable {
+    public func push(params: ManagedAudioSessionClientParams) -> Disposable {
+        let audioSessionType = params.audioSessionType
+        let outputMode = params.outputMode
+        let once = params.once
+        let activateImmediately = params.activateImmediately
+        let manualActivate = params.manualActivate
+        let deactivate = params.deactivate
+        let headsetConnectionStatusChanged = params.headsetConnectionStatusChanged
+        let availableOutputsChanged = params.availableOutputsChanged
+        
         let id = OSAtomicIncrement32(&self.nextId)
         let queue = self.queue
         queue.async {

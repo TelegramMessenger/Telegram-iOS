@@ -97,11 +97,36 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                 } else {
                     signal = account.viewTracker.aroundMessageOfInterestHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, count: count, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, orderStatistics: orderStatistics, additionalData: additionalData, useRootInterfaceStateForThread: useRootInterfaceStateForThread)
                 }
-                return signal
-                |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
+            
+                let isPossibleIntroLoaded: Signal<Bool, NoError>
+                if case let .peer(id) = chatLocation, id.namespace == Namespaces.Peer.CloudUser {
+                    isPossibleIntroLoaded = context.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Peer.BusinessIntro(id: id)
+                    )
+                    |> map { result -> Bool in
+                        switch result {
+                        case .known:
+                            return true
+                        case .unknown:
+                            return false
+                        }
+                    }
+                    |> distinctUntilChanged
+                } else {
+                    isPossibleIntroLoaded = .single(true)
+                }
+            
+                return combineLatest(signal, isPossibleIntroLoaded)
+                |> map { viewData, isPossibleIntroLoaded -> ChatHistoryViewUpdate in
+                    let (view, updateType, initialData) = viewData
+                    
                     let (cachedData, cachedDataMessages, readStateData) = extractAdditionalData(view: view, chatLocation: chatLocation)
                     
                     let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
+                    
+                    if !isPossibleIntroLoaded {
+                        return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                    }
                     
                     if preloaded {
                         return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)

@@ -371,6 +371,9 @@ func _internal_toggleChatManagingBotIsPaused(account: Account, chatId: EnginePee
                 if let managingBot = peerStatusSettings.managingBot {
                     isPaused = !managingBot.isPaused
                     peerStatusSettings.managingBot?.isPaused = isPaused
+                    if !isPaused {
+                        peerStatusSettings.managingBot?.canReply = true
+                    }
                 }
                 
                 return current.withUpdatedPeerStatusSettings(peerStatusSettings)
@@ -408,6 +411,35 @@ func _internal_removeChatManagingBot(account: Account, chatId: EnginePeer.Id) ->
                 peerStatusSettings.managingBot = nil
                 
                 return current.withUpdatedPeerStatusSettings(peerStatusSettings)
+            } else {
+                return current
+            }
+        })
+        transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, current in
+            guard let current = current as? CachedUserData else {
+                return current
+            }
+            
+            if let connectedBot = current.connectedBot {
+                var additionalPeers = connectedBot.recipients.additionalPeers
+                var excludePeers = connectedBot.recipients.excludePeers
+                if connectedBot.recipients.exclude {
+                    additionalPeers.insert(chatId)
+                } else {
+                    additionalPeers.remove(chatId)
+                    excludePeers.insert(chatId)
+                }
+                
+                return current.withUpdatedConnectedBot(TelegramAccountConnectedBot(
+                    id: connectedBot.id,
+                    recipients: TelegramBusinessRecipients(
+                        categories: connectedBot.recipients.categories,
+                        additionalPeers: additionalPeers,
+                        excludePeers: excludePeers,
+                        exclude: connectedBot.recipients.exclude
+                    ),
+                    canReply: connectedBot.canReply
+                ))
             } else {
                 return current
             }

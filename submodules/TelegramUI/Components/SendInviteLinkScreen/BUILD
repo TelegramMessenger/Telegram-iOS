@@ -30,6 +30,7 @@ swift_library(
         "//submodules/Markdown",
         "//submodules/PeerPresenceStatusManager",
         "//submodules/UndoUI",
+        "//submodules/AnimatedAvatarSetNode",
     ],
     visibility = [
         "//visibility:public",

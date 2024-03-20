@@ -4,6 +4,7 @@ public extension Api {
         case privacyValueAllowChatParticipants(chats: [Int64])
         case privacyValueAllowCloseFriends
         case privacyValueAllowContacts
+        case privacyValueAllowPremium
         case privacyValueAllowUsers(users: [Int64])
         case privacyValueDisallowAll
         case privacyValueDisallowChatParticipants(chats: [Int64])
@@ -37,6 +38,12 @@ public extension Api {
                 case .privacyValueAllowContacts:
                     if boxed {
                         buffer.appendInt32(-123988)
+                    }
+                    
+                    break
+                case .privacyValueAllowPremium:
+                    if boxed {
+                        buffer.appendInt32(-320241333)
                     }
                     
                     break
@@ -95,6 +102,8 @@ public extension Api {
                 return ("privacyValueAllowCloseFriends", [])
                 case .privacyValueAllowContacts:
                 return ("privacyValueAllowContacts", [])
+                case .privacyValueAllowPremium:
+                return ("privacyValueAllowPremium", [])
                 case .privacyValueAllowUsers(let users):
                 return ("privacyValueAllowUsers", [("users", users as Any)])
                 case .privacyValueDisallowAll:
@@ -129,6 +138,9 @@ public extension Api {
         }
         public static func parse_privacyValueAllowContacts(_ reader: BufferReader) -> PrivacyRule? {
             return Api.PrivacyRule.privacyValueAllowContacts
+        }
+        public static func parse_privacyValueAllowPremium(_ reader: BufferReader) -> PrivacyRule? {
+            return Api.PrivacyRule.privacyValueAllowPremium
         }
         public static func parse_privacyValueAllowUsers(_ reader: BufferReader) -> PrivacyRule? {
             var _1: [Int64]?

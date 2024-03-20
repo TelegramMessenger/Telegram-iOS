@@ -418,6 +418,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2079962673] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowChatParticipants($0) }
     dict[793067081] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowCloseFriends($0) }
     dict[218751099] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowContacts($0) }
+    dict[2009975281] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowPremium($0) }
     dict[320652927] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowUsers($0) }
     dict[-697604407] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowAll($0) }
     dict[-380694650] = { return Api.InputPrivacyRule.parse_inputPrivacyValueDisallowChatParticipants($0) }
@@ -728,6 +729,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1796427406] = { return Api.PrivacyRule.parse_privacyValueAllowChatParticipants($0) }
     dict[-135735141] = { return Api.PrivacyRule.parse_privacyValueAllowCloseFriends($0) }
     dict[-123988] = { return Api.PrivacyRule.parse_privacyValueAllowContacts($0) }
+    dict[-320241333] = { return Api.PrivacyRule.parse_privacyValueAllowPremium($0) }
     dict[-1198497870] = { return Api.PrivacyRule.parse_privacyValueAllowUsers($0) }
     dict[-1955338397] = { return Api.PrivacyRule.parse_privacyValueDisallowAll($0) }
     dict[1103656293] = { return Api.PrivacyRule.parse_privacyValueDisallowChatParticipants($0) }
@@ -1330,7 +1332,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
                 return nil
             }
         }

@@ -1927,10 +1927,11 @@ public final class ChatListNode: ListView {
                 context.engine.notices.getServerProvidedSuggestions(),
                 twoStepData,
                 newSessionReviews(postbox: context.account.postbox),
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Birthday(id: context.account.peerId)),
                 context.account.stateManager.contactBirthdays,
                 ApplicationSpecificNotice.dismissedBirthdayPremiumGifts(accountManager: context.sharedContext.accountManager)
             )
-            |> mapToSignal { suggestions, configuration, newSessionReviews, birthdays, dismissedBirthdayPeerIds -> Signal<ChatListNotice?, NoError> in
+            |> mapToSignal { suggestions, configuration, newSessionReviews, birthday, birthdays, dismissedBirthdayPeerIds -> Signal<ChatListNotice?, NoError> in
                 if let newSessionReview = newSessionReviews.first {
                     return .single(.reviewLogin(newSessionReview: newSessionReview, totalCount: newSessionReviews.count))
                 }
@@ -1960,7 +1961,7 @@ public final class ChatListNode: ListView {
                     return lhs < rhs
                 }
                 
-                if suggestions.contains(.setupBirthday) {
+                if suggestions.contains(.setupBirthday) && birthday == nil {
                     return .single(.setupBirthday)
                 } else if !todayBirthdayPeerIds.isEmpty && todayBirthdayPeerIds.map({ $0.toInt64() }) != dismissedBirthdayPeerIds {
                     return context.engine.data.get(
@@ -4206,14 +4207,14 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
             if isContact {
                 return (strings.ChatList_PeerTypeContact, false, false, nil)
             } else {
-                return (strings.ChatList_PeerTypeNonContact, false, false, nil)
+                return (strings.ChatList_PeerTypeNonContactUser, false, false, nil)
             }
         }
     } else if case .secretChat = peer {
         if isContact {
             return (strings.ChatList_PeerTypeContact, false, false, nil)
         } else {
-            return (strings.ChatList_PeerTypeNonContact, false, false, nil)
+            return (strings.ChatList_PeerTypeNonContactUser, false, false, nil)
         }
     } else if case .legacyGroup = peer {
         return (strings.ChatList_PeerTypeGroup, false, false, nil)
@@ -4224,7 +4225,7 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
             return (strings.ChatList_PeerTypeChannel, false, false, nil)
         }
     }
-    return (strings.ChatList_PeerTypeNonContact, false, false, nil)
+    return (strings.ChatList_PeerTypeNonContactUser, false, false, nil)
 }
 
 public class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {

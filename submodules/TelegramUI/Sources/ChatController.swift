@@ -663,7 +663,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.stickerSettings = ChatInterfaceStickerSettings()
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil)
         self.presentationInterfaceStatePromise = ValuePromise(self.presentationInterfaceState)
         
         var mediaAccessoryPanelVisibility = MediaAccessoryPanelVisibility.none
@@ -5421,9 +5421,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         var renderedPeer: RenderedPeer?
                         var contactStatus: ChatContactStatus?
+                        var businessIntro: TelegramBusinessIntro?
                         if let peer = peerView.peers[peerView.peerId] {
                             if let cachedData = peerView.cachedData as? CachedUserData {
                                 contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: nil, managingBot: managingBot)
+                                if case let .known(value) = cachedData.businessIntro {
+                                    businessIntro = value
+                                }
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
                                 if let invitedByPeerId = cachedData.invitedBy {
@@ -5622,6 +5626,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 .updatedAppliedBoosts(appliedBoosts)
                                 .updatedBoostsToUnrestrict(boostsToUnrestrict)
                                 .updatedHasBirthdayToday(hasBirthdayToday)
+                                .updatedBusinessIntro(businessIntro)
                                 .updatedInterfaceState { interfaceState in
                                     var interfaceState = interfaceState
                                     
@@ -5926,10 +5931,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var renderedPeer: RenderedPeer?
                         var contactStatus: ChatContactStatus?
                         var copyProtectionEnabled: Bool = false
+                        var businessIntro: TelegramBusinessIntro?
                         if let peer = peerView.peers[peerView.peerId] {
                             copyProtectionEnabled = peer.isCopyProtectionEnabled
                             if let cachedData = peerView.cachedData as? CachedUserData {
                                 contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: nil, managingBot: managingBot)
+                                if case let .known(value) = cachedData.businessIntro {
+                                    businessIntro = value
+                                }
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
                                 if let invitedByPeerId = cachedData.invitedBy {
@@ -6208,6 +6217,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     .updatedHasSavedChats(hasSavedChats)
                                     .updatedAppliedBoosts(appliedBoosts)
                                     .updatedBoostsToUnrestrict(boostsToUnrestrict)
+                                    .updatedBusinessIntro(businessIntro)
                                     .updatedInterfaceState { interfaceState in
                                         var interfaceState = interfaceState
                                         

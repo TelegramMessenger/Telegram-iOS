@@ -38,10 +38,7 @@ func _internal_getServerProvidedSuggestions(account: Account) -> Signal<[ServerP
             return []
         }
         
-        var items = listItems
-        items.insert(ServerProvidedSuggestion.setupBirthday.rawValue, at: 0)
-                
-        return items.compactMap { item -> ServerProvidedSuggestion? in
+        return listItems.compactMap { item -> ServerProvidedSuggestion? in
             return ServerProvidedSuggestion(rawValue: item)
         }.filter { !dismissedSuggestions.contains($0) }
     }

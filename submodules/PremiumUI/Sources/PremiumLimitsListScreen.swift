@@ -971,7 +971,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     videoFile: videos["business_bots"],
                                     decoration: .business
                                 )),
-                                title: strings.Business_Chatbots,
+                                title: strings.Business_ChatbotsItem,
                                 text: strings.Business_ChatbotsInfo,
                                 textColor: textColor
                             )

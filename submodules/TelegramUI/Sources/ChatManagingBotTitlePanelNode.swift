@@ -170,10 +170,16 @@ private final class ChatManagingBotTitlePanelComponent: Component {
                 containerSize: CGSize(width: maxTextWidth, height: 100.0)
             )
             //TODO:localize
+            let textValue: String
+            if component.isPaused {
+                textValue = "bot paused"
+            } else {
+                textValue = component.managesChat ? "bot manages this chat" : "bot has access to this chat"
+            }
             let textSize = self.text.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.managesChat ? "bot manages this chat" : "bot has access to this chat", font: Font.regular(15.0), textColor: component.theme.rootController.navigationBar.secondaryTextColor))
+                    text: .plain(NSAttributedString(string: textValue, font: Font.regular(15.0), textColor: component.theme.rootController.navigationBar.secondaryTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: maxTextWidth, height: 100.0)
@@ -400,7 +406,7 @@ final class ChatManagingBotTitlePanelNode: ChatTitleAccessoryPanelNode {
                     strings: interfaceState.strings,
                     insets: UIEdgeInsets(top: 0.0, left: leftInset, bottom: 0.0, right: rightInset),
                     peer: managingBot.bot,
-                    managesChat: managingBot.canReply,
+                    managesChat: managingBot.canReply || managingBot.isPaused,
                     isPaused: managingBot.isPaused,
                     toggleIsPaused: { [weak self] in
                         guard let self else {
