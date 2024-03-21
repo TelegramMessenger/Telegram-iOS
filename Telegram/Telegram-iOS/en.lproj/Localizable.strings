@@ -11649,7 +11649,7 @@ Sorry for the inconvenience.";
 "ChatList.AddBirthdayTitle" = "Add your birthday! 🎂";
 "ChatList.AddBirthdayText" = "Let your contacts know when you're celebrating.";
 
-"ChatList.BirthdaySingleTitle" = "It's %@ **birthday** today! 🎂";
+"ChatList.BirthdaySingleTitle" = "It's %@'s **birthday** today! 🎂";
 "ChatList.BirthdaySingleText" = "Gift them Telegram Premium.";
 
 "ChatList.BirthdayMultipleTitle_1" = "%@ contact have **birthday** today! 🎂";
