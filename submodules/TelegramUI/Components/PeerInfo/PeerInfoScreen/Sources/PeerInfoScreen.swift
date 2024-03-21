@@ -1213,7 +1213,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 if today.day == Int(birthday.day) && today.month == Int(birthday.month) {
                     hasBirthdayToday = true
                 }
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 400, label: presentationData.strings.UserInfo_Birthday, text: stringForCompactBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, icon: hasBirthdayToday ? .premiumGift : nil, action: nil, longTapAction: nil, iconAction: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 400, label: hasBirthdayToday ? presentationData.strings.UserInfo_BirthdayToday : presentationData.strings.UserInfo_Birthday, text: stringForCompactBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, icon: hasBirthdayToday ? .premiumGift : nil, action: nil, longTapAction: nil, iconAction: {
                     interaction.openPremiumGift()
                 }, contextAction: nil, requestLayout: {
                 }))
