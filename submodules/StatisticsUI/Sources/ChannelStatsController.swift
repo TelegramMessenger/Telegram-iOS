@@ -1338,8 +1338,10 @@ private func monetizationEntries(
     state: ChannelStatsControllerState,
     stats: ChannelStats,
     data: MonetizationStats,
-    animatedEmojis: [String: TelegramMediaFile]
+    animatedEmojis: [String: [StickerPackItem]]
 ) -> [StatsEntry] {
+    let diamond = animatedEmojis["💎"]?.first?.file
+    
     var entries: [StatsEntry] = []
     //TODO:localize
     entries.append(.adsHeader(presentationData.theme, "Telegram shares 50% of the revenue from ads displayed in your channel. [Learn More]()"))
@@ -1355,10 +1357,10 @@ private func monetizationEntries(
     }
         
     entries.append(.adsProceedsTitle(presentationData.theme, "PROCEEDS OVERVIEW"))
-    entries.append(.adsProceedsOverview(presentationData.theme, data, animatedEmojis["💎"]))
+    entries.append(.adsProceedsOverview(presentationData.theme, data, diamond))
     
     entries.append(.adsBalanceTitle(presentationData.theme, "AVAILABLE BALANCE"))
-    entries.append(.adsBalance(presentationData.theme, data, false, animatedEmojis["💎"], state.monetizationAddress))
+    entries.append(.adsBalance(presentationData.theme, data, false, diamond, state.monetizationAddress))
     entries.append(.adsBalanceInfo(presentationData.theme, "We will transfer your balance to the TON wallet address you specify. [Learn More]()"))
     
     entries.append(.adsTransactionsTitle(presentationData.theme, "TRANSACTION HISTORY"))
@@ -1373,7 +1375,7 @@ private func monetizationEntries(
     }
     
     entries.append(.adsCpmToggle(presentationData.theme, "Switch off Ads", nil))
-    entries.append(.adsCpm(presentationData.theme, presentationData.strings, 5, animatedEmojis["💎"]))
+    entries.append(.adsCpm(presentationData.theme, presentationData.strings, 5, diamond))
     entries.append(.adsCpmInfo(presentationData.theme, "Switch off ads or set their minimum CPM."))
     
     return entries
@@ -1393,7 +1395,7 @@ private func channelStatsControllerEntries(
     giveawayAvailable: Bool,
     isGroup: Bool,
     boostsOnly: Bool,
-    animatedEmojis: [String: TelegramMediaFile],
+    animatedEmojis: [String: [StickerPackItem]],
     monetizationData: MonetizationStats?
 ) -> [StatsEntry] {
     switch state.section {
@@ -1488,31 +1490,6 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
 
     let boostsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: false)
     let giftsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: true)
-    
-    let animatedEmojiStickers = Promise<[String: TelegramMediaFile]>()
-    animatedEmojiStickers.set(.single([:])
-        |> then(
-            context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
-            |> map { animatedEmoji -> [String: TelegramMediaFile] in
-                var animatedEmojiStickers: [String: TelegramMediaFile] = [:]
-                switch animatedEmoji {
-                    case let .result(_, items, _):
-                        for item in items {
-                            if let emoji = item.getStringRepresentationsOfIndexKeys().first {
-                                animatedEmojiStickers[emoji.basicEmoji.0] = item.file
-                                let strippedEmoji = emoji.basicEmoji.0.strippedEmoji
-                                if animatedEmojiStickers[strippedEmoji] == nil {
-                                    animatedEmojiStickers[strippedEmoji] = item.file
-                                }
-                            }
-                        }
-                    default:
-                        break
-                }
-                return animatedEmojiStickers
-            }
-        )
-    )
     
     var dismissAllTooltipsImpl: (() -> Void)?
     var presentImpl: ((ViewController) -> Void)?
@@ -1721,7 +1698,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         boostsContext.state,
         giftsContext.state,
         longLoadingSignal,
-        animatedEmojiStickers.get()
+        context.animatedEmojiStickers
     )
     |> deliverOnMainQueue
     |> map { presentationData, state, peer, data, messageView, stories, boostData, boostersState, giftsState, longLoading, animatedEmojiStickers -> (ItemListControllerState, (ItemListNodeState, Any)) in
@@ -1837,11 +1814,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 section = .boosts
             case 2:
                 section = .monetization
-                let _ = (animatedEmojiStickers.get()
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak controller] animatedEmojis in
-                    controller?.push(MonetizationIntroScreen(context: context, animatedEmojis: animatedEmojis, openMore: {}))
-                })
+                controller?.push(MonetizationIntroScreen(context: context, openMore: {}))
             default:
                 section = .stats
             }

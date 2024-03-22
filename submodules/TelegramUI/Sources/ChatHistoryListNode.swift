@@ -1380,9 +1380,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         }
         |> distinctUntilChanged
         
-        let animatedEmojiStickers: Signal<[String: [StickerPackItem]], NoError> = (context as! AccountContextImpl).animatedEmojiStickersSignal
-        
-        let additionalAnimatedEmojiStickers = (context as! AccountContextImpl).additionalAnimatedEmojiStickers
+        let animatedEmojiStickers: Signal<[String: [StickerPackItem]], NoError> = context.animatedEmojiStickers
+        let additionalAnimatedEmojiStickers = context.additionalAnimatedEmojiStickers
         
         let previousHistoryAppearsCleared = self.previousHistoryAppearsCleared
                 

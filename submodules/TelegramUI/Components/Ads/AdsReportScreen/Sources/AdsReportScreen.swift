@@ -12,24 +12,25 @@ import SheetComponent
 import BundleIconComponent
 import BalancedTextComponent
 import MultilineTextComponent
-import MultilineTextWithEntitiesComponent
 import SolidRoundedButtonComponent
-import LottieComponent
 import AccountContext
 
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let animatedEmojis: [String: TelegramMediaFile]
     let openMore: () -> Void
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
+        animatedEmojis: [String: TelegramMediaFile],
         openMore: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
+        self.animatedEmojis = animatedEmojis
         self.openMore = openMore
         self.dismiss = dismiss
     }
@@ -70,7 +71,7 @@ private final class SheetContent: CombinedComponent {
         let actionButton = Child(SolidRoundedButtonComponent.self)
         
         let infoBackground = Child(RoundedRectangle.self)
-        let infoTitle = Child(MultilineTextWithEntitiesComponent.self)
+        let infoTitle = Child(MultilineTextComponent.self)
         let infoText = Child(MultilineTextComponent.self)
         
         return { context in
@@ -123,7 +124,7 @@ private final class SheetContent: CombinedComponent {
             )
             
             let icon = icon.update(
-                component: BundleIconComponent(name: "Ads/MonetizationLogo", tintColor: theme.list.itemCheckColors.foregroundColor),
+                component: BundleIconComponent(name: "Chart/Monetization", tintColor: theme.list.itemCheckColors.foregroundColor),
                 availableSize: CGSize(width: 90, height: 90),
                 transition: .immediate
             )
@@ -160,7 +161,7 @@ private final class SheetContent: CombinedComponent {
                         titleColor: textColor,
                         text: "Telegram can display ads in your channel.",
                         textColor: secondaryTextColor,
-                        iconName: "Ads/Ads",
+                        iconName: "Chart/Ads",
                         iconColor: linkColor
                     ))
                 )
@@ -173,7 +174,7 @@ private final class SheetContent: CombinedComponent {
                         titleColor: textColor,
                         text: "You receive 50% of the ad revenue in TON.",
                         textColor: secondaryTextColor,
-                        iconName: "Ads/Split",
+                        iconName: "Chart/Split",
                         iconColor: linkColor
                     ))
                 )
@@ -186,7 +187,7 @@ private final class SheetContent: CombinedComponent {
                         titleColor: textColor,
                         text: "You can withdraw your TON any time.",
                         textColor: secondaryTextColor,
-                        iconName: "Ads/Withdrawal",
+                        iconName: "Chart/Withdrawal",
                         iconColor: linkColor
                     ))
                 )
@@ -205,18 +206,12 @@ private final class SheetContent: CombinedComponent {
             
             let infoTitleString = "What's #TON?"//.replacingOccurrences(of: "#", with: "# ")
             let infoTitleAttributedString = NSMutableAttributedString(string: infoTitleString, font: titleFont, textColor: textColor)
-            let range = (infoTitleAttributedString.string as NSString).range(of: "#")
-            if range.location != NSNotFound, let emojiFile = component.context.animatedEmojiStickersValue["💎"]?.first?.file {
-                infoTitleAttributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: emojiFile.fileId.id, file: emojiFile), range: range)
-            }
             let infoTitle = infoTitle.update(
-                component: MultilineTextWithEntitiesComponent(
-                    context: component.context,
-                    animationCache: component.context.animationCache,
-                    animationRenderer: component.context.animationRenderer,
-                    placeholderColor: environment.theme.list.mediaPlaceholderColor,
+                component: MultilineTextComponent(
                     text: .plain(infoTitleAttributedString),
-                    horizontalAlignment: .center
+                    horizontalAlignment: .natural,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2
                 ),
                 availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
                 transition: .immediate
@@ -314,13 +309,16 @@ private final class SheetContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let animatedEmojis: [String: TelegramMediaFile]
     let openMore: () -> Void
     
     init(
         context: AccountContext,
+        animatedEmojis: [String: TelegramMediaFile],
         openMore: @escaping () -> Void
     ) {
         self.context = context
+        self.animatedEmojis = animatedEmojis
         self.openMore = openMore
     }
     
@@ -346,6 +344,7 @@ private final class SheetContainerComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
+                        animatedEmojis: context.component.animatedEmojis,
                         openMore: context.component.openMore,
                         dismiss: {
                             animateOut.invoke(Action { _ in
@@ -412,21 +411,25 @@ private final class SheetContainerComponent: CombinedComponent {
 }
 
 
-final class MonetizationIntroScreen: ViewControllerComponentContainer {
+final class AdsReportScreen: ViewControllerComponentContainer {
     private let context: AccountContext
+    private let animatedEmojis: [String: TelegramMediaFile]
     private var openMore: (() -> Void)?
         
     init(
         context: AccountContext,
+        animatedEmojis: [String: TelegramMediaFile],
         openMore: @escaping () -> Void
     ) {
         self.context = context
+        self.animatedEmojis = animatedEmojis
         self.openMore = openMore
                 
         super.init(
             context: context,
             component: SheetContainerComponent(
                 context: context,
+                animatedEmojis: animatedEmojis,
                 openMore: openMore
             ),
             navigationBarAppearance: .none,

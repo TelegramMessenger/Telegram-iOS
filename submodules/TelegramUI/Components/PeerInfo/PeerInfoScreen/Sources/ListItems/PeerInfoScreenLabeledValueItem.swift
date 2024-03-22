@@ -2,6 +2,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import AccountContext
+import TelegramCore
 import TextFormat
 import UIKit
 import AppBundle
@@ -9,6 +10,7 @@ import TelegramStringFormatting
 import ContextUI
 import SwiftSignalKit
 import TextLoadingEffect
+import EmojiTextAttachmentView
 
 enum PeerInfoScreenLabeledValueTextColor {
     case primary
@@ -18,6 +20,10 @@ enum PeerInfoScreenLabeledValueTextColor {
 enum PeerInfoScreenLabeledValueTextBehavior: Equatable {
     case singleLine
     case multiLine(maxLines: Int, enabledEntities: EnabledEntityTypes)
+}
+
+enum PeerInfoScreenLabeledValueLeftIcon {
+    case birthday
 }
 
 enum PeerInfoScreenLabeledValueIcon {
@@ -44,11 +50,13 @@ private struct TextLinkItemSource: Equatable {
 
 final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
     let id: AnyHashable
+    let context: AccountContext?
     let label: String
     let text: String
     let additionalText: String?
     let textColor: PeerInfoScreenLabeledValueTextColor
     let textBehavior: PeerInfoScreenLabeledValueTextBehavior
+    let leftIcon: PeerInfoScreenLabeledValueLeftIcon?
     let icon: PeerInfoScreenLabeledValueIcon?
     let action: ((ASDisplayNode, Promise<Bool>?) -> Void)?
     let longTapAction: ((ASDisplayNode) -> Void)?
@@ -59,11 +67,13 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
     
     init(
         id: AnyHashable,
+        context: AccountContext? = nil,
         label: String,
         text: String,
         additionalText: String? = nil,
         textColor: PeerInfoScreenLabeledValueTextColor = .primary,
         textBehavior: PeerInfoScreenLabeledValueTextBehavior = .singleLine,
+        leftIcon: PeerInfoScreenLabeledValueLeftIcon? = nil,
         icon: PeerInfoScreenLabeledValueIcon? = nil,
         action: ((ASDisplayNode, Promise<Bool>?) -> Void)?,
         longTapAction: ((ASDisplayNode) -> Void)? = nil,
@@ -73,11 +83,13 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
         requestLayout: @escaping () -> Void
     ) {
         self.id = id
+        self.context = context
         self.label = label
         self.text = text
         self.additionalText = additionalText
         self.textColor = textColor
         self.textBehavior = textBehavior
+        self.leftIcon = leftIcon
         self.icon = icon
         self.action = action
         self.longTapAction = longTapAction
@@ -131,6 +143,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     
     private let iconNode: ASImageNode
     private let iconButtonNode: HighlightTrackingButtonNode
+    
+    private var animatedEmojiLayer: InlineStickerItemLayer?
     
     private var linkHighlightingNode: LinkHighlightingNode?
     
@@ -558,12 +572,46 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             topOffset += labelSize.height + 3.0
             height += labelSize.height + 3.0
         }
-        let textFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset), size: textSize)
+        var textFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset), size: textSize)
         if textSize.height > 0.0 {
             topOffset += textSize.height + 3.0
             height += textSize.height
         }
         let additionalTextFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset), size: additionalTextSize)
+        
+        if let context = item.context, let leftIcon = item.leftIcon {
+            var file: TelegramMediaFile?
+            switch leftIcon {
+            case .birthday:
+#if DEBUG
+                file = context.animatedEmojiStickersValue["🔥"]?.first?.file
+                #else
+                file = context.animatedEmojiStickersValue["🎂"]?.first?.file
+                #endif
+            }
+            
+            if let file {
+                let itemSize = floorToScreenPixels(17.0)
+                var itemFrame = CGRect(origin: CGPoint(x: textFrame.minX + itemSize / 2.0, y: textFrame.midY), size: CGSize()).insetBy(dx: -itemSize / 2.0, dy: -itemSize / 2.0)
+                itemFrame.origin.x = floorToScreenPixels(itemFrame.origin.x)
+                itemFrame.origin.y = floorToScreenPixels(itemFrame.origin.y)
+                
+                let itemLayer: InlineStickerItemLayer
+                if let current = self.animatedEmojiLayer {
+                    itemLayer = current
+                } else {
+                    let pointSize = floor(itemSize * 1.3)
+                    itemLayer = InlineStickerItemLayer(context: context, userLocation: .other, attemptSynchronousLoad: true, emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file, custom: nil), file: file, cache: context.animationCache, renderer: context.animationRenderer, placeholderColor: presentationData.theme.list.mediaPlaceholderColor, pointSize: CGSize(width: pointSize, height: pointSize), dynamicColor: nil)
+                    self.animatedEmojiLayer = itemLayer
+                    self.layer.addSublayer(itemLayer)
+                    
+                    itemLayer.isVisibleForAnimations = true
+                }
+                itemLayer.frame = itemFrame
+                
+                textFrame.origin.x += 20.0
+            }
+        }
         
         let expandFrame = CGRect(origin: CGPoint(x: width - safeInsets.right - expandSize.width - 14.0 - UIScreenPixel, y: textFrame.maxY - expandSize.height), size: expandSize)
         self.expandNode.frame = expandFrame

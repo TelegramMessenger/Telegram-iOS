@@ -41,6 +41,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
+        "//submodules/Components/SheetComponent",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/MultilineTextWithEntitiesComponent",
         "//submodules/QrCodeUI",

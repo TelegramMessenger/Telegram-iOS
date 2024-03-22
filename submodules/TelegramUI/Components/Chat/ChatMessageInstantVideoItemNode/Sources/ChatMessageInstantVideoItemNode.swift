@@ -690,7 +690,9 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                                 }
                                 strongSelf.shareButtonNode = updatedShareButtonNode
                                 strongSelf.addSubnode(updatedShareButtonNode)
-                                updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
+                                updatedShareButtonNode.pressed = { [weak strongSelf] in
+                                    strongSelf?.shareButtonPressed()
+                                }
                             }
                             let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
                             updatedShareButtonNode.frame = CGRect(origin: CGPoint(x: min(params.width - buttonSize.width - 8.0, videoFrame.maxX - 7.0), y: videoFrame.maxY - 24.0 - buttonSize.height), size: buttonSize)
@@ -1170,7 +1172,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let shareButtonNode = self.shareButtonNode, shareButtonNode.frame.contains(point) {
-            return shareButtonNode.view
+            return shareButtonNode.view.hitTest(self.view.convert(point, to: shareButtonNode.view), with: event)
         }
         if !self.bounds.contains(point) {
             return nil

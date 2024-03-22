@@ -280,6 +280,7 @@ public enum PresentationResourceKey: Int32 {
     case chatFreeNavigateButtonIcon
     case chatFreeShareButtonIcon
     case chatFreeCloseButtonIcon
+    case chatFreeMoreButtonIcon
     
     case chatKeyboardActionButtonMessageIcon
     case chatKeyboardActionButtonLinkIcon

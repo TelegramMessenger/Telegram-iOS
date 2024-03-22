@@ -1120,6 +1120,20 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatFreeMoreButtonIcon(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatFreeMoreButtonIcon.rawValue, { _ in
+            return generateImage(CGSize(width: 16.0, height: 16.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper).cgColor)
+                
+                let dotSize = CGSize(width: 3.0 + UIScreenPixel, height: 3.0 + UIScreenPixel)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((size.height - dotSize.height) / 2.0)), size: dotSize))
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - dotSize.width) / 2.0), y: floorToScreenPixels((size.height - dotSize.height) / 2.0)), size: dotSize))
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - dotSize.width, y: floorToScreenPixels((size.height - dotSize.height) / 2.0)), size: dotSize))
+            })
+        })
+    }
+    
     public static func chatKeyboardActionButtonMessageIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatKeyboardActionButtonMessageIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotMessage"), color: theme.chat.inputButtonPanel.buttonTextColor)

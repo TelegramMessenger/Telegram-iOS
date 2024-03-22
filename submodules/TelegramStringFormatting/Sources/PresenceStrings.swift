@@ -171,6 +171,24 @@ public func stringForCompactBirthday(_ birthday: TelegramBirthday, strings: Pres
     return components.joined(separator: " ")
 }
 
+public func ageForBirthday(_ birthday: TelegramBirthday) -> Int? {
+    guard let year = birthday.year else {
+        return nil
+    }
+    var dateComponents = DateComponents()
+    dateComponents.day = Int(birthday.day)
+    dateComponents.month = Int(birthday.month)
+    dateComponents.year = Int(year)
+     
+    let calendar = Calendar.current
+    if let birthDate = calendar.date(from: dateComponents) {
+        if let age = calendar.dateComponents([.year], from: birthDate, to: Date()).year {
+            return age
+        }
+    }
+    return nil
+}
+
 public enum RelativeTimestampFormatDay {
     case today
     case yesterday

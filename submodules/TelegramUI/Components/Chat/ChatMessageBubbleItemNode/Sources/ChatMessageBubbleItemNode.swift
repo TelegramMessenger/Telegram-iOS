@@ -3908,7 +3908,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 let shareButtonNode = ChatMessageShareButton()
                 strongSelf.shareButtonNode = shareButtonNode
                 strongSelf.insertSubnode(shareButtonNode, belowSubnode: strongSelf.messageAccessibilityArea)
-                shareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
+                shareButtonNode.pressed = { [weak strongSelf] in
+                    strongSelf?.shareButtonPressed()
+                }
+                shareButtonNode.morePressed = { [weak strongSelf] in
+                    strongSelf?.openMessageContextMenu()
+                }
             }
         } else if let shareButtonNode = strongSelf.shareButtonNode {
             strongSelf.shareButtonNode = nil
@@ -4749,7 +4754,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         if let shareButtonNode = self.shareButtonNode, shareButtonNode.frame.contains(point) {
-            return shareButtonNode.view
+            return shareButtonNode.view.hitTest(self.view.convert(point, to: shareButtonNode.view), with: event)
         }
         
         if let selectionNode = self.selectionNode {

@@ -106,7 +106,6 @@ import PeerInfoChatPaneNode
 import PeerInfoChatListPaneNode
 import GroupStickerPackSetupController
 import PeerNameColorItem
-import ConfettiEffect
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -1213,7 +1212,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 if today.day == Int(birthday.day) && today.month == Int(birthday.month) {
                     hasBirthdayToday = true
                 }
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 400, label: hasBirthdayToday ? presentationData.strings.UserInfo_BirthdayToday : presentationData.strings.UserInfo_Birthday, text: stringForCompactBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, icon: hasBirthdayToday ? .premiumGift : nil, action: nil, longTapAction: nil, iconAction: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 400, context: context, label: hasBirthdayToday ? presentationData.strings.UserInfo_BirthdayToday : presentationData.strings.UserInfo_Birthday, text: stringForCompactBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, leftIcon: hasBirthdayToday ? .birthday : nil, icon: hasBirthdayToday ? .premiumGift : nil, action: nil, longTapAction: nil, iconAction: {
                     interaction.openPremiumGift()
                 }, contextAction: nil, requestLayout: {
                 }))
@@ -10900,6 +10899,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private var didPlayBirthdayAnimation = false
+    private weak var birthdayOverlayNode: PeerInfoBirthdayOverlay?
     func maybePlayBirthdayAnimation() {
         guard !self.didPlayBirthdayAnimation, !self.isSettings && !self.isMediaOnly, let cachedData = self.data?.cachedData as? CachedUserData, let birthday = cachedData.birthday, let (layout, _) = self.validLayout else {
             return
@@ -10915,7 +10915,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         if hasBirthdayToday {
             Queue.mainQueue().after(0.3) {
-                self.view.addSubview(ConfettiView(frame: CGRect(origin: .zero, size: layout.size)))
+                let overlayNode = PeerInfoBirthdayOverlay(context: self.context)
+                overlayNode.frame = CGRect(origin: .zero, size: layout.size)
+                overlayNode.setup(size: layout.size, birthday: birthday)
+                self.addSubnode(overlayNode)
             }
         }
     }
@@ -11712,6 +11715,10 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: sourceController, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             sourceController.presentInGlobalOverlay(contextController)
         })
+    }
+    
+    public static func preloadBirthdayAnimations(context: AccountContext, birthday: TelegramBirthday) {
+        PeerInfoBirthdayOverlay.preloadBirthdayAnimations(context: context, birthday: birthday)
     }
 }
 
