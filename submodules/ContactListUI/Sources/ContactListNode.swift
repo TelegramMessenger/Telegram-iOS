@@ -538,6 +538,9 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
             
             var index: Int = 0
             for peer in topPeers.prefix(15) {
+                if peer.isDeleted {
+                    continue
+                }
                 existingPeerIds.insert(.peer(peer.id))
                 
                 let selection: ContactsPeerItemSelection
@@ -579,6 +582,9 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                 
                 for peerId in peerIds {
                     if let peer = topPeers.first(where: { $0.id == peerId }) {
+                        if peer.isDeleted {
+                            continue
+                        }
                         if existingPeerIds.contains(.peer(peer.id)) {
                             continue
                         }
@@ -625,6 +631,9 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
             })
             
             for peer in topPeers.prefix(15) {
+                if peer.isDeleted {
+                    continue
+                }
                 if existingPeerIds.contains(.peer(peer.id)) {
                     continue
                 }

@@ -457,8 +457,8 @@ public enum PremiumPerk: CaseIterable {
     case businessQuickReplies
     case businessAwayMessage
     case businessChatBots
-    case businessLinks
     case businessIntro
+    case businessLinks
     
     public static var allCases: [PremiumPerk] {
         return [
@@ -493,13 +493,10 @@ public enum PremiumPerk: CaseIterable {
             .businessHours,
             .businessQuickReplies,
             .businessGreetingMessage,
+            .businessLinks,
             .businessAwayMessage,
             .businessIntro,
-            .businessChatBots,
-            .businessLinks
-//            .emojiStatus,
-//            .folderTags,
-//            .stories,
+            .businessChatBots
         ]
     }
     
@@ -572,10 +569,10 @@ public enum PremiumPerk: CaseIterable {
             return "away_message"
         case .businessChatBots:
             return "business_bots"
-        case .businessLinks:
-            return "business_links"
         case .businessIntro:
             return "business_intro"
+        case .businessLinks:
+            return "business_links"
         }
     }
     
@@ -638,11 +635,10 @@ public enum PremiumPerk: CaseIterable {
             return strings.Business_AwayMessages
         case .businessChatBots:
             return strings.Business_ChatbotsItem
-        case .businessLinks:
-            //TODO:localize
-            return "Links to Chat"
         case .businessIntro:
             return strings.Business_Intro
+        case .businessLinks:
+            return strings.Business_Links
         }
     }
     
@@ -705,11 +701,10 @@ public enum PremiumPerk: CaseIterable {
             return strings.Business_AwayMessagesInfo
         case .businessChatBots:
             return strings.Business_ChatbotsInfo
-        case .businessLinks:
-            //TODO:localize
-            return "Create links that start a chat with you, suggesting the first message."
         case .businessIntro:
             return strings.Business_IntroInfo
+        case .businessLinks:
+            return strings.Business_LinksInfo
         }
     }
     
@@ -772,10 +767,10 @@ public enum PremiumPerk: CaseIterable {
             return "Premium/BusinessPerk/Away"
         case .businessChatBots:
             return "Premium/BusinessPerk/Chatbots"
-        case .businessLinks:
-            return "Premium/BusinessPerk/ChatLinks"
         case .businessIntro:
             return "Premium/BusinessPerk/Intro"
+        case .businessLinks:
+            return "Premium/BusinessPerk/Links"
         }
     }
 }
@@ -810,12 +805,9 @@ struct PremiumIntroConfiguration {
             .businessQuickReplies,
             .businessGreetingMessage,
             .businessAwayMessage,
+            .businessLinks,
             .businessIntro,
-            .businessChatBots,
-            .businessLinks
-//            .emojiStatus,
-//            .folderTags,
-//            .stories
+            .businessChatBots
         ])
     }
     
@@ -846,20 +838,6 @@ struct PremiumIntroConfiguration {
             if perks.count < 4 {
                 perks = PremiumIntroConfiguration.defaultValue.perks
             }
-            #if DEBUG
-            if !perks.contains(.lastSeen) {
-                perks.append(.lastSeen)
-            }
-            if !perks.contains(.messagePrivacy) {
-                perks.append(.messagePrivacy)
-            }
-            if !perks.contains(.messageTags) {
-                perks.append(.messageTags)
-            }
-            if !perks.contains(.business) {
-                perks.append(.business)
-            }
-            #endif
             
             var businessPerks: [PremiumPerk] = []
             if let values = data["business_promo_order"] as? [String] {
@@ -2159,8 +2137,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     UIColor(rgb: 0xbc4395),
                     UIColor(rgb: 0x9b4fed),
                     UIColor(rgb: 0x8958ff),
-                    UIColor(rgb: 0x8958ff),
-                    UIColor(rgb: 0x8958ff),
+                    UIColor(rgb: 0x676bff),
+                    UIColor(rgb: 0x007aff)
                 ]
                 
                 var i = 0

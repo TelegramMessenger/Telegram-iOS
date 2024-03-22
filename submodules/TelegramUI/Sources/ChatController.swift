@@ -118,7 +118,6 @@ import WallpaperGalleryScreen
 import WallpaperGridScreen
 import VideoMessageCameraScreen
 import TopMessageReactions
-import PeerInfoScreen
 import AudioWaveform
 import PeerNameColorScreen
 import ChatEmptyNode
@@ -16165,7 +16164,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private var didDisplayBirthdayTooltip = false
     func displayBirthdayTooltip() {
-        guard !self.didDisplayBirthdayTooltip, let rect = self.chatDisplayNode.frameForGiftButton(), self.effectiveNavigationController?.topViewController === self, let peer = self.presentationInterfaceState.renderedPeer?.peer.flatMap({ EnginePeer($0) }) else {
+        guard !self.didDisplayBirthdayTooltip else {
+            return
+        }
+        if let birthday = (self.peerView?.cachedData as? CachedUserData)?.birthday {
+            PeerInfoScreenImpl.preloadBirthdayAnimations(context: self.context, birthday: birthday)
+        }
+        guard let rect = self.chatDisplayNode.frameForGiftButton(), self.effectiveNavigationController?.topViewController === self, let peer = self.presentationInterfaceState.renderedPeer?.peer.flatMap({ EnginePeer($0) }) else {
             return
         }
         

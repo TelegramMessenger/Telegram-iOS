@@ -484,7 +484,7 @@ private final class StickerPackContainer: ASDisplayNode {
             if let strongSelf = self {
                 if let itemNode = strongSelf.gridNode.itemNodeAtPoint(point) as? StickerPackPreviewGridItemNode, let item = itemNode.stickerPackItem {
                     var canEdit = false
-                    if let (info, _, _) = strongSelf.currentStickerPack, info.flags.contains(.isCreator) {
+                    if let (info, _, _) = strongSelf.currentStickerPack, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                         canEdit = true
                     }
                     
@@ -955,7 +955,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 case .none:
                     buttonColor = self.presentationData.theme.list.itemAccentColor
                 case let .result(info, _, installed):
-                    if info.flags.contains(.isCreator) {
+                    if info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                         buttonColor = installed ? self.presentationData.theme.list.itemAccentColor : self.presentationData.theme.list.itemCheckColors.foregroundColor
                     } else {
                         buttonColor = installed ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemCheckColors.foregroundColor
@@ -991,7 +991,7 @@ private final class StickerPackContainer: ASDisplayNode {
         }
         
         var isEditable = false
-        if let info = self.currentStickerPack?.0, info.flags.contains(.isCreator) {
+        if let info = self.currentStickerPack?.0, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
             isEditable = true
         }
         
@@ -1082,7 +1082,7 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         })))
         
-        if let (info, packItems, _) = self.currentStickerPack, info.flags.contains(.isCreator) {
+        if let (info, packItems, _) = self.currentStickerPack, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
             //TODO:localize
             items.append(.separator)
             if packItems.count > 0 {
@@ -1402,7 +1402,7 @@ private final class StickerPackContainer: ASDisplayNode {
             }
             self.requestDismiss()
         } else if let (info, _, installed) = self.currentStickerPack {
-            if installed, info.flags.contains(.isCreator) {
+            if installed, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                 self.updateIsEditing(!self.isEditing)
                 return
             }
@@ -1477,7 +1477,7 @@ private final class StickerPackContainer: ASDisplayNode {
         if let currentContents = self.currentContents, currentContents.count == 1, let content = currentContents.first, case let .result(info, _, installed) = content {
             if installed {
                 let text: String
-                if info.flags.contains(.isCreator) {
+                if info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                     if self.isEditing {
                         var updated = false
                         if let current = self.buttonNode.attributedTitle(for: .normal)?.string, !current.isEmpty && current != self.presentationData.strings.Common_Done {
@@ -1656,7 +1656,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 self.controller?.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.StickerPack_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 self.controller?.dismiss(animated: true, completion: nil)
             case let .result(info, items, installed):
-                isEditable = info.flags.contains(.isCreator)
+                isEditable = info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)
                 self.onReady()
                 if !items.isEmpty && self.currentStickerPack == nil {
                     if let _ = self.validLayout, abs(self.expandScrollProgress - 1.0) < .ulpOfOne {
@@ -1740,7 +1740,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     self.updateButton(count: count)
                 }
                 
-                if info.flags.contains(.isCreator) {
+                if info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                     entries.append(.add)
                 }
             }
@@ -1841,7 +1841,7 @@ private final class StickerPackContainer: ASDisplayNode {
         self.currentEntries = entries
         
         if let controller = self.controller {
-            let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil, isEditable: info.flags.contains(.isCreator), isEditing: self.isEditing)
+            let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil, isEditable: info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji), isEditing: self.isEditing)
             self.enqueueTransaction(transaction)
         }
     }
@@ -1901,7 +1901,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     actionAreaBottomInset = 2.0
                 }
             }
-            if let (info, _, isInstalled) = self.currentStickerPack, isInstalled, !info.flags.contains(.isCreator) {
+            if let (info, _, isInstalled) = self.currentStickerPack, isInstalled, !info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                 buttonHeight = 42.0
                 actionAreaTopInset = 1.0
                 actionAreaBottomInset = 2.0

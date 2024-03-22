@@ -119,6 +119,9 @@ func managedContactBirthdays(stateManager: AccountStateManager) -> Signal<Never,
                 for contactBirthday in contactBirthdays {
                     if case let .contactBirthday(contactId, birthday) = contactBirthday {
                         let peerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(contactId))
+                        if peerId == stateManager.accountPeerId {
+                            continue
+                        }
                         birthdays[peerId] = TelegramBirthday(apiBirthday: birthday)
                     }
                 }

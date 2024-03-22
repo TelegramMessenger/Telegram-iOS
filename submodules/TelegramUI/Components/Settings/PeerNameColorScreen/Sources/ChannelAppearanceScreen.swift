@@ -1612,7 +1612,7 @@ final class ChannelAppearanceScreenComponent: Component {
                             sectionId: 0,
                             themes: chatThemes,
                             hasNoTheme: true,
-                            animatedEmojiStickers: component.context.animatedEmojiStickers,
+                            animatedEmojiStickers: component.context.animatedEmojiStickersValue,
                             themeSpecificAccentColors: [:],
                             themeSpecificChatWallpapers: [:],
                             nightMode: environment.theme.overallDarkAppearance,

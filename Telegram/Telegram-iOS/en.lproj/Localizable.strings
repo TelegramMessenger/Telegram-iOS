@@ -11649,7 +11649,7 @@ Sorry for the inconvenience.";
 "ChatList.AddBirthdayTitle" = "Add your birthday! 🎂";
 "ChatList.AddBirthdayText" = "Let your contacts know when you're celebrating.";
 
-"ChatList.BirthdaySingleTitle" = "It's %@ **birthday** today! 🎂";
+"ChatList.BirthdaySingleTitle" = "It's %@'s **birthday** today! 🎂";
 "ChatList.BirthdaySingleText" = "Gift them Telegram Premium.";
 
 "ChatList.BirthdayMultipleTitle_1" = "%@ contact have **birthday** today! 🎂";
@@ -11657,3 +11657,12 @@ Sorry for the inconvenience.";
 "ChatList.BirthdayMultipleText" = "Gift them Telegram Premium.";
 
 "ChatList.BirthdayInSettingsInfo" = "You can set your date of birth later in **Settings**.";
+
+"UserInfo.Birthday" = "date of birth";
+"UserInfo.BirthdayToday" = "birthday today";
+
+"UserInfo.Age_1" = "%@ year old";
+"UserInfo.Age_any" = "%@ years old";
+
+"Business.Links" = "Links to Chat";
+"Business.LinksInfo" = "Create links that start a chat with you, suggesting the first message.";

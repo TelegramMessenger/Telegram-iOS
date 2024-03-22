@@ -140,7 +140,7 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
     private let itemContainerNode: ASDisplayNode
     
     private var currentItems: [PeerInfoScreenItem] = []
-    private var itemNodes: [AnyHashable: PeerInfoScreenItemNode] = [:]
+    fileprivate var itemNodes: [AnyHashable: PeerInfoScreenItemNode] = [:]
     
     override init() {
         self.backgroundNode = ASDisplayNode()
@@ -587,6 +587,7 @@ private final class PeerInfoInteraction {
     let updateBirthdate: (TelegramBirthday??) -> Void
     let updateIsEditingBirthdate: (Bool) -> Void
     let openBirthdatePrivacy: () -> Void
+    let openPremiumGift: () -> Void
     let editingOpenPersonalChannel: () -> Void
     
     init(
@@ -646,6 +647,7 @@ private final class PeerInfoInteraction {
         updateBirthdate: @escaping (TelegramBirthday??) -> Void,
         updateIsEditingBirthdate: @escaping (Bool) -> Void,
         openBirthdatePrivacy: @escaping () -> Void,
+        openPremiumGift: @escaping () -> Void,
         editingOpenPersonalChannel: @escaping () -> Void
     ) {
         self.openUsername = openUsername
@@ -704,6 +706,7 @@ private final class PeerInfoInteraction {
         self.updateBirthdate = updateBirthdate
         self.updateIsEditingBirthdate = updateIsEditingBirthdate
         self.openBirthdatePrivacy = openBirthdatePrivacy
+        self.openPremiumGift = openPremiumGift
         self.editingOpenPersonalChannel = editingOpenPersonalChannel
     }
 }
@@ -1133,21 +1136,21 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     return result
 }
 
+private enum InfoSection: Int, CaseIterable {
+    case groupLocation
+    case calls
+    case personalChannel
+    case peerInfo
+    case peerMembers
+}
+
 private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], chatLocation: ChatLocation, isOpenedFromChat: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
     guard let data = data else {
         return []
     }
-    
-    enum Section: Int, CaseIterable {
-        case groupLocation
-        case calls
-        case personalChannel
-        case peerInfo
-        case peerMembers
-    }
-    
-    var items: [Section: [PeerInfoScreenItem]] = [:]
-    for section in Section.allCases {
+        
+    var items: [InfoSection: [PeerInfoScreenItem]] = [:]
+    for section in InfoSection.allCases {
         items[section] = []
     }
     
@@ -1227,7 +1230,14 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     
         if let cachedData = data.cachedData as? CachedUserData {
             if let birthday = cachedData.birthday {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 400, label: "date of birth", text: stringForFullBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, action: nil, longTapAction: nil, contextAction: nil, requestLayout: {
+                var hasBirthdayToday = false
+                let today = Calendar.current.dateComponents(Set([.day, .month]), from: Date())
+                if today.day == Int(birthday.day) && today.month == Int(birthday.month) {
+                    hasBirthdayToday = true
+                }
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 400, context: context, label: hasBirthdayToday ? presentationData.strings.UserInfo_BirthdayToday : presentationData.strings.UserInfo_Birthday, text: stringForCompactBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, leftIcon: hasBirthdayToday ? .birthday : nil, icon: hasBirthdayToday ? .premiumGift : nil, action: nil, longTapAction: nil, iconAction: {
+                    interaction.openPremiumGift()
+                }, contextAction: nil, requestLayout: {
                 }))
             }
             
@@ -1592,7 +1602,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     }
     
     var result: [(AnyHashable, [PeerInfoScreenItem])] = []
-    for section in Section.allCases {
+    for section in InfoSection.allCases {
         if let sectionItems = items[section], !sectionItems.isEmpty {
             result.append((section, sectionItems))
         }
@@ -2671,6 +2681,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             openBirthdatePrivacy: { [weak self] in
                 if let self {
                     self.openBirthdatePrivacy()
+                }
+            },
+            openPremiumGift: { [weak self] in
+                if let self {
+                    self.openPremiumGift()
                 }
             },
             editingOpenPersonalChannel: { [weak self] in
@@ -4466,8 +4481,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 membersUpdated = true
             }
             
-            var infoUpdated = false // previousData != nil && (previousData?.cachedData == nil) != (data.cachedData == nil)
-           
+            var infoUpdated = false
+            
             var previousCall: CachedChannelData.ActiveCall?
             var currentCall: CachedChannelData.ActiveCall?
             
@@ -4539,6 +4554,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 infoUpdated = true
             }
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: self.didSetReady && (membersUpdated || infoUpdated) ? .animated(duration: 0.3, curve: .spring) : .immediate)
+            
+            if let cachedData = data.cachedData as? CachedUserData, let _ = cachedData.birthday {
+                self.maybePlayBirthdayAnimation()
+            }
         }
     }
     
@@ -5695,34 +5714,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)
                             
-                            if let strongSelf = self {
-                                var pushControllerImpl: ((ViewController) -> Void)?
-                                let controller = PremiumGiftScreen(context: strongSelf.context, peerIds: [strongSelf.peerId], options: cachedData.premiumGiftOptions, source: .profile, pushController: { c in
-                                    pushControllerImpl?(c)
-                                }, completion: { [weak self] in
-                                    if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                                        var controllers = navigationController.viewControllers
-                                        controllers = controllers.filter { !($0 is PeerInfoScreen) && !($0 is PremiumGiftScreen) }
-                                        var foundController = false
-                                        for controller in controllers.reversed() {
-                                            if let chatController = controller as? ChatController, case .peer(id: strongSelf.peerId) = chatController.chatLocation {
-                                                chatController.hintPlayNextOutgoingGift()
-                                                foundController = true
-                                                break
-                                            }
-                                        }
-                                        if !foundController {
-                                            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId), subject: nil, botStart: nil, mode: .standard(.default))
-                                            chatController.hintPlayNextOutgoingGift()
-                                            controllers.append(chatController)
-                                        }
-                                        navigationController.setViewControllers(controllers, animated: true)
-                                    }
-                                })
-                                pushControllerImpl = { [weak controller] c in
-                                    controller?.push(c)
-                                }
-                                strongSelf.controller?.push(controller)
+                            if let self {
+                                self.openPremiumGift()
                             }
                         })))
                     }
@@ -8898,6 +8891,39 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         controller.present(self.context.sharedContext.makeChatQrCodeScreen(context: self.context, peer: peer, threadId: threadId, temporary: temporary), in: .window(.root))
     }
     
+    private func openPremiumGift() {
+        guard let cachedData = self.data?.cachedData as? CachedUserData else {
+            return
+        }
+        var pushControllerImpl: ((ViewController) -> Void)?
+        let controller = PremiumGiftScreen(context: self.context, peerIds: [self.peerId], options: cachedData.premiumGiftOptions, source: .profile, pushController: { c in
+            pushControllerImpl?(c)
+        }, completion: { [weak self] in
+            if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                var controllers = navigationController.viewControllers
+                controllers = controllers.filter { !($0 is PeerInfoScreen) && !($0 is PremiumGiftScreen) }
+                var foundController = false
+                for controller in controllers.reversed() {
+                    if let chatController = controller as? ChatController, case .peer(id: strongSelf.peerId) = chatController.chatLocation {
+                        chatController.hintPlayNextOutgoingGift()
+                        foundController = true
+                        break
+                    }
+                }
+                if !foundController {
+                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId), subject: nil, botStart: nil, mode: .standard(.default))
+                    chatController.hintPlayNextOutgoingGift()
+                    controllers.append(chatController)
+                }
+                navigationController.setViewControllers(controllers, animated: true)
+            }
+        })
+        pushControllerImpl = { [weak controller] c in
+            controller?.push(c)
+        }
+        self.controller?.push(controller)
+    }
+    
     private func openPostStory() {
         self.postingAvailabilityDisposable?.dispose()
         
@@ -10927,6 +10953,38 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.controller?.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         }))
     }
+    
+    private var didPlayBirthdayAnimation = false
+    private weak var birthdayOverlayNode: PeerInfoBirthdayOverlay?
+    func maybePlayBirthdayAnimation() {
+        guard !self.didPlayBirthdayAnimation, !self.isSettings && !self.isMediaOnly, let cachedData = self.data?.cachedData as? CachedUserData, let birthday = cachedData.birthday, let (layout, _) = self.validLayout else {
+            return
+        }
+        
+        self.didPlayBirthdayAnimation = true
+
+        var hasBirthdayToday = false
+        let today = Calendar.current.dateComponents(Set([.day, .month]), from: Date())
+        if today.day == Int(birthday.day) && today.month == Int(birthday.month) {
+            hasBirthdayToday = true
+        }
+        
+        if hasBirthdayToday {
+            Queue.mainQueue().after(0.3) {
+                var birthdayItemFrame: CGRect?
+                if let section = self.regularSections[InfoSection.peerInfo] {
+                    if let birthdayItem = section.itemNodes[AnyHashable(400)] {
+                        birthdayItemFrame = birthdayItem.view.convert(birthdayItem.view.bounds, to: self.view)
+                    }
+                }
+                
+                let overlayNode = PeerInfoBirthdayOverlay(context: self.context)
+                overlayNode.frame = CGRect(origin: .zero, size: layout.size)
+                overlayNode.setup(size: layout.size, birthday: birthday, sourceRect: birthdayItemFrame)
+                self.addSubnode(overlayNode)
+            }
+        }
+    }
 }
 
 public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortcutResponder {
@@ -11720,6 +11778,10 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: sourceController, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             sourceController.presentInGlobalOverlay(contextController)
         })
+    }
+    
+    public static func preloadBirthdayAnimations(context: AccountContext, birthday: TelegramBirthday) {
+        PeerInfoBirthdayOverlay.preloadBirthdayAnimations(context: context, birthday: birthday)
     }
 }
 

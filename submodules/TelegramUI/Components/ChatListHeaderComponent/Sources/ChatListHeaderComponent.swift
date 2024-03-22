@@ -1090,6 +1090,18 @@ public final class ChatListHeaderComponent: Component {
         public func findTitleView() -> ChatListTitleView? {
             return self.primaryContentView?.chatListTitleView
         }
+        
+        public func emojiStatus() -> PeerEmojiStatus? {
+            guard let component = self.component else {
+                return nil
+            }
+            if let _ = component.storySubscriptions, let primaryContent = component.primaryContent, let chatListTitle = primaryContent.chatListTitle, let peerStatus = chatListTitle.peerStatus, case let .emoji(emojiStatus) = peerStatus {
+                return emojiStatus
+            } else if let peerStatus = self.findTitleView()?.title.peerStatus, case let .emoji(emojiStatus) = peerStatus {
+                return emojiStatus
+            }
+            return nil
+        }
     }
     
     public func makeView() -> View {

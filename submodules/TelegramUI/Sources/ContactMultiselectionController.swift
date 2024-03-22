@@ -640,6 +640,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     return
                 }
                 self.contactsNode.editableTokens = []
+                self.updateTitle()
                 self.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
             }
             contactsNode.updatedSelection = { [weak self] peers, value in

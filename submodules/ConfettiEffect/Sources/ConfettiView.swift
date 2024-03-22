@@ -157,7 +157,7 @@ public final class ConfettiView: UIView {
                 dtAndDamping.append((0.0, 1.0))
             } else if let slowdownStart = self.slowdownStartTimestamps[i] {
                 let slowdownDt: Float
-                let slowdownDuration: Float = 0.5
+                let slowdownDuration: Float = 0.7
                 let damping: Float
                 if currentTime >= slowdownStart && currentTime <= slowdownStart + slowdownDuration {
                     let slowdownTimestamp: Float = currentTime - slowdownStart

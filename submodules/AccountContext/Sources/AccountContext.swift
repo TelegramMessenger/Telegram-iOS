@@ -907,7 +907,7 @@ public protocol SharedAccountContext: AnyObject {
     
     var activeAccountContexts: Signal<(primary: AccountContext?, accounts: [(AccountRecordId, AccountContext, Int32)], currentAuth: UnauthorizedAccount?), NoError> { get }
     var activeAccountsWithInfo: Signal<(primary: AccountRecordId?, accounts: [AccountWithInfo]), NoError> { get }
-    
+        
     var presentGlobalController: (ViewController, Any?) -> Void { get }
     var presentCrossfadeController: () -> Void { get }
     
@@ -1081,7 +1081,9 @@ public protocol AccountContext: AnyObject {
     var animationCache: AnimationCache { get }
     var animationRenderer: MultiAnimationRenderer { get }
     
-    var animatedEmojiStickers: [String: [StickerPackItem]] { get }
+    var animatedEmojiStickers: Signal<[String: [StickerPackItem]], NoError> { get }
+    var animatedEmojiStickersValue: [String: [StickerPackItem]] { get }
+    var additionalAnimatedEmojiStickers: Signal<[String: [Int: StickerPackItem]], NoError> { get }
     
     var isPremium: Bool { get }
     var userLimits: EngineConfiguration.UserLimits { get }

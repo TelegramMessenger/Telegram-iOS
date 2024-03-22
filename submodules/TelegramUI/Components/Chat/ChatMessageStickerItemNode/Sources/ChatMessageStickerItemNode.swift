@@ -986,7 +986,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                             }
                             strongSelf.shareButtonNode = updatedShareButtonNode
                             strongSelf.addSubnode(updatedShareButtonNode)
-                            updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
+                            updatedShareButtonNode.pressed = { [weak strongSelf] in
+                                strongSelf?.shareButtonPressed()
+                            }
                         }
                         let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
                         let shareButtonFrame = CGRect(origin: CGPoint(x: baseShareButtonFrame.minX, y: baseShareButtonFrame.maxY - buttonSize.height), size: buttonSize)
@@ -1600,7 +1602,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let shareButtonNode = self.shareButtonNode, shareButtonNode.frame.contains(point) {
-            return shareButtonNode.view
+            return shareButtonNode.view.hitTest(self.view.convert(point, to: shareButtonNode.view), with: event)
         }
         if let threadInfoNode = self.threadInfoNode, let result = threadInfoNode.hitTest(self.view.convert(point, to: threadInfoNode.view), with: event) {
             return result
