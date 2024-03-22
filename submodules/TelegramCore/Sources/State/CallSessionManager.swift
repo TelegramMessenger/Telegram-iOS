@@ -60,7 +60,7 @@ enum CallSessionInternalState {
     case requesting(a: Data, disposable: Disposable)
     case requested(id: Int64, accessHash: Int64, a: Data, gA: Data, config: SecretChatEncryptionConfig, remoteConfirmationTimestamp: Int32?)
     case confirming(id: Int64, accessHash: Int64, key: Data, keyId: Int64, keyVisualHash: Data, disposable: Disposable)
-    case active(id: Int64, accessHash: Int64, beginTimestamp: Int32, key: Data, keyId: Int64, keyVisualHash: Data, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, customParameters: [String: Any], allowsP2P: Bool)
+    case active(id: Int64, accessHash: Int64, beginTimestamp: Int32, key: Data, keyId: Int64, keyVisualHash: Data, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, customParameters: String?, allowsP2P: Bool)
     case dropping(reason: CallSessionTerminationReason, disposable: Disposable)
     case terminated(id: Int64?, accessHash: Int64?, reason: CallSessionTerminationReason, reportRating: Bool, sendDebugLogs: Bool)
 
@@ -143,7 +143,7 @@ public enum CallSessionState {
     case ringing
     case accepting
     case requesting(ringing: Bool)
-    case active(id: CallId, key: Data, keyVisualHash: Data, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, customParameters: [String: Any], allowsP2P: Bool)
+    case active(id: CallId, key: Data, keyVisualHash: Data, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, customParameters: String?, allowsP2P: Bool)
     case dropping(reason: CallSessionTerminationReason)
     case terminated(id: CallId?, reason: CallSessionTerminationReason, options: CallTerminationOptions)
     
@@ -884,7 +884,7 @@ private final class CallSessionManagerContext {
                     //assertionFailure()
                 }
             }
-        case let .phoneCall(flags, id, _, _, _, _, gAOrB, keyFingerprint, callProtocol, connections, startDate):
+        case let .phoneCall(flags, id, _, _, _, _, gAOrB, keyFingerprint, callProtocol, connections, startDate, customParameters):
             let allowsP2P = (flags & (1 << 5)) != 0
             if let internalId = self.contextIdByStableId[id] {
                 if let context = self.contexts[internalId] {
@@ -897,12 +897,18 @@ private final class CallSessionManagerContext {
                                     switch callProtocol {
                                         case let .phoneCallProtocol(_, _, maxLayer, versions):
                                             if !versions.isEmpty {
-                                                let customParameters: [String: Any] = [:]
+                                                var customParametersValue: String?
+                                                switch customParameters {
+                                                case .none:
+                                                    break
+                                                case let .dataJSON(data):
+                                                    customParametersValue = data
+                                                }
                                                 
                                                 let isVideoPossible = self.videoVersions().contains(where: { versions.contains($0) })
                                                 context.isVideoPossible = isVideoPossible
                                                 
-                                                context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: calculatedKeyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, version: versions[0], customParameters: customParameters, allowsP2P: allowsP2P)
+                                                context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: calculatedKeyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, version: versions[0], customParameters: customParametersValue, allowsP2P: allowsP2P)
                                                 self.contextUpdated(internalId: internalId)
                                             } else {
                                                 self.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
@@ -918,12 +924,18 @@ private final class CallSessionManagerContext {
                             switch callProtocol {
                                 case let .phoneCallProtocol(_, _, maxLayer, versions):
                                     if !versions.isEmpty {
-                                        let customParameters: [String: Any] = [:]
+                                        var customParametersValue: String?
+                                        switch customParameters {
+                                        case .none:
+                                            break
+                                        case let .dataJSON(data):
+                                            customParametersValue = data
+                                        }
                                         
                                         let isVideoPossible = self.videoVersions().contains(where: { versions.contains($0) })
                                         context.isVideoPossible = isVideoPossible
                                         
-                                        context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, version: versions[0], customParameters: customParameters, allowsP2P: allowsP2P)
+                                        context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, version: versions[0], customParameters: customParametersValue, allowsP2P: allowsP2P)
                                         self.contextUpdated(internalId: internalId)
                                     } else {
                                         self.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
@@ -1203,7 +1215,7 @@ public final class CallSessionManager {
 
 private enum AcceptedCall {
     case waiting(config: SecretChatEncryptionConfig)
-    case call(config: SecretChatEncryptionConfig, gA: Data, timestamp: Int32, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, customParameters: [String: Any], allowsP2P: Bool)
+    case call(config: SecretChatEncryptionConfig, gA: Data, timestamp: Int32, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, customParameters: String?, allowsP2P: Bool)
 }
 
 private enum AcceptCallResult {
@@ -1243,13 +1255,20 @@ private func acceptCallSession(accountPeerId: PeerId, postbox: Postbox, network:
                             return .failed
                         case .phoneCallWaiting:
                             return .success(.waiting(config: config))
-                        case let .phoneCall(flags, id, _, _, _, _, gAOrB, _, callProtocol, connections, startDate):
+                        case let .phoneCall(flags, id, _, _, _, _, gAOrB, _, callProtocol, connections, startDate, customParameters):
                             if id == stableId {
                                 switch callProtocol{
                                     case let .phoneCallProtocol(_, _, maxLayer, versions):
                                         if !versions.isEmpty {
-                                            let customParameters: [String: Any] = [:]
-                                            return .success(.call(config: config, gA: gAOrB.makeData(), timestamp: startDate, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, version: versions[0], customParameters: customParameters, allowsP2P: (flags & (1 << 5)) != 0))
+                                            var customParametersValue: String?
+                                            switch customParameters {
+                                            case .none:
+                                                break
+                                            case let .dataJSON(data):
+                                                customParametersValue = data
+                                            }
+                                            
+                                            return .success(.call(config: config, gA: gAOrB.makeData(), timestamp: startDate, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, version: versions[0], customParameters: customParametersValue, allowsP2P: (flags & (1 << 5)) != 0))
                                         } else {
                                             return .failed
                                         }

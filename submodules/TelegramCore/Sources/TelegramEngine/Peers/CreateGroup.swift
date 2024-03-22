@@ -49,22 +49,19 @@ func _internal_createGroup(account: Account, title: String, peerIds: [PeerId], t
             }
             return .generic
         }
-        |> mapToSignal { updates -> Signal<CreateGroupResult?, CreateGroupError> in
+        |> mapToSignal { result -> Signal<CreateGroupResult?, CreateGroupError> in
             var failedToInvitePeerIds: [EnginePeer.Id] = []
             failedToInvitePeerIds = []
-            switch updates {
-            case let .updates(updates, _, _, _, _):
-                for update in updates {
-                    if case let .updateGroupInvitePrivacyForbidden(userId) = update {
-                        failedToInvitePeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(userId)))
-                    }
-                }
-            default:
-                break
+            
+            let updatesValue: Api.Updates
+            switch result {
+            case let .invitedUsers(updates, missingInvitees):
+                let _ = missingInvitees
+                updatesValue = updates
             }
             
-            account.stateManager.addUpdates(updates)
-            if let message = updates.messages.first, let peerId = apiMessagePeerId(message) {
+            account.stateManager.addUpdates(updatesValue)
+            if let message = updatesValue.messages.first, let peerId = apiMessagePeerId(message) {
                 return account.postbox.multiplePeersView([peerId])
                 |> filter { view in
                     return view.peers[peerId] != nil

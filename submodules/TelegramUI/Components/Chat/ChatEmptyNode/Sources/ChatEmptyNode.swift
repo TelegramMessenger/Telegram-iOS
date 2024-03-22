@@ -20,6 +20,7 @@ import BalancedTextComponent
 import Markdown
 import ReactionSelectionNode
 import ChatMediaInputStickerGridItem
+import UndoUI
 
 private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
@@ -714,8 +715,15 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
     private let titleNode: ImmediateTextNode
     private var lineNodes: [ImmediateTextNode] = []
     
+    private var linkTextButton: HighlightTrackingButtonNode?
+    private var linkTextNode: ImmediateTextNode?
+    private var linkTextHighlightNode: LinkHighlightingNode?
+    
     private var currentTheme: PresentationTheme?
     private var currentStrings: PresentationStrings?
+    
+    private var businessLink: TelegramBusinessChatLinks.Link?
+    var shareBusinessLink: ((String) -> Void)?
     
     override init() {
         self.iconNode = ASImageNode()
@@ -736,6 +744,13 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
         self.addSubnode(self.titleNode)
     }
     
+    @objc private func linkTextButtonPressed() {
+        guard let businessLink = self.businessLink else {
+            return
+        }
+        self.shareBusinessLink?(businessLink.url)
+    }
+    
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         var maxWidth: CGFloat = size.width
         var centerText = false
@@ -744,6 +759,8 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
         var imageSpacing: CGFloat = 12.0
         var titleSpacing: CGFloat = 4.0
         
+        let businessLinkTextSpacing: CGFloat = 9.0
+        
         if case let .customChatContents(customChatContents) = interfaceState.subject {
             maxWidth = min(240.0, maxWidth)
             
@@ -751,6 +768,10 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
             case .quickReplyMessageInput:
                 insets.top = 10.0
                 imageSpacing = 5.0
+                titleSpacing = 5.0
+            case .businessLinkSetup:
+                insets.top = -9.0
+                imageSpacing = 4.0
                 titleSpacing = 5.0
             }
         }
@@ -765,6 +786,9 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
             
             let titleString: String
             let strings: [String]
+            var textFontSize: CGFloat = 14.0
+            
+            var businessLink: String?
             
             if case let .customChatContents(customChatContents) = interfaceState.subject {
                 switch customChatContents.kind {
@@ -793,6 +817,22 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                             interfaceState.strings.EmptyState_AwayMessage_Text
                         ]
                     }
+                case let .businessLinkSetup(link):
+                    //TODO:localize
+                    iconName = "Chat/Empty Chat/BusinessLink"
+                    centerText = true
+                    titleString = "Link to Chat"
+                    textFontSize = 13.0
+                    strings = [
+                        "Add a message that will be entered in the message input field for anyone who starts a chat with you using this link:"
+                    ]
+                    if link.url.hasPrefix("https://") {
+                        businessLink = String(link.url[link.url.index(link.url.startIndex, offsetBy: "https://".count)...])
+                    } else {
+                        businessLink = link.url
+                    }
+                    
+                    self.businessLink = link
                 }
             } else {
                 titleString = interfaceState.strings.Conversation_CloudStorageInfo_Title
@@ -810,9 +850,9 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
             
             let lines: [NSAttributedString] = strings.map {
                 return parseMarkdownIntoAttributedString($0, attributes: MarkdownAttributes(
-                    body: MarkdownAttributeSet(font: Font.regular(14.0), textColor: serviceColor.primaryText),
-                    bold: MarkdownAttributeSet(font: Font.semibold(14.0), textColor: serviceColor.primaryText),
-                    link: MarkdownAttributeSet(font: Font.regular(14.0), textColor: serviceColor.primaryText),
+                    body: MarkdownAttributeSet(font: Font.regular(textFontSize), textColor: serviceColor.primaryText),
+                    bold: MarkdownAttributeSet(font: Font.semibold(textFontSize), textColor: serviceColor.primaryText),
+                    link: MarkdownAttributeSet(font: Font.regular(textFontSize), textColor: serviceColor.primaryText),
                     linkAttribute: { url in
                         return ("URL", url)
                     }
@@ -832,6 +872,72 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                 
                 self.lineNodes[i].attributedText = lines[i]
             }
+            
+            if let businessLink {
+                let linkTextButton: HighlightTrackingButtonNode
+                if let current = self.linkTextButton {
+                    linkTextButton = current
+                } else {
+                    linkTextButton = HighlightTrackingButtonNode()
+                    self.linkTextButton = linkTextButton
+                    self.addSubnode(linkTextButton)
+                    
+                    linkTextButton.addTarget(self, action: #selector(self.linkTextButtonPressed), forControlEvents: .touchUpInside)
+                    linkTextButton.highligthedChanged = { [weak linkTextButton] highlighted in
+                        if let linkTextButton, linkTextButton.bounds.width > 0.0 {
+                            let animateScale = true
+                            
+                            let topScale: CGFloat = (linkTextButton.bounds.width - 8.0) / linkTextButton.bounds.width
+                            let maxScale: CGFloat = (linkTextButton.bounds.width + 2.0) / linkTextButton.bounds.width
+                            
+                            if highlighted {
+                                linkTextButton.layer.removeAnimation(forKey: "transform.scale")
+                                
+                                if animateScale {
+                                    let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                                    transition.setScale(layer: linkTextButton.layer, scale: topScale)
+                                }
+                            } else {
+                                if animateScale {
+                                    let transition = Transition(animation: .none)
+                                    transition.setScale(layer: linkTextButton.layer, scale: 1.0)
+                                    
+                                    linkTextButton.layer.animateScale(from: topScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak linkTextButton] _ in
+                                        guard let linkTextButton else {
+                                            return
+                                        }
+                                        
+                                        linkTextButton.layer.animateScale(from: maxScale, to: 1.0, duration: 0.1, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue)
+                                    })
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                let linkTextNode: ImmediateTextNode
+                if let current = self.linkTextNode {
+                    linkTextNode = current
+                } else {
+                    linkTextNode = ImmediateTextNode()
+                    linkTextNode.maximumNumberOfLines = 0
+                    linkTextNode.textAlignment = .center
+                    linkTextNode.lineSpacing = 0.2
+                    self.linkTextNode = linkTextNode
+                    linkTextButton.addSubnode(linkTextNode)
+                }
+                
+                linkTextNode.attributedText = NSAttributedString(string: businessLink, font: Font.medium(textFontSize), textColor: serviceColor.primaryText)
+            } else {
+                if let linkTextButton = self.linkTextButton {
+                    self.linkTextButton = nil
+                    linkTextButton.removeFromSupernode()
+                }
+                if let linkTextNode = self.linkTextNode {
+                    self.linkTextNode = nil
+                    linkTextNode.removeFromSupernode()
+                }
+            }
         }
         
         var contentWidth: CGFloat = 100.0
@@ -849,6 +955,14 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
             contentWidth = max(contentWidth, textSize.width)
             contentHeight += textSize.height + titleSpacing
             lineNodes.append((textSize, textNode))
+        }
+        
+        var linkTextLayout: TextNodeLayout?
+        if let linkTextNode {
+            //TODO:localize
+            let linkTextLayoutValue = linkTextNode.updateLayoutFullInfo(CGSize(width: maxWidth - insets.left - insets.right - 10.0, height: CGFloat.greatestFiniteMagnitude))
+            linkTextLayout = linkTextLayoutValue
+            contentHeight += businessLinkTextSpacing + linkTextLayoutValue.size.height + 20.0
         }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude))
@@ -870,10 +984,94 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
         var lineOffset = titleFrame.maxY + titleSpacing
+        var isFirstLine = true
         for (textSize, textNode) in lineNodes {
+            if isFirstLine {
+                isFirstLine = false
+            } else {
+                lineOffset += 4.0
+            }
+            
             let isRTL = textNode.cachedLayout?.hasRTL ?? false
             transition.updateFrame(node: textNode, frame: CGRect(origin: CGPoint(x: isRTL ? contentRect.maxX - textSize.width : contentRect.minX, y: lineOffset), size: textSize))
-            lineOffset += textSize.height + 4.0
+            lineOffset += textSize.height
+        }
+        
+        if let linkTextButton = self.linkTextButton, let linkTextNode = self.linkTextNode, let linkTextLayout {
+            if isFirstLine {
+                isFirstLine = false
+            } else {
+                lineOffset += businessLinkTextSpacing
+            }
+            
+            let linkTextButtonFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - linkTextLayout.size.width) * 0.5), y: lineOffset), size: linkTextLayout.size)
+            let linkTextFrame = CGRect(origin: CGPoint(), size: linkTextButtonFrame.size)
+            
+            transition.updatePosition(node: linkTextButton, position: linkTextButtonFrame.center)
+            transition.updateBounds(node: linkTextButton, bounds: CGRect(origin: CGPoint(), size: linkTextButtonFrame.size))
+            transition.updateFrame(node: linkTextNode, frame: linkTextFrame)
+            
+            let linkTextHighlightNode: LinkHighlightingNode
+            if let current = self.linkTextHighlightNode {
+                linkTextHighlightNode = current
+            } else {
+                linkTextHighlightNode = LinkHighlightingNode(color: .black)
+                linkTextHighlightNode.inset = 0.0
+                linkTextHighlightNode.useModernPathCalculation = true
+                self.linkTextHighlightNode = linkTextHighlightNode
+                linkTextNode.supernode?.insertSubnode(linkTextHighlightNode, belowSubnode: linkTextNode)
+            }
+            
+            let textLayout = linkTextLayout
+            
+            var labelRects = textLayout.linesRects()
+            if labelRects.count > 1 {
+                let sortedIndices = (0 ..< labelRects.count).sorted(by: { labelRects[$0].width > labelRects[$1].width })
+                for i in 0 ..< sortedIndices.count {
+                    let index = sortedIndices[i]
+                    for j in -1 ... 1 {
+                        if j != 0 && index + j >= 0 && index + j < sortedIndices.count {
+                            if abs(labelRects[index + j].width - labelRects[index].width) < 16.0 {
+                                labelRects[index + j].size.width = max(labelRects[index + j].width, labelRects[index].width)
+                                labelRects[index].size.width = labelRects[index + j].size.width
+                            }
+                        }
+                    }
+                }
+            }
+            for i in 0 ..< labelRects.count {
+                labelRects[i] = labelRects[i].insetBy(dx: -4.0, dy: 0.0)
+                if i == 0 {
+                    labelRects[i].origin.y -= 1.0
+                    labelRects[i].size.height += 1.0
+                }
+                if i == labelRects.count - 1 {
+                    labelRects[i].size.height += 1.0
+                } else {
+                    let deltaY = labelRects[i + 1].minY - labelRects[i].maxY
+                    let topDelta = deltaY * 0.5 - 0.0
+                    let bottomDelta = deltaY * 0.5 - 0.0
+                    labelRects[i].size.height += topDelta
+                    labelRects[i + 1].origin.y -= bottomDelta
+                    labelRects[i + 1].size.height += bottomDelta
+                }
+                labelRects[i].origin.x = floor((textLayout.size.width - labelRects[i].width) / 2.0)
+            }
+            for i in 0 ..< labelRects.count {
+                labelRects[i].origin.y -= 12.0
+            }
+            
+            linkTextHighlightNode.innerRadius = 4.0
+            linkTextHighlightNode.outerRadius = 4.0
+            
+            linkTextHighlightNode.updateRects(labelRects, color: interfaceState.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.1))
+            
+            linkTextHighlightNode.frame = linkTextFrame.offsetBy(dx: 0.0, dy: 0.0)
+        } else {
+            if let linkTextHighlightNode = self.linkTextHighlightNode {
+                self.linkTextHighlightNode = nil
+                linkTextHighlightNode.removeFromSupernode()
+            }
         }
         
         return contentRect.insetBy(dx: -insets.left, dy: -insets.top).size
@@ -1388,11 +1586,6 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
         }
         self.textMaskNode.updateRects(labelRects)
         
-        /*if self.textMaskNode.supernode == nil {
-            self.addSubnode(self.textMaskNode)
-            self.textMaskNode.alpha = 0.5
-        }*/
-        
         let size = CGSize(width: textLayout.size.width + 4.0 * 2.0, height: textLayout.size.height + 4.0 * 2.0)
         let textFrame = CGRect(origin: CGPoint(x: 4.0, y: 4.0), size: textLayout.size)
         self.textNode.frame = textFrame
@@ -1606,7 +1799,23 @@ public final class ChatEmptyNode: ASDisplayNode {
             case .group:
                 node = ChatEmptyNodeGroupChatContent()
             case .cloud:
-                node = ChatEmptyNodeCloudChatContent()
+                let cloudNode = ChatEmptyNodeCloudChatContent()
+                node = cloudNode
+                cloudNode.shareBusinessLink = { [weak self] url in
+                    guard let self, let interfaceInteraction = self.interaction else {
+                        return
+                    }
+                    
+                    UIPasteboard.general.string = url
+                    
+                    let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
+                    
+                    //TODO:localize
+                    let controller = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.GroupInfo_InviteLink_CopyAlert_Success), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in
+                        return false
+                    })
+                    interfaceInteraction.presentControllerInCurrent(controller, nil)
+                }
             case .peerNearby:
                 node = ChatEmptyNodeNearbyChatContent(context: self.context, interaction: self.interaction)
             case .greeting:
@@ -1626,7 +1835,7 @@ public final class ChatEmptyNode: ASDisplayNode {
                 node.layer.animateScale(from: 0.0, to: 1.0, duration: duration, timingFunction: curve.timingFunction)
             }
         }
-        self.isUserInteractionEnabled = [.peerNearby, .greeting, .premiumRequired].contains(contentType)
+        self.isUserInteractionEnabled = [.peerNearby, .greeting, .premiumRequired, .cloud].contains(contentType)
         
         let displayRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
         

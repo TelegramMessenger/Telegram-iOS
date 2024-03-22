@@ -996,7 +996,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 }
 
 - (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version
-                        customParameters:(NSDictionary<NSString *, id> * _Nonnull)customParameters
+                        customParameters:(NSString * _Nullable)customParameters
                                    queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue
                                    proxy:(VoipProxyServerWebrtc * _Nullable)proxy
                              networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving
@@ -1107,13 +1107,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         
         std::vector<tgcalls::Endpoint> endpoints;
         
-        NSData *customParametersJsonData = [NSJSONSerialization dataWithJSONObject:customParameters options:0 error:nil];
         std::string customParametersString = "{}";
-        if (customParametersJsonData) {
-            NSString *customParametersJson = [[NSString alloc] initWithData:customParametersJsonData encoding:NSUTF8StringEncoding];
-            if (customParametersJson && customParametersJson.length != 0) {
-                customParametersString = std::string(customParametersJson.UTF8String);
-            }
+        if (customParameters && customParameters.length != 0) {
+            customParametersString = std::string(customParameters.UTF8String);
         }
         
         tgcalls::Config config = {

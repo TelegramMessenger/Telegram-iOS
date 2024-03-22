@@ -104,7 +104,9 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
             let displayCount: Int
             switch customChatContents.kind {
             case .quickReplyMessageInput:
-                displayCount = 20
+                displayCount = customChatContents.messageLimit ?? 20
+            case .businessLinkSetup:
+                displayCount = 0
             }
             self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_QuickReplyMessageLimitReachedText(Int32(displayCount)), font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
         }

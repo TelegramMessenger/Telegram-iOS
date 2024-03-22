@@ -33,9 +33,16 @@ func _internal_addGroupMember(account: Account, peerId: PeerId, memberId: PeerId
                     }
                 }
                 |> mapToSignal { result -> Signal<Void, AddGroupMemberError> in
-                    account.stateManager.addUpdates(result)
+                    let updatesValue: Api.Updates
+                    switch result {
+                    case let .invitedUsers(updates, missingInvitees):
+                        let _ = missingInvitees
+                        updatesValue = updates
+                    }
+                    
+                    account.stateManager.addUpdates(updatesValue)
                     return account.postbox.transaction { transaction -> Void in
-                        if let message = result.messages.first, let timestamp = message.timestamp {
+                        if let message = updatesValue.messages.first, let timestamp = message.timestamp {
                             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                 if let cachedData = cachedData as? CachedGroupData, let participants = cachedData.participants {
                                     var updatedParticipants = participants.participants
@@ -94,8 +101,7 @@ func _internal_addChannelMember(account: Account, peerId: PeerId, memberId: Peer
                         updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: nil, rank: nil)
                     }
                     return account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: [inputUser]))
-                    |> map { [$0] }
-                    |> `catch` { error -> Signal<[Api.Updates], AddChannelMemberError> in
+                    |> `catch` { error -> Signal<Api.messages.InvitedUsers, AddChannelMemberError> in
                         switch error.errorDescription {
                             case "USER_CHANNELS_TOO_MUCH":
                                 return .fail(.tooMuchJoined)
@@ -118,9 +124,14 @@ func _internal_addChannelMember(account: Account, peerId: PeerId, memberId: Peer
                         }
                     }
                     |> mapToSignal { result -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in
-                        for updates in result {
-                            account.stateManager.addUpdates(updates)
+                        let updatesValue: Api.Updates
+                        switch result {
+                        case let .invitedUsers(updates, missingInvitees):
+                            let _ = missingInvitees
+                            updatesValue = updates
                         }
+                        
+                        account.stateManager.addUpdates(updatesValue)
                         return account.postbox.transaction { transaction -> (ChannelParticipant?, RenderedChannelParticipant) in
                             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                 if let cachedData = cachedData as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount, let kickedCount = cachedData.participantsSummary.kickedCount {
@@ -214,7 +225,14 @@ func _internal_addChannelMembers(account: Account, peerId: PeerId, memberIds: [P
                 }
             }
             |> map { result in
-                account.stateManager.addUpdates(result)
+                let updatesValue: Api.Updates
+                switch result {
+                case let .invitedUsers(updates, missingInvitees):
+                    let _ = missingInvitees
+                    updatesValue = updates
+                }
+                
+                account.stateManager.addUpdates(updatesValue)
                 account.viewTracker.forceUpdateCachedPeerData(peerId: peerId)
             }
 

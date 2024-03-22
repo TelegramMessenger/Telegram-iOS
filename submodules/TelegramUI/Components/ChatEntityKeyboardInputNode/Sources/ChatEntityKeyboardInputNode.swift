@@ -1765,6 +1765,15 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         if !emojiEnabled && interfaceState.interfaceState.editMessage == nil {
             emojiContent = nil
         }
+        if case let .customChatContents(customChatContents) = interfaceState.subject {
+            switch customChatContents.kind {
+            case .quickReplyMessageInput:
+                break
+            case .businessLinkSetup:
+                stickerContent = nil
+                gifContent = nil
+            }
+        }
         
         stickerContent?.inputInteractionHolder.inputInteraction = self.stickerInputInteraction
         self.currentInputData.emoji?.inputInteractionHolder.inputInteraction = self.emojiInputInteraction

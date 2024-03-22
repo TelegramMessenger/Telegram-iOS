@@ -664,6 +664,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.stickerSettings = ChatInterfaceStickerSettings()
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil)
+        
+        if case let .customChatContents(customChatContents) = subject {
+            switch customChatContents.kind {
+            case .quickReplyMessageInput:
+                break
+            case let .businessLinkSetup(link):
+                if !link.message.isEmpty {
+                    self.presentationInterfaceState = self.presentationInterfaceState.updatedInterfaceState({ interfaceState in
+                        return interfaceState.withUpdatedEffectiveInputState(ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(link.message, entities: link.entities)))
+                    })
+                }
+            }
+        }
+        
         self.presentationInterfaceStatePromise = ValuePromise(self.presentationInterfaceState)
         
         var mediaAccessoryPanelVisibility = MediaAccessoryPanelVisibility.none
@@ -742,6 +756,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: titleString, text: textString, actions: [
                             TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
                             TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.QuickReply_ChatRemoveGeneric_DeleteAction, action: { [weak strongSelf] in
+                                strongSelf?.dismiss()
+                            })
+                        ]), in: .window(.root))
+                        
+                        return false
+                    }
+                case let .businessLinkSetup(link):
+                    let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
+                    let entities = generateTextEntities(inputText.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(inputText, maxAnimatedEmojisInText: 0))
+                    
+                    let message = inputText.string
+                    
+                    if message != link.message || entities != link.entities {
+                        //TODO:localize
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: "You have unsaved changes. Reset?", actions: [
+                            TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
+                            TextAlertAction(type: .destructiveAction, title: "Reset", action: { [weak strongSelf] in
                                 strongSelf?.dismiss()
                             })
                         ]), in: .window(.root))
@@ -6272,6 +6303,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .away:
                             self.chatTitleView?.titleContent = .custom(self.presentationData.strings.QuickReply_TitleAwayMessage, nil, false)
                         }
+                    case let .businessLinkSetup(link):
+                        let linkUrl: String
+                        if link.url.hasPrefix("https://") {
+                            linkUrl = String(link.url[link.url.index(link.url.startIndex, offsetBy: "https://".count)...])
+                        } else {
+                            linkUrl = link.url
+                        }
+                        
+                        //TODO:localize
+                        self.chatTitleView?.titleContent = .custom(link.title ?? "Link to Chat", linkUrl, false)
                     }
                 } else {
                     self.chatTitleView?.titleContent = .custom(" ", nil, false)
@@ -8404,8 +8445,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, intentContext: .chat, peerIds: [peerId])
             } else if case let .customChatContents(customChatContents) = strongSelf.subject {
-                customChatContents.enqueueMessages(messages: messages)
-                strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                switch customChatContents.kind {
+                case .quickReplyMessageInput:
+                    customChatContents.enqueueMessages(messages: messages)
+                    strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                case let .businessLinkSetup(link):
+                    var text: String = ""
+                    var entities: [MessageTextEntity] = []
+                    if let message = messages.first {
+                        if case let .message(textValue, attributes, _, _, _, _, _, _, _, _) = message {
+                            text = textValue
+                            for attribute in attributes {
+                                if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                    entities = attribute.entities
+                                }
+                            }
+                        }
+                    }
+                    
+                    let _ = strongSelf.context.engine.accountData.editBusinessChatLink(url: link.url, message: text, entities: entities, title: link.title).start()
+                    if case let .customChatContents(customChatContents) = strongSelf.subject {
+                        customChatContents.businessLinkUpdate(message: text, entities: entities, title: link.title)
+                    }
+                    
+                    //TODO:localize
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: "Preset message saved.", timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                }
             }
             
             strongSelf.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })

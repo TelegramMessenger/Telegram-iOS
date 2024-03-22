@@ -83,6 +83,18 @@ public final class TelegramCollectibleItemInfo: Equatable {
     }
 }
 
+public final class TelegramResolvedMessageLink {
+    public let peer: EnginePeer
+    public let message: String
+    public let entities: [MessageTextEntity]
+    
+    public init(peer: EnginePeer, message: String, entities: [MessageTextEntity]) {
+        self.peer = peer
+        self.message = message
+        self.entities = entities
+    }
+}
+
 public extension TelegramEngine {
     enum NextUnreadChannelLocation: Equatable {
         case same
@@ -122,11 +134,8 @@ public extension TelegramEngine {
             return _internal_checkPublicChannelCreationAvailability(account: self.account, location: location)
         }
 
-        public func adminedPublicChannels(scope: AdminedPublicChannelsScope = .all) -> Signal<[EnginePeer], NoError> {
+        public func adminedPublicChannels(scope: AdminedPublicChannelsScope = .all) -> Signal<[TelegramAdminedPublicChannel], NoError> {
             return _internal_adminedPublicChannels(account: self.account, scope: scope)
-            |> map { peers -> [EnginePeer] in
-                return peers.map(EnginePeer.init)
-            }
         }
         
         public func channelsForStories() -> Signal<[EnginePeer], NoError> {
@@ -1501,6 +1510,35 @@ public extension TelegramEngine {
         
         public func removeChatManagingBot(chatId: EnginePeer.Id) {
             let _ = _internal_removeChatManagingBot(account: self.account, chatId: chatId).startStandalone()
+        }
+        
+        public func resolveMessageLink(slug: String) -> Signal<TelegramResolvedMessageLink?, NoError> {
+            return self.account.network.request(Api.functions.account.resolveBusinessChatLink(slug: slug))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.account.ResolvedBusinessChatLinks?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { result -> Signal<TelegramResolvedMessageLink?, NoError> in
+                guard let result else {
+                    return .single(nil)
+                }
+                return self.account.postbox.transaction { transaction -> TelegramResolvedMessageLink? in
+                    switch result {
+                    case let .resolvedBusinessChatLinks(_, peer, message, entities, chats, users):
+                        updatePeers(transaction: transaction, accountPeerId: self.account.peerId, peers: AccumulatedPeers(transaction: transaction, chats: chats, users: users))
+                        
+                        guard let peer = transaction.getPeer(peer.peerId) else {
+                            return nil
+                        }
+                        
+                        return TelegramResolvedMessageLink(
+                            peer: EnginePeer(peer),
+                            message: message,
+                            entities: messageTextEntitiesFromApiEntities(entities ?? [])
+                        )
+                    }
+                }
+            }
         }
     }
 }

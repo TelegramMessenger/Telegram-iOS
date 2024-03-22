@@ -457,6 +457,7 @@ public enum PremiumPerk: CaseIterable {
     case businessQuickReplies
     case businessAwayMessage
     case businessChatBots
+    case businessLinks
     case businessIntro
     
     public static var allCases: [PremiumPerk] {
@@ -494,7 +495,8 @@ public enum PremiumPerk: CaseIterable {
             .businessGreetingMessage,
             .businessAwayMessage,
             .businessIntro,
-            .businessChatBots
+            .businessChatBots,
+            .businessLinks
 //            .emojiStatus,
 //            .folderTags,
 //            .stories,
@@ -570,6 +572,8 @@ public enum PremiumPerk: CaseIterable {
             return "away_message"
         case .businessChatBots:
             return "business_bots"
+        case .businessLinks:
+            return "business_links"
         case .businessIntro:
             return "business_intro"
         }
@@ -634,6 +638,9 @@ public enum PremiumPerk: CaseIterable {
             return strings.Business_AwayMessages
         case .businessChatBots:
             return strings.Business_ChatbotsItem
+        case .businessLinks:
+            //TODO:localize
+            return "Links to Chat"
         case .businessIntro:
             return strings.Business_Intro
         }
@@ -698,6 +705,9 @@ public enum PremiumPerk: CaseIterable {
             return strings.Business_AwayMessagesInfo
         case .businessChatBots:
             return strings.Business_ChatbotsInfo
+        case .businessLinks:
+            //TODO:localize
+            return "Create links that start a chat with you, suggesting the first message."
         case .businessIntro:
             return strings.Business_IntroInfo
         }
@@ -762,6 +772,8 @@ public enum PremiumPerk: CaseIterable {
             return "Premium/BusinessPerk/Away"
         case .businessChatBots:
             return "Premium/BusinessPerk/Chatbots"
+        case .businessLinks:
+            return "Premium/BusinessPerk/ChatLinks"
         case .businessIntro:
             return "Premium/BusinessPerk/Intro"
         }
@@ -799,7 +811,8 @@ struct PremiumIntroConfiguration {
             .businessGreetingMessage,
             .businessAwayMessage,
             .businessIntro,
-            .businessChatBots
+            .businessChatBots,
+            .businessLinks
 //            .emojiStatus,
 //            .folderTags,
 //            .stories
@@ -863,9 +876,6 @@ struct PremiumIntroConfiguration {
             }
             if businessPerks.count < 4 {
                 businessPerks = PremiumIntroConfiguration.defaultValue.businessPerks
-            }
-            if !businessPerks.contains(.businessIntro) {
-                businessPerks.append(.businessIntro)
             }
             
             return PremiumIntroConfiguration(perks: perks, businessPerks: businessPerks)
@@ -2149,7 +2159,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     UIColor(rgb: 0xbc4395),
                     UIColor(rgb: 0x9b4fed),
                     UIColor(rgb: 0x8958ff),
-                    UIColor(rgb: 0x8958ff)
+                    UIColor(rgb: 0x8958ff),
+                    UIColor(rgb: 0x8958ff),
                 ]
                 
                 var i = 0
@@ -2177,7 +2188,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             )))
                         ], alignment: .left, spacing: 2.0)),
                         leftIcon: AnyComponentWithIdentity(id: 0, component: AnyComponent(PerkIconComponent(
-                            backgroundColor: gradientColors[i],
+                            backgroundColor: gradientColors[min(i, gradientColors.count - 1)],
                             foregroundColor: .white,
                             iconName: perk.iconName
                         ))),
@@ -2241,6 +2252,15 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         }
                                         push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext, initialData: initialData))
                                     })
+                                case .businessLinks:
+                                    let _ = (accountContext.sharedContext.makeBusinessLinksSetupScreenInitialData(context: accountContext)
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                        guard let accountContext else {
+                                            return
+                                        }
+                                        push(accountContext.sharedContext.makeBusinessLinksSetupScreen(context: accountContext, initialData: initialData))
+                                    })
                                 case .businessIntro:
                                     let _ = (accountContext.sharedContext.makeBusinessIntroSetupScreenInitialData(context: accountContext)
                                     |> take(1)
@@ -2270,6 +2290,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     demoSubject = .businessChatBots
                                 case .businessIntro:
                                     demoSubject = .businessIntro
+                                case .businessLinks:
+                                    demoSubject = .businessLinks
                                 default:
                                     fatalError()
                                 }
@@ -3650,6 +3672,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         
         if case .business = mode {
             context.account.viewTracker.keepQuickRepliesApproximatelyUpdated()
+            context.account.viewTracker.keepBusinessLinksApproximatelyUpdated()
         }
     }
     

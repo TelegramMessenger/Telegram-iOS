@@ -52,6 +52,19 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
         return nil
     case .scheduledMessages, .pinnedMessages:
         inhibitTitlePanelDisplay = true
+    case let .customChatContents(customChatContents):
+        switch customChatContents.kind {
+        case .quickReplyMessageInput:
+            break
+        case .businessLinkSetup:
+            if let currentPanel = currentPanel as? ChatBusinessLinkTitlePanelNode {
+                return currentPanel
+            } else {
+                let panel = ChatBusinessLinkTitlePanelNode(context: context)
+                panel.interfaceInteraction = interfaceInteraction
+                return panel
+            }
+        }
     default:
         break
     }

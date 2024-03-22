@@ -1091,6 +1091,7 @@ public enum ChatQuickReplyShortcutType {
 
 public enum ChatCustomContentsKind: Equatable {
     case quickReplyMessageInput(shortcut: String, shortcutType: ChatQuickReplyShortcutType)
+    case businessLinkSetup(link: TelegramBusinessChatLinks.Link)
 }
 
 public protocol ChatCustomContentsProtocol: AnyObject {
@@ -1103,6 +1104,7 @@ public protocol ChatCustomContentsProtocol: AnyObject {
     func editMessage(id: EngineMessage.Id, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, webpagePreviewAttribute: WebpagePreviewMessageAttribute?, disableUrlPreview: Bool)
     
     func quickReplyUpdateShortcut(value: String)
+    func businessLinkUpdate(message: String, entities: [MessageTextEntity], title: String?)
 }
 
 public enum ChatHistoryListDisplayHeaders {

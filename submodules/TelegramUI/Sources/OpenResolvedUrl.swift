@@ -33,6 +33,7 @@ import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
 import WallpaperGalleryScreen
 import TelegramStringFormatting
+import TextFormat
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -1057,5 +1058,15 @@ func openResolvedUrlImpl(
                     present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 }
             })
+        case let .messageLink(link):
+            if let navigationController = navigationController {
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                    navigationController: navigationController,
+                    context: context,
+                    chatLocation: .peer(link.peer),
+                    updateTextInputState: ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(link.message, entities: link.entities)),
+                    keepStack: .always
+                ))
+            }
     }
 }

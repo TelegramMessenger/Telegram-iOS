@@ -403,7 +403,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
     
     if case let .customChatContents(customChatContents) = chatPresentationInterfaceState.subject {
         switch customChatContents.kind {
-        case .quickReplyMessageInput:
+        case .quickReplyMessageInput, .businessLinkSetup:
             displayInputTextPanel = true
         }
         

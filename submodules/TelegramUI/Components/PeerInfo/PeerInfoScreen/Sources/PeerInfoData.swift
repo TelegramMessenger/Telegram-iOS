@@ -228,6 +228,34 @@ final class TelegramGlobalSettings {
     }
 }
 
+final class PeerInfoPersonalChannelData: Equatable {
+    let peer: EnginePeer
+    let subscriberCount: Int
+    let topMessage: EngineMessage?
+    
+    init(peer: EnginePeer, subscriberCount: Int, topMessage: EngineMessage?) {
+        self.peer = peer
+        self.subscriberCount = subscriberCount
+        self.topMessage = topMessage
+    }
+    
+    static func ==(lhs: PeerInfoPersonalChannelData, rhs: PeerInfoPersonalChannelData) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.subscriberCount != rhs.subscriberCount {
+            return false
+        }
+        if lhs.topMessage != rhs.topMessage {
+            return false
+        }
+        return true
+    }
+}
+
 final class PeerInfoScreenData {
     let peer: Peer?
     let chatPeer: Peer?
@@ -253,6 +281,7 @@ final class PeerInfoScreenData {
     let accountIsPremium: Bool
     let hasSavedMessageTags: Bool
     let isPremiumRequiredForStoryPosting: Bool
+    let personalChannel: PeerInfoPersonalChannelData?
     
     let _isContact: Bool
     var forceIsContact: Bool = false
@@ -290,7 +319,8 @@ final class PeerInfoScreenData {
         isPowerSavingEnabled: Bool?,
         accountIsPremium: Bool,
         hasSavedMessageTags: Bool,
-        isPremiumRequiredForStoryPosting: Bool
+        isPremiumRequiredForStoryPosting: Bool,
+        personalChannel: PeerInfoPersonalChannelData?
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -317,6 +347,7 @@ final class PeerInfoScreenData {
         self.accountIsPremium = accountIsPremium
         self.hasSavedMessageTags = hasSavedMessageTags
         self.isPremiumRequiredForStoryPosting = isPremiumRequiredForStoryPosting
+        self.personalChannel = personalChannel
     }
 }
 
@@ -500,6 +531,31 @@ public func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId, c
     }
 }
 
+private func peerInfoPersonalChannel(context: AccountContext, peerId: EnginePeer.Id) -> Signal<PeerInfoPersonalChannelData?, NoError> {
+    return context.engine.data.get(
+        TelegramEngine.EngineData.Item.Peer.Peer(id: EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(1006503122)))
+    )
+    |> mapToSignal { peer -> Signal<PeerInfoPersonalChannelData?, NoError> in
+        guard let peer else {
+            return .single(nil)
+        }
+        
+        return context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peer.id, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 5, fixedCombinedReadStates: nil)
+        |> map { view, _, _ -> PeerInfoPersonalChannelData? in
+            guard let entry = view.entries.last else {
+                return nil
+            }
+            
+            return PeerInfoPersonalChannelData(
+                peer: peer,
+                subscriberCount: 2000000,
+                topMessage: EngineMessage(entry.message)
+            )
+        }
+    }
+    |> distinctUntilChanged
+}
+
 func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, accountsAndPeers: Signal<[(AccountContext, EnginePeer, Int32)], NoError>, activeSessionsContextAndCount: Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError>, notificationExceptions: Signal<NotificationExceptionsList?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, hasPassport: Signal<Bool, NoError>) -> Signal<PeerInfoScreenData, NoError> {
     let preferences = context.sharedContext.accountManager.sharedData(keys: [
         SharedDataKeys.proxySettings,
@@ -642,9 +698,10 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         }
         |> distinctUntilChanged,
         hasStories,
-        bots
+        bots,
+        peerInfoPersonalChannel(context: context, peerId: peerId)
     )
-    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots -> PeerInfoScreenData in
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots, personalChannel -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
@@ -714,7 +771,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             isPowerSavingEnabled: isPowerSavingEnabled,
             accountIsPremium: peer?.isPremium ?? false,
             hasSavedMessageTags: false,
-            isPremiumRequiredForStoryPosting: true
+            isPremiumRequiredForStoryPosting: true,
+            personalChannel: personalChannel
         )
     }
 }
@@ -751,7 +809,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 isPowerSavingEnabled: nil,
                 accountIsPremium: false,
                 hasSavedMessageTags: false,
-                isPremiumRequiredForStoryPosting: true
+                isPremiumRequiredForStoryPosting: true,
+                personalChannel: nil
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -960,9 +1019,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 savedMessagesPeer,
                 hasSavedMessagesChats,
                 hasSavedMessages,
-                hasSavedMessageTags
+                hasSavedMessageTags,
+                peerInfoPersonalChannel(context: context, peerId: peerId)
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, personalChannel -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 
                 if let hasStories {
@@ -1023,7 +1083,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     isPowerSavingEnabled: nil,
                     accountIsPremium: accountIsPremium,
                     hasSavedMessageTags: hasSavedMessageTags,
-                    isPremiumRequiredForStoryPosting: false
+                    isPremiumRequiredForStoryPosting: false,
+                    personalChannel: personalChannel
                 )
             }
         case .channel:
@@ -1192,7 +1253,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     isPowerSavingEnabled: nil,
                     accountIsPremium: accountIsPremium,
                     hasSavedMessageTags: hasSavedMessageTags,
-                    isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting
+                    isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
+                    personalChannel: nil
                 )
             }
         case let .group(groupId):
@@ -1484,7 +1546,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     isPowerSavingEnabled: nil,
                     accountIsPremium: accountIsPremium,
                     hasSavedMessageTags: hasSavedMessageTags,
-                    isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting
+                    isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
+                    personalChannel: nil
                 ))
             }
         }

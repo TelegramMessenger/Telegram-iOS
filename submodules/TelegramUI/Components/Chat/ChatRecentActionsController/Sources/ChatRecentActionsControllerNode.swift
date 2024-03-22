@@ -1096,6 +1096,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .premiumMultiGift:
                         break
+                    case .messageLink:
+                        break
                 }
             }
         }))

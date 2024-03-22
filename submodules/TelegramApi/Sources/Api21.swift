@@ -1,4 +1,72 @@
 public extension Api {
+    enum SecurePasswordKdfAlgo: TypeConstructorDescription {
+        case securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt: Buffer)
+        case securePasswordKdfAlgoSHA512(salt: Buffer)
+        case securePasswordKdfAlgoUnknown
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(let salt):
+                    if boxed {
+                        buffer.appendInt32(-1141711456)
+                    }
+                    serializeBytes(salt, buffer: buffer, boxed: false)
+                    break
+                case .securePasswordKdfAlgoSHA512(let salt):
+                    if boxed {
+                        buffer.appendInt32(-2042159726)
+                    }
+                    serializeBytes(salt, buffer: buffer, boxed: false)
+                    break
+                case .securePasswordKdfAlgoUnknown:
+                    if boxed {
+                        buffer.appendInt32(4883767)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(let salt):
+                return ("securePasswordKdfAlgoPBKDF2HMACSHA512iter100000", [("salt", salt as Any)])
+                case .securePasswordKdfAlgoSHA512(let salt):
+                return ("securePasswordKdfAlgoSHA512", [("salt", salt as Any)])
+                case .securePasswordKdfAlgoUnknown:
+                return ("securePasswordKdfAlgoUnknown", [])
+    }
+    }
+    
+        public static func parse_securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_securePasswordKdfAlgoSHA512(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoSHA512(salt: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_securePasswordKdfAlgoUnknown(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
+            return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoUnknown
+        }
+    
+    }
+}
+public extension Api {
     enum SecurePlainData: TypeConstructorDescription {
         case securePlainEmail(email: String)
         case securePlainPhone(phone: String)
@@ -776,354 +844,6 @@ public extension Api {
         }
         public static func parse_secureValueTypeUtilityBill(_ reader: BufferReader) -> SecureValueType? {
             return Api.SecureValueType.secureValueTypeUtilityBill
-        }
-    
-    }
-}
-public extension Api {
-    enum SendAsPeer: TypeConstructorDescription {
-        case sendAsPeer(flags: Int32, peer: Api.Peer)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .sendAsPeer(let flags, let peer):
-                    if boxed {
-                        buffer.appendInt32(-1206095820)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .sendAsPeer(let flags, let peer):
-                return ("sendAsPeer", [("flags", flags as Any), ("peer", peer as Any)])
-    }
-    }
-    
-        public static func parse_sendAsPeer(_ reader: BufferReader) -> SendAsPeer? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.Peer?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.SendAsPeer.sendAsPeer(flags: _1!, peer: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum SendMessageAction: TypeConstructorDescription {
-        case sendMessageCancelAction
-        case sendMessageChooseContactAction
-        case sendMessageChooseStickerAction
-        case sendMessageEmojiInteraction(emoticon: String, msgId: Int32, interaction: Api.DataJSON)
-        case sendMessageEmojiInteractionSeen(emoticon: String)
-        case sendMessageGamePlayAction
-        case sendMessageGeoLocationAction
-        case sendMessageHistoryImportAction(progress: Int32)
-        case sendMessageRecordAudioAction
-        case sendMessageRecordRoundAction
-        case sendMessageRecordVideoAction
-        case sendMessageTypingAction
-        case sendMessageUploadAudioAction(progress: Int32)
-        case sendMessageUploadDocumentAction(progress: Int32)
-        case sendMessageUploadPhotoAction(progress: Int32)
-        case sendMessageUploadRoundAction(progress: Int32)
-        case sendMessageUploadVideoAction(progress: Int32)
-        case speakingInGroupCallAction
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .sendMessageCancelAction:
-                    if boxed {
-                        buffer.appendInt32(-44119819)
-                    }
-                    
-                    break
-                case .sendMessageChooseContactAction:
-                    if boxed {
-                        buffer.appendInt32(1653390447)
-                    }
-                    
-                    break
-                case .sendMessageChooseStickerAction:
-                    if boxed {
-                        buffer.appendInt32(-1336228175)
-                    }
-                    
-                    break
-                case .sendMessageEmojiInteraction(let emoticon, let msgId, let interaction):
-                    if boxed {
-                        buffer.appendInt32(630664139)
-                    }
-                    serializeString(emoticon, buffer: buffer, boxed: false)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    interaction.serialize(buffer, true)
-                    break
-                case .sendMessageEmojiInteractionSeen(let emoticon):
-                    if boxed {
-                        buffer.appendInt32(-1234857938)
-                    }
-                    serializeString(emoticon, buffer: buffer, boxed: false)
-                    break
-                case .sendMessageGamePlayAction:
-                    if boxed {
-                        buffer.appendInt32(-580219064)
-                    }
-                    
-                    break
-                case .sendMessageGeoLocationAction:
-                    if boxed {
-                        buffer.appendInt32(393186209)
-                    }
-                    
-                    break
-                case .sendMessageHistoryImportAction(let progress):
-                    if boxed {
-                        buffer.appendInt32(-606432698)
-                    }
-                    serializeInt32(progress, buffer: buffer, boxed: false)
-                    break
-                case .sendMessageRecordAudioAction:
-                    if boxed {
-                        buffer.appendInt32(-718310409)
-                    }
-                    
-                    break
-                case .sendMessageRecordRoundAction:
-                    if boxed {
-                        buffer.appendInt32(-1997373508)
-                    }
-                    
-                    break
-                case .sendMessageRecordVideoAction:
-                    if boxed {
-                        buffer.appendInt32(-1584933265)
-                    }
-                    
-                    break
-                case .sendMessageTypingAction:
-                    if boxed {
-                        buffer.appendInt32(381645902)
-                    }
-                    
-                    break
-                case .sendMessageUploadAudioAction(let progress):
-                    if boxed {
-                        buffer.appendInt32(-212740181)
-                    }
-                    serializeInt32(progress, buffer: buffer, boxed: false)
-                    break
-                case .sendMessageUploadDocumentAction(let progress):
-                    if boxed {
-                        buffer.appendInt32(-1441998364)
-                    }
-                    serializeInt32(progress, buffer: buffer, boxed: false)
-                    break
-                case .sendMessageUploadPhotoAction(let progress):
-                    if boxed {
-                        buffer.appendInt32(-774682074)
-                    }
-                    serializeInt32(progress, buffer: buffer, boxed: false)
-                    break
-                case .sendMessageUploadRoundAction(let progress):
-                    if boxed {
-                        buffer.appendInt32(608050278)
-                    }
-                    serializeInt32(progress, buffer: buffer, boxed: false)
-                    break
-                case .sendMessageUploadVideoAction(let progress):
-                    if boxed {
-                        buffer.appendInt32(-378127636)
-                    }
-                    serializeInt32(progress, buffer: buffer, boxed: false)
-                    break
-                case .speakingInGroupCallAction:
-                    if boxed {
-                        buffer.appendInt32(-651419003)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .sendMessageCancelAction:
-                return ("sendMessageCancelAction", [])
-                case .sendMessageChooseContactAction:
-                return ("sendMessageChooseContactAction", [])
-                case .sendMessageChooseStickerAction:
-                return ("sendMessageChooseStickerAction", [])
-                case .sendMessageEmojiInteraction(let emoticon, let msgId, let interaction):
-                return ("sendMessageEmojiInteraction", [("emoticon", emoticon as Any), ("msgId", msgId as Any), ("interaction", interaction as Any)])
-                case .sendMessageEmojiInteractionSeen(let emoticon):
-                return ("sendMessageEmojiInteractionSeen", [("emoticon", emoticon as Any)])
-                case .sendMessageGamePlayAction:
-                return ("sendMessageGamePlayAction", [])
-                case .sendMessageGeoLocationAction:
-                return ("sendMessageGeoLocationAction", [])
-                case .sendMessageHistoryImportAction(let progress):
-                return ("sendMessageHistoryImportAction", [("progress", progress as Any)])
-                case .sendMessageRecordAudioAction:
-                return ("sendMessageRecordAudioAction", [])
-                case .sendMessageRecordRoundAction:
-                return ("sendMessageRecordRoundAction", [])
-                case .sendMessageRecordVideoAction:
-                return ("sendMessageRecordVideoAction", [])
-                case .sendMessageTypingAction:
-                return ("sendMessageTypingAction", [])
-                case .sendMessageUploadAudioAction(let progress):
-                return ("sendMessageUploadAudioAction", [("progress", progress as Any)])
-                case .sendMessageUploadDocumentAction(let progress):
-                return ("sendMessageUploadDocumentAction", [("progress", progress as Any)])
-                case .sendMessageUploadPhotoAction(let progress):
-                return ("sendMessageUploadPhotoAction", [("progress", progress as Any)])
-                case .sendMessageUploadRoundAction(let progress):
-                return ("sendMessageUploadRoundAction", [("progress", progress as Any)])
-                case .sendMessageUploadVideoAction(let progress):
-                return ("sendMessageUploadVideoAction", [("progress", progress as Any)])
-                case .speakingInGroupCallAction:
-                return ("speakingInGroupCallAction", [])
-    }
-    }
-    
-        public static func parse_sendMessageCancelAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageCancelAction
-        }
-        public static func parse_sendMessageChooseContactAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageChooseContactAction
-        }
-        public static func parse_sendMessageChooseStickerAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageChooseStickerAction
-        }
-        public static func parse_sendMessageEmojiInteraction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SendMessageAction.sendMessageEmojiInteraction(emoticon: _1!, msgId: _2!, interaction: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageEmojiInteractionSeen(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageEmojiInteractionSeen(emoticon: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageGamePlayAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageGamePlayAction
-        }
-        public static func parse_sendMessageGeoLocationAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageGeoLocationAction
-        }
-        public static func parse_sendMessageHistoryImportAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageHistoryImportAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageRecordAudioAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageRecordAudioAction
-        }
-        public static func parse_sendMessageRecordRoundAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageRecordRoundAction
-        }
-        public static func parse_sendMessageRecordVideoAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageRecordVideoAction
-        }
-        public static func parse_sendMessageTypingAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.sendMessageTypingAction
-        }
-        public static func parse_sendMessageUploadAudioAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadAudioAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageUploadDocumentAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadDocumentAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageUploadPhotoAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadPhotoAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageUploadRoundAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadRoundAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_sendMessageUploadVideoAction(_ reader: BufferReader) -> SendMessageAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SendMessageAction.sendMessageUploadVideoAction(progress: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_speakingInGroupCallAction(_ reader: BufferReader) -> SendMessageAction? {
-            return Api.SendMessageAction.speakingInGroupCallAction
         }
     
     }

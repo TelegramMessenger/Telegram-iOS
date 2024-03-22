@@ -1093,3 +1093,35 @@ public func _internal_setAccountConnectedBot(account: Account, bot: TelegramAcco
     |> ignoreValues
     |> then(remoteApply)
 }
+
+func _internal_updatePersonalChannel(account: Account, personalChannel: TelegramPersonalChannel?) -> Signal<Never, NoError> {
+    let remoteApply = account.postbox.transaction { transaction -> Peer? in
+        guard let personalChannel else {
+            return nil
+        }
+        return (
+            transaction.getPeer(personalChannel.peerId)
+        )
+    }
+    |> mapToSignal { peer in
+        let inputPeer = peer.flatMap(apiInputChannel)
+        
+        return account.network.request(Api.functions.account.updatePersonalChannel(channel: inputPeer ?? .inputChannelEmpty))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Never, NoError> in
+            return .complete()
+        }
+    }
+    
+    return account.postbox.transaction { transaction in
+        transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, current in
+            var current = (current as? CachedUserData) ?? CachedUserData()
+            current = current.withUpdatedPersonalChannel(personalChannel)
+            return current
+        })
+    }
+    |> ignoreValues
+    |> then(remoteApply)
+}

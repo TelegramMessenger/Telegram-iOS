@@ -705,6 +705,46 @@ public extension Api {
     }
 }
 public extension Api {
+    enum MissingInvitee: TypeConstructorDescription {
+        case missingInvitee(flags: Int32, userId: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .missingInvitee(let flags, let userId):
+                    if boxed {
+                        buffer.appendInt32(1653379620)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .missingInvitee(let flags, let userId):
+                return ("missingInvitee", [("flags", flags as Any), ("userId", userId as Any)])
+    }
+    }
+    
+        public static func parse_missingInvitee(_ reader: BufferReader) -> MissingInvitee? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MissingInvitee.missingInvitee(flags: _1!, userId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum MyBoost: TypeConstructorDescription {
         case myBoost(flags: Int32, slot: Int32, peer: Api.Peer?, date: Int32, expires: Int32, cooldownUntilDate: Int32?)
     
