@@ -28,15 +28,15 @@ final class PeerInfoBirthdayOverlay: ASDisplayNode {
         self.disposable?.dispose()
     }
     
-    func setup(size: CGSize, birthday: TelegramBirthday) {
-        self.setupAnimations(size: size, birthday: birthday)
+    func setup(size: CGSize, birthday: TelegramBirthday, sourceRect: CGRect?) {
+        self.setupAnimations(size: size, birthday: birthday, sourceRect: sourceRect)
         
         Queue.mainQueue().after(0.1) {
             self.view.addSubview(ConfettiView(frame: CGRect(origin: .zero, size: size)))
         }
     }
     
-    private func setupAnimations(size: CGSize, birthday: TelegramBirthday) {
+    private func setupAnimations(size: CGSize, birthday: TelegramBirthday, sourceRect: CGRect?) {
         self.disposable = (combineLatest(
             self.context.engine.stickers.loadedStickerPack(reference: .animatedEmojiAnimations, forceActualized: false),
             self.context.engine.stickers.loadedStickerPack(reference: .name("FestiveFontEmoji"), forceActualized: false)
@@ -84,7 +84,7 @@ final class PeerInfoBirthdayOverlay: ASDisplayNode {
             for file in numberFiles {
                 let _ = freeMediaFileInteractiveFetched(account: self.context.account, userLocation: .peer(self.context.account.peerId), fileReference: file).startStandalone()
             }
-            self.setupNumberAnimations(size: size, files: numberFiles)
+            self.setupNumberAnimations(size: size, files: numberFiles, sourceRect: sourceRect)
         })
     }
     
@@ -108,10 +108,12 @@ final class PeerInfoBirthdayOverlay: ASDisplayNode {
         animationNode.visibility = true
     }
     
-    private func setupNumberAnimations(size: CGSize, files: [FileMediaReference]) {
+    private func setupNumberAnimations(size: CGSize, files: [FileMediaReference], sourceRect: CGRect?) {
         guard !files.isEmpty else {
             return
         }
+        
+        let startY = sourceRect?.midY ?? 475.0
         
         var offset: CGFloat = 0.0
         var scaleDelay: Double = 0.0
@@ -138,7 +140,7 @@ final class PeerInfoBirthdayOverlay: ASDisplayNode {
             animationNode.visibility = true
 
             let path = UIBezierPath()
-            let startPoint = CGPoint(x: 90.0 + offset * 0.7, y: 475.0 + CGFloat.random(in: -20.0 ..< 20.0))
+            let startPoint = CGPoint(x: 90.0 + offset * 0.7, y: startY + CGFloat.random(in: -20.0 ..< 20.0))
             animationNode.position = startPoint
             path.move(to: startPoint)
             path.addCurve(to: CGPoint(x: 205.0 + offset, y: -90.0), controlPoint1: CGPoint(x: 213.0 + offset * 0.8, y: 380.0 + CGFloat.random(in: -20.0 ..< 20.0)), controlPoint2: CGPoint(x: 206.0 + offset * 0.8, y: 134.0 + CGFloat.random(in: -20.0 ..< 20.0)))
@@ -151,6 +153,9 @@ final class PeerInfoBirthdayOverlay: ASDisplayNode {
             riseAnimation.beginTime = CACurrentMediaTime() + 0.5
             riseAnimation.isRemovedOnCompletion = false
             riseAnimation.fillMode = .forwards
+            riseAnimation.completion = { [weak self] _ in
+                self?.removeFromSupernode()
+            }
             animationNode.layer.add(riseAnimation, forKey: "position")
             offset += 132.0
             

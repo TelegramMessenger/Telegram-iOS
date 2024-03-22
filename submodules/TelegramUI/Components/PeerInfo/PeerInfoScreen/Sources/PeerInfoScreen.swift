@@ -139,7 +139,7 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
     private let itemContainerNode: ASDisplayNode
     
     private var currentItems: [PeerInfoScreenItem] = []
-    private var itemNodes: [AnyHashable: PeerInfoScreenItemNode] = [:]
+    fileprivate var itemNodes: [AnyHashable: PeerInfoScreenItemNode] = [:]
     
     override init() {
         self.backgroundNode = ASDisplayNode()
@@ -1126,20 +1126,20 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     return result
 }
 
+private enum InfoSection: Int, CaseIterable {
+    case groupLocation
+    case calls
+    case peerInfo
+    case peerMembers
+}
+
 private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], chatLocation: ChatLocation, isOpenedFromChat: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
     guard let data = data else {
         return []
     }
-    
-    enum Section: Int, CaseIterable {
-        case groupLocation
-        case calls
-        case peerInfo
-        case peerMembers
-    }
-    
-    var items: [Section: [PeerInfoScreenItem]] = [:]
-    for section in Section.allCases {
+        
+    var items: [InfoSection: [PeerInfoScreenItem]] = [:]
+    for section in InfoSection.allCases {
         items[section] = []
     }
     
@@ -1579,7 +1579,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     }
     
     var result: [(AnyHashable, [PeerInfoScreenItem])] = []
-    for section in Section.allCases {
+    for section in InfoSection.allCases {
         if let sectionItems = items[section], !sectionItems.isEmpty {
             result.append((section, sectionItems))
         }
@@ -10915,9 +10915,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         if hasBirthdayToday {
             Queue.mainQueue().after(0.3) {
+                var birthdayItemFrame: CGRect?
+                if let section = self.regularSections[InfoSection.peerInfo] {
+                    if let birthdayItem = section.itemNodes[AnyHashable(400)] {
+                        birthdayItemFrame = birthdayItem.view.convert(birthdayItem.view.bounds, to: self.view)
+                    }
+                }
+                
                 let overlayNode = PeerInfoBirthdayOverlay(context: self.context)
                 overlayNode.frame = CGRect(origin: .zero, size: layout.size)
-                overlayNode.setup(size: layout.size, birthday: birthday)
+                overlayNode.setup(size: layout.size, birthday: birthday, sourceRect: birthdayItemFrame)
                 self.addSubnode(overlayNode)
             }
         }

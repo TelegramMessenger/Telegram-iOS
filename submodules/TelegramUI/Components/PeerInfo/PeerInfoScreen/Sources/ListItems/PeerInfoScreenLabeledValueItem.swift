@@ -583,11 +583,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             var file: TelegramMediaFile?
             switch leftIcon {
             case .birthday:
-#if DEBUG
-                file = context.animatedEmojiStickersValue["🔥"]?.first?.file
-                #else
                 file = context.animatedEmojiStickersValue["🎂"]?.first?.file
-                #endif
             }
             
             if let file {
