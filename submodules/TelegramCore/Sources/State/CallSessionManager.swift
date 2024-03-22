@@ -884,7 +884,7 @@ private final class CallSessionManagerContext {
                     //assertionFailure()
                 }
             }
-        case let .phoneCall(flags, id, _, _, _, _, gAOrB, keyFingerprint, callProtocol, connections, startDate):
+        case let .phoneCall(flags, id, _, _, _, _, gAOrB, keyFingerprint, callProtocol, connections, startDate, _):
             let allowsP2P = (flags & (1 << 5)) != 0
             if let internalId = self.contextIdByStableId[id] {
                 if let context = self.contexts[internalId] {
@@ -1243,7 +1243,7 @@ private func acceptCallSession(accountPeerId: PeerId, postbox: Postbox, network:
                             return .failed
                         case .phoneCallWaiting:
                             return .success(.waiting(config: config))
-                        case let .phoneCall(flags, id, _, _, _, _, gAOrB, _, callProtocol, connections, startDate):
+                        case let .phoneCall(flags, id, _, _, _, _, gAOrB, _, callProtocol, connections, startDate, _):
                             if id == stableId {
                                 switch callProtocol{
                                     case let .phoneCallProtocol(_, _, maxLayer, versions):

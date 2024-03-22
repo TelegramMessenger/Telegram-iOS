@@ -904,6 +904,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum KeyboardButton: TypeConstructorDescription {
+        case inputKeyboardButtonRequestPeer(flags: Int32, text: String, buttonId: Int32, peerType: Api.RequestPeerType, maxQuantity: Int32)
         case inputKeyboardButtonUrlAuth(flags: Int32, text: String, fwdText: String?, url: String, bot: Api.InputUser)
         case inputKeyboardButtonUserProfile(text: String, userId: Api.InputUser)
         case keyboardButton(text: String)
@@ -923,6 +924,16 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .inputKeyboardButtonRequestPeer(let flags, let text, let buttonId, let peerType, let maxQuantity):
+                    if boxed {
+                        buffer.appendInt32(-916050683)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    serializeInt32(buttonId, buffer: buffer, boxed: false)
+                    peerType.serialize(buffer, true)
+                    serializeInt32(maxQuantity, buffer: buffer, boxed: false)
+                    break
                 case .inputKeyboardButtonUrlAuth(let flags, let text, let fwdText, let url, let bot):
                     if boxed {
                         buffer.appendInt32(-802258988)
@@ -1051,6 +1062,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .inputKeyboardButtonRequestPeer(let flags, let text, let buttonId, let peerType, let maxQuantity):
+                return ("inputKeyboardButtonRequestPeer", [("flags", flags as Any), ("text", text as Any), ("buttonId", buttonId as Any), ("peerType", peerType as Any), ("maxQuantity", maxQuantity as Any)])
                 case .inputKeyboardButtonUrlAuth(let flags, let text, let fwdText, let url, let bot):
                 return ("inputKeyboardButtonUrlAuth", [("flags", flags as Any), ("text", text as Any), ("fwdText", fwdText as Any), ("url", url as Any), ("bot", bot as Any)])
                 case .inputKeyboardButtonUserProfile(let text, let userId):
@@ -1086,6 +1099,31 @@ public extension Api {
     }
     }
     
+        public static func parse_inputKeyboardButtonRequestPeer(_ reader: BufferReader) -> KeyboardButton? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Api.RequestPeerType?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.RequestPeerType
+            }
+            var _5: Int32?
+            _5 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.KeyboardButton.inputKeyboardButtonRequestPeer(flags: _1!, text: _2!, buttonId: _3!, peerType: _4!, maxQuantity: _5!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_inputKeyboardButtonUrlAuth(_ reader: BufferReader) -> KeyboardButton? {
             var _1: Int32?
             _1 = reader.readInt32()

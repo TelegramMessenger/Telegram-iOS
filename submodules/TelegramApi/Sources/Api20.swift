@@ -129,6 +129,136 @@ public extension Api {
     }
 }
 public extension Api {
+    enum RequestedPeer: TypeConstructorDescription {
+        case requestedPeerChannel(flags: Int32, channelId: Int64, title: String?, username: String?, photo: Api.Photo?)
+        case requestedPeerChat(flags: Int32, chatId: Int64, title: String?, photo: Api.Photo?)
+        case requestedPeerUser(flags: Int32, userId: Int64, firstName: String?, lastName: String?, username: String?, photo: Api.Photo?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .requestedPeerChannel(let flags, let channelId, let title, let username, let photo):
+                    if boxed {
+                        buffer.appendInt32(-1952185372)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(channelId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(username!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {photo!.serialize(buffer, true)}
+                    break
+                case .requestedPeerChat(let flags, let chatId, let title, let photo):
+                    if boxed {
+                        buffer.appendInt32(1929860175)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(chatId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {photo!.serialize(buffer, true)}
+                    break
+                case .requestedPeerUser(let flags, let userId, let firstName, let lastName, let username, let photo):
+                    if boxed {
+                        buffer.appendInt32(-701500310)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(firstName!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(lastName!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(username!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {photo!.serialize(buffer, true)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .requestedPeerChannel(let flags, let channelId, let title, let username, let photo):
+                return ("requestedPeerChannel", [("flags", flags as Any), ("channelId", channelId as Any), ("title", title as Any), ("username", username as Any), ("photo", photo as Any)])
+                case .requestedPeerChat(let flags, let chatId, let title, let photo):
+                return ("requestedPeerChat", [("flags", flags as Any), ("chatId", chatId as Any), ("title", title as Any), ("photo", photo as Any)])
+                case .requestedPeerUser(let flags, let userId, let firstName, let lastName, let username, let photo):
+                return ("requestedPeerUser", [("flags", flags as Any), ("userId", userId as Any), ("firstName", firstName as Any), ("lastName", lastName as Any), ("username", username as Any), ("photo", photo as Any)])
+    }
+    }
+    
+        public static func parse_requestedPeerChannel(_ reader: BufferReader) -> RequestedPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
+            var _5: Api.Photo?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.Photo
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.RequestedPeer.requestedPeerChannel(flags: _1!, channelId: _2!, title: _3, username: _4, photo: _5)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_requestedPeerChat(_ reader: BufferReader) -> RequestedPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            var _4: Api.Photo?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.Photo
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.RequestedPeer.requestedPeerChat(flags: _1!, chatId: _2!, title: _3, photo: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_requestedPeerUser(_ reader: BufferReader) -> RequestedPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
+            var _5: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
+            var _6: Api.Photo?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.Photo
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.RequestedPeer.requestedPeerUser(flags: _1!, userId: _2!, firstName: _3, lastName: _4, username: _5, photo: _6)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum RestrictionReason: TypeConstructorDescription {
         case restrictionReason(platform: String, reason: String, text: String)
     
@@ -950,74 +1080,6 @@ public extension Api {
         }
         public static func parse_secureFileEmpty(_ reader: BufferReader) -> SecureFile? {
             return Api.SecureFile.secureFileEmpty
-        }
-    
-    }
-}
-public extension Api {
-    enum SecurePasswordKdfAlgo: TypeConstructorDescription {
-        case securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt: Buffer)
-        case securePasswordKdfAlgoSHA512(salt: Buffer)
-        case securePasswordKdfAlgoUnknown
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(let salt):
-                    if boxed {
-                        buffer.appendInt32(-1141711456)
-                    }
-                    serializeBytes(salt, buffer: buffer, boxed: false)
-                    break
-                case .securePasswordKdfAlgoSHA512(let salt):
-                    if boxed {
-                        buffer.appendInt32(-2042159726)
-                    }
-                    serializeBytes(salt, buffer: buffer, boxed: false)
-                    break
-                case .securePasswordKdfAlgoUnknown:
-                    if boxed {
-                        buffer.appendInt32(4883767)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(let salt):
-                return ("securePasswordKdfAlgoPBKDF2HMACSHA512iter100000", [("salt", salt as Any)])
-                case .securePasswordKdfAlgoSHA512(let salt):
-                return ("securePasswordKdfAlgoSHA512", [("salt", salt as Any)])
-                case .securePasswordKdfAlgoUnknown:
-                return ("securePasswordKdfAlgoUnknown", [])
-    }
-    }
-    
-        public static func parse_securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
-            var _1: Buffer?
-            _1 = parseBytes(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(salt: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_securePasswordKdfAlgoSHA512(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
-            var _1: Buffer?
-            _1 = parseBytes(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoSHA512(salt: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_securePasswordKdfAlgoUnknown(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
-            return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoUnknown
         }
     
     }

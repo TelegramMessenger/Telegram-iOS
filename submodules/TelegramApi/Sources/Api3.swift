@@ -1,4 +1,46 @@
 public extension Api {
+    enum CdnConfig: TypeConstructorDescription {
+        case cdnConfig(publicKeys: [Api.CdnPublicKey])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .cdnConfig(let publicKeys):
+                    if boxed {
+                        buffer.appendInt32(1462101002)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(publicKeys.count))
+                    for item in publicKeys {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .cdnConfig(let publicKeys):
+                return ("cdnConfig", [("publicKeys", publicKeys as Any)])
+    }
+    }
+    
+        public static func parse_cdnConfig(_ reader: BufferReader) -> CdnConfig? {
+            var _1: [Api.CdnPublicKey]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.CdnPublicKey.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.CdnConfig.cdnConfig(publicKeys: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum CdnPublicKey: TypeConstructorDescription {
         case cdnPublicKey(dcId: Int32, publicKey: String)
     

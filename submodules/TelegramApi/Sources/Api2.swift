@@ -897,6 +897,68 @@ public extension Api {
     }
 }
 public extension Api {
+    enum BusinessChatLink: TypeConstructorDescription {
+        case businessChatLink(flags: Int32, link: String, message: String, entities: [Api.MessageEntity]?, title: String?, views: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .businessChatLink(let flags, let link, let message, let entities, let title, let views):
+                    if boxed {
+                        buffer.appendInt32(-1263638929)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(link, buffer: buffer, boxed: false)
+                    serializeString(message, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities!.count))
+                    for item in entities! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    serializeInt32(views, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .businessChatLink(let flags, let link, let message, let entities, let title, let views):
+                return ("businessChatLink", [("flags", flags as Any), ("link", link as Any), ("message", message as Any), ("entities", entities as Any), ("title", title as Any), ("views", views as Any)])
+    }
+    }
+    
+        public static func parse_businessChatLink(_ reader: BufferReader) -> BusinessChatLink? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: [Api.MessageEntity]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            } }
+            var _5: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
+            var _6: Int32?
+            _6 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.BusinessChatLink.businessChatLink(flags: _1!, link: _2!, message: _3!, entities: _4, title: _5, views: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum BusinessGreetingMessage: TypeConstructorDescription {
         case businessGreetingMessage(shortcutId: Int32, recipients: Api.BusinessRecipients, noActivityDays: Int32)
     
@@ -1166,48 +1228,6 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.BusinessWorkHours.businessWorkHours(flags: _1!, timezoneId: _2!, weeklyOpen: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum CdnConfig: TypeConstructorDescription {
-        case cdnConfig(publicKeys: [Api.CdnPublicKey])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .cdnConfig(let publicKeys):
-                    if boxed {
-                        buffer.appendInt32(1462101002)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(publicKeys.count))
-                    for item in publicKeys {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .cdnConfig(let publicKeys):
-                return ("cdnConfig", [("publicKeys", publicKeys as Any)])
-    }
-    }
-    
-        public static func parse_cdnConfig(_ reader: BufferReader) -> CdnConfig? {
-            var _1: [Api.CdnPublicKey]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.CdnPublicKey.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.CdnConfig.cdnConfig(publicKeys: _1!)
             }
             else {
                 return nil

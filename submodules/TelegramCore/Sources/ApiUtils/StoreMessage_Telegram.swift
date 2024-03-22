@@ -258,6 +258,8 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                     if let boostPeer = boostPeer {
                         result.append(boostPeer.peerId)
                     }
+                case .messageActionRequestedPeerSentMe:
+                    break
             }
         
             return result

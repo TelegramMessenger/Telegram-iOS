@@ -128,7 +128,7 @@ final class PeerInfoBirthdayOverlay: ASDisplayNode {
             
             let animationNode = DefaultAnimatedStickerNodeImpl()
             let source = AnimatedStickerResourceSource(account: self.context.account, resource: file.media.resource, fitzModifier: nil)
-            let pathPrefix: String? = nil //self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.media.resource.id)
+            let pathPrefix: String? = self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.media.resource.id)
             animationNode.setup(source: source, width: Int(pixelSize.width), height: Int(pixelSize.height), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
             self.addSubnode(animationNode)
             
