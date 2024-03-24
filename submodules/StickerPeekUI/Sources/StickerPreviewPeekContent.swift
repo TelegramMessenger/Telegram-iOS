@@ -252,6 +252,10 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
         }
         
         let textSize = self.textNode.measure(CGSize(width: 100.0, height: 100.0))
+        if textSize.height.isZero {
+            topOffset = 0.0
+            textSpacing = 0.0
+        }
         
         let imageSize = dimensions.cgSize.aspectFitted(boundingSize)
         self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
@@ -275,7 +279,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
         
         self.textNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - textSize.width) / 2.0) - centerOffset, y: -textSize.height - textSpacing), size: textSize)
         
-        if self.item.file?.isCustomEmoji == true {
+        if self.item.file?.isCustomEmoji == true || textSize.height.isZero {
             return CGSize(width: boundingSize.width, height: imageFrame.height)
         } else {
             return CGSize(width: boundingSize.width, height: imageFrame.height + textSize.height + textSpacing)

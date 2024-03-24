@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import CoreMedia
 import FFMpegBinding
-import YuvConversion
+import ImageDCT
 
 final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
     public static let registerFFMpegGlobals: Void = {
@@ -10,9 +10,8 @@ final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
         return
     }()
     
-    var ffmpegWriter: FFMpegVideoWriter?
+    let ffmpegWriter = FFMpegVideoWriter()
     var pool: CVPixelBufferPool?
-    var secondPool: CVPixelBufferPool?
         
     func setup(configuration: MediaEditorVideoExport.Configuration, outputPath: String) {
         let _ = MediaEditorVideoFFMpegWriter.registerFFMpegGlobals
@@ -26,8 +25,7 @@ final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
         let pixelBufferOptions: [String: Any] = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA as NSNumber,
             kCVPixelBufferWidthKey as String: UInt32(width),
-            kCVPixelBufferHeightKey as String: UInt32(height)//,
-//            kCVPixelBufferIOSurfacePropertiesKey as String: [:] as NSDictionary
+            kCVPixelBufferHeightKey as String: UInt32(height)
         ]
         
         var pool: CVPixelBufferPool?
@@ -38,25 +36,7 @@ final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
         }
         self.pool = pool
         
-        let secondPixelBufferOptions: [String: Any] = [
-            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8VideoRange_8A_TriPlanar as NSNumber,
-            kCVPixelBufferWidthKey as String: UInt32(width),
-            kCVPixelBufferHeightKey as String: UInt32(height)//,
-//            kCVPixelBufferIOSurfacePropertiesKey as String: [:] as NSDictionary
-        ]
-        
-        var secondPool: CVPixelBufferPool?
-        CVPixelBufferPoolCreate(nil, bufferOptions as CFDictionary, secondPixelBufferOptions as CFDictionary, &secondPool)
-        guard let secondPool else {
-            self.status = .failed
-            return
-        }
-        self.secondPool = secondPool
-        
-        let ffmpegWriter = FFMpegVideoWriter()
-        self.ffmpegWriter = ffmpegWriter
-        
-        if !ffmpegWriter.setup(withOutputPath: outputPath, width: width, height: height) {
+        if !self.ffmpegWriter.setup(withOutputPath: outputPath, width: width, height: height, bitrate: 200 * 1000, framerate: 30) {
             self.status = .failed
         }
     }
@@ -83,10 +63,7 @@ final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
     }
     
     func finishWriting(completion: @escaping () -> Void) {
-        guard let ffmpegWriter = self.ffmpegWriter else {
-            return
-        }
-        ffmpegWriter.finalizeVideo()
+        self.ffmpegWriter.finalizeVideo()
         self.status = .completed
         completion()
     }
@@ -113,75 +90,31 @@ final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
         return false
     }
     
-    var isFirst = true
     func appendPixelBuffer(_ buffer: CVPixelBuffer, at time: CMTime) -> Bool {
-        guard let ffmpegWriter = self.ffmpegWriter, let secondPool = self.secondPool else {
-            return false
-        }
-        
         let width = Int32(CVPixelBufferGetWidth(buffer))
         let height = Int32(CVPixelBufferGetHeight(buffer))
         let bytesPerRow = Int32(CVPixelBufferGetBytesPerRow(buffer))
         
-        var convertedBuffer: CVPixelBuffer?
-        CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, secondPool, &convertedBuffer)
-        guard let convertedBuffer else {
-            return false
-        }
+        let frame = FFMpegAVFrame(pixelFormat: .YUVA, width: width, height: height)
         
-        CVPixelBufferLockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0))
+        CVPixelBufferLockBaseAddress(buffer, CVPixelBufferLockFlags.readOnly)
         let src = CVPixelBufferGetBaseAddress(buffer)
         
-        CVPixelBufferLockBaseAddress(convertedBuffer, CVPixelBufferLockFlags(rawValue: 0))
-        let dst = CVPixelBufferGetBaseAddress(convertedBuffer)
-                
-        encodeRGBAToYUVA(dst, src, width, height, bytesPerRow, false, false)
-                
-        CVPixelBufferUnlockBaseAddress(convertedBuffer, CVPixelBufferLockFlags(rawValue: 0))
-        CVPixelBufferUnlockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0))
+        splitRGBAIntoYUVAPlanes(
+            src,
+            frame.data[0],
+            frame.data[1],
+            frame.data[2],
+            frame.data[3],
+            width,
+            height,
+            bytesPerRow,
+            true
+        )
+
+        CVPixelBufferUnlockBaseAddress(buffer, CVPixelBufferLockFlags.readOnly)
         
-        if self.isFirst {
-            let path = NSTemporaryDirectory() + "test.png"
-            let image = self.imageFromCVPixelBuffer(convertedBuffer, orientation: .up)
-            let data = image?.pngData()
-            try? data?.write(to: URL(fileURLWithPath: path))
-            self.isFirst = false
-        }
-                
-        return ffmpegWriter.encodeFrame(convertedBuffer)
-    }
-    
-    func imageFromCVPixelBuffer(_ pixelBuffer: CVPixelBuffer, orientation: UIImage.Orientation) -> UIImage? {
-        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
-        
-        let width = CVPixelBufferGetWidth(pixelBuffer)
-        let height = CVPixelBufferGetHeight(pixelBuffer)
-        let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
-        let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer)
-        
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        
-        guard let context = CGContext(
-            data: baseAddress,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: bytesPerRow,
-            space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else {
-            CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
-            return nil
-        }
-        
-        guard let cgImage = context.makeImage() else {
-            CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
-            return nil
-        }
-        
-        CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
-            
-        return UIImage(cgImage: cgImage, scale: 1.0, orientation: orientation)
+        return self.ffmpegWriter.encode(frame)
     }
     
     func markVideoAsFinished() {

@@ -69,6 +69,9 @@ public final class PeekController: ViewController, ContextControllerProtocol {
     
     public var getOverlayViews: (() -> [UIView])?
     
+    public var appeared: (() -> Void)?
+    public var disappeared: (() -> Void)?
+    
     private var animatedIn = false
     
     private let _ready = Promise<Bool>()

@@ -1518,7 +1518,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         
         let transition: ContainedViewLayoutTransition
         if animated {
-            transition = .animated(duration:  self.itemContainers.count == 1 ? 0.3 : 0.45, curve: .spring)
+            transition = .animated(duration: self.itemContainers.count == 1 ? 0.3 : 0.45, curve: .spring)
         } else {
             transition = .immediate
         }

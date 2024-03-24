@@ -20,6 +20,7 @@ import ConfettiEffect
 import TextFormat
 import UniversalMediaPlayer
 import InstantPageCache
+import ScrollComponent
 
 extension PremiumGiftSource {
     var identifier: String? {

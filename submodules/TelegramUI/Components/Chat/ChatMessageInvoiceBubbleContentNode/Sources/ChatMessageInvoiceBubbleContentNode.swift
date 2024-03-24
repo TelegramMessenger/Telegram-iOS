@@ -76,7 +76,7 @@ public final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContent
                 }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, automaticDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, item.read, item.chatLocation, title, subtitle, text, nil, mediaAndFlags, nil, nil, nil, false, layoutConstants, preparePosition, constrainedSize, item.controllerInteraction.presentationContext.animationCache, item.controllerInteraction.presentationContext.animationRenderer)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, automaticDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, item.read, item.chatLocation, title, nil, subtitle, text, nil, mediaAndFlags, nil, nil, nil, false, layoutConstants, preparePosition, constrainedSize, item.controllerInteraction.presentationContext.animationCache, item.controllerInteraction.presentationContext.animationRenderer)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             

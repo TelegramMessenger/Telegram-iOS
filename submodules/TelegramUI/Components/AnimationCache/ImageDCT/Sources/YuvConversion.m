@@ -3,9 +3,10 @@
 #import <Foundation/Foundation.h>
 #import <Accelerate/Accelerate.h>
 
-static uint8_t permuteMap[4] = { 3, 2, 1, 0};
+static uint8_t permuteMap[4] = { 3, 2, 1, 0 };
+static uint8_t invertedPermuteMap[4] = { 3, 0, 1, 2 };
 
-void splitRGBAIntoYUVAPlanes(uint8_t const *argb, uint8_t *outY, uint8_t *outU, uint8_t *outV, uint8_t *outA, int width, int height, int bytesPerRow) {
+void splitRGBAIntoYUVAPlanes(uint8_t const *argb, uint8_t *outY, uint8_t *outU, uint8_t *outV, uint8_t *outA, int width, int height, int bytesPerRow, bool keepColorsOrder) {
     static vImage_ARGBToYpCbCr info;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -45,7 +46,7 @@ void splitRGBAIntoYUVAPlanes(uint8_t const *argb, uint8_t *outY, uint8_t *outU, 
     destA.height = height;
     destA.rowBytes = width;
     
-    error = vImageConvert_ARGB8888To420Yp8_Cb8_Cr8(&src, &destYp, &destCb, &destCr, &info, permuteMap, kvImageDoNotTile);
+    error = vImageConvert_ARGB8888To420Yp8_Cb8_Cr8(&src, &destYp, &destCb, &destCr, &info, keepColorsOrder ? invertedPermuteMap : permuteMap, kvImageDoNotTile);
     if (error != kvImageNoError) {
         return;
     }

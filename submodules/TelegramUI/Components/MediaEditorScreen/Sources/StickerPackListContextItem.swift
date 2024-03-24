@@ -49,6 +49,9 @@ private final class StickerPackListContextItemNode: ASDisplayNode, ContextMenuCu
         
         var i = 0
         for (pack, topItem) in item.packs {
+            if pack.flags.contains(.isEmoji) {
+                continue
+            }
             let thumbSize = CGSize(width: 24.0, height: 24.0)
             let thumbnailResource = pack.thumbnail?.resource ?? topItem?.file.resource
             let thumbnailIconSource: ContextMenuActionItemIconSource?

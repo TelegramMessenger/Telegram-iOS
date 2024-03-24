@@ -442,6 +442,8 @@ swift_library(
         "//submodules/TelegramUI/Components/StickerPickerScreen",
         "//submodules/TelegramUI/Components/Chat/ChatEmptyNode",
         "//submodules/TelegramUI/Components/Chat/ChatMediaInputStickerGridItem",
+        "//submodules/TelegramUI/Components/Ads/AdsInfoScreen",
+        "//submodules/TelegramUI/Components/Ads/AdsReportScreen",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

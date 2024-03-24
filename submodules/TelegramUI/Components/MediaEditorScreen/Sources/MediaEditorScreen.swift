@@ -5875,14 +5875,25 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             ), 
             sourceView: { [weak self] in
                 if let self {
-                    let size = CGSize(width: self.view.frame.width, height: self.view.frame.width)
-                    return (self.view, CGRect(origin: CGPoint(x: (self.view.frame.width - size.width) / 2.0, y: (self.view.frame.height - size.height) / 2.0), size: size))
+                    let previewContainerFrame = self.node.previewContainerView.frame
+                    let size = CGSize(width: previewContainerFrame.width, height: previewContainerFrame.width)
+                    return (self.view, CGRect(origin: CGPoint(x: previewContainerFrame.midX - size.width / 2.0, y: previewContainerFrame.midY - size.height / 2.0), size: size))
                 } else {
                     return nil
                 }
             },
             activateImmediately: true
         )
+        peekController.appeared = { [weak self] in
+            if let self {
+                self.node.previewView.alpha = 0.0
+            }
+        }
+        peekController.disappeared = { [weak self] in
+            if let self {
+                self.node.previewView.alpha = 1.0
+            }
+        }
         self.present(peekController, in: .window(.root))
     }
     

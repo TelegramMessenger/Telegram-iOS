@@ -71,6 +71,7 @@ swift_library(
         "//submodules/WallpaperBackgroundNode",
         "//submodules/ImageTransparency",
         "//submodules/FFMpegBinding",
+        "//submodules/TelegramUI/Components/AnimationCache/ImageDCT",
     ],
     visibility = [
         "//visibility:public",
