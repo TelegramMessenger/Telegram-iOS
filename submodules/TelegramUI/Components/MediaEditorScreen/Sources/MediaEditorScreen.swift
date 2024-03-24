@@ -2146,7 +2146,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private let gradientView: UIImageView
         private var gradientColorsDisposable: Disposable?
         
-        private let stickerTransparentView: UIImageView
+        private var stickerBackgroundView: UIImageView?
+        private var stickerOverlayLayer: SimpleShapeLayer?
+        private var stickerFrameLayer: SimpleShapeLayer?
         
         fileprivate let entitiesContainerView: UIView
         let entitiesView: DrawingEntitiesView
@@ -2216,9 +2218,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             
             self.gradientView = UIImageView()
-            self.stickerTransparentView = UIImageView()
-            self.stickerTransparentView.clipsToBounds = true
-            
+       
             var isStickerEditor = false
             if case .stickerEditor = controller.mode {
                 isStickerEditor = true
@@ -2255,7 +2255,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             if case .stickerEditor = controller.mode {
                 let rowsCount = 40
-                self.stickerTransparentView.image = generateImage(CGSize(width: rowsCount, height: rowsCount), opaque: true, scale: 1.0, rotatedContext: { size, context in
+                let stickerBackgroundView = UIImageView()
+                stickerBackgroundView.clipsToBounds = true
+                stickerBackgroundView.image = generateImage(CGSize(width: rowsCount, height: rowsCount), opaque: true, scale: 1.0, rotatedContext: { size, context in
                     context.setFillColor(UIColor.black.cgColor)
                     context.fill(CGRect(origin: .zero, size: size))
                     context.setFillColor(UIColor(rgb: 0x2b2b2d).cgColor)
@@ -2269,10 +2271,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                     context.fillPath()
                 })
-                self.stickerTransparentView.layer.magnificationFilter = .nearest
-                self.stickerTransparentView.layer.shouldRasterize = true
-                self.stickerTransparentView.layer.rasterizationScale = UIScreenScale
-                self.previewContainerView.addSubview(self.stickerTransparentView)
+                stickerBackgroundView.layer.magnificationFilter = .nearest
+                stickerBackgroundView.layer.shouldRasterize = true
+                stickerBackgroundView.layer.rasterizationScale = UIScreenScale
+                self.stickerBackgroundView = stickerBackgroundView
+                self.previewContainerView.addSubview(stickerBackgroundView)
             } else {
                 self.previewContainerView.addSubview(self.gradientView)
             }
@@ -2281,6 +2284,24 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.previewContainerView.addSubview(self.entitiesContainerView)
             self.entitiesContainerView.addSubview(self.entitiesView)
             self.entitiesView.addSubview(self.drawingView)
+            
+            if case .stickerEditor = controller.mode {
+                let stickerOverlayLayer = SimpleShapeLayer()
+                stickerOverlayLayer.fillColor = UIColor(rgb: 0x000000, alpha: 0.7).cgColor
+                stickerOverlayLayer.fillRule = .evenOdd
+                self.stickerOverlayLayer = stickerOverlayLayer
+                self.previewContainerView.layer.addSublayer(stickerOverlayLayer)
+                
+                let stickerFrameLayer = SimpleShapeLayer()
+                stickerFrameLayer.fillColor = UIColor.clear.cgColor
+                stickerFrameLayer.strokeColor = UIColor(rgb: 0xffffff, alpha: 0.55).cgColor
+                stickerFrameLayer.lineDashPattern = [12, 12] as [NSNumber]
+                stickerFrameLayer.lineCap = .round
+                
+                self.stickerFrameLayer = stickerFrameLayer
+                self.previewContainerView.layer.addSublayer(stickerFrameLayer)
+            }
+            
             self.previewContainerView.addSubview(self.selectionContainerView)
             
             self.subjectDisposable = (
@@ -4408,8 +4429,25 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             transition.setFrame(view: self.selectionContainerView, frame: CGRect(origin: .zero, size: previewFrame.size))
             
             let stickerFrameWidth = floor(previewSize.width * 0.97)
-            transition.setFrame(view: self.stickerTransparentView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((previewSize.width - stickerFrameWidth) / 2.0), y: floorToScreenPixels((previewSize.height - stickerFrameWidth) / 2.0)), size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth)))
-            self.stickerTransparentView.layer.cornerRadius = stickerFrameWidth / 8.0
+            if let stickerBackgroundView = self.stickerBackgroundView, let stickerOverlayLayer = self.stickerOverlayLayer, let stickerFrameLayer = self.stickerFrameLayer {
+                stickerOverlayLayer.frame = CGRect(origin: .zero, size: previewSize)
+                
+                let stickerFrameRect = CGRect(origin: CGPoint(x: floor((previewSize.width - stickerFrameWidth) / 2.0), y: floor((previewSize.height - stickerFrameWidth) / 2.0)), size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth))
+                 
+                let overlayOuterRect = UIBezierPath(rect: CGRect(origin: .zero, size: previewSize))
+                let overlayInnerRect = UIBezierPath(cgPath: CGPath(roundedRect: stickerFrameRect, cornerWidth: stickerFrameWidth / 8.0, cornerHeight: stickerFrameWidth / 8.0, transform: nil))
+                let overlayLineWidth: CGFloat = 2.0 - UIScreenPixel
+                overlayOuterRect.append(overlayInnerRect)
+                overlayOuterRect.usesEvenOddFillRule = true
+                stickerOverlayLayer.path = overlayOuterRect.cgPath
+                
+                stickerFrameLayer.frame = stickerOverlayLayer.frame
+                stickerFrameLayer.lineWidth = overlayLineWidth
+                stickerFrameLayer.path = CGPath(roundedRect: stickerFrameRect.insetBy(dx: -overlayLineWidth / 2.0, dy: -overlayLineWidth / 2.0), cornerWidth: stickerFrameWidth / 8.0 * 1.02, cornerHeight: stickerFrameWidth / 8.0 * 1.02, transform: nil)
+                
+                transition.setFrame(view: stickerBackgroundView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((previewSize.width - stickerFrameWidth) / 2.0), y: floorToScreenPixels((previewSize.height - stickerFrameWidth) / 2.0)), size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth)))
+                stickerBackgroundView.layer.cornerRadius = stickerFrameWidth / 8.0
+            }
             
             self.interaction?.containerLayoutUpdated(layout: layout, transition: transition)
             
@@ -5886,11 +5924,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         )
         peekController.appeared = { [weak self] in
             if let self {
+                self.node.entitiesView.alpha = 0.0
                 self.node.previewView.alpha = 0.0
             }
         }
         peekController.disappeared = { [weak self] in
             if let self {
+                self.node.entitiesView.alpha = 1.0
                 self.node.previewView.alpha = 1.0
             }
         }
@@ -5905,6 +5945,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
     
     private func presentCreateStickerPack(file: TelegramMediaFile, completion: @escaping () -> Void) {
+        //TODO:localize
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
         
         var dismissImpl: (() -> Void)?

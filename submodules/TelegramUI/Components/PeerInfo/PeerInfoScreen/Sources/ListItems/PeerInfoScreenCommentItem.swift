@@ -32,6 +32,8 @@ private final class PeerInfoScreenCommentItemNode: PeerInfoScreenItemNode {
     private var item: PeerInfoScreenCommentItem?
     private var presentationData: PresentationData?
     
+    private var chevronImage: UIImage?
+    
     override init() {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
@@ -66,6 +68,7 @@ private final class PeerInfoScreenCommentItemNode: PeerInfoScreenItemNode {
             return 10.0
         }
         
+        let themeUpdated = self.presentationData?.theme !== presentationData.theme
         self.item = item
         self.presentationData = presentationData
         
@@ -79,8 +82,16 @@ private final class PeerInfoScreenCommentItemNode: PeerInfoScreenItemNode {
         
         let attributedText = parseMarkdownIntoAttributedString(item.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
             return (TelegramTextAttributes.URL, contents)
-        }))
-        
+        })).mutableCopy() as! NSMutableAttributedString
+        if let range = attributedText.string.range(of: ">") {
+            if themeUpdated || self.chevronImage == nil {
+                self.chevronImage = generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: presentationData.theme.list.itemAccentColor)
+            }
+            if let chevronImage = self.chevronImage {
+                attributedText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedText.string))
+            }
+        }
+
         self.textNode.attributedText = attributedText
         self.activateArea.accessibilityLabel = attributedText.string
         

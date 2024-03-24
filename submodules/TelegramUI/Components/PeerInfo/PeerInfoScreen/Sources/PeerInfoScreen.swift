@@ -587,6 +587,7 @@ private final class PeerInfoInteraction {
     let openEditing: () -> Void
     let updateBirthdate: (TelegramBirthday??) -> Void
     let updateIsEditingBirthdate: (Bool) -> Void
+    let openBioPrivacy: () -> Void
     let openBirthdatePrivacy: () -> Void
     let openPremiumGift: () -> Void
     let editingOpenPersonalChannel: () -> Void
@@ -647,6 +648,7 @@ private final class PeerInfoInteraction {
         openEditing: @escaping () -> Void,
         updateBirthdate: @escaping (TelegramBirthday??) -> Void,
         updateIsEditingBirthdate: @escaping (Bool) -> Void,
+        openBioPrivacy: @escaping () -> Void,
         openBirthdatePrivacy: @escaping () -> Void,
         openPremiumGift: @escaping () -> Void,
         editingOpenPersonalChannel: @escaping () -> Void
@@ -706,6 +708,7 @@ private final class PeerInfoInteraction {
         self.openEditing = openEditing
         self.updateBirthdate = updateBirthdate
         self.updateIsEditingBirthdate = updateIsEditingBirthdate
+        self.openBioPrivacy = openBioPrivacy
         self.openBirthdatePrivacy = openBirthdatePrivacy
         self.openPremiumGift = openPremiumGift
         self.editingOpenPersonalChannel = editingOpenPersonalChannel
@@ -1030,7 +1033,9 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         }, action: {
             interaction.dismissInput()
         }, maxLength: Int(data.globalSettings?.userLimits.maxAboutLength ?? 70)))
-        items[.bio]!.append(PeerInfoScreenCommentItem(id: ItemBioHelp, text: presentationData.strings.Settings_About_Help))
+        items[.bio]!.append(PeerInfoScreenCommentItem(id: ItemBioHelp, text: presentationData.strings.Settings_About_PrivacyHelp, linkAction: { _ in
+            interaction.openBioPrivacy()
+        }))
     }
     
     
@@ -2681,6 +2686,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.2, curve: .easeInOut), additive: false)
                     }
+                }
+            },
+            openBioPrivacy: { [weak self] in
+                if let self {
+                    self.openBioPrivacy()
                 }
             },
             openBirthdatePrivacy: { [weak self] in
@@ -7574,6 +7584,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             if let peer = strongSelf.data?.peer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer))))
             }
+        })
+    }
+    
+    private func openBioPrivacy() {
+        guard let _ = self.data?.globalSettings?.privacySettings else {
+            return
+        }
+        self.context.sharedContext.makeBioPrivacyController(context: self.context, settings: self.privacySettings, present: { [weak self] c in
+            self?.controller?.push(c)
         })
     }
     

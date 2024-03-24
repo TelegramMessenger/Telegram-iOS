@@ -11669,3 +11669,5 @@ Sorry for the inconvenience.";
 
 "Business.Links" = "Links to Chat";
 "Business.LinksInfo" = "Create links that start a chat with you, suggesting the first message.";
+
+"Settings.About.PrivacyHelp" = "You can add a few lines about yourself. Choose who can see your bio in [Settings]().";

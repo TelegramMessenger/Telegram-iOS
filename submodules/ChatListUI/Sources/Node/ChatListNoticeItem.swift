@@ -12,7 +12,7 @@ import Markdown
 import AccountContext
 import MergedAvatarsNode
 
-class ChatListStorageInfoItem: ListViewItem {
+class ChatListNoticeItem: ListViewItem {
     enum Action {
         case activate
         case hide
@@ -43,7 +43,7 @@ class ChatListStorageInfoItem: ListViewItem {
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = ChatListStorageInfoItemNode()
+            let node = ChatListNoticeItemNode()
             
             let (nodeLayout, apply) = node.asyncLayout()(self, params, false)
             
@@ -62,8 +62,8 @@ class ChatListStorageInfoItem: ListViewItem {
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            assert(node() is ChatListStorageInfoItemNode)
-            if let nodeValue = node() as? ChatListStorageInfoItemNode {
+            assert(node() is ChatListNoticeItemNode)
+            if let nodeValue = node() as? ChatListNoticeItemNode {
                 
                 let layout = nodeValue.asyncLayout()
                 async {
@@ -84,7 +84,7 @@ private let separatorHeight = 1.0 / UIScreen.main.scale
 private let titleFont = Font.semibold(15.0)
 private let textFont = Font.regular(15.0)
 
-class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
+final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
     private let contentContainer: ASDisplayNode
     private let titleNode: TextNode
     private let textNode: TextNode
@@ -100,7 +100,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
     private var okButton: HighlightableButtonNode?
     private var cancelButton: HighlightableButtonNode?
     
-    private var item: ChatListStorageInfoItem?
+    private var item: ChatListNoticeItem?
     
     override var apparentHeight: CGFloat {
         didSet {
@@ -145,11 +145,11 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
     
     override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         let layout = self.asyncLayout()
-        let (_, apply) = layout(item as! ChatListStorageInfoItem, params, nextItem == nil)
+        let (_, apply) = layout(item as! ChatListNoticeItem, params, nextItem == nil)
         apply()
     }
     
-    func asyncLayout() -> (_ item: ChatListStorageInfoItem, _ params: ListViewItemLayoutParams, _ isLast: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ChatListNoticeItem, _ params: ListViewItemLayoutParams, _ isLast: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let previousItem = self.item
         
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
@@ -321,9 +321,19 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                     if let image = strongSelf.arrowNode.image {
                         strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: layout.size.width - sideInset - image.size.width + 8.0, y: floor((layout.size.height - image.size.height) / 2.0)), size: image.size)
                     }
+                    
+                    var hasCloseButton = false
+                    if case .xmasPremiumGift = item.notice {
+                        hasCloseButton = true
+                    } else if case .setupBirthday = item.notice {
+                        hasCloseButton = true
+                    } else if case .birthdayPremiumGift = item.notice {
+                        hasCloseButton = true
+                    }
                                         
                     if let okButtonLayout, let cancelButtonLayout {
                         strongSelf.arrowNode.isHidden = true
+                        strongSelf.closeButton?.isHidden = true
                         
                         let okButton: HighlightableButtonNode
                         if let current = strongSelf.okButton {
@@ -372,7 +382,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                         okButtonText.frame = CGRect(origin: CGPoint(x: floor((okButtonFrame.width - okButtonLayout.0.size.width) * 0.5), y: floor((okButtonFrame.height - okButtonLayout.0.size.height) * 0.5)), size: okButtonLayout.0.size)
                         cancelButtonText.frame = CGRect(origin: CGPoint(x: floor((cancelButtonFrame.width - cancelButtonLayout.0.size.width) * 0.5), y: floor((cancelButtonFrame.height - cancelButtonLayout.0.size.height) * 0.5)), size: cancelButtonLayout.0.size)
                     } else {
-                        strongSelf.arrowNode.isHidden = false
+                        strongSelf.arrowNode.isHidden = hasCloseButton
                         
                         if let okButton = strongSelf.okButton {
                             strongSelf.okButton = nil
@@ -390,40 +400,29 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.cancelButtonText = nil
                             cancelButtonText.removeFromSupernode()
                         }
-                    }
-                    
-                    let arrowIsHidden = strongSelf.arrowNode.isHidden
-                    var hasCloseButton = false
-                    if case .xmasPremiumGift = item.notice {
-                        hasCloseButton = true
-                    } else if case .setupBirthday = item.notice {
-                        hasCloseButton = true
-                    } else if case .birthdayPremiumGift = item.notice {
-                        hasCloseButton = true
-                    }
-                    
-                    if hasCloseButton {
-                        strongSelf.arrowNode.isHidden = true
                         
-                        let closeButton: HighlightableButtonNode
-                        if let current = strongSelf.closeButton {
-                            closeButton = current
+                        if hasCloseButton {
+                            let closeButton: HighlightableButtonNode
+                            if let current = strongSelf.closeButton {
+                                closeButton = current
+                            } else {
+                                closeButton = HighlightableButtonNode()
+                                closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
+                                closeButton.addTarget(self, action: #selector(strongSelf.closePressed), forControlEvents: [.touchUpInside])
+                                strongSelf.contentContainer.addSubnode(closeButton)
+                                strongSelf.closeButton = closeButton
+                            }
+                            
+                            if themeUpdated {
+                                closeButton.setImage(PresentationResourcesItemList.itemListCloseIconImage(item.theme), for: .normal)
+                            }
+                            
+                            let closeButtonSize = closeButton.measure(CGSize(width: 100.0, height: 100.0))
+                            closeButton.frame = CGRect(origin: CGPoint(x: layout.size.width - sideInset - closeButtonSize.width, y: floor((layout.size.height - closeButtonSize.height) / 2.0)), size: closeButtonSize)
                         } else {
-                            closeButton = HighlightableButtonNode()
-                            closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
-                            closeButton.addTarget(self, action: #selector(strongSelf.closePressed), forControlEvents: [.touchUpInside])
-                            strongSelf.contentContainer.addSubnode(closeButton)
-                            strongSelf.closeButton = closeButton
+                            strongSelf.closeButton?.removeFromSupernode()
+                            strongSelf.closeButton = nil
                         }
-                        
-                        if themeUpdated {
-                            closeButton.setImage(PresentationResourcesItemList.itemListCloseIconImage(item.theme), for: .normal)
-                        }
-                        
-                        let closeButtonSize = closeButton.measure(CGSize(width: 100.0, height: 100.0))
-                        closeButton.frame = CGRect(origin: CGPoint(x: layout.size.width - sideInset - closeButtonSize.width, y: floor((layout.size.height - closeButtonSize.height) / 2.0)), size: closeButtonSize)
-                    } else {
-                        strongSelf.arrowNode.isHidden = arrowIsHidden
                     }
                     
                     strongSelf.contentSize = layout.contentSize
