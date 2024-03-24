@@ -80,10 +80,12 @@ private final class PeerInfoScreenCommentItemNode: PeerInfoScreenItemNode {
         let textFont = Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize)
         let textColor = presentationData.theme.list.freeTextColor
         
-        let attributedText = parseMarkdownIntoAttributedString(item.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
+        var text = item.text
+        text = text.replacingOccurrences(of: " >]", with: "\u{00A0}>]")
+        let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
             return (TelegramTextAttributes.URL, contents)
         })).mutableCopy() as! NSMutableAttributedString
-        if let range = attributedText.string.range(of: ">") {
+        if let _ = item.text.range(of: ">]"), let range = attributedText.string.range(of: ">") {
             if themeUpdated || self.chevronImage == nil {
                 self.chevronImage = generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: presentationData.theme.list.itemAccentColor)
             }

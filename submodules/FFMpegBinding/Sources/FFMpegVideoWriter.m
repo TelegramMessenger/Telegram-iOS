@@ -47,6 +47,9 @@
     _codecContext->codec_id = AV_CODEC_ID_VP9;
     _codecContext->codec_type = AVMEDIA_TYPE_VIDEO;
     _codecContext->pix_fmt = AV_PIX_FMT_YUVA420P;
+    _codecContext->color_range = AVCOL_RANGE_MPEG;
+    _codecContext->color_primaries = AVCOL_PRI_BT709;
+    _codecContext->colorspace = AVCOL_SPC_BT709;
     _codecContext->width = width;
     _codecContext->height = height;
     _codecContext->time_base = (AVRational){1, framerate};
@@ -96,6 +99,9 @@
     AVFrame *frameImpl = (AVFrame *)[frame impl];
     
     frameImpl->pts = self.framePts;
+    frameImpl->color_range = AVCOL_RANGE_MPEG;
+    frameImpl->color_primaries = AVCOL_PRI_BT709;
+    frameImpl->colorspace = AVCOL_SPC_BT709;
     
     int sendRet = avcodec_send_frame(_codecContext, frameImpl);
     if (sendRet < 0) {

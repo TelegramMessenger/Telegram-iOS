@@ -366,6 +366,7 @@ extension ImageARGB {
                                 Int32(self.argbPlane.width),
                                 Int32(self.argbPlane.height),
                                 Int32(self.argbPlane.bytesPerRow),
+                                false,
                                 false
                             )
                         }

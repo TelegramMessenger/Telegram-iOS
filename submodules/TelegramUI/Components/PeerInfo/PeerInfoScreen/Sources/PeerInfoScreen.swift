@@ -2678,8 +2678,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             updateIsEditingBirthdate: { [weak self] value in
                 if let self {
-                    if value, let data = self.data?.cachedData as? CachedUserData, data.birthday == nil {
-                        self.state = self.state.withUpdatingBirthDate(TelegramBirthday(day: 1, month: 1, year: nil))
+                    if value {
+                        if let data = self.data?.cachedData as? CachedUserData {
+                            if data.birthday == nil {
+                                self.state = self.state.withUpdatingBirthDate(TelegramBirthday(day: 1, month: 1, year: nil))
+                            } else {
+                                self.state = self.state.withUpdatingBirthDate(nil)
+                            }
+                        }
+                    } else {
+                        if self.state.updatingBirthDate != .some(nil) {
+                            self.state = self.state.withUpdatingBirthDate(nil)
+                        }
                     }
                     self.state = self.state.withIsEditingBirthDate(value)
                     

@@ -152,7 +152,7 @@ final class MediaEditorComposer {
                     if var compositedImage {
                         let scale = self.outputDimensions.width / compositedImage.extent.width
                         compositedImage = compositedImage.samplingLinear().transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-    
+                        
                         self.ciContext?.render(compositedImage, to: pixelBuffer)
                         completion(pixelBuffer)
                     } else {
@@ -164,7 +164,6 @@ final class MediaEditorComposer {
         }
         completion(nil)
     }
-    private var isFirst = true
     
     private var cachedTexture: MTLTexture?
     func textureForImage(_ image: UIImage) -> MTLTexture? {

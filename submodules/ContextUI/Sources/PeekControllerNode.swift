@@ -266,23 +266,19 @@ final class PeekControllerNode: ViewControllerTracingNode {
     }
     
     func animateIn(from rect: CGRect) {
-        if let appeared = self.controller?.appeared {
-            appeared()
-        } else {
-            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-        }
-        
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.blurView.layer.animateAlpha(from: 0.0, to: self.blurView.alpha, duration: 0.3)
         
         let offset = CGPoint(x: rect.midX - self.containerNode.position.x, y: rect.midY - self.containerNode.position.y)
         self.containerNode.layer.animateSpring(from: NSValue(cgPoint: offset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, initialVelocity: 0.0, damping: 110.0, additive: true)
         
-        if rect.width > 10.0 {
+        if let appeared = self.controller?.appeared {
+            appeared()
             let scale = rect.width / self.contentNode.frame.width
             self.containerNode.layer.animateSpring(from: scale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, initialVelocity: 0.0, damping: 110.0)
         } else {
             self.containerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, initialVelocity: 0.0, damping: 110.0)
+            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
         }
         
         if let topAccessoryNode = self.topAccessoryNode {
@@ -322,12 +318,8 @@ final class PeekControllerNode: ViewControllerTracingNode {
             outCompletion()
             completion()
         })
+
         if let _ = self.controller?.disappeared {
-        } else {
-            self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-        }
-        
-        if rect.width > 10.0 {
             let scale = rect.width / self.contentNode.frame.width
             self.containerNode.layer.animateScale(from: 1.0, to: scale, duration: 0.25, removeOnCompletion: false, completion: { _ in
                 scaleCompleted = true
@@ -338,6 +330,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
                 scaleCompleted = true
                 outCompletion()
             })
+            self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         }
         
         if !self.actionsStackNode.alpha.isZero {

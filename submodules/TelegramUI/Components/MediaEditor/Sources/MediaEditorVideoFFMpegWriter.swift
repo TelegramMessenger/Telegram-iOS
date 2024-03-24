@@ -109,6 +109,7 @@ final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
             width,
             height,
             bytesPerRow,
+            true,
             true
         )
 
