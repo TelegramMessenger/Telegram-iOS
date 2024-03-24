@@ -312,6 +312,8 @@ public enum PresentationResourceKey: Int32 {
     case avatarPremiumLockBadge
     case shareAvatarPremiumLockBadgeBackground
     case shareAvatarPremiumLockBadge
+    
+    case sharedLinkIcon
 }
 
 public enum ChatExpiredStoryIndicatorType: Hashable {

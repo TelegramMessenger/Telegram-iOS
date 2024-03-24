@@ -96,12 +96,14 @@ public enum ChatListItemContent {
         public var searchQuery: String?
         public var messageCount: Int?
         public var hideSeparator: Bool
+        public var hideDate: Bool
         
-        public init(commandPrefix: String?, searchQuery: String?, messageCount: Int?, hideSeparator: Bool) {
+        public init(commandPrefix: String?, searchQuery: String?, messageCount: Int?, hideSeparator: Bool, hideDate: Bool) {
             self.commandPrefix = commandPrefix
             self.searchQuery = searchQuery
             self.messageCount = messageCount
             self.hideSeparator = hideSeparator
+            self.hideDate = hideDate
         }
     }
     
@@ -2741,12 +2743,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             case let .peer(peerData):
                 topIndex = peerData.messages.first?.index
             }
-            if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
-                if let messageCount = customMessageListData.messageCount, customMessageListData.commandPrefix == nil {
-                    dateText = "\(messageCount)"
-                } else {
-                    dateText = " "
-                }
+            if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, let messageCount = customMessageListData.messageCount, customMessageListData.commandPrefix == nil {
+                dateText = "\(messageCount)"
+            } else if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.hideDate {
+                dateText = " "
             } else if let topIndex {
                 var t = Int(topIndex.timestamp)
                 var timeinfo = tm()

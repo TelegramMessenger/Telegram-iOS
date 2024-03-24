@@ -1760,5 +1760,29 @@ public extension TelegramEngine.EngineData.Item {
                 }
             }
         }
+        
+        public struct BusinessChatLinks: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = TelegramBusinessChatLinks?
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.businessLinks()]))
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                return view.values[PreferencesKeys.businessLinks()]?.get(TelegramBusinessChatLinks.self)
+            }
+        }
     }
 }

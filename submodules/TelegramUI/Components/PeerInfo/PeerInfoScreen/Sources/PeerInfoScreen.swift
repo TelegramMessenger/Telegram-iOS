@@ -106,6 +106,7 @@ import PeerInfoChatPaneNode
 import PeerInfoChatListPaneNode
 import GroupStickerPackSetupController
 import PeerNameColorItem
+import PeerSelectionScreen
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -531,7 +532,7 @@ private enum TopicsLimitedReason {
 }
 
 private final class PeerInfoInteraction {
-    let openChat: () -> Void
+    let openChat: (EnginePeer.Id?) -> Void
     let openUsername: (String, Bool, Promise<Bool>?) -> Void
     let openPhone: (String, ASDisplayNode, ContextGesture?) -> Void
     let editingOpenNotificationSettings: () -> Void
@@ -588,6 +589,7 @@ private final class PeerInfoInteraction {
     let updateIsEditingBirthdate: (Bool) -> Void
     let openBirthdatePrivacy: () -> Void
     let openPremiumGift: () -> Void
+    let editingOpenPersonalChannel: () -> Void
     
     init(
         openUsername: @escaping (String, Bool, Promise<Bool>?) -> Void,
@@ -599,7 +601,7 @@ private final class PeerInfoInteraction {
         suggestPhoto: @escaping () -> Void,
         setCustomPhoto: @escaping () -> Void,
         resetCustomPhoto: @escaping () -> Void,
-        openChat: @escaping () -> Void,
+        openChat: @escaping (EnginePeer.Id?) -> Void,
         openAddContact: @escaping () -> Void,
         updateBlocked: @escaping (Bool) -> Void,
         openReport: @escaping (PeerInfoReportType) -> Void,
@@ -646,7 +648,8 @@ private final class PeerInfoInteraction {
         updateBirthdate: @escaping (TelegramBirthday??) -> Void,
         updateIsEditingBirthdate: @escaping (Bool) -> Void,
         openBirthdatePrivacy: @escaping () -> Void,
-        openPremiumGift: @escaping () -> Void
+        openPremiumGift: @escaping () -> Void,
+        editingOpenPersonalChannel: @escaping () -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -705,6 +708,7 @@ private final class PeerInfoInteraction {
         self.updateIsEditingBirthdate = updateIsEditingBirthdate
         self.openBirthdatePrivacy = openBirthdatePrivacy
         self.openPremiumGift = openPremiumGift
+        self.editingOpenPersonalChannel = editingOpenPersonalChannel
     }
 }
 
@@ -1016,6 +1020,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     let ItemBirthdayPicker = 10
     let ItemBirthdayRemove = 11
     let ItemBirthdayHelp = 12
+    let ItemPeerPersonalChannel = 13
     
     items[.help]!.append(PeerInfoScreenCommentItem(id: ItemNameHelp, text: presentationData.strings.EditProfile_NameAndPhotoOrVideoHelp))
     
@@ -1091,6 +1096,11 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), text: presentationData.strings.Settings_YourColor, icon: nil, action: {
             interaction.editingOpenNameColorSetup()
         }))
+        
+        //TODO:localize
+        items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text("Add"), text: "Personal Channel", icon: nil, action: {
+            interaction.editingOpenPersonalChannel()
+        }))
     }
     
     items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
@@ -1130,6 +1140,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
 private enum InfoSection: Int, CaseIterable {
     case groupLocation
     case calls
+    case personalChannel
     case peerInfo
     case peerMembers
 }
@@ -1154,6 +1165,18 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     if let user = data.peer as? TelegramUser {
         if !callMessages.isEmpty {
             items[.calls]!.append(PeerInfoScreenCallListItem(id: 20, messages: callMessages))
+        }
+        
+        if let personalChannel = data.personalChannel, !"".isEmpty {
+            let peerId = personalChannel.peer.id
+            items[.personalChannel]?.append(PeerInfoScreenHeaderItem(id: 0, text: "PERSONAL CHANNEL", label: "2M subscribers"))
+            items[.personalChannel]?.append(PeerInfoScreenPersonalChannelItem(id: 1, context: context, data: personalChannel, requestLayout: { _ in
+            }, action: { [weak interaction] in
+                guard let interaction else {
+                    return
+                }
+                interaction.openChat(peerId)
+            }))
         }
         
         if let phone = user.phone {
@@ -1282,7 +1305,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
         if let reactionSourceMessageId = reactionSourceMessageId, !data.isContact {
             items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
-                interaction.openChat()
+                interaction.openChat(nil)
             }))
             
             items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_ReportReaction, color: .destructive, action: {
@@ -1290,7 +1313,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }))
         } else if let _ = nearbyPeerDistance {
             items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
-                interaction.openChat()
+                interaction.openChat(nil)
             }))
             
             items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_Report, color: .destructive, action: {
@@ -2493,8 +2516,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             resetCustomPhoto: { [weak self] in
                 self?.resetCustomPhoto()
             },
-            openChat: { [weak self] in
-                self?.openChat()
+            openChat: { [weak self] peerId in
+                self?.openChat(peerId: peerId)
             },
             openAddContact: { [weak self] in
                 self?.openAddContact()
@@ -2669,6 +2692,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 if let self {
                     self.openPremiumGift()
                 }
+            },
+            editingOpenPersonalChannel: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.editingOpenPersonalChannel()
             }
         )
         
@@ -6983,7 +7012,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.controller?.present(actionSheet, in: .window(.root))
     }
     
-    private func openChat() {
+    private func openChat(peerId: EnginePeer.Id?) {
+        if let peerId {
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+            )
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                guard let self, let peer else {
+                    return
+                }
+                guard let navigationController = self.controller?.navigationController as? NavigationController else {
+                    return
+                }
+                
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), keepStack: .always))
+            })
+            return
+        }
+        
         if let peer = self.data?.peer, let navigationController = self.controller?.navigationController as? NavigationController {
             self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(EnginePeer(peer)), keepStack: self.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), completion: { [weak self] _ in
                 if let strongSelf = self, strongSelf.nearbyPeerDistance != nil {
@@ -7567,6 +7613,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         } else if let peer = self.data?.peer, peer is TelegramChannel {
             self.controller?.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, boostStatus: self.boostStatus))
         }
+    }
+    
+    private func editingOpenPersonalChannel() {
+        self.controller?.push(PeerSelectionScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, completion: { [weak self] channel in
+            guard let self else {
+                return
+            }
+            
+            let _ = self.context.engine.accountData.updatePersonalChannel(personalChannel: TelegramPersonalChannel(peerId: channel.peer.id, subscriberCount: channel.subscriberCount.flatMap(Int32.init(clamping:)), topMessageId: nil)).startStandalone()
+        }))
     }
         
     private func editingOpenInviteLinksSetup() {

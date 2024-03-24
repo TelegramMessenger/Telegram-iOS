@@ -2939,13 +2939,20 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     func updateChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, transition: ContainedViewLayoutTransition, interactive: Bool, completion: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.selectedMessages = chatPresentationInterfaceState.interfaceState.selectionState?.selectedIds
         
+        var textStateUpdated = false
         if let textInputPanelNode = self.textInputPanelNode {
+            let wasEmpty = self.chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.length != 0
+            let isEmpty = chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.length != 0
+            if wasEmpty != isEmpty {
+                textStateUpdated = true
+            }
+            
             self.chatPresentationInterfaceState = self.chatPresentationInterfaceState.updatedInterfaceState { $0.withUpdatedEffectiveInputState(textInputPanelNode.inputTextState) }
         }
         
         let presentationReadyUpdated = self.chatPresentationInterfaceState.presentationReady != chatPresentationInterfaceState.presentationReady
         
-        if self.chatPresentationInterfaceState != chatPresentationInterfaceState && chatPresentationInterfaceState.presentationReady {
+        if (self.chatPresentationInterfaceState != chatPresentationInterfaceState && chatPresentationInterfaceState.presentationReady) || textStateUpdated {
             self.onLayoutCompletions.append(completion)
             
             let themeUpdated = presentationReadyUpdated || (self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme)
@@ -4007,7 +4014,17 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
                 
-                if !messages.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
+                var postEmptyMessages = false
+                if case let .customChatContents(customChatContents) = self.chatPresentationInterfaceState.subject {
+                    switch customChatContents.kind {
+                    case .quickReplyMessageInput:
+                        break
+                    case .businessLinkSetup:
+                        postEmptyMessages = true
+                    }
+                }
+                
+                if !messages.isEmpty || postEmptyMessages || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
                     if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                         var attributes: [MessageAttribute] = []
                         attributes.append(ForwardOptionsMessageAttribute(hideNames: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideNames == true, hideCaptions: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideCaptions == true))

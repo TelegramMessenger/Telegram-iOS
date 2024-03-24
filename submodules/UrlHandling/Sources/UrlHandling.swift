@@ -102,6 +102,7 @@ public enum ParsedInternalUrl {
     case contactToken(String)
     case chatFolder(slug: String)
     case premiumGiftCode(slug: String)
+    case messageLink(slug: String)
 }
 
 private enum ParsedUrl {
@@ -464,6 +465,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     return .peer(.name(pathComponents[1]), .boost)
                 } else if pathComponents[0] == "giftcode", pathComponents.count == 2 {
                     return .premiumGiftCode(slug: pathComponents[1])
+                } else if pathComponents[0] == "m" {
+                    return .messageLink(slug: pathComponents[1])
                 } else if pathComponents.count == 3 && pathComponents[0] == "c" {
                     if let channelId = Int64(pathComponents[1]), let messageId = Int32(pathComponents[2]) {
                         var threadId: Int32?
@@ -992,6 +995,28 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             }
         case let .premiumGiftCode(slug):
             return .single(.result(.premiumGiftCode(slug: slug)))
+        case let .messageLink(slug):
+            return .single(.progress)
+            |> then(context.engine.peers.resolveMessageLink(slug: slug)
+            |> mapToSignal { result -> Signal<ResolveInternalUrlResult, NoError> in
+                guard let result else {
+                    return .single(.result(nil))
+                }
+                var customEmojiIds: [Int64] = []
+                for entity in result.entities {
+                    if case let .CustomEmoji(_, fileId) = entity.type {
+                        if !customEmojiIds.contains(fileId) {
+                            customEmojiIds.append(fileId)
+                        }
+                    }
+                }
+                
+                return context.engine.stickers.resolveInlineStickers(fileIds: customEmojiIds)
+                |> mapToSignal { _ -> Signal<ResolveInternalUrlResult, NoError> in
+                    return .single(.result(.messageLink(link: result)))
+                }
+            })
+            
     }
 }
 

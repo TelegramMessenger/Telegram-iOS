@@ -442,6 +442,7 @@ swift_library(
         "//submodules/TelegramUI/Components/StickerPickerScreen",
         "//submodules/TelegramUI/Components/Chat/ChatEmptyNode",
         "//submodules/TelegramUI/Components/Chat/ChatMediaInputStickerGridItem",
+        "//submodules/TelegramUI/Components/Settings/BusinessLinkNameAlertController",
         "//submodules/TelegramUI/Components/Ads/AdsInfoScreen",
         "//submodules/TelegramUI/Components/Ads/AdsReportScreen",
     ] + select({

@@ -307,6 +307,7 @@ public enum ResolvedUrl {
     case boost(peerId: PeerId?, status: ChannelBoostStatus?, myBoostStatus: MyBoostStatus?)
     case premiumGiftCode(slug: String)
     case premiumMultiGift(reference: String?)
+    case messageLink(link: TelegramResolvedMessageLink)
 }
 
 public enum ResolveUrlResult {
@@ -865,6 +866,9 @@ public protocol CollectibleItemInfoScreenInitialData: AnyObject {
     var collectibleItemInfo: TelegramCollectibleItemInfo { get }
 }
 
+public protocol BusinessLinksSetupScreenInitialData: AnyObject {
+}
+
 public enum CollectibleItemInfoScreenSubject {
     case phoneNumber(String)
     case username(String)
@@ -968,6 +972,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError>
     func makeBusinessIntroSetupScreen(context: AccountContext, initialData: BusinessIntroSetupScreenInitialData) -> ViewController
     func makeBusinessIntroSetupScreenInitialData(context: AccountContext) -> Signal<BusinessIntroSetupScreenInitialData, NoError>
+    func makeBusinessLinksSetupScreen(context: AccountContext, initialData: BusinessLinksSetupScreenInitialData) -> ViewController
+    func makeBusinessLinksSetupScreenInitialData(context: AccountContext) -> Signal<BusinessLinksSetupScreenInitialData, NoError>
     func makeCollectibleItemInfoScreen(context: AccountContext, initialData: CollectibleItemInfoScreenInitialData) -> ViewController
     func makeCollectibleItemInfoScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, subject: CollectibleItemInfoScreenSubject) -> Signal<CollectibleItemInfoScreenInitialData?, NoError>
     func navigateToChatController(_ params: NavigateToChatControllerParams)

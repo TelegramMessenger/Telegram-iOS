@@ -857,14 +857,6 @@ struct PremiumIntroConfiguration {
                 businessPerks = PremiumIntroConfiguration.defaultValue.businessPerks
             }
             
-#if DEBUG
-            if !businessPerks.contains(.businessLinks) {
-                businessPerks.append(.businessLinks)
-            }
-            if !businessPerks.contains(.businessIntro) {
-                businessPerks.append(.businessIntro)
-            }
-#endif
             return PremiumIntroConfiguration(perks: perks, businessPerks: businessPerks)
         } else {
             return .defaultValue
@@ -2175,7 +2167,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             )))
                         ], alignment: .left, spacing: 2.0)),
                         leftIcon: AnyComponentWithIdentity(id: 0, component: AnyComponent(PerkIconComponent(
-                            backgroundColor: gradientColors[i],
+                            backgroundColor: gradientColors[min(i, gradientColors.count - 1)],
                             foregroundColor: .white,
                             iconName: perk.iconName
                         ))),
@@ -2239,6 +2231,15 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         }
                                         push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext, initialData: initialData))
                                     })
+                                case .businessLinks:
+                                    let _ = (accountContext.sharedContext.makeBusinessLinksSetupScreenInitialData(context: accountContext)
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                        guard let accountContext else {
+                                            return
+                                        }
+                                        push(accountContext.sharedContext.makeBusinessLinksSetupScreen(context: accountContext, initialData: initialData))
+                                    })
                                 case .businessIntro:
                                     let _ = (accountContext.sharedContext.makeBusinessIntroSetupScreenInitialData(context: accountContext)
                                     |> take(1)
@@ -2248,8 +2249,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         }
                                         push(accountContext.sharedContext.makeBusinessIntroSetupScreen(context: accountContext, initialData: initialData))
                                     })
-                                case .businessLinks:
-                                    fatalError()
                                 default:
                                     fatalError()
                                 }
@@ -3652,6 +3651,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         
         if case .business = mode {
             context.account.viewTracker.keepQuickRepliesApproximatelyUpdated()
+            context.account.viewTracker.keepBusinessLinksApproximatelyUpdated()
         }
     }
     

@@ -220,6 +220,15 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     }
                 }
                 
+                if case let .customChatContents(customChatContents) = chatPresentationInterfaceState.subject {
+                    switch customChatContents.kind {
+                    case .quickReplyMessageInput:
+                        break
+                    case .businessLinkSetup:
+                        stickersEnabled = false
+                    }
+                }
+                
                 if isTextEmpty && chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands && !hasForward {
                     accessoryItems.append(.commands)
                 }

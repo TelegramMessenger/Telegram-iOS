@@ -1990,6 +1990,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         customChatContents.deleteMessages(ids: messages.map(\.id))
                     })))
                 }
+            case .businessLinkSetup:
+                break
             }
         }
         

@@ -1941,6 +1941,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return BusinessIntroSetupScreen.initialData(context: context)
     }
     
+    public func makeBusinessLinksSetupScreen(context: AccountContext, initialData: BusinessLinksSetupScreenInitialData) -> ViewController {
+        return BusinessLinksSetupScreen(context: context, initialData: initialData as! BusinessLinksSetupScreen.InitialData)
+    }
+    
+    public func makeBusinessLinksSetupScreenInitialData(context: AccountContext) -> Signal<BusinessLinksSetupScreenInitialData, NoError> {
+        return BusinessLinksSetupScreen.makeInitialData(context: context)
+    }
+    
     public func makeCollectibleItemInfoScreen(context: AccountContext, initialData: CollectibleItemInfoScreenInitialData) -> ViewController {
         return CollectibleItemInfoScreen(context: context, initialData: initialData as! CollectibleItemInfoScreen.InitialData)
     }

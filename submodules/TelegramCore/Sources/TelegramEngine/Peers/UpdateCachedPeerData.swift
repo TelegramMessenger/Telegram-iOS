@@ -258,7 +258,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                     previous = CachedUserData()
                                 }
                                 switch fullUser {
-                                    case let .userFull(userFullFlags, _, _, userFullAbout, userFullSettings, personalPhoto, profilePhoto, fallbackPhoto, _, userFullBotInfo, userFullPinnedMsgId, userFullCommonChatsCount, _, userFullTtlPeriod, userFullThemeEmoticon, _, _, _, userPremiumGiftOptions, userWallpaper, stories, businessWorkHours, businessLocation, greetingMessage, awayMessage, businessIntro, birthday, _, _):
+                                    case let .userFull(userFullFlags, _, _, userFullAbout, userFullSettings, personalPhoto, profilePhoto, fallbackPhoto, _, userFullBotInfo, userFullPinnedMsgId, userFullCommonChatsCount, _, userFullTtlPeriod, userFullThemeEmoticon, _, _, _, userPremiumGiftOptions, userWallpaper, stories, businessWorkHours, businessLocation, greetingMessage, awayMessage, businessIntro, birthday, personalChannelId, personalChannelMessage):
                                         let _ = stories
                                         let botInfo = userFullBotInfo.flatMap(BotInfo.init(apiBotInfo:))
                                         let isBlocked = (userFullFlags & (1 << 0)) != 0
@@ -345,6 +345,27 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         if let birthday {
                                             mappedBirthday = TelegramBirthday(apiBirthday: birthday)
                                         }
+                                    
+                                        var personalChannel: TelegramPersonalChannel?
+                                        if let personalChannelId {
+                                            let channelPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(personalChannelId))
+                                            
+                                            var subscriberCount: Int32?
+                                            for chat in chats {
+                                                if chat.peerId == channelPeerId {
+                                                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _) = chat {
+                                                        subscriberCount = participantsCount
+                                                    }
+                                                }
+                                            }
+                                            
+                                            personalChannel = TelegramPersonalChannel(
+                                                peerId: channelPeerId,
+                                                subscriberCount: subscriberCount,
+                                                topMessageId: personalChannelMessage
+                                            )
+                                        }
+                                    
                                         return previous.withUpdatedAbout(userFullAbout)
                                             .withUpdatedBotInfo(botInfo)
                                             .withUpdatedEditableBotInfo(editableBotInfo)
@@ -373,6 +394,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             .withUpdatedConnectedBot(mappedConnectedBot)
                                             .withUpdatedBusinessIntro(mappedBusinessIntro)
                                             .withUpdatedBirthday(mappedBirthday)
+                                            .withUpdatedPersonalChannel(personalChannel)
                                 }
                             })
                         }

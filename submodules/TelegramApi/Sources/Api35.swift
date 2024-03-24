@@ -2990,20 +2990,20 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
-                static func inviteToChannel(channel: Api.InputChannel, users: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func inviteToChannel(channel: Api.InputChannel, users: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.InvitedUsers>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(429865580)
+                    buffer.appendInt32(-907854508)
                     channel.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
                         item.serialize(buffer, true)
                     }
-                    return (FunctionDescription(name: "channels.inviteToChannel", parameters: [("channel", String(describing: channel)), ("users", String(describing: users))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "channels.inviteToChannel", parameters: [("channel", String(describing: channel)), ("users", String(describing: users))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.InvitedUsers? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Updates?
+                        var result: Api.messages.InvitedUsers?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                            result = Api.parse(reader, signature: signature) as? Api.messages.InvitedUsers
                         }
                         return result
                     })
@@ -4660,17 +4660,17 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func addChatUser(chatId: Int64, userId: Api.InputUser, fwdLimit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func addChatUser(chatId: Int64, userId: Api.InputUser, fwdLimit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.InvitedUsers>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-230206493)
+                    buffer.appendInt32(-876162809)
                     serializeInt64(chatId, buffer: buffer, boxed: false)
                     userId.serialize(buffer, true)
                     serializeInt32(fwdLimit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.addChatUser", parameters: [("chatId", String(describing: chatId)), ("userId", String(describing: userId)), ("fwdLimit", String(describing: fwdLimit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "messages.addChatUser", parameters: [("chatId", String(describing: chatId)), ("userId", String(describing: userId)), ("fwdLimit", String(describing: fwdLimit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.InvitedUsers? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Updates?
+                        var result: Api.messages.InvitedUsers?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                            result = Api.parse(reader, signature: signature) as? Api.messages.InvitedUsers
                         }
                         return result
                     })
@@ -4782,9 +4782,9 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func createChat(flags: Int32, users: [Api.InputUser], title: String, ttlPeriod: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func createChat(flags: Int32, users: [Api.InputUser], title: String, ttlPeriod: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.InvitedUsers>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(3450904)
+                    buffer.appendInt32(-1831936556)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
@@ -4793,11 +4793,11 @@ public extension Api.functions.messages {
                     }
                     serializeString(title, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(ttlPeriod!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "messages.createChat", parameters: [("flags", String(describing: flags)), ("users", String(describing: users)), ("title", String(describing: title)), ("ttlPeriod", String(describing: ttlPeriod))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "messages.createChat", parameters: [("flags", String(describing: flags)), ("users", String(describing: users)), ("title", String(describing: title)), ("ttlPeriod", String(describing: ttlPeriod))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.InvitedUsers? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Updates?
+                        var result: Api.messages.InvitedUsers?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                            result = Api.parse(reader, signature: signature) as? Api.messages.InvitedUsers
                         }
                         return result
                     })

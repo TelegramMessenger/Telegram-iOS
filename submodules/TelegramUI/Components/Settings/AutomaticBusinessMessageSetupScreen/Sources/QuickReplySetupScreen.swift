@@ -271,7 +271,8 @@ final class QuickReplySetupScreenComponent: Component {
                             commandPrefix: "/\(item.shortcut)",
                             searchQuery: nil,
                             messageCount: item.totalCount,
-                            hideSeparator: false
+                            hideSeparator: false,
+                            hideDate: true
                         )
                     )),
                     editing: isEditing,
