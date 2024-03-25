@@ -280,6 +280,9 @@ class GeneralChartComponentController: ChartThemeContainer {
         }
     }
     
+    var verticalLimitsNumberFormatter: NumberFormatter = BaseConstants.chartNumberFormatter
+    var detailsNumberFormatter: NumberFormatter = BaseConstants.detailsNumberFormatter
+    
     func verticalLimitsLabels(verticalRange: ClosedRange<CGFloat>) -> (ClosedRange<CGFloat>, [LinesChartLabel]) {
         let ditance = verticalRange.distance
         let chartHeight = chartFrame().height
@@ -313,7 +316,7 @@ class GeneralChartComponentController: ChartThemeContainer {
         var verticalValue = (verticalRange.lowerBound / base).rounded(.down) * base
         let lowerBound = verticalValue
         
-        let numberFormatter = BaseConstants.chartNumberFormatter
+        let numberFormatter = self.verticalLimitsNumberFormatter
         numberFormatter.maximumFractionDigits = maximumNumberOfDecimals
         while verticalValue < verticalRange.upperBound {
             let text: String = numberFormatter.string(from: NSNumber(value: Double(verticalValue))) ?? ""
@@ -331,7 +334,7 @@ class GeneralChartComponentController: ChartThemeContainer {
             let (index, component) = arg
             return ChartDetailsViewModel.Value(prefix: nil,
                                                title: component.name,
-                                               value: BaseConstants.detailsNumberFormatter.string(from: NSNumber(value: component.values[pointIndex])) ?? "",
+                                               value: self.detailsNumberFormatter.string(from: NSNumber(value: component.values[pointIndex])) ?? "",
                                                color: component.color,
                                                visible: chartVisibility[index])
         }

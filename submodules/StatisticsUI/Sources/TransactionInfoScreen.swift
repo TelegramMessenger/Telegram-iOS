@@ -18,31 +18,19 @@ import AccountContext
 import TelegramStringFormatting
 import PremiumPeerShortcutComponent
 
-enum MonetizationTransaction: Equatable {
-    case incoming(amount: Int64, fromTimestamp: Int32, toTimestamp: Int32)
-    case outgoing(amount: Int64, timestamp: Int32, address: String, explorerUrl: String)
-    
-    var amount: Int64 {
-        switch self {
-        case let .incoming(amount, _, _), let .outgoing(amount, _, _, _):
-            return amount
-        }
-    }
-}
-
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
     let peer: EnginePeer
-    let transaction: MonetizationTransaction
+    let transaction: RevenueStatsTransactionsContext.State.Transaction
     let openExplorer: (String) -> Void
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
         peer: EnginePeer,
-        transaction: MonetizationTransaction,
+        transaction: RevenueStatsTransactionsContext.State.Transaction,
         openExplorer: @escaping (String) -> Void,
         dismiss: @escaping () -> Void
     ) {
@@ -91,7 +79,6 @@ private final class SheetContent: CombinedComponent {
         let amount = Child(MultilineTextComponent.self)
         let title = Child(MultilineTextComponent.self)
         let date = Child(MultilineTextComponent.self)
-        let address = Child(MultilineTextComponent.self)
         let peerShortcut = Child(PremiumPeerShortcutComponent.self)
         
         let actionButton = Child(SolidRoundedButtonComponent.self)
@@ -110,9 +97,8 @@ private final class SheetContent: CombinedComponent {
             
             let titleFont = Font.semibold(17.0)
             let textFont = Font.regular(17.0)
-            let fixedFont = Font.monospace(17.0)
             
-            let textColor = theme.actionSheet.primaryTextColor
+            var titleColor = theme.actionSheet.primaryTextColor
             let secondaryTextColor = theme.actionSheet.secondaryTextColor
             
             var contentSize = CGSize(width: context.availableSize.width, height: 45.0)
@@ -142,31 +128,47 @@ private final class SheetContent: CombinedComponent {
             let amountString: NSMutableAttributedString
             let dateString: String
             let titleString: String
-            let subtitleString: String
             let buttonTitle: String
             let explorerUrl: String?
             
             let integralFont = Font.with(size: 48.0, design: .round, weight: .semibold)
             let fractionalFont = Font.with(size: 24.0, design: .round, weight: .semibold)
             
-            //TODO:localize
+            var showPeer = false
             switch component.transaction {
-            case let .incoming(amount, fromTimestamp, toTimestamp):
+            case let .proceeds(amount, fromDate, toDate):
                 amountString = amountAttributedString(formatBalanceText(amount, decimalSeparator: dateTimeFormat.decimalSeparator, showPlus: true), integralFont: integralFont, fractionalFont: fractionalFont, color: theme.list.itemDisclosureActions.constructive.fillColor).mutableCopy() as! NSMutableAttributedString
                 amountString.append(NSAttributedString(string: " TON", font: fractionalFont, textColor: theme.list.itemDisclosureActions.constructive.fillColor))
-                dateString = "\(stringForFullDate(timestamp: fromTimestamp, strings: strings, dateTimeFormat: dateTimeFormat)) – \(stringForFullDate(timestamp: toTimestamp, strings: strings, dateTimeFormat: dateTimeFormat))"
-                titleString = "Proceeds from Ads displayed in"
-                subtitleString = ""
+                dateString = "\(stringForFullDate(timestamp: fromDate, strings: strings, dateTimeFormat: dateTimeFormat)) – \(stringForFullDate(timestamp: toDate, strings: strings, dateTimeFormat: dateTimeFormat))"
+                titleString = strings.Monetization_TransactionInfo_Proceeds
                 buttonTitle = strings.Common_OK
                 explorerUrl = nil
-            case let .outgoing(amount, timestamp, address, explorerUrlValue):
+                showPeer = true
+            case let .withdrawal(status, amount, date, provider, _, transactionUrl):
                 amountString = amountAttributedString(formatBalanceText(amount, decimalSeparator: dateTimeFormat.decimalSeparator), integralFont: integralFont, fractionalFont: fractionalFont, color: theme.list.itemDestructiveColor).mutableCopy() as! NSMutableAttributedString
                 amountString.append(NSAttributedString(string: " TON", font: fractionalFont, textColor: theme.list.itemDestructiveColor))
-                dateString = stringForFullDate(timestamp: timestamp, strings: strings, dateTimeFormat: dateTimeFormat)
-                titleString = "Balance Withdrawal to"
-                subtitleString = formatAddress(address)
-                buttonTitle = "View in Blockchain Explorer"
-                explorerUrl = explorerUrlValue
+                dateString = stringForFullDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat)
+                
+                switch status {
+                case .succeed:
+                    titleString = strings.Monetization_TransactionInfo_Withdrawal(provider).string
+                    buttonTitle = strings.Monetization_TransactionInfo_ViewInExplorer
+                case .pending:
+                    titleString = strings.Monetization_TransactionInfo_Pending
+                    buttonTitle = strings.Common_OK
+                case .failed:
+                    titleString = strings.Monetization_TransactionInfo_Failed
+                    buttonTitle = strings.Common_OK
+                    titleColor = theme.list.itemDestructiveColor
+                }
+                explorerUrl = transactionUrl
+            case let .refund(amount, date, _):
+                titleString = strings.Monetization_TransactionInfo_Refund
+                amountString = amountAttributedString(formatBalanceText(amount, decimalSeparator: dateTimeFormat.decimalSeparator, showPlus: true), integralFont: integralFont, fractionalFont: fractionalFont, color: theme.list.itemDisclosureActions.constructive.fillColor).mutableCopy() as! NSMutableAttributedString
+                amountString.append(NSAttributedString(string: " TON", font: fractionalFont, textColor: theme.list.itemDisclosureActions.constructive.fillColor))
+                dateString = stringForFullDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat)
+                buttonTitle = strings.Common_OK
+                explorerUrl = nil
             }
             
             let amount = amount.update(
@@ -203,7 +205,7 @@ private final class SheetContent: CombinedComponent {
             
             let title = title.update(
                 component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: titleString, font: titleFont, textColor: textColor)),
+                    text: .plain(NSAttributedString(string: titleString, font: titleFont, textColor: titleColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.1
@@ -217,23 +219,7 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += title.size.height
             contentSize.height += 3.0
             
-            if !subtitleString.isEmpty {
-                let address = address.update(
-                    component: MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: subtitleString, font: fixedFont, textColor: textColor)),
-                        horizontalAlignment: .center,
-                        maximumNumberOfLines: 0,
-                        lineSpacing: 0.1
-                    ),
-                    availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
-                    transition: .immediate
-                )
-                context.add(address
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + address.size.height / 2.0))
-                )
-                contentSize.height += address.size.height
-                contentSize.height += 50.0
-            } else {
+            if showPeer {
                 contentSize.height += 5.0
                 let peerShortcut = peerShortcut.update(
                     component: PremiumPeerShortcutComponent(
@@ -250,6 +236,8 @@ private final class SheetContent: CombinedComponent {
                 )
                 contentSize.height += peerShortcut.size.height
                 contentSize.height += 50.0
+            } else {
+                contentSize.height += 45.0
             }
            
             let actionButton = actionButton.update(
@@ -298,13 +286,13 @@ private final class SheetContainerComponent: CombinedComponent {
     
     let context: AccountContext
     let peer: EnginePeer
-    let transaction: MonetizationTransaction
+    let transaction: RevenueStatsTransactionsContext.State.Transaction
     let openExplorer: (String) -> Void
     
     init(
         context: AccountContext,
         peer: EnginePeer,
-        transaction: MonetizationTransaction,
+        transaction: RevenueStatsTransactionsContext.State.Transaction,
         openExplorer: @escaping (String) -> Void
     ) {
         self.context = context
@@ -415,7 +403,7 @@ final class TransactionInfoScreen: ViewControllerComponentContainer {
     init(
         context: AccountContext,
         peer: EnginePeer,
-        transaction: MonetizationTransaction,
+        transaction: RevenueStatsTransactionsContext.State.Transaction,
         openExplorer: @escaping (String) -> Void
     ) {
         self.context = context

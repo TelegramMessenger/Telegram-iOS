@@ -16,15 +16,17 @@ class StatsGraphItem: ListViewItem, ItemListItem {
     let graph: StatsGraph
     let type: ChartType
     let noInitialZoom: Bool
+    let conversionRate: Double
     let getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)?
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, graph: StatsGraph, type: ChartType, noInitialZoom: Bool = false, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(presentationData: ItemListPresentationData, graph: StatsGraph, type: ChartType, noInitialZoom: Bool = false, conversionRate: Double = 1.0, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
         self.graph = graph
         self.type = type
         self.noInitialZoom = noInitialZoom
+        self.conversionRate = conversionRate
         self.getDetailsData = getDetailsData
         self.sectionId = sectionId
         self.style = style
@@ -137,7 +139,7 @@ class StatsGraphItemNode: ListViewItemNode {
             if currentItem?.graph != item.graph {
                 updatedGraph = item.graph
                 if case let .Loaded(_, data) = updatedGraph {
-                    updatedController = createChartController(data, type: item.type, getDetailsData: { [weak self] date, completion in
+                    updatedController = createChartController(data, type: item.type, rate: item.conversionRate, getDetailsData: { [weak self] date, completion in
                         if let strongSelf = self, let item = strongSelf.item {
                             item.getDetailsData?(date, completion)
                         }

@@ -2191,11 +2191,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     }
     
     @objc private func searchOrMorePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
-        //TODO:localize
-        if case let .assets(_, mode) = self.subject, [.story, .addImage, .createSticker].contains(mode) {
+        let strings = self.presentationData.strings
+        if case let .assets(_, mode) = self.subject, [.createSticker].contains(mode) {
             var items: [ContextMenuItem] = []
             if mode != .addImage {
-                items.append(.action(ContextMenuActionItem(text: "Create", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: strings.Attachment_Create, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, f in
                     f(.default)
@@ -2204,7 +2204,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 })))
             }
             
-            items.append(.action(ContextMenuActionItem(text: "Select from Files", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: strings.Attachment_SelectFromFiles, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/File"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
@@ -2223,7 +2223,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
 //            self.presentSearch(activateOnDisplay: true)
                 break
             case .more:
-                let strings = self.presentationData.strings
                 let selectionCount = self.selectionCount
             
                 var isSpoilerAvailable = true

@@ -201,6 +201,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case dismissedMessagePrivacyBadge = 67
     case dismissedBusinessBadge = 68
     case dismissedBirthdayPremiumGifts = 69
+    case monetizationIntroDismissed = 70
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -544,6 +545,11 @@ private struct ApplicationSpecificNoticeKeys {
     static func dismissedBirthdayPremiumGiftTip(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: dismissedBirthdayPremiumGiftTipNamespace), key: noticeKey(peerId: peerId, key: 0))
     }
+    
+    static func monetizationIntroDismissed() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.monetizationIntroDismissed.key)
+    }
+    
 }
 
 public struct ApplicationSpecificNotice {
@@ -2290,5 +2296,26 @@ public struct ApplicationSpecificNotice {
             }
         }
         |> ignoreValues
+    }
+    
+    public static func setMonetizationIntroDismissed(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.monetizationIntroDismissed(), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func monetizationIntroDismissed(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.monetizationIntroDismissed())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> take(1)
     }
 }

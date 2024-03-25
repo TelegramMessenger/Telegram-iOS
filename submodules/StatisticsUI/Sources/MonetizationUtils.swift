@@ -9,6 +9,11 @@ func formatAddress(_ address: String) -> String {
     return address
 }
 
+func formatUsdValue(_ value: Int64, rate: Double) -> String {
+    let formattedValue = String(format: "%0.2f", (Double(value) / 1000000000) * rate)
+    return "$\(formattedValue)"
+}
+
 func formatBalanceText(_ value: Int64, decimalSeparator: String, showPlus: Bool = false) -> String {
     var balanceText = "\(abs(value))"
     while balanceText.count < 10 {

@@ -17,6 +17,7 @@ class BarsComponentController: GeneralChartComponentController {
     let mainBarsRenderer: BarChartRenderer
     let horizontalScalesRenderer: HorizontalScalesRenderer
     let verticalScalesRenderer: VerticalScalesRenderer
+    let secondaryScalesRenderer: VerticalScalesRenderer?
     
     let lineBulletsRenderer = LineBulletsRenderer()
     let verticalLineRenderer = VerticalLinesRenderer()
@@ -32,11 +33,13 @@ class BarsComponentController: GeneralChartComponentController {
          mainBarsRenderer: BarChartRenderer,
          horizontalScalesRenderer: HorizontalScalesRenderer,
          verticalScalesRenderer: VerticalScalesRenderer,
+         secondaryScalesRenderer: VerticalScalesRenderer? = nil,
          previewBarsChartRenderer: BarChartRenderer,
          step: Bool = false) {
         self.mainBarsRenderer = mainBarsRenderer
         self.horizontalScalesRenderer = horizontalScalesRenderer
         self.verticalScalesRenderer = verticalScalesRenderer
+        self.secondaryScalesRenderer = secondaryScalesRenderer
         self.previewBarsChartRenderer = previewBarsChartRenderer
         self.step = step
         
@@ -122,6 +125,7 @@ class BarsComponentController: GeneralChartComponentController {
         mainBarsRenderer.setVisible(visible, animated: animated)
         horizontalScalesRenderer.setVisible(visible, animated: animated)
         verticalScalesRenderer.setVisible(visible, animated: animated)
+        secondaryScalesRenderer?.setVisible(visible, animated: animated)
         previewBarsChartRenderer.setVisible(visible, animated: animated)
     }
     
@@ -129,6 +133,7 @@ class BarsComponentController: GeneralChartComponentController {
         mainBarsRenderer.setup(horizontalRange: horizontalRange, animated: animated)
         horizontalScalesRenderer.setup(horizontalRange: horizontalRange, animated: animated)
         verticalScalesRenderer.setup(horizontalRange: horizontalRange, animated: animated)
+        secondaryScalesRenderer?.setup(horizontalRange: horizontalRange, animated: animated)
         
         verticalLineRenderer.setup(horizontalRange: horizontalRange, animated: animated)
         lineBulletsRenderer.setup(horizontalRange: horizontalRange, animated: animated)
@@ -144,20 +149,49 @@ class BarsComponentController: GeneralChartComponentController {
                                          components: visibleComponents)
     }
     
+    var conversionRate: Double = 1.0
+    func verticalLimitsLabels(verticalRange: ClosedRange<CGFloat>, secondary: Bool) -> (ClosedRange<CGFloat>, [LinesChartLabel]) {
+        var (range, labels) = super.verticalLimitsLabels(verticalRange: verticalRange)
+        if secondary {
+            var updatedLabels: [LinesChartLabel] = []
+            for label in labels {
+                let convertedValue = (Double(label.text) ?? 0.0) * self.conversionRate
+                let text: String
+                if convertedValue > 1.0 {
+                    text = String(format: "%0.1f", convertedValue)
+                } else {
+                    text = String(format: "%0.3f", convertedValue)
+                }
+                updatedLabels.append(LinesChartLabel(value: label.value, text: "≈$\(text)"))
+            }
+            labels = updatedLabels
+        }
+        return (range, labels)
+    }
+    
     func updateChartVerticalRanges(horizontalRange: ClosedRange<CGFloat>, animated: Bool) {
         if let range = BarChartRenderer.BarsData.verticalRange(bars: visibleBars,
                                                                separate: self.step,
                                                                calculatingRange: horizontalRange,
                                                                addBounds: true) {
-            let (range, labels) = verticalLimitsLabels(verticalRange: range)
+            let (range, labels) = verticalLimitsLabels(verticalRange: range, secondary: false)
             if verticalScalesRenderer.verticalRange.end != range {
                 verticalScalesRenderer.setup(verticalLimitsLabels: labels, animated: animated)
             }
             verticalScalesRenderer.setVisible(true, animated: animated)
             
+            if let secondaryScalesRenderer = self.secondaryScalesRenderer {
+                let (range, labels) = verticalLimitsLabels(verticalRange: range, secondary: true)
+                if secondaryScalesRenderer.verticalRange.end != range {
+                    secondaryScalesRenderer.setup(verticalLimitsLabels: labels, animated: animated)
+                }
+                secondaryScalesRenderer.setVisible(true, animated: animated)
+            }
+            
             setupMainChart(verticalRange: range, animated: animated)
         } else {
             verticalScalesRenderer.setVisible(false, animated: animated)
+            secondaryScalesRenderer?.setVisible(false, animated: animated)
         }
         
         if let range = BarChartRenderer.BarsData.verticalRange(bars: visibleBars, separate: self.step) {
@@ -169,6 +203,7 @@ class BarsComponentController: GeneralChartComponentController {
         mainBarsRenderer.setup(verticalRange: verticalRange, animated: animated)
         horizontalScalesRenderer.setup(verticalRange: verticalRange, animated: animated)
         verticalScalesRenderer.setup(verticalRange: verticalRange, animated: animated)
+        secondaryScalesRenderer?.setup(verticalRange: verticalRange, animated: animated)
         lineBulletsRenderer.setup(verticalRange: verticalRange, animated: animated)
     }
     
@@ -232,6 +267,9 @@ class BarsComponentController: GeneralChartComponentController {
         verticalScalesRenderer.labelsColor = theme.chartLabelsColor
         verticalScalesRenderer.axisXColor = theme.barChartStrongLinesColor
         verticalScalesRenderer.horizontalLinesColor = theme.barChartStrongLinesColor
+        secondaryScalesRenderer?.labelsColor = theme.chartLabelsColor
+        secondaryScalesRenderer?.axisXColor = .clear
+        secondaryScalesRenderer?.horizontalLinesColor = .clear
         mainBarsRenderer.update(backgroundColor: theme.chartBackgroundColor, animated: false)
         previewBarsChartRenderer.update(backgroundColor: theme.chartBackgroundColor, animated: false)
         verticalLineRenderer.linesColor = theme.chartStrongLinesColor

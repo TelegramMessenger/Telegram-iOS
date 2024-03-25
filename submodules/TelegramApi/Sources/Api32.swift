@@ -1685,165 +1685,57 @@ public extension Api.smsjobs {
     }
 }
 public extension Api.stats {
-    enum BroadcastStats: TypeConstructorDescription {
-        case broadcastStats(period: Api.StatsDateRangeDays, followers: Api.StatsAbsValueAndPrev, viewsPerPost: Api.StatsAbsValueAndPrev, sharesPerPost: Api.StatsAbsValueAndPrev, reactionsPerPost: Api.StatsAbsValueAndPrev, viewsPerStory: Api.StatsAbsValueAndPrev, sharesPerStory: Api.StatsAbsValueAndPrev, reactionsPerStory: Api.StatsAbsValueAndPrev, enabledNotifications: Api.StatsPercentValue, growthGraph: Api.StatsGraph, followersGraph: Api.StatsGraph, muteGraph: Api.StatsGraph, topHoursGraph: Api.StatsGraph, interactionsGraph: Api.StatsGraph, ivInteractionsGraph: Api.StatsGraph, viewsBySourceGraph: Api.StatsGraph, newFollowersBySourceGraph: Api.StatsGraph, languagesGraph: Api.StatsGraph, reactionsByEmotionGraph: Api.StatsGraph, storyInteractionsGraph: Api.StatsGraph, storyReactionsByEmotionGraph: Api.StatsGraph, recentPostsInteractions: [Api.PostInteractionCounters])
+    enum BroadcastRevenueStats: TypeConstructorDescription {
+        case broadcastRevenueStats(topHoursGraph: Api.StatsGraph, revenueGraph: Api.StatsGraph, currentBalance: Int64, availableBalance: Int64, overallRevenue: Int64, usdRate: Double)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .broadcastStats(let period, let followers, let viewsPerPost, let sharesPerPost, let reactionsPerPost, let viewsPerStory, let sharesPerStory, let reactionsPerStory, let enabledNotifications, let growthGraph, let followersGraph, let muteGraph, let topHoursGraph, let interactionsGraph, let ivInteractionsGraph, let viewsBySourceGraph, let newFollowersBySourceGraph, let languagesGraph, let reactionsByEmotionGraph, let storyInteractionsGraph, let storyReactionsByEmotionGraph, let recentPostsInteractions):
+                case .broadcastRevenueStats(let topHoursGraph, let revenueGraph, let currentBalance, let availableBalance, let overallRevenue, let usdRate):
                     if boxed {
-                        buffer.appendInt32(963421692)
+                        buffer.appendInt32(-797226067)
                     }
-                    period.serialize(buffer, true)
-                    followers.serialize(buffer, true)
-                    viewsPerPost.serialize(buffer, true)
-                    sharesPerPost.serialize(buffer, true)
-                    reactionsPerPost.serialize(buffer, true)
-                    viewsPerStory.serialize(buffer, true)
-                    sharesPerStory.serialize(buffer, true)
-                    reactionsPerStory.serialize(buffer, true)
-                    enabledNotifications.serialize(buffer, true)
-                    growthGraph.serialize(buffer, true)
-                    followersGraph.serialize(buffer, true)
-                    muteGraph.serialize(buffer, true)
                     topHoursGraph.serialize(buffer, true)
-                    interactionsGraph.serialize(buffer, true)
-                    ivInteractionsGraph.serialize(buffer, true)
-                    viewsBySourceGraph.serialize(buffer, true)
-                    newFollowersBySourceGraph.serialize(buffer, true)
-                    languagesGraph.serialize(buffer, true)
-                    reactionsByEmotionGraph.serialize(buffer, true)
-                    storyInteractionsGraph.serialize(buffer, true)
-                    storyReactionsByEmotionGraph.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(recentPostsInteractions.count))
-                    for item in recentPostsInteractions {
-                        item.serialize(buffer, true)
-                    }
+                    revenueGraph.serialize(buffer, true)
+                    serializeInt64(currentBalance, buffer: buffer, boxed: false)
+                    serializeInt64(availableBalance, buffer: buffer, boxed: false)
+                    serializeInt64(overallRevenue, buffer: buffer, boxed: false)
+                    serializeDouble(usdRate, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .broadcastStats(let period, let followers, let viewsPerPost, let sharesPerPost, let reactionsPerPost, let viewsPerStory, let sharesPerStory, let reactionsPerStory, let enabledNotifications, let growthGraph, let followersGraph, let muteGraph, let topHoursGraph, let interactionsGraph, let ivInteractionsGraph, let viewsBySourceGraph, let newFollowersBySourceGraph, let languagesGraph, let reactionsByEmotionGraph, let storyInteractionsGraph, let storyReactionsByEmotionGraph, let recentPostsInteractions):
-                return ("broadcastStats", [("period", period as Any), ("followers", followers as Any), ("viewsPerPost", viewsPerPost as Any), ("sharesPerPost", sharesPerPost as Any), ("reactionsPerPost", reactionsPerPost as Any), ("viewsPerStory", viewsPerStory as Any), ("sharesPerStory", sharesPerStory as Any), ("reactionsPerStory", reactionsPerStory as Any), ("enabledNotifications", enabledNotifications as Any), ("growthGraph", growthGraph as Any), ("followersGraph", followersGraph as Any), ("muteGraph", muteGraph as Any), ("topHoursGraph", topHoursGraph as Any), ("interactionsGraph", interactionsGraph as Any), ("ivInteractionsGraph", ivInteractionsGraph as Any), ("viewsBySourceGraph", viewsBySourceGraph as Any), ("newFollowersBySourceGraph", newFollowersBySourceGraph as Any), ("languagesGraph", languagesGraph as Any), ("reactionsByEmotionGraph", reactionsByEmotionGraph as Any), ("storyInteractionsGraph", storyInteractionsGraph as Any), ("storyReactionsByEmotionGraph", storyReactionsByEmotionGraph as Any), ("recentPostsInteractions", recentPostsInteractions as Any)])
+                case .broadcastRevenueStats(let topHoursGraph, let revenueGraph, let currentBalance, let availableBalance, let overallRevenue, let usdRate):
+                return ("broadcastRevenueStats", [("topHoursGraph", topHoursGraph as Any), ("revenueGraph", revenueGraph as Any), ("currentBalance", currentBalance as Any), ("availableBalance", availableBalance as Any), ("overallRevenue", overallRevenue as Any), ("usdRate", usdRate as Any)])
     }
     }
     
-        public static func parse_broadcastStats(_ reader: BufferReader) -> BroadcastStats? {
-            var _1: Api.StatsDateRangeDays?
+        public static func parse_broadcastRevenueStats(_ reader: BufferReader) -> BroadcastRevenueStats? {
+            var _1: Api.StatsGraph?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.StatsDateRangeDays
+                _1 = Api.parse(reader, signature: signature) as? Api.StatsGraph
             }
-            var _2: Api.StatsAbsValueAndPrev?
+            var _2: Api.StatsGraph?
             if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
+                _2 = Api.parse(reader, signature: signature) as? Api.StatsGraph
             }
-            var _3: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _4: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _5: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _6: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _7: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _8: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _9: Api.StatsPercentValue?
-            if let signature = reader.readInt32() {
-                _9 = Api.parse(reader, signature: signature) as? Api.StatsPercentValue
-            }
-            var _10: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _10 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _11: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _11 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _12: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _12 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _13: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _13 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _14: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _14 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _15: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _15 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _16: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _16 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _17: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _17 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _18: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _18 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _19: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _19 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _20: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _20 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _21: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _21 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _22: [Api.PostInteractionCounters]?
-            if let _ = reader.readInt32() {
-                _22 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PostInteractionCounters.self)
-            }
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int64?
+            _4 = reader.readInt64()
+            var _5: Int64?
+            _5 = reader.readInt64()
+            var _6: Double?
+            _6 = reader.readDouble()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = _8 != nil
-            let _c9 = _9 != nil
-            let _c10 = _10 != nil
-            let _c11 = _11 != nil
-            let _c12 = _12 != nil
-            let _c13 = _13 != nil
-            let _c14 = _14 != nil
-            let _c15 = _15 != nil
-            let _c16 = _16 != nil
-            let _c17 = _17 != nil
-            let _c18 = _18 != nil
-            let _c19 = _19 != nil
-            let _c20 = _20 != nil
-            let _c21 = _21 != nil
-            let _c22 = _22 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 {
-                return Api.stats.BroadcastStats.broadcastStats(period: _1!, followers: _2!, viewsPerPost: _3!, sharesPerPost: _4!, reactionsPerPost: _5!, viewsPerStory: _6!, sharesPerStory: _7!, reactionsPerStory: _8!, enabledNotifications: _9!, growthGraph: _10!, followersGraph: _11!, muteGraph: _12!, topHoursGraph: _13!, interactionsGraph: _14!, ivInteractionsGraph: _15!, viewsBySourceGraph: _16!, newFollowersBySourceGraph: _17!, languagesGraph: _18!, reactionsByEmotionGraph: _19!, storyInteractionsGraph: _20!, storyReactionsByEmotionGraph: _21!, recentPostsInteractions: _22!)
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.stats.BroadcastRevenueStats.broadcastRevenueStats(topHoursGraph: _1!, revenueGraph: _2!, currentBalance: _3!, availableBalance: _4!, overallRevenue: _5!, usdRate: _6!)
             }
             else {
                 return nil
@@ -1853,46 +1745,19 @@ public extension Api.stats {
     }
 }
 public extension Api.stats {
-    enum MegagroupStats: TypeConstructorDescription {
-        case megagroupStats(period: Api.StatsDateRangeDays, members: Api.StatsAbsValueAndPrev, messages: Api.StatsAbsValueAndPrev, viewers: Api.StatsAbsValueAndPrev, posters: Api.StatsAbsValueAndPrev, growthGraph: Api.StatsGraph, membersGraph: Api.StatsGraph, newMembersBySourceGraph: Api.StatsGraph, languagesGraph: Api.StatsGraph, messagesGraph: Api.StatsGraph, actionsGraph: Api.StatsGraph, topHoursGraph: Api.StatsGraph, weekdaysGraph: Api.StatsGraph, topPosters: [Api.StatsGroupTopPoster], topAdmins: [Api.StatsGroupTopAdmin], topInviters: [Api.StatsGroupTopInviter], users: [Api.User])
+    enum BroadcastRevenueTransactions: TypeConstructorDescription {
+        case broadcastRevenueTransactions(count: Int32, transactions: [Api.BroadcastRevenueTransaction])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .megagroupStats(let period, let members, let messages, let viewers, let posters, let growthGraph, let membersGraph, let newMembersBySourceGraph, let languagesGraph, let messagesGraph, let actionsGraph, let topHoursGraph, let weekdaysGraph, let topPosters, let topAdmins, let topInviters, let users):
+                case .broadcastRevenueTransactions(let count, let transactions):
                     if boxed {
-                        buffer.appendInt32(-276825834)
+                        buffer.appendInt32(-2028632986)
                     }
-                    period.serialize(buffer, true)
-                    members.serialize(buffer, true)
-                    messages.serialize(buffer, true)
-                    viewers.serialize(buffer, true)
-                    posters.serialize(buffer, true)
-                    growthGraph.serialize(buffer, true)
-                    membersGraph.serialize(buffer, true)
-                    newMembersBySourceGraph.serialize(buffer, true)
-                    languagesGraph.serialize(buffer, true)
-                    messagesGraph.serialize(buffer, true)
-                    actionsGraph.serialize(buffer, true)
-                    topHoursGraph.serialize(buffer, true)
-                    weekdaysGraph.serialize(buffer, true)
+                    serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(topPosters.count))
-                    for item in topPosters {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(topAdmins.count))
-                    for item in topAdmins {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(topInviters.count))
-                    for item in topInviters {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
+                    buffer.appendInt32(Int32(transactions.count))
+                    for item in transactions {
                         item.serialize(buffer, true)
                     }
                     break
@@ -1901,99 +1766,22 @@ public extension Api.stats {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .megagroupStats(let period, let members, let messages, let viewers, let posters, let growthGraph, let membersGraph, let newMembersBySourceGraph, let languagesGraph, let messagesGraph, let actionsGraph, let topHoursGraph, let weekdaysGraph, let topPosters, let topAdmins, let topInviters, let users):
-                return ("megagroupStats", [("period", period as Any), ("members", members as Any), ("messages", messages as Any), ("viewers", viewers as Any), ("posters", posters as Any), ("growthGraph", growthGraph as Any), ("membersGraph", membersGraph as Any), ("newMembersBySourceGraph", newMembersBySourceGraph as Any), ("languagesGraph", languagesGraph as Any), ("messagesGraph", messagesGraph as Any), ("actionsGraph", actionsGraph as Any), ("topHoursGraph", topHoursGraph as Any), ("weekdaysGraph", weekdaysGraph as Any), ("topPosters", topPosters as Any), ("topAdmins", topAdmins as Any), ("topInviters", topInviters as Any), ("users", users as Any)])
+                case .broadcastRevenueTransactions(let count, let transactions):
+                return ("broadcastRevenueTransactions", [("count", count as Any), ("transactions", transactions as Any)])
     }
     }
     
-        public static func parse_megagroupStats(_ reader: BufferReader) -> MegagroupStats? {
-            var _1: Api.StatsDateRangeDays?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.StatsDateRangeDays
-            }
-            var _2: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _3: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _4: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _5: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _6: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _7: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _8: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _9: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _9 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _10: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _10 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _11: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _11 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _12: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _12 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _13: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _13 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _14: [Api.StatsGroupTopPoster]?
+        public static func parse_broadcastRevenueTransactions(_ reader: BufferReader) -> BroadcastRevenueTransactions? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.BroadcastRevenueTransaction]?
             if let _ = reader.readInt32() {
-                _14 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StatsGroupTopPoster.self)
-            }
-            var _15: [Api.StatsGroupTopAdmin]?
-            if let _ = reader.readInt32() {
-                _15 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StatsGroupTopAdmin.self)
-            }
-            var _16: [Api.StatsGroupTopInviter]?
-            if let _ = reader.readInt32() {
-                _16 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StatsGroupTopInviter.self)
-            }
-            var _17: [Api.User]?
-            if let _ = reader.readInt32() {
-                _17 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BroadcastRevenueTransaction.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = _8 != nil
-            let _c9 = _9 != nil
-            let _c10 = _10 != nil
-            let _c11 = _11 != nil
-            let _c12 = _12 != nil
-            let _c13 = _13 != nil
-            let _c14 = _14 != nil
-            let _c15 = _15 != nil
-            let _c16 = _16 != nil
-            let _c17 = _17 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 {
-                return Api.stats.MegagroupStats.megagroupStats(period: _1!, members: _2!, messages: _3!, viewers: _4!, posters: _5!, growthGraph: _6!, membersGraph: _7!, newMembersBySourceGraph: _8!, languagesGraph: _9!, messagesGraph: _10!, actionsGraph: _11!, topHoursGraph: _12!, weekdaysGraph: _13!, topPosters: _14!, topAdmins: _15!, topInviters: _16!, users: _17!)
+            if _c1 && _c2 {
+                return Api.stats.BroadcastRevenueTransactions.broadcastRevenueTransactions(count: _1!, transactions: _2!)
             }
             else {
                 return nil

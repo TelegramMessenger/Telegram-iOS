@@ -478,6 +478,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         var actions: [ContextMenuItem] = []
         
         if "".isEmpty {
+//        if adAttribute.canReport {
             //TODO:localize
             
             actions.append(.action(ContextMenuActionItem(text: "About This Ad", textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in

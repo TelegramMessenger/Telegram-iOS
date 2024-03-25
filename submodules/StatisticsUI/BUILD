@@ -44,8 +44,9 @@ swift_library(
         "//submodules/Components/SheetComponent",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/MultilineTextWithEntitiesComponent",
-        "//submodules/QrCodeUI",
+        "//submodules/TelegramNotices",
         "//submodules/UIKitRuntimeUtils",
+        "//submodules/PeerInfoUI",
     ],
     visibility = [
         "//visibility:public",

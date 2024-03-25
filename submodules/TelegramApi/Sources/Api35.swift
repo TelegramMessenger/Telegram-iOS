@@ -3171,6 +3171,24 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
+                static func restrictSponsoredMessages(flags: Int32, channel: Api.InputChannel, restricted: Api.Bool, minCpm: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(968593985)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    channel.serialize(buffer, true)
+                    restricted.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(minCpm!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "channels.restrictSponsoredMessages", parameters: [("flags", String(describing: flags)), ("channel", String(describing: channel)), ("restricted", String(describing: restricted)), ("minCpm", String(describing: minCpm))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.channels {
                 static func setBoostsToUnblockRestrictions(channel: Api.InputChannel, boosts: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1388733202)
@@ -9412,6 +9430,55 @@ public extension Api.functions.smsjobs {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stats {
+                static func getBroadcastRevenueStats(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastRevenueStats>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1977595505)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    channel.serialize(buffer, true)
+                    return (FunctionDescription(name: "stats.getBroadcastRevenueStats", parameters: [("flags", String(describing: flags)), ("channel", String(describing: channel))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.BroadcastRevenueStats? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.stats.BroadcastRevenueStats?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.stats.BroadcastRevenueStats
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stats {
+                static func getBroadcastRevenueTransactions(channel: Api.InputChannel, offset: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastRevenueTransactions>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(6891535)
+                    channel.serialize(buffer, true)
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stats.getBroadcastRevenueTransactions", parameters: [("channel", String(describing: channel)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.BroadcastRevenueTransactions? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.stats.BroadcastRevenueTransactions?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.stats.BroadcastRevenueTransactions
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stats {
+                static func getBroadcastRevenueWithdrawalUrl(channel: Api.InputChannel, password: Api.InputCheckPasswordSRP) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastRevenueWithdrawalUrl>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(711323507)
+                    channel.serialize(buffer, true)
+                    password.serialize(buffer, true)
+                    return (FunctionDescription(name: "stats.getBroadcastRevenueWithdrawalUrl", parameters: [("channel", String(describing: channel)), ("password", String(describing: password))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.BroadcastRevenueWithdrawalUrl? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.stats.BroadcastRevenueWithdrawalUrl?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.stats.BroadcastRevenueWithdrawalUrl
                         }
                         return result
                     })

@@ -79,7 +79,7 @@ final class PeerInfoBirthdayOverlay: ASDisplayNode {
             
             if let effectFile {
                 let _ = freeMediaFileInteractiveFetched(account: self.context.account, userLocation: .peer(self.context.account.peerId), fileReference: effectFile).startStandalone()
-                self.setupEffectAnimation(size: size, file: effectFile)
+                self.setupEffectAnimation(size: size, file: effectFile, sourceRect: sourceRect)
             }
             for file in numberFiles {
                 let _ = freeMediaFileInteractiveFetched(account: self.context.account, userLocation: .peer(self.context.account.peerId), fileReference: file).startStandalone()
@@ -88,7 +88,7 @@ final class PeerInfoBirthdayOverlay: ASDisplayNode {
         })
     }
     
-    private func setupEffectAnimation(size: CGSize, file: FileMediaReference) {
+    private func setupEffectAnimation(size: CGSize, file: FileMediaReference, sourceRect: CGRect?) {
         guard let dimensions = file.media.dimensions else {
             return
         }
@@ -102,9 +102,11 @@ final class PeerInfoBirthdayOverlay: ASDisplayNode {
         animationNode.setup(source: source, width: Int(pixelSize.width), height: Int(pixelSize.height), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
         self.addSubnode(animationNode)
         
+        let startY = sourceRect?.midY ?? size.height / 2.0
+        
         animationNode.updateLayout(size: animationSize)
         animationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-        animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - animationSize.width) / 2.0), y: floor((size.height - animationSize.height) / 2.0)), size: animationSize)
+        animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - animationSize.width) / 2.0), y: startY - animationSize.height / 2.0), size: animationSize)
         animationNode.visibility = true
     }
     

@@ -665,6 +665,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     tokens = tokens.filter { !peerIds.contains($0.id) }
                 }
                 self.contactsNode.editableTokens = tokens
+                self.updateTitle()
                 self.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
 
             }

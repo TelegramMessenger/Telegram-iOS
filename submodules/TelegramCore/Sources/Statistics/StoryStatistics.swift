@@ -369,8 +369,8 @@ private final class StoryStatsPublicForwardsContextImpl {
                 return
             }
             strongSelf.lastOffset = nextOffset
-            for forwards in forwards {
-                strongSelf.results.append(forwards)
+            for forward in forwards {
+                strongSelf.results.append(forward)
             }
             strongSelf.isLoadingMore = false
             strongSelf.hasLoadedOnce = true

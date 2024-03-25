@@ -23,14 +23,26 @@ public class StackedBarsChartController: BaseChartController {
         }
     }
     
-    override public init(chartsCollection: ChartsCollection)  {
+    public init(chartsCollection: ChartsCollection, isCrypto: Bool = false, rate: Double = 1.0)  {
         let horizontalScalesRenderer = HorizontalScalesRenderer()
         let verticalScalesRenderer = VerticalScalesRenderer()
+        var secondaryScalesRenderer: VerticalScalesRenderer?
+        if isCrypto {
+            verticalScalesRenderer.isCrypto = true
+            secondaryScalesRenderer = VerticalScalesRenderer()
+            secondaryScalesRenderer?.isRightAligned = true
+        }
         barsController = BarsComponentController(isZoomed: false,
                                                  mainBarsRenderer: BarChartRenderer(),
                                                  horizontalScalesRenderer: horizontalScalesRenderer,
                                                  verticalScalesRenderer: verticalScalesRenderer,
+                                                 secondaryScalesRenderer: secondaryScalesRenderer,
                                                  previewBarsChartRenderer: BarChartRenderer())
+        if isCrypto {
+            barsController.conversionRate = rate
+            barsController.verticalLimitsNumberFormatter = BaseConstants.tonNumberFormatter
+            barsController.detailsNumberFormatter = BaseConstants.tonNumberFormatter
+        }
         zoomedBarsController = BarsComponentController(isZoomed: true,
                                                        mainBarsRenderer: BarChartRenderer(),
                                                        horizontalScalesRenderer: horizontalScalesRenderer,
@@ -67,12 +79,16 @@ public class StackedBarsChartController: BaseChartController {
     }
     
     public override var mainChartRenderers: [ChartViewRenderer] {
-        return [barsController.mainBarsRenderer,
+        var renderers = [barsController.mainBarsRenderer,
                 zoomedBarsController.mainBarsRenderer,
                 barsController.horizontalScalesRenderer,
                 barsController.verticalScalesRenderer,
 //                performanceRenderer
         ]
+        if let secondary = barsController.secondaryScalesRenderer {
+            renderers.append(secondary)
+        }
+        return renderers
     }
     
     public override var navigationRenderers: [ChartViewRenderer] {

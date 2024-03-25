@@ -35,7 +35,7 @@ extension StoryStats: Stats {
     
 }
 
-extension MonetizationStats: Stats {
+extension RevenueStats: Stats {
     
 }
 
@@ -708,16 +708,17 @@ class StatsOverviewItemNode: ListViewItemNode {
                 } else {
                     height += topLeftItemLayoutAndApply!.0.height * 4.0 + verticalSpacing * 3.0
                 }
-            } else if let _ = item.stats as? MonetizationStats {
+            } else if let stats = item.stats as? RevenueStats {
                 twoColumnLayout = false
+                
                 
                 topLeftItemLayoutAndApply = makeTopLeftItemLayout(
                     item.context,
                     params.width,
                     item.presentationData,
-                    "54.12",
-                    "Balance Available to Withdraw",
-                    ("≈$123", .generic),
+                    formatBalanceText(stats.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
+                    item.presentationData.strings.Monetization_Overview_Available,
+                    (stats.availableBalance == 0 ? "" : "≈\(formatUsdValue(stats.availableBalance, rate: stats.usdRate))", .generic),
                     item.animatedEmoji
                 )
                 
@@ -725,9 +726,9 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.context,
                     params.width,
                     item.presentationData,
-                    "84.52",
-                    "Proceeds Since Last Withdrawal",
-                    ("≈$226", .generic),
+                    formatBalanceText(stats.currentBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
+                    item.presentationData.strings.Monetization_Overview_Current,
+                    (stats.currentBalance == 0 ? "" : "≈\(formatUsdValue(stats.currentBalance, rate: stats.usdRate))", .generic),
                     item.animatedEmoji
                 )
                 
@@ -735,9 +736,9 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.context,
                     params.width,
                     item.presentationData,
-                    "692.52",
-                    "Total Lifetime Proceeds",
-                    ("≈$1858", .generic),
+                    formatBalanceText(stats.overallRevenue, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
+                    item.presentationData.strings.Monetization_Overview_Total,
+                    (stats.overallRevenue == 0 ? "" : "≈\(formatUsdValue(stats.overallRevenue, rate: stats.usdRate))", .generic),
                     item.animatedEmoji
                 )
                 

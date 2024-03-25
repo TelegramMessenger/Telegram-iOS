@@ -79,7 +79,7 @@ private final class SheetContent: CombinedComponent {
             let state = context.state
             
             let theme = environment.theme
-//            let strings = environment.strings
+            let strings = environment.strings
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let textSideInset: CGFloat = 30.0 + environment.safeInsets.left
@@ -94,9 +94,7 @@ private final class SheetContent: CombinedComponent {
             let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
                 return (TelegramTextAttributes.URL, contents)
             })
-            
-            //TODO:localize
-            
+                        
             let spacing: CGFloat = 16.0
             var contentSize = CGSize(width: context.availableSize.width, height: 32.0)
                                     
@@ -136,7 +134,7 @@ private final class SheetContent: CombinedComponent {
             
             let title = title.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Earn From Your Channel", font: titleFont, textColor: textColor)),
+                    text: .plain(NSAttributedString(string: strings.Monetization_Intro_Title, font: titleFont, textColor: textColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.1
@@ -156,9 +154,9 @@ private final class SheetContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "ads",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Telegram Ads",
+                        title: strings.Monetization_Intro_Ads_Title,
                         titleColor: textColor,
-                        text: "Telegram can display ads in your channel.",
+                        text: strings.Monetization_Intro_Ads_Text,
                         textColor: secondaryTextColor,
                         iconName: "Ads/Ads",
                         iconColor: linkColor
@@ -169,9 +167,9 @@ private final class SheetContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "split",
                     component: AnyComponent(ParagraphComponent(
-                        title: "50:50 Revenue Split",
+                        title: strings.Monetization_Intro_Split_Title,
                         titleColor: textColor,
-                        text: "You receive 50% of the ad revenue in TON.",
+                        text: strings.Monetization_Intro_Split_Text,
                         textColor: secondaryTextColor,
                         iconName: "Ads/Split",
                         iconColor: linkColor
@@ -182,9 +180,9 @@ private final class SheetContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "withdrawal",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Flexible Withdrawals",
+                        title: strings.Monetization_Intro_Withdrawal_Title,
                         titleColor: textColor,
-                        text: "You can withdraw your TON any time.",
+                        text: strings.Monetization_Intro_Withdrawal_Text,
                         textColor: secondaryTextColor,
                         iconName: "Ads/Withdrawal",
                         iconColor: linkColor
@@ -203,7 +201,7 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += list.size.height
             contentSize.height += spacing - 9.0
             
-            let infoTitleString = "What's #TON?"//.replacingOccurrences(of: "#", with: "# ")
+            let infoTitleString = strings.Monetization_Intro_Info_Title
             let infoTitleAttributedString = NSMutableAttributedString(string: infoTitleString, font: titleFont, textColor: textColor)
             let range = (infoTitleAttributedString.string as NSString).range(of: "#")
             if range.location != NSNotFound, let emojiFile = component.context.animatedEmojiStickersValue["💎"]?.first?.file {
@@ -226,7 +224,7 @@ private final class SheetContent: CombinedComponent {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
             }
             
-            let infoString = "TON is a blockchain platform and cryptocurrency that Telegram uses for its record scalability and ultra low commissions on transactions.\n[Learn More >]()"
+            let infoString = strings.Monetization_Intro_Info_Text
             let infoAttributedString = parseMarkdownIntoAttributedString(infoString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = infoAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
                 infoAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: infoAttributedString.string))
@@ -274,7 +272,7 @@ private final class SheetContent: CombinedComponent {
             
             let actionButton = actionButton.update(
                 component: SolidRoundedButtonComponent(
-                    title: "Understood",
+                    title: strings.Monetization_Intro_Understood,
                     theme: SolidRoundedButtonComponent.Theme(
                         backgroundColor: theme.list.itemCheckColors.fillColor,
                         backgroundColors: [],

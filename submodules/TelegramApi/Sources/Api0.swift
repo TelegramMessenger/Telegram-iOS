@@ -105,6 +105,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-944407322] = { return Api.BotMenuButton.parse_botMenuButton($0) }
     dict[1113113093] = { return Api.BotMenuButton.parse_botMenuButtonCommands($0) }
     dict[1966318984] = { return Api.BotMenuButton.parse_botMenuButtonDefault($0) }
+    dict[1434332356] = { return Api.BroadcastRevenueTransaction.parse_broadcastRevenueTransactionProceeds($0) }
+    dict[1121127726] = { return Api.BroadcastRevenueTransaction.parse_broadcastRevenueTransactionRefund($0) }
+    dict[1515784568] = { return Api.BroadcastRevenueTransaction.parse_broadcastRevenueTransactionWithdrawal($0) }
     dict[-283809188] = { return Api.BusinessAwayMessage.parse_businessAwayMessage($0) }
     dict[-910564679] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleAlways($0) }
     dict[-867328308] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleCustom($0) }
@@ -195,7 +198,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1605510357] = { return Api.ChatAdminRights.parse_chatAdminRights($0) }
     dict[-219353309] = { return Api.ChatAdminWithInvites.parse_chatAdminWithInvites($0) }
     dict[-1626209256] = { return Api.ChatBannedRights.parse_chatBannedRights($0) }
-    dict[1153455271] = { return Api.ChatFull.parse_channelFull($0) }
+    dict[1745581884] = { return Api.ChatFull.parse_channelFull($0) }
     dict[-908914376] = { return Api.ChatFull.parse_chatFull($0) }
     dict[-840897472] = { return Api.ChatInvite.parse_chatInvite($0) }
     dict[1516793212] = { return Api.ChatInvite.parse_chatInviteAlready($0) }
@@ -1292,6 +1295,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1696454430] = { return Api.premium.MyBoosts.parse_myBoosts($0) }
     dict[-594852657] = { return Api.smsjobs.EligibilityToJoin.parse_eligibleToJoin($0) }
     dict[720277905] = { return Api.smsjobs.Status.parse_status($0) }
+    dict[-797226067] = { return Api.stats.BroadcastRevenueStats.parse_broadcastRevenueStats($0) }
+    dict[-2028632986] = { return Api.stats.BroadcastRevenueTransactions.parse_broadcastRevenueTransactions($0) }
+    dict[-328886473] = { return Api.stats.BroadcastRevenueWithdrawalUrl.parse_broadcastRevenueWithdrawalUrl($0) }
     dict[963421692] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
     dict[-276825834] = { return Api.stats.MegagroupStats.parse_megagroupStats($0) }
     dict[2145983508] = { return Api.stats.MessageStats.parse_messageStats($0) }
@@ -1346,7 +1352,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
@@ -1439,6 +1445,8 @@ public extension Api {
             case let _1 as Api.BotInlineResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotMenuButton:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.BroadcastRevenueTransaction:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BusinessAwayMessage:
                 _1.serialize(buffer, boxed)
@@ -2303,6 +2311,12 @@ public extension Api {
             case let _1 as Api.smsjobs.EligibilityToJoin:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.smsjobs.Status:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stats.BroadcastRevenueStats:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stats.BroadcastRevenueTransactions:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stats.BroadcastRevenueWithdrawalUrl:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stats.BroadcastStats:
                 _1.serialize(buffer, boxed)

@@ -435,6 +435,10 @@ public extension TelegramEngine {
             return _internal_updateChannelHistoryAvailabilitySettingsInteractively(postbox: self.account.postbox, network: self.account.network, accountStateManager: self.account.stateManager, peerId: peerId, historyAvailableForNewMembers: historyAvailableForNewMembers)
         }
 
+        public func updateChannelRestrictAdMessages(peerId: PeerId, value: ChannelRestrictAdMessagesValue) -> Signal<Never, ChannelRestrictAdMessagesError> {
+            return _internal_updateChannelRestrictAdMessages(account: self.account, peerId: peerId, value: value)
+        }
+        
         public func channelMembers(peerId: PeerId, category: ChannelMembersCategory = .recent(.all), offset: Int32 = 0, limit: Int32 = 64, hash: Int64 = 0) -> Signal<[RenderedChannelParticipant]?, NoError> {
             return _internal_channelMembers(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, peerId: peerId, category: category, offset: offset, limit: limit, hash: hash)
         }
@@ -444,7 +448,7 @@ public extension TelegramEngine {
         }
 
         public func updateChannelOwnership(channelId: PeerId, memberId: PeerId, password: String) -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> {
-            return _internal_updateChannelOwnership(account: self.account, accountStateManager: self.account.stateManager, channelId: channelId, memberId: memberId, password: password)
+            return _internal_updateChannelOwnership(account: self.account, channelId: channelId, memberId: memberId, password: password)
         }
 
         public func searchGroupMembers(peerId: PeerId, query: String) -> Signal<[EnginePeer], NoError> {
@@ -809,6 +813,14 @@ public extension TelegramEngine {
         
         public func updatePeerEmojiStatus(peerId: EnginePeer.Id, fileId: Int64?, expirationDate: Int32?) -> Signal<Never, UpdatePeerEmojiStatusError> {
             return _internal_updatePeerEmojiStatus(account: self.account, peerId: peerId, fileId: fileId, expirationDate: expirationDate)
+        }
+        
+        public func checkChannelRevenueWithdrawalAvailability() -> Signal<Never, RequestRevenueWithdrawalError> {
+            return _internal_checkChannelRevenueWithdrawalAvailability(account: self.account)
+        }
+        
+        public func requestChannelRevenueWithdrawalUrl(peerId: EnginePeer.Id, password: String) -> Signal<String, RequestRevenueWithdrawalError> {
+            return _internal_requestChannelRevenueWithdrawalUrl(account: self.account, peerId: peerId, password: password)
         }
         
         public func getChatListPeers(filterPredicate: ChatListFilterPredicate) -> Signal<[EnginePeer], NoError> {

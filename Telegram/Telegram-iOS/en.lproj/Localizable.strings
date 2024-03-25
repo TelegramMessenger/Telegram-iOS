@@ -11671,3 +11671,56 @@ Sorry for the inconvenience.";
 "Business.LinksInfo" = "Create links that start a chat with you, suggesting the first message.";
 
 "Settings.About.PrivacyHelp" = "You can add a few lines about yourself. Choose who can see your bio in [Settings]().";
+
+"Attachment.Create" = "Create";
+"Attachment.SelectFromFiles" = "Select From Files";
+
+"Stats.Monetization" = "Monetization";
+
+"Monetization.Header" = "Telegram shares 50% of the revenue from ads displayed in your channel. [Learn More >]()";
+"Monetization.ImpressionsTitle" = "AD IMPRESSIONS (BY HOURS)";
+"Monetization.AdRevenueTitle" = "AD REVENUE";
+"Monetization.OverviewTitle" = "PROCEEDS OVERVIEW";
+"Monetization.BalanceTitle" = "AVAILABLE BALANCE";
+"Monetization.BalanceInfo" = "You will be able to collect rewards using Fragment, a third-party platform used by the advertizer to pay for the ad. [Learn More >]()";
+"Monetization.BalanceWithdraw" = "Withdraw via Fragment";
+"Monetization.TransactionsTitle" = "TRANSACTION HISTORY";
+
+"Monetization.Overview.Available" = "Balance Available to Withdraw";
+"Monetization.Overview.Current" = "Proceeds Since Last Withdrawal";
+"Monetization.Overview.Total" = "Total Lifetime Proceeds";
+
+"Monetization.Transaction.Proceeds" = "Proceeds from Ads";
+"Monetization.Transaction.Withdrawal" = "Withdrawal via %@";
+"Monetization.Transaction.Refund" = "Refund";
+"Monetization.Transaction.Pending" = "Pending";
+"Monetization.Transaction.Failed" = "Not Completed";
+
+"Monetization.SwitchOffAds" = "Switch off Ads";
+"Monetization.SwitchOffAdsInfo" = "You will not be eligible for any rewards if you switch off ads.";
+
+"Monetization.Withdraw.EnterPassword.Title" = "Enter Password";
+"Monetization.Withdraw.EnterPassword.Text" = "Please enter your Two-Step Verification password to complete this action.";
+"Monetization.Withdraw.EnterPassword.Done" = "Proceed";
+
+"Monetization.TransactionInfo.Proceeds" = "Proceeds from Ads displayed in";
+"Monetization.TransactionInfo.Withdrawal" = "Balance Withdrawal via %@";
+"Monetization.TransactionInfo.Pending" = "Pending";
+"Monetization.TransactionInfo.Failed" = "Not Completed";
+"Monetization.TransactionInfo.Refund" = "Refund";
+"Monetization.TransactionInfo.ViewInExplorer" = "View in Blockchain Explorer";
+
+"Monetization.Intro.Title" = "Earn From Your Channel";
+
+"Monetization.Intro.Ads.Title" = "Telegram Ads";
+"Monetization.Intro.Ads.Text" = "Telegram can display ads in your channel.";
+
+"Monetization.Intro.Split.Title" = "50:50 Revenue Split";
+"Monetization.Intro.Split.Text" = "You receive 50% of the ad revenue in TON.";
+
+"Monetization.Intro.Withdrawal.Title" = "Flexible Withdrawals";
+"Monetization.Intro.Withdrawal.Text" = "You can withdraw your TON any time.";
+
+"Monetization.Intro.Info.Title" = "What's #TON?";
+"Monetization.Intro.Info.Text" = "TON is a blockchain platform and cryptocurrency that Telegram uses for its record scalability and ultra low commissions on transactions. [Learn More >]()";
+"Monetization.Intro.Understood" = "Understood";

@@ -71,7 +71,7 @@ func _internal_checkOwnershipTranfserAvailability(postbox: Postbox, network: Net
     }
 }
 
-func _internal_updateChannelOwnership(account: Account, accountStateManager: AccountStateManager, channelId: PeerId, memberId: PeerId, password: String) -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> {
+func _internal_updateChannelOwnership(account: Account, channelId: PeerId, memberId: PeerId, password: String) -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> {
     guard !password.isEmpty else {
         return .fail(.invalidPassword)
     }
@@ -141,7 +141,7 @@ func _internal_updateChannelOwnership(account: Account, accountStateManager: Acc
                         return .generic
                     }
                     |> mapToSignal { updates -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> in
-                        accountStateManager.addUpdates(updates)
+                        account.stateManager.addUpdates(updates)
                         
                         return account.postbox.transaction { transaction -> [(ChannelParticipant?, RenderedChannelParticipant)] in
                             transaction.updatePeerCachedData(peerIds: Set([channelId]), update: { _, cachedData -> CachedPeerData? in

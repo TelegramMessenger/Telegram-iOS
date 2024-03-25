@@ -67,7 +67,6 @@ swift_library(
         "//submodules/TelegramIntents:TelegramIntents",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
-        "//submodules/StatisticsUI:StatisticsUI",
         "//submodules/ChatListFilterSettingsHeaderItem:ChatListFilterSettingsHeaderItem",
         "//submodules/InviteLinksUI:InviteLinksUI",
         "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",

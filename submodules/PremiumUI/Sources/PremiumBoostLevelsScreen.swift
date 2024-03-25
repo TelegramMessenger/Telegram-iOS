@@ -58,7 +58,7 @@ func requiredBoostSubjectLevel(subject: BoostSubject, group: Bool, context: Acco
     case .emojiPack:
         return configuration.minGroupEmojiPackLevel
     case .noAds:
-        return 30
+        return configuration.minChannelRestrictAdsLevel
     }
 }
 
@@ -1185,7 +1185,8 @@ private final class SheetContent: CombinedComponent {
            
             if !isGroup {
                 let noAdsLevel = requiredBoostSubjectLevel(subject: .noAds, group: false, context: component.context, configuration: premiumConfiguration)
-                if level < noAdsLevel {
+                if let nextLevels, noAdsLevel <= nextLevels.upperBound {
+                } else if level < noAdsLevel {
                     layoutLevel(noAdsLevel)
                 }
             }
