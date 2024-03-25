@@ -884,6 +884,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         bottomInset: environment.safeInsets.bottom,
                         deviceMetrics: environment.deviceMetrics,
                         emojiContent: emojiContent.withSelectedItems(Set(enabledReactions.map(\.file.fileId))),
+                        stickerContent: nil,
                         backgroundIconColor: nil,
                         backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
                         separatorColor: environment.theme.list.itemBlocksSeparatorColor,

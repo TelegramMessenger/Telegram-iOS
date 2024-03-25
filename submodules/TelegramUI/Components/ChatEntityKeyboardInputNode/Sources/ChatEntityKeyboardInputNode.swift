@@ -1425,7 +1425,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         
                     var version = 0
                     strongSelf.stickerSearchDisposable.set((resultSignal
-                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                    |> deliverOnMainQueue).start(next: { result in
                         guard let strongSelf = self else {
                             return
                         }

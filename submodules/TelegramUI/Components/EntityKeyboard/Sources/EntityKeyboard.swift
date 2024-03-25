@@ -272,7 +272,7 @@ public final class EntityKeyboardComponent: Component {
         private let pagerView: ComponentHostView<EntityKeyboardChildEnvironment>
         
         private var component: EntityKeyboardComponent?
-        private weak var state: EmptyComponentState?
+        public private(set) weak var state: EmptyComponentState?
         
         private var searchView: ComponentHostView<EntitySearchContentEnvironment>?
         private var searchComponent: EntitySearchContentComponent?

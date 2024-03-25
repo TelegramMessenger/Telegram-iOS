@@ -257,9 +257,15 @@ final class ChatbotSetupScreenComponent: Component {
             if !query.isEmpty {
                 if self.botResolutionState?.query != query {
                     let previousState = self.botResolutionState?.state
+                    let updatedState: BotResolutionState.State
+                    if let current = self.botResolutionState?.state, case .found = current {
+                        updatedState = current
+                    } else {
+                        updatedState = .searching
+                    }
                     self.botResolutionState = BotResolutionState(
                         query: query,
-                        state: self.botResolutionState?.state ?? .searching
+                        state: updatedState
                     )
                     self.botResolutionDisposable?.dispose()
                     
@@ -267,7 +273,19 @@ final class ChatbotSetupScreenComponent: Component {
                         self.state?.updated(transition: .spring(duration: 0.35))
                     }
                     
-                    self.botResolutionDisposable = (component.context.engine.peers.resolvePeerByName(name: query)
+                    var cleanQuery = query
+                    if let url = URL(string: cleanQuery), url.host == "t.me" {
+                        if url.pathComponents.count > 1 {
+                            cleanQuery = url.pathComponents[1]
+                        }
+                    } else if let url = URL(string: "https://\(cleanQuery)"), url.host == "t.me" {
+                        if url.pathComponents.count > 1 {
+                            cleanQuery = url.pathComponents[1]
+                        }
+                    }
+                    
+                    self.botResolutionDisposable = (component.context.engine.peers.resolvePeerByName(name: cleanQuery)
+                    |> delay(0.4, queue: .mainQueue())
                     |> deliverOnMainQueue).start(next: { [weak self] result in
                         guard let self else {
                             return
@@ -661,10 +679,20 @@ final class ChatbotSetupScreenComponent: Component {
                         guard let self else {
                             return
                         }
+                        self.endEditing(true)
+                        
                         if var botResolutionState = self.botResolutionState, case let .found(peer, isInstalled) = botResolutionState.state, !isInstalled {
-                            botResolutionState.state = .found(peer: peer, isInstalled: true)
-                            self.botResolutionState = botResolutionState
-                            self.state?.updated(transition: .spring(duration: 0.3))
+                            if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.isBusiness) {
+                                botResolutionState.state = .found(peer: peer, isInstalled: true)
+                                self.botResolutionState = botResolutionState
+                                self.state?.updated(transition: .spring(duration: 0.3))
+                            } else {
+                                //TODO:localize
+                                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "This bot doesn't support Telegram Business yet.", actions: [
+                                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                                    })
+                                ]), in: .window(.root))
+                            }
                         }
                     },
                     removeAction: { [weak self] in

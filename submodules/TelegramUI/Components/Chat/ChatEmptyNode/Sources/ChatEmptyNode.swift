@@ -21,6 +21,7 @@ import Markdown
 import ReactionSelectionNode
 import ChatMediaInputStickerGridItem
 import UndoUI
+import PremiumUI
 
 private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
@@ -1594,7 +1595,7 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
         self.badgeTextNode.attributedText = NSAttributedString(string: "how?", font: Font.regular(11.0), textColor: serviceColor.primaryText)
         let badgeTextSize = self.badgeTextNode.updateLayout(CGSize(width: 200.0, height: 100.0))
         if let lastLineFrame = labelRects.last {
-            let badgeTextFrame = CGRect(origin: CGPoint(x: lastLineFrame.maxX - badgeTextSize.width - 2.0, y: textFrame.maxY - badgeTextSize.height), size: badgeTextSize)
+            let badgeTextFrame = CGRect(origin: CGPoint(x: lastLineFrame.maxX - badgeTextSize.width - 3.0, y: textFrame.maxY - badgeTextSize.height), size: badgeTextSize)
             self.badgeTextNode.frame = badgeTextFrame
             
             let badgeBackgroundFrame = badgeTextFrame.insetBy(dx: -4.0, dy: -1.0)
@@ -1857,6 +1858,7 @@ public final class ChatEmptyNode: ASDisplayNode {
         self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(20.0, self.backgroundNode.bounds.height / 2.0), transition: transition)
         
         if displayAttachedDescription, let peer = interfaceState.renderedPeer?.chatMainPeer {
+            let isPremium = interfaceState.isPremium
             let attachedDescriptionNode: EmptyAttachedDescriptionNode
             if let current = self.attachedDescriptionNode {
                 attachedDescriptionNode = current
@@ -1869,7 +1871,32 @@ public final class ChatEmptyNode: ASDisplayNode {
                     guard let self else {
                         return
                     }
-                    let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .settings, forceDark: false, dismissed: nil)
+                    
+                    //TODO:localize
+                    let context = self.context
+                    var replaceImpl: ((ViewController) -> Void)?
+                    var dismissImpl: (() -> Void)?
+                    let controller = PremiumLimitsListScreen(context: context, subject: .business, source: .other, order: [.business], buttonText: "OK", isPremium: false, forceDark: false)
+                    controller.action = {
+                        if isPremium {
+                            dismissImpl?()
+                        } else {
+                            let controller = PremiumIntroScreen(context: context, source: .settings, forceDark: false)
+                            replaceImpl?(controller)
+                        }
+                    }
+                    replaceImpl = { [weak self, weak controller] c in
+                        controller?.dismiss(animated: true, completion: {
+                            guard let self else {
+                                return
+                            }
+                            self.interaction?.chatController()?.push(c)
+                        })
+                    }
+                    dismissImpl = { [weak controller] in
+                        controller?.dismiss(animated: true, completion: {
+                        })
+                    }
                     self.interaction?.chatController()?.push(controller)
                 }
             }
