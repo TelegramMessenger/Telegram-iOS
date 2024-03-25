@@ -20,6 +20,7 @@ final class BusinessLinkListItemComponent: Component {
     let link: TelegramBusinessChatLinks.Link
     let action: () -> Void
     let deleteAction: () -> Void
+    let shareAction: () -> Void
     
     init(
         context: AccountContext,
@@ -27,7 +28,8 @@ final class BusinessLinkListItemComponent: Component {
         strings: PresentationStrings,
         link: TelegramBusinessChatLinks.Link,
         action: @escaping () -> Void,
-        deleteAction: @escaping () -> Void
+        deleteAction: @escaping () -> Void,
+        shareAction: @escaping () -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -35,6 +37,7 @@ final class BusinessLinkListItemComponent: Component {
         self.link = link
         self.action = action
         self.deleteAction = deleteAction
+        self.shareAction = shareAction
     }
 
     static func ==(lhs: BusinessLinkListItemComponent, rhs: BusinessLinkListItemComponent) -> Bool {
@@ -98,7 +101,11 @@ final class BusinessLinkListItemComponent: Component {
                     return
                 }
                 self.swipeOptionContainer.setRevealOptionsOpened(false, animated: true)
-                component.deleteAction()
+                if option.key == AnyHashable(0 as Int) {
+                    component.shareAction()
+                } else {
+                    component.deleteAction()
+                }
             }
             
             self.addSubview(self.swipeOptionContainer)
@@ -237,15 +244,21 @@ final class BusinessLinkListItemComponent: Component {
             self.swipeOptionContainer.updateLayout(size: swipeOptionContainerFrame.size, leftInset: 0.0, rightInset: 0.0)
             
             var rightOptions: [ListItemSwipeOptionContainer.Option] = []
-            let color: UIColor = component.theme.list.itemDisclosureActions.destructive.fillColor
-            let textColor: UIColor = component.theme.list.itemDisclosureActions.destructive.foregroundColor
+            //TODO:localize
             rightOptions = [
                 ListItemSwipeOptionContainer.Option(
                     key: 0,
+                    title: "Share",
+                    icon: .none,
+                    color: component.theme.list.itemDisclosureActions.accent.fillColor,
+                    textColor: component.theme.list.itemDisclosureActions.accent.foregroundColor
+                ),
+                ListItemSwipeOptionContainer.Option(
+                    key: 1,
                     title: component.strings.Common_Delete,
                     icon: .none,
-                    color: color,
-                    textColor: textColor
+                    color: component.theme.list.itemDisclosureActions.destructive.fillColor,
+                    textColor: component.theme.list.itemDisclosureActions.destructive.foregroundColor
                 )
             ]
             self.swipeOptionContainer.setRevealOptions(([], rightOptions))

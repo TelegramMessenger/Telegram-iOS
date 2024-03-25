@@ -17,6 +17,7 @@ import ListActionItemComponent
 import BundleIconComponent
 import TextFormat
 import UndoUI
+import ShareController
 
 final class BusinessLinksSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -164,7 +165,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                 self.isCreatingLink = false
                 self.state?.updated(transition: .immediate)
                 
-                self.openLink(link: link)
+                self.openLink(link: link, openKeyboard: true)
             }, error: { [weak self] error in
                 guard let self, let component = self.component, let environment = self.environment else {
                     return
@@ -192,11 +193,11 @@ final class BusinessLinksSetupScreenComponent: Component {
         
         private func openLink(url: String) {
             if let link = self.links.first(where: { $0.url == url }) {
-                self.openLink(link: link)
+                self.openLink(link: link, openKeyboard: false)
             }
         }
         
-        private func openLink(link: TelegramBusinessChatLinks.Link) {
+        private func openLink(link: TelegramBusinessChatLinks.Link, openKeyboard: Bool) {
             guard let component = self.component else {
                 return
             }
@@ -212,6 +213,9 @@ final class BusinessLinksSetupScreenComponent: Component {
                 botStart: nil,
                 mode: .standard(.default)
             )
+            if openKeyboard {
+                chatController.activateInput(type: .text)
+            }
             chatController.navigationPresentation = .modal
             self.environment?.controller()?.push(chatController)
         }
@@ -240,6 +244,18 @@ final class BusinessLinksSetupScreenComponent: Component {
                 })
             ])])
             self.environment?.controller()?.present(actionSheet, in: .window(.root))
+        }
+        
+        private func openShareLink(url: String) {
+            guard let component = self.component, let environment = self.environment else {
+                return
+            }
+            
+            guard let link = self.links.first(where: { $0.url == url }) else {
+                return
+            }
+            
+            environment.controller()?.present(ShareController(context: component.context, subject: .url(link.url), showInChat: nil, externalShare: false, immediateExternalShare: false), in: .window(.root))
         }
         
         func update(component: BusinessLinksSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -515,6 +531,12 @@ final class BusinessLinksSetupScreenComponent: Component {
                             return
                         }
                         self.openDeleteLink(url: link.url)
+                    },
+                    shareAction: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.openShareLink(url: link.url)
                     }
                 ))))
             }

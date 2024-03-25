@@ -96,6 +96,9 @@ extension TelegramUser {
                 if (flags2 & (1 << 1)) != 0 {
                     botFlags.insert(.canEdit)
                 }
+                if (flags2 & (1 << 11)) != 0 {
+                    botFlags.insert(.isBusiness)
+                }
                 botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
             }
             

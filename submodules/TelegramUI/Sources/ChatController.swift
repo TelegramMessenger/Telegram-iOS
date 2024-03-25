@@ -763,7 +763,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 case let .businessLinkSetup(link):
                     let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
-                    let entities = generateTextEntities(inputText.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(inputText, maxAnimatedEmojisInText: 0))
+                    let entities = generateChatInputTextEntities(inputText, generateLinks: false)
                     
                     let message = inputText.string
                     
@@ -12127,7 +12127,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let _ = self.context.engine.peers.checkPeerChatServiceActions(peerId: peerId).startStandalone()
             }
             
-            if self.chatDisplayNode.frameForInputActionButton() != nil {
+            if self.chatLocation.peerId != nil && self.chatDisplayNode.frameForInputActionButton() != nil {
                 let inputText = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText.string
                 if !inputText.isEmpty {
                     if inputText.count > 4 {
@@ -16319,7 +16319,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    func activateInput(type: ChatControllerActivateInput) {
+    public func activateInput(type: ChatControllerActivateInput) {
         if self.didAppear {
             switch type {
             case .text:
