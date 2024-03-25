@@ -11351,6 +11351,9 @@ Sorry for the inconvenience.";
 "Premium.Business.Away.Title" = "Away Messages";
 "Premium.Business.Away.Text" = "Define messages that are automatically sent when you are off.";
 
+"Premium.Business.Links.Title" = "Links";
+"Premium.Business.Links.Text" = "Create links that start a chat with you, suggesting the first message.";
+
 "Premium.Business.Intro.Title" = "Intro";
 "Premium.Business.Intro.Text" = "Customize the message people see before they start a chat with you.";
 
@@ -11666,3 +11669,5 @@ Sorry for the inconvenience.";
 
 "Business.Links" = "Links to Chat";
 "Business.LinksInfo" = "Create links that start a chat with you, suggesting the first message.";
+
+"Settings.About.PrivacyHelp" = "You can add a few lines about yourself. Choose who can see your bio in [Settings]().";

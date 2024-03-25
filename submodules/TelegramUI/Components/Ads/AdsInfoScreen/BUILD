@@ -28,7 +28,6 @@ swift_library(
         "//submodules/AppBundle",
         "//submodules/TelegramStringFormatting",
         "//submodules/PresentationDataUtils",
-        "//submodules/Components/SheetComponent",
     ],
     visibility = [
         "//visibility:public",

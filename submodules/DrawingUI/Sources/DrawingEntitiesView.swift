@@ -97,9 +97,6 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     private let angleLayer = SimpleShapeLayer()
     private let bin = ComponentView<Empty>()
 
-    private let stickerOverlayLayer = SimpleShapeLayer()
-    private let stickerFrameLayer = SimpleShapeLayer()
-
     public var onInteractionUpdated: (Bool) -> Void = { _ in }
     public var edgePreviewUpdated: (Bool) -> Void = { _ in }
     
@@ -145,13 +142,6 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         self.angleLayer.opacity = 0.0
         self.angleLayer.lineDashPattern = [12, 12] as [NSNumber]
         
-        self.stickerOverlayLayer.fillColor = UIColor(rgb: 0x000000, alpha: 0.7).cgColor
-        
-        self.stickerFrameLayer.fillColor = UIColor.clear.cgColor
-        self.stickerFrameLayer.strokeColor = UIColor(rgb: 0xffffff, alpha: 0.55).cgColor
-        self.stickerFrameLayer.lineDashPattern = [24, 24] as [NSNumber]
-        self.stickerFrameLayer.lineCap = .round
-        
         self.addSubview(self.topEdgeView)
         self.addSubview(self.leftEdgeView)
         self.addSubview(self.rightEdgeView)
@@ -160,23 +150,10 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         self.addSubview(self.xAxisView)
         self.addSubview(self.yAxisView)
         self.layer.addSublayer(self.angleLayer)
-        
-        if isStickerEditor {
-            self.layer.addSublayer(self.stickerOverlayLayer)
-            self.layer.addSublayer(self.stickerFrameLayer)
-        }
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    public override func addSubview(_ view: UIView) {
-        super.addSubview(view)
-        if self.stickerOverlayLayer.superlayer != nil, view is DrawingEntityView {
-            self.layer.addSublayer(self.stickerOverlayLayer)
-            self.layer.addSublayer(self.stickerFrameLayer)
-        }
     }
     
     public override func layoutSubviews() {
@@ -214,25 +191,6 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         self.angleLayer.path = anglePath
         self.angleLayer.lineWidth = width
         self.angleLayer.bounds = CGRect(origin: .zero, size: CGSize(width: 3000.0, height: width))
-        
-        let frameWidth = floor(self.bounds.width * 0.97)
-        let frameRect = CGRect(origin: CGPoint(x: floor((self.bounds.width - frameWidth) / 2.0), y: floor((self.bounds.height - frameWidth) / 2.0)), size: CGSize(width: frameWidth, height: frameWidth))
-         
-        self.stickerOverlayLayer.frame = self.bounds
-        
-        let overlayOuterRect = UIBezierPath(rect: self.bounds)
-        let overlayInnerRect = UIBezierPath(cgPath: CGPath(roundedRect: frameRect, cornerWidth: frameWidth / 8.0, cornerHeight: frameWidth / 8.0, transform: nil))
-        let overlayLineWidth: CGFloat = 2.0 * 2.2
-        
-        overlayOuterRect.append(overlayInnerRect)
-        overlayOuterRect.usesEvenOddFillRule = true
-
-        self.stickerOverlayLayer.path = overlayOuterRect.cgPath
-        self.stickerOverlayLayer.fillRule = .evenOdd
-        
-        self.stickerFrameLayer.frame = self.bounds
-        self.stickerFrameLayer.lineWidth = overlayLineWidth
-        self.stickerFrameLayer.path = CGPath(roundedRect: frameRect.insetBy(dx: -overlayLineWidth / 2.0, dy: -overlayLineWidth / 2.0), cornerWidth: frameWidth / 8.0 * 1.02, cornerHeight: frameWidth / 8.0 * 1.02, transform: nil)
     }
     
     public var entities: [DrawingEntity] {

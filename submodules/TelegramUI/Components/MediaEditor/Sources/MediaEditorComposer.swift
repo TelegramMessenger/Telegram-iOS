@@ -152,16 +152,6 @@ final class MediaEditorComposer {
                     if var compositedImage {
                         let scale = self.outputDimensions.width / compositedImage.extent.width
                         compositedImage = compositedImage.samplingLinear().transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-
-                        if self.isFirst {
-                            let path = NSTemporaryDirectory() + "test22.png"
-                            if let cgImage = self.ciContext?.createCGImage(compositedImage, from: CGRect(origin: .zero, size: compositedImage.extent.size)) {
-                                let image = UIImage(cgImage: cgImage)
-                                let data = image.pngData()
-                                try? data?.write(to: URL(fileURLWithPath: path))
-                                self.isFirst = false
-                            }
-                        }
                         
                         self.ciContext?.render(compositedImage, to: pixelBuffer)
                         completion(pixelBuffer)
@@ -174,7 +164,6 @@ final class MediaEditorComposer {
         }
         completion(nil)
     }
-    private var isFirst = true
     
     private var cachedTexture: MTLTexture?
     func textureForImage(_ image: UIImage) -> MTLTexture? {

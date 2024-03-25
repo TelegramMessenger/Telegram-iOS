@@ -33,6 +33,7 @@ import EmojiStatusSelectionComponent
 import EmojiStatusComponent
 import EntityKeyboard
 import EmojiActionIconComponent
+import ScrollComponent
 
 public enum PremiumSource: Equatable {
     public static func == (lhs: PremiumSource, rhs: PremiumSource) -> Bool {

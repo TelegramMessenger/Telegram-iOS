@@ -345,7 +345,8 @@ class PremiumCoinComponent: Component {
                     return
                 }
                 
-                if #available(iOS 17.0, *), let material = node.geometry?.materials.first {
+//                if #available(iOS 17.0, *), let material = node.geometry?.materials.first {
+                if let material = node.geometry?.materials.first {
                     material.metalness.intensity = 0.3
                 }
                 

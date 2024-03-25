@@ -484,6 +484,7 @@ private enum PeerInfoContextSubject {
     case link(customLink: String?)
     case businessHours(String)
     case businessLocation(String)
+    case birthday
 }
 
 private enum PeerInfoSettingsSection {
@@ -586,6 +587,7 @@ private final class PeerInfoInteraction {
     let openEditing: () -> Void
     let updateBirthdate: (TelegramBirthday??) -> Void
     let updateIsEditingBirthdate: (Bool) -> Void
+    let openBioPrivacy: () -> Void
     let openBirthdatePrivacy: () -> Void
     let openPremiumGift: () -> Void
     let editingOpenPersonalChannel: () -> Void
@@ -646,6 +648,7 @@ private final class PeerInfoInteraction {
         openEditing: @escaping () -> Void,
         updateBirthdate: @escaping (TelegramBirthday??) -> Void,
         updateIsEditingBirthdate: @escaping (Bool) -> Void,
+        openBioPrivacy: @escaping () -> Void,
         openBirthdatePrivacy: @escaping () -> Void,
         openPremiumGift: @escaping () -> Void,
         editingOpenPersonalChannel: @escaping () -> Void
@@ -705,6 +708,7 @@ private final class PeerInfoInteraction {
         self.openEditing = openEditing
         self.updateBirthdate = updateBirthdate
         self.updateIsEditingBirthdate = updateIsEditingBirthdate
+        self.openBioPrivacy = openBioPrivacy
         self.openBirthdatePrivacy = openBirthdatePrivacy
         self.openPremiumGift = openPremiumGift
         self.editingOpenPersonalChannel = editingOpenPersonalChannel
@@ -1029,7 +1033,9 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         }, action: {
             interaction.dismissInput()
         }, maxLength: Int(data.globalSettings?.userLimits.maxAboutLength ?? 70)))
-        items[.bio]!.append(PeerInfoScreenCommentItem(id: ItemBioHelp, text: presentationData.strings.Settings_About_Help))
+        items[.bio]!.append(PeerInfoScreenCommentItem(id: ItemBioHelp, text: presentationData.strings.Settings_About_PrivacyHelp, linkAction: { _ in
+            interaction.openBioPrivacy()
+        }))
     }
     
     
@@ -1244,7 +1250,11 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 if today.day == Int(birthday.day) && today.month == Int(birthday.month) {
                     hasBirthdayToday = true
                 }
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 400, context: context, label: hasBirthdayToday ? presentationData.strings.UserInfo_BirthdayToday : presentationData.strings.UserInfo_Birthday, text: stringForCompactBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, leftIcon: hasBirthdayToday ? .birthday : nil, icon: hasBirthdayToday ? .premiumGift : nil, action: nil, longTapAction: nil, iconAction: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 400, context: context, label: hasBirthdayToday ? presentationData.strings.UserInfo_BirthdayToday : presentationData.strings.UserInfo_Birthday, text: stringForCompactBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, leftIcon: hasBirthdayToday ? .birthday : nil, icon: hasBirthdayToday ? .premiumGift : nil, action: hasBirthdayToday ? { _, _ in
+                    interaction.openPremiumGift()
+                } : nil, longTapAction: { sourceNode in
+                    interaction.openPeerInfoContextMenu(.birthday, sourceNode, nil)
+                }, iconAction: {
                     interaction.openPremiumGift()
                 }, contextAction: nil, requestLayout: {
                 }))
@@ -2677,14 +2687,29 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             updateIsEditingBirthdate: { [weak self] value in
                 if let self {
-                    if value, let data = self.data?.cachedData as? CachedUserData, data.birthday == nil {
-                        self.state = self.state.withUpdatingBirthDate(TelegramBirthday(day: 1, month: 1, year: nil))
+                    if value {
+                        if let data = self.data?.cachedData as? CachedUserData {
+                            if data.birthday == nil {
+                                self.state = self.state.withUpdatingBirthDate(TelegramBirthday(day: 1, month: 1, year: nil))
+                            } else {
+                                self.state = self.state.withUpdatingBirthDate(nil)
+                            }
+                        }
+                    } else {
+                        if self.state.updatingBirthDate != .some(nil) {
+                            self.state = self.state.withUpdatingBirthDate(nil)
+                        }
                     }
                     self.state = self.state.withIsEditingBirthDate(value)
                     
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.2, curve: .easeInOut), additive: false)
                     }
+                }
+            },
+            openBioPrivacy: { [weak self] in
+                if let self {
+                    self.openBioPrivacy()
                 }
             },
             openBirthdatePrivacy: { [weak self] in
@@ -7581,6 +7606,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         })
     }
     
+    private func openBioPrivacy() {
+        guard let _ = self.data?.globalSettings?.privacySettings else {
+            return
+        }
+        self.context.sharedContext.makeBioPrivacyController(context: self.context, settings: self.privacySettings, present: { [weak self] c in
+            self?.controller?.push(c)
+        })
+    }
+    
     private func openBirthdatePrivacy() {
         guard let _ = self.data?.globalSettings?.privacySettings else {
             return
@@ -7996,6 +8030,29 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         let context = self.context
         switch subject {
+        case .birthday:
+            if let cachedData = data.cachedData as? CachedUserData, let birthday = cachedData.birthday {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let text = stringForCompactBirthday(birthday, strings: presentationData.strings)
+                
+                let actions: [ContextMenuAction] = [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopy), action: { [weak self] in
+                    UIPasteboard.general.string = text
+                    
+                    self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                })]
+                let contextMenuController = makeContextMenuController(actions: actions)
+                controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
+                    if let controller = self?.controller, let sourceNode = sourceNode {
+                        var rect = sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0)
+                        if let sourceRect = sourceRect {
+                            rect = sourceRect.insetBy(dx: 0.0, dy: 2.0)
+                        }
+                        return (sourceNode, rect, controller.displayNode, controller.view.bounds)
+                    } else {
+                        return nil
+                    }
+                }))
+            }
         case .bio:
             var text: String?
             if let cachedData = data.cachedData as? CachedUserData {

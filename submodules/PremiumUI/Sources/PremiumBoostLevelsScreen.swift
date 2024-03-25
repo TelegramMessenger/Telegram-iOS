@@ -21,6 +21,7 @@ import BlurredBackgroundComponent
 import UndoUI
 import ConfettiEffect
 import PremiumPeerShortcutComponent
+import ScrollComponent
 
 func requiredBoostSubjectLevel(subject: BoostSubject, group: Bool, context: AccountContext, configuration: PremiumConfiguration) -> Int32 {
     switch subject {

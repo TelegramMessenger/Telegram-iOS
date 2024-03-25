@@ -24,6 +24,7 @@ typedef NS_ENUM(NSUInteger, FFMpegAVFramePixelFormat) {
 @property (nonatomic, readonly) FFMpegAVFramePixelFormat pixelFormat;
 
 - (instancetype)init;
+- (instancetype)initWithPixelFormat:(FFMpegAVFramePixelFormat)pixelFormat width:(int32_t)width height:(int32_t)height;
 
 - (void *)impl;
 

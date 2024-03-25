@@ -875,8 +875,8 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
         for line in textItem.lines {
             let lineFrame = frameForLine(line, boundingWidth: boundingWidth, alignment: alignment)
             for imageItem in line.imageItems {
-                if case let .image(image) = media[imageItem.id] {
-                    let item = InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: lineFrame.minX + offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: .image(image), url: nil, caption: nil, credit: nil), interactive: false, roundCorners: false, fit: false)
+                if let media = media[imageItem.id] {
+                    let item = InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: lineFrame.minX + offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: media, url: nil, caption: nil, credit: nil), interactive: false, roundCorners: false, fit: false)
                     additionalItems.append(item)
                     
                     if item.frame.minY < topInset {

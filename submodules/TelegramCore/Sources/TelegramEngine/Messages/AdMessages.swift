@@ -18,6 +18,7 @@ private class AdMessagesHistoryContextImpl {
             case buttonText
             case sponsorInfo
             case additionalInfo
+            case canReport
         }
         
         enum MessageType: Int32, Codable {
@@ -168,6 +169,7 @@ private class AdMessagesHistoryContextImpl {
         public let buttonText: String?
         public let sponsorInfo: String?
         public let additionalInfo: String?
+        public let canReport: Bool
 
         public init(
             opaqueId: Data,
@@ -181,7 +183,8 @@ private class AdMessagesHistoryContextImpl {
             startParam: String?,
             buttonText: String?,
             sponsorInfo: String?,
-            additionalInfo: String?
+            additionalInfo: String?,
+            canReport: Bool
         ) {
             self.opaqueId = opaqueId
             self.messageType = messageType
@@ -195,6 +198,7 @@ private class AdMessagesHistoryContextImpl {
             self.buttonText = buttonText
             self.sponsorInfo = sponsorInfo
             self.additionalInfo = additionalInfo
+            self.canReport = canReport
         }
 
         public init(from decoder: Decoder) throws {
@@ -225,6 +229,8 @@ private class AdMessagesHistoryContextImpl {
             
             self.sponsorInfo = try container.decodeIfPresent(String.self, forKey: .sponsorInfo)
             self.additionalInfo = try container.decodeIfPresent(String.self, forKey: .additionalInfo)
+            
+            self.canReport = try container.decodeIfPresent(Bool.self, forKey: .displayAvatar) ?? false
         }
 
         public func encode(to encoder: Encoder) throws {
@@ -250,6 +256,8 @@ private class AdMessagesHistoryContextImpl {
             
             try container.encodeIfPresent(self.sponsorInfo, forKey: .sponsorInfo)
             try container.encodeIfPresent(self.additionalInfo, forKey: .additionalInfo)
+            
+            try container.encode(self.canReport, forKey: .canReport)
         }
 
         public static func ==(lhs: CachedMessage, rhs: CachedMessage) -> Bool {
@@ -291,6 +299,9 @@ private class AdMessagesHistoryContextImpl {
             if lhs.additionalInfo != rhs.additionalInfo {
                 return false
             }
+            if lhs.canReport != rhs.canReport {
+                return false
+            }
             return true
         }
 
@@ -315,7 +326,7 @@ private class AdMessagesHistoryContextImpl {
             case .recommended:
                 mappedMessageType = .recommended
             }
-            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, displayAvatar: self.displayAvatar, target: target, buttonText: self.buttonText, sponsorInfo: self.sponsorInfo, additionalInfo: self.additionalInfo))
+            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, displayAvatar: self.displayAvatar, target: target, buttonText: self.buttonText, sponsorInfo: self.sponsorInfo, additionalInfo: self.additionalInfo, canReport: self.canReport))
             if !self.textEntities.isEmpty {
                 let attribute = TextEntitiesMessageAttribute(entities: self.textEntities)
                 attributes.append(attribute)
@@ -604,6 +615,7 @@ private class AdMessagesHistoryContextImpl {
                                 
                                 let isRecommended = (flags & (1 << 5)) != 0
                                 var displayAvatar = (flags & (1 << 6)) != 0
+                                let canReport = (flags & (1 << 12)) != 0
                                 
                                 var target: CachedMessage.Target?
                                 if let fromId = fromId {
@@ -685,7 +697,8 @@ private class AdMessagesHistoryContextImpl {
                                         startParam: startParam,
                                         buttonText: buttonText,
                                         sponsorInfo: sponsorInfo,
-                                        additionalInfo: additionalInfo
+                                        additionalInfo: additionalInfo,
+                                        canReport: canReport
                                     ))
                                 }
                             }

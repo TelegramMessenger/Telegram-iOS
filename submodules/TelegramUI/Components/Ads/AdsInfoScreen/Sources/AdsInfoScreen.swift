@@ -65,6 +65,7 @@ private final class ScrollContent: CombinedComponent {
         let icon = Child(BundleIconComponent.self)
         
         let title = Child(BalancedTextComponent.self)
+        let text = Child(BalancedTextComponent.self)
         let list = Child(List<Empty>.self)
         let actionButton = Child(SolidRoundedButtonComponent.self)
         
@@ -98,7 +99,7 @@ private final class ScrollContent: CombinedComponent {
             //TODO:localize
             
             let spacing: CGFloat = 16.0
-            var contentSize = CGSize(width: context.availableSize.width, height: 32.0)
+            var contentSize = CGSize(width: context.availableSize.width, height: 30.0)
                                     
             let iconSize = CGSize(width: 90.0, height: 90.0)
             let gradientImage: UIImage
@@ -128,12 +129,11 @@ private final class ScrollContent: CombinedComponent {
                 availableSize: CGSize(width: 90, height: 90),
                 transition: .immediate
             )
-            
             context.add(icon
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + iconBackground.size.height / 2.0))
             )
             contentSize.height += iconSize.height
-            contentSize.height += spacing + 5.0
+            contentSize.height += spacing + 1.0
             
             let title = title.update(
                 component: BalancedTextComponent(
@@ -149,6 +149,22 @@ private final class ScrollContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + title.size.height / 2.0))
             )
             contentSize.height += title.size.height
+            contentSize.height += spacing - 8.0
+            
+            let text = text.update(
+                component: BalancedTextComponent(
+                    text: .plain(NSAttributedString(string: "Telegram Ads are very different from ads on other platforms. Ads such as this one:", font: textFont, textColor: secondaryTextColor)),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2
+                ),
+                availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
+                transition: .immediate
+            )
+            context.add(text
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + text.size.height / 2.0))
+            )
+            contentSize.height += text.size.height
             contentSize.height += spacing
             
             
@@ -215,7 +231,7 @@ private final class ScrollContent: CombinedComponent {
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
                 ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.4, height: context.availableSize.height),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 3.5, height: context.availableSize.height),
                 transition: .immediate
             )
             
@@ -223,7 +239,7 @@ private final class ScrollContent: CombinedComponent {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
             }
             
-            let infoString = "Anyone can create an ad to display in this channel – with minimal budgets. Check out the Telegram Ad Platform for details. [Learn More >]()"
+            let infoString = "Anyone can create ads to display in this channel – with minimal budgets. Check out the Telegram Ad Platform for details. [Learn More >]()"
             let infoAttributedString = parseMarkdownIntoAttributedString(infoString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = infoAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
                 infoAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: infoAttributedString.string))
@@ -235,12 +251,12 @@ private final class ScrollContent: CombinedComponent {
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
                 ),
-                availableSize: CGSize(width: context.availableSize.width - (textSideInset + sideInset - 2.0) * 2.0, height: context.availableSize.height),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 3.5, height: context.availableSize.height),
                 transition: .immediate
             )
             
-            let infoPadding: CGFloat = 17.0
-            let infoSpacing: CGFloat = 12.0
+            let infoPadding: CGFloat = 13.0
+            let infoSpacing: CGFloat = 6.0
             let totalInfoHeight = infoPadding + infoTitle.size.height + infoSpacing + infoText.size.height + infoPadding
             
             let infoBackground = infoBackground.update(

@@ -3,10 +3,12 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class FFMpegAVFrame;
+
 @interface FFMpegVideoWriter : NSObject
 
-- (bool)setupWithOutputPath:(NSString *)outputPath width:(int)width height:(int)height;
-- (bool)encodeFrame:(CVPixelBufferRef)pixelBuffer;
+- (bool)setupWithOutputPath:(NSString *)outputPath width:(int)width height:(int)height bitrate:(int64_t)bitrate framerate:(int32_t)framerate;
+- (bool)encodeFrame:(FFMpegAVFrame *)frame;
 - (bool)finalizeVideo;
 
 @end

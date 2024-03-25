@@ -1845,6 +1845,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
         return SettingsUI.makePrivacyAndSecurityController(context: context)
     }
+
+    public func makeBioPrivacyController(context: AccountContext, settings: Promise<AccountPrivacySettings?>, present: @escaping (ViewController) -> Void) {
+        SettingsUI.makeBioPrivacyController(context: context, settings: settings, present: present)
+    }
     
     public func makeBirthdayPrivacyController(context: AccountContext, settings: Promise<AccountPrivacySettings?>, openedFromBirthdayScreen: Bool, present: @escaping (ViewController) -> Void) {
         SettingsUI.makeBirthdayPrivacyController(context: context, settings: settings, openedFromBirthdayScreen: openedFromBirthdayScreen, present: present)

@@ -1,5 +1,5 @@
 #import <FFMpegBinding/FFMpegVideoWriter.h>
-#import <FFMpegBinding/FrameConverter.h>
+#import <FFMpegBinding/FFMpegAVFrame.h>
 
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
@@ -24,7 +24,7 @@
     return self;
 }
 
-- (bool)setupWithOutputPath:(NSString *)outputPath width:(int)width height:(int)height {
+- (bool)setupWithOutputPath:(NSString *)outputPath width:(int)width height:(int)height bitrate:(int64_t)bitrate framerate:(int32_t)framerate {
     avformat_alloc_output_context2(&_formatContext, NULL, "matroska", [outputPath UTF8String]);
     if (!_formatContext) {
         return false;
@@ -47,13 +47,14 @@
     _codecContext->codec_id = AV_CODEC_ID_VP9;
     _codecContext->codec_type = AVMEDIA_TYPE_VIDEO;
     _codecContext->pix_fmt = AV_PIX_FMT_YUVA420P;
+    _codecContext->color_range = AVCOL_RANGE_MPEG;
+    _codecContext->color_primaries = AVCOL_PRI_BT709;
+    _codecContext->colorspace = AVCOL_SPC_BT709;
     _codecContext->width = width;
     _codecContext->height = height;
-    _codecContext->time_base = (AVRational){1, 30};
-    _codecContext->framerate = (AVRational){30, 1};
-    _codecContext->bit_rate = 200000;
-//    _codecContext->gop_size = 10;
-//    _codecContext->max_b_frames = 1;
+    _codecContext->time_base = (AVRational){1, framerate};
+    _codecContext->framerate = (AVRational){framerate, 1};
+    _codecContext->bit_rate = bitrate;
     
     if (_formatContext->oformat->flags & AVFMT_GLOBALHEADER) {
         _codecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -88,62 +89,22 @@
     return true;
 }
 
-- (bool)encodeFrame:(CVPixelBufferRef)pixelBuffer {
+- (bool)encodeFrame:(FFMpegAVFrame *)frame {
     if (!_codecContext || !_stream) {
         return false;
     }
 
     self.framePts++;
     
-    AVFrame *frame = av_frame_alloc();
-    if (!frame) {
-        return false;
-    }
+    AVFrame *frameImpl = (AVFrame *)[frame impl];
     
-    int width = (int)CVPixelBufferGetWidth(pixelBuffer);
-    int height = (int)CVPixelBufferGetHeight(pixelBuffer);
-
-    frame->format = _codecContext->pix_fmt;
-    frame->width = width;
-    frame->height = height;
+    frameImpl->pts = self.framePts;
+    frameImpl->color_range = AVCOL_RANGE_MPEG;
+    frameImpl->color_primaries = AVCOL_PRI_BT709;
+    frameImpl->colorspace = AVCOL_SPC_BT709;
     
-    if (av_frame_get_buffer(frame, 0) < 0) {
-        return false;
-    }
-        
-    CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-        
-    uint8_t *yBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0);
-    size_t yStride = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
-    
-    uint8_t *uvBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1);
-    size_t uvStride = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1);
-    
-    uint8_t *aBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 2);
-    size_t aStride = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 2);
-    
-    for (int i = 0; i < height; i++) {
-        memcpy(frame->data[0] + i * frame->linesize[0], yBaseAddress + i * yStride, width);
-    }
-
-    for (int i = 0; i < height / 2; i++) {
-        for (int j = 0; j < width / 2; j++) {
-            frame->data[1][i * frame->linesize[1] + j] = uvBaseAddress[i * uvStride + 2 * j];
-            frame->data[2][i * frame->linesize[2] + j] = uvBaseAddress[i * uvStride + 2 * j + 1];
-        }
-    }
-    
-    for (int i = 0; i < height; i++) {
-        memcpy(frame->data[3] + i * frame->linesize[3], aBaseAddress + i * aStride, width);
-    }
-        
-    CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-        
-    frame->pts = self.framePts;
-    
-    int sendRet = avcodec_send_frame(_codecContext, frame);
+    int sendRet = avcodec_send_frame(_codecContext, frameImpl);
     if (sendRet < 0) {
-        av_frame_free(&frame);
         return false;
     }
     
@@ -170,11 +131,26 @@
         }
     }
     
-    av_frame_free(&frame);
     return true;
 }
 
 - (bool)finalizeVideo {
+    int sendRet = avcodec_send_frame(_codecContext, NULL);
+    if (sendRet >= 0) {
+        AVPacket pkt;
+        av_init_packet(&pkt);
+        pkt.data = NULL;
+        pkt.size = 0;
+        
+        while (avcodec_receive_packet(_codecContext, &pkt) == 0) {
+            av_packet_rescale_ts(&pkt, _codecContext->time_base, _stream->time_base);
+            pkt.stream_index = _stream->index;
+
+            av_interleaved_write_frame(_formatContext, &pkt);
+            av_packet_unref(&pkt);
+        }
+    }
+    
     av_write_trailer(_formatContext);
     
     avio_closep(&_formatContext->pb);

@@ -1344,7 +1344,7 @@ private func monetizationEntries(
     
     var entries: [StatsEntry] = []
     //TODO:localize
-    entries.append(.adsHeader(presentationData.theme, "Telegram shares 50% of the revenue from ads displayed in your channel. [Learn More]()"))
+    entries.append(.adsHeader(presentationData.theme, "Telegram shares 50% of the revenue from ads displayed in your channel. [Learn More >]()"))
     
     entries.append(.adsImpressionsTitle(presentationData.theme, "AD IMPRESSIONS (BY HOURS)"))
     if !stats.topHoursGraph.isEmpty {
@@ -1361,7 +1361,7 @@ private func monetizationEntries(
     
     entries.append(.adsBalanceTitle(presentationData.theme, "AVAILABLE BALANCE"))
     entries.append(.adsBalance(presentationData.theme, data, false, diamond, state.monetizationAddress))
-    entries.append(.adsBalanceInfo(presentationData.theme, "We will transfer your balance to the TON wallet address you specify. [Learn More]()"))
+    entries.append(.adsBalanceInfo(presentationData.theme, "We will transfer your balance to the TON wallet address you specify. [Learn More >]()"))
     
     entries.append(.adsTransactionsTitle(presentationData.theme, "TRANSACTION HISTORY"))
     

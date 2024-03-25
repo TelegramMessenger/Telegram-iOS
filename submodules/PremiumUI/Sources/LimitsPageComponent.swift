@@ -9,6 +9,7 @@ import MultilineTextComponent
 import BlurredBackgroundComponent
 import Markdown
 import TelegramPresentationData
+import ScrollComponent
 
 private final class LimitComponent: CombinedComponent {
     let title: String

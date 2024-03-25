@@ -10,6 +10,7 @@ import BlurredBackgroundComponent
 import Markdown
 import TelegramPresentationData
 import BundleIconComponent
+import ScrollComponent
 
 private final class HeaderComponent: Component {
     let context: AccountContext
@@ -307,7 +308,8 @@ private final class BusinessListComponent: CombinedComponent {
                 UIColor(rgb: 0xbc4395),
                 UIColor(rgb: 0x9b4fed),
                 UIColor(rgb: 0x8958ff),
-                UIColor(rgb: 0x676bff)
+                UIColor(rgb: 0x676bff),
+                UIColor(rgb: 0x007aff)
             ]
             
             let titleColor = theme.list.itemPrimaryTextColor
@@ -398,6 +400,20 @@ private final class BusinessListComponent: CombinedComponent {
             
             items.append(
                 AnyComponentWithIdentity(
+                    id: "links",
+                    component: AnyComponent(ParagraphComponent(
+                        title: strings.Premium_Business_Links_Title,
+                        titleColor: titleColor,
+                        text: strings.Premium_Business_Links_Text,
+                        textColor: textColor,
+                        iconName: "Premium/Business/Links",
+                        iconColor: colors[5]
+                    ))
+                )
+            )
+            
+            items.append(
+                AnyComponentWithIdentity(
                     id: "intro",
                     component: AnyComponent(ParagraphComponent(
                         title: strings.Premium_Business_Intro_Title,
@@ -405,7 +421,7 @@ private final class BusinessListComponent: CombinedComponent {
                         text: strings.Premium_Business_Intro_Text,
                         textColor: textColor,
                         iconName: "Premium/Business/Intro",
-                        iconColor: colors[5]
+                        iconColor: colors[6]
                     ))
                 )
             )
@@ -419,7 +435,7 @@ private final class BusinessListComponent: CombinedComponent {
                         text: strings.Premium_Business_Chatbots_Text,
                         textColor: textColor,
                         iconName: "Premium/Business/Chatbots",
-                        iconColor: colors[6]
+                        iconColor: colors[7]
                     ))
                 )
             )

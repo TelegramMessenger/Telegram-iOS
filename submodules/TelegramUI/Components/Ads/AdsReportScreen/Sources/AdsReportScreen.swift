@@ -9,297 +9,312 @@ import TextFormat
 import TelegramPresentationData
 import ViewControllerComponent
 import SheetComponent
-import BundleIconComponent
 import BalancedTextComponent
 import MultilineTextComponent
-import SolidRoundedButtonComponent
+import ListSectionComponent
+import ListActionItemComponent
+import ItemListUI
+import UndoUI
 import AccountContext
+
+private final class SheetPageContent: CombinedComponent {
+    struct Item: Equatable {
+        let title: String
+        let subItems: [Item]
+    }
+    
+    let context: AccountContext
+    let title: String?
+    let items: [Item]
+    let action: (Item) -> Void
+    let pop: () -> Void
+    
+    init(
+        context: AccountContext,
+        title: String?,
+        items: [Item],
+        action: @escaping (Item) -> Void,
+        pop: @escaping () -> Void
+    ) {
+        self.context = context
+        self.title = title
+        self.items = items
+        self.action = action
+        self.pop = pop
+    }
+    
+    static func ==(lhs: SheetPageContent, rhs: SheetPageContent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.items != rhs.items {
+            return false
+        }
+        return true
+    }
+        
+    static var body: Body {
+        let background = Child(RoundedRectangle.self)
+        let back = Child(Button.self)
+        let title = Child(Text.self)
+        let subtitle = Child(Text.self)
+        let section = Child(ListSectionComponent.self)
+        
+        return { context in
+            let component = context.component
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            let theme = presentationData.theme
+//            let strings = environment.strings
+            
+            let sideInset: CGFloat = 16.0
+            
+            var contentSize = CGSize(width: context.availableSize.width, height: 18.0)
+                        
+            let background = background.update(
+                component: RoundedRectangle(color: theme.list.modalBlocksBackgroundColor, cornerRadius: 8.0),
+                availableSize: CGSize(width: context.availableSize.width, height: 1000.0),
+                transition: .immediate
+            )
+            context.add(background
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: background.size.height / 2.0))
+            )
+            
+            let back = back.update(
+                component: Button(
+                    content: AnyComponent(
+                        Text(text: "Cancel", font: Font.regular(17.0), color: theme.list.itemAccentColor)
+                    ),
+                    action: {
+                        component.pop()
+                    }
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
+                transition: .immediate
+            )
+            context.add(back
+                .position(CGPoint(x: sideInset + back.size.width / 2.0, y: contentSize.height + back.size.height / 2.0))
+            )
+            
+            let title = title.update(
+                component: Text(text: "Report Ad", font: Font.semibold(17.0), color: theme.list.itemPrimaryTextColor),
+                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
+                transition: .immediate
+            )
+            if let subtitleText = component.title {
+                let subtitle = subtitle.update(
+                    component: Text(text: subtitleText, font: Font.regular(13.0), color: theme.list.itemSecondaryTextColor),
+                    availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
+                    transition: .immediate
+                )
+                context.add(title
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + title.size.height / 2.0 - 8.0))
+                )
+                contentSize.height += title.size.height
+                context.add(subtitle
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + subtitle.size.height / 2.0 - 9.0))
+                )
+                contentSize.height += subtitle.size.height
+                contentSize.height += 24.0
+            } else {
+                context.add(title
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + title.size.height / 2.0))
+                )
+                contentSize.height += title.size.height
+                contentSize.height += 24.0
+            }
+            
+            var items: [AnyComponentWithIdentity<Empty>] = []
+            for item in component.items  {
+                items.append(AnyComponentWithIdentity(id: item.title, component: AnyComponent(ListActionItemComponent(
+                    theme: theme,
+                    title: AnyComponent(VStack([
+                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: item.title,
+                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                textColor: theme.list.itemPrimaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        ))),
+                    ], alignment: .left, spacing: 2.0)),
+                    accessory: !item.subItems.isEmpty ? .arrow : nil,
+                    action: { _ in
+                        component.action(item)
+                    }
+                ))))
+            }
+            
+            let section = section.update(
+                component: ListSectionComponent(
+                    theme: theme,
+                    header: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: "WHAT IS WRONG WITH THIS AD?".uppercased(),
+                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                            textColor: theme.list.freeTextColor
+                        )),
+                        maximumNumberOfLines: 0
+                    )),
+                    footer: AnyComponent(MultilineTextComponent(
+                        text: .markdown(
+                            text: "Learn more about [Telegram Ad Policies and Guidelines]().",
+                            attributes: MarkdownAttributes(
+                                body: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.freeTextColor),
+                                bold: MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.freeTextColor),
+                                link: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.itemAccentColor),
+                                linkAttribute: { _ in
+                                    return nil
+                                }
+                            )
+                        ),
+                        maximumNumberOfLines: 0
+                    )),
+                    items: items
+                ),
+                environment: {},
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
+                transition: context.transition
+            )
+            context.add(section
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + section.size.height / 2.0))
+            )
+            contentSize.height += section.size.height
+            contentSize.height += 54.0
+            
+            return contentSize
+        }
+    }
+}
 
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let animatedEmojis: [String: TelegramMediaFile]
+    let pts: Int
     let openMore: () -> Void
+    let complete: () -> Void
     let dismiss: () -> Void
+    let update: (Transition) -> Void
     
     init(
         context: AccountContext,
-        animatedEmojis: [String: TelegramMediaFile],
+        pts: Int,
         openMore: @escaping () -> Void,
-        dismiss: @escaping () -> Void
+        complete: @escaping () -> Void,
+        dismiss: @escaping () -> Void,
+        update: @escaping (Transition) -> Void
     ) {
         self.context = context
-        self.animatedEmojis = animatedEmojis
+        self.pts = pts
         self.openMore = openMore
+        self.complete = complete
         self.dismiss = dismiss
+        self.update = update
     }
     
     static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
+        if lhs.pts != rhs.pts {
+            return false
+        }
         return true
     }
     
     final class State: ComponentState {
-        var cachedIconImage: (UIImage, PresentationTheme)?
-        var cachedChevronImage: (UIImage, PresentationTheme)?
-        
-        let playOnce =  ActionSlot<Void>()
-        private var didPlayAnimation = false
-                
-        func playAnimationIfNeeded() {
-            guard !self.didPlayAnimation else {
-                return
-            }
-            self.didPlayAnimation = true
-            self.playOnce.invoke(Void())
-        }
+        var pushedItem: SheetPageContent.Item?
     }
     
     func makeState() -> State {
         return State()
     }
-    
+        
     static var body: Body {
-        let iconBackground = Child(Image.self)
-        let icon = Child(BundleIconComponent.self)
-        
-        let title = Child(BalancedTextComponent.self)
-        let list = Child(List<Empty>.self)
-        let actionButton = Child(SolidRoundedButtonComponent.self)
-        
-        let infoBackground = Child(RoundedRectangle.self)
-        let infoTitle = Child(MultilineTextComponent.self)
-        let infoText = Child(MultilineTextComponent.self)
+//        let title = Child(BalancedTextComponent.self)
+        let navigation = Child(NavigationStackComponent.self)
         
         return { context in
-            let environment = context.environment[EnvironmentType.self]
             let component = context.component
             let state = context.state
-            
-            let theme = environment.theme
-//            let strings = environment.strings
-            
-            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let textSideInset: CGFloat = 30.0 + environment.safeInsets.left
-            
-            let titleFont = Font.semibold(20.0)
-            let textFont = Font.regular(15.0)
-            
-            let textColor = theme.actionSheet.primaryTextColor
-            let secondaryTextColor = theme.actionSheet.secondaryTextColor
-            let linkColor = theme.actionSheet.controlAccentColor
-            
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
-                return (TelegramTextAttributes.URL, contents)
-            })
-            
-            //TODO:localize
-            
-            let spacing: CGFloat = 16.0
-            var contentSize = CGSize(width: context.availableSize.width, height: 32.0)
-                                    
-            let iconSize = CGSize(width: 90.0, height: 90.0)
-            let gradientImage: UIImage
-                            
-            if let (current, currentTheme) = state.cachedIconImage, currentTheme === theme {
-                gradientImage = current
-            } else {
-                gradientImage = generateGradientFilledCircleImage(diameter: iconSize.width, colors: [
-                    UIColor(rgb: 0x4bbb45).cgColor,
-                    UIColor(rgb: 0x9ad164).cgColor
-                ])!
-                context.state.cachedIconImage = (gradientImage, theme)
-            }
-            
-            let iconBackground = iconBackground.update(
-                component: Image(image: gradientImage),
-                availableSize: iconSize,
-                transition: .immediate
-            )
-            context.add(iconBackground
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + iconBackground.size.height / 2.0))
-            )
-            
-            let icon = icon.update(
-                component: BundleIconComponent(name: "Chart/Monetization", tintColor: theme.list.itemCheckColors.foregroundColor),
-                availableSize: CGSize(width: 90, height: 90),
-                transition: .immediate
-            )
-            
-            context.add(icon
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + iconBackground.size.height / 2.0))
-            )
-            contentSize.height += iconSize.height
-            contentSize.height += spacing + 5.0
-            
-            let title = title.update(
-                component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Earn From Your Channel", font: titleFont, textColor: textColor)),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.1
-                ),
-                availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
-                transition: .immediate
-            )
-            context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + title.size.height / 2.0))
-            )
-            contentSize.height += title.size.height
-            contentSize.height += spacing
-            
+            let update = component.update
             
             var items: [AnyComponentWithIdentity<Empty>] = []
-            items.append(
-                AnyComponentWithIdentity(
-                    id: "ads",
-                    component: AnyComponent(ParagraphComponent(
-                        title: "Telegram Ads",
-                        titleColor: textColor,
-                        text: "Telegram can display ads in your channel.",
-                        textColor: secondaryTextColor,
-                        iconName: "Chart/Ads",
-                        iconColor: linkColor
-                    ))
-                )
-            )
-            items.append(
-                AnyComponentWithIdentity(
-                    id: "split",
-                    component: AnyComponent(ParagraphComponent(
-                        title: "50:50 Revenue Split",
-                        titleColor: textColor,
-                        text: "You receive 50% of the ad revenue in TON.",
-                        textColor: secondaryTextColor,
-                        iconName: "Chart/Split",
-                        iconColor: linkColor
-                    ))
-                )
-            )
-            items.append(
-                AnyComponentWithIdentity(
-                    id: "withdrawal",
-                    component: AnyComponent(ParagraphComponent(
-                        title: "Flexible Withdrawals",
-                        titleColor: textColor,
-                        text: "You can withdraw your TON any time.",
-                        textColor: secondaryTextColor,
-                        iconName: "Chart/Withdrawal",
-                        iconColor: linkColor
-                    ))
-                )
-            )
-            
-            let list = list.update(
-                component: List(items),
-                availableSize: CGSize(width: context.availableSize.width - sideInset, height: 10000.0),
-                transition: context.transition
-            )
-            context.add(list
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + list.size.height / 2.0))
-            )
-            contentSize.height += list.size.height
-            contentSize.height += spacing - 9.0
-            
-            let infoTitleString = "What's #TON?"//.replacingOccurrences(of: "#", with: "# ")
-            let infoTitleAttributedString = NSMutableAttributedString(string: infoTitleString, font: titleFont, textColor: textColor)
-            let infoTitle = infoTitle.update(
-                component: MultilineTextComponent(
-                    text: .plain(infoTitleAttributedString),
-                    horizontalAlignment: .natural,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.2
-                ),
-                availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
-                transition: .immediate
-            )
-            
-            if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
-                state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
-            }
-            
-            let infoString = "TON is a blockchain platform and cryptocurrency that Telegram uses for its record scalability and ultra low commissions on transactions.\n[Learn More >]()"
-            let infoAttributedString = parseMarkdownIntoAttributedString(infoString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
-            if let range = infoAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
-                infoAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: infoAttributedString.string))
-            }
-            let infoText = infoText.update(
-                component: MultilineTextComponent(
-                    text: .plain(infoAttributedString),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.2
-                ),
-                availableSize: CGSize(width: context.availableSize.width - (textSideInset + sideInset - 2.0) * 2.0, height: context.availableSize.height),
-                transition: .immediate
-            )
-            
-            let infoPadding: CGFloat = 17.0
-            let infoSpacing: CGFloat = 12.0
-            let totalInfoHeight = infoPadding + infoTitle.size.height + infoSpacing + infoText.size.height + infoPadding
-            
-            let infoBackground = infoBackground.update(
-                component: RoundedRectangle(
-                    color: theme.list.blocksBackgroundColor,
-                    cornerRadius: 10.0
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: totalInfoHeight),
-                transition: .immediate
-            )
-            context.add(infoBackground
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + infoBackground.size.height / 2.0))
-            )
-            contentSize.height += infoPadding
-            
-            context.add(infoTitle
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + infoTitle.size.height / 2.0))
-            )
-            contentSize.height += infoTitle.size.height
-            contentSize.height += infoSpacing
-            
-            context.add(infoText
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + infoText.size.height / 2.0))
-            )
-            contentSize.height += infoText.size.height
-            contentSize.height += infoPadding
-            contentSize.height += spacing
-            
-            let actionButton = actionButton.update(
-                component: SolidRoundedButtonComponent(
-                    title: "Understood",
-                    theme: SolidRoundedButtonComponent.Theme(
-                        backgroundColor: theme.list.itemCheckColors.fillColor,
-                        backgroundColors: [],
-                        foregroundColor: theme.list.itemCheckColors.foregroundColor
-                    ),
-                    font: .bold,
-                    fontSize: 17.0,
-                    height: 50.0,
-                    cornerRadius: 10.0,
-                    gloss: false,
-                    iconName: nil,
-                    animationName: nil,
-                    iconPosition: .left,
-                    action: {
+            items.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(
+                SheetPageContent(
+                    context: component.context,
+                    title: nil,
+                    items: [
+                        SheetPageContent.Item(title: "I don't like it", subItems: []),
+                        SheetPageContent.Item(title: "I don't want to see ads", subItems: []),
+                        SheetPageContent.Item(title: "Destination doesn't match the ad", subItems: []),
+                        SheetPageContent.Item(title: "Word choice or style", subItems: []),
+                        SheetPageContent.Item(title: "Shocking or sexual content", subItems: []),
+                        SheetPageContent.Item(title: "Hate speech or threats", subItems: []),
+                        SheetPageContent.Item(title: "Scam or misleading", subItems: []),
+                        SheetPageContent.Item(title: "Illegal or questionable products", subItems: [
+                            SheetPageContent.Item(title: "Drugs, alcohol or tobacco", subItems: []),
+                            SheetPageContent.Item(title: "Uncertified medicine or supplements", subItems: []),
+                            SheetPageContent.Item(title: "Weapons or firearms", subItems: []),
+                            SheetPageContent.Item(title: "Fake money", subItems: []),
+                            SheetPageContent.Item(title: "Fake documents", subItems: []),
+                            SheetPageContent.Item(title: "Malware, phishing, hacked accounts", subItems: []),
+                            SheetPageContent.Item(title: "Human trafficking or exploitation", subItems: []),
+                            SheetPageContent.Item(title: "Wild or restricted animals", subItems: []),
+                            SheetPageContent.Item(title: "Gambling", subItems: [])
+                        ]),
+                        SheetPageContent.Item(title: "Copyright infringement", subItems: []),
+                        SheetPageContent.Item(title: "Politics or religion", subItems: []),
+                        SheetPageContent.Item(title: "Spam", subItems: [])
+                    ],
+                    action: { [weak state] item in
+                        if !item.subItems.isEmpty {
+                            state?.pushedItem = item
+                            update(.spring(duration: 0.45))
+                        } else {
+                            component.complete()
+                        }
+                    },
+                    pop: {
                         component.dismiss()
                     }
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                )
+            )))
+            if let pushedItem = context.state.pushedItem {
+                items.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(
+                    SheetPageContent(
+                        context: component.context,
+                        title: pushedItem.title,
+                        items: pushedItem.subItems.map {
+                            SheetPageContent.Item(title: $0.title, subItems: [])
+                        },
+                        action: { item in
+                            component.complete()
+                        },
+                        pop: { [weak state] in
+                            state?.pushedItem = nil
+                            update(.spring(duration: 0.45))
+                        }
+                    )
+                )))
+            }
+            
+            var contentSize = CGSize(width: context.availableSize.width, height: 0.0)
+            let navigation = navigation.update(
+                component: NavigationStackComponent(items: items),
+                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
                 transition: context.transition
             )
-            context.add(actionButton
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + actionButton.size.height / 2.0))
+            context.add(navigation
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: navigation.size.height / 2.0))
+                .clipsToBounds(true)
             )
-            contentSize.height += actionButton.size.height
-            contentSize.height += 22.0
+            contentSize.height += navigation.size.height
                         
-            contentSize.height += environment.safeInsets.bottom
-            
-            state.playAnimationIfNeeded()
-            
             return contentSize
         }
     }
@@ -309,17 +324,17 @@ private final class SheetContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let animatedEmojis: [String: TelegramMediaFile]
     let openMore: () -> Void
+    let complete: () -> Void
     
     init(
         context: AccountContext,
-        animatedEmojis: [String: TelegramMediaFile],
-        openMore: @escaping () -> Void
+        openMore: @escaping () -> Void,
+        complete: @escaping () -> Void
     ) {
         self.context = context
-        self.animatedEmojis = animatedEmojis
         self.openMore = openMore
+        self.complete = complete
     }
     
     static func ==(lhs: SheetContainerComponent, rhs: SheetContainerComponent) -> Bool {
@@ -327,6 +342,14 @@ private final class SheetContainerComponent: CombinedComponent {
             return false
         }
         return true
+    }
+    
+    final class State: ComponentState {
+        var pts: Int = 0
+    }
+    
+    func makeState() -> State {
+        return State()
     }
     
     static var body: Body {
@@ -337,24 +360,29 @@ private final class SheetContainerComponent: CombinedComponent {
         
         return { context in
             let environment = context.environment[EnvironmentType.self]
-            
+            let state = context.state
             let controller = environment.controller
             
             let sheet = sheet.update(
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
-                        animatedEmojis: context.component.animatedEmojis,
+                        pts: state.pts,
                         openMore: context.component.openMore,
+                        complete: context.component.complete,
                         dismiss: {
                             animateOut.invoke(Action { _ in
                                 if let controller = controller() {
                                     controller.dismiss(completion: nil)
                                 }
                             })
+                        },
+                        update: { [weak state] transition in
+                            state?.pts += 1
+                            state?.updated(transition: transition)
                         }
                     )),
-                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
+                    backgroundColor: .color(environment.theme.list.modalBlocksBackgroundColor),
                     followContentSizeChanges: true,
                     externalState: sheetExternalState,
                     animateOut: animateOut
@@ -411,26 +439,23 @@ private final class SheetContainerComponent: CombinedComponent {
 }
 
 
-final class AdsReportScreen: ViewControllerComponentContainer {
+public final class AdsReportScreen: ViewControllerComponentContainer {
     private let context: AccountContext
-    private let animatedEmojis: [String: TelegramMediaFile]
-    private var openMore: (() -> Void)?
         
-    init(
-        context: AccountContext,
-        animatedEmojis: [String: TelegramMediaFile],
-        openMore: @escaping () -> Void
+    public init(
+        context: AccountContext
     ) {
         self.context = context
-        self.animatedEmojis = animatedEmojis
-        self.openMore = openMore
                 
+        var completeImpl: (() -> Void)?
         super.init(
             context: context,
             component: SheetContainerComponent(
                 context: context,
-                animatedEmojis: animatedEmojis,
-                openMore: openMore
+                openMore: {},
+                complete: {
+                    completeImpl?()
+                }
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
@@ -438,146 +463,259 @@ final class AdsReportScreen: ViewControllerComponentContainer {
         )
         
         self.navigationPresentation = .flatModal
+        
+        completeImpl = { [weak self] in
+            guard let self else {
+                return
+            }
+            let navigationController = self.navigationController
+            self.dismissAnimated()
+            
+            Queue.mainQueue().after(0.4, {
+                //TODO:localize
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                (navigationController?.viewControllers.last as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: "We will review this ad to ensure it matches our [Ad Policies and Guidelines]().", cancel: nil, destructive: false), elevatedLayout: false, action: { _ in
+                    return true
+                }), in: .current)
+            })
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func viewDidLoad() {
+    public override func viewDidLoad() {
         super.viewDidLoad()
         
         self.view.disablesInteractiveModalDismiss = true
     }
     
-    func dismissAnimated() {
+    public func dismissAnimated() {
         if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
             view.dismissAnimated()
         }
     }
 }
 
-private final class ParagraphComponent: CombinedComponent {
-    let title: String
-    let titleColor: UIColor
-    let text: String
-    let textColor: UIColor
-    let iconName: String
-    let iconColor: UIColor
+
+
+//private final class NavigationContainer: UIView, UIGestureRecognizerDelegate {
+//    var requestUpdate: ((Transition) -> Void)?
+//    var requestPop: (() -> Void)?
+//    var transitionFraction: CGFloat = 0.0
+//    
+//    private var panRecognizer: InteractiveTransitionGestureRecognizer?
+//    
+//    var isNavigationEnabled: Bool = false {
+//        didSet {
+//            self.panRecognizer?.isEnabled = self.isNavigationEnabled
+//        }
+//    }
+//    
+//    override init() {
+//        super.init()
+//        
+//        self.clipsToBounds = true
+//        
+//        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
+//            guard let strongSelf = self else {
+//                return []
+//            }
+//            let _ = strongSelf
+//            return [.right]
+//        })
+//        panRecognizer.delegate = self
+//        self.view.addGestureRecognizer(panRecognizer)
+//        self.panRecognizer = panRecognizer
+//    }
+//    
+//    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+//        return false
+//    }
+//    
+//    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+//        if let _ = otherGestureRecognizer as? InteractiveTransitionGestureRecognizer {
+//            return false
+//        }
+//        if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
+//            return true
+//        }
+//        return false
+//    }
+//    
+//    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+//        switch recognizer.state {
+//        case .began:
+//            self.transitionFraction = 0.0
+//        case .changed:
+//            let distanceFactor: CGFloat = recognizer.translation(in: self.view).x / self.bounds.width
+//            let transitionFraction = max(0.0, min(1.0, distanceFactor))
+//            if self.transitionFraction != transitionFraction {
+//                self.transitionFraction = transitionFraction
+//                self.requestUpdate?(.immediate)
+//            }
+//        case .ended, .cancelled:
+//            let distanceFactor: CGFloat = recognizer.translation(in: self.view).x / self.bounds.width
+//            let transitionFraction = max(0.0, min(1.0, distanceFactor))
+//            if transitionFraction > 0.2 {
+//                self.transitionFraction = 0.0
+//                self.requestPop?()
+//            } else {
+//                self.transitionFraction = 0.0
+//                self.requestUpdate?(.spring(duration: 0.45))
+//            }
+//        default:
+//            break
+//        }
+//    }
+//}
+
+final class NavigationStackComponent: Component {
+    public let items: [AnyComponentWithIdentity<Empty>]
     
     public init(
-        title: String,
-        titleColor: UIColor,
-        text: String,
-        textColor: UIColor,
-        iconName: String,
-        iconColor: UIColor
+        items: [AnyComponentWithIdentity<Empty>]
     ) {
-        self.title = title
-        self.titleColor = titleColor
-        self.text = text
-        self.textColor = textColor
-        self.iconName = iconName
-        self.iconColor = iconColor
+        self.items = items
     }
     
-    static func ==(lhs: ParagraphComponent, rhs: ParagraphComponent) -> Bool {
-        if lhs.title != rhs.title {
-            return false
-        }
-        if lhs.titleColor != rhs.titleColor {
-            return false
-        }
-        if lhs.text != rhs.text {
-            return false
-        }
-        if lhs.textColor != rhs.textColor {
-            return false
-        }
-        if lhs.iconName != rhs.iconName {
-            return false
-        }
-        if lhs.iconColor != rhs.iconColor {
+    public static func ==(lhs: NavigationStackComponent, rhs: NavigationStackComponent) -> Bool {
+        if lhs.items != rhs.items {
             return false
         }
         return true
     }
-    
-    static var body: Body {
-        let title = Child(MultilineTextComponent.self)
-        let text = Child(MultilineTextComponent.self)
-        let icon = Child(BundleIconComponent.self)
         
-        return { context in
-            let component = context.component
-            
-            let leftInset: CGFloat = 64.0
-            let rightInset: CGFloat = 32.0
-            let textSideInset: CGFloat = leftInset + 8.0
-            let spacing: CGFloat = 5.0
-            
-            let textTopInset: CGFloat = 9.0
-            
-            let title = title.update(
-                component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: component.title,
-                        font: Font.semibold(15.0),
-                        textColor: component.titleColor,
-                        paragraphAlignment: .natural
-                    )),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 1
-                ),
-                availableSize: CGSize(width: context.availableSize.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude),
-                transition: .immediate
-            )
-            
-            let textFont = Font.regular(15.0)
-            let boldTextFont = Font.semibold(15.0)
-            let textColor = component.textColor
-            let markdownAttributes = MarkdownAttributes(
-                body: MarkdownAttributeSet(font: textFont, textColor: textColor),
-                bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
-                link: MarkdownAttributeSet(font: textFont, textColor: textColor),
-                linkAttribute: { _ in
-                    return nil
-                }
-            )
-                        
-            let text = text.update(
-                component: MultilineTextComponent(
-                    text: .markdown(text: component.text, attributes: markdownAttributes),
-                    horizontalAlignment: .natural,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.2
-                ),
-                availableSize: CGSize(width: context.availableSize.width - leftInset - rightInset, height: context.availableSize.height),
-                transition: .immediate
-            )
-            
-            let icon = icon.update(
-                component: BundleIconComponent(
-                    name: component.iconName,
-                    tintColor: component.iconColor
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
-                transition: .immediate
-            )
-         
-            context.add(title
-                .position(CGPoint(x: textSideInset + title.size.width / 2.0, y: textTopInset + title.size.height / 2.0))
-            )
-            
-            context.add(text
-                .position(CGPoint(x: textSideInset + text.size.width / 2.0, y: textTopInset + title.size.height + spacing + text.size.height / 2.0))
-            )
-            
-            context.add(icon
-                .position(CGPoint(x: 47.0, y: textTopInset + 18.0))
-            )
+    private final class ItemView: UIView {
+        let contents = ComponentView<Empty>()
         
-            return CGSize(width: context.availableSize.width, height: textTopInset + title.size.height + text.size.height + 20.0)
+        override init(frame: CGRect) {
+            super.init(frame: frame)
         }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+    }
+    
+    public final class View: UIView {
+        private var itemViews: [AnyHashable: ItemView] = [:]
+        
+        private var component: NavigationStackComponent?
+        
+        public override init(frame: CGRect) {
+            super.init(frame: CGRect())
+        }
+        
+        required public init?(coder: NSCoder) {
+            preconditionFailure()
+        }
+                
+        func update(component: NavigationStackComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.component = component
+            
+            var contentHeight: CGFloat = 0.0
+                        
+            var validItemIds: [AnyHashable] = []
+            struct ReadyItem {
+                var index: Int
+                var itemId: AnyHashable
+                var itemView: ItemView
+                var itemTransition: Transition
+                var itemSize: CGSize
+                
+                init(index: Int, itemId: AnyHashable, itemView: ItemView, itemTransition: Transition, itemSize: CGSize) {
+                    self.index = index
+                    self.itemId = itemId
+                    self.itemView = itemView
+                    self.itemTransition = itemTransition
+                    self.itemSize = itemSize
+                }
+            }
+            
+            var readyItems: [ReadyItem] = []
+            for i in 0 ..< component.items.count {
+                let item = component.items[i]
+                let itemId = item.id
+                validItemIds.append(itemId)
+                
+                let itemView: ItemView
+                var itemTransition = transition
+                if let current = self.itemViews[itemId] {
+                    itemView = current
+                } else {
+                    itemTransition = itemTransition.withAnimation(.none)
+                    itemView = ItemView()
+                    itemView.clipsToBounds = true
+                    self.itemViews[itemId] = itemView
+                    itemView.contents.parentState = state
+                }
+                
+                let itemSize = itemView.contents.update(
+                    transition: itemTransition,
+                    component: item.component,
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width, height: availableSize.height)
+                )
+                
+                readyItems.append(ReadyItem(
+                    index: i,
+                    itemId: itemId,
+                    itemView: itemView,
+                    itemTransition: itemTransition,
+                    itemSize: itemSize
+                ))
+                
+                if i == component.items.count - 1 {
+                    contentHeight = itemSize.height
+                }
+            }
+            
+            for readyItem in readyItems.sorted(by: { $0.index < $1.index }) {
+                let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: readyItem.itemSize)
+                if let itemComponentView = readyItem.itemView.contents.view {
+                    var isAdded = false
+                    if itemComponentView.superview == nil {
+                        isAdded = true
+                        self.addSubview(itemComponentView)
+                    }
+                    readyItem.itemTransition.setFrame(view: readyItem.itemView, frame: itemFrame)
+                    readyItem.itemTransition.setFrame(view: itemComponentView, frame: CGRect(origin: CGPoint(), size: itemFrame.size))
+                    
+                    if readyItem.index > 0 && isAdded {
+                        transition.animatePosition(view: itemComponentView, from: CGPoint(x: itemFrame.width, y: 0.0), to: .zero, additive: true, completion: nil)
+                    }
+                }
+            }
+            
+            var removedItemIds: [AnyHashable] = []
+            for (id, _) in self.itemViews {
+                if !validItemIds.contains(id) {
+                    removedItemIds.append(id)
+                }
+            }
+            for id in removedItemIds {
+                guard let itemView = self.itemViews[id] else {
+                    continue
+                }
+                var position = itemView.center
+                position.x += itemView.bounds.width / 2.0
+                transition.setPosition(view: itemView, position: position, completion: { _ in
+                    itemView.removeFromSuperview()
+                    self.itemViews.removeValue(forKey: id)
+                })
+            }
+            
+            return CGSize(width: availableSize.width, height: contentHeight)
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

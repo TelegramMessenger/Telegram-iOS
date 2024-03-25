@@ -1517,6 +1517,8 @@ public extension EmojiPagerContentComponent {
                     displaySearchWithPlaceholder = strings.EmojiSearch_SearchEmojiPlaceholder
                 } else if [.profilePhoto, .groupPhoto].contains(subject) {
                     displaySearchWithPlaceholder = strings.Common_Search
+                } else if case .stickerAlt = subject {
+                    displaySearchWithPlaceholder = strings.Common_Search
                 }
             }
             

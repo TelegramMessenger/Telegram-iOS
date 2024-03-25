@@ -245,7 +245,11 @@ final class PeekControllerNode: ViewControllerTracingNode {
                 case .contained:
                     containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
                 case .freeform:
-                    containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) / 3.0)), size: contentSize)
+                    var fraction: CGFloat = 1.0 / 3.0
+                    if let _ = self.controller?.appeared {
+                        fraction *= 1.33
+                    }
+                    containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) * fraction)), size: contentSize)
             }
             actionsFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - actionsSize.width) / 2.0), y: containerFrame.maxY + 64.0), size: actionsSize)
         }
@@ -267,8 +271,15 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         let offset = CGPoint(x: rect.midX - self.containerNode.position.x, y: rect.midY - self.containerNode.position.y)
         self.containerNode.layer.animateSpring(from: NSValue(cgPoint: offset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, initialVelocity: 0.0, damping: 110.0, additive: true)
-        self.containerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, initialVelocity: 0.0, damping: 110.0)
-        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        
+        if let appeared = self.controller?.appeared {
+            appeared()
+            let scale = rect.width / self.contentNode.frame.width
+            self.containerNode.layer.animateSpring(from: scale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, initialVelocity: 0.0, damping: 110.0)
+        } else {
+            self.containerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, initialVelocity: 0.0, damping: 110.0)
+            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        }
         
         if let topAccessoryNode = self.topAccessoryNode {
             topAccessoryNode.layer.animateSpring(from: NSValue(cgPoint: offset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.4, initialVelocity: 0.0, damping: 110.0, additive: true)
@@ -293,13 +304,35 @@ final class PeekControllerNode: ViewControllerTracingNode {
         let springDuration: Double = 0.42 * animationDurationFactor
         let springDamping: CGFloat = 104.0
         
+        var scaleCompleted = false
+        var positionCompleted = false
+        let outCompletion = { [weak self] in
+            if scaleCompleted && positionCompleted {
+                self?.controller?.disappeared?()
+            }
+        }
+        
         let offset = CGPoint(x: rect.midX - self.containerNode.position.x, y: rect.midY - self.containerNode.position.y)
-        self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint()), to: NSValue(cgPoint: offset), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true, completion: { _ in
+        self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint()), to: NSValue(cgPoint: offset), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, removeOnCompletion: false, additive: true, completion: { _ in
+            positionCompleted = true
+            outCompletion()
             completion()
         })
-        self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-        self.containerNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.25, removeOnCompletion: false)
-           
+
+        if let _ = self.controller?.disappeared {
+            let scale = rect.width / self.contentNode.frame.width
+            self.containerNode.layer.animateScale(from: 1.0, to: scale, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                scaleCompleted = true
+                outCompletion()
+            })
+        } else {
+            self.containerNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                scaleCompleted = true
+                outCompletion()
+            })
+            self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        }
+        
         if !self.actionsStackNode.alpha.isZero {
             let actionsOffset = CGPoint(x: rect.midX - self.actionsStackNode.position.x, y: rect.midY - self.actionsStackNode.position.y)
             self.actionsStackNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false)

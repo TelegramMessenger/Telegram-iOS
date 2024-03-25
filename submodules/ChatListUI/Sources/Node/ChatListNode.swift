@@ -724,7 +724,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                     hideChatListContacts(context: context)
                 } : nil), directionHint: entry.directionHint)
             case let .Notice(presentationData, notice):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(context: context, theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListNoticeItem(context: context, theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
                     switch action {
                     case .activate:
                         switch notice {
@@ -1060,7 +1060,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                     hideChatListContacts(context: context)
                 } : nil), directionHint: entry.directionHint)
             case let .Notice(presentationData, notice):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(context: context, theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListNoticeItem(context: context, theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
                     switch action {
                     case .activate:
                         switch notice {
