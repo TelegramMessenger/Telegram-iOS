@@ -1065,6 +1065,7 @@ func openResolvedUrlImpl(
                     context: context,
                     chatLocation: .peer(link.peer),
                     updateTextInputState: ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(link.message, entities: link.entities)),
+                    activateInput: .text,
                     keepStack: .always
                 ))
             }

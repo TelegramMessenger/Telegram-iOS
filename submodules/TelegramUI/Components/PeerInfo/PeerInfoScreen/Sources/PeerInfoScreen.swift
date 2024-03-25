@@ -591,6 +591,7 @@ private final class PeerInfoInteraction {
     let openBirthdatePrivacy: () -> Void
     let openPremiumGift: () -> Void
     let editingOpenPersonalChannel: () -> Void
+    let getController: () -> ViewController?
     
     init(
         openUsername: @escaping (String, Bool, Promise<Bool>?) -> Void,
@@ -651,7 +652,8 @@ private final class PeerInfoInteraction {
         openBioPrivacy: @escaping () -> Void,
         openBirthdatePrivacy: @escaping () -> Void,
         openPremiumGift: @escaping () -> Void,
-        editingOpenPersonalChannel: @escaping () -> Void
+        editingOpenPersonalChannel: @escaping () -> Void,
+        getController: @escaping () -> ViewController?
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -712,6 +714,7 @@ private final class PeerInfoInteraction {
         self.openBirthdatePrivacy = openBirthdatePrivacy
         self.openPremiumGift = openPremiumGift
         self.editingOpenPersonalChannel = editingOpenPersonalChannel
+        self.getController = getController
     }
 }
 
@@ -1107,7 +1110,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         if let personalChannel = data.personalChannel {
             personalChannelTitle = personalChannel.peer.compactDisplayTitle
         }
-        items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? "Add"), text: "Personal Channel", icon: nil, action: {
+        items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? "Add"), text: "Channel", icon: nil, action: {
             interaction.editingOpenPersonalChannel()
         }))
     }
@@ -1183,8 +1186,12 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 label = presentationData.strings.Conversation_StatusSubscribers(Int32(subscriberCount))
             }
             //TODO:localize
-            items[.personalChannel]?.append(PeerInfoScreenHeaderItem(id: 0, text: "PERSONAL CHANNEL", label: label))
-            items[.personalChannel]?.append(PeerInfoScreenPersonalChannelItem(id: 1, context: context, data: personalChannel, requestLayout: { _ in
+            items[.personalChannel]?.append(PeerInfoScreenHeaderItem(id: 0, text: "CHANNEL", label: label))
+            items[.personalChannel]?.append(PeerInfoScreenPersonalChannelItem(id: 1, context: context, data: personalChannel, controller: { [weak interaction] in
+                guard let interaction else {
+                    return nil
+                }
+                return interaction.getController()
             }, action: { [weak interaction] in
                 guard let interaction else {
                     return
@@ -2727,6 +2734,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 self.editingOpenPersonalChannel()
+            },
+            getController: { [weak self] in
+                return self?.controller
             }
         )
         
@@ -7664,12 +7674,26 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 guard let self else {
                     return
                 }
+                if initialData.channelId == channel?.peer.id {
+                    return
+                }
                 
+                //TODO:localize
+                let toastText: String
                 var mappedChannel: TelegramPersonalChannel?
                 if let channel {
                     mappedChannel = TelegramPersonalChannel(peerId: channel.peer.id, subscriberCount: channel.subscriberCount.flatMap(Int32.init(clamping:)), topMessageId: nil)
+                    if initialData.channelId != nil {
+                        toastText = "Personal channel updated."
+                    } else {
+                        toastText = "Personal channel added."
+                    }
+                } else {
+                    toastText = "Personal channel removed."
                 }
                 let _ = self.context.engine.accountData.updatePersonalChannel(personalChannel: mappedChannel).startStandalone()
+                
+                self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: nil, text: toastText, cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             }))
         })
     }

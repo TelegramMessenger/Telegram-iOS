@@ -52,6 +52,7 @@ swift_library(
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
         "//submodules/TelegramUI/Components/ListItemSwipeOptionContainer",
         "//submodules/UndoUI",
+        "//submodules/ShareController",
     ],
     visibility = [
         "//visibility:public",

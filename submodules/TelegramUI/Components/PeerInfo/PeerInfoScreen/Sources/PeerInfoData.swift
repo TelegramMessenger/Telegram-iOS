@@ -231,13 +231,15 @@ final class TelegramGlobalSettings {
 final class PeerInfoPersonalChannelData: Equatable {
     let peer: EnginePeer
     let subscriberCount: Int?
-    let topMessage: EngineMessage?
+    let topMessages: [EngineMessage]
+    let storyStats: PeerStoryStats?
     let isLoading: Bool
     
-    init(peer: EnginePeer, subscriberCount: Int?, topMessage: EngineMessage?, isLoading: Bool) {
+    init(peer: EnginePeer, subscriberCount: Int?, topMessages: [EngineMessage], storyStats: PeerStoryStats?, isLoading: Bool) {
         self.peer = peer
         self.subscriberCount = subscriberCount
-        self.topMessage = topMessage
+        self.topMessages = topMessages
+        self.storyStats = storyStats
         self.isLoading = isLoading
     }
     
@@ -251,7 +253,10 @@ final class PeerInfoPersonalChannelData: Equatable {
         if lhs.subscriberCount != rhs.subscriberCount {
             return false
         }
-        if lhs.topMessage != rhs.topMessage {
+        if lhs.topMessages != rhs.topMessages {
+            return false
+        }
+        if lhs.storyStats != rhs.storyStats {
             return false
         }
         if lhs.isLoading != rhs.isLoading {
@@ -555,13 +560,36 @@ private func peerInfoPersonalChannel(context: AccountContext, peerId: EnginePeer
                 return .single(nil)
             }
             
-            //TODO:localize and keep updated
-            return context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: channelPeer.id, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 5, fixedCombinedReadStates: nil)
-            |> map { view, _, _ -> PeerInfoPersonalChannelData? in
-                let entry = view.entries.last
+            
+            let polledChannel: Signal<Void, NoError> = Signal<Void, NoError>.single(Void())
+            |> then(
+                context.account.viewTracker.polledChannel(peerId: channelPeer.id)
+                |> ignoreValues
+                |> map { _ -> Void in
+                }
+            )
+            
+            return combineLatest(
+                context.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: channelPeer.id, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 10, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: []),
+                context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Peer.StoryStats(id: channelPeer.id)
+                ),
+                polledChannel
+            )
+            |> map { viewData, storyStats, _ -> PeerInfoPersonalChannelData? in
+                let (view, _, _) = viewData
+                var messages: [EngineMessage] = []
+                for i in (0 ..< view.entries.count).reversed() {
+                    if messages.isEmpty {
+                        messages.append(EngineMessage(view.entries[i].message))
+                    } else if messages[0].groupingKey == view.entries[i].message.groupingKey {
+                        messages.append(EngineMessage(view.entries[i].message))
+                    }
+                }
+                messages = messages.reversed()
                 
                 var isLoading = false
-                if entry == nil && view.isLoading {
+                if messages.isEmpty && view.isLoading {
                     isLoading = true
                 }
                 
@@ -575,7 +603,8 @@ private func peerInfoPersonalChannel(context: AccountContext, peerId: EnginePeer
                 return PeerInfoPersonalChannelData(
                     peer: channelPeer,
                     subscriberCount: mappedParticipantCount,
-                    topMessage: (entry?.message).flatMap(EngineMessage.init),
+                    topMessages: messages,
+                    storyStats: storyStats,
                     isLoading: isLoading
                 )
             }

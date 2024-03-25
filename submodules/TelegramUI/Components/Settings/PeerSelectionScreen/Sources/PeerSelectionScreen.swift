@@ -18,6 +18,7 @@ import ComponentFlow
 import BalancedTextComponent
 import MultilineTextComponent
 import ItemListPeerActionItem
+import ComponentDisplayAdapters
 
 final class PeerSelectionScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -202,6 +203,7 @@ final class PeerSelectionScreenComponent: Component {
         private var emptyState: ComponentView<Empty>?
         private var contentListNode: ContentListNode?
         private var emptySearchState: ComponentView<Empty>?
+        private var loadingView: PeerSelectionLoadingView?
         
         private let navigationBarView = ComponentView<Empty>()
         private var navigationHeight: CGFloat?
@@ -214,7 +216,7 @@ final class PeerSelectionScreenComponent: Component {
         private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
         
-        private var channels: [PeerSelectionScreen.ChannelInfo] = []
+        private var channels: [PeerSelectionScreen.ChannelInfo]?
         private var channelsDisposable: Disposable?
         
         private var isSearchDisplayControllerActive: Bool = false
@@ -248,7 +250,7 @@ final class PeerSelectionScreenComponent: Component {
             }
             
             if let peer {
-                guard let channel = self.channels.first(where: { $0.peer.id == peer.id }) else {
+                guard let channel = self.channels?.first(where: { $0.peer.id == peer.id }) else {
                     return
                 }
                 component.completion(channel)
@@ -279,7 +281,7 @@ final class PeerSelectionScreenComponent: Component {
                 navigationBackTitle: nil,
                 titleComponent: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Personal Channel", font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor))
+                        text: .plain(NSAttributedString(string: "Channel", font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor))
                     ))),
                     AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(string: "select your channel", font: Font.regular(12.0), textColor: theme.rootController.navigationBar.secondaryTextColor))
@@ -394,6 +396,10 @@ final class PeerSelectionScreenComponent: Component {
                     disableStoriesAnimations: false,
                     crossfadeStoryPeers: false
                 )))
+            }
+            
+            if let contentListNode = self.contentListNode, let loadingView = self.loadingView {
+                transition.setFrame(view: loadingView, frame: contentListNode.frame.offsetBy(dx: 0.0, dy: -offset + contentListNode.insets.top))
             }
         }
         
@@ -563,20 +569,22 @@ final class PeerSelectionScreenComponent: Component {
             if component.initialData.channelId != nil && self.searchQuery.isEmpty {
                 entries.append(.hide)
             }
-            for channel in self.channels {
-                if !self.searchQuery.isEmpty {
-                    var matches = false
+            if let channels = self.channels {
+                for channel in channels {
+                    if !self.searchQuery.isEmpty {
+                        var matches = false
                     inner: for nameComponent in channel.peer.compactDisplayTitle.lowercased().components(separatedBy: self.searchQueryComponentSeparationCharacterSet) {
                         if nameComponent.lowercased().hasPrefix(self.searchQuery) {
                             matches = true
                             break inner
                         }
                     }
-                    if !matches {
-                        continue
+                        if !matches {
+                            continue
+                        }
                     }
+                    entries.append(.item(peer: channel.peer, subscriberCount: channel.subscriberCount, sortIndex: entries.count))
                 }
-                entries.append(.item(peer: channel.peer, subscriberCount: channel.subscriberCount, sortIndex: entries.count))
             }
             contentListNode.setEntries(entries: entries, animated: !transition.animation.isImmediate)
             
@@ -619,6 +627,32 @@ final class PeerSelectionScreenComponent: Component {
                 emptySearchState.view?.removeFromSuperview()
             }
             
+            if self.channels == nil, let contentListNode = self.contentListNode {
+                let loadingView: PeerSelectionLoadingView
+                if let current = self.loadingView {
+                    loadingView = current
+                } else {
+                    loadingView = PeerSelectionLoadingView()
+                    self.loadingView = loadingView
+                    contentListNode.view.superview?.insertSubview(loadingView, aboveSubview: contentListNode.view)
+                }
+                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                loadingView.update(
+                    context: component.context,
+                    size: CGSize(width: contentListNode.bounds.size.width, height: floor(contentListNode.bounds.size.height * 1.2)),
+                    presentationData: presentationData,
+                    transition: transition.containedViewLayoutTransition
+                )
+            } else {
+                if let loadingView = self.loadingView {
+                    self.loadingView = nil
+                    let removeTransition: Transition = .easeInOut(duration: 0.2)
+                    removeTransition.setAlpha(view: loadingView, alpha: 0.0, completion: { [weak loadingView] _ in
+                        loadingView?.removeFromSuperview()
+                    })
+                }
+            }
+            
             self.updateNavigationScrolling(navigationHeight: navigationHeight, transition: transition)
             
             if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
@@ -652,7 +686,7 @@ final class PeerSelectionScreenComponent: Component {
 
 public final class PeerSelectionScreen: ViewControllerComponentContainer {
     public final class InitialData {
-        fileprivate let channelId: EnginePeer.Id?
+        public let channelId: EnginePeer.Id?
         
         init(channelId: EnginePeer.Id?) {
             self.channelId = channelId

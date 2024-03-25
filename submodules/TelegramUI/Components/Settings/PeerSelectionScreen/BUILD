@@ -28,6 +28,8 @@ swift_library(
         "//submodules/Components/BalancedTextComponent",
         "//submodules/ItemListPeerActionItem",
         "//submodules/AccountContext",
+        "//submodules/Components/HierarchyTrackingLayer",
+        "//submodules/Components/ComponentDisplayAdapters",
     ],
     visibility = [
         "//visibility:public",
