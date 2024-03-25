@@ -852,34 +852,6 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
-        public struct PersonalChannel: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
-            public typealias Result = CachedTelegramPersonalChannel
-
-            fileprivate var id: EnginePeer.Id
-            public var mapKey: EnginePeer.Id {
-                return self.id
-            }
-
-            public init(id: EnginePeer.Id) {
-                self.id = id
-            }
-
-            var key: PostboxViewKey {
-                return .cachedPeerData(peerId: self.id)
-            }
-
-            func extract(view: PostboxView) -> Result {
-                guard let view = view as? CachedPeerDataView else {
-                    preconditionFailure()
-                }
-                if let cachedData = view.cachedPeerData as? CachedUserData {
-                    return cachedData.personalChannel
-                } else {
-                    return .unknown
-                }
-            }
-        }
-        
         public struct PersonalPhoto: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = EnginePeerCachedInfoItem<TelegramMediaImage?>
 
