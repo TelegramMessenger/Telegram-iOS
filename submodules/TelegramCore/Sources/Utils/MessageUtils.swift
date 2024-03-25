@@ -437,6 +437,14 @@ public extension Message {
         }
         return nil
     }
+    var inlineBotAttribute: InlineBusinessBotMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? InlineBusinessBotMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
 }
 public extension Message {
     var reactionsAttribute: ReactionsMessageAttribute? {
