@@ -139,7 +139,7 @@ private final class SheetContent: CombinedComponent {
             case let .proceeds(amount, fromDate, toDate):
                 amountString = amountAttributedString(formatBalanceText(amount, decimalSeparator: dateTimeFormat.decimalSeparator, showPlus: true), integralFont: integralFont, fractionalFont: fractionalFont, color: theme.list.itemDisclosureActions.constructive.fillColor).mutableCopy() as! NSMutableAttributedString
                 amountString.append(NSAttributedString(string: " TON", font: fractionalFont, textColor: theme.list.itemDisclosureActions.constructive.fillColor))
-                dateString = "\(stringForFullDate(timestamp: fromDate, strings: strings, dateTimeFormat: dateTimeFormat)) – \(stringForFullDate(timestamp: toDate, strings: strings, dateTimeFormat: dateTimeFormat))"
+                dateString = "\(stringForMediumCompactDate(timestamp: fromDate, strings: strings, dateTimeFormat: dateTimeFormat)) – \(stringForMediumCompactDate(timestamp: toDate, strings: strings, dateTimeFormat: dateTimeFormat))"
                 titleString = strings.Monetization_TransactionInfo_Proceeds
                 buttonTitle = strings.Common_OK
                 explorerUrl = nil

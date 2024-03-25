@@ -39,6 +39,7 @@ swift_library(
         "//submodules/TextFormat",
         "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
+        "//submodules/TelegramUI/Components/Settings/BoostLevelIconComponent",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/Components/SheetComponent",

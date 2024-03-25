@@ -1402,5 +1402,9 @@ public extension TelegramEngine {
                 transaction.reindexSavedMessagesCustomTagsWithTagsIfNeeded(peerId: self.account.peerId, threadId: threadId, tag: tag)
             }).startStandalone()
         }
+        
+        public func reportAdMessage(peerId: EnginePeer.Id, opaqueId: Data, option: Data?) -> Signal<ReportAdMessageResult, ReportAdMessageError> {
+            return _internal_reportAdMessage(account: self.account, peerId: peerId, opaqueId: opaqueId, option: option)
+        }
     }
 }

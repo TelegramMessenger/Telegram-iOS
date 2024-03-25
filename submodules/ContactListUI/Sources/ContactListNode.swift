@@ -577,7 +577,17 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                     actionTitle = allSelected ? strings.Premium_Gift_ContactSelection_DeselectAll.uppercased() : strings.Premium_Gift_ContactSelection_SelectAll.uppercased()
                 }
                 let header: ListViewItemHeader? = ChatListSearchItemHeader(type: .text(title.uppercased(), AnyHashable(10 * sectionId + (allSelected ? 1 : 0))), theme: theme, strings: strings, actionTitle: actionTitle, action: {
-                    interaction.toggleSelection(topPeers.filter { peerIds.contains($0.id) }, !allSelected)
+                    var existingPeerIds = Set<EnginePeer.Id>()
+                    var peers: [EnginePeer] = []
+                    for peer in topPeers {
+                        if !existingPeerIds.contains(peer.id) {
+                            if peerIds.contains(peer.id) {
+                                peers.append(peer)
+                                existingPeerIds.insert(peer.id)
+                            }
+                        }
+                    }
+                    interaction.toggleSelection(peers, !allSelected)
                 })
                 
                 for peerId in peerIds {
@@ -1616,16 +1626,35 @@ public final class ContactListNode: ASDisplayNode {
                     chatListSignal = .single([])
                 }
                 
-                let topPeers: Signal<[EnginePeer], NoError>
+                struct TopPeer {
+                    let peer: EnginePeer
+                    let presence: EnginePeer.Presence?
+                }
+                
+                let topPeers: Signal<[TopPeer], NoError>
                 switch displayTopPeers {
                 case .recent:
                     topPeers = context.engine.peers.recentPeers()
-                    |> map { recentPeers -> [EnginePeer] in
-                        var topPeers: [EnginePeer] = []
+                    |> mapToSignal { recentPeers -> Signal<[TopPeer], NoError> in
                         if case let .peers(peers) = recentPeers {
-                            topPeers = peers.map(EnginePeer.init)
+                            let topPeers = peers.map(EnginePeer.init)
+                            return context.engine.data.subscribe(
+                                EngineDataMap(peers.map(\.id).map(TelegramEngine.EngineData.Item.Peer.Presence.init))
+                            )
+                            |> map { presences -> [TopPeer] in
+                                var result: [TopPeer] = []
+                                for peer in topPeers {
+                                    var presence: EnginePeer.Presence?
+                                    if let maybePresence = presences[peer.id], let presenceValue = maybePresence {
+                                        presence = presenceValue
+                                    }
+                                    result.append(TopPeer(peer: peer, presence: presence))
+                                }
+                                return result
+                            }
+                        } else {
+                            return .single([])                      
                         }
-                        return topPeers
                     }
                 case let .custom(sections):
                     var peerIds: [EnginePeer.Id] = []
@@ -1635,16 +1664,35 @@ public final class ContactListNode: ASDisplayNode {
                     topPeers = combineLatest(
                         context.engine.data.get(EngineDataMap(peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))),
                         context.engine.peers.recentPeers()
-                    ) |> map { peers, recentPeers in
-                        var result: [EnginePeer] = []
-                        for peer in peers.values {
-                            if let peer {
-                                result.append(peer)
+                        |> mapToSignal { recentPeers -> Signal<[TopPeer], NoError> in
+                            if case let .peers(peers) = recentPeers {
+                                let topPeers = peers.map(EnginePeer.init)
+                                return context.engine.data.subscribe(
+                                    EngineDataMap(peers.map(\.id).map(TelegramEngine.EngineData.Item.Peer.Presence.init))
+                                )
+                                |> map { presences -> [TopPeer] in
+                                    var result: [TopPeer] = []
+                                    for peer in topPeers {
+                                        var presence: EnginePeer.Presence?
+                                        if let maybePresence = presences[peer.id], let presenceValue = maybePresence {
+                                            presence = presenceValue
+                                        }
+                                        result.append(TopPeer(peer: peer, presence: presence))
+                                    }
+                                    return result
+                                }
+                            } else {
+                                return .single([])
                             }
                         }
-                        if case let .peers(peers) = recentPeers {
-                            result.append(contentsOf: peers.map(EnginePeer.init))
+                    ) |> map { peers, recentPeers in
+                        var result: [TopPeer] = []
+                        for peer in peers.values {
+                            if let peer {
+                                result.append(TopPeer(peer: peer, presence: nil))
+                            }
                         }
+                        result.append(contentsOf: recentPeers)
                         return result
                     }
                 case .none:
@@ -1703,11 +1751,18 @@ public final class ContactListNode: ASDisplayNode {
                             }
                         }
                         
+                        var presences = view.0.presences
+                        for peer in topPeers {
+                            if let presence = peer.presence {
+                                presences[peer.peer.id] = presence
+                            }
+                        }
+                        
                         var isEmpty = false
                         if (authorizationStatus == .notDetermined || authorizationStatus == .denied) && peers.isEmpty {
                             isEmpty = true
                         }
-                        let entries = contactListNodeEntries(accountPeer: view.1, peers: peers, presences: view.0.presences, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, peerRequiresPremiumForMessaging: view.2, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed, displaySortOptions: displaySortOptions, displayCallIcons: displayCallIcons, storySubscriptions: storySubscriptions, topPeers: topPeers, topPeersPresentation: displayTopPeers, interaction: interaction)
+                        let entries = contactListNodeEntries(accountPeer: view.1, peers: peers, presences: presences, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, peerRequiresPremiumForMessaging: view.2, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed, displaySortOptions: displaySortOptions, displayCallIcons: displayCallIcons, storySubscriptions: storySubscriptions, topPeers: topPeers.map { $0.peer }, topPeersPresentation: displayTopPeers, interaction: interaction)
                         let previous = previousEntries.swap(entries)
                         let previousSelection = previousSelectionState.swap(selectionState)
                         let previousPendingRemovalPeerIds = previousPendingRemovalPeerIds.swap(pendingRemovalPeerIds)

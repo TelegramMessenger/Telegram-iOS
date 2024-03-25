@@ -240,7 +240,9 @@ private final class RevenueStatsTransactionsContextImpl {
                     return .complete()
                 }
                 let offset = lastOffset ?? 0
-                let request = Api.functions.stats.getBroadcastRevenueTransactions(channel: inputChannel, offset: offset, limit: 50)
+                let limit: Int32 = lastOffset == nil ? 25 : 50
+                
+                let request = Api.functions.stats.getBroadcastRevenueTransactions(channel: inputChannel, offset: offset, limit: limit)
                 let signal: Signal<Api.stats.BroadcastRevenueTransactions, MTRpcError>
                 if let statsDatacenterId = statsDatacenterId, account.network.datacenterId != statsDatacenterId {
                     signal = account.network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)

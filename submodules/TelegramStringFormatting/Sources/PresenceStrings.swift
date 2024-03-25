@@ -107,7 +107,7 @@ public func stringForMonth(strings: PresentationStrings, month: Int32, ofYear ye
     }
 }
 
-private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String {
+func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String {
     switch index {
     case 0:
         return strings.Month_ShortJanuary
