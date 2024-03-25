@@ -402,4 +402,10 @@ public struct PresentationResourcesItemList {
             })
         })
     }
+    
+    public static func hideIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.hideIconImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/Archive/IconHide"), color: theme.list.itemAccentColor)
+        })
+    }
 }

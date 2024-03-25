@@ -26,6 +26,8 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BalancedTextComponent",
+        "//submodules/ItemListPeerActionItem",
+        "//submodules/AccountContext",
     ],
     visibility = [
         "//visibility:public",

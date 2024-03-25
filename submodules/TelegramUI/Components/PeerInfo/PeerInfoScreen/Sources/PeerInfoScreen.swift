@@ -1097,7 +1097,11 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         }))
         
         //TODO:localize
-        items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text("Add"), text: "Personal Channel", icon: nil, action: {
+        var personalChannelTitle: String?
+        if let personalChannel = data.personalChannel {
+            personalChannelTitle = personalChannel.peer.compactDisplayTitle
+        }
+        items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? "Add"), text: "Personal Channel", icon: nil, action: {
             interaction.editingOpenPersonalChannel()
         }))
     }
@@ -1166,9 +1170,14 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             items[.calls]!.append(PeerInfoScreenCallListItem(id: 20, messages: callMessages))
         }
         
-        if let personalChannel = data.personalChannel, !"".isEmpty {
+        if let personalChannel = data.personalChannel {
             let peerId = personalChannel.peer.id
-            items[.personalChannel]?.append(PeerInfoScreenHeaderItem(id: 0, text: "PERSONAL CHANNEL", label: "2M subscribers"))
+            var label: String?
+            if let subscriberCount = personalChannel.subscriberCount {
+                label = presentationData.strings.Conversation_StatusSubscribers(Int32(subscriberCount))
+            }
+            //TODO:localize
+            items[.personalChannel]?.append(PeerInfoScreenHeaderItem(id: 0, text: "PERSONAL CHANNEL", label: label))
             items[.personalChannel]?.append(PeerInfoScreenPersonalChannelItem(id: 1, context: context, data: personalChannel, requestLayout: { _ in
             }, action: { [weak interaction] in
                 guard let interaction else {
@@ -7611,13 +7620,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func editingOpenPersonalChannel() {
-        self.controller?.push(PeerSelectionScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, completion: { [weak self] channel in
+        let _ = (PeerSelectionScreen.initialData(context: self.context)
+        |> deliverOnMainQueue).start(next: { [weak self] initialData in
             guard let self else {
                 return
             }
             
-            let _ = self.context.engine.accountData.updatePersonalChannel(personalChannel: TelegramPersonalChannel(peerId: channel.peer.id, subscriberCount: channel.subscriberCount.flatMap(Int32.init(clamping:)), topMessageId: nil)).startStandalone()
-        }))
+            self.controller?.push(PeerSelectionScreen(context: self.context, initialData: initialData, updatedPresentationData: self.controller?.updatedPresentationData, completion: { [weak self] channel in
+                guard let self else {
+                    return
+                }
+                
+                var mappedChannel: TelegramPersonalChannel?
+                if let channel {
+                    mappedChannel = TelegramPersonalChannel(peerId: channel.peer.id, subscriberCount: channel.subscriberCount.flatMap(Int32.init(clamping:)), topMessageId: nil)
+                }
+                let _ = self.context.engine.accountData.updatePersonalChannel(personalChannel: mappedChannel).startStandalone()
+            }))
+        })
     }
         
     private func editingOpenInviteLinksSetup() {

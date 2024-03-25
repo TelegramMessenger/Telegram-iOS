@@ -17,18 +17,19 @@ import ViewControllerComponent
 import ComponentFlow
 import BalancedTextComponent
 import MultilineTextComponent
+import ItemListPeerActionItem
 
 final class PeerSelectionScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
     let initialData: PeerSelectionScreen.InitialData
-    let completion: (PeerSelectionScreen.ChannelInfo) -> Void
+    let completion: (PeerSelectionScreen.ChannelInfo?) -> Void
     
     init(
         context: AccountContext,
         initialData: PeerSelectionScreen.InitialData,
-        completion: @escaping (PeerSelectionScreen.ChannelInfo) -> Void
+        completion: @escaping (PeerSelectionScreen.ChannelInfo?) -> Void
     ) {
         self.context = context
         self.initialData = initialData
@@ -45,22 +46,30 @@ final class PeerSelectionScreenComponent: Component {
     
     private enum ContentEntry: Comparable, Identifiable {
         enum Id: Hashable {
+            case hide
             case item(EnginePeer.Id)
         }
         
         var stableId: Id {
             switch self {
+            case .hide:
+                return .hide
             case let .item(peer, _, _):
                 return .item(peer.id)
             }
         }
         
+        case hide
         case item(peer: EnginePeer, subscriberCount: Int?, sortIndex: Int)
         
         static func <(lhs: ContentEntry, rhs: ContentEntry) -> Bool {
             switch lhs {
+            case .hide:
+                return false
             case let .item(lhsPeer, _, lhsSortIndex):
                 switch rhs {
+                case .hide:
+                    return false
                 case let .item(rhsPeer, _, rhsSortIndex):
                     if lhsSortIndex != rhsSortIndex {
                         return lhsSortIndex < rhsSortIndex
@@ -72,6 +81,26 @@ final class PeerSelectionScreenComponent: Component {
         
         func item(listNode: ContentListNode) -> ListViewItem {
             switch self {
+            case .hide:
+                return ItemListPeerActionItem(
+                    presentationData: ItemListPresentationData(listNode.presentationData),
+                    icon: PresentationResourcesItemList.hideIconImage(listNode.presentationData.theme),
+                    iconSignal: nil,
+                    title: "Hide Personal Channel",
+                    additionalBadgeIcon: nil,
+                    alwaysPlain: true,
+                    hasSeparator: true,
+                    sectionId: 0,
+                    height: .generic,
+                    color: .accent,
+                    editing: false,
+                    action: { [weak listNode] in
+                        guard let listNode, let parentView = listNode.parentView else {
+                            return
+                        }
+                        parentView.peerSelected(peer: nil)
+                    }
+                )
             case let .item(peer, subscriberCount, _):
                 //TODO:localize
                 let statusText: String
@@ -213,14 +242,19 @@ final class PeerSelectionScreenComponent: Component {
             return true
         }
         
-        func peerSelected(peer: EnginePeer) {
+        func peerSelected(peer: EnginePeer?) {
             guard let component = self.component, let environment = self.environment else {
                 return
             }
-            guard let channel = self.channels.first(where: { $0.peer.id == peer.id }) else {
-                return
+            
+            if let peer {
+                guard let channel = self.channels.first(where: { $0.peer.id == peer.id }) else {
+                    return
+                }
+                component.completion(channel)
+            } else {
+                component.completion(nil)
             }
-            component.completion(channel)
             environment.controller()?.dismiss()
         }
         
@@ -526,6 +560,9 @@ final class PeerSelectionScreenComponent: Component {
             contentListNode.update(size: availableSize, insets: UIEdgeInsets(top: navigationHeight, left: environment.safeInsets.left, bottom: listBottomInset, right: environment.safeInsets.right), transition: transition)
             
             var entries: [ContentEntry] = []
+            if component.initialData.channelId != nil && self.searchQuery.isEmpty {
+                entries.append(.hide)
+            }
             for channel in self.channels {
                 if !self.searchQuery.isEmpty {
                     var matches = false
@@ -615,7 +652,10 @@ final class PeerSelectionScreenComponent: Component {
 
 public final class PeerSelectionScreen: ViewControllerComponentContainer {
     public final class InitialData {
-        init() {
+        fileprivate let channelId: EnginePeer.Id?
+        
+        init(channelId: EnginePeer.Id?) {
+            self.channelId = channelId
         }
     }
     
@@ -631,12 +671,12 @@ public final class PeerSelectionScreen: ViewControllerComponentContainer {
     
     private let context: AccountContext
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, completion: @escaping (ChannelInfo) -> Void) {
+    public init(context: AccountContext, initialData: InitialData, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, completion: @escaping (ChannelInfo?) -> Void) {
         self.context = context
         
         super.init(context: context, component: PeerSelectionScreenComponent(
             context: context,
-            initialData: InitialData(),
+            initialData: initialData,
             completion: completion
         ), navigationBarAppearance: .none, theme: .default, updatedPresentationData: updatedPresentationData)
         
@@ -661,6 +701,19 @@ public final class PeerSelectionScreen: ViewControllerComponentContainer {
     }
     
     deinit {
+    }
+    
+    public static func initialData(context: AccountContext) -> Signal<InitialData, NoError> {
+        return context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.PersonalChannel(id: context.account.peerId)
+        )
+        |> map { personalChannel -> InitialData in
+            var channelId: EnginePeer.Id?
+            if case let .known(value) = personalChannel, let value {
+                channelId = value.peerId
+            }
+            return InitialData(channelId: channelId)
+        }
     }
     
     @objc private func cancelPressed() {
