@@ -11683,6 +11683,7 @@ Sorry for the inconvenience.";
 "Monetization.OverviewTitle" = "PROCEEDS OVERVIEW";
 "Monetization.BalanceTitle" = "AVAILABLE BALANCE";
 "Monetization.BalanceInfo" = "You will be able to collect rewards using Fragment, a third-party platform used by the advertizer to pay for the ad. [Learn More >]()";
+"Monetization.BalanceInfo_URL" = "https://telegram.org";
 "Monetization.BalanceWithdraw" = "Withdraw via Fragment";
 "Monetization.TransactionsTitle" = "TRANSACTION HISTORY";
 
@@ -11695,6 +11696,8 @@ Sorry for the inconvenience.";
 "Monetization.Transaction.Refund" = "Refund";
 "Monetization.Transaction.Pending" = "Pending";
 "Monetization.Transaction.Failed" = "Not Completed";
+"Monetization.Transaction.ShowMoreTransactions_1" = "Show %@ More Transaction";
+"Monetization.Transaction.ShowMoreTransactions_any" = "Show %@ More Transactions";
 
 "Monetization.SwitchOffAds" = "Switch off Ads";
 "Monetization.SwitchOffAdsInfo" = "You will not be eligible for any rewards if you switch off ads.";
@@ -11723,4 +11726,6 @@ Sorry for the inconvenience.";
 
 "Monetization.Intro.Info.Title" = "What's #TON?";
 "Monetization.Intro.Info.Text" = "TON is a blockchain platform and cryptocurrency that Telegram uses for its record scalability and ultra low commissions on transactions. [Learn More >]()";
+"Monetization.Intro.Info.Text_URL" = "https://ton.org";
+
 "Monetization.Intro.Understood" = "Understood";

@@ -23,8 +23,11 @@ import ItemListPeerActionItem
 import PremiumUI
 import StoryContainerScreen
 import TelegramNotices
+import ComponentFlow
+import BoostLevelIconComponent
 
 private let initialBoostersDisplayedLimit: Int32 = 5
+private let initialTransactionsDisplayedLimit: Int32 = 5
 
 private final class ChannelStatsControllerArguments {
     let context: AccountContext
@@ -42,13 +45,14 @@ private final class ChannelStatsControllerArguments {
     
     let requestWithdraw: () -> Void
     let openMonetizationIntro: () -> Void
+    let openMonetizationInfo: () -> Void
     let openTransaction: (RevenueStatsTransactionsContext.State.Transaction) -> Void
     let expandTransactions: () -> Void
     let updateCpmEnabled: (Bool) -> Void
     let presentCpmLocked: () -> Void
     let dismissInput: () -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void, requestWithdraw: @escaping () -> Void, openMonetizationIntro: @escaping () -> Void, openTransaction: @escaping (RevenueStatsTransactionsContext.State.Transaction) -> Void, expandTransactions: @escaping () -> Void, updateCpmEnabled: @escaping (Bool) -> Void, presentCpmLocked: @escaping () -> Void, dismissInput: @escaping () -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void, requestWithdraw: @escaping () -> Void, openMonetizationIntro: @escaping () -> Void, openMonetizationInfo: @escaping () -> Void, openTransaction: @escaping (RevenueStatsTransactionsContext.State.Transaction) -> Void, expandTransactions: @escaping () -> Void, updateCpmEnabled: @escaping (Bool) -> Void, presentCpmLocked: @escaping () -> Void, dismissInput: @escaping () -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openPostStats = openPostStats
@@ -63,6 +67,7 @@ private final class ChannelStatsControllerArguments {
         self.updateGiftsSelected = updateGiftsSelected
         self.requestWithdraw = requestWithdraw
         self.openMonetizationIntro = openMonetizationIntro
+        self.openMonetizationInfo = openMonetizationInfo
         self.openTransaction = openTransaction
         self.expandTransactions = expandTransactions
         self.updateCpmEnabled = updateCpmEnabled
@@ -225,8 +230,9 @@ private enum StatsEntry: ItemListNodeEntry {
     
     case adsTransactionsTitle(PresentationTheme, String)
     case adsTransaction(Int32, PresentationTheme, RevenueStatsTransactionsContext.State.Transaction)
+    case adsTransactionsExpand(PresentationTheme, String)
     
-    case adsCpmToggle(PresentationTheme, String, Bool?)
+    case adsCpmToggle(PresentationTheme, String, Int32, Bool?)
     case adsCpmInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -281,7 +287,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.adsProceeds.rawValue
             case .adsBalanceTitle, .adsBalance, .adsBalanceInfo:
                 return StatsSection.adsBalance.rawValue
-            case .adsTransactionsTitle, .adsTransaction:
+            case .adsTransactionsTitle, .adsTransaction, .adsTransactionsExpand:
                 return StatsSection.adsTransactions.rawValue
             case .adsCpmToggle, .adsCpmInfo:
                 return StatsSection.adsCpm.rawValue
@@ -404,10 +410,12 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 20010
             case let .adsTransaction(index, _, _):
                 return 20011 + index
+            case .adsTransactionsExpand:
+                return 30000
             case .adsCpmToggle:
-                return 21000
+                return 30001
             case .adsCpmInfo:
-                return 21002
+                return 30002
         }
     }
     
@@ -755,8 +763,14 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .adsCpmToggle(lhsTheme, lhsText, lhsValue):
-                if case let .adsCpmToggle(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .adsTransactionsExpand(lhsTheme, lhsText):
+                if case let .adsTransactionsExpand(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .adsCpmToggle(lhsTheme, lhsText, lhsMinLevel, lhsValue):
+                if case let .adsCpmToggle(rhsTheme, rhsText, rhsMinLevel, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsMinLevel == rhsMinLevel, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -806,7 +820,6 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .boostersInfo(_, text),
                  let .boostLinkInfo(_, text),
                  let .boostGiftsInfo(_, text),
-                 let .adsBalanceInfo(_, text),
                  let .adsCpmInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .overview(_, stats):
@@ -961,6 +974,10 @@ private enum StatsEntry: ItemListNodeEntry {
                     sectionId: self.section,
                     style: .blocks
                 )
+            case let .adsBalanceInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
+                    arguments.openMonetizationInfo()
+                })
             case let .adsTransaction(_, theme, transaction):
                 let font = Font.regular(presentationData.fontSize.itemListBaseFontSize)
                 let smallLabelFont = Font.regular(floor(presentationData.fontSize.itemListBaseFontSize / 17.0 * 13.0))
@@ -973,22 +990,22 @@ private enum StatsEntry: ItemListNodeEntry {
                 switch transaction {
                 case let .proceeds(_, fromDate, toDate):
                     title = NSAttributedString(string: presentationData.strings.Monetization_Transaction_Proceeds, font: font, textColor: theme.list.itemPrimaryTextColor)
-                    detailText = "\(stringForMediumDate(timestamp: fromDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)) – \(stringForMediumDate(timestamp: toDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat))"
+                    detailText = "\(stringForMediumCompactDate(timestamp: fromDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)) – \(stringForMediumCompactDate(timestamp: toDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat))"
                 case let .withdrawal(status, _, date, provider, _, _):
                     title = NSAttributedString(string: presentationData.strings.Monetization_Transaction_Withdrawal(provider).string, font: font, textColor: theme.list.itemPrimaryTextColor)
                     labelColor = theme.list.itemDestructiveColor
                     switch status {
                     case .succeed:
-                        detailText = stringForMediumDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                        detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
                     case .failed:
-                        detailText = stringForMediumDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat) + " – \(presentationData.strings.Monetization_Transaction_Failed)"
+                        detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat) + " – \(presentationData.strings.Monetization_Transaction_Failed)"
                         detailColor = .destructive
                     case .pending:
                         detailText = presentationData.strings.Monetization_Transaction_Pending
                     }
                 case let .refund(_, date, _):
                     title = NSAttributedString(string: presentationData.strings.Monetization_Transaction_Refund, font: font, textColor: theme.list.itemPrimaryTextColor)
-                    detailText = stringForMediumDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                    detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
                 }
             
                 let label = amountAttributedString(formatBalanceText(transaction.amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, showPlus: true), integralFont: font, fractionalFont: smallLabelFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
@@ -997,8 +1014,19 @@ private enum StatsEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, title: "", attributedTitle: title, label: "", attributedLabel: label, labelStyle: .coloredText(labelColor), additionalDetailLabel: detailText, additionalDetailLabelColor: detailColor, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
                     arguments.openTransaction(transaction)
                 })
-            case let .adsCpmToggle(_, title, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: title, value: value == true, enableInteractiveChanges: value != nil, enabled: true, displayLocked: value == nil, sectionId: self.section, style: .blocks, updated: { updatedValue in
+            case let .adsTransactionsExpand(theme, title):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
+                    arguments.expandTransactions()
+                })
+            case let .adsCpmToggle(_, title, minLevel, value):
+                var badgeComponent: AnyComponent<Empty>?
+                if value == nil {
+                    badgeComponent = AnyComponent(BoostLevelIconComponent(
+                        strings: presentationData.strings,
+                        level: Int(minLevel)
+                    ))
+                }
+                return ItemListSwitchItem(presentationData: presentationData, title: title, titleBadgeComponent: badgeComponent, value: value == true, enableInteractiveChanges: value != nil, enabled: true, displayLocked: value == nil, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     if value != nil {
                         arguments.updateCpmEnabled(updatedValue)
                     } else {
@@ -1022,19 +1050,25 @@ private struct ChannelStatsControllerState: Equatable {
     let boostersExpanded: Bool
     let moreBoostersDisplayed: Int32
     let giftsSelected: Bool
+    let transactionsExpanded: Bool
+    let moreTransactionsDisplayed: Int32
   
     init() {
         self.section = .stats
         self.boostersExpanded = false
         self.moreBoostersDisplayed = 0
         self.giftsSelected = false
+        self.transactionsExpanded = false
+        self.moreTransactionsDisplayed = 0
     }
     
-    init(section: ChannelStatsSection, boostersExpanded: Bool, moreBoostersDisplayed: Int32, giftsSelected: Bool) {
+    init(section: ChannelStatsSection, boostersExpanded: Bool, moreBoostersDisplayed: Int32, giftsSelected: Bool, transactionsExpanded: Bool, moreTransactionsDisplayed: Int32) {
         self.section = section
         self.boostersExpanded = boostersExpanded
         self.moreBoostersDisplayed = moreBoostersDisplayed
         self.giftsSelected = giftsSelected
+        self.transactionsExpanded = transactionsExpanded
+        self.moreTransactionsDisplayed = moreTransactionsDisplayed
     }
     
     static func ==(lhs: ChannelStatsControllerState, rhs: ChannelStatsControllerState) -> Bool {
@@ -1050,23 +1084,37 @@ private struct ChannelStatsControllerState: Equatable {
         if lhs.giftsSelected != rhs.giftsSelected {
             return false
         }
+        if lhs.transactionsExpanded != rhs.transactionsExpanded {
+            return false
+        }
+        if lhs.moreTransactionsDisplayed != rhs.moreTransactionsDisplayed {
+            return false
+        }
         return true
     }
     
     func withUpdatedSection(_ section: ChannelStatsSection) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected)
+        return ChannelStatsControllerState(section: section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
     }
     
     func withUpdatedBoostersExpanded(_ boostersExpanded: Bool) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: self.section, boostersExpanded: boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected)
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
     }
     
     func withUpdatedMoreBoostersDisplayed(_ moreBoostersDisplayed: Int32) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: moreBoostersDisplayed, giftsSelected: self.giftsSelected)
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: moreBoostersDisplayed, giftsSelected: self.giftsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
     }
     
     func withUpdatedGiftsSelected(_ giftsSelected: Bool) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: giftsSelected)
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: giftsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
+    }
+    
+    func withUpdatedTransactionsExpanded(_ transactionsExpanded: Bool) -> ChannelStatsControllerState {
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
+    }
+    
+    func withUpdatedMoreTransactionsDisplayed(_ moreTransactionsDisplayed: Int32) -> ChannelStatsControllerState {
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: moreTransactionsDisplayed)
     }
 }
 
@@ -1309,9 +1357,11 @@ private func boostsEntries(
 private func monetizationEntries(
     presentationData: PresentationData,
     state: ChannelStatsControllerState,
+    peer: EnginePeer?,
     data: RevenueStats,
     boostData: ChannelBoostStatus?,
-    transactions: RevenueStatsTransactionsContext.State,
+    transactionsInfo: RevenueStatsTransactionsContext.State,
+    adsRestricted: Bool,
     animatedEmojis: [String: [StickerPackItem]],
     premiumConfiguration: PremiumConfiguration
 ) -> [StatsEntry] {
@@ -1333,25 +1383,50 @@ private func monetizationEntries(
     entries.append(.adsProceedsTitle(presentationData.theme, presentationData.strings.Monetization_OverviewTitle))
     entries.append(.adsProceedsOverview(presentationData.theme, data, diamond))
     
+    
+    var withdrawalAvailable = false
+    if let peer, case let .channel(channel) = peer, channel.flags.contains(.isCreator) && data.availableBalance > 0 {
+        withdrawalAvailable = true
+    }
     entries.append(.adsBalanceTitle(presentationData.theme, presentationData.strings.Monetization_BalanceTitle))
-    entries.append(.adsBalance(presentationData.theme, data, false, diamond))
+    entries.append(.adsBalance(presentationData.theme, data, withdrawalAvailable, diamond))
     entries.append(.adsBalanceInfo(presentationData.theme, presentationData.strings.Monetization_BalanceInfo))
                    
-    if !transactions.transactions.isEmpty {
+    if !transactionsInfo.transactions.isEmpty {
         entries.append(.adsTransactionsTitle(presentationData.theme, presentationData.strings.Monetization_TransactionsTitle))
+        
+        var transactions = transactionsInfo.transactions
+        var limit: Int32
+        if state.transactionsExpanded {
+            limit = 25 + state.moreTransactionsDisplayed
+        } else {
+            limit = initialTransactionsDisplayedLimit
+        }
+        transactions = Array(transactions.prefix(Int(limit)))
+        
         var i: Int32 = 0
-        for transaction in transactions.transactions {
+        for transaction in transactions {
             entries.append(.adsTransaction(i, presentationData.theme, transaction))
             i += 1
+        }
+        
+        if transactions.count < transactionsInfo.count {
+            let moreCount: Int32
+            if !state.transactionsExpanded {
+                moreCount = min(20, transactionsInfo.count - Int32(transactions.count))
+            } else {
+                moreCount = min(500, transactionsInfo.count - Int32(transactions.count))
+            }
+            entries.append(.adsTransactionsExpand(presentationData.theme, presentationData.strings.Monetization_Transaction_ShowMoreTransactions(moreCount)))
         }
     }
     
     var switchOffAdds: Bool? = nil
     if let boostData, boostData.level >= premiumConfiguration.minChannelRestrictAdsLevel {
-        switchOffAdds = false
+        switchOffAdds = adsRestricted
     }
     
-    entries.append(.adsCpmToggle(presentationData.theme, presentationData.strings.Monetization_SwitchOffAds, switchOffAdds))
+    entries.append(.adsCpmToggle(presentationData.theme, presentationData.strings.Monetization_SwitchOffAds, premiumConfiguration.minChannelRestrictAdsLevel, switchOffAdds))
     entries.append(.adsCpmInfo(presentationData.theme, presentationData.strings.Monetization_SwitchOffAdsInfo))
     
     return entries
@@ -1374,6 +1449,7 @@ private func channelStatsControllerEntries(
     animatedEmojis: [String: [StickerPackItem]],
     revenueState: RevenueStats?,
     revenueTransactions: RevenueStatsTransactionsContext.State,
+    adsRestricted: Bool,
     premiumConfiguration: PremiumConfiguration
 ) -> [StatsEntry] {
     switch state.section {
@@ -1406,9 +1482,11 @@ private func channelStatsControllerEntries(
             return monetizationEntries(
                 presentationData: presentationData,
                 state: state,
+                peer: peer,
                 data: revenueState,
                 boostData: boostData,
-                transactions: revenueTransactions,
+                transactionsInfo: revenueTransactions,
+                adsRestricted: adsRestricted,
                 animatedEmojis: animatedEmojis,
                 premiumConfiguration: premiumConfiguration
             )
@@ -1418,8 +1496,8 @@ private func channelStatsControllerEntries(
 }
 
 public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, section: ChannelStatsSection = .stats, boostStatus: ChannelBoostStatus? = nil, boostStatusUpdated: ((ChannelBoostStatus) -> Void)? = nil) -> ViewController {
-    let statePromise = ValuePromise(ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false), ignoreRepeated: true)
-    let stateValue = Atomic(value: ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false))
+    let statePromise = ValuePromise(ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false, transactionsExpanded: false, moreTransactionsDisplayed: 0), ignoreRepeated: true)
+    let stateValue = Atomic(value: ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false, transactionsExpanded: false, moreTransactionsDisplayed: 0))
     let updateState: ((ChannelStatsControllerState) -> ChannelStatsControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
@@ -1471,6 +1549,8 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let boostsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: false)
     let giftsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: true)
     let revenueContext = RevenueStatsContext(postbox: context.account.postbox, network: context.account.network, peerId: peerId)
+    let revenueState = Promise<RevenueStatsContextState?>()
+    revenueState.set(.single(nil) |> then(revenueContext.state |> map(Optional.init)))
     
     let revenueTransactions = RevenueStatsTransactionsContext(account: context.account, peerId: peerId)
     
@@ -1612,13 +1692,25 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         let controller = MonetizationIntroScreen(context: context, openMore: {})
         pushImpl?(controller)
     },
+    openMonetizationInfo: {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.Monetization_BalanceInfo_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+    },
     openTransaction: { transaction in
         openTransactionImpl?(transaction)
     },
     expandTransactions: {
-        
+        updateState { state in
+            if state.transactionsExpanded {
+                return state.withUpdatedMoreTransactionsDisplayed(state.moreTransactionsDisplayed + 50)
+            } else {
+                return state.withUpdatedTransactionsExpanded(true)
+            }
+        }
+        revenueTransactions.loadMore()
     },
     updateCpmEnabled: { value in
+        let _ = context.engine.peers.updateChannelRestrictAdMessages(peerId: peerId, value: value ? .restrict(minCpm: nil) : .unrestrict).start()
     },
     presentCpmLocked: {
         let _ = combineLatest(
@@ -1658,6 +1750,8 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let peer = Promise<EnginePeer?>()
     peer.set(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
     
+    let adsRestricted = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.AdsRestricted(id: peerId))
+    
     let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
     let previousData = Atomic<ChannelStats?>(value: nil)
 
@@ -1672,13 +1766,14 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         boostDataPromise.get(),
         boostsContext.state,
         giftsContext.state,
-        revenueContext.state,
+        revenueState.get(),
         revenueTransactions.state,
+        adsRestricted,
         longLoadingSignal,
         context.animatedEmojiStickers
     )
     |> deliverOnMainQueue
-    |> map { presentationData, state, peer, data, messageView, stories, boostData, boostersState, giftsState, revenueState, revenueTransactions, longLoading, animatedEmojiStickers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, peer, data, messageView, stories, boostData, boostersState, giftsState, revenueState, revenueTransactions, adsRestricted, longLoading, animatedEmojiStickers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var isGroup = false
         if let peer, case let .channel(channel) = peer, case .group = channel.info {
             isGroup = true
@@ -1700,8 +1795,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
         case .monetization:
-            emptyStateItem = nil
-//            emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
+            if revenueState == nil {
+                emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
+            }
         }
         
         var existingGroupingKeys = Set<Int64>()
@@ -1762,7 +1858,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(presentationData: presentationData, state: state, peer: peer, data: data, messages: messages, stories: stories, interactions: interactions, boostData: boostData, boostersState: boostersState, giftsState: giftsState, giveawayAvailable: premiumConfiguration.giveawayGiftsPurchaseAvailable, isGroup: isGroup, boostsOnly: boostsOnly, animatedEmojis: animatedEmojiStickers, revenueState: revenueState.stats, revenueTransactions: revenueTransactions, premiumConfiguration: premiumConfiguration), style: .blocks, emptyStateItem: emptyStateItem, headerItem: headerItem, crossfadeState: previous == nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(presentationData: presentationData, state: state, peer: peer, data: data, messages: messages, stories: stories, interactions: interactions, boostData: boostData, boostersState: boostersState, giftsState: giftsState, giveawayAvailable: premiumConfiguration.giveawayGiftsPurchaseAvailable, isGroup: isGroup, boostsOnly: boostsOnly, animatedEmojis: animatedEmojiStickers, revenueState: revenueState?.stats, revenueTransactions: revenueTransactions, adsRestricted: adsRestricted, premiumConfiguration: premiumConfiguration), style: .blocks, emptyStateItem: emptyStateItem, headerItem: headerItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -1770,6 +1866,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         actionsDisposable.dispose()
         let _ = statsContext.state
         let _ = storyList.state
+        let _ = revenueContext.state
     }
     
     let controller = ItemListController(context: context, state: signal)

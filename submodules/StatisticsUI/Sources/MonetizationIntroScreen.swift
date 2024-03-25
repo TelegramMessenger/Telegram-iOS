@@ -224,6 +224,7 @@ private final class SheetContent: CombinedComponent {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
             }
             
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let infoString = strings.Monetization_Intro_Info_Text
             let infoAttributedString = parseMarkdownIntoAttributedString(infoString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = infoAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
@@ -234,7 +235,17 @@ private final class SheetContent: CombinedComponent {
                     text: .plain(infoAttributedString),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
-                    lineSpacing: 0.2
+                    lineSpacing: 0.2,
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { _, _ in
+                        component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Monetization_Intro_Info_Text_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                    }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - (textSideInset + sideInset - 2.0) * 2.0, height: context.availableSize.height),
                 transition: .immediate
