@@ -1059,15 +1059,20 @@ func openResolvedUrlImpl(
                 }
             })
         case let .messageLink(link):
-            if let navigationController = navigationController {
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
-                    navigationController: navigationController,
-                    context: context,
-                    chatLocation: .peer(link.peer),
-                    updateTextInputState: ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(link.message, entities: link.entities)),
-                    activateInput: .text,
-                    keepStack: .always
-                ))
+            if let link {
+                if let navigationController = navigationController {
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                        navigationController: navigationController,
+                        context: context,
+                        chatLocation: .peer(link.peer),
+                        updateTextInputState: ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(link.message, entities: link.entities)),
+                        activateInput: .text,
+                        keepStack: .always
+                    ))
+                }
+            } else {
+                //TODO:localize
+                present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: "Link expired.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }
     }
 }

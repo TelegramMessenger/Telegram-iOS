@@ -182,9 +182,17 @@ final class BusinessLinkListItemComponent: Component {
             }
             
             let asyncLayout = TextNodeWithEntities.asyncLayout(self.text)
+            let filteredEntities = component.link.entities.filter { entity in
+                switch entity.type {
+                case .CustomEmoji:
+                    return true
+                default:
+                    return false
+                }
+            }
             let textString = stringWithAppliedEntities(
                 component.link.message.isEmpty ? "No text" : component.link.message,
-                entities: component.link.entities,
+                entities: filteredEntities,
                 baseColor: component.theme.list.itemSecondaryTextColor,
                 linkColor: component.theme.list.itemSecondaryTextColor,
                 baseQuoteTintColor: nil,

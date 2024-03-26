@@ -307,7 +307,7 @@ public enum ResolvedUrl {
     case boost(peerId: PeerId?, status: ChannelBoostStatus?, myBoostStatus: MyBoostStatus?)
     case premiumGiftCode(slug: String)
     case premiumMultiGift(reference: String?)
-    case messageLink(link: TelegramResolvedMessageLink)
+    case messageLink(link: TelegramResolvedMessageLink?)
 }
 
 public enum ResolveUrlResult {
