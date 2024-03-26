@@ -1301,6 +1301,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 mediaReference = AnyMediaReference.standalone(media: image)
                             } else if let file = media as? TelegramMediaFile {
                                 mediaReference = AnyMediaReference.standalone(media: file)
+                            } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                                if let image = content.image {
+                                    mediaReference = AnyMediaReference.standalone(media: image)
+                                } else if let file = content.file {
+                                    mediaReference = AnyMediaReference.standalone(media: file)
+                                }
                             }
                         }
                         

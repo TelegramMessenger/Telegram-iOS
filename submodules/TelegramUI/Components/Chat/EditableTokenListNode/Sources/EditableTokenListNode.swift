@@ -235,6 +235,12 @@ private final class TokenNode: ASDisplayNode {
                 })
             }
             self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        } else {
+            if isSelected {
+                self.selectedBackgroundNode.alpha = 1.0
+            } else {
+                self.selectedBackgroundNode.alpha = 0.0
+            }
         }
         
         self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(14.0), textColor: self.isSelected ? self.theme.selectedTextColor : self.theme.primaryTextColor)

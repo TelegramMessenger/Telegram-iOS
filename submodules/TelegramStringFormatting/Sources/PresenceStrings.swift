@@ -161,7 +161,7 @@ public func stringForCompactBirthday(_ birthday: TelegramBirthday, strings: Pres
              
             let calendar = Calendar.current
             if let birthDate = calendar.date(from: dateComponents) {
-                if let age = calendar.dateComponents([.year], from: birthDate, to: Date()).year {
+                if let age = calendar.dateComponents([.year], from: birthDate, to: Date()).year, age > 0 {
                     components.append("(\(strings.UserInfo_Age(Int32(age))))")
                 }
             }
