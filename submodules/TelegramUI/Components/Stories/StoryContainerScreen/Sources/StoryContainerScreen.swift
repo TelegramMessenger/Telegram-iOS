@@ -357,7 +357,14 @@ private final class StoryContainerScreenComponent: Component {
     }
 
     final class View: UIView, UIGestureRecognizerDelegate {
-        private var component: StoryContainerScreenComponent?
+        private var component: StoryContainerScreenComponent? {
+            didSet {
+                if self.component != nil {
+                    self.isComponentReadyPromise.set(true)
+                }
+            }
+        }
+        private let isComponentReadyPromise = ValuePromise(false, ignoreRepeated: true)
         private weak var state: EmptyComponentState?
         private var environment: ViewControllerComponentContainer.Environment?
         
@@ -700,9 +707,13 @@ private final class StoryContainerScreenComponent: Component {
             self.volumeButtonsListenerShouldBeActiveDisposable = (combineLatest(queue: .mainQueue(),
                 self.contentWantsVolumeButtonMonitoring.get(),
                 self.isMuteSwitchOnPromise.get(),
-                self.audioModePromise.get()
+                self.audioModePromise.get(),
+                self.isComponentReadyPromise.get()
             )
-            |> map { contentWantsVolumeButtonMonitoring, isMuteSwitchOn, audioMode -> Bool in
+            |> map { contentWantsVolumeButtonMonitoring, isMuteSwitchOn, audioMode, isComponentReady -> Bool in
+                if !isComponentReady {
+                    return false
+                }
                 if !contentWantsVolumeButtonMonitoring {
                     return false
                 }
@@ -1105,53 +1116,55 @@ private final class StoryContainerScreenComponent: Component {
         }
         
         private func updateVolumeButtonMonitoring() {
-            if self.volumeButtonsListener == nil {
-                let buttonAction = { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    guard let slice = self.stateValue?.slice else {
-                        return
-                    }
-                    var isSilentVideo = false
-                    if case let .file(file) = slice.item.storyItem.media {
-                        for attribute in file.attributes {
-                            if case let .Video(_, _, flags, _) = attribute {
-                                if flags.contains(.isSilent) {
-                                    isSilentVideo = true
-                                }
+            guard self.volumeButtonsListener == nil, let component = self.component else {
+                return
+            }
+            let buttonAction = { [weak self] in
+                guard let self else {
+                    return
+                }
+                guard let slice = self.stateValue?.slice else {
+                    return
+                }
+                var isSilentVideo = false
+                if case let .file(file) = slice.item.storyItem.media {
+                    for attribute in file.attributes {
+                        if case let .Video(_, _, flags, _) = attribute {
+                            if flags.contains(.isSilent) {
+                                isSilentVideo = true
                             }
+                        }
+                    }
+                }
+                
+                if isSilentVideo {
+                    if let slice = self.stateValue?.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let currentItemView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                        currentItemView.displayMutedVideoTooltip()
+                    }
+                } else {
+                    switch self.audioMode {
+                    case .off, .ambient:
+                        break
+                    case .on:
+                        return
+                    }
+                    self.audioMode = .on
+                    
+                    for (_, itemSetView) in self.visibleItemSetViews {
+                        if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                            componentView.leaveAmbientMode()
                         }
                     }
                     
-                    if isSilentVideo {
-                        if let slice = self.stateValue?.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let currentItemView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                            currentItemView.displayMutedVideoTooltip()
-                        }
-                    } else {
-                        switch self.audioMode {
-                        case .off, .ambient:
-                            break
-                        case .on:
-                            return
-                        }
-                        self.audioMode = .on
-                        
-                        for (_, itemSetView) in self.visibleItemSetViews {
-                            if let componentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                                componentView.leaveAmbientMode()
-                            }
-                        }
-                        
-                        self.state?.updated(transition: .immediate)
-                    }
+                    self.state?.updated(transition: .immediate)
                 }
-                self.volumeButtonsListener = VolumeButtonsListener(
-                    shouldBeActive: self.volumeButtonsListenerShouldBeActive.get(),
-                    upPressed: buttonAction,
-                    downPressed: buttonAction
-                )
             }
+            self.volumeButtonsListener = VolumeButtonsListener(
+                sharedContext: component.context.sharedContext,
+                shouldBeActive: self.volumeButtonsListenerShouldBeActive.get(),
+                upPressed: buttonAction,
+                downPressed: buttonAction
+            )
         }
         
         private var previousBackNavigationTime: Double?
