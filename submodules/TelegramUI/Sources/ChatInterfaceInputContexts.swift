@@ -55,6 +55,15 @@ func serviceTasksForChatPresentationIntefaceState(context: AccountContext, chatP
 }
 
 func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) -> [ChatPresentationInputQuery] {
+    if case let .customChatContents(customChatContents) = chatPresentationInterfaceState.subject {
+        switch customChatContents.kind {
+        case .quickReplyMessageInput:
+            break
+        case .businessLinkSetup:
+            return []
+        }
+    }
+    
     let inputState = chatPresentationInterfaceState.interfaceState.effectiveInputState
     let inputString: NSString = inputState.inputText.string as NSString
     var result: [ChatPresentationInputQuery] = []

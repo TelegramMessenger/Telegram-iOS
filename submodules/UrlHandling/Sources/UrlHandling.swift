@@ -1000,7 +1000,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             |> then(context.engine.peers.resolveMessageLink(slug: slug)
             |> mapToSignal { result -> Signal<ResolveInternalUrlResult, NoError> in
                 guard let result else {
-                    return .single(.result(nil))
+                    return .single(.result(.messageLink(link: nil)))
                 }
                 var customEmojiIds: [Int64] = []
                 for entity in result.entities {

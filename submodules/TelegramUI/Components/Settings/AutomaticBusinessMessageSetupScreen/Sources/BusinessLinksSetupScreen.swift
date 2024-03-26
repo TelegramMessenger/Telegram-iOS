@@ -341,7 +341,7 @@ final class BusinessLinksSetupScreenComponent: Component {
             let iconSize = self.icon.update(
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: "MapEmoji"),
+                    content: LottieComponent.AppBundleContent(name: "MessageLinkEmoji"),
                     loop: false
                 )),
                 environment: {},

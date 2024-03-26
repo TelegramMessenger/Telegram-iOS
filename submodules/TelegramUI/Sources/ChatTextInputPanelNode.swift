@@ -2022,7 +2022,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         var leftInset = leftInset
         
         var textInputBackgroundWidthOffset: CGFloat = 0.0
-        var attachmentButtonX: CGFloat = hideOffset.x + leftInset + 2.0 - UIScreenPixel
+        var attachmentButtonX: CGFloat = hideOffset.x + leftInset + leftMenuInset + 2.0 - UIScreenPixel
         if !displayMediaButton {
             attachmentButtonX = -40.0
             let inputFieldAdditionalWidth = 40.0 - 4.0
