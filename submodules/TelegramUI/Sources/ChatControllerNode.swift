@@ -1005,6 +1005,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     mappedType = .botInfo
                 }
                 emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, subject: .emptyChat(mappedType), loadingNode: wasLoading && self.loadingNode.supernode != nil ? self.loadingNode : nil, backgroundNode: self.backgroundNode, size: size, insets: insets, transition: .immediate)
+                emptyNode.frame = CGRect(origin: CGPoint(), size: size)
             }
             if animated {
                 emptyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)

@@ -11837,6 +11837,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
+            switch event {
+            case let .download(subject):
+                if case let .message(messageId) = subject {
+                    var isVisible = false
+                    self.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
+                        if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                            for (message, _) in item.content {
+                                if message.id == messageId {
+                                    isVisible = true
+                                }
+                            }
+                        }
+                    }
+                    
+                    if !isVisible {
+                        return
+                    }
+                }
+            case .upload:
+                break
+            }
+            
             let timestamp = CFAbsoluteTimeGetCurrent()
             if lastEventTimestamp + 10.0 < timestamp {
                 lastEventTimestamp = timestamp
@@ -11864,6 +11886,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 text = "Subscribe to [Telegram Premium]() and increase upload speeds \(speedIncreaseFactor) times."
             }
             let content: UndoOverlayContent = .universal(animation: "anim_speed_low", scale: 0.066, colors: [:], title: title, text: text, customUndoText: nil, timeout: 5.0)
+            
+            self.context.account.network.markNetworkSpeedLimitDisplayed()
             
             self.present(UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, position: .top, action: { [weak self] action in
                 guard let self else {

@@ -323,155 +323,157 @@ final class ChatbotSetupScreenComponent: Component {
                 return
             }
             
-            enum AdditionalCategoryId: Int {
-                case existingChats
-                case newChats
-                case contacts
-                case nonContacts
-            }
-            
-            let additionalCategories: [ChatListNodeAdditionalCategory]
-            var selectedCategories = Set<Int>()
-            if isExclude {
-                additionalCategories = []
-            } else {
-                additionalCategories = [
-                    ChatListNodeAdditionalCategory(
-                        id: self.hasAccessToAllChatsByDefault ? AdditionalCategoryId.existingChats.rawValue : AdditionalCategoryId.newChats.rawValue,
-                        icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: self.hasAccessToAllChatsByDefault ? "Chat List/Filters/Chats" : "Chat List/Filters/NewChats"), color: .white), cornerRadius: 12.0, color: .purple),
-                        smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: self.hasAccessToAllChatsByDefault ? "Chat List/Filters/Chats" : "Chat List/Filters/NewChats"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .purple),
-                        title: self.hasAccessToAllChatsByDefault ? environment.strings.BusinessMessageSetup_Recipients_CategoryExistingChats : environment.strings.BusinessMessageSetup_Recipients_CategoryNewChats
-                    ),
-                    ChatListNodeAdditionalCategory(
-                        id: AdditionalCategoryId.contacts.rawValue,
-                        icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), cornerRadius: 12.0, color: .blue),
-                        smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
-                        title: environment.strings.BusinessMessageSetup_Recipients_CategoryContacts
-                    ),
-                    ChatListNodeAdditionalCategory(
-                        id: AdditionalCategoryId.nonContacts.rawValue,
-                        icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), cornerRadius: 12.0, color: .yellow),
-                        smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .yellow),
-                        title: environment.strings.BusinessMessageSetup_Recipients_CategoryNonContacts
-                    )
-                ]
-            }
+            var mappedPeerList = BusinessRecipientListScreenComponent.PeerList(categories: Set(), peers: [])
             if !isExclude {
                 for category in self.additionalPeerList.categories {
                     switch category {
                     case .existingChats:
-                        selectedCategories.insert(AdditionalCategoryId.existingChats.rawValue)
+                        mappedPeerList.categories.insert(.existingChats)
                     case .newChats:
-                        selectedCategories.insert(AdditionalCategoryId.newChats.rawValue)
+                        mappedPeerList.categories.insert(.newChats)
                     case .contacts:
-                        selectedCategories.insert(AdditionalCategoryId.contacts.rawValue)
+                        mappedPeerList.categories.insert(.contacts)
                     case .nonContacts:
-                        selectedCategories.insert(AdditionalCategoryId.nonContacts.rawValue)
+                        mappedPeerList.categories.insert(.nonContacts)
                     }
                 }
             }
-            
-            let controller = component.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: component.context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
-                title: (self.hasAccessToAllChatsByDefault || isExclude) ? environment.strings.BusinessMessageSetup_Recipients_ExcludeSearchTitle : environment.strings.BusinessMessageSetup_Recipients_IncludeSearchTitle,
-                searchPlaceholder: environment.strings.ChatListFilter_AddChatsSearchPlaceholder,
-                selectedChats: isExclude ? Set(self.additionalPeerList.excludePeers.map(\.peer.id)) : Set(self.additionalPeerList.peers.map(\.peer.id)),
-                additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
-                chatListFilters: nil,
-                onlyUsers: true
-            )), options: [], filters: [], alwaysEnabled: true, limit: 100, reachedLimit: { _ in
-            }))
-            controller.navigationPresentation = .modal
-            
-            let _ = (controller.result
-            |> take(1)
-            |> deliverOnMainQueue).startStandalone(next: { [weak self, weak controller] result in
-                guard let self, let component = self.component, case let .result(rawPeerIds, additionalCategoryIds) = result else {
-                    controller?.dismiss()
-                    return
+            if isExclude {
+                for peer in self.additionalPeerList.excludePeers {
+                    mappedPeerList.peers.append(BusinessRecipientListScreenComponent.PeerList.Peer(
+                        peer: peer.peer,
+                        isContact: peer.isContact
+                    ))
                 }
-                
-                let peerIds = rawPeerIds.compactMap { id -> EnginePeer.Id? in
-                    switch id {
-                    case let .peer(id):
-                        return id
-                    case .deviceContact:
-                        return nil
+            } else {
+                for peer in self.additionalPeerList.peers {
+                    mappedPeerList.peers.append(BusinessRecipientListScreenComponent.PeerList.Peer(
+                        peer: peer.peer,
+                        isContact: peer.isContact
+                    ))
+                }
+            }
+            
+            let mode: BusinessRecipientListScreen.Mode
+            if isExclude {
+                mode = .excludeUsers
+            } else {
+                if self.hasAccessToAllChatsByDefault {
+                    mode = .excludeExceptions
+                } else {
+                    mode = .includeExceptions
+                }
+            }
+            
+            if mappedPeerList.categories.isEmpty && mappedPeerList.peers.isEmpty {
+                let controller = BusinessRecipientListScreenComponent.View.makePeerListSetupScreen(
+                    context: component.context,
+                    mode: mode,
+                    initialPeerList: mappedPeerList,
+                    completion: { [weak self] peerList in
+                        guard let self, let component = self.component, let environment = self.environment else {
+                            return
+                        }
+                        
+                        environment.controller()?.push(BusinessRecipientListScreen(
+                            context: component.context,
+                            peerList: peerList,
+                            mode: mode,
+                            update: { [weak self] updatedPeerList in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                switch mode {
+                                case .excludeExceptions, .includeExceptions:
+                                    self.additionalPeerList.peers.removeAll()
+                                    for peer in updatedPeerList.peers {
+                                        self.additionalPeerList.peers.append(AdditionalPeerList.Peer(
+                                            peer: peer.peer,
+                                            isContact: peer.isContact
+                                        ))
+                                        
+                                        self.additionalPeerList.excludePeers.removeAll(where: { $0.peer.id == peer.peer.id })
+                                    }
+                                    self.additionalPeerList.categories.removeAll()
+                                    for category in updatedPeerList.categories {
+                                        switch category {
+                                        case .existingChats:
+                                            self.additionalPeerList.categories.insert(.existingChats)
+                                        case .newChats:
+                                            self.additionalPeerList.categories.insert(.newChats)
+                                        case .contacts:
+                                            self.additionalPeerList.categories.insert(.contacts)
+                                        case .nonContacts:
+                                            self.additionalPeerList.categories.insert(.nonContacts)
+                                        }
+                                    }
+                                case .excludeUsers:
+                                    for peer in updatedPeerList.peers {
+                                        self.additionalPeerList.excludePeers.append(AdditionalPeerList.Peer(
+                                            peer: peer.peer,
+                                            isContact: peer.isContact
+                                        ))
+                                        
+                                        self.additionalPeerList.peers.removeAll(where: { $0.peer.id == peer.peer.id })
+                                    }
+                                }
+                                
+                                self.state?.updated(transition: .immediate)
+                            }
+                        ))
                     }
-                }
-                
-                let _ = (component.context.engine.data.get(
-                    EngineDataMap(
-                        peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))
-                    ),
-                    EngineDataMap(
-                        peerIds.map(TelegramEngine.EngineData.Item.Peer.IsContact.init(id:))
-                    )
                 )
-                |> deliverOnMainQueue).start(next: { [weak self] peerMap, isContactMap in
-                    guard let self else {
-                        return
+                environment.controller()?.push(controller)
+            } else {
+                environment.controller()?.push(BusinessRecipientListScreen(
+                    context: component.context,
+                    peerList: mappedPeerList,
+                    mode: mode,
+                    update: { [weak self] updatedPeerList in
+                        guard let self else {
+                            return
+                        }
+                        
+                        switch mode {
+                        case .excludeExceptions, .includeExceptions:
+                            self.additionalPeerList.peers.removeAll()
+                            for peer in updatedPeerList.peers {
+                                self.additionalPeerList.peers.append(AdditionalPeerList.Peer(
+                                    peer: peer.peer,
+                                    isContact: peer.isContact
+                                ))
+                                
+                                self.additionalPeerList.excludePeers.removeAll(where: { $0.peer.id == peer.peer.id })
+                            }
+                            self.additionalPeerList.categories.removeAll()
+                            for category in updatedPeerList.categories {
+                                switch category {
+                                case .existingChats:
+                                    self.additionalPeerList.categories.insert(.existingChats)
+                                case .newChats:
+                                    self.additionalPeerList.categories.insert(.newChats)
+                                case .contacts:
+                                    self.additionalPeerList.categories.insert(.contacts)
+                                case .nonContacts:
+                                    self.additionalPeerList.categories.insert(.nonContacts)
+                                }
+                            }
+                        case .excludeUsers:
+                            for peer in updatedPeerList.peers {
+                                self.additionalPeerList.excludePeers.append(AdditionalPeerList.Peer(
+                                    peer: peer.peer,
+                                    isContact: peer.isContact
+                                ))
+                                
+                                self.additionalPeerList.peers.removeAll(where: { $0.peer.id == peer.peer.id })
+                            }
+                        }
+                        
+                        self.state?.updated(transition: .immediate)
                     }
-                    
-                    if !isExclude {
-                        let mappedCategories = additionalCategoryIds.compactMap { item -> AdditionalPeerList.Category? in
-                            switch item {
-                            case AdditionalCategoryId.existingChats.rawValue:
-                                return .existingChats
-                            case AdditionalCategoryId.newChats.rawValue:
-                                return .newChats
-                            case AdditionalCategoryId.contacts.rawValue:
-                                return .contacts
-                            case AdditionalCategoryId.nonContacts.rawValue:
-                                return .nonContacts
-                            default:
-                                return nil
-                            }
-                        }
-                        
-                        self.additionalPeerList.categories = Set(mappedCategories)
-                        
-                        self.additionalPeerList.peers.removeAll()
-                        for id in peerIds {
-                            guard let maybePeer = peerMap[id], let peer = maybePeer else {
-                                continue
-                            }
-                            self.additionalPeerList.peers.append(AdditionalPeerList.Peer(
-                                peer: peer,
-                                isContact: isContactMap[id] ?? false
-                            ))
-                        }
-                        self.additionalPeerList.peers.sort(by: { lhs, rhs in
-                            return lhs.peer.debugDisplayTitle < rhs.peer.debugDisplayTitle
-                        })
-                        
-                        let includedIds = self.additionalPeerList.peers.map(\.peer.id)
-                        self.additionalPeerList.excludePeers.removeAll(where: { includedIds.contains($0.peer.id) })
-                    } else {
-                        self.additionalPeerList.excludePeers.removeAll()
-                        for id in peerIds {
-                            guard let maybePeer = peerMap[id], let peer = maybePeer else {
-                                continue
-                            }
-                            self.additionalPeerList.excludePeers.append(AdditionalPeerList.Peer(
-                                peer: peer,
-                                isContact: isContactMap[id] ?? false
-                            ))
-                        }
-                        self.additionalPeerList.excludePeers.sort(by: { lhs, rhs in
-                            return lhs.peer.debugDisplayTitle < rhs.peer.debugDisplayTitle
-                        })
-                        
-                        let excludedIds = self.additionalPeerList.excludePeers.map(\.peer.id)
-                        self.additionalPeerList.peers.removeAll(where: { excludedIds.contains($0.peer.id) })
-                    }
-                    
-                    self.state?.updated(transition: .immediate)
-                    
-                    controller?.dismiss()
-                })
-            })
-            
-            self.environment?.controller()?.push(controller)
+                ))
+            }
         }
         
         func update(component: ChatbotSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -832,24 +834,50 @@ final class ChatbotSetupScreenComponent: Component {
             contentHeight += accessSectionSize.height
             contentHeight += sectionSpacing
             
+            //TODO:localize
+            let categoriesAndUsersItemCount = self.additionalPeerList.categories.count + self.additionalPeerList.peers.count
+            let excludedSectionValue: String
+            if categoriesAndUsersItemCount == 0 {
+                excludedSectionValue = "Add"
+            } else if categoriesAndUsersItemCount == 1 {
+                excludedSectionValue = "1 item"
+            } else {
+                excludedSectionValue = "\(categoriesAndUsersItemCount) items"
+            }
+            
+            let excludedUsersItemCount = self.additionalPeerList.excludePeers.count
+            let excludedUsersValue: String
+            if excludedUsersItemCount == 0 {
+                excludedUsersValue = "Add"
+            } else if excludedUsersItemCount == 1 {
+                excludedUsersValue = "1 item"
+            } else {
+                excludedUsersValue = "\(excludedUsersItemCount) items"
+            }
+            
             var excludedSectionItems: [AnyComponentWithIdentity<Empty>] = []
             excludedSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
                 theme: environment.theme,
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: self.hasAccessToAllChatsByDefault ? environment.strings.BusinessMessageSetup_Recipients_AddExclude : environment.strings.BusinessMessageSetup_Recipients_AddInclude,
+                            string: self.hasAccessToAllChatsByDefault ? "Excluded Chats" : "Included Chats",
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                            textColor: environment.theme.list.itemAccentColor
+                            textColor: environment.theme.list.itemPrimaryTextColor
                         )),
                         maximumNumberOfLines: 1
                     ))),
                 ], alignment: .left, spacing: 2.0)),
-                leftIcon: AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
-                    name: "Chat List/AddIcon",
-                    tintColor: environment.theme.list.itemAccentColor
-                ))),
-                accessory: nil,
+                leftIcon: nil,
+                icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: excludedSectionValue,
+                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                        textColor: environment.theme.list.itemSecondaryTextColor
+                    )),
+                    maximumNumberOfLines: 1
+                )))),
+                accessory: .arrow,
                 action: { [weak self] _ in
                     guard let self else {
                         return
@@ -857,109 +885,12 @@ final class ChatbotSetupScreenComponent: Component {
                     self.openAdditionalPeerListSetup(isExclude: false)
                 }
             ))))
-            for category in self.additionalPeerList.categories.sorted(by: { $0.rawValue < $1.rawValue }) {
-                let title: String
-                let icon: String
-                let color: AvatarBackgroundColor
-                switch category {
-                case .newChats:
-                    title = environment.strings.BusinessMessageSetup_Recipients_CategoryNewChats
-                    icon = "Chat List/Filters/NewChats"
-                    color = .purple
-                case .existingChats:
-                    title = environment.strings.BusinessMessageSetup_Recipients_CategoryExistingChats
-                    icon = "Chat List/Filters/Chats"
-                    color = .purple
-                case .contacts:
-                    title = environment.strings.BusinessMessageSetup_Recipients_CategoryContacts
-                    icon = "Chat List/Filters/Contact"
-                    color = .blue
-                case .nonContacts:
-                    title = environment.strings.BusinessMessageSetup_Recipients_CategoryNonContacts
-                    icon = "Chat List/Filters/User"
-                    color = .yellow
-                }
-                excludedSectionItems.append(AnyComponentWithIdentity(id: category, component: AnyComponent(PeerListItemComponent(
-                    context: component.context,
-                    theme: environment.theme,
-                    strings: environment.strings,
-                    style: .generic,
-                    sideInset: 0.0,
-                    title: title,
-                    avatar: PeerListItemComponent.Avatar(
-                        icon: icon,
-                        color: color,
-                        clipStyle: .roundedRect
-                    ),
-                    peer: nil,
-                    subtitle: nil,
-                    subtitleAccessory: .none,
-                    presence: nil,
-                    selectionState: .none,
-                    hasNext: false,
-                    action: { peer, _, _ in
-                    },
-                    inlineActions: PeerListItemComponent.InlineActionsState(
-                        actions: [PeerListItemComponent.InlineAction(
-                            id: AnyHashable(0),
-                            title: environment.strings.Common_Delete,
-                            color: .destructive,
-                            action: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                self.additionalPeerList.categories.remove(category)
-                                self.state?.updated(transition: .spring(duration: 0.4))
-                            }
-                        )]
-                    )
-                ))))
-            }
-            for peer in self.additionalPeerList.peers {
-                excludedSectionItems.append(AnyComponentWithIdentity(id: peer.peer.id, component: AnyComponent(PeerListItemComponent(
-                    context: component.context,
-                    theme: environment.theme,
-                    strings: environment.strings,
-                    style: .generic,
-                    sideInset: 0.0,
-                    title: peer.peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
-                    peer: peer.peer,
-                    subtitle: peer.isContact ? environment.strings.ChatList_PeerTypeContact : environment.strings.ChatList_PeerTypeNonContactUser,
-                    subtitleAccessory: .none,
-                    presence: nil,
-                    selectionState: .none,
-                    hasNext: false,
-                    action: { peer, _, _ in
-                    },
-                    inlineActions: PeerListItemComponent.InlineActionsState(
-                        actions: [PeerListItemComponent.InlineAction(
-                            id: AnyHashable(0),
-                            title: environment.strings.Common_Delete,
-                            color: .destructive,
-                            action: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                self.additionalPeerList.peers.removeAll(where: { $0.peer.id == peer.peer.id })
-                                self.state?.updated(transition: .spring(duration: 0.4))
-                            }
-                        )]
-                    )
-                ))))
-            }
             
             let excludedSectionSize = self.excludedSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
-                    header: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: self.hasAccessToAllChatsByDefault ? environment.strings.BusinessMessageSetup_Recipients_ExcludedSectionHeader : environment.strings.BusinessMessageSetup_Recipients_IncludedSectionHeader,
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
-                        )),
-                        maximumNumberOfLines: 0
-                    )),
+                    header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .markdown(
                             text: self.hasAccessToAllChatsByDefault ? environment.strings.ChatbotSetup_Recipients_ExcludedSectionFooter : environment.strings.ChatbotSetup_Recipients_IncludedSectionFooter,
@@ -997,18 +928,23 @@ final class ChatbotSetupScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: environment.strings.BusinessMessageSetup_Recipients_AddExclude,
+                            string: "Excluded Chats",
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                            textColor: environment.theme.list.itemAccentColor
+                            textColor: environment.theme.list.itemPrimaryTextColor
                         )),
                         maximumNumberOfLines: 1
                     ))),
                 ], alignment: .left, spacing: 2.0)),
-                leftIcon: AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
-                    name: "Chat List/AddIcon",
-                    tintColor: environment.theme.list.itemAccentColor
-                ))),
-                accessory: nil,
+                leftIcon: nil,
+                icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: excludedUsersValue,
+                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                        textColor: environment.theme.list.itemSecondaryTextColor
+                    )),
+                    maximumNumberOfLines: 1
+                )))),
+                accessory: .arrow,
                 action: { [weak self] _ in
                     guard let self else {
                         return
@@ -1016,38 +952,6 @@ final class ChatbotSetupScreenComponent: Component {
                     self.openAdditionalPeerListSetup(isExclude: true)
                 }
             ))))
-            for peer in self.additionalPeerList.excludePeers {
-                excludedUsersSectionItems.append(AnyComponentWithIdentity(id: peer.peer.id, component: AnyComponent(PeerListItemComponent(
-                    context: component.context,
-                    theme: environment.theme,
-                    strings: environment.strings,
-                    style: .generic,
-                    sideInset: 0.0,
-                    title: peer.peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
-                    peer: peer.peer,
-                    subtitle: peer.isContact ? environment.strings.ChatList_PeerTypeContact : environment.strings.ChatList_PeerTypeNonContactUser,
-                    subtitleAccessory: .none,
-                    presence: nil,
-                    selectionState: .none,
-                    hasNext: false,
-                    action: { peer, _, _ in
-                    },
-                    inlineActions: PeerListItemComponent.InlineActionsState(
-                        actions: [PeerListItemComponent.InlineAction(
-                            id: AnyHashable(0),
-                            title: environment.strings.Common_Delete,
-                            color: .destructive,
-                            action: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                self.additionalPeerList.excludePeers.removeAll(where: { $0.peer.id == peer.peer.id })
-                                self.state?.updated(transition: .spring(duration: 0.4))
-                            }
-                        )]
-                    )
-                ))))
-            }
             let excludedUsersSectionSize = self.excludedUsersSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(

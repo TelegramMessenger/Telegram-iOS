@@ -731,8 +731,16 @@ private final class MultipartFetchManager {
     
     
     private func processFloodWaitError(error: String) {
-        if error.hasPrefix("FLOOD_PREMIUM_WAIT") {
-            self.network.addNetworkSpeedLimitedEvent(event: .download)
+        var networkSpeedLimitSubject: NetworkSpeedLimitedEvent.DownloadSubject?
+        if let location = self.parameters?.location {
+            if let messageId = location.messageId {
+                networkSpeedLimitSubject = .message(messageId)
+            }
+        }
+        if let subject = networkSpeedLimitSubject {
+            if error.hasPrefix("FLOOD_PREMIUM_WAIT") {
+                self.network.addNetworkSpeedLimitedEvent(event: .download(subject))
+            }
         }
     }
     

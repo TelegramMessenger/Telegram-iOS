@@ -10428,8 +10428,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
                              
                 let sectionWidth = layout.size.width - insets.left - insets.right
-                if isFirstSection && sectionItems.first is PeerInfoScreenHeaderItem {
-                    contentHeight -= 16.0
+                if isFirstSection && sectionItems.first is PeerInfoScreenHeaderItem && !self.state.isEditing {
+                    if self.data?.peer?.profileColor == nil {
+                        contentHeight -= 16.0
+                    }
                 }
                 let sectionHeight = sectionNode.update(width: sectionWidth, safeInsets: UIEdgeInsets(), hasCorners: !insets.left.isZero, presentationData: self.presentationData, items: sectionItems, transition: transition)
                 let sectionFrame = CGRect(origin: CGPoint(x: insets.left, y: contentHeight), size: CGSize(width: sectionWidth, height: sectionHeight))
