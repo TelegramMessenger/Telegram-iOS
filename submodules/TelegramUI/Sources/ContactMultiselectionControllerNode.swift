@@ -140,11 +140,19 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                     excludePeers: [],
                     color: nil
                 ))
-            } else if chatSelection.disableChannels {
+            } else if chatSelection.disableChannels || chatSelection.disableBots {
+                var categories: ChatListFilterPeerCategories = [.contacts, .nonContacts, .groups, .bots, .channels]
+                if chatSelection.disableChannels {
+                    categories.remove(.channels)
+                }
+                if chatSelection.disableChannels {
+                    categories.remove(.bots)
+                }
+                
                 chatListFilter = .filter(id: Int32.max, title: "", emoticon: nil, data: ChatListFilterData(
                     isShared: false,
                     hasSharedLinks: false,
-                    categories: [.contacts, .nonContacts, .groups, .bots],
+                    categories: categories,
                     excludeMuted: false,
                     excludeRead: false,
                     excludeArchived: false,
