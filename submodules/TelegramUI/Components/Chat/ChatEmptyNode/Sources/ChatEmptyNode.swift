@@ -1432,10 +1432,11 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
         self.textNode = ImmediateTextNode()
         self.textNode.textAlignment = .center
         self.textNode.maximumNumberOfLines = 0
+        self.textNode.lineSpacing = 0.2
         
         self.textMaskNode = LinkHighlightingNode(color: .white)
         self.textMaskNode.inset = 0.0
-        self.textMaskNode.useModernPathCalculation = true
+        self.textMaskNode.useModernPathCalculation = false
         
         self.badgeTextNode = ImmediateTextNode()
         self.badgeBackgroundView = UIImageView()
@@ -1567,11 +1568,11 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
                 labelRects[i].size.height += 2.0
             }
             if i == labelRects.count - 1 {
-                labelRects[i].size.height += 2.0
+                labelRects[i].size.height += 3.0
             } else {
-                let deltaY = labelRects[i + 1].minY - labelRects[i].maxY
-                let topDelta = deltaY * 0.5 + 2.0
-                let bottomDelta = deltaY * 0.5 - 2.0
+                let deltaYHalf = ceil((labelRects[i + 1].minY - labelRects[i].maxY) * 0.5)
+                let topDelta = deltaYHalf + 0.0
+                let bottomDelta = deltaYHalf - 0.0
                 labelRects[i].size.height += topDelta
                 labelRects[i + 1].origin.y -= bottomDelta
                 labelRects[i + 1].size.height += bottomDelta
@@ -1582,7 +1583,7 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
             labelRects[i].origin.y -= 12.0
         }
         if !labelRects.isEmpty {
-            self.textMaskNode.innerRadius = labelRects[0].height * 0.5
+            self.textMaskNode.innerRadius = labelRects[0].height * 0.25
             self.textMaskNode.outerRadius = labelRects[0].height * 0.5
         }
         self.textMaskNode.updateRects(labelRects)
@@ -1595,7 +1596,7 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
         self.badgeTextNode.attributedText = NSAttributedString(string: "how?", font: Font.regular(11.0), textColor: serviceColor.primaryText)
         let badgeTextSize = self.badgeTextNode.updateLayout(CGSize(width: 200.0, height: 100.0))
         if let lastLineFrame = labelRects.last {
-            let badgeTextFrame = CGRect(origin: CGPoint(x: lastLineFrame.maxX - badgeTextSize.width - 3.0, y: textFrame.maxY - badgeTextSize.height), size: badgeTextSize)
+            let badgeTextFrame = CGRect(origin: CGPoint(x: lastLineFrame.maxX - badgeTextSize.width - 3.0, y: textFrame.maxY - badgeTextSize.height - 3.0 - UIScreenPixel), size: badgeTextSize)
             self.badgeTextNode.frame = badgeTextFrame
             
             let badgeBackgroundFrame = badgeTextFrame.insetBy(dx: -4.0, dy: -1.0)

@@ -890,8 +890,12 @@ public func accountBackupData(postbox: Postbox) -> Signal<AccountBackupData?, No
 }
 
 public enum NetworkSpeedLimitedEvent {
+    public enum DownloadSubject {
+        case message(MessageId)
+    }
+    
     case upload
-    case download
+    case download(DownloadSubject)
 }
 
 public class Account {

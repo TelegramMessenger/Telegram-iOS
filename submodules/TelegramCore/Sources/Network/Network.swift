@@ -747,11 +747,15 @@ private final class NetworkSpeedLimitedEventState {
         let timestamp = CFAbsoluteTimeGetCurrent()
         
         if self.lastNotifyTimestamp + self.notifyInterval < timestamp {
-            self.lastNotifyTimestamp = timestamp
             return true
         } else {
             return false
         }
+    }
+    
+    func markNotifyTimestamp() {
+        let timestamp = CFAbsoluteTimeGetCurrent()
+        self.lastNotifyTimestamp = timestamp
     }
 }
 
@@ -1159,6 +1163,12 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         }
         if notify {
             self.networkSpeedLimitedEventPipe.putNext(event)
+        }
+    }
+    
+    public func markNetworkSpeedLimitDisplayed() {
+        self.networkSpeedLimitedEventState.with { state in
+            return state.markNotifyTimestamp()
         }
     }
 }
