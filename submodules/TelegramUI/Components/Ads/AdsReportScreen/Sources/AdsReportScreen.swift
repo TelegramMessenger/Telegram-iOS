@@ -300,7 +300,7 @@ private final class SheetContent: CombinedComponent {
     }
     
     final class State: ComponentState {
-        var pushedOptions: (title: String, subtitle: String, options: [ReportAdMessageResult.Option])?
+        var pushedOptions: [(title: String, subtitle: String, options: [ReportAdMessageResult.Option])] = []
         let disposable = MetaDisposable()
         
         deinit {
@@ -313,7 +313,6 @@ private final class SheetContent: CombinedComponent {
     }
         
     static var body: Body {
-//        let title = Child(BalancedTextComponent.self)
         let navigation = Child(NavigationStackComponent.self)
         
         return { context in
@@ -334,7 +333,7 @@ private final class SheetContent: CombinedComponent {
                     |> deliverOnMainQueue).start(next: { [weak state] result in
                         switch result {
                         case let .options(title, options):
-                            state?.pushedOptions = (item.title, title, options)
+                            state?.pushedOptions.append((item.title, title, options))
                             state?.updated(transition: .spring(duration: 0.45))
                         case .adsHidden:
                             complete(.hidden)
@@ -350,7 +349,7 @@ private final class SheetContent: CombinedComponent {
             }
             
             var items: [AnyComponentWithIdentity<Empty>] = []
-            items.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(
+            items.append(AnyComponentWithIdentity(id: items.count, component: AnyComponent(
                 SheetPageContent(
                     context: component.context,
                     title: nil,
@@ -366,20 +365,20 @@ private final class SheetContent: CombinedComponent {
                     }
                 )
             )))
-            if let pushedOptions = context.state.pushedOptions {
-                items.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(
+            for pushedOption in state.pushedOptions {
+                items.append(AnyComponentWithIdentity(id: items.count, component: AnyComponent(
                     SheetPageContent(
                         context: component.context,
-                        title: pushedOptions.title,
-                        subtitle: pushedOptions.subtitle,
-                        items: pushedOptions.options.map {
+                        title: pushedOption.title,
+                        subtitle: pushedOption.subtitle,
+                        items: pushedOption.options.map {
                             SheetPageContent.Item(title: $0.text, option: $0.option)
                         },
                         action: { item in
                             action(item)
                         },
                         pop: { [weak state] in
-                            state?.pushedOptions = nil
+                            state?.pushedOptions.removeLast()
                             update(.spring(duration: 0.45))
                         }
                     )
@@ -391,7 +390,7 @@ private final class SheetContent: CombinedComponent {
                 component: NavigationStackComponent(
                     items: items,
                     requestPop: { [weak state] in
-                        state?.pushedOptions = nil
+                        state?.pushedOptions.removeLast()
                         update(.spring(duration: 0.45))
                     }
                 ),
