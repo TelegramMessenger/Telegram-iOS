@@ -10525,6 +10525,7 @@ Sorry for the inconvenience.";
 
 "Message.AdSponsoredLabel" = "Sponsored";
 "Message.AdRecommendedLabel" = "Recommended";
+"Message.AdWhatIsThis" = "what's this?";
 
 "Stats.StoryTitle" = "Story Statistics";
 
@@ -11682,7 +11683,7 @@ Sorry for the inconvenience.";
 "Monetization.AdRevenueTitle" = "AD REVENUE";
 "Monetization.OverviewTitle" = "PROCEEDS OVERVIEW";
 "Monetization.BalanceTitle" = "AVAILABLE BALANCE";
-"Monetization.BalanceInfo" = "You will be able to collect rewards using Fragment, a third-party platform used by the advertizer to pay for the ad. [Learn More >]()";
+"Monetization.BalanceInfo" = "You will be able to collect rewards using Fragment, a third-party platform used by advertisers to pay for ads. [Learn More >]()";
 "Monetization.BalanceInfo_URL" = "https://telegram.org";
 "Monetization.BalanceWithdraw" = "Withdraw via Fragment";
 "Monetization.TransactionsTitle" = "TRANSACTION HISTORY";

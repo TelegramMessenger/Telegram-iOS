@@ -179,7 +179,7 @@ private final class SheetPageContent: CombinedComponent {
                             maximumNumberOfLines: 1
                         ))),
                     ], alignment: .left, spacing: 2.0)),
-                    accessory: nil,
+                    accessory: .arrow,
                     action: { _ in
                         component.action(item)
                     }

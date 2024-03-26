@@ -3232,6 +3232,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             controller.statusBar.statusBarStyle = .Ignore
             self.isUserInteractionEnabled = false
             
+            self.saveTooltip?.dismiss()
+            
             if self.entitiesView.hasSelection {
                 self.entitiesView.selectEntity(nil)
             }
@@ -3472,7 +3474,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.controller?.present(tooltipController, in: .current)
         }
         
-        private weak var saveTooltip: SaveProgressScreen?
+        fileprivate weak var saveTooltip: SaveProgressScreen?
         func presentSaveTooltip() {
             guard let controller = self.controller else {
                 return
@@ -3525,7 +3527,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         controller.cancelVideoExport()
                     }
                 }
-                controller.present(tooltipController, in: .current)
+                controller.present(tooltipController, in: .window(.root))
                 self.saveTooltip = tooltipController
             }
         }
@@ -3554,7 +3556,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
                 }
-                controller.present(tooltipController, in: .current)
+                controller.present(tooltipController, in: .window(.root))
                 self.saveTooltip = tooltipController
             }
         }
@@ -5768,10 +5770,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+        let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
         
         var isVideo = false
         if mediaEditor.resultIsVideo {
             isVideo = true
+            
+            Queue.concurrentDefaultQueue().async {
+                if let data = try? WebP.convert(toWebP: image, quality: 97.0) {
+                    self.context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: data)
+                }
+            }
         } else {
             Queue.concurrentDefaultQueue().async {
                 if let data = try? WebP.convert(toWebP: image, quality: 97.0) {
@@ -5782,7 +5791,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
         
-        let file = stickerFile(resource: resource, size: Int64(0), dimensions: PixelDimensions(image.size), isVideo: isVideo)
+        let file = stickerFile(resource: resource, thumbnailResource: thumbnailResource, size: Int64(0), dimensions: PixelDimensions(image.size), isVideo: isVideo)
         
         var menuItems: [ContextMenuItem] = []
         if case let .stickerEditor(mode) = self.mode {
@@ -6073,7 +6082,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         case let .progress(progress):
                             return .single(.progress(isVideo ? 0.5 + progress * 0.5 : progress))
                         case let .complete(resource, _):
-                            let file = stickerFile(resource: resource, size: file.size ?? 0, dimensions: dimensions, isVideo: isVideo)
+                            let file = stickerFile(resource: resource, thumbnailResource: file.previewRepresentations.first?.resource, size: file.size ?? 0, dimensions: dimensions, isVideo: isVideo)
                             switch action {
                             case .send:
                                 return .single(status)
@@ -6147,7 +6156,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 let result: MediaEditorScreen.Result
                 switch action {
                 case .upload, .send:
-                    let file = stickerFile(resource: resource, size: resource.size ?? 0, dimensions: dimensions, isVideo: isVideo)
+                    let file = stickerFile(resource: resource, thumbnailResource: file.previewRepresentations.first?.resource, size: resource.size ?? 0, dimensions: dimensions, isVideo: isVideo)
                     result = MediaEditorScreen.Result(media: .sticker(file: file))
                 default:
                     result = MediaEditorScreen.Result()
@@ -7045,11 +7054,16 @@ extension MediaScrubberComponent.Track {
     }
 }
 
-private func stickerFile(resource: TelegramMediaResource, size: Int64, dimensions: PixelDimensions, isVideo: Bool) -> TelegramMediaFile {
+private func stickerFile(resource: TelegramMediaResource, thumbnailResource: TelegramMediaResource?, size: Int64, dimensions: PixelDimensions, isVideo: Bool) -> TelegramMediaFile {
     var fileAttributes: [TelegramMediaFileAttribute] = []
     fileAttributes.append(.FileName(fileName: isVideo ? "sticker.webm" : "sticker.webp"))
     fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
     fileAttributes.append(.ImageSize(size: dimensions))
     
-    return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: isVideo ? "video/webm" : "image/webp", size: size, attributes: fileAttributes)
+    var previewRepresentations: [TelegramMediaImageRepresentation] = []
+    if let thumbnailResource {
+        previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil))
+    }
+    
+    return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: isVideo ? "video/webm" : "image/webp", size: size, attributes: fileAttributes)
 }

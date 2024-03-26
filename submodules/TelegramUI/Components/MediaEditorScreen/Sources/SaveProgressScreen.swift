@@ -486,7 +486,8 @@ public final class SaveProgressScreen: ViewController {
                     self.view.addSubview(componentView)
                 }
                 let componentFrame = CGRect(origin: .zero, size: componentSize)
-                transition.setFrame(view: componentView, frame: CGRect(origin: componentFrame.origin, size: CGSize(width: componentFrame.width, height: componentFrame.height)))
+                componentView.center = componentFrame.center
+                componentView.bounds = CGRect(origin: .zero, size: componentFrame.size)
             }
             
             if isFirstTime {

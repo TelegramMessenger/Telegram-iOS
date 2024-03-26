@@ -32,7 +32,6 @@ final class PeerInfoBirthdayOverlay: ASDisplayNode {
         self.setupAnimations(size: size, birthday: birthday, sourceRect: sourceRect)
         
         Queue.mainQueue().after(0.1) {
-            HapticFeedback().success()
             self.view.addSubview(ConfettiView(frame: CGRect(origin: .zero, size: size)))
         }
     }
