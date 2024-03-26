@@ -534,7 +534,7 @@ private enum TopicsLimitedReason {
 private final class PeerInfoInteraction {
     let openChat: (EnginePeer.Id?) -> Void
     let openUsername: (String, Bool, Promise<Bool>?) -> Void
-    let openPhone: (String, ASDisplayNode, ContextGesture?) -> Void
+    let openPhone: (String, ASDisplayNode, ContextGesture?, Promise<Bool>?) -> Void
     let editingOpenNotificationSettings: () -> Void
     let editingOpenSoundSettings: () -> Void
     let editingToggleShowMessageText: (Bool) -> Void
@@ -595,7 +595,7 @@ private final class PeerInfoInteraction {
     
     init(
         openUsername: @escaping (String, Bool, Promise<Bool>?) -> Void,
-        openPhone: @escaping (String, ASDisplayNode, ContextGesture?) -> Void,
+        openPhone: @escaping (String, ASDisplayNode, ContextGesture?, Promise<Bool>?) -> Void,
         editingOpenNotificationSettings: @escaping () -> Void,
         editingOpenSoundSettings: @escaping () -> Void,
         editingToggleShowMessageText: @escaping (Bool) -> Void,
@@ -1208,10 +1208,10 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             } else {
                 label = presentationData.strings.ContactInfo_PhoneLabelMobile
             }
-            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 2, label: label, text: formattedPhone, textColor: .accent, action: { node, _ in
-                interaction.openPhone(phone, node, nil)
+            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 2, label: label, text: formattedPhone, textColor: .accent, action: { node, progress in
+                interaction.openPhone(phone, node, nil, progress)
             }, longTapAction: nil, contextAction: { node, gesture, _ in
-                interaction.openPhone(phone, node, gesture)
+                interaction.openPhone(phone, node, gesture, nil)
             }, requestLayout: {
                 interaction.requestLayout(false)
             }))
@@ -2513,8 +2513,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             openUsername: { [weak self] value, isMainUsername, progress in
                 self?.openUsername(value: value, isMainUsername: isMainUsername, progress: progress)
             },
-            openPhone: { [weak self] value, node, gesture in
-                self?.openPhone(value: value, node: node, gesture: gesture)
+            openPhone: { [weak self] value, node, gesture, progress in
+                self?.openPhone(value: value, node: node, gesture: gesture, progress: progress)
             },
             editingOpenNotificationSettings: { [weak self] in
                 self?.editingOpenNotificationSettings()
@@ -6780,8 +6780,33 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
-    private func openPhone(value: String, node: ASDisplayNode, gesture: ContextGesture?) {
+    private func openPhone(value: String, node: ASDisplayNode, gesture: ContextGesture?, progress: Promise<Bool>?) {
         guard let sourceNode = node as? ContextExtractedContentContainingNode else {
+            return
+        }
+        
+        let formattedPhoneNumber = formatPhoneNumber(context: self.context, number: value)
+        if gesture == nil, formattedPhoneNumber.hasPrefix("+888") {
+            let collectibleInfo = Promise<CollectibleItemInfoScreenInitialData?>()
+            collectibleInfo.set(self.context.sharedContext.makeCollectibleItemInfoScreenInitialData(context: self.context, peerId: self.peerId, subject: .phoneNumber(value)))
+            
+            progress?.set(.single(true))
+            let _ = (collectibleInfo.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] initialData in
+                progress?.set(.single(false))
+                
+                guard let self else {
+                    return
+                }
+                if let initialData {
+                    self.view.endEditing(true)
+                    self.controller?.push(self.context.sharedContext.makeCollectibleItemInfoScreen(context: self.context, initialData: initialData))
+                } else {
+                    self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: "https://fragment.com/numbers", forceExternal: true, presentationData: self.presentationData, navigationController: nil, dismissInput: {})
+                }
+            })
+            
             return
         }
         
@@ -6826,7 +6851,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             }
             
-            let formattedPhoneNumber = formatPhoneNumber(context: strongSelf.context, number: value)
             var isAnonymousNumber = false
             var items: [ContextMenuItem] = []
             if case let .user(peer) = peer, let peerPhoneNumber = peer.phone, formattedPhoneNumber == formatPhoneNumber(context: strongSelf.context, number: peerPhoneNumber) {
@@ -10378,7 +10402,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 contentHeight += sectionSpacing + 12.0
             }
               
+            var isFirst = true
             for (sectionId, sectionItems) in items {
+                let isFirstSection = isFirst
+                isFirst = false
                 validRegularSections.append(sectionId)
                 
                 var wasAdded = false
@@ -10398,6 +10425,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
                              
                 let sectionWidth = layout.size.width - insets.left - insets.right
+                if isFirstSection && sectionItems.first is PeerInfoScreenHeaderItem {
+                    contentHeight -= 16.0
+                }
                 let sectionHeight = sectionNode.update(width: sectionWidth, safeInsets: UIEdgeInsets(), hasCorners: !insets.left.isZero, presentationData: self.presentationData, items: sectionItems, transition: transition)
                 let sectionFrame = CGRect(origin: CGPoint(x: insets.left, y: contentHeight), size: CGSize(width: sectionWidth, height: sectionHeight))
                 if additive {

@@ -47,6 +47,7 @@ public enum ContactMultiselectionControllerMode {
         public var displayPresence: Bool
         public var onlyUsers: Bool
         public var disableChannels: Bool
+        public var disableBots: Bool
         
         public init(
             title: String,
@@ -57,7 +58,8 @@ public enum ContactMultiselectionControllerMode {
             displayAutoremoveTimeout: Bool = false,
             displayPresence: Bool = false,
             onlyUsers: Bool = false,
-            disableChannels: Bool = false
+            disableChannels: Bool = false,
+            disableBots: Bool = false
         ) {
             self.title = title
             self.searchPlaceholder = searchPlaceholder
@@ -68,6 +70,7 @@ public enum ContactMultiselectionControllerMode {
             self.displayPresence = displayPresence
             self.onlyUsers = onlyUsers
             self.disableChannels = disableChannels
+            self.disableBots = disableBots
         }
     }
     

@@ -1120,6 +1120,7 @@ public func selectivePrivacySettingsController(
             //TODO:localize
             var additionalCategories: [ChatListNodeAdditionalCategory] = []
             
+            var selectedCategories = Set<Int>()
             if displayPremiumCategory && enable {
                 additionalCategories = [
                     ChatListNodeAdditionalCategory(
@@ -1130,8 +1131,8 @@ public func selectivePrivacySettingsController(
                         appearance: .option(sectionTitle: "USER TYPES")
                     )
                 ]
+                selectedCategories.insert(AdditionalCategoryId.premiumUsers.rawValue)
             }
-            let selectedCategories = Set<Int>([AdditionalCategoryId.premiumUsers.rawValue])
             
             let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
                 title: "Add Users",
@@ -1140,7 +1141,8 @@ public func selectivePrivacySettingsController(
                 additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
                 chatListFilters: nil,
                 onlyUsers: false,
-                disableChannels: true
+                disableChannels: true,
+                disableBots: true
             )), options: [], filters: [.excludeSelf]))
             addPeerDisposable.set((controller.result
             |> take(1)

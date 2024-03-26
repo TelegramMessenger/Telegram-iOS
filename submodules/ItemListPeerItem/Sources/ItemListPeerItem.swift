@@ -1720,7 +1720,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             strongSelf.containerNode.view.addSubview(customAvatarIconView)
                         }
                         customAvatarIconView.image = customAvatarIcon
-                        customAvatarIconView.frame = strongSelf.avatarNode.frame
+                        
+                        transition.updateFrame(view: customAvatarIconView, frame: strongSelf.avatarNode.frame)
                     } else if let customAvatarIconView = strongSelf.customAvatarIconView {
                         strongSelf.customAvatarIconView = nil
                         customAvatarIconView.removeFromSuperview()
@@ -1868,6 +1869,10 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
         if let avatarButton = self.avatarButton {
             avatarButton.frame = avatarFrame
+        }
+        
+        if let customAvatarIconView = self.customAvatarIconView {
+            transition.updateFrame(view: customAvatarIconView, frame: avatarFrame)
         }
         
         if let avatarIconComponentView = self.avatarIconView?.view {
