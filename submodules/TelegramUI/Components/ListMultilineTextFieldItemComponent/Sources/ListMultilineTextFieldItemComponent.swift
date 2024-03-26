@@ -12,6 +12,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
     public final class ExternalState {
         public fileprivate(set) var hasText: Bool = false
         public fileprivate(set) var text: NSAttributedString = NSAttributedString()
+        public fileprivate(set) var isEditing: Bool = false
         
         public init() {
         }
@@ -39,6 +40,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
     public let autocapitalizationType: UITextAutocapitalizationType
     public let autocorrectionType: UITextAutocorrectionType
     public let characterLimit: Int?
+    public let displayCharacterLimit: Bool
     public let allowEmptyLines: Bool
     public let updated: ((String) -> Void)?
     public let textUpdateTransition: Transition
@@ -55,6 +57,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
         autocapitalizationType: UITextAutocapitalizationType = .sentences,
         autocorrectionType: UITextAutocorrectionType = .default,
         characterLimit: Int? = nil,
+        displayCharacterLimit: Bool = false,
         allowEmptyLines: Bool = true,
         updated: ((String) -> Void)?,
         textUpdateTransition: Transition = .immediate,
@@ -70,6 +73,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
         self.autocapitalizationType = autocapitalizationType
         self.autocorrectionType = autocorrectionType
         self.characterLimit = characterLimit
+        self.displayCharacterLimit = displayCharacterLimit
         self.allowEmptyLines = allowEmptyLines
         self.updated = updated
         self.textUpdateTransition = textUpdateTransition
@@ -107,6 +111,9 @@ public final class ListMultilineTextFieldItemComponent: Component {
         if lhs.characterLimit != rhs.characterLimit {
             return false
         }
+        if lhs.displayCharacterLimit != rhs.displayCharacterLimit {
+            return false
+        }
         if lhs.allowEmptyLines != rhs.allowEmptyLines {
             return false
         }
@@ -133,6 +140,9 @@ public final class ListMultilineTextFieldItemComponent: Component {
         private let textFieldExternalState = TextFieldComponent.ExternalState()
         
         private let placeholder = ComponentView<Empty>()
+        
+        private var measureTextLimitLabel: ComponentView<Empty>?
+        private var textLimitLabel: ComponentView<Empty>?
         
         private var component: ListMultilineTextFieldItemComponent?
         private weak var state: EmptyComponentState?
@@ -192,6 +202,29 @@ public final class ListMultilineTextFieldItemComponent: Component {
             let verticalInset: CGFloat = 12.0
             let sideInset: CGFloat = 16.0
             
+            let textLimitFont = Font.regular(15.0)
+            var measureTextLimitInset: CGFloat = 0.0
+            if component.characterLimit != nil && component.displayCharacterLimit {
+                let measureTextLimitLabel: ComponentView<Empty>
+                if let current = self.measureTextLimitLabel {
+                    measureTextLimitLabel = current
+                } else {
+                    measureTextLimitLabel = ComponentView()
+                    self.measureTextLimitLabel = measureTextLimitLabel
+                }
+                let measureTextLimitSize = measureTextLimitLabel.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: "000", font: textLimitFont))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 100.0, height: 100.0)
+                )
+                measureTextLimitInset = measureTextLimitSize.width + 4.0
+            } else {
+                self.measureTextLimitLabel = nil
+            }
+            
             let textFieldSize = self.textField.update(
                 transition: transition,
                 component: AnyComponent(TextFieldComponent(
@@ -201,7 +234,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
                     externalState: self.textFieldExternalState,
                     fontSize: 17.0,
                     textColor: component.theme.list.itemPrimaryTextColor,
-                    insets: UIEdgeInsets(top: verticalInset, left: sideInset - 8.0, bottom: verticalInset, right: sideInset - 8.0),
+                    insets: UIEdgeInsets(top: verticalInset, left: sideInset - 8.0, bottom: verticalInset, right: sideInset - 8.0 + measureTextLimitInset),
                     hideKeyboard: false,
                     customInputView: nil,
                     resetText: component.resetText.flatMap { resetText in
@@ -258,6 +291,51 @@ public final class ListMultilineTextFieldItemComponent: Component {
             
             component.externalState?.hasText = self.textFieldExternalState.hasText
             component.externalState?.text = self.textFieldExternalState.text
+            component.externalState?.isEditing = self.textFieldExternalState.isEditing
+            
+            var displayRemainingLimit: Int?
+            if let characterLimit = component.characterLimit, component.displayCharacterLimit {
+                let remainingLimit = characterLimit - self.textFieldExternalState.text.length
+                let displayThreshold = max(10, Int(Double(characterLimit) * 0.15))
+                if remainingLimit <= displayThreshold {
+                    displayRemainingLimit = remainingLimit
+                }
+            }
+            if let displayRemainingLimit {
+                let textLimitLabel: ComponentView<Empty>
+                var textLimitLabelTransition = transition
+                if let current = self.textLimitLabel {
+                    textLimitLabel = current
+                } else {
+                    textLimitLabelTransition = textLimitLabelTransition.withAnimation(.none)
+                    textLimitLabel = ComponentView()
+                    self.textLimitLabel = textLimitLabel
+                }
+                
+                let textLimitLabelSize = textLimitLabel.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: "\(displayRemainingLimit)", font: textLimitFont, textColor: component.theme.list.itemSecondaryTextColor))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 100.0, height: 100.0)
+                )
+                let textLimitLabelFrame = CGRect(origin: CGPoint(x: availableSize.width - textLimitLabelSize.width - sideInset, y: verticalInset + 2.0), size: textLimitLabelSize)
+                if let textLimitLabelView = textLimitLabel.view {
+                    if textLimitLabelView.superview == nil {
+                        textLimitLabelView.isUserInteractionEnabled = false
+                        textLimitLabelView.layer.anchorPoint = CGPoint(x: 1.0, y: 0.0)
+                        self.addSubview(textLimitLabelView)
+                    }
+                    textLimitLabelTransition.setPosition(view: textLimitLabelView, position: CGPoint(x: textLimitLabelFrame.maxX, y: textLimitLabelFrame.minY))
+                    textLimitLabelView.bounds = CGRect(origin: CGPoint(), size: textLimitLabelFrame.size)
+                }
+            } else {
+                if let textLimitLabel = self.textLimitLabel {
+                    self.textLimitLabel = nil
+                    textLimitLabel.view?.removeFromSuperview()
+                }
+            }
             
             return size
         }

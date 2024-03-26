@@ -17,7 +17,8 @@ public final class EmojiSelectionComponent: Component {
     public let sideInset: CGFloat
     public let bottomInset: CGFloat
     public let deviceMetrics: DeviceMetrics
-    public let emojiContent: EmojiPagerContentComponent
+    public let emojiContent: EmojiPagerContentComponent?
+    public let stickerContent: EmojiPagerContentComponent?
     public let backgroundIconColor: UIColor?
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
@@ -29,7 +30,8 @@ public final class EmojiSelectionComponent: Component {
         sideInset: CGFloat,
         bottomInset: CGFloat,
         deviceMetrics: DeviceMetrics,
-        emojiContent: EmojiPagerContentComponent,
+        emojiContent: EmojiPagerContentComponent?,
+        stickerContent: EmojiPagerContentComponent?,
         backgroundIconColor: UIColor?,
         backgroundColor: UIColor,
         separatorColor: UIColor,
@@ -41,6 +43,7 @@ public final class EmojiSelectionComponent: Component {
         self.bottomInset = bottomInset
         self.deviceMetrics = deviceMetrics
         self.emojiContent = emojiContent
+        self.stickerContent = stickerContent
         self.backgroundIconColor = backgroundIconColor
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
@@ -64,6 +67,9 @@ public final class EmojiSelectionComponent: Component {
             return false
         }
         if lhs.emojiContent != rhs.emojiContent {
+            return false
+        }
+        if lhs.stickerContent != rhs.stickerContent {
             return false
         }
         if lhs.backgroundIconColor != rhs.backgroundIconColor {
@@ -95,6 +101,8 @@ public final class EmojiSelectionComponent: Component {
         
         private var component: EmojiSelectionComponent?
         private weak var state: EmptyComponentState?
+        
+        private var isSearchActive: Bool = false
         
         override init(frame: CGRect) {
             self.keyboardView = ComponentView<Empty>()
@@ -144,6 +152,12 @@ public final class EmojiSelectionComponent: Component {
         deinit {
         }
         
+        public func internalRequestUpdate(transition: Transition) {
+            if let keyboardComponentView = self.keyboardView.view as? EntityKeyboardComponent.View {
+                keyboardComponentView.state?.updated(transition: transition)
+            }
+        }
+        
         func update(component: EmojiSelectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.backgroundColor = component.backgroundColor
             let panelBackgroundColor = component.backgroundColor.withMultipliedAlpha(0.85)
@@ -153,6 +167,11 @@ public final class EmojiSelectionComponent: Component {
             let previousComponent = self.component
             self.component = component
             self.state = state
+            
+            var resolvedHeight: CGFloat = min(340.0, max(50.0, availableSize.height - 200.0))
+            if self.isSearchActive {
+                resolvedHeight = min(availableSize.height, resolvedHeight + 200.0)
+            }
             
             self.cornersView.tintColor = component.theme.list.blocksBackgroundColor
             transition.setFrame(view: self.cornersView, frame: CGRect(origin: CGPoint(x: 0.0, y: -8.0), size: CGSize(width: availableSize.width, height: 16.0)))
@@ -201,7 +220,7 @@ public final class EmojiSelectionComponent: Component {
                 })
             }
             self.backspaceBackgroundView.frame = CGRect(origin: CGPoint(), size: backspaceButtonSize).insetBy(dx: -12.0, dy: -12.0)
-            let backspaceButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - component.sideInset - backspaceButtonInset.right - backspaceButtonSize.width, y: availableSize.height - component.bottomInset - backspaceButtonInset.bottom), size: backspaceButtonSize)
+            let backspaceButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - component.sideInset - backspaceButtonInset.right - backspaceButtonSize.width, y: resolvedHeight - component.bottomInset - backspaceButtonInset.bottom), size: backspaceButtonSize)
             
             if let backspaceButtonView = self.backspaceButton.view {
                 if backspaceButtonView.superview == nil {
@@ -220,6 +239,7 @@ public final class EmojiSelectionComponent: Component {
                 }
             }
             
+            self.keyboardView.parentState = state
             let keyboardSize = self.keyboardView.update(
                 transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
@@ -228,8 +248,8 @@ public final class EmojiSelectionComponent: Component {
                     isContentInFocus: true,
                     containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: component.sideInset, bottom: component.bottomInset + 16.0, right: component.sideInset),
                     topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
-                    emojiContent: component.emojiContent.withCustomTintColor(component.theme.list.itemPrimaryTextColor),
-                    stickerContent: nil,
+                    emojiContent: component.emojiContent?.withCustomTintColor(component.theme.list.itemPrimaryTextColor),
+                    stickerContent: component.stickerContent?.withCustomTintColor(component.theme.list.itemPrimaryTextColor),
                     maskContent: nil,
                     gifContent: nil,
                     hasRecentGifs: false,
@@ -241,7 +261,15 @@ public final class EmojiSelectionComponent: Component {
                     topPanelExtensionUpdated: { _, _ in },
                     topPanelScrollingOffset: { _, _ in },
                     hideInputUpdated: { _, _, _ in },
-                    hideTopPanelUpdated: { _, _ in },
+                    hideTopPanelUpdated: { [weak self] hideTopPanel, transition in
+                        guard let self else {
+                            return
+                        }
+                        if self.isSearchActive != hideTopPanel {
+                            self.isSearchActive = hideTopPanel
+                            self.state?.updated(transition: transition)
+                        }
+                    },
                     switchToTextInput: {},
                     switchToGifSubject: { _ in },
                     reorderItems: { _, _ in },
@@ -257,7 +285,7 @@ public final class EmojiSelectionComponent: Component {
                     customTintColor: component.backgroundIconColor
                 )),
                 environment: {},
-                containerSize: availableSize
+                containerSize: CGSize(width: availableSize.width, height: resolvedHeight)
             )
             if let keyboardComponentView = self.keyboardView.view {
                 if keyboardComponentView.superview == nil {
@@ -270,7 +298,7 @@ public final class EmojiSelectionComponent: Component {
                     self.keyboardClippingView.clipsToBounds = false
                 }
                 
-                transition.setFrame(view: self.keyboardClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelHeight)))
+                transition.setFrame(view: self.keyboardClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight), size: CGSize(width: availableSize.width, height: resolvedHeight - topPanelHeight)))
                 
                 transition.setFrame(view: keyboardComponentView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelHeight), size: keyboardSize))
                 transition.setFrame(view: self.panelHostView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight - 34.0), size: CGSize(width: keyboardSize.width, height: 0.0)))
@@ -282,7 +310,7 @@ public final class EmojiSelectionComponent: Component {
                 transition.setAlpha(view: self.panelSeparatorView, alpha: 1.0)
             }
             
-            return availableSize
+            return CGSize(width: availableSize.width, height: resolvedHeight)
         }
     }
 
