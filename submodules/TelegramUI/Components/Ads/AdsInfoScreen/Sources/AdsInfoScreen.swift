@@ -15,6 +15,7 @@ import MultilineTextComponent
 import SolidRoundedButtonComponent
 import AccountContext
 import ScrollComponent
+import BlurredBackgroundComponent
 
 private final class ScrollContent: CombinedComponent {
     typealias EnvironmentType = (ViewControllerComponentContainer.Environment, ScrollChildEnvironment)
@@ -67,14 +68,12 @@ private final class ScrollContent: CombinedComponent {
         let title = Child(BalancedTextComponent.self)
         let text = Child(BalancedTextComponent.self)
         let list = Child(List<Empty>.self)
-        let actionButton = Child(SolidRoundedButtonComponent.self)
         
         let infoBackground = Child(RoundedRectangle.self)
         let infoTitle = Child(MultilineTextComponent.self)
         let infoText = Child(MultilineTextComponent.self)
-        
+                
         return { context in
-//            let scrollEnvironment = context.environment[ScrollChildEnvironment.self].value
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let component = context.component
             let state = context.state
@@ -165,7 +164,6 @@ private final class ScrollContent: CombinedComponent {
             )
             contentSize.height += text.size.height
             contentSize.height += spacing
-            
             
             var items: [AnyComponentWithIdentity<Empty>] = []
             items.append(
@@ -297,36 +295,12 @@ private final class ScrollContent: CombinedComponent {
             contentSize.height += infoPadding
             contentSize.height += spacing
             
-            let actionButton = actionButton.update(
-                component: SolidRoundedButtonComponent(
-                    title: strings.AdsInfo_Understood,
-                    theme: SolidRoundedButtonComponent.Theme(
-                        backgroundColor: theme.list.itemCheckColors.fillColor,
-                        backgroundColors: [],
-                        foregroundColor: theme.list.itemCheckColors.foregroundColor
-                    ),
-                    font: .bold,
-                    fontSize: 17.0,
-                    height: 50.0,
-                    cornerRadius: 10.0,
-                    gloss: false,
-                    iconName: nil,
-                    animationName: nil,
-                    iconPosition: .left,
-                    action: {
-                        component.dismiss()
-                    }
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
-                transition: context.transition
-            )
-            context.add(actionButton
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + actionButton.size.height / 2.0))
-            )
-            contentSize.height += actionButton.size.height
-            contentSize.height += 22.0
-                        
-            contentSize.height += environment.safeInsets.bottom
+            contentSize.height += 12.0 + 50.0
+            if environment.safeInsets.bottom > 0 {
+                contentSize.height += environment.safeInsets.bottom + 5.0
+            } else {
+                contentSize.height += 12.0
+            }
             
             state.playAnimationIfNeeded()
             
@@ -356,12 +330,28 @@ private final class ContainerComponent: CombinedComponent {
         return true
     }
     
+    final class State: ComponentState {
+        var topContentOffset: CGFloat?
+        var bottomContentOffset: CGFloat?
+    }
+    
+    func makeState() -> State {
+        return State()
+    }
+    
     static var body: Body {
         let background = Child(Rectangle.self)
         let scroll = Child(ScrollComponent<ViewControllerComponentContainer.Environment>.self)
-                
+        let bottomPanel = Child(BlurredBackgroundComponent.self)
+        let bottomSeparator = Child(Rectangle.self)
+        let actionButton = Child(SolidRoundedButtonComponent.self)
+        let scrollExternalState = ScrollComponent<EnvironmentType>.ExternalState()
+        
         return { context in
             let environment = context.environment[EnvironmentType.self]
+            let theme = environment.theme
+            let strings = environment.strings
+            let state = context.state
             
             let controller = environment.controller
             
@@ -384,13 +374,14 @@ private final class ContainerComponent: CombinedComponent {
                             controller()?.dismiss()
                         }
                     )),
+                    externalState: scrollExternalState,
                     contentInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0),
-                    contentOffsetUpdated: { topContentOffset, bottomContentOffset in
-//                        state?.topContentOffset = topContentOffset
-//                        state?.bottomContentOffset = bottomContentOffset
-//                        Queue.mainQueue().justDispatch {
-//                            state?.updated(transition: .immediate)
-//                        }
+                    contentOffsetUpdated: { [weak state] topContentOffset, bottomContentOffset in
+                        state?.topContentOffset = topContentOffset
+                        state?.bottomContentOffset = bottomContentOffset
+                        Queue.mainQueue().justDispatch {
+                            state?.updated(transition: .immediate)
+                        }
                     },
                     contentOffsetWillCommit: { targetContentOffset in
                     }
@@ -402,6 +393,74 @@ private final class ContainerComponent: CombinedComponent {
             
             context.add(scroll
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
+            )
+            
+            let buttonHeight: CGFloat = 50.0
+            let bottomPanelPadding: CGFloat = 12.0
+            let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
+            let bottomPanelHeight = bottomPanelPadding + buttonHeight + bottomInset
+            
+            let bottomPanelAlpha: CGFloat
+            if scrollExternalState.contentHeight > context.availableSize.height {
+                if let bottomContentOffset = state.bottomContentOffset {
+                    bottomPanelAlpha = min(16.0, bottomContentOffset) / 16.0
+                } else {
+                    bottomPanelAlpha = 1.0
+                }
+            } else {
+                bottomPanelAlpha = 0.0
+            }
+            
+            let bottomPanel = bottomPanel.update(
+                component: BlurredBackgroundComponent(
+                    color: theme.rootController.tabBar.backgroundColor
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: bottomPanelHeight),
+                transition: context.transition
+            )
+            let bottomSeparator = bottomSeparator.update(
+                component: Rectangle(
+                    color: theme.rootController.tabBar.separatorColor
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: UIScreenPixel),
+                transition: context.transition
+            )
+            
+            context.add(bottomPanel
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height / 2.0))
+                .opacity(bottomPanelAlpha)
+            )
+            context.add(bottomSeparator
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height))
+                .opacity(bottomPanelAlpha)
+            )
+            
+            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let actionButton = actionButton.update(
+                component: SolidRoundedButtonComponent(
+                    title: strings.AdsInfo_Understood,
+                    theme: SolidRoundedButtonComponent.Theme(
+                        backgroundColor: theme.list.itemCheckColors.fillColor,
+                        backgroundColors: [],
+                        foregroundColor: theme.list.itemCheckColors.foregroundColor
+                    ),
+                    font: .bold,
+                    fontSize: 17.0,
+                    height: buttonHeight,
+                    cornerRadius: 10.0,
+                    gloss: false,
+                    iconName: nil,
+                    animationName: nil,
+                    iconPosition: .left,
+                    action: {
+                        controller()?.dismiss()
+                    }
+                ),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                transition: context.transition
+            )
+            context.add(actionButton
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanelHeight + bottomPanelPadding + actionButton.size.height / 2.0))
             )
              
             return context.availableSize
