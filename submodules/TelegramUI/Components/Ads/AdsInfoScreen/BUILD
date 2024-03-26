@@ -22,6 +22,7 @@ swift_library(
         "//submodules/Components/BalancedTextComponent",
         "//submodules/Components/SolidRoundedButtonComponent",
         "//submodules/Components/BundleIconComponent",
+        "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/TelegramUI/Components/ScrollComponent",
         "//submodules/TelegramPresentationData",
         "//submodules/AccountContext",

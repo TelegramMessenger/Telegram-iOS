@@ -25,6 +25,7 @@ public class ChatMessageShareButton: ASDisplayNode {
     
     private var theme: PresentationTheme?
     private var isReplies: Bool = false
+    private var hasMore: Bool = false
     
     private var textNode: ImmediateTextNode?
     
@@ -97,18 +98,26 @@ public class ChatMessageShareButton: ASDisplayNode {
             isReplies = false
         }
         
-        if self.theme !== presentationData.theme.theme || self.isReplies != isReplies {
+        var hasMore = false
+        if let adAttribute = message.adAttribute, adAttribute.canReport {
+            hasMore = true
+        }
+        
+        if self.theme !== presentationData.theme.theme || self.isReplies != isReplies || self.hasMore != hasMore {
             self.theme = presentationData.theme.theme
             self.isReplies = isReplies
+            self.hasMore = hasMore
 
             var updatedIconImage: UIImage?
             var updatedBottomIconImage: UIImage?
             var updatedIconOffset = CGPoint()
-            if message.adAttribute != nil {
+            if let _ = message.adAttribute {
                 updatedIconImage = PresentationResourcesChat.chatFreeCloseButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                 updatedIconOffset = CGPoint(x: UIScreenPixel, y: UIScreenPixel)
                 
-                updatedBottomIconImage = PresentationResourcesChat.chatFreeMoreButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                if hasMore {
+                    updatedBottomIconImage = PresentationResourcesChat.chatFreeMoreButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                }
             } else if case .pinnedMessages = subject {
                 updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                 updatedIconOffset = CGPoint(x: UIScreenPixel, y: 1.0)
@@ -173,7 +182,7 @@ public class ChatMessageShareButton: ASDisplayNode {
             }
         }
         var size = CGSize(width: 30.0, height: 30.0)
-        if message.adAttribute != nil {
+        if hasMore {
             size.height += 30.0
         }
         var offsetIcon = false

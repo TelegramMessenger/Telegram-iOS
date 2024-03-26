@@ -79,6 +79,7 @@ extension TelegramBirthday {
 
 public enum UpdateBirthdayError {
     case generic
+    case flood
 }
 
 func _internal_updateBirthday(account: Account, birthday: TelegramBirthday?) -> Signal<Never, UpdateBirthdayError> {
@@ -86,9 +87,13 @@ func _internal_updateBirthday(account: Account, birthday: TelegramBirthday?) -> 
     if let _ = birthday {
         flags |= (1 << 0)
     }
-    return account.network.request(Api.functions.account.updateBirthday(flags: flags, birthday: birthday?.apiBirthday))
-    |> mapError { _ -> UpdateBirthdayError in
-        return .generic
+    return account.network.request(Api.functions.account.updateBirthday(flags: flags, birthday: birthday?.apiBirthday), automaticFloodWait: false)
+    |> mapError { error -> UpdateBirthdayError in
+        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .flood
+        } else {
+            return .generic
+        }
     }
     |> mapToSignal { result -> Signal<Never, UpdateBirthdayError> in
         return account.postbox.transaction { transaction -> Void in

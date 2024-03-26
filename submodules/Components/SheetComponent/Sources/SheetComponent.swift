@@ -106,6 +106,10 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             }
             super.setContentOffset(contentOffset, animated: animated)
         }
+        
+        override func touchesShouldCancel(in view: UIView) -> Bool {
+            return true
+        }
     }
         
     public final class View: UIView, UIScrollViewDelegate, ComponentTaggedView {
@@ -363,14 +367,21 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize), completion: nil)
             
             let previousContentSize = self.scrollView.contentSize
-            self.scrollView.contentSize = contentSize
-            self.scrollView.contentInset = UIEdgeInsets(top: max(0.0, availableSize.height - contentSize.height) + contentSize.height, left: 0.0, bottom: 0.0, right: 0.0)
-            self.ignoreScrolling = false
+            let updateContentSize = {
+                self.scrollView.contentSize = contentSize
+                self.scrollView.contentInset = UIEdgeInsets(top: max(0.0, availableSize.height - contentSize.height) + contentSize.height, left: 0.0, bottom: 0.0, right: 0.0)
+            }
+            if previousContentSize.height.isZero {
+                updateContentSize()
+            }
             
+            self.ignoreScrolling = false
             if let currentAvailableSize = self.currentAvailableSize, currentAvailableSize.height != availableSize.height {
                 self.scrollView.contentOffset = CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height))
             } else if component.followContentSizeChanges, !previousContentSize.height.isZero, previousContentSize != contentSize {
-                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height)), size: availableSize))
+                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height)), size: availableSize), completion: { _ in
+                    updateContentSize()
+                })
             }
             if self.currentHasInputHeight != previousHasInputHeight {
                 transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height)), size: self.scrollView.bounds.size))

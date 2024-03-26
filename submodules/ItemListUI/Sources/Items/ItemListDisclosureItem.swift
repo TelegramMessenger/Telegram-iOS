@@ -410,7 +410,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             if let additionalDetailLabel = item.additionalDetailLabel {
                 var detailRightInset: CGFloat = 20.0 + params.rightInset + additionalTextRightInset
                 if labelLayout.size.width != 0 {
-                    detailRightInset += labelLayout.size.width + 12.0
+                    detailRightInset += labelLayout.size.width + 7.0
                 }
                 let additionalDetailColor: UIColor
                 switch item.additionalDetailLabelColor {

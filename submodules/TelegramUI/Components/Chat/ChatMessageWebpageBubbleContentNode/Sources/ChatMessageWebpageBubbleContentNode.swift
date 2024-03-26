@@ -132,6 +132,11 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 }
             }
         }
+        self.contentNode.activateBadgeAction = { [weak self] in
+            if let strongSelf = self, let item = strongSelf.item {
+                item.controllerInteraction.openAdsInfo()
+            }
+        }
         self.contentNode.activateAction = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
                 if let _ = item.message.adAttribute {
@@ -506,7 +511,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     }
                 }
 
-                titleBadge = "what's this?"
+                if adAttribute.canReport {
+                    titleBadge = item.presentationData.strings.Message_AdWhatIsThis
+                }
                 
                 if let buttonText = adAttribute.buttonText {
                     actionTitle = buttonText.uppercased()

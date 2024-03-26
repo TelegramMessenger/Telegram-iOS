@@ -10525,6 +10525,7 @@ Sorry for the inconvenience.";
 
 "Message.AdSponsoredLabel" = "Sponsored";
 "Message.AdRecommendedLabel" = "Recommended";
+"Message.AdWhatIsThis" = "what's this?";
 
 "Stats.StoryTitle" = "Story Statistics";
 
@@ -11682,7 +11683,7 @@ Sorry for the inconvenience.";
 "Monetization.AdRevenueTitle" = "AD REVENUE";
 "Monetization.OverviewTitle" = "PROCEEDS OVERVIEW";
 "Monetization.BalanceTitle" = "AVAILABLE BALANCE";
-"Monetization.BalanceInfo" = "You will be able to collect rewards using Fragment, a third-party platform used by the advertizer to pay for the ad. [Learn More >]()";
+"Monetization.BalanceInfo" = "You will be able to collect rewards using Fragment, a third-party platform used by advertisers to pay for ads. [Learn More >]()";
 "Monetization.BalanceInfo_URL" = "https://telegram.org";
 "Monetization.BalanceWithdraw" = "Withdraw via Fragment";
 "Monetization.TransactionsTitle" = "TRANSACTION HISTORY";
@@ -11729,3 +11730,28 @@ Sorry for the inconvenience.";
 "Monetization.Intro.Info.Text_URL" = "https://ton.org";
 
 "Monetization.Intro.Understood" = "Understood";
+
+"ReportAd.Title" = "Report Ad";
+"ReportAd.Help" = "Learn more about [Telegram Ad Policies and Guidelines]().";
+"ReportAd.Help_URL" = "https://promote.telegram.org/guidelines";
+"ReportAd.Reported" = "We will review this ad to ensure it matches our [Ad Policies and Guidelines]().";
+"ReportAd.Hidden" = "Ads are hidden now.";
+
+"AdsInfo.Title" = "About These Ads";
+"AdsInfo.Info" = "Telegram Ads are very different from ads on other platforms. Ads such as this one:";
+"AdsInfo.Respect.Title" = "Respect Your Privacy";
+"AdsInfo.Respect.Text" = "Ads on Telegram do not use your personal information and are based on the channel in which you see them.";
+"AdsInfo.Split.Title" = "Help the Channel Creator";
+"AdsInfo.Split.Text" = "50% of the revenue from Telegram Ads goes to the owner of the channel where they are displayed.";
+"AdsInfo.Ads.Title" = "Can Be Removed";
+"AdsInfo.Ads.Text" = "You can turn off ads by subscribing to [Telegram Premium](), and Level 30 channels can remove them for their subscribers.";
+
+"AdsInfo.Launch.Title" = "Can I Launch an Ad?";
+"AdsInfo.Launch.Text" = "Anyone can create ads to display in this channel – with minimal budgets. Check out the Telegram Ad Platform for details. [Learn More >]()";
+"AdsInfo.Launch.Text_URL" = "https://promote.telegram.org";
+
+"AdsInfo.Understood" = "Understood";
+
+"Chat.ContextMenu.AboutAd" = "About This Ad";
+"Chat.ContextMenu.ReportAd" = "Report Ad";
+"Chat.ContextMenu.RemoveAd" = "Remove Ad";

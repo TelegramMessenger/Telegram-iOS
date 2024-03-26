@@ -17,6 +17,12 @@ import ItemListUI
 import UndoUI
 import AccountContext
 
+private enum ReportResult {
+    case reported
+    case hidden
+    case premiumRequired
+}
+
 private final class SheetPageContent: CombinedComponent {
     struct Item: Equatable {
         let title: String
@@ -83,7 +89,7 @@ private final class SheetPageContent: CombinedComponent {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let theme = presentationData.theme
-//            let strings = environment.strings
+            let strings = presentationData.strings
             
             let sideInset: CGFloat = 16.0
             
@@ -108,12 +114,12 @@ private final class SheetPageContent: CombinedComponent {
             
             let backContents: AnyComponent<Empty>
             if component.title == nil {
-                backContents = AnyComponent(Text(text: "Cancel", font: Font.regular(17.0), color: theme.list.itemAccentColor))
+                backContents = AnyComponent(Text(text: strings.Common_Cancel, font: Font.regular(17.0), color: theme.list.itemAccentColor))
             } else {
                 backContents = AnyComponent(
                     HStack([
                         AnyComponentWithIdentity(id: "arrow", component: AnyComponent(Image(image: backArrowImage, contentMode: .center))),
-                        AnyComponentWithIdentity(id: "label", component: AnyComponent(Text(text: "Back", font: Font.regular(17.0), color: theme.list.itemAccentColor)))
+                        AnyComponentWithIdentity(id: "label", component: AnyComponent(Text(text: strings.Common_Back, font: Font.regular(17.0), color: theme.list.itemAccentColor)))
                     ], spacing: 6.0)
                 )
             }
@@ -132,7 +138,7 @@ private final class SheetPageContent: CombinedComponent {
             )
             
             let title = title.update(
-                component: Text(text: "Report Ad", font: Font.semibold(17.0), color: theme.list.itemPrimaryTextColor),
+                component: Text(text: strings.ReportAd_Title, font: Font.semibold(17.0), color: theme.list.itemPrimaryTextColor),
                 availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
                 transition: .immediate
             )
@@ -173,7 +179,7 @@ private final class SheetPageContent: CombinedComponent {
                             maximumNumberOfLines: 1
                         ))),
                     ], alignment: .left, spacing: 2.0)),
-                    accessory: nil,
+                    accessory: .arrow,
                     action: { _ in
                         component.action(item)
                     }
@@ -193,17 +199,18 @@ private final class SheetPageContent: CombinedComponent {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .markdown(
-                            text: "Learn more about [Telegram Ad Policies and Guidelines]().",
+                            text: strings.ReportAd_Help,
                             attributes: MarkdownAttributes(
                                 body: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.freeTextColor),
                                 bold: MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.freeTextColor),
                                 link: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: theme.list.itemAccentColor),
-                                linkAttribute: { _ in
-                                    return nil
+                                linkAttribute: { contents in
+                                    return (TelegramTextAttributes.URL, contents)
                                 }
                             )
                         ),
                         maximumNumberOfLines: 0,
+                        highlightColor: theme.list.itemAccentColor.withAlphaComponent(0.2),
                         highlightAction: { attributes in
                             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                                 return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
@@ -212,7 +219,7 @@ private final class SheetPageContent: CombinedComponent {
                             }
                         },
                         tapAction: { _, _ in
-//                            component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Monetization_Intro_Info_Text_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                            component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.ReportAd_Help_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                         }
                     )),
                     items: items
@@ -242,7 +249,7 @@ private final class SheetContent: CombinedComponent {
     let options: [ReportAdMessageResult.Option]
     let pts: Int
     let openMore: () -> Void
-    let complete: () -> Void
+    let complete: (ReportResult) -> Void
     let dismiss: () -> Void
     let update: (Transition) -> Void
     
@@ -254,7 +261,7 @@ private final class SheetContent: CombinedComponent {
         options: [ReportAdMessageResult.Option],
         pts: Int,
         openMore: @escaping () -> Void,
-        complete: @escaping () -> Void,
+        complete: @escaping (ReportResult) -> Void,
         dismiss: @escaping () -> Void,
         update: @escaping (Transition) -> Void
     ) {
@@ -293,7 +300,7 @@ private final class SheetContent: CombinedComponent {
     }
     
     final class State: ComponentState {
-        var pushedOptions: (title: String, subtitle: String, options: [ReportAdMessageResult.Option])?
+        var pushedOptions: [(title: String, subtitle: String, options: [ReportAdMessageResult.Option])] = []
         let disposable = MetaDisposable()
         
         deinit {
@@ -306,7 +313,6 @@ private final class SheetContent: CombinedComponent {
     }
         
     static var body: Body {
-//        let title = Child(BalancedTextComponent.self)
         let navigation = Child(NavigationStackComponent.self)
         
         return { context in
@@ -327,19 +333,23 @@ private final class SheetContent: CombinedComponent {
                     |> deliverOnMainQueue).start(next: { [weak state] result in
                         switch result {
                         case let .options(title, options):
-                            state?.pushedOptions = (item.title, title, options)
+                            state?.pushedOptions.append((item.title, title, options))
                             state?.updated(transition: .spring(duration: 0.45))
                         case .adsHidden:
-                            complete()
+                            complete(.hidden)
                         case .reported:
-                            complete()
+                            complete(.reported)
+                        }
+                    }, error: { error in
+                        if case .premiumRequired = error {
+                            complete(.premiumRequired)
                         }
                     })
                 )
             }
             
             var items: [AnyComponentWithIdentity<Empty>] = []
-            items.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(
+            items.append(AnyComponentWithIdentity(id: items.count, component: AnyComponent(
                 SheetPageContent(
                     context: component.context,
                     title: nil,
@@ -355,20 +365,20 @@ private final class SheetContent: CombinedComponent {
                     }
                 )
             )))
-            if let pushedOptions = context.state.pushedOptions {
-                items.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(
+            for pushedOption in state.pushedOptions {
+                items.append(AnyComponentWithIdentity(id: items.count, component: AnyComponent(
                     SheetPageContent(
                         context: component.context,
-                        title: pushedOptions.title,
-                        subtitle: pushedOptions.subtitle,
-                        items: pushedOptions.options.map {
+                        title: pushedOption.title,
+                        subtitle: pushedOption.subtitle,
+                        items: pushedOption.options.map {
                             SheetPageContent.Item(title: $0.text, option: $0.option)
                         },
                         action: { item in
                             action(item)
                         },
                         pop: { [weak state] in
-                            state?.pushedOptions = nil
+                            state?.pushedOptions.removeLast()
                             update(.spring(duration: 0.45))
                         }
                     )
@@ -377,7 +387,13 @@ private final class SheetContent: CombinedComponent {
             
             var contentSize = CGSize(width: context.availableSize.width, height: 0.0)
             let navigation = navigation.update(
-                component: NavigationStackComponent(items: items),
+                component: NavigationStackComponent(
+                    items: items,
+                    requestPop: { [weak state] in
+                        state?.pushedOptions.removeLast()
+                        update(.spring(duration: 0.45))
+                    }
+                ),
                 availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
                 transition: context.transition
             )
@@ -402,7 +418,7 @@ private final class SheetContainerComponent: CombinedComponent {
     let title: String
     let options: [ReportAdMessageResult.Option]
     let openMore: () -> Void
-    let complete: () -> Void
+    let complete: (ReportResult) -> Void
     
     init(
         context: AccountContext,
@@ -411,7 +427,7 @@ private final class SheetContainerComponent: CombinedComponent {
         title: String,
         options: [ReportAdMessageResult.Option],
         openMore: @escaping () -> Void,
-        complete: @escaping () -> Void
+        complete: @escaping (ReportResult) -> Void
     ) {
         self.context = context
         self.peerId = peerId
@@ -552,7 +568,7 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
     ) {
         self.context = context
                 
-        var completeImpl: (() -> Void)?
+        var completeImpl: ((ReportResult) -> Void)?
         super.init(
             context: context,
             component: SheetContainerComponent(
@@ -562,8 +578,8 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
                 title: title,
                 options: options,
                 openMore: {},
-                complete: {
-                    completeImpl?()
+                complete: { hidden in
+                    completeImpl?(hidden)
                 }
             ),
             navigationBarAppearance: .none,
@@ -573,7 +589,7 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
         
         self.navigationPresentation = .flatModal
         
-        completeImpl = { [weak self] in
+        completeImpl = { [weak self] result in
             guard let self else {
                 return
             }
@@ -581,11 +597,32 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
             self.dismissAnimated()
             
             Queue.mainQueue().after(0.4, {
-                //TODO:localize
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                (navigationController?.viewControllers.last as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: "We will review this ad to ensure it matches our [Ad Policies and Guidelines]().", cancel: nil, destructive: false), elevatedLayout: false, action: { _ in
-                    return true
-                }), in: .current)
+                switch result {
+                case .reported, .hidden:
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let text: String
+                    if case .reported = result {
+                        text = presentationData.strings.ReportAd_Reported
+                    } else {
+                        text = presentationData.strings.ReportAd_Hidden
+                    }
+                    (navigationController?.viewControllers.last as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: text, cancel: nil, destructive: false), elevatedLayout: false, action: { action in
+                        if case .info = action, case .reported = result {
+                            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.ReportAd_Help_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                        }
+                        return true
+                    }), in: .current)
+                case .premiumRequired:
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    navigationController?.pushViewController(controller, animated: true)
+                }
             })
         }
     }
@@ -609,84 +646,89 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
 
 
 
-//private final class NavigationContainer: UIView, UIGestureRecognizerDelegate {
-//    var requestUpdate: ((Transition) -> Void)?
-//    var requestPop: (() -> Void)?
-//    var transitionFraction: CGFloat = 0.0
-//    
-//    private var panRecognizer: InteractiveTransitionGestureRecognizer?
-//    
-//    var isNavigationEnabled: Bool = false {
-//        didSet {
-//            self.panRecognizer?.isEnabled = self.isNavigationEnabled
-//        }
-//    }
-//    
-//    override init() {
-//        super.init()
-//        
-//        self.clipsToBounds = true
-//        
-//        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
-//            guard let strongSelf = self else {
-//                return []
-//            }
-//            let _ = strongSelf
-//            return [.right]
-//        })
-//        panRecognizer.delegate = self
-//        self.view.addGestureRecognizer(panRecognizer)
-//        self.panRecognizer = panRecognizer
-//    }
-//    
-//    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-//        return false
-//    }
-//    
-//    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-//        if let _ = otherGestureRecognizer as? InteractiveTransitionGestureRecognizer {
-//            return false
-//        }
-//        if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
-//            return true
-//        }
-//        return false
-//    }
-//    
-//    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
-//        switch recognizer.state {
-//        case .began:
-//            self.transitionFraction = 0.0
-//        case .changed:
-//            let distanceFactor: CGFloat = recognizer.translation(in: self.view).x / self.bounds.width
-//            let transitionFraction = max(0.0, min(1.0, distanceFactor))
-//            if self.transitionFraction != transitionFraction {
-//                self.transitionFraction = transitionFraction
-//                self.requestUpdate?(.immediate)
-//            }
-//        case .ended, .cancelled:
-//            let distanceFactor: CGFloat = recognizer.translation(in: self.view).x / self.bounds.width
-//            let transitionFraction = max(0.0, min(1.0, distanceFactor))
-//            if transitionFraction > 0.2 {
-//                self.transitionFraction = 0.0
-//                self.requestPop?()
-//            } else {
-//                self.transitionFraction = 0.0
-//                self.requestUpdate?(.spring(duration: 0.45))
-//            }
-//        default:
-//            break
-//        }
-//    }
-//}
+private final class NavigationContainer: UIView, UIGestureRecognizerDelegate {
+    var requestUpdate: ((Transition) -> Void)?
+    var requestPop: (() -> Void)?
+    var transitionFraction: CGFloat = 0.0
+    
+    private var panRecognizer: InteractiveTransitionGestureRecognizer?
+    
+    var isNavigationEnabled: Bool = false {
+        didSet {
+            self.panRecognizer?.isEnabled = self.isNavigationEnabled
+        }
+    }
+    
+    init() {
+        super.init(frame: .zero)
+                
+        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
+            guard let strongSelf = self else {
+                return []
+            }
+            let _ = strongSelf
+            return [.right]
+        })
+        panRecognizer.delegate = self
+        self.addGestureRecognizer(panRecognizer)
+        self.panRecognizer = panRecognizer
+    }
+    
+    required public init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return false
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let _ = otherGestureRecognizer as? InteractiveTransitionGestureRecognizer {
+            return false
+        }
+        if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
+            return true
+        }
+        return false
+    }
+    
+    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            self.transitionFraction = 0.0
+        case .changed:
+            let distanceFactor: CGFloat = recognizer.translation(in: self).x / self.bounds.width
+            let transitionFraction = max(0.0, min(1.0, distanceFactor))
+            if self.transitionFraction != transitionFraction {
+                self.transitionFraction = transitionFraction
+                self.requestUpdate?(.immediate)
+            }
+        case .ended, .cancelled:
+            let distanceFactor: CGFloat = recognizer.translation(in: self).x / self.bounds.width
+            let transitionFraction = max(0.0, min(1.0, distanceFactor))
+            if transitionFraction > 0.2 {
+                self.transitionFraction = 0.0
+                self.requestPop?()
+            } else {
+                self.transitionFraction = 0.0
+                self.requestUpdate?(.spring(duration: 0.45))
+            }
+        default:
+            break
+        }
+    }
+}
 
 final class NavigationStackComponent: Component {
     public let items: [AnyComponentWithIdentity<Empty>]
+    public let requestPop: () -> Void
     
     public init(
-        items: [AnyComponentWithIdentity<Empty>]
+        items: [AnyComponentWithIdentity<Empty>],
+        requestPop: @escaping () -> Void
     ) {
         self.items = items
+        self.requestPop = requestPop
     }
     
     public static func ==(lhs: NavigationStackComponent, rhs: NavigationStackComponent) -> Bool {
@@ -716,11 +758,29 @@ final class NavigationStackComponent: Component {
     
     public final class View: UIView {
         private var itemViews: [AnyHashable: ItemView] = [:]
+        private let navigationContainer = NavigationContainer()
         
         private var component: NavigationStackComponent?
+        private var state: EmptyComponentState?
         
         public override init(frame: CGRect) {
             super.init(frame: CGRect())
+            
+            self.addSubview(self.navigationContainer)
+            
+            self.navigationContainer.requestUpdate = { [weak self] transition in
+                guard let self else {
+                    return
+                }
+                self.state?.updated(transition: transition)
+            }
+            
+            self.navigationContainer.requestPop = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.component?.requestPop()
+            }
         }
         
         required public init?(coder: NSCoder) {
@@ -729,9 +789,11 @@ final class NavigationStackComponent: Component {
                 
         func update(component: NavigationStackComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
+            self.state = state
             
-            var contentHeight: CGFloat = 0.0
-                        
+            let navigationTransitionFraction = self.navigationContainer.transitionFraction
+            self.navigationContainer.isNavigationEnabled = component.items.count > 1
+                                    
             var validItemIds: [AnyHashable] = []
             struct ReadyItem {
                 var index: Int
@@ -762,7 +824,6 @@ final class NavigationStackComponent: Component {
                 } else {
                     itemTransition = itemTransition.withAnimation(.none)
                     itemView = ItemView()
-                    itemView.clipsToBounds = true
                     self.itemViews[itemId] = itemView
                     itemView.contents.parentState = state
                 }
@@ -781,15 +842,32 @@ final class NavigationStackComponent: Component {
                     itemTransition: itemTransition,
                     itemSize: itemSize
                 ))
-                
-                if i == component.items.count - 1 {
-                    contentHeight = itemSize.height
-                }
             }
             
-            for readyItem in readyItems.sorted(by: { $0.index < $1.index }) {
-                let isLast = readyItem.index == readyItems.count - 1
-                let itemFrame = CGRect(origin: CGPoint(x: isLast ? 0.0 : -readyItem.itemSize.width / 3.0, y: 0.0), size: readyItem.itemSize)
+            let sortedItems = readyItems.sorted(by: { $0.index < $1.index })
+            for readyItem in sortedItems {
+                let transitionFraction: CGFloat
+                let alphaTransitionFraction: CGFloat
+                if readyItem.index == readyItems.count - 1 {
+                    transitionFraction = navigationTransitionFraction
+                    alphaTransitionFraction = 1.0
+                } else if readyItem.index == readyItems.count - 2 {
+                    transitionFraction = navigationTransitionFraction - 1.0
+                    alphaTransitionFraction = navigationTransitionFraction
+                } else {
+                    transitionFraction = 0.0
+                    alphaTransitionFraction = 0.0
+                }
+                
+                let transitionOffset: CGFloat
+                if readyItem.index == readyItems.count - 1 {
+                    transitionOffset = readyItem.itemSize.width * transitionFraction
+                } else {
+                    transitionOffset = readyItem.itemSize.width / 3.0 * transitionFraction
+                }
+                
+                let itemFrame = CGRect(origin: CGPoint(x: transitionOffset, y: 0.0), size: readyItem.itemSize)
+                
                 let itemBounds = CGRect(origin: .zero, size: itemFrame.size)
                 if let itemComponentView = readyItem.itemView.contents.view {
                     var isAdded = false
@@ -797,18 +875,27 @@ final class NavigationStackComponent: Component {
                         isAdded = true
                         
                         readyItem.itemView.insertSubview(itemComponentView, at: 0)
-                        self.addSubview(readyItem.itemView)
+                        self.navigationContainer.addSubview(readyItem.itemView)
                     }
                     readyItem.itemTransition.setFrame(view: readyItem.itemView, frame: itemFrame)
                     readyItem.itemTransition.setFrame(view: itemComponentView, frame: itemBounds)
                     readyItem.itemTransition.setFrame(view: readyItem.itemView.dimView, frame: itemBounds)
-                    readyItem.itemTransition.setAlpha(view: readyItem.itemView.dimView, alpha: isLast ? 0.0 : 1.0)
+                    readyItem.itemTransition.setAlpha(view: readyItem.itemView.dimView, alpha: 1.0 - alphaTransitionFraction)
                     
                     if readyItem.index > 0 && isAdded {
                         transition.animatePosition(view: itemComponentView, from: CGPoint(x: itemFrame.width, y: 0.0), to: .zero, additive: true, completion: nil)
                     }
                 }
             }
+            
+            let lastHeight = sortedItems.last?.itemSize.height ?? 0.0
+            let previousHeight: CGFloat
+            if sortedItems.count > 1 {
+                previousHeight = sortedItems[sortedItems.count - 2].itemSize.height
+            } else {
+                previousHeight = lastHeight
+            }
+            let contentHeight = lastHeight * (1.0 - navigationTransitionFraction) + previousHeight * navigationTransitionFraction
             
             var removedItemIds: [AnyHashable] = []
             for (id, _) in self.itemViews {
@@ -833,7 +920,10 @@ final class NavigationStackComponent: Component {
                 }
             }
             
-            return CGSize(width: availableSize.width, height: contentHeight)
+            let contentSize = CGSize(width: availableSize.width, height: contentHeight)
+            self.navigationContainer.frame = CGRect(origin: .zero, size: contentSize)
+            
+            return contentSize
         }
     }
     

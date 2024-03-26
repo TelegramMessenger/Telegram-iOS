@@ -228,6 +228,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openRequestedPeerSelection: (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32, Int32) -> Void
     public let saveMediaToFiles: (EngineMessage.Id) -> Void
     public let openNoAdsDemo: () -> Void
+    public let openAdsInfo: () -> Void
     public let displayGiveawayParticipationStatus: (EngineMessage.Id) -> Void
     public let openPremiumStatusInfo: (EnginePeer.Id, UIView, Int64?, PeerNameColor) -> Void
     public let openRecommendedChannelContextMenu: (EnginePeer, UIView, ContextGesture?) -> Void
@@ -352,6 +353,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         openRequestedPeerSelection: @escaping (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32, Int32) -> Void,
         saveMediaToFiles: @escaping (EngineMessage.Id) -> Void,
         openNoAdsDemo: @escaping () -> Void,
+        openAdsInfo: @escaping () -> Void,
         displayGiveawayParticipationStatus: @escaping (EngineMessage.Id) -> Void,
         openPremiumStatusInfo: @escaping (EnginePeer.Id, UIView, Int64?, PeerNameColor) -> Void,
         openRecommendedChannelContextMenu: @escaping (EnginePeer, UIView, ContextGesture?) -> Void,
@@ -456,6 +458,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.openRequestedPeerSelection = openRequestedPeerSelection
         self.saveMediaToFiles = saveMediaToFiles
         self.openNoAdsDemo = openNoAdsDemo
+        self.openAdsInfo = openAdsInfo
         self.displayGiveawayParticipationStatus = displayGiveawayParticipationStatus
         self.openPremiumStatusInfo = openPremiumStatusInfo
         self.openRecommendedChannelContextMenu = openRecommendedChannelContextMenu

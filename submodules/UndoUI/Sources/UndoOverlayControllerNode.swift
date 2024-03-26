@@ -279,6 +279,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     displayUndo = false
                 }
                 self.originalRemainingSeconds = 5
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
             case let .linkCopied(text):
                 self.avatarNode = nil
                 self.iconNode = nil

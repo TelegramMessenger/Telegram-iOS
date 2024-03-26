@@ -15,21 +15,22 @@ import MultilineTextComponent
 import SolidRoundedButtonComponent
 import AccountContext
 import ScrollComponent
+import BlurredBackgroundComponent
 
 private final class ScrollContent: CombinedComponent {
     typealias EnvironmentType = (ViewControllerComponentContainer.Environment, ScrollChildEnvironment)
     
     let context: AccountContext
-    let openMore: () -> Void
+    let openPremium: () -> Void
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
-        openMore: @escaping () -> Void,
+        openPremium: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
-        self.openMore = openMore
+        self.openPremium = openPremium
         self.dismiss = dismiss
     }
     
@@ -67,20 +68,19 @@ private final class ScrollContent: CombinedComponent {
         let title = Child(BalancedTextComponent.self)
         let text = Child(BalancedTextComponent.self)
         let list = Child(List<Empty>.self)
-        let actionButton = Child(SolidRoundedButtonComponent.self)
         
         let infoBackground = Child(RoundedRectangle.self)
         let infoTitle = Child(MultilineTextComponent.self)
         let infoText = Child(MultilineTextComponent.self)
-        
+                
         return { context in
-//            let scrollEnvironment = context.environment[ScrollChildEnvironment.self].value
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let component = context.component
             let state = context.state
             
             let theme = environment.theme
-//            let strings = environment.strings
+            let strings = environment.strings
+            let presentationData = context.component.context.sharedContext.currentPresentationData.with { $0 }
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let textSideInset: CGFloat = 30.0 + environment.safeInsets.left
@@ -95,9 +95,7 @@ private final class ScrollContent: CombinedComponent {
             let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
                 return (TelegramTextAttributes.URL, contents)
             })
-            
-            //TODO:localize
-            
+                        
             let spacing: CGFloat = 16.0
             var contentSize = CGSize(width: context.availableSize.width, height: 30.0)
                                     
@@ -137,7 +135,7 @@ private final class ScrollContent: CombinedComponent {
             
             let title = title.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "About These Ads", font: titleFont, textColor: textColor)),
+                    text: .plain(NSAttributedString(string: strings.AdsInfo_Title, font: titleFont, textColor: textColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.1
@@ -153,7 +151,7 @@ private final class ScrollContent: CombinedComponent {
             
             let text = text.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Telegram Ads are very different from ads on other platforms. Ads such as this one:", font: textFont, textColor: secondaryTextColor)),
+                    text: .plain(NSAttributedString(string: strings.AdsInfo_Info, font: textFont, textColor: secondaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
@@ -167,15 +165,14 @@ private final class ScrollContent: CombinedComponent {
             contentSize.height += text.size.height
             contentSize.height += spacing
             
-            
             var items: [AnyComponentWithIdentity<Empty>] = []
             items.append(
                 AnyComponentWithIdentity(
                     id: "respect",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Respect Your Privacy",
+                        title: strings.AdsInfo_Respect_Title,
                         titleColor: textColor,
-                        text: "Ads on Telegram do not use your personal information and are based on the channel in which you see them.",
+                        text: strings.AdsInfo_Respect_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Ads/Privacy",
@@ -187,9 +184,9 @@ private final class ScrollContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "split",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Help the Channel Creator",
+                        title: strings.AdsInfo_Split_Title,
                         titleColor: textColor,
-                        text: "50% of the revenue from Telegram Ads goes to the owner of the channel where they are displayed.",
+                        text: strings.AdsInfo_Split_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Ads/Split",
@@ -201,13 +198,16 @@ private final class ScrollContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "ads",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Can Be Removed",
+                        title: strings.AdsInfo_Ads_Title,
                         titleColor: textColor,
-                        text: "You can turn off ads by subscribing to [Telegram Premium](), and Level 30 channels can remove them for their subscribers.",
+                        text: strings.AdsInfo_Ads_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Premium/BoostPerk/NoAds",
-                        iconColor: linkColor
+                        iconColor: linkColor,
+                        action: {
+                            component.openPremium()
+                        }
                     ))
                 )
             )
@@ -223,7 +223,7 @@ private final class ScrollContent: CombinedComponent {
             contentSize.height += list.size.height
             contentSize.height += spacing - 9.0
             
-            let infoTitleAttributedString = NSMutableAttributedString(string: "Can I Launch an Ad?", font: titleFont, textColor: textColor)
+            let infoTitleAttributedString = NSMutableAttributedString(string: strings.AdsInfo_Launch_Title, font: titleFont, textColor: textColor)
             let infoTitle = infoTitle.update(
                 component: MultilineTextComponent(
                     text: .plain(infoTitleAttributedString),
@@ -239,7 +239,7 @@ private final class ScrollContent: CombinedComponent {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
             }
             
-            let infoString = "Anyone can create ads to display in this channel – with minimal budgets. Check out the Telegram Ad Platform for details. [Learn More >]()"
+            let infoString = strings.AdsInfo_Launch_Text
             let infoAttributedString = parseMarkdownIntoAttributedString(infoString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = infoAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
                 infoAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: infoAttributedString.string))
@@ -249,7 +249,17 @@ private final class ScrollContent: CombinedComponent {
                     text: .plain(infoAttributedString),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
-                    lineSpacing: 0.2
+                    lineSpacing: 0.2,
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { _, _ in
+                        component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.AdsInfo_Launch_Text_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                    }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 3.5, height: context.availableSize.height),
                 transition: .immediate
@@ -285,36 +295,12 @@ private final class ScrollContent: CombinedComponent {
             contentSize.height += infoPadding
             contentSize.height += spacing
             
-            let actionButton = actionButton.update(
-                component: SolidRoundedButtonComponent(
-                    title: "Understood",
-                    theme: SolidRoundedButtonComponent.Theme(
-                        backgroundColor: theme.list.itemCheckColors.fillColor,
-                        backgroundColors: [],
-                        foregroundColor: theme.list.itemCheckColors.foregroundColor
-                    ),
-                    font: .bold,
-                    fontSize: 17.0,
-                    height: 50.0,
-                    cornerRadius: 10.0,
-                    gloss: false,
-                    iconName: nil,
-                    animationName: nil,
-                    iconPosition: .left,
-                    action: {
-                        component.dismiss()
-                    }
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
-                transition: context.transition
-            )
-            context.add(actionButton
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + actionButton.size.height / 2.0))
-            )
-            contentSize.height += actionButton.size.height
-            contentSize.height += 22.0
-                        
-            contentSize.height += environment.safeInsets.bottom
+            contentSize.height += 12.0 + 50.0
+            if environment.safeInsets.bottom > 0 {
+                contentSize.height += environment.safeInsets.bottom + 5.0
+            } else {
+                contentSize.height += 12.0
+            }
             
             state.playAnimationIfNeeded()
             
@@ -327,14 +313,14 @@ private final class ContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let openMore: () -> Void
+    let openPremium: () -> Void
     
     init(
         context: AccountContext,
-        openMore: @escaping () -> Void
+        openPremium: @escaping () -> Void
     ) {
         self.context = context
-        self.openMore = openMore
+        self.openPremium = openPremium
     }
     
     static func ==(lhs: ContainerComponent, rhs: ContainerComponent) -> Bool {
@@ -344,12 +330,28 @@ private final class ContainerComponent: CombinedComponent {
         return true
     }
     
+    final class State: ComponentState {
+        var topContentOffset: CGFloat?
+        var bottomContentOffset: CGFloat?
+    }
+    
+    func makeState() -> State {
+        return State()
+    }
+    
     static var body: Body {
         let background = Child(Rectangle.self)
         let scroll = Child(ScrollComponent<ViewControllerComponentContainer.Environment>.self)
-                
+        let bottomPanel = Child(BlurredBackgroundComponent.self)
+        let bottomSeparator = Child(Rectangle.self)
+        let actionButton = Child(SolidRoundedButtonComponent.self)
+        let scrollExternalState = ScrollComponent<EnvironmentType>.ExternalState()
+        
         return { context in
             let environment = context.environment[EnvironmentType.self]
+            let theme = environment.theme
+            let strings = environment.strings
+            let state = context.state
             
             let controller = environment.controller
             
@@ -367,18 +369,19 @@ private final class ContainerComponent: CombinedComponent {
                 component: ScrollComponent<EnvironmentType>(
                     content: AnyComponent(ScrollContent(
                         context: context.component.context,
-                        openMore: context.component.openMore,
+                        openPremium: context.component.openPremium,
                         dismiss: {
                             controller()?.dismiss()
                         }
                     )),
+                    externalState: scrollExternalState,
                     contentInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0),
-                    contentOffsetUpdated: { topContentOffset, bottomContentOffset in
-//                        state?.topContentOffset = topContentOffset
-//                        state?.bottomContentOffset = bottomContentOffset
-//                        Queue.mainQueue().justDispatch {
-//                            state?.updated(transition: .immediate)
-//                        }
+                    contentOffsetUpdated: { [weak state] topContentOffset, bottomContentOffset in
+                        state?.topContentOffset = topContentOffset
+                        state?.bottomContentOffset = bottomContentOffset
+                        Queue.mainQueue().justDispatch {
+                            state?.updated(transition: .immediate)
+                        }
                     },
                     contentOffsetWillCommit: { targetContentOffset in
                     }
@@ -387,52 +390,77 @@ private final class ContainerComponent: CombinedComponent {
                 availableSize: context.availableSize,
                 transition: context.transition
             )
-//            let sheet = sheet.update(
-//                component: SheetComponent<EnvironmentType>(
-//                    content: AnyComponent<EnvironmentType>(ScrollContent(
-//                        context: context.component.context,
-//                        openMore: context.component.openMore,
-//                        dismiss: {
-//                            animateOut.invoke(Action { _ in
-//                                if let controller = controller() {
-//                                    controller.dismiss(completion: nil)
-//                                }
-//                            })
-//                        }
-//                    )),
-//                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
-//                    followContentSizeChanges: true,
-//                    externalState: sheetExternalState,
-//                    animateOut: animateOut
-//                ),
-//                environment: {
-//                    environment
-//                    SheetComponentEnvironment(
-//                        isDisplaying: environment.value.isVisible,
-//                        isCentered: environment.metrics.widthClass == .regular,
-//                        hasInputHeight: !environment.inputHeight.isZero,
-//                        regularMetricsSize: CGSize(width: 430.0, height: 900.0),
-//                        dismiss: { animated in
-//                            if animated {
-//                                animateOut.invoke(Action { _ in
-//                                    if let controller = controller() {
-//                                        controller.dismiss(completion: nil)
-//                                    }
-//                                })
-//                            } else {
-//                                if let controller = controller() {
-//                                    controller.dismiss(completion: nil)
-//                                }
-//                            }
-//                        }
-//                    )
-//                },
-//                availableSize: context.availableSize,
-//                transition: context.transition
-//            )
             
             context.add(scroll
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
+            )
+            
+            let buttonHeight: CGFloat = 50.0
+            let bottomPanelPadding: CGFloat = 12.0
+            let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
+            let bottomPanelHeight = bottomPanelPadding + buttonHeight + bottomInset
+            
+            let bottomPanelAlpha: CGFloat
+            if scrollExternalState.contentHeight > context.availableSize.height {
+                if let bottomContentOffset = state.bottomContentOffset {
+                    bottomPanelAlpha = min(16.0, bottomContentOffset) / 16.0
+                } else {
+                    bottomPanelAlpha = 1.0
+                }
+            } else {
+                bottomPanelAlpha = 0.0
+            }
+            
+            let bottomPanel = bottomPanel.update(
+                component: BlurredBackgroundComponent(
+                    color: theme.rootController.tabBar.backgroundColor
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: bottomPanelHeight),
+                transition: context.transition
+            )
+            let bottomSeparator = bottomSeparator.update(
+                component: Rectangle(
+                    color: theme.rootController.tabBar.separatorColor
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: UIScreenPixel),
+                transition: context.transition
+            )
+            
+            context.add(bottomPanel
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height / 2.0))
+                .opacity(bottomPanelAlpha)
+            )
+            context.add(bottomSeparator
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height))
+                .opacity(bottomPanelAlpha)
+            )
+            
+            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+            let actionButton = actionButton.update(
+                component: SolidRoundedButtonComponent(
+                    title: strings.AdsInfo_Understood,
+                    theme: SolidRoundedButtonComponent.Theme(
+                        backgroundColor: theme.list.itemCheckColors.fillColor,
+                        backgroundColors: [],
+                        foregroundColor: theme.list.itemCheckColors.foregroundColor
+                    ),
+                    font: .bold,
+                    fontSize: 17.0,
+                    height: buttonHeight,
+                    cornerRadius: 10.0,
+                    gloss: false,
+                    iconName: nil,
+                    animationName: nil,
+                    iconPosition: .left,
+                    action: {
+                        controller()?.dismiss()
+                    }
+                ),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                transition: context.transition
+            )
+            context.add(actionButton
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanelHeight + bottomPanelPadding + actionButton.size.height / 2.0))
             )
              
             return context.availableSize
@@ -448,11 +476,14 @@ public final class AdsInfoScreen: ViewControllerComponentContainer {
     ) {
         self.context = context
                 
+        var openPremiumImpl: (() -> Void)?
         super.init(
             context: context,
             component: ContainerComponent(
                 context: context,
-                openMore: {}
+                openPremium: {
+                    openPremiumImpl?()
+                }
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,
@@ -460,6 +491,20 @@ public final class AdsInfoScreen: ViewControllerComponentContainer {
         )
         
         self.navigationPresentation = .modal
+        
+        openPremiumImpl = { [weak self] in
+            guard let self else {
+                return
+            }
+            
+            let navigationController = self.navigationController
+            self.dismiss()
+            
+            Queue.mainQueue().after(0.3) {
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
+                navigationController?.pushViewController(controller, animated: true)
+            }
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -475,6 +520,7 @@ private final class ParagraphComponent: CombinedComponent {
     let accentColor: UIColor
     let iconName: String
     let iconColor: UIColor
+    let action: () -> Void
     
     public init(
         title: String,
@@ -483,7 +529,8 @@ private final class ParagraphComponent: CombinedComponent {
         textColor: UIColor,
         accentColor: UIColor,
         iconName: String,
-        iconColor: UIColor
+        iconColor: UIColor,
+        action: @escaping () -> Void = {}
     ) {
         self.title = title
         self.titleColor = titleColor
@@ -492,6 +539,7 @@ private final class ParagraphComponent: CombinedComponent {
         self.accentColor = accentColor
         self.iconName = iconName
         self.iconColor = iconColor
+        self.action = action
     }
     
     static func ==(lhs: ParagraphComponent, rhs: ParagraphComponent) -> Bool {
@@ -557,8 +605,8 @@ private final class ParagraphComponent: CombinedComponent {
                 body: MarkdownAttributeSet(font: textFont, textColor: textColor),
                 bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
                 link: MarkdownAttributeSet(font: textFont, textColor: accentColor),
-                linkAttribute: { _ in
-                    return nil
+                linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
                 }
             )
                         
@@ -567,7 +615,17 @@ private final class ParagraphComponent: CombinedComponent {
                     text: .markdown(text: component.text, attributes: markdownAttributes),
                     horizontalAlignment: .natural,
                     maximumNumberOfLines: 0,
-                    lineSpacing: 0.2
+                    lineSpacing: 0.2,
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { _, _ in
+                        component.action()
+                    }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - leftInset - rightInset, height: context.availableSize.height),
                 transition: .immediate

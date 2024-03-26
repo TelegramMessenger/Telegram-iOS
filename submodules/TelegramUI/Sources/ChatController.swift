@@ -122,6 +122,7 @@ import AudioWaveform
 import PeerNameColorScreen
 import ChatEmptyNode
 import ChatMediaInputStickerGridItem
+import AdsInfoScreen
 
 public enum ChatControllerPeekActions {
     case standard
@@ -4438,6 +4439,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 controller?.replace(with: c)
             }
             self.push(controller)
+        }, openAdsInfo: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.push(AdsInfoScreen(context: self.context))
         }, displayGiveawayParticipationStatus: { [weak self] messageId in
             guard let self else {
                 return

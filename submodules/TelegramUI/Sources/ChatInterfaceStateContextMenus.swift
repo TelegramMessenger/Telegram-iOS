@@ -30,7 +30,6 @@ import DebugSettingsUI
 import ChatPresentationInterfaceState
 import Pasteboard
 import SettingsUI
-import PremiumUI
 import TextNodeWithEntities
 import ChatControllerInteraction
 import ChatMessageItemCommon
@@ -477,21 +476,18 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         var actions: [ContextMenuItem] = []
         
-        if "".isEmpty {
-//        if adAttribute.canReport {
-            //TODO:localize
-            
-            actions.append(.action(ContextMenuActionItem(text: "About This Ad", textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+        if adAttribute.canReport {
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AboutAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
             }, iconSource: nil, action: { _, f in
                 f(.dismissWithoutContent)
                 controllerInteraction.navigationController()?.pushViewController(AdsInfoScreen(context: context))
             })))
             
-            actions.append(.action(ContextMenuActionItem(text: "Report Ad", textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_ReportAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
             }, iconSource: nil, action: { _, f in
-                f(.dismissWithoutContent)
+                f(.default)
                 
                 let _ = (context.engine.messages.reportAdMessage(peerId: message.id.peerId, opaqueId: adAttribute.opaqueId, option: nil)
                 |> deliverOnMainQueue).start(next: { result in
@@ -511,13 +507,13 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             actions.append(.separator)
                            
-            actions.append(.action(ContextMenuActionItem(text: "Remove Ad", textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_RemoveAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
             }, iconSource: nil, action: { c, _ in
                 c.dismiss(completion: {
                     var replaceImpl: ((ViewController) -> Void)?
-                    let controller = PremiumDemoScreen(context: context, subject: .noAds, action: {
-                        let controller = PremiumIntroScreen(context: context, source: .ads)
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
                         replaceImpl?(controller)
                     })
                     replaceImpl = { [weak controller] c in
@@ -585,8 +581,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }, iconSource: nil, action: { c, _ in
                     c.dismiss(completion: {
                         var replaceImpl: ((ViewController) -> Void)?
-                        let controller = PremiumDemoScreen(context: context, subject: .noAds, action: {
-                            let controller = PremiumIntroScreen(context: context, source: .ads)
+                        let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, action: {
+                            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
                             replaceImpl?(controller)
                         })
                         replaceImpl = { [weak controller] c in
@@ -1083,15 +1079,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }, action: { _, f in
                     let context = context
                     var replaceImpl: ((ViewController) -> Void)?
-                    let controller = PremiumDemoScreen(context: context, subject: .fasterDownload, action: {
-                        let controller = PremiumIntroScreen(context: context, source: .fasterDownload)
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .fasterDownload, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .fasterDownload, forceDark: false, dismissed: nil)
                         replaceImpl?(controller)
                     })
                     replaceImpl = { [weak controller] c in
                         controller?.replace(with: c)
                     }
                     controllerInteraction.navigationController()?.pushViewController(controller)
-                    
                     f(.dismissWithoutContent)
                 })))
                 actions.append(.separator)
@@ -1626,7 +1621,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                                     }
                                                     controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                                                         if case .info = action {
-                                                            let controller = PremiumIntroScreen(context: context, source: .savedGifs)
+                                                            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs, forceDark: false, dismissed: nil)
                                                             controllerInteraction.navigationController()?.pushViewController(controller)
                                                             return true
                                                         }
