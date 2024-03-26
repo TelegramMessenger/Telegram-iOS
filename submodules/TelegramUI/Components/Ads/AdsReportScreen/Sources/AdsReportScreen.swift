@@ -20,11 +20,12 @@ import AccountContext
 private final class SheetPageContent: CombinedComponent {
     struct Item: Equatable {
         let title: String
-        let subItems: [Item]
+        let option: Data
     }
     
     let context: AccountContext
     let title: String?
+    let subtitle: String
     let items: [Item]
     let action: (Item) -> Void
     let pop: () -> Void
@@ -32,12 +33,14 @@ private final class SheetPageContent: CombinedComponent {
     init(
         context: AccountContext,
         title: String?,
+        subtitle: String,
         items: [Item],
         action: @escaping (Item) -> Void,
         pop: @escaping () -> Void
     ) {
         self.context = context
         self.title = title
+        self.subtitle = subtitle
         self.items = items
         self.action = action
         self.pop = pop
@@ -50,10 +53,21 @@ private final class SheetPageContent: CombinedComponent {
         if lhs.title != rhs.title {
             return false
         }
+        if lhs.subtitle != rhs.subtitle {
+            return false
+        }
         if lhs.items != rhs.items {
             return false
         }
         return true
+    }
+    
+    final class State: ComponentState {
+        var backArrowImage: (UIImage, PresentationTheme)?
+    }
+    
+    func makeState() -> State {
+        return State()
     }
         
     static var body: Body {
@@ -65,6 +79,7 @@ private final class SheetPageContent: CombinedComponent {
         
         return { context in
             let component = context.component
+            let state = context.state
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let theme = presentationData.theme
@@ -83,11 +98,28 @@ private final class SheetPageContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: background.size.height / 2.0))
             )
             
+            let backArrowImage: UIImage
+            if let (cached, cachedTheme) = state.backArrowImage, cachedTheme === theme {
+                backArrowImage = cached
+            } else {
+                backArrowImage = NavigationBarTheme.generateBackArrowImage(color: theme.list.itemAccentColor)!
+                state.backArrowImage = (backArrowImage, theme)
+            }
+            
+            let backContents: AnyComponent<Empty>
+            if component.title == nil {
+                backContents = AnyComponent(Text(text: "Cancel", font: Font.regular(17.0), color: theme.list.itemAccentColor))
+            } else {
+                backContents = AnyComponent(
+                    HStack([
+                        AnyComponentWithIdentity(id: "arrow", component: AnyComponent(Image(image: backArrowImage, contentMode: .center))),
+                        AnyComponentWithIdentity(id: "label", component: AnyComponent(Text(text: "Back", font: Font.regular(17.0), color: theme.list.itemAccentColor)))
+                    ], spacing: 6.0)
+                )
+            }
             let back = back.update(
                 component: Button(
-                    content: AnyComponent(
-                        Text(text: "Cancel", font: Font.regular(17.0), color: theme.list.itemAccentColor)
-                    ),
+                    content: backContents,
                     action: {
                         component.pop()
                     }
@@ -96,7 +128,7 @@ private final class SheetPageContent: CombinedComponent {
                 transition: .immediate
             )
             context.add(back
-                .position(CGPoint(x: sideInset + back.size.width / 2.0, y: contentSize.height + back.size.height / 2.0))
+                .position(CGPoint(x: sideInset + back.size.width / 2.0 - (component.title != nil ? 8.0 : 0.0), y: contentSize.height + back.size.height / 2.0))
             )
             
             let title = title.update(
@@ -118,7 +150,7 @@ private final class SheetPageContent: CombinedComponent {
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + subtitle.size.height / 2.0 - 9.0))
                 )
                 contentSize.height += subtitle.size.height
-                contentSize.height += 24.0
+                contentSize.height += 8.0
             } else {
                 context.add(title
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + title.size.height / 2.0))
@@ -141,7 +173,7 @@ private final class SheetPageContent: CombinedComponent {
                             maximumNumberOfLines: 1
                         ))),
                     ], alignment: .left, spacing: 2.0)),
-                    accessory: !item.subItems.isEmpty ? .arrow : nil,
+                    accessory: nil,
                     action: { _ in
                         component.action(item)
                     }
@@ -153,7 +185,7 @@ private final class SheetPageContent: CombinedComponent {
                     theme: theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "WHAT IS WRONG WITH THIS AD?".uppercased(),
+                            string: component.subtitle.uppercased(),
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: theme.list.freeTextColor
                         )),
@@ -171,7 +203,17 @@ private final class SheetPageContent: CombinedComponent {
                                 }
                             )
                         ),
-                        maximumNumberOfLines: 0
+                        maximumNumberOfLines: 0,
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { _, _ in
+//                            component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Monetization_Intro_Info_Text_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                        }
                     )),
                     items: items
                 ),
@@ -194,6 +236,10 @@ private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let peerId: EnginePeer.Id
+    let opaqueId: Data
+    let title: String
+    let options: [ReportAdMessageResult.Option]
     let pts: Int
     let openMore: () -> Void
     let complete: () -> Void
@@ -202,6 +248,10 @@ private final class SheetContent: CombinedComponent {
     
     init(
         context: AccountContext,
+        peerId: EnginePeer.Id,
+        opaqueId: Data,
+        title: String,
+        options: [ReportAdMessageResult.Option],
         pts: Int,
         openMore: @escaping () -> Void,
         complete: @escaping () -> Void,
@@ -209,6 +259,10 @@ private final class SheetContent: CombinedComponent {
         update: @escaping (Transition) -> Void
     ) {
         self.context = context
+        self.peerId = peerId
+        self.opaqueId = opaqueId
+        self.title = title
+        self.options = options
         self.pts = pts
         self.openMore = openMore
         self.complete = complete
@@ -220,6 +274,18 @@ private final class SheetContent: CombinedComponent {
         if lhs.context !== rhs.context {
             return false
         }
+        if lhs.peerId != rhs.peerId {
+            return false
+        }
+        if lhs.opaqueId != rhs.opaqueId {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.options != rhs.options {
+            return false
+        }
         if lhs.pts != rhs.pts {
             return false
         }
@@ -227,7 +293,12 @@ private final class SheetContent: CombinedComponent {
     }
     
     final class State: ComponentState {
-        var pushedItem: SheetPageContent.Item?
+        var pushedOptions: (title: String, subtitle: String, options: [ReportAdMessageResult.Option])?
+        let disposable = MetaDisposable()
+        
+        deinit {
+            self.disposable.dispose()
+        }
     }
     
     func makeState() -> State {
@@ -243,60 +314,61 @@ private final class SheetContent: CombinedComponent {
             let state = context.state
             let update = component.update
             
+            let accountContext = component.context
+            let peerId = component.peerId
+            let opaqueId = component.opaqueId
+            let complete = component.complete
+            let action: (SheetPageContent.Item) -> Void = { [weak state] item in
+                guard let state else {
+                    return
+                }
+                state.disposable.set(
+                    (accountContext.engine.messages.reportAdMessage(peerId: peerId, opaqueId: opaqueId, option: item.option)
+                    |> deliverOnMainQueue).start(next: { [weak state] result in
+                        switch result {
+                        case let .options(title, options):
+                            state?.pushedOptions = (item.title, title, options)
+                            state?.updated(transition: .spring(duration: 0.45))
+                        case .adsHidden:
+                            complete()
+                        case .reported:
+                            complete()
+                        }
+                    })
+                )
+            }
+            
             var items: [AnyComponentWithIdentity<Empty>] = []
             items.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(
                 SheetPageContent(
                     context: component.context,
                     title: nil,
-                    items: [
-                        SheetPageContent.Item(title: "I don't like it", subItems: []),
-                        SheetPageContent.Item(title: "I don't want to see ads", subItems: []),
-                        SheetPageContent.Item(title: "Destination doesn't match the ad", subItems: []),
-                        SheetPageContent.Item(title: "Word choice or style", subItems: []),
-                        SheetPageContent.Item(title: "Shocking or sexual content", subItems: []),
-                        SheetPageContent.Item(title: "Hate speech or threats", subItems: []),
-                        SheetPageContent.Item(title: "Scam or misleading", subItems: []),
-                        SheetPageContent.Item(title: "Illegal or questionable products", subItems: [
-                            SheetPageContent.Item(title: "Drugs, alcohol or tobacco", subItems: []),
-                            SheetPageContent.Item(title: "Uncertified medicine or supplements", subItems: []),
-                            SheetPageContent.Item(title: "Weapons or firearms", subItems: []),
-                            SheetPageContent.Item(title: "Fake money", subItems: []),
-                            SheetPageContent.Item(title: "Fake documents", subItems: []),
-                            SheetPageContent.Item(title: "Malware, phishing, hacked accounts", subItems: []),
-                            SheetPageContent.Item(title: "Human trafficking or exploitation", subItems: []),
-                            SheetPageContent.Item(title: "Wild or restricted animals", subItems: []),
-                            SheetPageContent.Item(title: "Gambling", subItems: [])
-                        ]),
-                        SheetPageContent.Item(title: "Copyright infringement", subItems: []),
-                        SheetPageContent.Item(title: "Politics or religion", subItems: []),
-                        SheetPageContent.Item(title: "Spam", subItems: [])
-                    ],
-                    action: { [weak state] item in
-                        if !item.subItems.isEmpty {
-                            state?.pushedItem = item
-                            update(.spring(duration: 0.45))
-                        } else {
-                            component.complete()
-                        }
+                    subtitle: component.title,
+                    items: component.options.map {
+                        SheetPageContent.Item(title: $0.text, option: $0.option)
+                    },
+                    action: { item in
+                        action(item)
                     },
                     pop: {
                         component.dismiss()
                     }
                 )
             )))
-            if let pushedItem = context.state.pushedItem {
+            if let pushedOptions = context.state.pushedOptions {
                 items.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(
                     SheetPageContent(
                         context: component.context,
-                        title: pushedItem.title,
-                        items: pushedItem.subItems.map {
-                            SheetPageContent.Item(title: $0.title, subItems: [])
+                        title: pushedOptions.title,
+                        subtitle: pushedOptions.subtitle,
+                        items: pushedOptions.options.map {
+                            SheetPageContent.Item(title: $0.text, option: $0.option)
                         },
                         action: { item in
-                            component.complete()
+                            action(item)
                         },
                         pop: { [weak state] in
-                            state?.pushedItem = nil
+                            state?.pushedOptions = nil
                             update(.spring(duration: 0.45))
                         }
                     )
@@ -312,6 +384,7 @@ private final class SheetContent: CombinedComponent {
             context.add(navigation
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: navigation.size.height / 2.0))
                 .clipsToBounds(true)
+                .cornerRadius(8.0)
             )
             contentSize.height += navigation.size.height
                         
@@ -324,21 +397,45 @@ private final class SheetContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let peerId: EnginePeer.Id
+    let opaqueId: Data
+    let title: String
+    let options: [ReportAdMessageResult.Option]
     let openMore: () -> Void
     let complete: () -> Void
     
     init(
         context: AccountContext,
+        peerId: EnginePeer.Id,
+        opaqueId: Data,
+        title: String,
+        options: [ReportAdMessageResult.Option],
         openMore: @escaping () -> Void,
         complete: @escaping () -> Void
     ) {
         self.context = context
+        self.peerId = peerId
+        self.opaqueId = opaqueId
+        self.title = title
+        self.options = options
         self.openMore = openMore
         self.complete = complete
     }
     
     static func ==(lhs: SheetContainerComponent, rhs: SheetContainerComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.peerId != rhs.peerId {
+            return false
+        }
+        if lhs.opaqueId != rhs.opaqueId {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.options != rhs.options {
             return false
         }
         return true
@@ -367,6 +464,10 @@ private final class SheetContainerComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
+                        peerId: context.component.peerId,
+                        opaqueId: context.component.opaqueId,
+                        title: context.component.title,
+                        options: context.component.options,
                         pts: state.pts,
                         openMore: context.component.openMore,
                         complete: context.component.complete,
@@ -443,7 +544,11 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
     private let context: AccountContext
         
     public init(
-        context: AccountContext
+        context: AccountContext,
+        peerId: EnginePeer.Id,
+        opaqueId: Data,
+        title: String,
+        options: [ReportAdMessageResult.Option]
     ) {
         self.context = context
                 
@@ -452,6 +557,10 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
             context: context,
             component: SheetContainerComponent(
                 context: context,
+                peerId: peerId,
+                opaqueId: opaqueId,
+                title: title,
+                options: options,
                 openMore: {},
                 complete: {
                     completeImpl?()
@@ -589,9 +698,15 @@ final class NavigationStackComponent: Component {
         
     private final class ItemView: UIView {
         let contents = ComponentView<Empty>()
+        let dimView = UIView()
         
         override init(frame: CGRect) {
             super.init(frame: frame)
+            
+            self.dimView.alpha = 0.0
+            self.dimView.backgroundColor = UIColor.black.withAlphaComponent(0.2)
+            self.dimView.isUserInteractionEnabled = false
+            self.addSubview(self.dimView)
         }
         
         required init?(coder: NSCoder) {
@@ -673,15 +788,21 @@ final class NavigationStackComponent: Component {
             }
             
             for readyItem in readyItems.sorted(by: { $0.index < $1.index }) {
-                let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: readyItem.itemSize)
+                let isLast = readyItem.index == readyItems.count - 1
+                let itemFrame = CGRect(origin: CGPoint(x: isLast ? 0.0 : -readyItem.itemSize.width / 3.0, y: 0.0), size: readyItem.itemSize)
+                let itemBounds = CGRect(origin: .zero, size: itemFrame.size)
                 if let itemComponentView = readyItem.itemView.contents.view {
                     var isAdded = false
                     if itemComponentView.superview == nil {
                         isAdded = true
-                        self.addSubview(itemComponentView)
+                        
+                        readyItem.itemView.insertSubview(itemComponentView, at: 0)
+                        self.addSubview(readyItem.itemView)
                     }
                     readyItem.itemTransition.setFrame(view: readyItem.itemView, frame: itemFrame)
-                    readyItem.itemTransition.setFrame(view: itemComponentView, frame: CGRect(origin: CGPoint(), size: itemFrame.size))
+                    readyItem.itemTransition.setFrame(view: itemComponentView, frame: itemBounds)
+                    readyItem.itemTransition.setFrame(view: readyItem.itemView.dimView, frame: itemBounds)
+                    readyItem.itemTransition.setAlpha(view: readyItem.itemView.dimView, alpha: isLast ? 0.0 : 1.0)
                     
                     if readyItem.index > 0 && isAdded {
                         transition.animatePosition(view: itemComponentView, from: CGPoint(x: itemFrame.width, y: 0.0), to: .zero, additive: true, completion: nil)
@@ -699,12 +820,17 @@ final class NavigationStackComponent: Component {
                 guard let itemView = self.itemViews[id] else {
                     continue
                 }
-                var position = itemView.center
-                position.x += itemView.bounds.width / 2.0
-                transition.setPosition(view: itemView, position: position, completion: { _ in
+                if let itemComponeentView = itemView.contents.view {
+                    var position = itemComponeentView.center
+                    position.x += itemComponeentView.bounds.width
+                    transition.setPosition(view: itemComponeentView, position: position, completion: { _ in
+                        itemView.removeFromSuperview()
+                        self.itemViews.removeValue(forKey: id)
+                    })
+                } else {
                     itemView.removeFromSuperview()
                     self.itemViews.removeValue(forKey: id)
-                })
+                }
             }
             
             return CGSize(width: availableSize.width, height: contentHeight)

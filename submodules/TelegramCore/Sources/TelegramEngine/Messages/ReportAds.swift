@@ -4,9 +4,9 @@ import SwiftSignalKit
 import TelegramApi
 
 public enum ReportAdMessageResult {
-    public struct Option {
-        let text: String
-        let option: Data
+    public struct Option: Equatable {
+        public let text: String
+        public let option: Data
     }
     
     case options(title: String, options: [Option])

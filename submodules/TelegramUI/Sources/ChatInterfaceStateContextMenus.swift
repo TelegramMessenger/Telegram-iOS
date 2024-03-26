@@ -492,7 +492,21 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
             }, iconSource: nil, action: { _, f in
                 f(.dismissWithoutContent)
-                controllerInteraction.navigationController()?.pushViewController(AdsReportScreen(context: context))
+                
+                let _ = (context.engine.messages.reportAdMessage(peerId: message.id.peerId, opaqueId: adAttribute.opaqueId, option: nil)
+                |> deliverOnMainQueue).start(next: { result in
+                    if case let .options(title, options) = result {
+                        controllerInteraction.navigationController()?.pushViewController(
+                            AdsReportScreen(
+                                context: context,
+                                peerId: message.id.peerId,
+                                opaqueId: adAttribute.opaqueId,
+                                title: title,
+                                options: options
+                            )
+                        )
+                    }
+                })
             })))
             
             actions.append(.separator)
