@@ -1059,7 +1059,7 @@ public final class ContactListNode: ASDisplayNode {
     
     private let isPeerEnabled: ((EnginePeer) -> Bool)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], onlyWriteable: Bool, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)? = nil, isSearch: Bool = false, multipleSelection: Bool = false) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], onlyWriteable: Bool, isGroupInvitation: Bool, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)? = nil, isSearch: Bool = false, multipleSelection: Bool = false) {
         self.context = context
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
@@ -1383,7 +1383,7 @@ public final class ContactListNode: ASDisplayNode {
                     })
                     
                     let peerRequiresPremiumForMessaging: Signal<[EnginePeer.Id: Bool], NoError>
-                    if onlyWriteable {
+                    if onlyWriteable && !isGroupInvitation {
                         peerRequiresPremiumForMessaging = foundPeers.get()
                         |> map { foundPeers -> Set<EnginePeer.Id> in
                             var result = Set<EnginePeer.Id>()

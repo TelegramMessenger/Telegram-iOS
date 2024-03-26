@@ -96,19 +96,21 @@ public final class ContactMultiselectionControllerParams {
     public let options: [ContactListAdditionalOption]
     public let filters: [ContactListFilter]
     public let onlyWriteable: Bool
+    public let isGroupInvitation: Bool
     public let isPeerEnabled: ((EnginePeer) -> Bool)?
     public let attemptDisabledItemSelection: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
     public let alwaysEnabled: Bool
     public let limit: Int32?
     public let reachedLimit: ((Int32) -> Void)?
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf], onlyWriteable: Bool = false, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, attemptDisabledItemSelection: ((EnginePeer, ChatListDisabledPeerReason) -> Void)? = nil, alwaysEnabled: Bool = false, limit: Int32? = nil, reachedLimit: ((Int32) -> Void)? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf], onlyWriteable: Bool = false, isGroupInvitation: Bool = false, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, attemptDisabledItemSelection: ((EnginePeer, ChatListDisabledPeerReason) -> Void)? = nil, alwaysEnabled: Bool = false, limit: Int32? = nil, reachedLimit: ((Int32) -> Void)? = nil) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.mode = mode
         self.options = options
         self.filters = filters
         self.onlyWriteable = onlyWriteable
+        self.isGroupInvitation = isGroupInvitation
         self.isPeerEnabled = isPeerEnabled
         self.attemptDisabledItemSelection = attemptDisabledItemSelection
         self.alwaysEnabled = alwaysEnabled

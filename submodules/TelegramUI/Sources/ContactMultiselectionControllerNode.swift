@@ -78,8 +78,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     
     private let isPeerEnabled: ((EnginePeer) -> Bool)?
     private let onlyWriteable: Bool
+    private let isGroupInvitation: Bool
     
-    init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, isPeerEnabled: ((EnginePeer) -> Bool)?, attemptDisabledItemSelection: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?, options: [ContactListAdditionalOption], filters: [ContactListFilter], onlyWriteable: Bool, limit: Int32?, reachedSelectionLimit: ((Int32) -> Void)?, present: @escaping (ViewController, Any?) -> Void) {
+    init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, isPeerEnabled: ((EnginePeer) -> Bool)?, attemptDisabledItemSelection: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?, options: [ContactListAdditionalOption], filters: [ContactListFilter], onlyWriteable: Bool, isGroupInvitation: Bool, limit: Int32?, reachedSelectionLimit: ((Int32) -> Void)?, present: @escaping (ViewController, Any?) -> Void) {
         self.navigationBar = navigationBar
         
         self.context = context
@@ -90,6 +91,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         self.isPeerEnabled = isPeerEnabled
         self.onlyWriteable = onlyWriteable
+        self.isGroupInvitation = isGroupInvitation
         
         var proceedImpl: (() -> Void)?
         
@@ -231,7 +233,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             } else {
                 displayTopPeers = .none
             }
-            let contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList, topPeers: displayTopPeers)), filters: filters, onlyWriteable: onlyWriteable, selectionState: ContactListNodeGroupSelectionState())
+            let contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList, topPeers: displayTopPeers)), filters: filters, onlyWriteable: onlyWriteable, isGroupInvitation: isGroupInvitation, selectionState: ContactListNodeGroupSelectionState())
             self.contentNode = .contacts(contactListNode)
             
             if !selectedPeers.isEmpty {
@@ -359,7 +361,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                                 searchChannels: searchChannels,
                                 globalSearch: globalSearch,
                                 displaySavedMessages: displaySavedMessages
-                            ))), filters: filters, onlyWriteable: strongSelf.onlyWriteable, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
+                            ))), filters: filters, onlyWriteable: strongSelf.onlyWriteable, isGroupInvitation: strongSelf.isGroupInvitation, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
                         searchResultsNode.openPeer = { peer, _ in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)

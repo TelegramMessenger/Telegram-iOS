@@ -78,7 +78,7 @@ func _internal_addGroupAdmin(account: Account, peerId: PeerId, adminId: PeerId) 
                             }
                         )
                     } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
-                        return .fail(.addMemberError(.privacy))
+                        return .fail(.addMemberError(.privacy(nil)))
                     } else if error.errorDescription == "ADMINS_TOO_MUCH" {
                         return .fail(.adminsTooMuch)
                     }
@@ -204,7 +204,7 @@ func _internal_updateChannelAdminRights(account: Account, peerId: PeerId, adminI
                         } else if error.errorDescription == "USER_NOT_MUTUAL_CONTACT" {
                             return .fail(.addMemberError(.notMutualContact))
                         } else if error.errorDescription == "USER_PRIVACY_RESTRICTED" {
-                            return .fail(.addMemberError(.restricted))
+                            return .fail(.addMemberError(.restricted(nil)))
                         } else if error.errorDescription == "USER_CHANNELS_TOO_MUCH" {
                             return .fail(.addMemberError(.tooMuchJoined))
                         } else if error.errorDescription == "ADMINS_TOO_MUCH" {

@@ -316,6 +316,7 @@ public enum PresentationResourceKey: Int32 {
     case sharedLinkIcon
     
     case hideIconImage
+    case peerStatusLockedImage
 }
 
 public enum ChatExpiredStoryIndicatorType: Hashable {
