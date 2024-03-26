@@ -231,7 +231,11 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                 let title: String
                 let text: String
                 if peers.count == 1, let peer = peers.first {
-                    title = item.strings.ChatList_BirthdaySingleTitle(peer.compactDisplayTitle).string
+                    var peerName = peer.compactDisplayTitle
+                    if peerName.count > 20 {
+                        peerName = peerName.prefix(20).trimmingCharacters(in: .whitespacesAndNewlines) + "\u{2026}"
+                    }
+                    title = item.strings.ChatList_BirthdaySingleTitle(peerName).string
                     text = item.strings.ChatList_BirthdaySingleText
                 } else {
                     title = item.strings.ChatList_BirthdayMultipleTitle(Int32(peers.count))
