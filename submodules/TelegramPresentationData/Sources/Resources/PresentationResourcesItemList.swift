@@ -408,4 +408,10 @@ public struct PresentationResourcesItemList {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/Archive/IconHide"), color: theme.list.itemAccentColor)
         })
     }
+    
+    public static func peerStatusLockedImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.peerStatusLockedImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: theme.list.itemSecondaryTextColor)
+        })
+    }
 }

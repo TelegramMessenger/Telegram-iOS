@@ -34,13 +34,22 @@ final class PeerListItemComponent: Component {
         case editing(isSelected: Bool)
     }
     
+    enum SubtitleIcon {
+        case lock
+    }
+    
+    enum Subtitle: Equatable {
+        case presence(EnginePeer.Presence?)
+        case text(text: String, icon: SubtitleIcon)
+    }
+    
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let sideInset: CGFloat
     let title: String
+    let subtitle: Subtitle
     let peer: EnginePeer?
-    let presence: EnginePeer.Presence?
     let selectionState: SelectionState
     let hasNext: Bool
     let action: (EnginePeer) -> Void
@@ -51,8 +60,8 @@ final class PeerListItemComponent: Component {
         strings: PresentationStrings,
         sideInset: CGFloat,
         title: String,
+        subtitle: Subtitle,
         peer: EnginePeer?,
-        presence: EnginePeer.Presence?,
         selectionState: SelectionState,
         hasNext: Bool,
         action: @escaping (EnginePeer) -> Void
@@ -62,8 +71,8 @@ final class PeerListItemComponent: Component {
         self.strings = strings
         self.sideInset = sideInset
         self.title = title
+        self.subtitle = subtitle
         self.peer = peer
-        self.presence = presence
         self.selectionState = selectionState
         self.hasNext = hasNext
         self.action = action
@@ -85,10 +94,10 @@ final class PeerListItemComponent: Component {
         if lhs.title != rhs.title {
             return false
         }
-        if lhs.peer != rhs.peer {
+        if lhs.subtitle != rhs.subtitle {
             return false
         }
-        if lhs.presence != rhs.presence {
+        if lhs.peer != rhs.peer {
             return false
         }
         if lhs.selectionState != rhs.selectionState {
@@ -108,6 +117,7 @@ final class PeerListItemComponent: Component {
         private let separatorLayer: SimpleLayer
         private let avatarNode: AvatarNode
         
+        private var labelIconView: UIImageView?
         private var checkLayer: CheckLayer?
         
         private var component: PeerListItemComponent?
@@ -165,7 +175,7 @@ final class PeerListItemComponent: Component {
             self.component = component
             self.state = state
             
-            if let presence = component.presence {
+            if case let .presence(presence) = component.subtitle, let presence {
                 let statusManager: PeerPresenceStatusManager
                 if let current = self.statusManager {
                     statusManager = current
@@ -240,11 +250,26 @@ final class PeerListItemComponent: Component {
                 }
             }
             
+            var labelIcon: UIImage?
             let labelData: (String, Bool)
-            if let presence = component.presence {
-                labelData = stringAndActivityForUserPresence(strings: component.strings, dateTimeFormat: PresentationDateTimeFormat(), presence: presence, relativeTo: Int32(Date().timeIntervalSince1970))
-            } else {
-                labelData = (component.strings.LastSeen_Offline, false)
+            switch component.subtitle {
+            case let .presence(presence):
+                if let presence {
+                    labelData = stringAndActivityForUserPresence(strings: component.strings, dateTimeFormat: PresentationDateTimeFormat(), presence: presence, relativeTo: Int32(Date().timeIntervalSince1970))
+                } else {
+                    labelData = (component.strings.LastSeen_Offline, false)
+                }
+            case let .text(text, icon):
+                switch icon {
+                case .lock:
+                    labelIcon = PresentationResourcesItemList.peerStatusLockedImage(component.theme)
+                }
+                labelData = (text, false)
+            }
+            
+            var maxTextSize = availableSize.width - leftInset - rightInset
+            if labelIcon != nil {
+                maxTextSize -= 48.0
             }
             
             let labelSize = self.label.update(
@@ -253,7 +278,7 @@ final class PeerListItemComponent: Component {
                     text: .plain(NSAttributedString(string: labelData.0, font: Font.regular(15.0), textColor: labelData.1 ? component.theme.list.itemAccentColor : component.theme.list.itemSecondaryTextColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
+                containerSize: CGSize(width: maxTextSize, height: 100.0)
             )
             
             let previousTitleFrame = self.title.view?.frame
@@ -268,7 +293,7 @@ final class PeerListItemComponent: Component {
                     text: .plain(NSAttributedString(string: component.title, font: Font.semibold(17.0), textColor: component.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: 100.0)
+                containerSize: CGSize(width: maxTextSize, height: 100.0)
             )
             
             let titleSpacing: CGFloat = 1.0
@@ -296,6 +321,27 @@ final class PeerListItemComponent: Component {
                     transition.animateAlpha(view: titleView, from: 0.0, to: 1.0)
                 }
             }
+            
+            if let labelIcon {
+                let labelIconView: UIImageView
+                if let current = self.labelIconView {
+                    labelIconView = current
+                } else {
+                    labelIconView = UIImageView()
+                    self.labelIconView = labelIconView
+                    self.containerButton.addSubview(labelIconView)
+                }
+                labelIconView.image = labelIcon
+                
+                let labelIconFrame = CGRect(origin: CGPoint(x: availableSize.width - rightInset - 48.0 + floor((48.0 - labelIcon.size.width) * 0.5), y: floor((height - verticalInset * 2.0 - labelIcon.size.height) / 2.0)), size: CGSize(width: labelIcon.size.width, height: labelIcon.size.height))
+                transition.setFrame(view: labelIconView, frame: labelIconFrame)
+            } else {
+                if let labelIconView = self.labelIconView {
+                    self.labelIconView = nil
+                    labelIconView.removeFromSuperview()
+                }
+            }
+            
             if let labelView = self.label.view {
                 if labelView.superview == nil {
                     labelView.isUserInteractionEnabled = false

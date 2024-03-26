@@ -83,6 +83,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     private let options: [ContactListAdditionalOption]
     private let filters: [ContactListFilter]
     private let onlyWriteable: Bool
+    private let isGroupInvitation: Bool
     private let limit: Int32?
     
     init(_ params: ContactMultiselectionControllerParams) {
@@ -94,6 +95,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         self.options = params.options
         self.filters = params.filters
         self.onlyWriteable = params.onlyWriteable
+        self.isGroupInvitation = params.isGroupInvitation
         self.limit = params.limit
         self.presentationData = params.updatedPresentationData?.initial ?? params.context.sharedContext.currentPresentationData.with { $0 }
         
@@ -302,7 +304,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, presentationData: self.presentationData, mode: self.mode, isPeerEnabled: self.isPeerEnabled, attemptDisabledItemSelection: self.attemptDisabledItemSelection, options: self.options, filters: self.filters, onlyWriteable: self.onlyWriteable, limit: self.limit, reachedSelectionLimit: self.params.reachedLimit, present: { [weak self] c, a in
+        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, presentationData: self.presentationData, mode: self.mode, isPeerEnabled: self.isPeerEnabled, attemptDisabledItemSelection: self.attemptDisabledItemSelection, options: self.options, filters: self.filters, onlyWriteable: self.onlyWriteable, isGroupInvitation: self.isGroupInvitation, limit: self.limit, reachedSelectionLimit: self.params.reachedLimit, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         })
         switch self.contactsNode.contentNode {

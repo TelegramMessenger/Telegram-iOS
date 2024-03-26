@@ -1244,8 +1244,8 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                             return current.withUpdatedUpdating(false)
                         }
                         
-                        if let adminPeer {
-                            let inviteScreen = SendInviteLinkScreen(context: context, peer: channelPeer, link: exportedInvitation?.link, peers: [adminPeer])
+                        if let adminPeer, case let .restricted(forbiddenPeer) = error {
+                            let inviteScreen = SendInviteLinkScreen(context: context, peer: channelPeer, link: exportedInvitation?.link, peers: [forbiddenPeer ?? TelegramForbiddenInvitePeer(peer: adminPeer, canInviteWithPremium: false, premiumRequiredToContact: false)])
                             pushControllerImpl?(inviteScreen)
                             
                             dismissImpl?()
@@ -1433,9 +1433,9 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                             return current.withUpdatedUpdating(true)
                         }
                         updateRightsDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(engine: context.engine, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(rights: updateFlags), rank: updateRank) |> deliverOnMainQueue).start(error: { error in
-                            if case let .addMemberError(addMemberError) = error, let admin = adminPeer {
+                            if case let .addMemberError(addMemberError) = error, case let .restricted(forbiddenPeer) = addMemberError, let admin = adminPeer {
                                 if let channelPeer {
-                                    let inviteScreen = SendInviteLinkScreen(context: context, peer: channelPeer, link: exportedInvitation?.link, peers: [admin])
+                                    let inviteScreen = SendInviteLinkScreen(context: context, peer: channelPeer, link: exportedInvitation?.link, peers: [forbiddenPeer ?? TelegramForbiddenInvitePeer(peer: admin, canInviteWithPremium: false, premiumRequiredToContact: false)])
                                     pushControllerImpl?(inviteScreen)
                                     
                                     dismissImpl?()

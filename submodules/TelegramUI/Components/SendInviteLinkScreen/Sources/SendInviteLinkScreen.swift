@@ -22,13 +22,13 @@ private final class SendInviteLinkScreenComponent: Component {
     
     let context: AccountContext
     let link: String?
-    let peers: [EnginePeer]
+    let peers: [TelegramForbiddenInvitePeer]
     let peerPresences: [EnginePeer.Id: EnginePeer.Presence]
     
     init(
         context: AccountContext,
         link: String?,
-        peers: [EnginePeer],
+        peers: [TelegramForbiddenInvitePeer],
         peerPresences: [EnginePeer.Id: EnginePeer.Presence]
     ) {
         self.context = context
@@ -272,7 +272,9 @@ private final class SendInviteLinkScreenComponent: Component {
             
             if self.component == nil {
                 for peer in component.peers {
-                    self.selectedItems.insert(peer.id)
+                    if component.link != nil && !peer.premiumRequiredToContact {
+                        self.selectedItems.insert(peer.peer.id)
+                    }
                 }
             }
             
@@ -280,8 +282,15 @@ private final class SendInviteLinkScreenComponent: Component {
             self.state = state
             self.environment = environment
             
-            let hasPremiumRestrictedUsers = "".isEmpty
-            let hasInviteLink = "".isEmpty
+            let premiumRestrictedUsers = component.peers.filter { peer in
+                return peer.canInviteWithPremium
+            }
+            var hasInviteLink = true
+            if premiumRestrictedUsers.count == component.peers.count && component.link == nil {
+                hasInviteLink = false
+            } else if component.link != nil && !premiumRestrictedUsers.isEmpty && component.peers.allSatisfy({ $0.premiumRequiredToContact }) {
+                hasInviteLink = false
+            }
             
             if themeUpdated {
                 self.dimView.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
@@ -312,12 +321,13 @@ private final class SendInviteLinkScreenComponent: Component {
                 self.scrollContentView.addSubview(avatarsNode.view)
             }
             
-            let avatarsContent = self.avatarsContext.update(peers: component.peers.count <= 3 ? component.peers : Array(component.peers.prefix(upTo: 3)), animated: false)
+            let avatarPeers = component.peers.map(\.peer)
+            let avatarsContent = self.avatarsContext.update(peers: avatarPeers.count <= 3 ? avatarPeers : Array(avatarPeers.prefix(upTo: 3)), animated: false)
             let avatarsSize = avatarsNode.update(
                 context: component.context,
                 content: avatarsContent,
                 itemSize: CGSize(width: 60.0, height: 60.0),
-                customSpacing: 50.0,
+                customSpacing: 30.0,
                 font: avatarPlaceholderFont(size: 28.0),
                 animated: false,
                 synchronousLoad: true
@@ -347,7 +357,7 @@ private final class SendInviteLinkScreenComponent: Component {
                 transition.setFrame(view: leftButtonView, frame: leftButtonFrame)
             }
             
-            if hasPremiumRestrictedUsers {
+            if !premiumRestrictedUsers.isEmpty {
                 var premiumItemsTransition = transition
                 
                 let premiumTitle: ComponentView<Empty>
@@ -397,20 +407,20 @@ private final class SendInviteLinkScreenComponent: Component {
                 
                 //TODO:localize
                 let text: String
-                if component.peers.count == 1 {
-                    text = "**\(component.peers[0].compactDisplayTitle)** accepts invitations to groups from contacts and **Premium** users."
+                if premiumRestrictedUsers.count == 1 {
+                    text = "**\(premiumRestrictedUsers[0].peer.compactDisplayTitle)** accepts invitations to groups from contacts and **Premium** users."
                 } else {
-                    let extraCount = component.peers.count - 3
+                    let extraCount = premiumRestrictedUsers.count - 3
                     
                     var peersText = ""
-                    for i in 0 ..< min(3, component.peers.count) {
-                        if extraCount == 0 && i == component.peers.count - 1 {
+                    for i in 0 ..< min(3, premiumRestrictedUsers.count) {
+                        if extraCount == 0 && i == premiumRestrictedUsers.count - 1 {
                             peersText.append(", and ")
                         } else if i != 0 {
                             peersText.append(", ")
                         }
                         peersText.append("**")
-                        peersText.append(component.peers[i].compactDisplayTitle)
+                        peersText.append(premiumRestrictedUsers[i].peer.compactDisplayTitle)
                         peersText.append("**")
                     }
                     
@@ -641,13 +651,13 @@ private final class SendInviteLinkScreenComponent: Component {
                 contentHeight += 8.0
                 
                 let text: String
-                if hasPremiumRestrictedUsers {
+                if !premiumRestrictedUsers.isEmpty {
                     if component.link != nil {
                         //TODO:localize
                         text = "You can try to send an invite link instead."
                     } else {
                         if component.peers.count == 1 {
-                            text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                            text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
                         } else {
                             text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
                         }
@@ -655,13 +665,13 @@ private final class SendInviteLinkScreenComponent: Component {
                 } else {
                     if component.link != nil {
                         if component.peers.count == 1 {
-                            text = environment.strings.SendInviteLink_TextAvailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                            text = environment.strings.SendInviteLink_TextAvailableSingleUser(component.peers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
                         } else {
                             text = environment.strings.SendInviteLink_TextAvailableMultipleUsers(Int32(component.peers.count))
                         }
                     } else {
                         if component.peers.count == 1 {
-                            text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
+                            text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
                         } else {
                             text = environment.strings.SendInviteLink_TextUnavailableMultipleUsers(Int32(component.peers.count))
                         }
@@ -696,6 +706,7 @@ private final class SendInviteLinkScreenComponent: Component {
                 
                 contentHeight += descriptionTextFrame.height
                 contentHeight += 22.0
+                initialContentHeight = contentHeight
                 
                 var singleItemHeight: CGFloat = 0.0
                 
@@ -706,7 +717,7 @@ private final class SendInviteLinkScreenComponent: Component {
                     
                     for _ in 0 ..< 1 {
                         //let id: AnyHashable = AnyHashable("\(peer.id)_\(j)")
-                        let id = AnyHashable(peer.id)
+                        let id = AnyHashable(peer.peer.id)
                         validIds.append(id)
                         
                         let item: ComponentView<Empty>
@@ -719,6 +730,15 @@ private final class SendInviteLinkScreenComponent: Component {
                             self.items[id] = item
                         }
                         
+                        let itemSubtitle: PeerListItemComponent.Subtitle
+                        let canBeSelected = component.link != nil && !peer.premiumRequiredToContact
+                        if peer.premiumRequiredToContact {
+                            //TODO:localize
+                            itemSubtitle = .text(text: "Available only to premium users", icon: .lock)
+                        } else {
+                            itemSubtitle = .presence(component.peerPresences[peer.peer.id])
+                        }
+                        
                         let itemSize = item.update(
                             transition: itemTransition,
                             component: AnyComponent(PeerListItemComponent(
@@ -726,13 +746,16 @@ private final class SendInviteLinkScreenComponent: Component {
                                 theme: environment.theme,
                                 strings: environment.strings,
                                 sideInset: 0.0,
-                                title: peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
-                                peer: peer,
-                                presence: component.peerPresences[peer.id],
-                                selectionState: component.link == nil ? .none : .editing(isSelected: self.selectedItems.contains(peer.id)),
+                                title: peer.peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
+                                subtitle: itemSubtitle,
+                                peer: peer.peer,
+                                selectionState: !canBeSelected ? .none : .editing(isSelected: self.selectedItems.contains(peer.peer.id)),
                                 hasNext: i != component.peers.count - 1,
                                 action: { [weak self] peer in
                                     guard let self else {
+                                        return
+                                    }
+                                    if !canBeSelected {
                                         return
                                     }
                                     if self.selectedItems.contains(peer.id) {
@@ -771,7 +794,6 @@ private final class SendInviteLinkScreenComponent: Component {
                 }
                 transition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: CGSize(width: availableSize.width - sideInset * 2.0, height: itemsHeight)))
                 
-                initialContentHeight += singleItemHeight + 16.0
                 initialContentHeight += min(itemsHeight, floor(singleItemHeight * 2.5))
                 
                 contentHeight += itemsHeight
@@ -805,16 +827,16 @@ private final class SendInviteLinkScreenComponent: Component {
                             if self.selectedItems.isEmpty {
                                 controller.dismiss()
                             } else if let link = component.link {
-                                let selectedPeers = component.peers.filter { self.selectedItems.contains($0.id) }
+                                let selectedPeers = component.peers.filter { self.selectedItems.contains($0.peer.id) }
                                 
                                 let _ = enqueueMessagesToMultiplePeers(account: component.context.account, peerIds: Array(self.selectedItems), threadIds: [:], messages: [.message(text: link, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
                                 let text: String
                                 if selectedPeers.count == 1 {
-                                    text = environment.strings.Conversation_ShareLinkTooltip_Chat_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
+                                    text = environment.strings.Conversation_ShareLinkTooltip_Chat_One(selectedPeers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
                                 } else if selectedPeers.count == 2 {
-                                    text = environment.strings.Conversation_ShareLinkTooltip_TwoChats_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), selectedPeers[1].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
+                                    text = environment.strings.Conversation_ShareLinkTooltip_TwoChats_One(selectedPeers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), selectedPeers[1].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
                                 } else {
-                                    text = environment.strings.Conversation_ShareLinkTooltip_ManyChats_One(selectedPeers[0].displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), "\(selectedPeers.count - 1)").string
+                                    text = environment.strings.Conversation_ShareLinkTooltip_ManyChats_One(selectedPeers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), "\(selectedPeers.count - 1)").string
                                 }
                                 
                                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
@@ -863,7 +885,7 @@ private final class SendInviteLinkScreenComponent: Component {
             
             let topInset: CGFloat = max(0.0, availableSize.height - containerInset - initialContentHeight)
             
-            let scrollContentHeight = max(topInset + contentHeight, availableSize.height - containerInset)
+            let scrollContentHeight = max(topInset + contentHeight + containerInset, availableSize.height - containerInset)
             
             self.scrollContentClippingView.layer.cornerRadius = 10.0
             
@@ -906,19 +928,133 @@ private final class SendInviteLinkScreenComponent: Component {
 public class SendInviteLinkScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     private let link: String?
-    private let peers: [EnginePeer]
+    private let peers: [TelegramForbiddenInvitePeer]
     
     private var isDismissed: Bool = false
     
     private var presenceDisposable: Disposable?
     
-    public init(context: AccountContext, peer: EnginePeer, link: String?, peers: [EnginePeer]) {
+    public init(context: AccountContext, peer: EnginePeer, link: String?, peers: [TelegramForbiddenInvitePeer]) {
         self.context = context
         
         var link = link
         if link == nil, let addressName = peer.addressName {
             link = "https://t.me/\(addressName)"
         }
+        
+        #if DEBUG
+        var peers = peers
+        
+        if !"".isEmpty {
+            enum TestConfiguration: CaseIterable {
+                case singlePeerNoPremiumLink
+                case singlePeerPremiumLink
+                case singlePeerNoPremiumNoLink
+                case singlePeerPremiumNoLink
+                case somePeersNoPremiumLink
+                case somePeersOnePremiumLink
+                case somePeersAllPremiumLink
+                case somePeersNoPremiumNoLink
+                case somePeersOnePremiumNoLink
+                case somePeersAllPremiumNoLink
+                case morePeersNoPremiumLink
+                case morePeersOnePremiumLink
+                case morePeersAllPremiumLink
+                case morePeersNoPremiumNoLink
+                case morePeersOnePremiumNoLink
+                case morePeersAllPremiumNoLink
+            }
+            
+            var nextPeerId: Int64 = 1
+            let makePeer: (Bool, Bool) -> TelegramForbiddenInvitePeer = { canInviteWithPremium, premiumRequiredToContact in
+                guard case let .user(user) = peers[0].peer else {
+                    preconditionFailure()
+                }
+                let id = nextPeerId
+                nextPeerId += 1
+                return TelegramForbiddenInvitePeer(
+                    peer: .user(TelegramUser(
+                        id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)),
+                        accessHash: user.accessHash,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        username: user.username,
+                        phone: user.phone,
+                        photo: user.photo,
+                        botInfo: user.botInfo,
+                        restrictionInfo: user.restrictionInfo,
+                        flags: user.flags,
+                        emojiStatus: user.emojiStatus,
+                        usernames: user.usernames,
+                        storiesHidden: user.storiesHidden,
+                        nameColor: user.nameColor,
+                        backgroundEmojiId: user.backgroundEmojiId,
+                        profileColor: user.profileColor,
+                        profileBackgroundEmojiId: user.profileBackgroundEmojiId
+                    )),
+                    canInviteWithPremium: canInviteWithPremium,
+                    premiumRequiredToContact: premiumRequiredToContact
+                )
+            }
+            
+            let caseIndex = 9
+            let configuration = TestConfiguration.allCases[caseIndex]
+            do {
+                switch configuration {
+                case .singlePeerNoPremiumLink:
+                    peers = [makePeer(false, false)]
+                    link = "abcd"
+                case .singlePeerPremiumLink:
+                    peers = [makePeer(true, false)]
+                    link = "abcd"
+                case .singlePeerNoPremiumNoLink:
+                    peers = [makePeer(false, false)]
+                    link = nil
+                case .singlePeerPremiumNoLink:
+                    peers = [makePeer(true, false)]
+                    link = nil
+                case .somePeersNoPremiumLink:
+                    peers = (0 ..< 3).map { _ in makePeer(false, false) }
+                    link = "abcd"
+                case .somePeersOnePremiumLink:
+                    peers = [
+                        makePeer(false, false),
+                        makePeer(true, true),
+                        makePeer(false, false)
+                    ]
+                    link = "abcd"
+                case .somePeersAllPremiumLink:
+                    peers = (0 ..< 3).map { _ in makePeer(true, false) }
+                    link = "abcd"
+                case .somePeersNoPremiumNoLink:
+                    peers = (0 ..< 3).map { _ in makePeer(false, false) }
+                    link = nil
+                case .somePeersOnePremiumNoLink:
+                    peers = [
+                        makePeer(false, false),
+                        makePeer(true, false),
+                        makePeer(false, false)
+                    ]
+                    link = nil
+                case .somePeersAllPremiumNoLink:
+                    peers = (0 ..< 3).map { _ in makePeer(true, false) }
+                    link = nil
+                case .morePeersNoPremiumLink:
+                    preconditionFailure()
+                case .morePeersOnePremiumLink:
+                    preconditionFailure()
+                case .morePeersAllPremiumLink:
+                    preconditionFailure()
+                case .morePeersNoPremiumNoLink:
+                    preconditionFailure()
+                case .morePeersOnePremiumNoLink:
+                    preconditionFailure()
+                case .morePeersAllPremiumNoLink:
+                    preconditionFailure()
+                }
+            }
+        }
+        #endif
         
         self.link = link
         self.peers = peers
@@ -930,7 +1066,7 @@ public class SendInviteLinkScreen: ViewControllerComponentContainer {
         self.blocksBackgroundWhenInOverlay = true
         
         self.presenceDisposable = (context.engine.data.subscribe(EngineDataMap(
-            peers.map(\.id).map(TelegramEngine.EngineData.Item.Peer.Presence.init(id:))
+            peers.map(\.peer.id).map(TelegramEngine.EngineData.Item.Peer.Presence.init(id:))
         ))
         |> deliverOnMainQueue).start(next: { [weak self] presences in
             guard let self else {
