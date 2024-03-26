@@ -95,6 +95,7 @@ AS_EXTERN NSInteger const ASDefaultDrawingPriority;
  *
  */
 
+NS_SWIFT_UI_ACTOR
 @interface ASDisplayNode : NSObject <ASLocking> {
 @public
   /**

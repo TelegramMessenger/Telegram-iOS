@@ -6747,7 +6747,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                             self.updateDecorationsLayout(transition: transition)
                         }
                     }
-                    if false, let (peerId, _) = minimalVisiblePeerid {
+                    if let (peerId, _) = minimalVisiblePeerid {
                         var index = 0
                         for item in self.currentEntries {
                             if case let .peer(entry, _) = item, entry.peer.id == peerId {
