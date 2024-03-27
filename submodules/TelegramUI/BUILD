@@ -445,6 +445,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/BusinessLinkNameAlertController",
         "//submodules/TelegramUI/Components/Ads/AdsInfoScreen",
         "//submodules/TelegramUI/Components/Ads/AdsReportScreen",
+        "//submodules/TelegramUI/Components/Settings/BotSettingsScreen",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

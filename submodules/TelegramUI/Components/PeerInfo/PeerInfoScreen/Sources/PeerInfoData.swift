@@ -35,6 +35,7 @@ final class PeerInfoState {
     let highlightedButton: PeerInfoHeaderButtonKey?
     let isEditingBirthDate: Bool
     let updatingBirthDate: TelegramBirthday??
+    let personalChannels: [TelegramAdminedPublicChannel]?
     
     init(
         isEditing: Bool,
@@ -44,7 +45,8 @@ final class PeerInfoState {
         avatarUploadProgress: AvatarUploadProgress?,
         highlightedButton: PeerInfoHeaderButtonKey?,
         isEditingBirthDate: Bool,
-        updatingBirthDate: TelegramBirthday??
+        updatingBirthDate: TelegramBirthday??,
+        personalChannels: [TelegramAdminedPublicChannel]?
     ) {
         self.isEditing = isEditing
         self.selectedMessageIds = selectedMessageIds
@@ -54,6 +56,7 @@ final class PeerInfoState {
         self.highlightedButton = highlightedButton
         self.isEditingBirthDate = isEditingBirthDate
         self.updatingBirthDate = updatingBirthDate
+        self.personalChannels = personalChannels
     }
     
     func withIsEditing(_ isEditing: Bool) -> PeerInfoState {
@@ -65,7 +68,8 @@ final class PeerInfoState {
             avatarUploadProgress: self.avatarUploadProgress,
             highlightedButton: self.highlightedButton,
             isEditingBirthDate: self.isEditingBirthDate,
-            updatingBirthDate: self.updatingBirthDate
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
         )
     }
     
@@ -78,7 +82,8 @@ final class PeerInfoState {
             avatarUploadProgress: self.avatarUploadProgress,
             highlightedButton: self.highlightedButton,
             isEditingBirthDate: self.isEditingBirthDate,
-            updatingBirthDate: self.updatingBirthDate
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
         )
     }
     
@@ -91,7 +96,8 @@ final class PeerInfoState {
             avatarUploadProgress: self.avatarUploadProgress,
             highlightedButton: self.highlightedButton,
             isEditingBirthDate: self.isEditingBirthDate,
-            updatingBirthDate: self.updatingBirthDate
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
         )
     }
     
@@ -104,7 +110,8 @@ final class PeerInfoState {
             avatarUploadProgress: self.avatarUploadProgress,
             highlightedButton: self.highlightedButton,
             isEditingBirthDate: self.isEditingBirthDate,
-            updatingBirthDate: self.updatingBirthDate
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
         )
     }
     
@@ -117,7 +124,8 @@ final class PeerInfoState {
             avatarUploadProgress: avatarUploadProgress,
             highlightedButton: self.highlightedButton,
             isEditingBirthDate: self.isEditingBirthDate,
-            updatingBirthDate: self.updatingBirthDate
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
         )
     }
     
@@ -130,7 +138,8 @@ final class PeerInfoState {
             avatarUploadProgress: self.avatarUploadProgress,
             highlightedButton: highlightedButton,
             isEditingBirthDate: self.isEditingBirthDate,
-            updatingBirthDate: self.updatingBirthDate
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
         )
     }
     
@@ -143,7 +152,8 @@ final class PeerInfoState {
             avatarUploadProgress: self.avatarUploadProgress,
             highlightedButton: self.highlightedButton,
             isEditingBirthDate: isEditingBirthDate,
-            updatingBirthDate: self.updatingBirthDate
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
         )
     }
     
@@ -156,7 +166,22 @@ final class PeerInfoState {
             avatarUploadProgress: self.avatarUploadProgress,
             highlightedButton: self.highlightedButton,
             isEditingBirthDate: self.isEditingBirthDate,
-            updatingBirthDate: updatingBirthDate
+            updatingBirthDate: updatingBirthDate,
+            personalChannels: self.personalChannels
+        )
+    }
+    
+    func withPersonalChannels(_ personalChannels: [TelegramAdminedPublicChannel]?) -> PeerInfoState {
+        return PeerInfoState(
+            isEditing: self.isEditing,
+            selectedMessageIds: self.selectedMessageIds,
+            updatingAvatar: self.updatingAvatar,
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: personalChannels
         )
     }
 }

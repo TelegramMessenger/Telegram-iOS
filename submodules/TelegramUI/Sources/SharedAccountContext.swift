@@ -61,6 +61,7 @@ import MediaEditor
 import MediaEditorScreen
 import BusinessIntroSetupScreen
 import TelegramNotices
+import BotSettingsScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1960,6 +1961,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeCollectibleItemInfoScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, subject: CollectibleItemInfoScreenSubject) -> Signal<CollectibleItemInfoScreenInitialData?, NoError> {
         return CollectibleItemInfoScreen.initialData(context: context, peerId: peerId, subject: subject)
+    }
+    
+    public func makeBotSettingsScreen(context: AccountContext, peerId: EnginePeer.Id?) -> ViewController {
+        if let peerId {
+            return botSettingsScreen(context: context, peerId: peerId)
+        } else {
+            return botListSettingsScreen(context: context)
+        }
     }
     
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {

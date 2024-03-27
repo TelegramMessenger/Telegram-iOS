@@ -484,6 +484,22 @@ public struct PreferencesKeys {
         return key
     }
     
+    static func botBiometricsStatePrefix() -> ValueBoxKey {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.botBiometricsState.rawValue)
+        return key
+    }
+    
+    static func extractBotBiometricsStatePeerId(key: ValueBoxKey) -> PeerId? {
+        if key.length != 4 + 8 {
+            return nil
+        }
+        if key.getInt32(0) != PreferencesKeyValues.botBiometricsState.rawValue {
+            return nil
+        }
+        return PeerId(key.getInt64(4))
+    }
+    
     public static func botBiometricsState(peerId: PeerId) -> ValueBoxKey {
         let key = ValueBoxKey(length: 4 + 8)
         key.setInt32(0, value: PreferencesKeyValues.botBiometricsState.rawValue)

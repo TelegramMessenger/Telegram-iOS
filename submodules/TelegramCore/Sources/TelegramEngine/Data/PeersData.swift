@@ -1762,7 +1762,7 @@ public extension TelegramEngine.EngineData.Item {
         }
         
         public struct BotBiometricsState: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
-            public typealias Result = TelegramBotBiometricsState
+            public typealias Result = TelegramBotBiometricsState?
 
             fileprivate var id: EnginePeer.Id
             public var mapKey: EnginePeer.Id {
@@ -1784,7 +1784,7 @@ public extension TelegramEngine.EngineData.Item {
                 if let state = view.values[PreferencesKeys.botBiometricsState(peerId: self.id)]?.get(TelegramBotBiometricsState.self) {
                     return state
                 } else {
-                    return TelegramBotBiometricsState.default
+                    return nil
                 }
             }
         }

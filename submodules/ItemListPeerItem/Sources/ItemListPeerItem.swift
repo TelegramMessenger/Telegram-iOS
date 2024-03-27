@@ -495,7 +495,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         label: ItemListPeerItemLabel,
         editing: ItemListPeerItemEditing,
         revealOptions: ItemListPeerItemRevealOptions? = nil,
-        switchValue: ItemListPeerItemSwitch?,
+        switchValue: ItemListPeerItemSwitch? = nil,
         enabled: Bool,
         highlighted: Bool = false,
         selectable: Bool,

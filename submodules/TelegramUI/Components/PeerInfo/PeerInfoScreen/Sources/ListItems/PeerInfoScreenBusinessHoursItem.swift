@@ -356,6 +356,9 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                             },
                             yesterdayFormatString: { value in
                                 return PresentationStrings.FormattedString(string: presentationData.strings.PeerInfo_BusinessHours_StatusOpensTodayAt(value).string, ranges: [])
+                            },
+                            daysFormatString: { value in
+                                return PresentationStrings.FormattedString(string: presentationData.strings.PeerInfo_BusinessHours_StatusOpensInDays(Int32(value)), ranges: [])
                             }
                         )).string
                         currentDayStatusText = dateText
@@ -429,6 +432,11 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                         }
                         self.displayLocalTimezone = !self.displayLocalTimezone
                         self.item?.requestLayout(false)
+                        
+                        if !self.isExpanded {
+                            self.isExpanded = true
+                            self.item?.requestLayout(true)
+                        }
                     },
                     animateAlpha: true,
                     animateScale: false,

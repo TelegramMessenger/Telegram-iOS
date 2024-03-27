@@ -1512,8 +1512,12 @@ public extension TelegramEngine {
             }
         }
         
-        public func updateBotBiometricsState(peerId: EnginePeer.Id, update: @escaping (TelegramBotBiometricsState) -> TelegramBotBiometricsState) {
+        public func updateBotBiometricsState(peerId: EnginePeer.Id, update: @escaping (TelegramBotBiometricsState?) -> TelegramBotBiometricsState) {
             let _ = _internal_updateBotBiometricsState(account: self.account, peerId: peerId, update: update).startStandalone()
+        }
+        
+        public func botsWithBiometricState() -> Signal<Set<EnginePeer.Id>, NoError> {
+            return _internal_botsWithBiometricState(account: self.account)
         }
         
         public func toggleChatManagingBotIsPaused(chatId: EnginePeer.Id) {

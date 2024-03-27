@@ -73,6 +73,7 @@ private enum PrivacyAndSecuritySection: Int32 {
     case account
     case messageAutoremove
     case dataSettings
+    case loginEmail
 }
 
 public enum PrivacyAndSecurityEntryTag: ItemListItemTag {
@@ -98,6 +99,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     case voiceCallPrivacy(PresentationTheme, String, String)
     case forwardPrivacy(PresentationTheme, String, String)
     case groupPrivacy(PresentationTheme, String, String)
+    case groupPrivacyFooter
     case voiceMessagePrivacy(PresentationTheme, String, String, Bool)
     case messagePrivacy(PresentationTheme, Bool, Bool)
     case bioPrivacy(PresentationTheme, String, String)
@@ -121,9 +123,11 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-        case .blockedPeers, .activeSessions, .passcode, .twoStepVerification, .loginEmail, .loginEmailInfo, .messageAutoremoveTimeout, .messageAutoremoveInfo:
+        case .blockedPeers, .activeSessions, .passcode, .twoStepVerification, .messageAutoremoveTimeout, .messageAutoremoveInfo:
             return PrivacyAndSecuritySection.general.rawValue
-        case .privacyHeader, .phoneNumberPrivacy, .lastSeenPrivacy, .profilePhotoPrivacy, .forwardPrivacy, .groupPrivacy, .voiceCallPrivacy, .voiceMessagePrivacy, .messagePrivacy, .bioPrivacy, .birthdayPrivacy, .selectivePrivacyInfo:
+        case .loginEmail, .loginEmailInfo:
+            return PrivacyAndSecuritySection.loginEmail.rawValue
+        case .privacyHeader, .phoneNumberPrivacy, .lastSeenPrivacy, .profilePhotoPrivacy, .forwardPrivacy, .groupPrivacy, .groupPrivacyFooter, .voiceCallPrivacy, .voiceMessagePrivacy, .messagePrivacy, .bioPrivacy, .birthdayPrivacy, .selectivePrivacyInfo:
             return PrivacyAndSecuritySection.privacy.rawValue
         case .autoArchiveHeader, .autoArchive, .autoArchiveInfo:
             return PrivacyAndSecuritySection.autoArchive.rawValue
@@ -174,6 +178,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return 19
             case .groupPrivacy:
                 return 20
+            case .groupPrivacyFooter:
+                return 21
             case .selectivePrivacyInfo:
                 return 22
             case .autoArchiveHeader:
@@ -235,6 +241,12 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 }
             case let .groupPrivacy(lhsTheme, lhsText, lhsValue):
                 if case let .groupPrivacy(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case .groupPrivacyFooter:
+                if case .groupPrivacyFooter = rhs {
                     return true
                 } else {
                     return false
@@ -401,6 +413,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openGroupsPrivacy()
                 })
+            case .groupPrivacyFooter:
+                return ItemListTextItem(presentationData: presentationData, text: .markdown("You can restrict which users are allowed to add you to groups and channels."), sectionId: self.section)
             case let .voiceMessagePrivacy(theme, text, value, hasPremium):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, titleIcon: hasPremium ? PresentationResourcesItemList.premiumIcon(theme) : nil, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, action: {
                     arguments.openVoiceMessagePrivacy()
@@ -637,6 +651,7 @@ private func privacyAndSecurityControllerEntries(
         }
         //TODO:localize
         entries.append(.groupPrivacy(presentationData.theme, "Invites", stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.groupInvitations)))
+        entries.append(.groupPrivacyFooter)
     } else {
         entries.append(.phoneNumberPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_PhoneNumber, presentationData.strings.Channel_NotificationLoading))
         entries.append(.lastSeenPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_LastSeen, presentationData.strings.Channel_NotificationLoading))

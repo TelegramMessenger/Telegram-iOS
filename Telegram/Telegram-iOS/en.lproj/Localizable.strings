@@ -11438,6 +11438,8 @@ Sorry for the inconvenience.";
 "PeerInfo.BusinessHours.StatusOpensOnDate" = "Opens %@";
 "PeerInfo.BusinessHours.StatusOpensTodayAt" = "Opens today at %@";
 "PeerInfo.BusinessHours.StatusOpensTomorrowAt" = "Opens tomorrow at %@";
+"PeerInfo.BusinessHours.StatusOpensInDays_1" = "Opens in 1 day";
+"PeerInfo.BusinessHours.StatusOpensInDays_any" = "Opens in %d days";
 "PeerInfo.BusinessHours.TimezoneSwitchMy" = "my time";
 "PeerInfo.BusinessHours.TimezoneSwitchBusiness" = "local time";
 "PeerInfo.BusinessHours.Label" = "business hours";

@@ -53,6 +53,7 @@ public enum PostboxViewKey: Hashable {
     case peerChatState(peerId: PeerId)
     case orderedItemList(id: Int32)
     case preferences(keys: Set<ValueBoxKey>)
+    case preferencesPrefix(keyPrefix: ValueBoxKey)
     case globalMessageTags(globalTag: GlobalMessageTags, position: MessageIndex, count: Int, groupingPredicate: ((Message, Message) -> Bool)?)
     case peer(peerId: PeerId, components: PeerViewComponents)
     case pendingMessageActions(type: PendingMessageActionType)
@@ -112,6 +113,8 @@ public enum PostboxViewKey: Hashable {
             hasher.combine(id)
         case .preferences:
             hasher.combine(3)
+        case .preferencesPrefix:
+            hasher.combine(21)
         case .globalMessageTags:
             hasher.combine(4)
         case let .peer(peerId, _):
@@ -256,6 +259,12 @@ public enum PostboxViewKey: Hashable {
             }
         case let .preferences(lhsKeys):
             if case let .preferences(rhsKeys) = rhs, lhsKeys == rhsKeys {
+                return true
+            } else {
+                return false
+            }
+        case let .preferencesPrefix(lhsKeyPrefix):
+            if case let .preferencesPrefix(rhsKeyPrefix) = rhs, lhsKeyPrefix == rhsKeyPrefix {
                 return true
             } else {
                 return false
@@ -542,6 +551,8 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutableOrderedItemListView(postbox: postbox, collectionId: id)
     case let .preferences(keys):
         return MutablePreferencesView(postbox: postbox, keys: keys)
+    case let .preferencesPrefix(keyPrefix):
+        return MutablePreferencesPrefixView(postbox: postbox, keyPrefix: keyPrefix)
     case let .globalMessageTags(globalTag, position, count, groupingPredicate):
         return MutableGlobalMessageTagsView(postbox: postbox, globalTag: globalTag, position: position, count: count, groupingPredicate: groupingPredicate)
     case let .peer(peerId, components):
