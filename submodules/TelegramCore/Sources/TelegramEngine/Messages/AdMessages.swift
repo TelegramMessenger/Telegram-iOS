@@ -764,6 +764,31 @@ private class AdMessagesHistoryContextImpl {
         }
         let _ = signal.start()
     }
+    
+    func remove(opaqueId: Data) {
+        if var stateValue = self.stateValue {
+            if let index = stateValue.messages.firstIndex(where: { $0.adAttribute?.opaqueId == opaqueId }) {
+                stateValue.messages.remove(at: index)
+                self.stateValue = stateValue
+            }
+        }
+        
+        let peerId = self.peerId
+        let _ = (self.account.postbox.transaction { transaction -> Void in
+            let key = ValueBoxKey(length: 8)
+            key.setInt64(0, value: peerId.toInt64())
+            let id = ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAdMessageStates, key: key)
+            guard var cachedState = transaction.retrieveItemCacheEntry(id: id)?.get(CachedState.self) else {
+                return
+            }
+            if let index = cachedState.messages.firstIndex(where: { $0.opaqueId == opaqueId }) {
+                cachedState.messages.remove(at: index)
+                if let entry = CodableEntry(cachedState) {
+                    transaction.putItemCacheEntry(id: id, entry: entry)
+                }
+            }
+        }).start()
+    }
 }
 
 public class AdMessagesHistoryContext {
@@ -801,6 +826,12 @@ public class AdMessagesHistoryContext {
     public func markAction(opaqueId: Data) {
         self.impl.with { impl in
             impl.markAction(opaqueId: opaqueId)
+        }
+    }
+    
+    public func remove(opaqueId: Data) {
+        self.impl.with { impl in
+            impl.remove(opaqueId: opaqueId)
         }
     }
 }
