@@ -3145,8 +3145,7 @@ public final class DrawingToolsInteraction {
                 } else {
                     actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Duplicate, accessibilityLabel: presentationData.strings.Paint_Duplicate), action: { [weak self, weak entityView] in
                         if let self, let entityView {
-                            let newEntity = self.entitiesView.duplicate(entityView.entity)
-                            self.entitiesView.selectEntity(newEntity)
+                            self.duplicateEntity(entityView.entity)
                         }
                     }))
                 }
@@ -3233,6 +3232,20 @@ public final class DrawingToolsInteraction {
                 
                 entityView.animateInsertion()
             }
+        }
+    }
+    
+    public func duplicateEntity(_ entity: DrawingEntity) {
+        let newEntity = self.entitiesView.duplicate(entity)
+        self.entitiesView.selectEntity(newEntity)
+        
+        if let entityView = self.entitiesView.getView(for: newEntity.uuid) {
+            if self.isVideo {
+                entityView.seek(to: 0.0)
+                entityView.play()
+            }
+            
+            entityView.animateInsertion()
         }
     }
     

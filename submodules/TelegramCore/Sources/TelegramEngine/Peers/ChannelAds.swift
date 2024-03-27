@@ -4,16 +4,11 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-public enum ChannelRestrictAdMessagesValue {
-    case restrict(minCpm: Int32?)
-    case unrestrict
-}
-
 public enum ChannelRestrictAdMessagesError {
     case generic
 }
 
-func _internal_updateChannelRestrictAdMessages(account: Account, peerId: PeerId, value: ChannelRestrictAdMessagesValue) -> Signal<Never, ChannelRestrictAdMessagesError> {
+func _internal_updateChannelRestrictAdMessages(account: Account, peerId: PeerId, restricted: Bool) -> Signal<Never, ChannelRestrictAdMessagesError> {
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     }
@@ -23,18 +18,7 @@ func _internal_updateChannelRestrictAdMessages(account: Account, peerId: PeerId,
             return .fail(.generic)
         }
         
-        var flags: Int32 = 0
-        var minCpm: Int32?
-        var restricted = false
-        if case let .restrict(minCpmValue) = value {
-            if let minCpmValue {
-                flags |= (1 << 0)
-                minCpm = minCpmValue
-            }
-            restricted = true
-        }
-        
-        return account.network.request(Api.functions.channels.restrictSponsoredMessages(flags: flags, channel: inputChannel, restricted: restricted ? .boolTrue : .boolFalse, minCpm: minCpm))
+        return account.network.request(Api.functions.channels.restrictSponsoredMessages(channel: inputChannel, restricted: restricted ? .boolTrue : .boolFalse))
             |> `catch` { error -> Signal<Api.Updates, ChannelRestrictAdMessagesError> in
                 return .fail(.generic)
             }
@@ -49,7 +33,7 @@ func _internal_updateChannelRestrictAdMessages(account: Account, peerId: PeerId,
                             } else {
                                 flags.remove(.adsRestricted)
                             }
-                            return currentData.withUpdatedFlags(flags).withUpdatedAdsMinCpm(minCpm)
+                            return currentData.withUpdatedFlags(flags)
                         } else {
                             return currentData
                         }

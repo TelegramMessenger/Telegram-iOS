@@ -11788,6 +11788,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         self.volumeButtonsListener = VolumeButtonsListener(
+            sharedContext: self.context.sharedContext,
             shouldBeActive: shouldBeActive,
             upPressed: buttonAction,
             downPressed: buttonAction

@@ -60,7 +60,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     private let context: AccountContext
     private let size: CGSize
     private let hasBin: Bool
-    private let isStickerEditor: Bool
+    public let isStickerEditor: Bool
     
     weak var drawingView: DrawingView?
     public weak var selectionContainerView: DrawingSelectionContainerView?

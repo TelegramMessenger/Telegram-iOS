@@ -151,7 +151,7 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
     
     var contour = findContours(pixelBuffer: pixelBuffer)
     contour = simplify(contour, tolerance: 1.4)
-    let path = UIBezierPath(points: contour, close: true)
+    let path = UIBezierPath(points: contour, smooth: false)
     
     let firstScale = min(size.width, size.height) / 256.0
     let secondScale = size.width / 1080.0
@@ -480,28 +480,38 @@ fileprivate extension Array {
         return (index + self.count) % self.count
     }
 }
-extension UIBezierPath {
-    convenience init(points: [CGPoint], close: Bool) {
+
+private extension UIBezierPath {
+    convenience init(points: [CGPoint], smooth: Bool) {
         self.init()
-        let K: CGFloat = 0.2
-        var c1 = [Int: CGPoint]()
-        var c2 = [Int: CGPoint]()
-        let count = close ? points.count + 1 : points.count - 1
-        for index in 1 ..< count {
-            let p = points[circularIndex: index]
-            let vP1 = points[circularIndex: index + 1]
-            let vP2 = points[index - 1]
-            let vP = CGPoint(x: vP1.x - vP2.x, y: vP1.y - vP2.y)
-            let v = CGPoint(x: vP.x * K, y: vP.y * K)
-            c2[(index + points.count - 1) % points.count] = CGPoint(x: p.x - v.x, y: p.y - v.y) //(p - v)
-            c1[(index + points.count) % points.count] = CGPoint(x: p.x + v.x, y: p.y + v.y) //(p + v)
+        
+        if smooth {
+            let K: CGFloat = 0.2
+            var c1 = [Int: CGPoint]()
+            var c2 = [Int: CGPoint]()
+            let count = points.count - 1
+            for index in 1 ..< count {
+                let p = points[circularIndex: index]
+                let vP1 = points[circularIndex: index + 1]
+                let vP2 = points[index - 1]
+                let vP = CGPoint(x: vP1.x - vP2.x, y: vP1.y - vP2.y)
+                let v = CGPoint(x: vP.x * K, y: vP.y * K)
+                c2[(index + points.count - 1) % points.count] = CGPoint(x: p.x - v.x, y: p.y - v.y) //(p - v)
+                c1[(index + points.count) % points.count] = CGPoint(x: p.x + v.x, y: p.y + v.y) //(p + v)
+            }
+            self.move(to: points[0])
+            for index in 0 ..< points.count - 1 {
+                let c1 = c1[index] ?? points[points.circularIndex(index)]
+                let c2 = c2[index] ?? points[points.circularIndex(index + 1)]
+                self.addCurve(to: points[circularIndex: index + 1], controlPoint1: c1, controlPoint2: c2)
+            }
+            self.close()
+        } else {
+            self.move(to: points[0])
+            for index in 1 ..< points.count - 1 {
+                self.addLine(to: points[index])
+            }
+            self.close()
         }
-        self.move(to: points[0])
-        for index in 0 ..< points.count - 1 {
-            let c1 = c1[index] ?? points[points.circularIndex(index)]
-            let c2 = c2[index] ?? points[points.circularIndex(index + 1)]
-            self.addCurve(to: points[circularIndex: index + 1], controlPoint1: c1, controlPoint2: c2)
-        }
-        self.close()
     }
 }

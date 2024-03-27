@@ -61,7 +61,7 @@ public final class BirthdayPickerComponent: Component {
         
         private let calendar = Calendar(identifier: .gregorian)
         private var value = TelegramBirthday(day: 1, month: 1, year: nil)
-        private let minYear: Int32 = 1900
+        private var minYear: Int32 = 1900
         private let maxYear: Int32
         
         override init(frame: CGRect) {
@@ -83,6 +83,10 @@ public final class BirthdayPickerComponent: Component {
             let isFirstTime = self.component == nil
             self.component = component
             self.componentState = state
+            
+            if let year = component.value.year, year < self.minYear {
+                self.minYear = year
+            }
             
             self.pickerView.frame = CGRect(origin: .zero, size: availableSize)
             

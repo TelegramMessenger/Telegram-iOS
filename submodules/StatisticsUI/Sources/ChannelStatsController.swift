@@ -1710,7 +1710,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         revenueTransactions.loadMore()
     },
     updateCpmEnabled: { value in
-        let _ = context.engine.peers.updateChannelRestrictAdMessages(peerId: peerId, value: value ? .restrict(minCpm: nil) : .unrestrict).start()
+        let _ = context.engine.peers.updateChannelRestrictAdMessages(peerId: peerId, restricted: value).start()
     },
     presentCpmLocked: {
         let _ = combineLatest(
@@ -1750,7 +1750,10 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let peer = Promise<EnginePeer?>()
     peer.set(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
     
-    let adsRestricted = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.AdsRestricted(id: peerId))
+    let peerData = context.engine.data.get(
+         TelegramEngine.EngineData.Item.Peer.AdsRestricted(id: peerId),
+         TelegramEngine.EngineData.Item.Peer.CanViewRevenue(id: peerId)
+    )
     
     let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
     let previousData = Atomic<ChannelStats?>(value: nil)
@@ -1768,12 +1771,14 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         giftsContext.state,
         revenueState.get(),
         revenueTransactions.state,
-        adsRestricted,
+        peerData,
         longLoadingSignal,
         context.animatedEmojiStickers
     )
     |> deliverOnMainQueue
-    |> map { presentationData, state, peer, data, messageView, stories, boostData, boostersState, giftsState, revenueState, revenueTransactions, adsRestricted, longLoading, animatedEmojiStickers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, peer, data, messageView, stories, boostData, boostersState, giftsState, revenueState, revenueTransactions, peerData, longLoading, animatedEmojiStickers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let (adsRestricted, canViewRevenue) = peerData
+        
         var isGroup = false
         if let peer, case let .channel(channel) = peer, case .group = channel.info {
             isGroup = true
@@ -1854,7 +1859,13 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             case .monetization:
                 index = 2
             }
-            title = .textWithTabs(peer?.compactDisplayTitle ?? "", [presentationData.strings.Stats_Statistics, presentationData.strings.Stats_Boosts, presentationData.strings.Stats_Monetization], index)
+            var tabs: [String] = []
+            tabs.append(presentationData.strings.Stats_Statistics)
+            tabs.append(presentationData.strings.Stats_Boosts)
+            if canViewRevenue {
+                tabs.append(presentationData.strings.Stats_Monetization)
+            }
+            title = .textWithTabs(peer?.compactDisplayTitle ?? "", tabs, index)
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)

@@ -435,8 +435,8 @@ public extension TelegramEngine {
             return _internal_updateChannelHistoryAvailabilitySettingsInteractively(postbox: self.account.postbox, network: self.account.network, accountStateManager: self.account.stateManager, peerId: peerId, historyAvailableForNewMembers: historyAvailableForNewMembers)
         }
 
-        public func updateChannelRestrictAdMessages(peerId: PeerId, value: ChannelRestrictAdMessagesValue) -> Signal<Never, ChannelRestrictAdMessagesError> {
-            return _internal_updateChannelRestrictAdMessages(account: self.account, peerId: peerId, value: value)
+        public func updateChannelRestrictAdMessages(peerId: PeerId, restricted: Bool) -> Signal<Never, ChannelRestrictAdMessagesError> {
+            return _internal_updateChannelRestrictAdMessages(account: self.account, peerId: peerId, restricted: restricted)
         }
         
         public func channelMembers(peerId: PeerId, category: ChannelMembersCategory = .recent(.all), offset: Int32 = 0, limit: Int32 = 64, hash: Int64 = 0) -> Signal<[RenderedChannelParticipant]?, NoError> {
