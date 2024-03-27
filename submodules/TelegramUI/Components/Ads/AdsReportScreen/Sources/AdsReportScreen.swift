@@ -24,6 +24,8 @@ private enum ReportResult {
 }
 
 private final class SheetPageContent: CombinedComponent {
+    typealias EnvironmentType = ViewControllerComponentContainer.Environment
+    
     struct Item: Equatable {
         let title: String
         let option: Data
@@ -84,6 +86,7 @@ private final class SheetPageContent: CombinedComponent {
         let section = Child(ListSectionComponent.self)
         
         return { context in
+            let environment = context.environment[EnvironmentType.self]
             let component = context.component
             let state = context.state
             
@@ -91,7 +94,7 @@ private final class SheetPageContent: CombinedComponent {
             let theme = presentationData.theme
             let strings = presentationData.strings
             
-            let sideInset: CGFloat = 16.0
+            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
             var contentSize = CGSize(width: context.availableSize.width, height: 18.0)
                         
@@ -313,9 +316,10 @@ private final class SheetContent: CombinedComponent {
     }
         
     static var body: Body {
-        let navigation = Child(NavigationStackComponent.self)
+        let navigation = Child(NavigationStackComponent<EnvironmentType>.self)
         
         return { context in
+            let environment = context.environment[EnvironmentType.self]
             let component = context.component
             let state = context.state
             let update = component.update
@@ -348,7 +352,7 @@ private final class SheetContent: CombinedComponent {
                 )
             }
             
-            var items: [AnyComponentWithIdentity<Empty>] = []
+            var items: [AnyComponentWithIdentity<EnvironmentType>] = []
             items.append(AnyComponentWithIdentity(id: items.count, component: AnyComponent(
                 SheetPageContent(
                     context: component.context,
@@ -394,6 +398,7 @@ private final class SheetContent: CombinedComponent {
                         update(.spring(duration: 0.45))
                     }
                 ),
+                environment: { environment },
                 availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
                 transition: context.transition
             )
@@ -564,7 +569,8 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
         peerId: EnginePeer.Id,
         opaqueId: Data,
         title: String,
-        options: [ReportAdMessageResult.Option]
+        options: [ReportAdMessageResult.Option],
+        completed: @escaping () -> Void
     ) {
         self.context = context
                 
@@ -596,34 +602,38 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
             let navigationController = self.navigationController
             self.dismissAnimated()
             
-            Queue.mainQueue().after(0.4, {
-                switch result {
-                case .reported, .hidden:
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let text: String
-                    if case .reported = result {
-                        text = presentationData.strings.ReportAd_Reported
-                    } else {
-                        text = presentationData.strings.ReportAd_Hidden
-                    }
+            switch result {
+            case .reported, .hidden:
+                completed()
+                
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let text: String
+                if case .reported = result {
+                    text = presentationData.strings.ReportAd_Reported
+                } else {
+                    text = presentationData.strings.ReportAd_Hidden
+                }
+                Queue.mainQueue().after(0.4, {
                     (navigationController?.viewControllers.last as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: text, cancel: nil, destructive: false), elevatedLayout: false, action: { action in
                         if case .info = action, case .reported = result {
                             context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.ReportAd_Help_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                         }
                         return true
                     }), in: .current)
-                case .premiumRequired:
-                    var replaceImpl: ((ViewController) -> Void)?
-                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, action: {
-                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
-                        replaceImpl?(controller)
-                    })
-                    replaceImpl = { [weak controller] c in
-                        controller?.replace(with: c)
-                    }
-                    navigationController?.pushViewController(controller, animated: true)
+                })
+            case .premiumRequired:
+                var replaceImpl: ((ViewController) -> Void)?
+                let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, action: {
+                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
+                    replaceImpl?(controller)
+                })
+                replaceImpl = { [weak controller] c in
+                    controller?.replace(with: c)
                 }
-            })
+                Queue.mainQueue().after(0.4, {
+                    navigationController?.pushViewController(controller, animated: true)
+                })
+            }
         }
     }
     
@@ -719,12 +729,12 @@ private final class NavigationContainer: UIView, UIGestureRecognizerDelegate {
     }
 }
 
-final class NavigationStackComponent: Component {
-    public let items: [AnyComponentWithIdentity<Empty>]
+final class NavigationStackComponent<ChildEnvironment: Equatable>: Component {
+    public let items: [AnyComponentWithIdentity<ChildEnvironment>]
     public let requestPop: () -> Void
     
     public init(
-        items: [AnyComponentWithIdentity<Empty>],
+        items: [AnyComponentWithIdentity<ChildEnvironment>],
         requestPop: @escaping () -> Void
     ) {
         self.items = items
@@ -739,7 +749,7 @@ final class NavigationStackComponent: Component {
     }
         
     private final class ItemView: UIView {
-        let contents = ComponentView<Empty>()
+        let contents = ComponentView<ChildEnvironment>()
         let dimView = UIView()
         
         override init(frame: CGRect) {
@@ -753,6 +763,22 @@ final class NavigationStackComponent: Component {
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+    }
+    
+    private struct ReadyItem {
+        var index: Int
+        var itemId: AnyHashable
+        var itemView: ItemView
+        var itemTransition: Transition
+        var itemSize: CGSize
+        
+        init(index: Int, itemId: AnyHashable, itemView: ItemView, itemTransition: Transition, itemSize: CGSize) {
+            self.index = index
+            self.itemId = itemId
+            self.itemView = itemView
+            self.itemTransition = itemTransition
+            self.itemSize = itemSize
         }
     }
     
@@ -787,7 +813,7 @@ final class NavigationStackComponent: Component {
             preconditionFailure()
         }
                 
-        func update(component: NavigationStackComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: NavigationStackComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -795,21 +821,7 @@ final class NavigationStackComponent: Component {
             self.navigationContainer.isNavigationEnabled = component.items.count > 1
                                     
             var validItemIds: [AnyHashable] = []
-            struct ReadyItem {
-                var index: Int
-                var itemId: AnyHashable
-                var itemView: ItemView
-                var itemTransition: Transition
-                var itemSize: CGSize
-                
-                init(index: Int, itemId: AnyHashable, itemView: ItemView, itemTransition: Transition, itemSize: CGSize) {
-                    self.index = index
-                    self.itemId = itemId
-                    self.itemView = itemView
-                    self.itemTransition = itemTransition
-                    self.itemSize = itemSize
-                }
-            }
+        
             
             var readyItems: [ReadyItem] = []
             for i in 0 ..< component.items.count {
@@ -831,7 +843,7 @@ final class NavigationStackComponent: Component {
                 let itemSize = itemView.contents.update(
                     transition: itemTransition,
                     component: item.component,
-                    environment: {},
+                    environment: { environment[ChildEnvironment.self] },
                     containerSize: CGSize(width: availableSize.width, height: availableSize.height)
                 )
                 
@@ -879,7 +891,7 @@ final class NavigationStackComponent: Component {
                     }
                     readyItem.itemTransition.setFrame(view: readyItem.itemView, frame: itemFrame)
                     readyItem.itemTransition.setFrame(view: itemComponentView, frame: itemBounds)
-                    readyItem.itemTransition.setFrame(view: readyItem.itemView.dimView, frame: itemBounds)
+                    readyItem.itemTransition.setFrame(view: readyItem.itemView.dimView, frame: CGRect(origin: .zero, size: availableSize))
                     readyItem.itemTransition.setAlpha(view: readyItem.itemView.dimView, alpha: 1.0 - alphaTransitionFraction)
                     
                     if readyItem.index > 0 && isAdded {
@@ -931,7 +943,7 @@ final class NavigationStackComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ChildEnvironment>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

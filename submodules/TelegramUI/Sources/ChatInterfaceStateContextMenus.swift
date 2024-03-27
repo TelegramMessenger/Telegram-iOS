@@ -498,7 +498,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 peerId: message.id.peerId,
                                 opaqueId: adAttribute.opaqueId,
                                 title: title,
-                                options: options
+                                options: options,
+                                completed: {
+                                    
+                                }
                             )
                         )
                     }

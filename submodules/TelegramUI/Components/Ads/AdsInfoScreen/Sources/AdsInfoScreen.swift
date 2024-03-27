@@ -214,7 +214,7 @@ private final class ScrollContent: CombinedComponent {
             
             let list = list.update(
                 component: List(items),
-                availableSize: CGSize(width: context.availableSize.width - sideInset, height: 10000.0),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 10000.0),
                 transition: context.transition
             )
             context.add(list
@@ -575,8 +575,8 @@ private final class ParagraphComponent: CombinedComponent {
         return { context in
             let component = context.component
             
-            let leftInset: CGFloat = 40.0
-            let rightInset: CGFloat = 32.0
+            let leftInset: CGFloat = 32.0
+            let rightInset: CGFloat = 24.0
             let textSideInset: CGFloat = leftInset + 8.0
             let spacing: CGFloat = 5.0
             
@@ -649,7 +649,7 @@ private final class ParagraphComponent: CombinedComponent {
             )
             
             context.add(icon
-                .position(CGPoint(x: 23.0, y: textTopInset + 18.0))
+                .position(CGPoint(x: 15.0, y: textTopInset + 18.0))
             )
         
             return CGSize(width: context.availableSize.width, height: textTopInset + title.size.height + text.size.height + 20.0)

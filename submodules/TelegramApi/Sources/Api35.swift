@@ -3171,14 +3171,12 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
-                static func restrictSponsoredMessages(flags: Int32, channel: Api.InputChannel, restricted: Api.Bool, minCpm: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func restrictSponsoredMessages(channel: Api.InputChannel, restricted: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(968593985)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(-1696000743)
                     channel.serialize(buffer, true)
                     restricted.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(minCpm!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "channels.restrictSponsoredMessages", parameters: [("flags", String(describing: flags)), ("channel", String(describing: channel)), ("restricted", String(describing: restricted)), ("minCpm", String(describing: minCpm))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "channels.restrictSponsoredMessages", parameters: [("channel", String(describing: channel)), ("restricted", String(describing: restricted))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

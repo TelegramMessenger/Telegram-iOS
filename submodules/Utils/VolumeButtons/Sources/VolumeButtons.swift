@@ -69,7 +69,6 @@ private final class AVCaptureEventHandlerImpl: VolumeButtonHandlerImpl {
         )
         self.interaction.isEnabled = true
         context.mainWindow?.viewController?.view.addInteraction(self.interaction)
-//        hostView.eventView.addInteraction(self.interaction)
     }
     
     deinit {
