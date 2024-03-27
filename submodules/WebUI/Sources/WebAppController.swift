@@ -1069,7 +1069,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_biometry_get_info":
                     self.sendBiometryInfoReceivedEvent()
                 case "web_app_biometry_request_access":
-                    self.requestBiometryAccess()
+                    var reason: String?
+                    if let json, let reasonValue = json["reason"] as? String, !reasonValue.isEmpty {
+                        reason = reasonValue
+                    }
+                    self.requestBiometryAccess(reason: reason)
                 case "web_app_biometry_request_auth":
                     self.requestBiometryAuth()
                 case "web_app_biometry_update_token":
@@ -1078,6 +1082,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         tokenData = tokenDataValue.data(using: .utf8)
                     }
                     self.requestBiometryUpdateToken(tokenData: tokenData)
+                case "web_app_biometry_open_settings":
+                    if let lastTouchTimestamp = self.webView?.lastTouchTimestamp, currentTimestamp < lastTouchTimestamp + 10.0 {
+                        self.webView?.lastTouchTimestamp = nil
+
+                        self.openBotSettings()
+                    }
                 default:
                     break
             }
@@ -1411,11 +1421,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
             guard let controller = self.controller else {
                 return
             }
+            
+            self.context.engine.peers.updateBotBiometricsState(peerId: controller.botId, update: { state in
+                let state = state ?? TelegramBotBiometricsState.create()
+                return state
+            })
             let _ = (self.context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.BotBiometricsState(id: controller.botId)
             )
             |> deliverOnMainQueue).start(next: { [weak self] state in
                 guard let self else {
+                    return
+                }
+                guard let state else {
                     return
                 }
                 
@@ -1431,6 +1449,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     data["access_requested"] = state.accessRequested
                     data["access_granted"] = state.accessGranted
                     data["token_saved"] = state.opaqueToken != nil
+                    data["device_id"] = hexString(state.deviceId)
                 } else {
                     data["available"] = false
                 }
@@ -1445,7 +1464,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             })
         }
         
-        fileprivate func requestBiometryAccess() {
+        fileprivate func requestBiometryAccess(reason: String?) {
             guard let controller = self.controller else {
                 return
             }
@@ -1453,12 +1472,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId),
                 TelegramEngine.EngineData.Item.Peer.BotBiometricsState(id: controller.botId)
             )
-            |> deliverOnMainQueue).start(next: { [weak self] botPeer, state in
+            |> deliverOnMainQueue).start(next: { [weak self] botPeer, currentState in
                 guard let self, let botPeer, let controller = self.controller else {
                     return
                 }
                 
-                if state.accessRequested {
+                if let currentState, currentState.accessRequested {
                     self.sendBiometryInfoReceivedEvent()
                     return
                 }
@@ -1469,7 +1488,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                     
                     self.context.engine.peers.updateBotBiometricsState(peerId: botPeer.id, update: { state in
-                        var state = state
+                        var state = state ?? TelegramBotBiometricsState.create()
+                        
                         state.accessRequested = true
                         state.accessGranted = granted
                         return state
@@ -1479,8 +1499,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 
                 //TODO:localize
-                let alertText = "Do you want to allow \(botPeer.compactDisplayTitle) to use Face ID?"
-                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: alertText, actions: [
+                var alertTitle: String?
+                let alertText: String
+                if let reason {
+                    alertTitle = "Do you want to allow \(botPeer.compactDisplayTitle) to use Face ID?"
+                    alertText = reason
+                } else {
+                    alertText = "Do you want to allow \(botPeer.compactDisplayTitle) to use Face ID?"
+                }
+                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: alertTitle, text: alertText, actions: [
                     TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_No, action: {
                         updateAccessGranted(false)
                     }),
@@ -1501,6 +1528,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
             )
             |> deliverOnMainQueue).start(next: { [weak self] botPeer, state in
                 guard let self else {
+                    return
+                }
+                guard let state else {
                     return
                 }
                 
@@ -1609,7 +1639,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         
                         if let encryptedData {
                             self.context.engine.peers.updateBotBiometricsState(peerId: controller.botId, update: { state in
-                                var state = state
+                                var state = state ?? TelegramBotBiometricsState.create()
                                 state.opaqueToken = encryptedData
                                 return state
                             })
@@ -1640,7 +1670,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }.start()
             } else {
                 self.context.engine.peers.updateBotBiometricsState(peerId: controller.botId, update: { state in
-                    var state = state
+                    var state = state ?? TelegramBotBiometricsState.create()
                     state.opaqueToken = nil
                     return state
                 })
@@ -1655,6 +1685,17 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     return
                 }
                 self.webView?.sendEvent(name: "biometry_token_updated", data: jsonDataString)
+            }
+        }
+        
+        fileprivate func openBotSettings() {
+            guard let controller = self.controller else {
+                return
+            }
+            if let navigationController = controller.getNavigationController() {
+                let settingsController = self.context.sharedContext.makeBotSettingsScreen(context: self.context, peerId: controller.botId)
+                settingsController.navigationPresentation = .modal
+                navigationController.pushViewController(settingsController)
             }
         }
     }

@@ -1142,7 +1142,7 @@ public func selectivePrivacySettingsController(
                 chatListFilters: nil,
                 onlyUsers: false,
                 disableChannels: true,
-                disableBots: true
+                disableBots: false
             )), options: [], filters: [.excludeSelf]))
             addPeerDisposable.set((controller.result
             |> take(1)

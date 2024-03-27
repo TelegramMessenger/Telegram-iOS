@@ -73,3 +73,66 @@ public final class PreferencesView: PostboxView {
         self.values = view.values
     }
 }
+
+final class MutablePreferencesPrefixView: MutablePostboxView {
+    fileprivate let keyPrefix: ValueBoxKey
+    fileprivate var values: [ValueBoxKey: PreferencesEntry]
+    
+    init(postbox: PostboxImpl, keyPrefix: ValueBoxKey) {
+        self.keyPrefix = keyPrefix
+        
+        var values: [ValueBoxKey: PreferencesEntry] = [:]
+        for key in postbox.preferencesTable.getKeysWithPrefix(keyPrefix: keyPrefix) {
+            if let value = postbox.preferencesTable.get(key: key) {
+                values[key] = value
+            }
+        }
+        self.values = values
+    }
+    
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
+        var updated = false
+        for operation in transaction.currentPreferencesOperations {
+            switch operation {
+                case let .update(key, value):
+                if self.keyPrefix.isPrefix(to: key) {
+                    let currentValue = self.values[key]
+                    var updatedValue = false
+                    if let value = value, let currentValue = currentValue {
+                        if value != currentValue {
+                            updatedValue = true
+                        }
+                    } else if (value != nil) != (currentValue != nil) {
+                        updatedValue = true
+                    }
+                    if updatedValue {
+                        if let value = value {
+                            self.values[key] = value
+                        } else {
+                            self.values.removeValue(forKey: key)
+                        }
+                        updated = true
+                    }
+                }
+            }
+        }
+        
+        return updated
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
+    }
+    
+    func immutableView() -> PostboxView {
+        return PreferencesPrefixView(self)
+    }
+}
+
+public final class PreferencesPrefixView: PostboxView {
+    public let values: [ValueBoxKey: PreferencesEntry]
+    
+    init(_ view: MutablePreferencesPrefixView) {
+        self.values = view.values
+    }
+}

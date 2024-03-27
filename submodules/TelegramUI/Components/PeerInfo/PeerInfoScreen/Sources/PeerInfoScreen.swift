@@ -1105,14 +1105,23 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
             interaction.editingOpenNameColorSetup()
         }))
         
-        //TODO:localize
-        var personalChannelTitle: String?
-        if let personalChannel = data.personalChannel {
-            personalChannelTitle = personalChannel.peer.compactDisplayTitle
+        var displayPersonalChannel = false
+        if data.personalChannel != nil {
+            displayPersonalChannel = true
+        } else if let personalChannels = state.personalChannels, !personalChannels.isEmpty {
+            displayPersonalChannel = true
         }
-        items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? "Add"), text: "Channel", icon: nil, action: {
-            interaction.editingOpenPersonalChannel()
-        }))
+        if displayPersonalChannel {
+            //TODO:localize
+            var personalChannelTitle: String?
+            if let personalChannel = data.personalChannel {
+                personalChannelTitle = personalChannel.peer.compactDisplayTitle
+            }
+            
+            items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? "Add"), text: "Channel", icon: nil, action: {
+                interaction.editingOpenPersonalChannel()
+            }))
+        }
     }
     
     items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
@@ -2414,7 +2423,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         avatarUploadProgress: nil,
         highlightedButton: nil,
         isEditingBirthDate: false,
-        updatingBirthDate: nil
+        updatingBirthDate: nil,
+        personalChannels: nil
     )
     private var forceIsContactPromise = ValuePromise<Bool>(false)
     private let nearbyPeerDistance: Int32?
@@ -2471,6 +2481,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private var postingAvailabilityDisposable: Disposable?
     
     private let storiesReady = ValuePromise<Bool>(true, ignoreRepeated: true)
+    
+    private var personalChannelsDisposable: Disposable?
     
     private let _ready = Promise<Bool>()
     var ready: Promise<Bool> {
@@ -4464,6 +4476,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.updateAvatarDisposable.dispose()
         self.joinChannelDisposable.dispose()
         self.boostStatusDisposable?.dispose()
+        self.personalChannelsDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -7685,7 +7698,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func editingOpenPersonalChannel() {
-        let _ = (PeerSelectionScreen.initialData(context: self.context)
+        let _ = (PeerSelectionScreen.initialData(context: self.context, channels: self.state.personalChannels)
         |> deliverOnMainQueue).start(next: { [weak self] initialData in
             guard let self else {
                 return
@@ -11115,6 +11128,31 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         }
     }
+    
+    func refreshHasPersonalChannelsIfNeeded() {
+        if !self.isSettings {
+            return
+        }
+        if self.personalChannelsDisposable != nil {
+            return
+        }
+        self.personalChannelsDisposable = (self.context.engine.peers.adminedPublicChannels(scope: .forPersonalProfile)
+        |> deliverOnMainQueue).startStrict(next: { [weak self] personalChannels in
+            guard let self else {
+                return
+            }
+            self.personalChannelsDisposable?.dispose()
+            self.personalChannelsDisposable = nil
+            
+            if self.state.personalChannels != personalChannels {
+                self.state = self.state.withPersonalChannels(personalChannels)
+                
+                if let (layout, navigationHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
+                }
+            }
+        })
+    }
 }
 
 public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortcutResponder {
@@ -11736,6 +11774,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 )
             }
         }
+        
+        self.controllerNode.refreshHasPersonalChannelsIfNeeded()
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

@@ -455,8 +455,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     weak var emojiPackTooltipController: TooltipScreen?
     weak var birthdayTooltipController: TooltipScreen?
     
-    var currentMessageTooltipScreens: [(TooltipScreen, ListViewItemNode)] = []
-    
     weak var slowmodeTooltipController: ChatSlowmodeHintController?
     
     weak var currentContextController: ContextController?

@@ -331,32 +331,63 @@ public struct TelegramBotBiometricsState: Codable, Equatable {
         }
     }
     
+    public var deviceId: Data
     public var accessRequested: Bool
     public var accessGranted: Bool
     public var opaqueToken: OpaqueToken?
     
-    public static var `default`: TelegramBotBiometricsState {
+    public static func create() -> TelegramBotBiometricsState {
+        var deviceId = Data(count: 32)
+        deviceId.withUnsafeMutableBytes { buffer -> Void in
+            arc4random_buf(buffer.assumingMemoryBound(to: UInt8.self).baseAddress!, buffer.count)
+        }
+
         return TelegramBotBiometricsState(
+            deviceId: deviceId,
             accessRequested: false,
             accessGranted: false,
             opaqueToken: nil
         )
     }
     
-    public init(accessRequested: Bool, accessGranted: Bool, opaqueToken: OpaqueToken?) {
+    public init(deviceId: Data, accessRequested: Bool, accessGranted: Bool, opaqueToken: OpaqueToken?) {
+        self.deviceId = deviceId
         self.accessRequested = accessRequested
         self.accessGranted = accessGranted
         self.opaqueToken = opaqueToken
     }
 }
 
-func _internal_updateBotBiometricsState(account: Account, peerId: EnginePeer.Id, update: @escaping (TelegramBotBiometricsState) -> TelegramBotBiometricsState) -> Signal<Never, NoError> {
+func _internal_updateBotBiometricsState(account: Account, peerId: EnginePeer.Id, update: @escaping (TelegramBotBiometricsState?) -> TelegramBotBiometricsState) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
-        let previousState = transaction.getPreferencesEntry(key: PreferencesKeys.botBiometricsState(peerId: peerId))?.get(TelegramBotBiometricsState.self) ?? TelegramBotBiometricsState.default
+        let previousState = transaction.getPreferencesEntry(key: PreferencesKeys.botBiometricsState(peerId: peerId))?.get(TelegramBotBiometricsState.self)
         
         transaction.setPreferencesEntry(key: PreferencesKeys.botBiometricsState(peerId: peerId), value: PreferencesEntry(update(previousState)))
     }
     |> ignoreValues
+}
+
+func _internal_botsWithBiometricState(account: Account) -> Signal<Set<EnginePeer.Id>, NoError> {
+    let viewKey: PostboxViewKey = PostboxViewKey.preferencesPrefix(keyPrefix: PreferencesKeys.botBiometricsStatePrefix())
+    return account.postbox.combinedView(keys: [viewKey])
+    |> map { views -> Set<EnginePeer.Id> in
+        guard let view = views.views[viewKey] as? PreferencesPrefixView else {
+            return Set()
+        }
+        
+        var result = Set<EnginePeer.Id>()
+        for (key, value) in view.values {
+            guard let peerId = PreferencesKeys.extractBotBiometricsStatePeerId(key: key) else {
+                continue
+            }
+            if value.get(TelegramBotBiometricsState.self) == nil {
+                continue
+            }
+            result.insert(peerId)
+        }
+        
+        return result
+    }
 }
 
 func _internal_toggleChatManagingBotIsPaused(account: Account, chatId: EnginePeer.Id) -> Signal<Never, NoError> {

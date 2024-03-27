@@ -202,6 +202,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case dismissedBusinessBadge = 68
     case dismissedBirthdayPremiumGifts = 69
     case monetizationIntroDismissed = 70
+    case businessBotMessageTooltip = 71
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -550,6 +551,9 @@ private struct ApplicationSpecificNoticeKeys {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.monetizationIntroDismissed.key)
     }
     
+    static func businessBotMessageTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.businessBotMessageTooltip.key)
+    }
 }
 
 public struct ApplicationSpecificNotice {
@@ -2317,5 +2321,32 @@ public struct ApplicationSpecificNotice {
             }
         }
         |> take(1)
+    }
+    
+    public static func getBusinessBotMessageTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.businessBotMessageTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementBusinessBotMessageTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.businessBotMessageTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.businessBotMessageTooltip(), entry)
+            }
+            
+            return Int(previousValue)
+        }
     }
 }

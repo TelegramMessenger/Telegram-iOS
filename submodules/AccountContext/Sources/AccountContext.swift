@@ -977,6 +977,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeBusinessLinksSetupScreenInitialData(context: AccountContext) -> Signal<BusinessLinksSetupScreenInitialData, NoError>
     func makeCollectibleItemInfoScreen(context: AccountContext, initialData: CollectibleItemInfoScreenInitialData) -> ViewController
     func makeCollectibleItemInfoScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, subject: CollectibleItemInfoScreenSubject) -> Signal<CollectibleItemInfoScreenInitialData?, NoError>
+    func makeBotSettingsScreen(context: AccountContext, peerId: EnginePeer.Id?) -> ViewController
+    
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func navigateToForumChannel(context: AccountContext, peerId: EnginePeer.Id, navigationController: NavigationController)
     func navigateToForumThread(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?,  navigationController: NavigationController, activateInput: ChatControllerActivateInput?, keepStack: NavigateToChatKeepStack) -> Signal<Never, NoError>

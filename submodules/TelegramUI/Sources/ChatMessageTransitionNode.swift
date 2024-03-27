@@ -289,6 +289,16 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
             self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: offset)
         }
     }
+    
+    final class CustomOffsetHandlerImpl {
+        weak var itemNode: ChatMessageItemView?
+        let update: (CGFloat, ContainedViewLayoutTransition) -> Bool
+        
+        init(itemNode: ChatMessageItemView, update: @escaping (CGFloat, ContainedViewLayoutTransition) -> Bool) {
+            self.itemNode = itemNode
+            self.update = update
+        }
+    }
 
     private final class AnimatingItemNode: ASDisplayNode {
         let itemNode: ChatMessageItemView
@@ -900,6 +910,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
     private var animatingItemNodes: [AnimatingItemNode] = []
     private var decorationItemNodes: [DecorationItemNodeImpl] = []
     private var messageReactionContexts: [MessageReactionContext] = []
+    private var customOffsetHandlers: [CustomOffsetHandlerImpl] = []
 
     var hasScheduledTransitions: Bool {
         return !self.currentPendingItems.isEmpty
@@ -958,12 +969,6 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         self.decorationItemNodes.append(decorationItemNode)
         self.addSubnode(decorationItemNode)
         
-//        let overlayController = OverlayTransitionContainerController()
-//        overlayController.displayNode.isUserInteractionEnabled = false
-//        overlayController.displayNode.addSubnode(decorationItemNode)
-//        decorationItemNode.overlayController = overlayController
-//        itemNode.item?.context.sharedContext.mainWindow?.presentInGlobalOverlay(overlayController)
-                
         return decorationItemNode
     }
     
@@ -972,6 +977,20 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         decorationNode.removeFromSupernode()
         if let decorationNode = decorationNode as? DecorationItemNodeImpl {
             decorationNode.overlayController?.dismiss()
+        }
+    }
+    
+    public func addCustomOffsetHandler(itemNode: ChatMessageItemView, update: @escaping (CGFloat, ContainedViewLayoutTransition) -> Bool) -> Disposable {
+        let handler = CustomOffsetHandlerImpl(itemNode: itemNode, update: update)
+        self.customOffsetHandlers.append(handler)
+        
+        return ActionDisposable { [weak self, weak handler] in
+            Queue.mainQueue().async {
+                guard let self, let handler else {
+                    return
+                }
+                self.customOffsetHandlers.removeAll(where: { $0 === handler })
+            }
         }
     }
 
@@ -1094,6 +1113,15 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
             for decorationItemNode in self.decorationItemNodes {
                 decorationItemNode.addExternalOffset(offset: offset, transition: transition)
             }
+            var removeCustomOffsetHandlers: [CustomOffsetHandlerImpl] = []
+            for customOffsetHandler in self.customOffsetHandlers {
+                if !customOffsetHandler.update(offset, transition) {
+                    removeCustomOffsetHandlers.append(customOffsetHandler)
+                }
+            }
+            for customOffsetHandler in removeCustomOffsetHandlers {
+                self.customOffsetHandlers.removeAll(where: { $0 ===  customOffsetHandler})
+            }
         }
         for messageReactionContext in self.messageReactionContexts {
             messageReactionContext.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode, isRotated: isRotated)
@@ -1107,6 +1135,15 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         if itemNode == nil {
             for decorationItemNode in self.decorationItemNodes {
                 decorationItemNode.addContentOffset(offset: offset)
+            }
+            var removeCustomOffsetHandlers: [CustomOffsetHandlerImpl] = []
+            for customOffsetHandler in self.customOffsetHandlers {
+                if !customOffsetHandler.update(offset, .immediate) {
+                    removeCustomOffsetHandlers.append(customOffsetHandler)
+                }
+            }
+            for customOffsetHandler in removeCustomOffsetHandlers {
+                self.customOffsetHandlers.removeAll(where: { $0 ===  customOffsetHandler})
             }
         }
         for messageReactionContext in self.messageReactionContexts {

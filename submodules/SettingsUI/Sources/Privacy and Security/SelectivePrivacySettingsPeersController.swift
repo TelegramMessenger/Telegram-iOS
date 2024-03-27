@@ -354,7 +354,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             chatListFilters: nil,
             onlyUsers: false,
             disableChannels: true,
-            disableBots: true
+            disableBots: false
         )), options: [], alwaysEnabled: true))
         addPeerDisposable.set((controller.result
         |> take(1)

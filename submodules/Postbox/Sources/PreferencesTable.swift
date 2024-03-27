@@ -37,6 +37,17 @@ final class PreferencesTable: Table {
         }
     }
     
+    func getKeysWithPrefix(keyPrefix: ValueBoxKey) -> [ValueBoxKey] {
+        var result: [ValueBoxKey] = []
+        
+        self.valueBox.range(self.table, start: keyPrefix, end: keyPrefix.successor, keys: { key in
+            result.append(key)
+            return true
+        }, limit: 100000)
+        
+        return result
+    }
+    
     func set(key: ValueBoxKey, value: PreferencesEntry?, operations: inout [PreferencesOperation]) {
         self.cachedEntries[key] = CachedEntry(entry: value)
         updatedEntryKeys.insert(key)

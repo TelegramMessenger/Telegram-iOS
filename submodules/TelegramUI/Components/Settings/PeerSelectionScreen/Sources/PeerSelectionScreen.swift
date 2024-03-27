@@ -410,18 +410,24 @@ final class PeerSelectionScreenComponent: Component {
             }
             
             if self.component == nil {
-                self.channelsDisposable = (component.context.engine.peers.adminedPublicChannels(scope: .forPersonalProfile)
-                |> deliverOnMainQueue).startStrict(next: { [weak self] peers in
-                    guard let self else {
-                        return
-                    }
-                    self.channels = peers.map { peer in
+                if let channels = component.initialData.channels, !channels.isEmpty {
+                    self.channels = channels.map { peer in
                         return PeerSelectionScreen.ChannelInfo(peer: peer.peer, subscriberCount: peer.subscriberCount)
                     }
-                    if !self.isUpdating {
-                        self.state?.updated(transition: .immediate)
-                    }
-                })
+                } else {
+                    self.channelsDisposable = (component.context.engine.peers.adminedPublicChannels(scope: .forPersonalProfile)
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] peers in
+                        guard let self else {
+                            return
+                        }
+                        self.channels = peers.map { peer in
+                            return PeerSelectionScreen.ChannelInfo(peer: peer.peer, subscriberCount: peer.subscriberCount)
+                        }
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    })
+                }
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -687,9 +693,11 @@ final class PeerSelectionScreenComponent: Component {
 public final class PeerSelectionScreen: ViewControllerComponentContainer {
     public final class InitialData {
         public let channelId: EnginePeer.Id?
+        public let channels: [TelegramAdminedPublicChannel]?
         
-        init(channelId: EnginePeer.Id?) {
+        init(channelId: EnginePeer.Id?, channels: [TelegramAdminedPublicChannel]?) {
             self.channelId = channelId
+            self.channels = channels
         }
     }
     
@@ -737,7 +745,7 @@ public final class PeerSelectionScreen: ViewControllerComponentContainer {
     deinit {
     }
     
-    public static func initialData(context: AccountContext) -> Signal<InitialData, NoError> {
+    public static func initialData(context: AccountContext, channels: [TelegramAdminedPublicChannel]?) -> Signal<InitialData, NoError> {
         return context.engine.data.get(
             TelegramEngine.EngineData.Item.Peer.PersonalChannel(id: context.account.peerId)
         )
@@ -746,7 +754,7 @@ public final class PeerSelectionScreen: ViewControllerComponentContainer {
             if case let .known(value) = personalChannel, let value {
                 channelId = value.peerId
             }
-            return InitialData(channelId: channelId)
+            return InitialData(channelId: channelId, channels: channels)
         }
     }
     
