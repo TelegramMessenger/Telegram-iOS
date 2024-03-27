@@ -2001,6 +2001,11 @@ private final class StickerPackContainer: ASDisplayNode {
             return
         }
         
+        if self.skipNextGridLayoutUpdate {
+            self.skipNextGridLayoutUpdate = false
+            return
+        }
+        
         let minBackgroundY = gridFrame.minY - titleAreaInset
         let unclippedBackgroundY = gridFrame.minY - presentationLayout.contentOffset.y - titleAreaInset
         
@@ -2066,13 +2071,25 @@ private final class StickerPackContainer: ASDisplayNode {
         }
     }
     
+    private var didAutomaticExpansion = false
+    private var skipNextGridLayoutUpdate = true
     private func dequeueTransaction() {
         if self.enqueuedTransactions.isEmpty {
             return
         }
         let transaction = self.enqueuedTransactions.removeFirst()
         
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: transaction.deletions, insertItems: transaction.insertions, updateItems: transaction.updates, scrollToItem: transaction.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: transaction.deletions, insertItems: transaction.insertions, updateItems: transaction.updates, scrollToItem: transaction.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            
+            if self.currentEntries.count >= 15, self.controller?.expandIfNeeded == true, !self.didAutomaticExpansion {
+                self.didAutomaticExpansion = true
+                self.gridNode.autoscroll(toOffset: CGPoint(x: 0.0, y: max(0.0, self.gridNode.scrollView.contentSize.height - self.gridNode.scrollView.contentInset.top - self.gridNode.scrollView.bounds.height)), duration: 0.4)
+                self.skipNextGridLayoutUpdate = true
+            }
+        })
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -2575,6 +2592,7 @@ public final class StickerPackScreenImpl: ViewController, StickerPackScreen {
     private var alreadyDidAppear: Bool = false
     private var animatedIn: Bool = false
     fileprivate var initialIsEditing: Bool = false
+    fileprivate var expandIfNeeded: Bool = false
     
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
@@ -2591,6 +2609,7 @@ public final class StickerPackScreenImpl: ViewController, StickerPackScreen {
         mainActionTitle: String? = nil,
         actionTitle: String? = nil,
         isEditing: Bool = false,
+        expandIfNeeded: Bool = false,
         parentNavigationController: NavigationController? = nil,
         sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
         sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
@@ -2605,6 +2624,7 @@ public final class StickerPackScreenImpl: ViewController, StickerPackScreen {
         self.mainActionTitle = mainActionTitle
         self.actionTitle = actionTitle
         self.initialIsEditing = isEditing
+        self.expandIfNeeded = expandIfNeeded
         self.parentNavigationController = parentNavigationController
         self.sendSticker = sendSticker
         self.sendEmoji = sendEmoji
@@ -2838,6 +2858,7 @@ public func StickerPackScreen(
     mainActionTitle: String? = nil,
     actionTitle: String? = nil,
     isEditing: Bool = false,
+    expandIfNeeded: Bool = false,
     parentNavigationController: NavigationController? = nil,
     sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
     sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)? = nil,
@@ -2854,6 +2875,7 @@ public func StickerPackScreen(
         mainActionTitle: mainActionTitle,
         actionTitle: actionTitle,
         isEditing: isEditing,
+        expandIfNeeded: expandIfNeeded,
         parentNavigationController: parentNavigationController,
         sendSticker: sendSticker,
         sendEmoji: sendEmoji,

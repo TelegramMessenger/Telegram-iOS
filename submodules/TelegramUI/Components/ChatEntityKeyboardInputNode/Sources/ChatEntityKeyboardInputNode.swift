@@ -1337,6 +1337,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         stickerPacks: [packReference],
                         loadedStickerPacks: [],
                         isEditing: true,
+                        expandIfNeeded: false,
                         parentNavigationController: interaction.getNavigationController(),
                         sendSticker: { [weak interaction] fileReference, sourceView, sourceRect in
                             return interaction?.sendSticker(fileReference, false, false, nil, false, sourceView, sourceRect, nil, []) ?? false
@@ -2820,7 +2821,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                                     return
                                                 }
                                                 
-                                                let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, parentNavigationController: interaction.navigationController(), sendSticker: { file, sourceView, sourceRect in
+                                                let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: false, parentNavigationController: interaction.navigationController(), sendSticker: { file, sourceView, sourceRect in
                                                     sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
                                                     return true
                                                 })
