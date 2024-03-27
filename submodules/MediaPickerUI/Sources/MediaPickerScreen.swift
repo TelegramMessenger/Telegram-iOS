@@ -1676,16 +1676,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             } else if collection == nil {
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
                 
-                if [.story, .createSticker].contains(mode) {
+                if [.createSticker].contains(mode) {
                     self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
                     self.navigationItem.rightBarButtonItem?.action = #selector(self.rightButtonPressed)
                     self.navigationItem.rightBarButtonItem?.target = self
                 }
-//                if mode == .story || mode == .addImage {
-//                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
-//                    self.navigationItem.rightBarButtonItem?.action = #selector(self.rightButtonPressed)
-//                    self.navigationItem.rightBarButtonItem?.target = self
-//                }
             } else {
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.backPressed))
             }

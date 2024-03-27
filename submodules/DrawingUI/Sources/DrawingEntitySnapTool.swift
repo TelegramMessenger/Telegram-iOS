@@ -98,6 +98,7 @@ class DrawingEntitySnapTool {
         guard let snapCenterLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() else {
             return updatedPosition
         }
+        let isStickerEditor = (entityView.superview as? DrawingEntitiesView)?.isStickerEditor ?? false
         let snapEdgeLocations = (entityView.superview as? DrawingEntitiesView)?.getEntityEdgePositions()
         
         let currentTimestamp = CACurrentMediaTime()
@@ -202,7 +203,7 @@ class DrawingEntitySnapTool {
         self.yState = updatedYState
         self.previousYSnapTimestamp = updatedYPreviousTimestamp
         
-        if let snapEdgeLocations {
+        if let snapEdgeLocations, !isStickerEditor {
             if updatedXState == nil {
                 let (updatedXLeftEdgeValue, updatedLeftEdgeState, updatedLeftEdgePreviousTimestamp) = process(
                     state: self.leftEdgeState,

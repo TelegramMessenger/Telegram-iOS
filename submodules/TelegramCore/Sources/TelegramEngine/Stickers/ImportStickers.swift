@@ -250,8 +250,12 @@ func _internal_renameStickerSet(account: Account, packReference: StickerPackRefe
             return .complete()
         }
         return account.postbox.transaction { transaction -> Void in
-            transaction.replaceItemCollectionInfos(namespace: Namespaces.ItemCollection.CloudStickerPacks, itemCollectionInfos: [(info.id, info)])
-            
+            let collectionNamespace = Namespaces.ItemCollection.CloudStickerPacks
+            var currentInfos = transaction.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
+            if let index = currentInfos.firstIndex(where: { $0.id == info.id }) {
+                currentInfos[index] = info
+            }
+            transaction.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: currentInfos.map { ($0.id, $0) })
             cacheStickerPack(transaction: transaction, info: info, items: items)
         }
         |> castError(RenameStickerSetError.self)
