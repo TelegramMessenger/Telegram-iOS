@@ -17,6 +17,7 @@ final class MonetizationBalanceItem: ListViewItem, ItemListItem {
     let stats: RevenueStats
     let animatedEmoji: TelegramMediaFile?
     let canWithdraw: Bool
+    let isEnabled: Bool
     let withdrawAction: () -> Void
     let sectionId: ItemListSectionId
     let style: ItemListStyle
@@ -27,6 +28,7 @@ final class MonetizationBalanceItem: ListViewItem, ItemListItem {
         stats: RevenueStats,
         animatedEmoji: TelegramMediaFile?,
         canWithdraw: Bool,
+        isEnabled: Bool,
         withdrawAction: @escaping () -> Void,
         sectionId: ItemListSectionId,
         style: ItemListStyle
@@ -36,6 +38,7 @@ final class MonetizationBalanceItem: ListViewItem, ItemListItem {
         self.stats = stats
         self.animatedEmoji = animatedEmoji
         self.canWithdraw = canWithdraw
+        self.isEnabled = isEnabled
         self.withdrawAction = withdrawAction
         self.sectionId = sectionId
         self.style = style
@@ -304,7 +307,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                             buttonTheme = buttonTheme.withUpdated(disabledBackgroundColor: buttonTheme.backgroundColor, disabledForegroundColor: buttonTheme.foregroundColor.withAlphaComponent(0.6))
                             withdrawButtonNode = SolidRoundedButtonNode(theme: buttonTheme, height: buttonHeight, cornerRadius: 11.0)
                             withdrawButtonNode.pressed = { [weak self] in
-                                if let self, let item = self.item {
+                                if let self, let item = self.item, item.isEnabled {
                                     item.withdrawAction()
                                 }
                             }
@@ -312,6 +315,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.withdrawButtonNode = withdrawButtonNode
                         }
                         withdrawButtonNode.title = item.presentationData.strings.Monetization_BalanceWithdraw
+                        withdrawButtonNode.isEnabled = item.isEnabled
                         
                         let buttonWidth = contentSize.width - leftInset - rightInset
                         let _ = withdrawButtonNode.updateLayout(width: buttonWidth, transition: .immediate)

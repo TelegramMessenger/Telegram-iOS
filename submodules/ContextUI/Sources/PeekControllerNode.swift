@@ -429,7 +429,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         let previousBlurAlpha = self.blurView.alpha
         self.blurView.alpha = 1.0
-        self.blurView.layer.animateAlpha(from: previousBlurAlpha, to: self.blurView.alpha, duration: 0.3)
+        self.blurView.layer.animateAlpha(from: previousBlurAlpha, to: self.blurView.alpha, duration: 0.25)
         
         let previousDarkDimAlpha = self.darkDimNode.alpha
         self.darkDimNode.alpha = 1.0
@@ -450,7 +450,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         if immediately {
             animateIn()
         } else {
-            Queue.mainQueue().after(0.15, animateIn)
+            Queue.mainQueue().after(0.02, animateIn)
         }
     }
     

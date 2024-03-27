@@ -225,7 +225,7 @@ private enum StatsEntry: ItemListNodeEntry {
     case adsProceedsOverview(PresentationTheme, RevenueStats, TelegramMediaFile?)
 
     case adsBalanceTitle(PresentationTheme, String)
-    case adsBalance(PresentationTheme, RevenueStats, Bool, TelegramMediaFile?)
+    case adsBalance(PresentationTheme, RevenueStats, Bool, Bool, TelegramMediaFile?)
     case adsBalanceInfo(PresentationTheme, String)
     
     case adsTransactionsTitle(PresentationTheme, String)
@@ -739,8 +739,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .adsBalance(lhsTheme, lhsStats, lhsCanWithdraw, lhsAnimatedEmoji):
-                if case let .adsBalance(rhsTheme, rhsStats, rhsCanWithdraw, rhsAnimatedEmoji) = rhs, lhsTheme === rhsTheme, lhsStats == rhsStats, lhsCanWithdraw == rhsCanWithdraw, lhsAnimatedEmoji == rhsAnimatedEmoji {
+            case let .adsBalance(lhsTheme, lhsStats, lhsCanWithdraw, lhsIsEnabled, lhsAnimatedEmoji):
+                if case let .adsBalance(rhsTheme, rhsStats, rhsCanWithdraw, rhsIsEnabled, rhsAnimatedEmoji) = rhs, lhsTheme === rhsTheme, lhsStats == rhsStats, lhsCanWithdraw == rhsCanWithdraw, lhsIsEnabled == rhsIsEnabled, lhsAnimatedEmoji == rhsAnimatedEmoji {
                     return true
                 } else {
                     return false
@@ -961,13 +961,14 @@ private enum StatsEntry: ItemListNodeEntry {
                 })
             case let .adsProceedsOverview(_, stats, animatedEmoji):
                 return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: false, stats: stats, animatedEmoji: animatedEmoji, sectionId: self.section, style: .blocks)
-            case let .adsBalance(_, stats, canWithdraw, animatedEmoji):
+            case let .adsBalance(_, stats, canWithdraw, isEnabled, animatedEmoji):
                 return MonetizationBalanceItem(
                     context: arguments.context,
                     presentationData: presentationData,
                     stats: stats,
                     animatedEmoji: animatedEmoji,
                     canWithdraw: canWithdraw,
+                    isEnabled: isEnabled,
                     withdrawAction: {
                         arguments.requestWithdraw()
                     },
@@ -1110,7 +1111,7 @@ private struct ChannelStatsControllerState: Equatable {
     }
     
     func withUpdatedTransactionsExpanded(_ transactionsExpanded: Bool) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, transactionsExpanded: self.transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected, transactionsExpanded: transactionsExpanded, moreTransactionsDisplayed: self.moreTransactionsDisplayed)
     }
     
     func withUpdatedMoreTransactionsDisplayed(_ moreTransactionsDisplayed: Int32) -> ChannelStatsControllerState {
@@ -1363,7 +1364,8 @@ private func monetizationEntries(
     transactionsInfo: RevenueStatsTransactionsContext.State,
     adsRestricted: Bool,
     animatedEmojis: [String: [StickerPackItem]],
-    premiumConfiguration: PremiumConfiguration
+    premiumConfiguration: PremiumConfiguration,
+    monetizationConfiguration: MonetizationConfiguration
 ) -> [StatsEntry] {
     let diamond = animatedEmojis["💎"]?.first?.file
     
@@ -1383,15 +1385,25 @@ private func monetizationEntries(
     entries.append(.adsProceedsTitle(presentationData.theme, presentationData.strings.Monetization_OverviewTitle))
     entries.append(.adsProceedsOverview(presentationData.theme, data, diamond))
     
-    
     var withdrawalAvailable = false
-    if let peer, case let .channel(channel) = peer, channel.flags.contains(.isCreator) && data.availableBalance > 0 {
+    if let peer, case let .channel(channel) = peer, channel.flags.contains(.isCreator) {
         withdrawalAvailable = true
     }
     entries.append(.adsBalanceTitle(presentationData.theme, presentationData.strings.Monetization_BalanceTitle))
-    entries.append(.adsBalance(presentationData.theme, data, withdrawalAvailable, diamond))
-    entries.append(.adsBalanceInfo(presentationData.theme, presentationData.strings.Monetization_BalanceInfo))
-                   
+    entries.append(.adsBalance(presentationData.theme, data, withdrawalAvailable && data.availableBalance > 0, monetizationConfiguration.withdrawalAvailable, diamond))
+
+    if withdrawalAvailable {
+        let withdrawalInfoText: String
+        if data.availableBalance == 0 {
+            withdrawalInfoText = presentationData.strings.Monetization_Balance_ZeroInfo
+        } else if monetizationConfiguration.withdrawalAvailable {
+            withdrawalInfoText = presentationData.strings.Monetization_Balance_AvailableInfo
+        } else {
+            withdrawalInfoText = presentationData.strings.Monetization_Balance_ComingLaterInfo
+        }
+        entries.append(.adsBalanceInfo(presentationData.theme, withdrawalInfoText))
+    }
+
     if !transactionsInfo.transactions.isEmpty {
         entries.append(.adsTransactionsTitle(presentationData.theme, presentationData.strings.Monetization_TransactionsTitle))
         
@@ -1450,7 +1462,8 @@ private func channelStatsControllerEntries(
     revenueState: RevenueStats?,
     revenueTransactions: RevenueStatsTransactionsContext.State,
     adsRestricted: Bool,
-    premiumConfiguration: PremiumConfiguration
+    premiumConfiguration: PremiumConfiguration,
+    monetizationConfiguration: MonetizationConfiguration
 ) -> [StatsEntry] {
     switch state.section {
     case .stats:
@@ -1488,7 +1501,8 @@ private func channelStatsControllerEntries(
                 transactionsInfo: revenueTransactions,
                 adsRestricted: adsRestricted,
                 animatedEmojis: animatedEmojis,
-                premiumConfiguration: premiumConfiguration
+                premiumConfiguration: premiumConfiguration,
+                monetizationConfiguration: monetizationConfiguration
             )
         }
     }
@@ -1503,6 +1517,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     }
     
     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    let monetizationConfiguration = MonetizationConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
     
     var openPostStatsImpl: ((EnginePeer, StatsPostItem) -> Void)?
     var openStoryImpl: ((EngineStoryItem, UIView) -> Void)?
@@ -1869,7 +1884,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(presentationData: presentationData, state: state, peer: peer, data: data, messages: messages, stories: stories, interactions: interactions, boostData: boostData, boostersState: boostersState, giftsState: giftsState, giveawayAvailable: premiumConfiguration.giveawayGiftsPurchaseAvailable, isGroup: isGroup, boostsOnly: boostsOnly, animatedEmojis: animatedEmojiStickers, revenueState: revenueState?.stats, revenueTransactions: revenueTransactions, adsRestricted: adsRestricted, premiumConfiguration: premiumConfiguration), style: .blocks, emptyStateItem: emptyStateItem, headerItem: headerItem, crossfadeState: previous == nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(presentationData: presentationData, state: state, peer: peer, data: data, messages: messages, stories: stories, interactions: interactions, boostData: boostData, boostersState: boostersState, giftsState: giftsState, giveawayAvailable: premiumConfiguration.giveawayGiftsPurchaseAvailable, isGroup: isGroup, boostsOnly: boostsOnly, animatedEmojis: animatedEmojiStickers, revenueState: revenueState?.stats, revenueTransactions: revenueTransactions, adsRestricted: adsRestricted, premiumConfiguration: premiumConfiguration, monetizationConfiguration: monetizationConfiguration), style: .blocks, emptyStateItem: emptyStateItem, headerItem: headerItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -2141,5 +2156,25 @@ final class ChannelStatsContextExtractedContentSource: ContextExtractedContentSo
     
     func putBack() -> ContextControllerPutBackViewInfo? {
         return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private struct MonetizationConfiguration {
+    static var defaultValue: MonetizationConfiguration {
+        return MonetizationConfiguration(withdrawalAvailable: false)
+    }
+    
+    public let withdrawalAvailable: Bool
+    
+    fileprivate init(withdrawalAvailable: Bool) {
+        self.withdrawalAvailable = withdrawalAvailable
+    }
+    
+    static func with(appConfiguration: AppConfiguration) -> MonetizationConfiguration {
+        if let data = appConfiguration.data, let withdrawalAvailable = data["channel_revenue_withdrawal_enabled"] as? Bool {
+            return MonetizationConfiguration(withdrawalAvailable: withdrawalAvailable)
+        } else {
+            return .defaultValue
+        }
     }
 }

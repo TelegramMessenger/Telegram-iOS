@@ -6000,7 +6000,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             if let navigationController {
                                 Queue.mainQueue().after(0.2) {
                                     let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-                                    let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [.result(info: info, items: items, installed: true)], isEditing: false, parentNavigationController: navigationController, sendSticker: nil)
+                                    let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [.result(info: info, items: items, installed: true)], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: nil)
                                     (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                 }
                             }
@@ -6181,7 +6181,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 let navigationController = self.navigationController as? NavigationController
                                 if let navigationController {
                                     Queue.mainQueue().after(0.2) {
-                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, parentNavigationController: navigationController, sendSticker: nil)
+                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: nil)
                                         (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                         
                                         Queue.mainQueue().after(0.1) {

@@ -40,10 +40,6 @@ struct VideoConversionConfiguration {
     }
     
     static func with(appConfiguration: AppConfiguration) -> VideoConversionConfiguration {
-//        #if DEBUG
-//        return VideoConversionConfiguration(remuxToFMp4: true)
-//        #endif
-        
         if let data = appConfiguration.data, let conversion = data["video_conversion"] as? [String: Any] {
             let remuxToFMp4 = conversion["remux_fmp4"] as? Bool ?? VideoConversionConfiguration.defaultValue.remuxToFMp4
             return VideoConversionConfiguration(remuxToFMp4: remuxToFMp4)
