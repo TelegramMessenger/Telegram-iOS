@@ -227,7 +227,8 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                             searchQuery: command.searchQuery.flatMap { "/\($0)"},
                             messageCount: shortcut.totalCount,
                             hideSeparator: false,
-                            hideDate: true
+                            hideDate: true,
+                            hidePeerStatus: true
                         )
                     )),
                     editing: false,

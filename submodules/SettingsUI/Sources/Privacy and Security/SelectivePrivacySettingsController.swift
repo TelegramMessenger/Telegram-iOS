@@ -1243,7 +1243,7 @@ public func selectivePrivacySettingsController(
                 break
             }
             
-            let controller = selectivePrivacyPeersController(context: context, title: title, initialPeers: peerIds, initialEnableForPremium: stateValue.with({ $0 }).enableForPremium,  displayPremiumCategory: displayPremiumCategory, updated: { updatedPeerIds, enableForPremium in
+            let controller = selectivePrivacyPeersController(context: context, title: title, initialPeers: peerIds, initialEnableForPremium: displayPremiumCategory && stateValue.with({ $0 }).enableForPremium,  displayPremiumCategory: displayPremiumCategory, updated: { updatedPeerIds, enableForPremium in
                 updateState { state in
                     if enable {
                         switch target {

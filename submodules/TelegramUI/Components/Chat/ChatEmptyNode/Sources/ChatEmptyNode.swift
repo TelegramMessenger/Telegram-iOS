@@ -180,7 +180,7 @@ public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNod
         let previousCustomStickerFile = self.currentCustomStickerFile
         self.currentCustomStickerFile = customStickerFile
         
-        let stickerSize: CGSize
+        var stickerSize: CGSize
         let inset: CGFloat
         if size.width == 320.0 {
             stickerSize = CGSize(width: 106.0, height: 106.0)
@@ -189,6 +189,11 @@ public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNod
             stickerSize = CGSize(width: 160.0, height: 160.0)
             inset = 15.0
         }
+        
+        if let customStickerFile, let dimensions = customStickerFile.dimensions?.cgSize {
+            stickerSize = dimensions.aspectFitted(stickerSize)
+        }
+        
         if let item = self.stickerItem, previousCustomStickerFile == customStickerFile {
             self.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
         } else if !self.didSetupSticker || previousCustomStickerFile != customStickerFile {

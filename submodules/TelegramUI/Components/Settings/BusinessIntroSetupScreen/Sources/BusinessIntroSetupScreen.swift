@@ -294,7 +294,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                                 if !self.isUpdating {
                                     self.state?.updated(transition: .immediate)
                                 }
-                            case let .text(rawQuery, _):
+                            case let .text(rawQuery, languageCode):
                                 let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
                                 
                                 if query.isEmpty {
@@ -304,7 +304,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                                 } else {
                                     let context = component.context
                                 
-                                    let localSets = context.engine.stickers.searchStickerSets(query: query)
+                                    /*let localSets = context.engine.stickers.searchStickerSets(query: query)
                                     let remoteSets: Signal<FoundStickerSets?, NoError> = .single(nil) |> then(
                                         context.engine.stickers.searchStickerSetsRemotely(query: query)
                                         |> map(Optional.init)
@@ -347,6 +347,199 @@ final class BusinessIntroSetupScreenComponent: Component {
                                                 tintMode: animationData.isTemplate ? .primary : .none
                                             )
                                             items.append(item)
+                                        }
+                                    
+                                        return .single([EmojiPagerContentComponent.ItemGroup(
+                                            supergroupId: "search",
+                                            groupId: "search",
+                                            title: nil,
+                                            subtitle: nil,
+                                            badge: nil,
+                                            actionButtonTitle: nil,
+                                            isFeatured: false,
+                                            isPremiumLocked: false,
+                                            isEmbedded: false,
+                                            hasClear: false,
+                                            hasEdit: false,
+                                            collapsedLineCount: nil,
+                                            displayPremiumBadges: false,
+                                            headerItem: nil,
+                                            fillWithLoadingPlaceholders: false,
+                                            items: items
+                                        )])
+                                    }*/
+                                    
+                                    let stickers: Signal<[(String?, FoundStickerItem)], NoError> = Signal { subscriber in
+                                        var signals: Signal<[Signal<(String?, [FoundStickerItem]), NoError>], NoError> = .single([])
+                                        
+                                        if query.isSingleEmoji {
+                                            signals = .single([context.engine.stickers.searchStickers(query: [query.basicEmoji.0])
+                                            |> map { (nil, $0.items) }])
+                                        } else if query.count > 1, !languageCode.isEmpty && languageCode != "emoji" {
+                                            var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
+                                            if !languageCode.lowercased().hasPrefix("en") {
+                                                signal = signal
+                                                |> mapToSignal { keywords in
+                                                    return .single(keywords)
+                                                    |> then(
+                                                        context.engine.stickers.searchEmojiKeywords(inputLanguageCode: "en-US", query: query.lowercased(), completeMatch: query.count < 3)
+                                                        |> map { englishKeywords in
+                                                            return keywords + englishKeywords
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                            
+                                            signals = signal
+                                            |> map { keywords -> [Signal<(String?, [FoundStickerItem]), NoError>] in
+                                                var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
+                                                let emoticons = keywords.flatMap { $0.emoticons }
+                                                for emoji in emoticons {
+                                                    signals.append(context.engine.stickers.searchStickers(query: [emoji.basicEmoji.0])
+                                                    |> take(1)
+                                                    |> map { (emoji, $0.items) })
+                                                }
+                                                return signals
+                                            }
+                                        }
+                                        
+                                        return (signals
+                                        |> mapToSignal { signals in
+                                            return combineLatest(signals)
+                                        }).start(next: { results in
+                                            var result: [(String?, FoundStickerItem)] = []
+                                            for (emoji, stickers) in results {
+                                                for sticker in stickers {
+                                                    result.append((emoji, sticker))
+                                                }
+                                            }
+                                            subscriber.putNext(result)
+                                        }, completed: {
+                                            subscriber.putCompletion()
+                                        })
+                                    }
+                                    
+                                    let currentRemotePacks = Atomic<FoundStickerSets?>(value: nil)
+                                    
+                                    let local = context.engine.stickers.searchStickerSets(query: query)
+                                    let remote = context.engine.stickers.searchStickerSetsRemotely(query: query)
+                                    |> delay(0.2, queue: Queue.mainQueue())
+                                    let rawPacks = local
+                                    |> mapToSignal { result -> Signal<(FoundStickerSets, Bool, FoundStickerSets?), NoError> in
+                                        var localResult = result
+                                        if let currentRemote = currentRemotePacks.with ({ $0 }) {
+                                            localResult = localResult.merge(with: currentRemote)
+                                        }
+                                        return .single((localResult, false, nil))
+                                        |> then(
+                                            remote
+                                            |> map { remote -> (FoundStickerSets, Bool, FoundStickerSets?) in
+                                                return (result.merge(with: remote), true, remote)
+                                            }
+                                        )
+                                    }
+                                    
+                                    let installedPackIds = context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])])
+                                    |> map { view -> Set<ItemCollectionId> in
+                                        var installedPacks = Set<ItemCollectionId>()
+                                        if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView {
+                                            if let packsEntries = stickerPacksView.entriesByNamespace[Namespaces.ItemCollection.CloudStickerPacks] {
+                                                for entry in packsEntries {
+                                                    installedPacks.insert(entry.id)
+                                                }
+                                            }
+                                        }
+                                        return installedPacks
+                                    }
+                                    |> distinctUntilChanged
+                                    let packs = combineLatest(rawPacks, installedPackIds)
+                                    |> map { packs, installedPackIds -> (FoundStickerSets, Bool, FoundStickerSets?) in
+                                        var (localPacks, completed, remotePacks) = packs
+                                        
+                                        for i in 0 ..< localPacks.infos.count {
+                                            let installed = installedPackIds.contains(localPacks.infos[i].0)
+                                            if installed != localPacks.infos[i].3 {
+                                                localPacks.infos[i].3 = installed
+                                            }
+                                        }
+                                        
+                                        if remotePacks != nil {
+                                            for i in 0 ..< remotePacks!.infos.count {
+                                                let installed = installedPackIds.contains(remotePacks!.infos[i].0)
+                                                if installed != remotePacks!.infos[i].3 {
+                                                    remotePacks!.infos[i].3 = installed
+                                                }
+                                            }
+                                        }
+                                        
+                                        return (localPacks, completed, remotePacks)
+                                    }
+                                    
+                                    let signal = combineLatest(stickers, packs)
+                                    |> map { stickers, packs -> ([(String?, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)? in
+                                        return (stickers, packs.0, packs.1, packs.2)
+                                    }
+                                    
+                                    let resultSignal: Signal<[EmojiPagerContentComponent.ItemGroup], NoError> = signal
+                                    |> mapToSignal { result in
+                                        guard let result else {
+                                            return .complete()
+                                        }
+                                        
+                                        let (foundItems, localSets, complete, remoteSets) = result
+                                        
+                                        var items: [EmojiPagerContentComponent.Item] = []
+                                        
+                                        var existingIds = Set<MediaId>()
+                                        for (_, entry) in foundItems {
+                                            let itemFile = entry.file
+                                            
+                                            if existingIds.contains(itemFile.fileId) {
+                                                continue
+                                            }
+                                            existingIds.insert(itemFile.fileId)
+                                            
+                                            let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                            let item = EmojiPagerContentComponent.Item(
+                                                animationData: animationData,
+                                                content: .animation(animationData),
+                                                itemFile: itemFile,
+                                                subgroupId: nil,
+                                                icon: .none,
+                                                tintMode: animationData.isTemplate ? .primary : .none
+                                            )
+                                            items.append(item)
+                                        }
+                                        
+                                        var mergedSets = localSets
+                                        if let remoteSets {
+                                            mergedSets = mergedSets.merge(with: remoteSets)
+                                        }
+                                        for entry in mergedSets.entries {
+                                            guard let stickerPackItem = entry.item as? StickerPackItem else {
+                                                continue
+                                            }
+                                            let itemFile = stickerPackItem.file
+                                            
+                                            if existingIds.contains(itemFile.fileId) {
+                                                continue
+                                            }
+                                            existingIds.insert(itemFile.fileId)
+                                            
+                                            let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                            let item = EmojiPagerContentComponent.Item(
+                                                animationData: animationData,
+                                                content: .animation(animationData),
+                                                itemFile: itemFile,
+                                                subgroupId: nil,
+                                                icon: .none,
+                                                tintMode: animationData.isTemplate ? .primary : .none
+                                            )
+                                            items.append(item)
+                                        }
+                                        
+                                        if items.isEmpty && !complete {
+                                            return .complete()
                                         }
                                     
                                         return .single([EmojiPagerContentComponent.ItemGroup(
@@ -825,7 +1018,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                     var stickerSearchResults: EmojiPagerContentComponent.EmptySearchResults?
                     if !stickerSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
                         stickerSearchResults = EmojiPagerContentComponent.EmptySearchResults(
-                            text: environment.strings.EmojiSearch_SearchStickersEmptyResult,
+                            text: "No stickers found",
                             iconFile: nil
                         )
                     }
