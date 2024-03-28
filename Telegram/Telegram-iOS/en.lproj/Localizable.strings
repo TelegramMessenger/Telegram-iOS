@@ -11824,9 +11824,9 @@ Sorry for the inconvenience.";
 "Business.Links.CreateAction" = "Create a Link to Chat";
 "Business.Links.LinksSectionHeader" = "LINKS TO CHAT";
 
-"Business.Links.SimpleLinkInfoUsernamePhone" = "You can also use a simple link for a chat with you — [t.me/%1$@](username) or [t.me/\u{2060}+\u{2060}%2$@](phone).";
+"Business.Links.SimpleLinkInfoUsernamePhone" = "You can also use a simple link for a chat with you — [t.me/%1$@](username) or [t.me/\\u{2060}+\\u{2060}%2$@](phone).";
 "Business.Links.SimpleLinkInfoUsername" = "You can also use a simple link for a chat with you — [t.me/%@](username).";
-"Business.Links.SimpleLinkInfoPhone" = "You can also use a simple link for a chat with you — [t.me/\u{2060}+\u{2060}%@](phone).";
+"Business.Links.SimpleLinkInfoPhone" = "You can also use a simple link for a chat with you — [t.me/\\u{2060}+\\u{2060}%@](phone).";
 
 "Business.Links.LinkNameTitle" = "Link Name";
 "Business.Links.LinkNameText" = "Add a name for this link that only you will see.";

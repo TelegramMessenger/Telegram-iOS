@@ -1117,7 +1117,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
                 personalChannelTitle = personalChannel.peer.compactDisplayTitle
             }
             
-            items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? presentationData.strings.Settings_PersonalChannelItem), text: presentationData.strings.Settings_PersonalChannelEmptyValue, icon: nil, action: {
+            items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? presentationData.strings.Settings_PersonalChannelEmptyValue), text: presentationData.strings.Settings_PersonalChannelItem, icon: nil, action: {
                 interaction.editingOpenPersonalChannel()
             }))
         }

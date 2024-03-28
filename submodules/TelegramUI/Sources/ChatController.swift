@@ -761,7 +761,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return false
                     }
                 case let .businessLinkSetup(link):
-                    let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
+                    var inputText = convertMarkdownToAttributes(strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText)
+                    inputText = trimChatInputText(inputText)
                     let entities = generateChatInputTextEntities(inputText, generateLinks: false)
                     
                     let message = inputText.string
