@@ -354,6 +354,10 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                             strongSelf.titleControlValueChanged?(index)
                                         }
                                     }
+                                    if let validLayout = strongSelf.validLayout {
+                                        strongSelf.updateNavigationBarLayout(validLayout, transition: .immediate)
+                                    }
+                                    strongSelf.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
                                 }
                         }
                     }

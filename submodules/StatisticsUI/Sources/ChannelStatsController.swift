@@ -1385,14 +1385,14 @@ private func monetizationEntries(
     entries.append(.adsProceedsTitle(presentationData.theme, presentationData.strings.Monetization_OverviewTitle))
     entries.append(.adsProceedsOverview(presentationData.theme, data, diamond))
     
-    var withdrawalAvailable = false
+    var isCreator = false
     if let peer, case let .channel(channel) = peer, channel.flags.contains(.isCreator) {
-        withdrawalAvailable = true
+        isCreator = true
     }
     entries.append(.adsBalanceTitle(presentationData.theme, presentationData.strings.Monetization_BalanceTitle))
-    entries.append(.adsBalance(presentationData.theme, data, withdrawalAvailable && data.availableBalance > 0, monetizationConfiguration.withdrawalAvailable, diamond))
+    entries.append(.adsBalance(presentationData.theme, data, isCreator && data.availableBalance > 0, monetizationConfiguration.withdrawalAvailable, diamond))
 
-    if withdrawalAvailable {
+    if isCreator {
         let withdrawalInfoText: String
         if data.availableBalance == 0 {
             withdrawalInfoText = presentationData.strings.Monetization_Balance_ZeroInfo
@@ -1433,13 +1433,15 @@ private func monetizationEntries(
         }
     }
     
-    var switchOffAdds: Bool? = nil
-    if let boostData, boostData.level >= premiumConfiguration.minChannelRestrictAdsLevel {
-        switchOffAdds = adsRestricted
+    if isCreator {
+        var switchOffAdds: Bool? = nil
+        if let boostData, boostData.level >= premiumConfiguration.minChannelRestrictAdsLevel {
+            switchOffAdds = adsRestricted
+        }
+        
+        entries.append(.adsCpmToggle(presentationData.theme, presentationData.strings.Monetization_SwitchOffAds, premiumConfiguration.minChannelRestrictAdsLevel, switchOffAdds))
+        entries.append(.adsCpmInfo(presentationData.theme, presentationData.strings.Monetization_SwitchOffAdsInfo))
     }
-    
-    entries.append(.adsCpmToggle(presentationData.theme, presentationData.strings.Monetization_SwitchOffAds, premiumConfiguration.minChannelRestrictAdsLevel, switchOffAdds))
-    entries.append(.adsCpmInfo(presentationData.theme, presentationData.strings.Monetization_SwitchOffAdsInfo))
     
     return entries
 }
