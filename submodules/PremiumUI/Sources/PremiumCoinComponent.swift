@@ -345,9 +345,12 @@ class PremiumCoinComponent: Component {
                     return
                 }
                 
-//                if #available(iOS 17.0, *), let material = node.geometry?.materials.first {
                 if let material = node.geometry?.materials.first {
-                    material.metalness.intensity = 0.3
+                    if node.name == "Logos" {
+                        material.metalness.intensity = 0.1
+                    } else {
+                        material.metalness.intensity = 0.3
+                    }
                 }
                 
                 let animation = CABasicAnimation(keyPath: "contentsTransform")
