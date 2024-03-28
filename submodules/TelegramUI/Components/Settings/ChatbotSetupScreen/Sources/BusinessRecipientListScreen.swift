@@ -235,9 +235,8 @@ final class BusinessRecipientListScreenComponent: Component {
                 }
             }
             
-            //TODO:localize
             let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
-                title: "Add Exception",
+                title: presentationData.strings.ChatbotSetup_Recipients_SelectionTitle,
                 searchPlaceholder: presentationData.strings.ChatListFilter_AddChatsSearchPlaceholder,
                 selectedChats: Set(initialPeerList.peers.map(\.peer.id)),
                 additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
@@ -377,12 +376,11 @@ final class BusinessRecipientListScreenComponent: Component {
             let title: String
             switch component.mode {
             case .excludeExceptions, .excludeUsers:
-                title = "Excluded Chats"
+                title = environment.strings.ChatbotSetup_Recipients_ExcludedListTitle
             case .includeExceptions:
-                title = "Included Chats"
+                title = environment.strings.ChatbotSetup_Recipients_IncludedListTitle
             }
             
-            //TODO:localize
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
@@ -417,7 +415,7 @@ final class BusinessRecipientListScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Add Users",
+                            string: environment.strings.ChatbotSetup_Recipients_AddUsers,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemAccentColor
                         )),
@@ -570,7 +568,7 @@ final class BusinessRecipientListScreenComponent: Component {
                         title: AnyComponent(VStack([
                             AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
-                                    string: "Remove All Exceptions",
+                                    string: environment.strings.ChatbotSetup_Recipients_RemoveAll,
                                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                     textColor: environment.theme.list.itemDestructiveColor
                                 )),

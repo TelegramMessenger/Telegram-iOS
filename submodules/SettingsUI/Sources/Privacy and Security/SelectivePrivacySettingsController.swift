@@ -106,11 +106,10 @@ private func stringForUserCount(_ peers: [EnginePeer.Id: SelectivePrivacyPeer], 
         }
         
         if enableForPremium {
-            //TODO:localize
             if result == 0 {
-                return "Premium Users"
+                return strings.PrivacySettings_ValuePremium
             } else {
-                return "Premium Users +\(result)"
+                return strings.PrivacySettings_ValuePremiumPlus("\(result)").string
             }
         } else {
             return strings.UserCount(Int32(result))
@@ -1117,7 +1116,6 @@ public func selectivePrivacySettingsController(
                 break
             }
             
-            //TODO:localize
             var additionalCategories: [ChatListNodeAdditionalCategory] = []
             
             var selectedCategories = Set<Int>()
@@ -1127,16 +1125,16 @@ public func selectivePrivacySettingsController(
                         id: AdditionalCategoryId.premiumUsers.rawValue,
                         icon: generatePremiumCategoryIcon(size: CGSize(width: 40.0, height: 40.0), cornerRadius: 12.0),
                         smallIcon: generatePremiumCategoryIcon(size: CGSize(width: 22.0, height: 22.0), cornerRadius: 6.0),
-                        title: "Premium Users",
-                        appearance: .option(sectionTitle: "USER TYPES")
+                        title: strings.PrivacySettings_CategoryPremiumUsers,
+                        appearance: .option(sectionTitle: strings.PrivacySettings_SearchUserTypesHeader)
                     )
                 ]
                 selectedCategories.insert(AdditionalCategoryId.premiumUsers.rawValue)
             }
             
             let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
-                title: "Add Users",
-                searchPlaceholder: "Search users and groups",
+                title: strings.PrivacySettings_SearchUsersTitle,
+                searchPlaceholder: strings.PrivacySettings_SearchUsersPlaceholder,
                 selectedChats: Set(),
                 additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
                 chatListFilters: nil,

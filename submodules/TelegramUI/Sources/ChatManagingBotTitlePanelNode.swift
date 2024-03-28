@@ -102,12 +102,11 @@ private final class ChatManagingBotTitlePanelComponent: Component {
             let rightInset: CGFloat = component.insets.right + 10.0
             let actionAndSettingsButtonsSpacing: CGFloat = 8.0
             
-            //TODO:localize
             let actionButtonSize = self.actionButton.update(
                 transition: transition,
                 component: AnyComponent(PlainButtonComponent(
                     content: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: component.isPaused ? "START" : "STOP", font: Font.semibold(15.0), textColor: component.theme.list.itemCheckColors.foregroundColor))
+                        text: .plain(NSAttributedString(string: component.isPaused ? component.strings.Chat_BusinessBotPanel_ActionStart : component.strings.Chat_BusinessBotPanel_ActionStop, font: Font.semibold(15.0), textColor: component.theme.list.itemCheckColors.foregroundColor))
                     )),
                     background: AnyComponent(RoundedRectangle(
                         color: component.theme.list.itemCheckColors.fillColor,
@@ -169,12 +168,11 @@ private final class ChatManagingBotTitlePanelComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: maxTextWidth, height: 100.0)
             )
-            //TODO:localize
             let textValue: String
             if component.isPaused {
-                textValue = "bot paused"
+                textValue = component.strings.Chat_BusinessBotPanel_StatusPaused
             } else {
-                textValue = component.managesChat ? "bot manages this chat" : "bot has access to this chat"
+                textValue = component.managesChat ? component.strings.Chat_BusinessBotPanel_StatusManages : component.strings.Chat_BusinessBotPanel_StatusHasAccess
             }
             let textSize = self.text.update(
                 transition: .immediate,
@@ -292,12 +290,10 @@ final class ChatManagingBotTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
             
         let strings = self.context.sharedContext.currentPresentationData.with { $0 }.strings
-        let _ = strings
         
         var items: [ContextMenuItem] = []
         
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Remove bot from this chat", textColor: .destructive, icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: strings.Chat_BusinessBotPanel_Menu_RemoveBot, textColor: .destructive, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor)
         }, action: { [weak self] _, a in
             a(.default)
@@ -308,7 +304,7 @@ final class ChatManagingBotTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.context.engine.peers.removeChatManagingBot(chatId: chatPeerId)
         })))
         if let url = managingBot.settingsUrl {
-            items.append(.action(ContextMenuActionItem(text: "Manage Bot", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: strings.Chat_BusinessBotPanel_Menu_ManageBot, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, a in
                 a(.default)

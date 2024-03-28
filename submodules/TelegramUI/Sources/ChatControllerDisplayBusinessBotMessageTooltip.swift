@@ -28,8 +28,7 @@ extension ChatControllerImpl {
             let bounds = statusNode.view.convert(statusNode.view.bounds, to: self.chatDisplayNode.view)
             let location = CGPoint(x: bounds.midX, y: bounds.minY - 11.0)
             
-            //TODO:localize
-            let tooltipController = TooltipController(content: .text("Only you can see that this\nmessage was sent by the bot."), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, balancedTextLayout: true, timeout: 3.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+            let tooltipController = TooltipController(content: .text(self.presentationData.strings.Chat_BusinessBotMessageTooltip), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, balancedTextLayout: true, timeout: 3.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
             self.checksTooltipController = tooltipController
             tooltipController.dismissed = { [weak self, weak tooltipController] _ in
                 if let strongSelf = self, let tooltipController = tooltipController, strongSelf.checksTooltipController === tooltipController {

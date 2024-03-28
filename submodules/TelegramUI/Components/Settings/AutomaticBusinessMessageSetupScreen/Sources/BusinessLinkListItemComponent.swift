@@ -135,13 +135,11 @@ final class BusinessLinkListItemComponent: Component {
             let titleViewCountSpacing: CGFloat = 4.0
             let titleTextSpacing: CGFloat = 4.0
             
-            //TODO:localize
-            
             let viewCountText: String
             if component.link.viewCount == 0 {
-                viewCountText = "no clicks"
+                viewCountText = component.strings.Business_Links_ItemNoClicks
             } else {
-                viewCountText = "\(component.link.viewCount) clicks"
+                viewCountText = component.strings.Business_Links_ItemClickCount(Int32(component.link.viewCount))
             }
             let viewCountSize = self.viewCount.update(
                 transition: .immediate,
@@ -191,7 +189,7 @@ final class BusinessLinkListItemComponent: Component {
                 }
             }
             let textString = stringWithAppliedEntities(
-                component.link.message.isEmpty ? "No text" : component.link.message,
+                component.link.message.isEmpty ? component.strings.Business_Links_ItemNoText : component.link.message,
                 entities: filteredEntities,
                 baseColor: component.theme.list.itemSecondaryTextColor,
                 linkColor: component.theme.list.itemSecondaryTextColor,
@@ -252,11 +250,10 @@ final class BusinessLinkListItemComponent: Component {
             self.swipeOptionContainer.updateLayout(size: swipeOptionContainerFrame.size, leftInset: 0.0, rightInset: 0.0)
             
             var rightOptions: [ListItemSwipeOptionContainer.Option] = []
-            //TODO:localize
             rightOptions = [
                 ListItemSwipeOptionContainer.Option(
                     key: 0,
-                    title: "Share",
+                    title: component.strings.Business_Links_ItemActionShare,
                     icon: .none,
                     color: component.theme.list.itemDisclosureActions.accent.fillColor,
                     textColor: component.theme.list.itemDisclosureActions.accent.foregroundColor

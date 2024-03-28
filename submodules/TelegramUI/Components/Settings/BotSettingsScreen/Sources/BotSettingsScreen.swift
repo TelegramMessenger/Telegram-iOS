@@ -59,10 +59,9 @@ private enum BotSettingsEntry: ItemListNodeEntry {
         let arguments = arguments as! BotSettingsArguments
         switch self {
         case let .biometryAccess(value):
-            //TODO:localize
             return ItemListSwitchItem(
                 presentationData: presentationData,
-                title: "Biometry",
+                title: presentationData.strings.Settings_BotSettings_Biometry,
                 value: value,
                 sectionId: self.section,
                 style: .blocks,
@@ -133,7 +132,6 @@ public func botSettingsScreen(context: AccountContext, peerId: EnginePeer.Id) ->
     |> map { presentationData, state, data -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let (peer, biometricsState) = data
         
-        //TODO:localize
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(peer?.compactDisplayTitle ?? ""), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: botSettingsEntries(presentationData: presentationData, peer: peer, biometricsState: biometricsState), style: .blocks, animateChanges: true)
         

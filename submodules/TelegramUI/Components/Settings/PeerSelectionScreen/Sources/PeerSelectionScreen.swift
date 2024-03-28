@@ -87,7 +87,7 @@ final class PeerSelectionScreenComponent: Component {
                     presentationData: ItemListPresentationData(listNode.presentationData),
                     icon: PresentationResourcesItemList.hideIconImage(listNode.presentationData.theme),
                     iconSignal: nil,
-                    title: "Hide Personal Channel",
+                    title: listNode.presentationData.strings.Settings_PersonalChannelRemove,
                     additionalBadgeIcon: nil,
                     alwaysPlain: true,
                     hasSeparator: true,
@@ -103,12 +103,11 @@ final class PeerSelectionScreenComponent: Component {
                     }
                 )
             case let .item(peer, subscriberCount, _):
-                //TODO:localize
                 let statusText: String
                 if let subscriberCount, subscriberCount != 0 {
-                    statusText = "\(subscriberCount) subscribers"
+                    statusText = listNode.presentationData.strings.Conversation_StatusSubscribers(Int32(subscriberCount))
                 } else {
-                    statusText = "channel"
+                    statusText = listNode.presentationData.strings.Channel_Status
                 }
                 
                 return ContactsPeerItem(
@@ -273,7 +272,6 @@ final class PeerSelectionScreenComponent: Component {
         ) -> CGFloat {
             let rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
             
-            //TODO:localize
             let closeTitle: String = strings.Common_Cancel
             
             let headerContent: ChatListHeaderComponent.Content? = ChatListHeaderComponent.Content(
@@ -281,10 +279,10 @@ final class PeerSelectionScreenComponent: Component {
                 navigationBackTitle: nil,
                 titleComponent: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Channel", font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor))
+                        text: .plain(NSAttributedString(string: strings.Settings_PersonalChannelSelectTitle, font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor))
                     ))),
                     AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "select your channel", font: Font.regular(12.0), textColor: theme.rootController.navigationBar.secondaryTextColor))
+                        text: .plain(NSAttributedString(string: strings.Settings_PersonalChannelSelectSubtitle, font: Font.regular(12.0), textColor: theme.rootController.navigationBar.secondaryTextColor))
                     )))
                 ], spacing: 2.0)),
                 chatListTitle: nil,

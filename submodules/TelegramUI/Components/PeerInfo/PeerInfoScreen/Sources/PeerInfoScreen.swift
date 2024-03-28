@@ -1112,13 +1112,12 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
             displayPersonalChannel = true
         }
         if displayPersonalChannel {
-            //TODO:localize
             var personalChannelTitle: String?
             if let personalChannel = data.personalChannel {
                 personalChannelTitle = personalChannel.peer.compactDisplayTitle
             }
             
-            items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? "Add"), text: "Channel", icon: nil, action: {
+            items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? presentationData.strings.Settings_PersonalChannelItem), text: presentationData.strings.Settings_PersonalChannelEmptyValue, icon: nil, action: {
                 interaction.editingOpenPersonalChannel()
             }))
         }
@@ -1194,8 +1193,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             if let subscriberCount = personalChannel.subscriberCount {
                 label = presentationData.strings.Conversation_StatusSubscribers(Int32(subscriberCount))
             }
-            //TODO:localize
-            items[.personalChannel]?.append(PeerInfoScreenHeaderItem(id: 0, text: "CHANNEL", label: label))
+            items[.personalChannel]?.append(PeerInfoScreenHeaderItem(id: 0, text: presentationData.strings.Profile_PersonalChannelSectionTitle, label: label))
             items[.personalChannel]?.append(PeerInfoScreenPersonalChannelItem(id: 1, context: context, data: personalChannel, controller: { [weak interaction] in
                 guard let interaction else {
                     return nil
@@ -7732,18 +7730,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 
-                //TODO:localize
                 let toastText: String
                 var mappedChannel: TelegramPersonalChannel?
                 if let channel {
                     mappedChannel = TelegramPersonalChannel(peerId: channel.peer.id, subscriberCount: channel.subscriberCount.flatMap(Int32.init(clamping:)), topMessageId: nil)
                     if initialData.channelId != nil {
-                        toastText = "Personal channel updated."
+                        toastText = self.presentationData.strings.Settings_PersonalChannelUpdatedToast
                     } else {
-                        toastText = "Personal channel added."
+                        toastText = self.presentationData.strings.Settings_PersonalChannelAddedToast
                     }
                 } else {
-                    toastText = "Personal channel removed."
+                    toastText = self.presentationData.strings.Settings_PersonalChannelRemovedToast
                 }
                 let _ = self.context.engine.accountData.updatePersonalChannel(personalChannel: mappedChannel).startStandalone()
                 

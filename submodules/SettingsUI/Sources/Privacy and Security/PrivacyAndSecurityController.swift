@@ -414,7 +414,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                     arguments.openGroupsPrivacy()
                 })
             case .groupPrivacyFooter:
-                return ItemListTextItem(presentationData: presentationData, text: .markdown("You can restrict which users are allowed to add you to groups and channels."), sectionId: self.section)
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(presentationData.strings.PrivacySettings_InviteSectionFooter), sectionId: self.section)
             case let .voiceMessagePrivacy(theme, text, value, hasPremium):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, titleIcon: hasPremium ? PresentationResourcesItemList.premiumIcon(theme) : nil, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, action: {
                     arguments.openVoiceMessagePrivacy()
@@ -509,17 +509,16 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
                 return strings.PrivacySettings_LastSeenNobody
             } else {
                 if enableForCloseFriends && enableForPremium {
-                    //TODO:localize
                     if enableFor.isEmpty {
-                        return "Close Friends, Premium"
+                        return strings.PrivacySettings_ValueCloseFriendsAndPremium
                     } else {
-                        return "Close Friends, Premium +\(countForSelectivePeers(enableFor))"
+                        return strings.PrivacySettings_ValueCloseFriendsAndPremiumPlus("\(countForSelectivePeers(enableFor))").string
                     }
                 } else if enableForPremium {
                     if enableFor.isEmpty {
-                        return "Premium Users"
+                        return strings.PrivacySettings_ValuePremium
                     } else {
-                        return "Premium Users +\(countForSelectivePeers(enableFor))"
+                        return strings.PrivacySettings_ValuePremiumPlus("\(countForSelectivePeers(enableFor))").string
                     }
                 } else if enableForCloseFriends {
                     if enableFor.isEmpty {
@@ -543,16 +542,7 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
             }
         case let .enableContacts(enableFor, disableFor, enableForPremium):
             if enableForPremium {
-                return "Premium & Contacts"
-                /*if !enableFor.isEmpty && !disableFor.isEmpty {
-                    return "Premium, " + strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(disableFor))", "\(countForSelectivePeers(enableFor))").string
-                } else if !enableFor.isEmpty {
-                    return "Premium, " + strings.PrivacySettings_LastSeenContactsPlus("\(countForSelectivePeers(enableFor))").string
-                } else if !disableFor.isEmpty {
-                    return "Premium, " + strings.PrivacySettings_LastSeenContactsMinus("\(countForSelectivePeers(disableFor))").string
-                } else {
-                    return "Premium, " + strings.PrivacySettings_LastSeenContacts
-                }*/
+                return strings.PrivacySettings_ValuePremiumAndContacts
             } else {
                 if !enableFor.isEmpty && !disableFor.isEmpty {
                     return strings.PrivacySettings_LastSeenContactsMinusPlus("\(countForSelectivePeers(disableFor))", "\(countForSelectivePeers(enableFor))").string
@@ -649,8 +639,7 @@ private func privacyAndSecurityControllerEntries(
             entries.append(.voiceMessagePrivacy(presentationData.theme, presentationData.strings.Privacy_VoiceMessages, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.voiceMessages), isPremium))
             entries.append(.messagePrivacy(presentationData.theme, privacySettings.globalSettings.nonContactChatsRequirePremium, isPremium))
         }
-        //TODO:localize
-        entries.append(.groupPrivacy(presentationData.theme, "Invites", stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.groupInvitations)))
+        entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_InviteItem, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.groupInvitations)))
         entries.append(.groupPrivacyFooter)
     } else {
         entries.append(.phoneNumberPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_PhoneNumber, presentationData.strings.Channel_NotificationLoading))
