@@ -109,9 +109,11 @@ public final class TextFieldComponent: Component {
     public let characterLimit: Int?
     public let emptyLineHandling: EmptyLineHandling
     public let formatMenuAvailability: FormatMenuAvailability
+    public let returnKeyType: UIReturnKeyType
     public let lockedFormatAction: () -> Void
     public let present: (ViewController) -> Void
     public let paste: (PasteData) -> Void
+    public let returnKeyAction: (() -> Void)?
     
     public init(
         context: AccountContext,
@@ -128,9 +130,11 @@ public final class TextFieldComponent: Component {
         characterLimit: Int? = nil,
         emptyLineHandling: EmptyLineHandling = .allowed,
         formatMenuAvailability: FormatMenuAvailability,
+        returnKeyType: UIReturnKeyType = .default,
         lockedFormatAction: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
-        paste: @escaping (PasteData) -> Void
+        paste: @escaping (PasteData) -> Void,
+        returnKeyAction: (() -> Void)? = nil
     ) {
         self.context = context
         self.theme = theme
@@ -146,9 +150,11 @@ public final class TextFieldComponent: Component {
         self.characterLimit = characterLimit
         self.emptyLineHandling = emptyLineHandling
         self.formatMenuAvailability = formatMenuAvailability
+        self.returnKeyType = returnKeyType
         self.lockedFormatAction = lockedFormatAction
         self.present = present
         self.paste = paste
+        self.returnKeyAction = returnKeyAction
     }
     
     public static func ==(lhs: TextFieldComponent, rhs: TextFieldComponent) -> Bool {
@@ -192,6 +198,9 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.formatMenuAvailability != rhs.formatMenuAvailability {
+            return false
+        }
+        if lhs.returnKeyType != rhs.returnKeyType {
             return false
         }
         return true
@@ -408,6 +417,13 @@ public final class TextFieldComponent: Component {
         }
         
         public func chatInputTextNodeShouldReturn() -> Bool {
+            guard let component = self.component else {
+                return true
+            }
+            if let returnKeyAction = component.returnKeyAction {
+                returnKeyAction()
+                return false
+            }
             return true
         }
         
@@ -565,6 +581,7 @@ public final class TextFieldComponent: Component {
             guard let component = self.component else {
                 return true
             }
+            
             if let characterLimit = component.characterLimit {
                 let string = self.inputState.inputText.string as NSString
                 let updatedString = string.replacingCharacters(in: range, with: text)
@@ -582,6 +599,11 @@ public final class TextFieldComponent: Component {
                     return false
                 }
             case .notAllowed:
+                if (range.length == 0 && text == "\n"), let returnKeyAction = component.returnKeyAction {
+                    returnKeyAction()
+                    return false
+                }
+                
                 let string = self.inputState.inputText.string as NSString
                 let updatedString = string.replacingCharacters(in: range, with: text)
                 if updatedString.range(of: "\n") != nil {
@@ -1079,6 +1101,10 @@ public final class TextFieldComponent: Component {
                 if #available(iOS 13.0, *) {
                     self.textView.overrideUserInterfaceStyle = component.theme.overallDarkAppearance ? .dark : .light
                 }
+            }
+            
+            if self.textView.returnKeyType != component.returnKeyType {
+                self.textView.returnKeyType = component.returnKeyType
             }
             
             if let initialText = component.externalState.initialText {

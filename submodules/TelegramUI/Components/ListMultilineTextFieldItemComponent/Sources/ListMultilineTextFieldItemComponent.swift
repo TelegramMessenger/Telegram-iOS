@@ -45,10 +45,12 @@ public final class ListMultilineTextFieldItemComponent: Component {
     public let placeholder: String
     public let autocapitalizationType: UITextAutocapitalizationType
     public let autocorrectionType: UITextAutocorrectionType
+    public let returnKeyType: UIReturnKeyType
     public let characterLimit: Int?
     public let displayCharacterLimit: Bool
     public let emptyLineHandling: EmptyLineHandling
     public let updated: ((String) -> Void)?
+    public let returnKeyAction: (() -> Void)?
     public let textUpdateTransition: Transition
     public let tag: AnyObject?
     
@@ -62,10 +64,12 @@ public final class ListMultilineTextFieldItemComponent: Component {
         placeholder: String,
         autocapitalizationType: UITextAutocapitalizationType = .sentences,
         autocorrectionType: UITextAutocorrectionType = .default,
+        returnKeyType: UIReturnKeyType = .default,
         characterLimit: Int? = nil,
         displayCharacterLimit: Bool = false,
         emptyLineHandling: EmptyLineHandling = .allowed,
         updated: ((String) -> Void)?,
+        returnKeyAction: (() -> Void)? = nil,
         textUpdateTransition: Transition = .immediate,
         tag: AnyObject? = nil
     ) {
@@ -78,10 +82,12 @@ public final class ListMultilineTextFieldItemComponent: Component {
         self.placeholder = placeholder
         self.autocapitalizationType = autocapitalizationType
         self.autocorrectionType = autocorrectionType
+        self.returnKeyType = returnKeyType
         self.characterLimit = characterLimit
         self.displayCharacterLimit = displayCharacterLimit
         self.emptyLineHandling = emptyLineHandling
         self.updated = updated
+        self.returnKeyAction = returnKeyAction
         self.textUpdateTransition = textUpdateTransition
         self.tag = tag
     }
@@ -112,6 +118,9 @@ public final class ListMultilineTextFieldItemComponent: Component {
             return false
         }
         if lhs.autocorrectionType != rhs.autocorrectionType {
+            return false
+        }
+        if lhs.returnKeyType != rhs.returnKeyType {
             return false
         }
         if lhs.characterLimit != rhs.characterLimit {
@@ -196,6 +205,12 @@ public final class ListMultilineTextFieldItemComponent: Component {
             return false
         }
         
+        public func activateInput() {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                textFieldView.activateInput()
+            }
+        }
+        
         func update(component: ListMultilineTextFieldItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -260,11 +275,18 @@ public final class ListMultilineTextFieldItemComponent: Component {
                     characterLimit: component.characterLimit,
                     emptyLineHandling: mappedEmptyLineHandling,
                     formatMenuAvailability: .none,
+                    returnKeyType: component.returnKeyType,
                     lockedFormatAction: {
                     },
                     present: { _ in
                     },
                     paste: { _ in
+                    },
+                    returnKeyAction: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.returnKeyAction?()
                     }
                 )),
                 environment: {},

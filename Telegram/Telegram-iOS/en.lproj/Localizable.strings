@@ -11599,7 +11599,7 @@ Sorry for the inconvenience.";
 "ChatbotSetup.Recipients.IncludedSectionFooter" = "Select chats or entire chat categories which the bot **WILL** have access to.";
 
 "ChatbotSetup.PermissionsSectionHeader" = "BOT PERMISSIONS";
-"ChatbotSetup.PermissionsSectionFooter" = "The bot will be able to view all new incoming messages, but not the messages that had been sent before you added the bot.";
+"ChatbotSetup.PermissionsSectionFooter" = "The bot can only reply on your behalf in chats that were active during the last 24h.";
 "ChatbotSetup.Permission.ReplyToMessages" = "Reply to Messages";
 
 "ChatbotSetup.BotAddAction" = "ADD";

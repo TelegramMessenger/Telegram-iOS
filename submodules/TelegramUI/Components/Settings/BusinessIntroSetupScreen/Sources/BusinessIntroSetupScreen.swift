@@ -77,6 +77,7 @@ final class BusinessIntroSetupScreenComponent: Component {
         private let introSection = ComponentView<Empty>()
         private let deleteSection = ComponentView<Empty>()
         
+        private var ignoreScrolling: Bool = false
         private var isUpdating: Bool = false
         
         private var component: BusinessIntroSetupScreenComponent?
@@ -161,7 +162,9 @@ final class BusinessIntroSetupScreenComponent: Component {
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            self.updateScrolling(transition: .immediate)
+            if !self.ignoreScrolling {
+                self.updateScrolling(transition: .immediate)
+            }
         }
         
         private var scrolledUp = true
@@ -765,10 +768,20 @@ final class BusinessIntroSetupScreenComponent: Component {
                 placeholder: "Enter Title",
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
+                returnKeyType: .next,
                 characterLimit: 32,
                 displayCharacterLimit: true,
                 emptyLineHandling: .notAllowed,
                 updated: { _ in
+                },
+                returnKeyAction: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    
+                    if let titleView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
+                        titleView.activateInput()
+                    }
                 },
                 textUpdateTransition: .spring(duration: 0.4),
                 tag: self.titleInputTag
@@ -786,10 +799,19 @@ final class BusinessIntroSetupScreenComponent: Component {
                 placeholder: "Enter Message",
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
+                returnKeyType: .done,
                 characterLimit: 70,
                 displayCharacterLimit: true,
                 emptyLineHandling: .notAllowed,
                 updated: { _ in
+                },
+                returnKeyAction: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    if let titleView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
+                        titleView.endEditing(true)
+                    }
                 },
                 textUpdateTransition: .spring(duration: 0.4),
                 tag: self.textInputTag
@@ -1083,6 +1105,7 @@ final class BusinessIntroSetupScreenComponent: Component {
             
             let previousBounds = self.scrollView.bounds
             
+            self.ignoreScrolling = true
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
             if self.scrollView.frame != CGRect(origin: CGPoint(), size: availableSize) {
                 self.scrollView.frame = CGRect(origin: CGPoint(), size: availableSize)
@@ -1123,6 +1146,7 @@ final class BusinessIntroSetupScreenComponent: Component {
             }
             
             self.topOverscrollLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: -3000.0), size: CGSize(width: availableSize.width, height: 3000.0))
+            self.ignoreScrolling = false
             
             self.updateScrolling(transition: transition)
             
