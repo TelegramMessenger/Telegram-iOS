@@ -49,13 +49,13 @@ final class StickerCutoutOutlineView: UIView {
         self.imageLayer.contents = image.cgImage
         
         if let path = getPathFromMaskImage(maskImage, size: size, values: values) {
-            self.strokeLayer.shadowPath = path.cgPath.expand(width: 1.5)
+            self.strokeLayer.shadowPath = path.path.cgPath.expand(width: 1.5)
             
             self.setupAnimation(path: path)
         }
     }
         
-    func setupAnimation(path: UIBezierPath) {
+    private func setupAnimation(path: BezierPath) {
         self.outlineLayer = CAEmitterLayer()
         self.outlineLayer.opacity = 0.7
         self.glowLayer = CAEmitterLayer()
@@ -66,11 +66,13 @@ final class StickerCutoutOutlineView: UIView {
         let randomBeginTime = (previousBeginTime + 4) % 6
         previousBeginTime = randomBeginTime
         
+        let duration = path.length / 2200.0
+        
         let outlineAnimation = CAKeyframeAnimation(keyPath: "emitterPosition")
-        outlineAnimation.path = path.cgPath
-        outlineAnimation.duration = 5.0
+        outlineAnimation.path = path.path.cgPath
+        outlineAnimation.duration = duration
         outlineAnimation.repeatCount = .infinity
-        outlineAnimation.calculationMode = .paced
+        outlineAnimation.calculationMode = .cubicPaced
         outlineAnimation.beginTime = Double(randomBeginTime)
         self.outlineLayer.add(outlineAnimation, forKey: "emitterPosition")
         
@@ -83,8 +85,8 @@ final class StickerCutoutOutlineView: UIView {
         lineEmitterCell.color = UIColor.white.cgColor
         lineEmitterCell.contents = UIImage(named: "Media Editor/ParticleDot")?.cgImage
         lineEmitterCell.lifetime = 2.2
-        lineEmitterCell.birthRate = 600
-        lineEmitterCell.scale = 0.13
+        lineEmitterCell.birthRate = 1000
+        lineEmitterCell.scale = 0.14
         lineEmitterCell.alphaSpeed = -0.4
         
         self.outlineLayer.emitterCells = [lineEmitterCell]
@@ -93,8 +95,8 @@ final class StickerCutoutOutlineView: UIView {
         self.outlineLayer.emitterShape = .point
         
         let glowAnimation = CAKeyframeAnimation(keyPath: "emitterPosition")
-        glowAnimation.path = path.cgPath
-        glowAnimation.duration = 5.0
+        glowAnimation.path = path.path.cgPath
+        glowAnimation.duration = duration
         glowAnimation.repeatCount = .infinity
         glowAnimation.calculationMode = .cubicPaced
         glowAnimation.beginTime = Double(randomBeginTime)
@@ -136,7 +138,7 @@ final class StickerCutoutOutlineView: UIView {
     }
 }
 
-private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaEditorValues) -> UIBezierPath? {
+private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaEditorValues) -> BezierPath? {
     let edges = image.applyingFilter("CILineOverlay", parameters: ["inputEdgeIntensity": 0.1])
             
     guard let pixelBuffer = getEdgesBitmap(edges) else {
@@ -151,7 +153,7 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
     
     var contour = findContours(pixelBuffer: pixelBuffer)
     contour = simplify(contour, tolerance: 1.4)
-    let path = UIBezierPath(points: contour, smooth: false)
+    let path = BezierPath(points: contour, smooth: false)
     
     let firstScale = min(size.width, size.height) / 256.0
     let secondScale = size.width / 1080.0
@@ -165,8 +167,8 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
     transform = transform.rotated(by: rotation)
     transform = transform.scaledBy(x: scale * firstScale, y: scale * firstScale)
     
-    if !path.isEmpty {
-        path.apply(transform)
+    if !path.path.isEmpty {
+        path.apply(transform, scale: scale)
         return path
     }
     return nil
@@ -481,9 +483,12 @@ fileprivate extension Array {
     }
 }
 
-private extension UIBezierPath {
-    convenience init(points: [CGPoint], smooth: Bool) {
-        self.init()
+private class BezierPath {
+    let path: UIBezierPath
+    var length: CGFloat = 0.0
+    
+    init(points: [CGPoint], smooth: Bool) {
+        self.path = UIBezierPath()
         
         if smooth {
             let K: CGFloat = 0.2
@@ -499,19 +504,25 @@ private extension UIBezierPath {
                 c2[(index + points.count - 1) % points.count] = CGPoint(x: p.x - v.x, y: p.y - v.y) //(p - v)
                 c1[(index + points.count) % points.count] = CGPoint(x: p.x + v.x, y: p.y + v.y) //(p + v)
             }
-            self.move(to: points[0])
+            self.path.move(to: points[0])
             for index in 0 ..< points.count - 1 {
                 let c1 = c1[index] ?? points[points.circularIndex(index)]
                 let c2 = c2[index] ?? points[points.circularIndex(index + 1)]
-                self.addCurve(to: points[circularIndex: index + 1], controlPoint1: c1, controlPoint2: c2)
+                self.path.addCurve(to: points[circularIndex: index + 1], controlPoint1: c1, controlPoint2: c2)
             }
-            self.close()
+            self.path.close()
         } else {
-            self.move(to: points[0])
+            self.path.move(to: points[0])
             for index in 1 ..< points.count - 1 {
-                self.addLine(to: points[index])
+                self.length += points[index].distanceFrom(points[index - 1])
+                self.path.addLine(to: points[index])
             }
-            self.close()
+            self.path.close()
         }
+    }
+    
+    func apply(_ transform: CGAffineTransform, scale: CGFloat) {
+        self.path.apply(transform)
+        self.length *= scale
     }
 }

@@ -245,7 +245,7 @@ private final class MediaCutoutScreenComponent: Component {
                 transition.setFrame(view: view, frame: previewContainerFrame)
             }
             
-            let frameWidth = floor(previewContainerFrame.width * 0.97)
+            let frameWidth = floorToScreenPixels(previewContainerFrame.width * 0.97)
             
             self.fadeView.frame = CGRect(x: floorToScreenPixels((previewContainerFrame.width - frameWidth) / 2.0), y: previewContainerFrame.minY + floorToScreenPixels((previewContainerFrame.height - frameWidth) / 2.0), width: frameWidth, height: frameWidth)
             self.fadeView.layer.cornerRadius = frameWidth / 8.0

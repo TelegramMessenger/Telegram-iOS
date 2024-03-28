@@ -1815,7 +1815,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
         case .monetization:
-            if revenueState == nil {
+            if revenueState?.stats == nil {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
         }

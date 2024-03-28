@@ -58,13 +58,13 @@ public struct RevenueStatsContextState: Equatable {
 }
 
 private func requestRevenueStats(postbox: Postbox, network: Network, peerId: PeerId, dark: Bool = false) -> Signal<RevenueStats?, NoError> {
-    return postbox.transaction { transaction -> (Int32, Peer)? in
-        if let peer = transaction.getPeer(peerId), let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData {
-            return (cachedData.statsDatacenterId, peer)
+    return postbox.transaction { transaction -> Peer? in
+        if let peer = transaction.getPeer(peerId) {
+            return peer
         }
         return nil
-    } |> mapToSignal { data -> Signal<RevenueStats?, NoError> in
-        guard let (statsDatacenterId, peer) = data, let inputChannel = apiInputChannel(peer) else {
+    } |> mapToSignal { peer -> Signal<RevenueStats?, NoError> in
+        guard let peer, let inputChannel = apiInputChannel(peer) else {
             return .never()
         }
         
@@ -73,18 +73,7 @@ private func requestRevenueStats(postbox: Postbox, network: Network, peerId: Pee
             flags |= (1 << 1)
         }
         
-        let signal: Signal<Api.stats.BroadcastRevenueStats, MTRpcError>
-        if network.datacenterId != statsDatacenterId {
-            signal = network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
-            |> castError(MTRpcError.self)
-            |> mapToSignal { worker in
-                return worker.request(Api.functions.stats.getBroadcastRevenueStats(flags: flags, channel: inputChannel))
-            }
-        } else {
-            signal = network.request(Api.functions.stats.getBroadcastRevenueStats(flags: flags, channel: inputChannel))
-        }
-        
-        return signal
+        return network.request(Api.functions.stats.getBroadcastRevenueStats(flags: flags, channel: inputChannel))
         |> map { result -> RevenueStats? in
             return RevenueStats(apiRevenueStats: result, peerId: peerId)
         }
