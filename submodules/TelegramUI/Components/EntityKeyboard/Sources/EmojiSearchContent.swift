@@ -475,6 +475,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
             searchInitiallyHidden: false,
             searchAlwaysActive: true,
             searchIsPlaceholderOnly: false,
+            searchUnicodeEmojiOnly: false,
             emptySearchResults: nil,
             enableLongPress: false,
             selectedItems: Set(),

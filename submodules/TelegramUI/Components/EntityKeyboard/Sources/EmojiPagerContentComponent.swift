@@ -2832,9 +2832,10 @@ public final class EmojiPagerContentComponent: Component {
     public let searchInitiallyHidden: Bool
     public let searchAlwaysActive: Bool
     public let searchIsPlaceholderOnly: Bool
+    public let searchUnicodeEmojiOnly: Bool
     public let emptySearchResults: EmptySearchResults?
     public let enableLongPress: Bool
-    public let selectedItems: Set<MediaId>
+    public let selectedItems: Set<AnyHashable>
     public let customTintColor: UIColor?
     
     public init(
@@ -2856,9 +2857,10 @@ public final class EmojiPagerContentComponent: Component {
         searchInitiallyHidden: Bool,
         searchAlwaysActive: Bool,
         searchIsPlaceholderOnly: Bool,
+        searchUnicodeEmojiOnly: Bool,
         emptySearchResults: EmptySearchResults?,
         enableLongPress: Bool,
-        selectedItems: Set<MediaId>,
+        selectedItems: Set<AnyHashable>,
         customTintColor: UIColor?
     ) {
         self.id = id
@@ -2879,6 +2881,7 @@ public final class EmojiPagerContentComponent: Component {
         self.searchInitiallyHidden = searchInitiallyHidden
         self.searchAlwaysActive = searchAlwaysActive
         self.searchIsPlaceholderOnly = searchIsPlaceholderOnly
+        self.searchUnicodeEmojiOnly = searchUnicodeEmojiOnly
         self.emptySearchResults = emptySearchResults
         self.enableLongPress = enableLongPress
         self.selectedItems = selectedItems
@@ -2905,6 +2908,7 @@ public final class EmojiPagerContentComponent: Component {
             searchInitiallyHidden: self.searchInitiallyHidden,
             searchAlwaysActive: self.searchAlwaysActive,
             searchIsPlaceholderOnly: self.searchIsPlaceholderOnly,
+            searchUnicodeEmojiOnly: self.searchUnicodeEmojiOnly,
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
             selectedItems: self.selectedItems,
@@ -2932,6 +2936,7 @@ public final class EmojiPagerContentComponent: Component {
             searchInitiallyHidden: self.searchInitiallyHidden,
             searchAlwaysActive: self.searchAlwaysActive,
             searchIsPlaceholderOnly: self.searchIsPlaceholderOnly,
+            searchUnicodeEmojiOnly: self.searchUnicodeEmojiOnly,
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
             selectedItems: selectedItems,
@@ -2959,6 +2964,7 @@ public final class EmojiPagerContentComponent: Component {
             searchInitiallyHidden: self.searchInitiallyHidden,
             searchAlwaysActive: self.searchAlwaysActive,
             searchIsPlaceholderOnly: self.searchIsPlaceholderOnly,
+            searchUnicodeEmojiOnly: self.searchUnicodeEmojiOnly,
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
             selectedItems: self.selectedItems,
@@ -3649,7 +3655,7 @@ public final class EmojiPagerContentComponent: Component {
                         let string = NSAttributedString(string: staticEmoji, font: Font.regular(floor(32.0 * scaleFactor)), textColor: .black)
                         let boundingRect = string.boundingRect(with: scaledSize, options: .usesLineFragmentOrigin, context: nil)
                         UIGraphicsPushContext(context)
-                        string.draw(at: CGPoint(x: floor((scaledSize.width - boundingRect.width) / 2.0 + boundingRect.minX), y: floor((scaledSize.height - boundingRect.height) / 2.0 + boundingRect.minY)))
+                        string.draw(at: CGPoint(x: floorToScreenPixels((scaledSize.width - boundingRect.width) / 2.0 + boundingRect.minX), y: floorToScreenPixels((scaledSize.height - boundingRect.height) / 2.0 + boundingRect.minY)))
                         UIGraphicsPopContext()
                     })
                     self.contents = image?.cgImage
@@ -6227,7 +6233,11 @@ public final class EmojiPagerContentComponent: Component {
                         }
                         
                         var isSelected = false
-                        if let itemFile = item.itemFile, component.selectedItems.contains(itemFile.fileId) {
+                        var isEmoji = false
+                        if case let .staticEmoji(emoji) = item.content, component.selectedItems.contains(emoji) {
+                            isSelected = true
+                            isEmoji = true
+                        } else if let itemFile = item.itemFile, component.selectedItems.contains(itemFile.fileId) {
                             isSelected = true
                         } else if case let .icon(icon) = item.content.id, component.selectedItems.isEmpty {
                             if case .topic = icon {
@@ -6242,9 +6252,10 @@ public final class EmojiPagerContentComponent: Component {
                             if let current = self.visibleItemSelectionLayers[itemId] {
                                 itemSelectionLayer = current
                             } else {
+                                let cornerRadius = isEmoji ? baseItemFrame.width / 2.0 : 8.0
                                 itemSelectionLayer = ItemSelectionLayer()
-                                itemSelectionLayer.cornerRadius = 8.0
-                                itemSelectionLayer.tintContainerLayer.cornerRadius = 8.0
+                                itemSelectionLayer.cornerRadius = cornerRadius
+                                itemSelectionLayer.tintContainerLayer.cornerRadius = cornerRadius
                                 self.scrollView.layer.insertSublayer(itemSelectionLayer, below: itemLayer)
                                 self.mirrorContentScrollView.layer.addSublayer(itemSelectionLayer.tintContainerLayer)
                                 self.visibleItemSelectionLayers[itemId] = itemSelectionLayer
@@ -6268,9 +6279,13 @@ public final class EmojiPagerContentComponent: Component {
                             
                             itemTransition.setFrame(layer: itemSelectionLayer, frame: baseItemFrame)
                             
-//                            itemLayer.transform = CATransform3DMakeScale(0.8, 0.8, 1.0)
+                            if isEmoji {
+                                itemLayer.transform = CATransform3DMakeScale(0.8, 0.8, 1.0)
+                            }
                         } else {
-//                            itemLayer.transform = CATransform3DIdentity
+                            if isEmoji {
+                                itemLayer.transform = CATransform3DIdentity
+                            }
                         }
                         
                         if animateItemIn, !transition.animation.isImmediate, let contentAnimation = contentAnimation, case .groupExpanded(id: itemGroup.groupId) = contentAnimation.type, let placeholderView = self.visibleItemPlaceholderViews[itemId] {
@@ -6453,6 +6468,7 @@ public final class EmojiPagerContentComponent: Component {
                 if case let .icon(icon) = id.itemId, case .topic = icon, component.selectedItems.isEmpty {
                 } else if case let .icon(icon) = id.itemId, case .stop = icon, component.selectedItems.isEmpty {
                 } else if let fileId = fileId, component.selectedItems.contains(fileId) {
+                } else if case let .staticEmoji(emoji) = id.itemId, component.selectedItems.contains(emoji) {
                 } else {
                     itemSelectionLayer.removeFromSuperlayer()
                     removedItemSelectionLayerIds.append(id)

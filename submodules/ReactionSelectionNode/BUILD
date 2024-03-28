@@ -25,6 +25,7 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/Components/PagerComponent:PagerComponent",
         "//submodules/TelegramUI/Components/EmojiStatusSelectionComponent:EmojiStatusSelectionComponent",
         "//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboard",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",

@@ -110,7 +110,6 @@ private final class RevenueStatsContextImpl {
     }
     
     private let disposable = MetaDisposable()
-    private let disposables = DisposableDict<String>()
     
     init(postbox: Postbox, network: Network, peerId: PeerId) {
         assert(Queue.mainQueue().isCurrent())
@@ -127,10 +126,9 @@ private final class RevenueStatsContextImpl {
     deinit {
         assert(Queue.mainQueue().isCurrent())
         self.disposable.dispose()
-        self.disposables.dispose()
     }
     
-    private func load() {
+    fileprivate func load() {
         assert(Queue.mainQueue().isCurrent())
         
         self.disposable.set((requestRevenueStats(postbox: self.postbox, network: self.network, peerId: self.peerId)
@@ -141,7 +139,7 @@ private final class RevenueStatsContextImpl {
             }
         }))
     }
-    
+        
     func loadDetailedGraph(_ graph: StatsGraph, x: Int64) -> Signal<StatsGraph?, NoError> {
         if let token = graph.token {
             return requestGraph(postbox: self.postbox, network: self.network, peerId: self.peerId, token: token, x: x)
@@ -170,6 +168,12 @@ public final class RevenueStatsContext {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
             return RevenueStatsContextImpl(postbox: postbox, network: network, peerId: peerId)
         })
+    }
+    
+    public func reload() {
+        self.impl.with { impl in
+            impl.load()
+        }
     }
             
     public func loadDetailedGraph(_ graph: StatsGraph, x: Int64) -> Signal<StatsGraph?, NoError> {

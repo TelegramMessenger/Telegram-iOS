@@ -165,6 +165,7 @@ private final class ScrollContent: CombinedComponent {
             contentSize.height += text.size.height
             contentSize.height += spacing
             
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             var items: [AnyComponentWithIdentity<Empty>] = []
             items.append(
                 AnyComponentWithIdentity(
@@ -200,7 +201,7 @@ private final class ScrollContent: CombinedComponent {
                     component: AnyComponent(ParagraphComponent(
                         title: strings.AdsInfo_Ads_Title,
                         titleColor: textColor,
-                        text: strings.AdsInfo_Ads_Text,
+                        text: strings.AdsInfo_Ads_Text("\(premiumConfiguration.minChannelRestrictAdsLevel)").string,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Premium/BoostPerk/NoAds",

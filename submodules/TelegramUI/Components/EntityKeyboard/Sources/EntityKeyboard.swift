@@ -709,6 +709,11 @@ public final class EntityKeyboardComponent: Component {
                 panelHideBehavior = .hideOnScroll
             }
             
+            var forceUpdate = false
+            if let _ = transition.userData(PagerComponentForceUpdate.self) {
+                forceUpdate = true
+            }
+            
             let isContentInFocus = component.isContentInFocus && self.searchComponent == nil
             let pagerSize = self.pagerView.update(
                 transition: transition,
@@ -785,6 +790,7 @@ public final class EntityKeyboardComponent: Component {
                         }
                     )
                 },
+                forceUpdate: forceUpdate,
                 containerSize: availableSize
             )
             transition.setFrame(view: self.pagerView, frame: CGRect(origin: CGPoint(), size: pagerSize))

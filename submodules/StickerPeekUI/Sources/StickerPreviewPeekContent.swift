@@ -40,23 +40,25 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     public let item: StickerPreviewPeekItem
     let isLocked: Bool
     let isCreating: Bool
-    let reactionItems: [ReactionItem]
+    let selectedEmoji: [String]
+    let selectedEmojiUpdated: ([String]) -> Void
     let menu: [ContextMenuItem]
     let openPremiumIntro: () -> Void
     
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, item: StickerPreviewPeekItem, isLocked: Bool = false, isCreating: Bool = false, menu: [ContextMenuItem], reactionItems: [ReactionItem] = [], openPremiumIntro: @escaping () -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, item: StickerPreviewPeekItem, isLocked: Bool = false, isCreating: Bool = false, selectedEmoji: [String] = [], selectedEmojiUpdated: @escaping ([String]) -> Void = { _ in }, menu: [ContextMenuItem], openPremiumIntro: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
         self.item = item
         self.isLocked = isLocked
         self.isCreating = isCreating
+        self.selectedEmoji = selectedEmoji
+        self.selectedEmojiUpdated = selectedEmojiUpdated
         if isLocked {
             self.menu = []
         } else {
             self.menu = menu
         }
-        self.reactionItems = reactionItems
         self.openPremiumIntro = openPremiumIntro
     }
     
@@ -82,7 +84,7 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     
     public func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)? {
         if self.isCreating {
-            return EmojiStickerAccessoryNode(context: self.context, theme: self.theme, reactionItems: self.reactionItems)
+            return EmojiStickerAccessoryNode(context: self.context, theme: self.theme, selectedEmoji: self.selectedEmoji, selectedEmojiUpdated: self.selectedEmojiUpdated)
         }
         if self.isLocked {
             return PremiumStickerPackAccessoryNode(theme: self.theme, strings: self.strings, isEmoji: self.item.file?.isCustomEmoji ?? false, proceed: self.openPremiumIntro)
@@ -361,62 +363,47 @@ final class PremiumStickerPackAccessoryNode: SparseNode, PeekControllerAccessory
     }
 }
 
+private func topItems(selectedEmoji: [String] = [], count: Int) -> [String] {
+    let defaultItems: [String] = [
+        "👍", "👎", "❤", "🔥", "🥰", "👏", "😁"
+    ]
+    var result = selectedEmoji.filter { !defaultItems.contains($0) }
+    result.append(contentsOf: defaultItems)
+    return Array(result.prefix(count))
+}
+
 final class EmojiStickerAccessoryNode: SparseNode, PeekControllerAccessoryNode {
     let context: AccountContext
     
     let reactionContextNode: ReactionContextNode
+    var selectedItemsDisposable: Disposable?
     
     var dismiss: () -> Void = {}
     
-    init(context: AccountContext, theme: PresentationTheme, reactionItems: [ReactionItem]) {
+    private var scheduledCollapse = false
+    
+    init(context: AccountContext, theme: PresentationTheme, selectedEmoji: [String], selectedEmojiUpdated: @escaping ([String]) -> Void) {
         self.context = context
                 
         var layoutImpl: ((ContainedViewLayoutTransition) -> Void)?
-                
-        var items: [ReactionItem] = []
-        if let reaction = reactionItems.first(where: { $0.reaction.rawValue == .builtin("👍") }) {
-            items.append(reaction)
-        }
-        if let reaction = reactionItems.first(where: { $0.reaction.rawValue == .builtin("👎") }) {
-            items.append(reaction)
-        }
-        if let reaction = reactionItems.first(where: { $0.reaction.rawValue == .builtin("❤") }) {
-            items.append(reaction)
-        }
-        if let reaction = reactionItems.first(where: { $0.reaction.rawValue == .builtin("🔥") }) {
-            items.append(reaction)
-        }
-        if let reaction = reactionItems.first(where: { $0.reaction.rawValue == .builtin("🥰") }) {
-            items.append(reaction)
-        }
-        if let reaction = reactionItems.first(where: { $0.reaction.rawValue == .builtin("👏") }) {
-            items.append(reaction)
-        }
-        if let reaction = reactionItems.first(where: { $0.reaction.rawValue == .builtin("😁") }) {
-            items.append(reaction)
-        }
         
-        let selectedItems = ValuePromise<Set<MessageReaction.Reaction>>(Set())
+        let items = topItems(selectedEmoji: selectedEmoji, count: 7)
+        let selectedItems = ValuePromise<[String]>(selectedEmoji)
+        
         //TODO:localize
         let reactionContextNode = ReactionContextNode(
             context: self.context,
             animationCache: self.context.animationCache,
             presentationData: self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme),
-            items: items.map { .reaction($0) },
-            selectedItems: Set(),
+            items: items.map { .staticEmoji($0) },
+            selectedItems: Set(selectedEmoji),
             title: "Set emoji that corresponds to your sticker",
             reactionsLocked: false,
             alwaysAllowPremiumReactions: true,
             allPresetReactionsAreAvailable: true,
             getEmojiContent: { animationCache, animationRenderer in
-                let mappedReactionItems: [EmojiComponentReactionItem] = items.map { reaction -> EmojiComponentReactionItem in
-                    return EmojiComponentReactionItem(reaction: reaction.reaction.rawValue, file: reaction.stillAnimation)
-                }
-        
                 return selectedItems.get()
                 |> mapToSignal { selectedItems in
-                    let selected = Set<MediaId>()
-                                        
                     return EmojiPagerContentComponent.emojiInputData(
                         context: context,
                         animationCache: animationCache,
@@ -424,11 +411,12 @@ final class EmojiStickerAccessoryNode: SparseNode, PeekControllerAccessoryNode {
                         isStandalone: false,
                         subject: .stickerAlt,
                         hasTrending: false,
-                        topReactionItems: mappedReactionItems,
+                        topReactionItems: [],
+                        topEmojiItems: topItems(selectedEmoji: selectedItems, count: 7),
                         areUnicodeEmojiEnabled: true,
                         areCustomEmojiEnabled: false,
                         chatPeerId: context.account.peerId,
-                        selectedItems: selected,
+                        selectedItems: Set(selectedItems),
                         hasRecent: false,
                         premiumIfSavedMessages: false
                     )
@@ -448,56 +436,90 @@ final class EmojiStickerAccessoryNode: SparseNode, PeekControllerAccessoryNode {
         reactionContextNode.displayTail = true
         reactionContextNode.forceTailToRight = true
         reactionContextNode.forceDark = true
+        reactionContextNode.isEmojiOnly = true
         self.reactionContextNode = reactionContextNode
                 
         super.init()
         
         layoutImpl = { [weak self] transition in
-            self?.requestLayout(transition: transition)
+            self?.requestLayout(forceUpdate: true, transition: transition)
         }
         
-        reactionContextNode.reactionSelected = { [weak self] updateReaction, _ in
+        reactionContextNode.emojiSelected = { [weak self] emoji in
             guard let self else {
                 return
             }
-            self.reactionContextNode.collapse()
-            
             let _ = (selectedItems.get()
             |> take(1)
-            |> deliverOnMainQueue).startStandalone(next: { items in
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] items in
+                guard let self else {
+                    return
+                }
                 var items = items
-                items.insert(updateReaction.reaction)
+                if let index = items.firstIndex(where: { $0 == emoji }) {
+                    items.remove(at: index)
+                } else {
+                    items.append(emoji)
+                }
                 selectedItems.set(items)
+                selectedEmojiUpdated(items)
+                
+                self.reactionContextNode.collapse()
             })
         }
         
         self.addSubnode(reactionContextNode)
+        
+        self.selectedItemsDisposable = (selectedItems.get()
+        |> deliverOnMainQueue).start(next: { [weak self] items in
+            guard let self else {
+                return
+            }
+            self.reactionContextNode.selectedItems = Set(items)
+            self.reactionContextNode.items = topItems(selectedEmoji: items, count: 7).map { .staticEmoji($0) }
+        })
+    }
+    
+    deinit {
+        self.selectedItemsDisposable?.dispose()
     }
         
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let result = super.hitTest(point, with: event)
         if let result, result.isDescendant(of: self.reactionContextNode.view) {
             return result
+        } else if self.reactionContextNode.isExpanded {
+            if !self.scheduledCollapse {
+                self.scheduledCollapse = true
+                Queue.mainQueue().after(0.01, {
+                    self.scheduledCollapse = false
+                    self.reactionContextNode.collapse()
+                })
+            }
+            return self.reactionContextNode.view
         }
         return nil
     }
     
-    func requestLayout(transition: ContainedViewLayoutTransition) {
+    func requestLayout(forceUpdate: Bool = false, transition: ContainedViewLayoutTransition) {
         guard let size = self.currentLayout else {
             return
         }
-        self.updateLayout(size: size, transition: transition)
+        self.updateLayout(size: size, forceUpdate: forceUpdate, transition: transition)
     }
     
     private var currentLayout: CGSize?
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.updateLayout(size: size, forceUpdate: false, transition: transition)
+    }
+    func updateLayout(size: CGSize, forceUpdate: Bool, transition: ContainedViewLayoutTransition) {
         let isFirstTime = self.currentLayout == nil
         self.currentLayout = size
         
         let anchorRect = CGRect(x: size.width / 2.0, y: size.height / 3.0 - 50.0, width: 0.0, height: 0.0)
         
         transition.updateFrame(view: self.reactionContextNode.view, frame: CGRect(origin: CGPoint(), size: size))
-        self.reactionContextNode.updateLayout(size: size, insets: UIEdgeInsets(top: 64.0, left: 0.0, bottom: 0.0, right: 0.0), anchorRect: anchorRect, centerAligned: true, isCoveredByInput: false, isAnimatingOut: false, transition: transition)
+        self.reactionContextNode.updateLayout(size: size, insets: UIEdgeInsets(top: 64.0, left: 0.0, bottom: 0.0, right: 0.0), anchorRect: anchorRect, centerAligned: true, isCoveredByInput: false, isAnimatingOut: false, forceUpdate: forceUpdate, transition: transition)
         
         if isFirstTime {
             self.reactionContextNode.animateIn(from: anchorRect)

@@ -1556,37 +1556,27 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 }
             })
             
-            
             self.newPerksDisposable = combineLatest(queue: Queue.mainQueue(),
-                ApplicationSpecificNotice.dismissedPremiumAppIconsBadge(accountManager: context.sharedContext.accountManager),
-                ApplicationSpecificNotice.dismissedPremiumWallpapersBadge(accountManager: context.sharedContext.accountManager),
-                ApplicationSpecificNotice.dismissedPremiumColorsBadge(accountManager: context.sharedContext.accountManager),
-                ApplicationSpecificNotice.dismissedMessageTagsBadge(accountManager: context.sharedContext.accountManager),
-                ApplicationSpecificNotice.dismissedLastSeenBadge(accountManager: context.sharedContext.accountManager),
-                ApplicationSpecificNotice.dismissedMessagePrivacyBadge(accountManager: context.sharedContext.accountManager),
-                ApplicationSpecificNotice.dismissedBusinessBadge(accountManager: context.sharedContext.accountManager)
-            ).startStrict(next: { [weak self] dismissedPremiumAppIconsBadge, dismissedPremiumWallpapersBadge, dismissedPremiumColorsBadge, dismissedMessageTagsBadge, dismissedLastSeenBadge, dismissedMessagePrivacyBadge, dismissedBusinessBadge in
+                ApplicationSpecificNotice.dismissedBusinessBadge(accountManager: context.sharedContext.accountManager),
+                ApplicationSpecificNotice.dismissedBusinessLinksBadge(accountManager: context.sharedContext.accountManager),
+                ApplicationSpecificNotice.dismissedBusinessIntroBadge(accountManager: context.sharedContext.accountManager),
+                ApplicationSpecificNotice.dismissedBusinessChatbotsBadge(accountManager: context.sharedContext.accountManager)
+            ).startStrict(next: { [weak self] dismissedBusinessBadge, dismissedBusinessLinksBadge, dismissedBusinessIntroBadge, dismissedBusinessChatbotsBadge in
                 guard let self else {
                     return
                 }
                 var newPerks: [String] = []
-                if !dismissedPremiumWallpapersBadge {
-                    newPerks.append(PremiumPerk.wallpapers.identifier)
-                }
-                if !dismissedPremiumColorsBadge {
-                    newPerks.append(PremiumPerk.colors.identifier)
-                }
-                if !dismissedMessageTagsBadge {
-                    newPerks.append(PremiumPerk.messageTags.identifier)
-                }
-                if !dismissedLastSeenBadge {
-                    newPerks.append(PremiumPerk.lastSeen.identifier)
-                }
-                if !dismissedMessagePrivacyBadge {
-                    newPerks.append(PremiumPerk.messagePrivacy.identifier)
-                }
                 if !dismissedBusinessBadge {
                     newPerks.append(PremiumPerk.business.identifier)
+                }
+                if !dismissedBusinessLinksBadge {
+                    newPerks.append(PremiumPerk.businessLinks.identifier)
+                }
+                if !dismissedBusinessIntroBadge {
+                    newPerks.append(PremiumPerk.businessIntro.identifier)
+                }
+                if !dismissedBusinessChatbotsBadge {
+                    newPerks.append(PremiumPerk.businessChatBots.identifier)
                 }
                 self.newPerks = newPerks
                 self.updated()
@@ -2047,19 +2037,14 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .stories
                             case .colors:
                                 demoSubject = .colors
-                                let _ = ApplicationSpecificNotice.setDismissedPremiumColorsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             case .wallpapers:
                                 demoSubject = .wallpapers
-                                let _ = ApplicationSpecificNotice.setDismissedPremiumWallpapersBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             case .messageTags:
                                 demoSubject = .messageTags
-                                let _ = ApplicationSpecificNotice.setDismissedMessageTagsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             case .lastSeen:
                                 demoSubject = .lastSeen
-                                let _ = ApplicationSpecificNotice.setDismissedLastSeenBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             case .messagePrivacy:
                                 demoSubject = .messagePrivacy
-                                let _ = ApplicationSpecificNotice.setDismissedMessagePrivacyBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             case .business:
                                 demoSubject = .business
                                 let _ = ApplicationSpecificNotice.setDismissedBusinessBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
@@ -2145,17 +2130,30 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 var i = 0
                 var perksItems: [AnyComponentWithIdentity<Empty>] = []
                 for perk in state.configuration.businessPerks  {
+                    let isNew = state.newPerks.contains(perk.identifier)
+                    let titleComponent = AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: perk.title(strings: strings),
+                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                            textColor: environment.theme.list.itemPrimaryTextColor
+                        )),
+                        maximumNumberOfLines: 0
+                    ))
+                    
+                    let titleCombinedComponent: AnyComponent<Empty>
+                    if isNew {
+                        titleCombinedComponent = AnyComponent(HStack([
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: titleComponent),
+                            AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(BadgeComponent(color: gradientColors[i], text: strings.Premium_New)))
+                        ], spacing: 5.0))
+                    } else {
+                        titleCombinedComponent = AnyComponent(HStack([AnyComponentWithIdentity(id: AnyHashable(0), component: titleComponent)], spacing: 0.0))
+                    }
+                    
                     perksItems.append(AnyComponentWithIdentity(id: perksItems.count, component: AnyComponent(ListActionItemComponent(
                         theme: environment.theme,
                         title: AnyComponent(VStack([
-                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(
-                                    string: perk.title(strings: strings),
-                                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                    textColor: environment.theme.list.itemPrimaryTextColor
-                                )),
-                                maximumNumberOfLines: 0
-                            ))),
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: titleCombinedComponent),
                             AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
                                     string: perk.subtitle(strings: strings),
@@ -2231,15 +2229,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         }
                                         push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext, initialData: initialData))
                                     })
-                                case .businessLinks:
-                                    let _ = (accountContext.sharedContext.makeBusinessLinksSetupScreenInitialData(context: accountContext)
-                                    |> take(1)
-                                    |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
-                                        guard let accountContext else {
-                                            return
-                                        }
-                                        push(accountContext.sharedContext.makeBusinessLinksSetupScreen(context: accountContext, initialData: initialData))
-                                    })
+                                    let _ = ApplicationSpecificNotice.setDismissedBusinessChatbotsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                                 case .businessIntro:
                                     let _ = (accountContext.sharedContext.makeBusinessIntroSetupScreenInitialData(context: accountContext)
                                     |> take(1)
@@ -2249,6 +2239,17 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         }
                                         push(accountContext.sharedContext.makeBusinessIntroSetupScreen(context: accountContext, initialData: initialData))
                                     })
+                                    let _ = ApplicationSpecificNotice.setDismissedBusinessIntroBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
+                                case .businessLinks:
+                                    let _ = (accountContext.sharedContext.makeBusinessLinksSetupScreenInitialData(context: accountContext)
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                        guard let accountContext else {
+                                            return
+                                        }
+                                        push(accountContext.sharedContext.makeBusinessLinksSetupScreen(context: accountContext, initialData: initialData))
+                                    })
+                                    let _ = ApplicationSpecificNotice.setDismissedBusinessLinksBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                                 default:
                                     fatalError()
                                 }
@@ -2267,10 +2268,13 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     demoSubject = .businessAwayMessage
                                 case .businessChatBots:
                                     demoSubject = .businessChatBots
+                                    let _ = ApplicationSpecificNotice.setDismissedBusinessChatbotsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                                 case .businessIntro:
                                     demoSubject = .businessIntro
+                                    let _ = ApplicationSpecificNotice.setDismissedBusinessIntroBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                                 case .businessLinks:
                                     demoSubject = .businessLinks
+                                    let _ = ApplicationSpecificNotice.setDismissedBusinessLinksBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                                 default:
                                     fatalError()
                                 }

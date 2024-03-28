@@ -82,7 +82,7 @@ private final class SheetPageContent: CombinedComponent {
         let background = Child(RoundedRectangle.self)
         let back = Child(Button.self)
         let title = Child(Text.self)
-        let subtitle = Child(Text.self)
+        let subtitle = Child(MultilineTextComponent.self)
         let section = Child(ListSectionComponent.self)
         
         return { context in
@@ -140,15 +140,17 @@ private final class SheetPageContent: CombinedComponent {
                 .position(CGPoint(x: sideInset + back.size.width / 2.0 - (component.title != nil ? 8.0 : 0.0), y: contentSize.height + back.size.height / 2.0))
             )
             
+            let constrainedTitleWidth = context.availableSize.width - (back.size.width + 16.0) * 2.0
+            
             let title = title.update(
                 component: Text(text: strings.ReportAd_Title, font: Font.semibold(17.0), color: theme.list.itemPrimaryTextColor),
-                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
+                availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
                 transition: .immediate
             )
             if let subtitleText = component.title {
                 let subtitle = subtitle.update(
-                    component: Text(text: subtitleText, font: Font.regular(13.0), color: theme.list.itemSecondaryTextColor),
-                    availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
+                    component: MultilineTextComponent(text: .plain(NSAttributedString(string: subtitleText, font: Font.regular(13.0), textColor: theme.list.itemSecondaryTextColor)), truncationType: .end, maximumNumberOfLines: 1),
+                    availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
                     transition: .immediate
                 )
                 context.add(title

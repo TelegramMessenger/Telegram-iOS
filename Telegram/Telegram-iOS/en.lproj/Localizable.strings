@@ -11749,7 +11749,7 @@ Sorry for the inconvenience.";
 "AdsInfo.Split.Title" = "Help the Channel Creator";
 "AdsInfo.Split.Text" = "50% of the revenue from Telegram Ads goes to the owner of the channel where they are displayed.";
 "AdsInfo.Ads.Title" = "Can Be Removed";
-"AdsInfo.Ads.Text" = "You can turn off ads by subscribing to [Telegram Premium](), and Level 30 channels can remove them for their subscribers.";
+"AdsInfo.Ads.Text" = "You can turn off ads by subscribing to [Telegram Premium](), and Level %@ channels can remove them for their subscribers.";
 
 "AdsInfo.Launch.Title" = "Can I Launch an Ad?";
 "AdsInfo.Launch.Text" = "Anyone can create ads to display in this channel – with minimal budgets. Check out the Telegram Ad Platform for details. [Learn More >]()";
