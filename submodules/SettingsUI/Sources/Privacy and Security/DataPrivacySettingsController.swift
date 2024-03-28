@@ -267,10 +267,9 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
         case let .secretChatLinkPreviewsInfo(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case .botList:
-            //TODO:localize
             return ItemListDisclosureItem(
                 presentationData: presentationData,
-                title: "Bot Settings",
+                title: presentationData.strings.Settings_BotListSettings,
                 label: "",
                 sectionId: self.section,
                 style: .blocks,

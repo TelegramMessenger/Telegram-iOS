@@ -238,8 +238,7 @@ public final class BusinessLinkNameAlertContentNode: AlertContentNode {
         self.subtext = subtext
         self.titleFont = titleFont
         
-        //TODO:localize
-        self.inputFieldNode = PromptInputFieldNode(theme: ptheme, placeholder: "Name this link...", characterLimit: characterLimit)
+        self.inputFieldNode = PromptInputFieldNode(theme: ptheme, placeholder: strings.Business_Links_LinkNameInputPlaceholder, characterLimit: characterLimit)
         self.inputFieldNode.text = value ?? ""
         
         self.actionNodesSeparator = ASDisplayNode()

@@ -767,10 +767,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let message = inputText.string
                     
                     if message != link.message || entities != link.entities {
-                        //TODO:localize
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: "You have unsaved changes. Reset?", actions: [
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Business_Links_AlertUnsavedText, actions: [
                             TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
-                            TextAlertAction(type: .destructiveAction, title: "Reset", action: { [weak strongSelf] in
+                            TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.Business_Links_AlertUnsavedAction, action: { [weak strongSelf] in
                                 strongSelf?.dismiss()
                             })
                         ]), in: .window(.root))
@@ -6320,8 +6319,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             linkUrl = link.url
                         }
                         
-                        //TODO:localize
-                        self.chatTitleView?.titleContent = .custom(link.title ?? "Link to Chat", linkUrl, false)
+                        self.chatTitleView?.titleContent = .custom(link.title ?? self.presentationData.strings.Business_Links_EditLinkTitle, linkUrl, false)
                     }
                 } else {
                     self.chatTitleView?.titleContent = .custom(" ", nil, false)
@@ -8485,8 +8483,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         customChatContents.businessLinkUpdate(message: text, entities: entities, title: link.title)
                     }
                     
-                    //TODO:localize
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: "Preset message saved.", timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Business_Links_EditLinkToastSaved, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
             }
             
@@ -11872,7 +11869,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            //TODO:localize
             let title: String
             let text: String
             switch event {
@@ -11881,15 +11877,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["upload_premium_speedup_download"] as? Double {
                     speedIncreaseFactor = Int(value)
                 }
-                title = "Download speed limited"
-                text = "Subscribe to [Telegram Premium]() and increase download speeds \(speedIncreaseFactor) times."
+                title = self.presentationData.strings.Chat_SpeedLimitAlert_Download_Title
+                text = self.presentationData.strings.Chat_SpeedLimitAlert_Download_Text("\(speedIncreaseFactor)").string
             case .upload:
                 var speedIncreaseFactor = 10
                 if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["upload_premium_speedup_upload"] as? Double {
                     speedIncreaseFactor = Int(value)
                 }
-                title = "Upload speed limited"
-                text = "Subscribe to [Telegram Premium]() and increase upload speeds \(speedIncreaseFactor) times."
+                title = self.presentationData.strings.Chat_SpeedLimitAlert_Upload_Title
+                text = self.presentationData.strings.Chat_SpeedLimitAlert_Upload_Text("\(speedIncreaseFactor)").string
             }
             let content: UndoOverlayContent = .universal(animation: "anim_speed_low", scale: 0.066, colors: [:], title: title, text: text, customUndoText: nil, timeout: 5.0)
             

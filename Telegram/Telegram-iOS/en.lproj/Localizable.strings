@@ -11760,3 +11760,125 @@ Sorry for the inconvenience.";
 "Chat.ContextMenu.AboutAd" = "About This Ad";
 "Chat.ContextMenu.ReportAd" = "Report Ad";
 "Chat.ContextMenu.RemoveAd" = "Remove Ad";
+
+"Settings.BotListSettings" = "Bot Settings";
+"Settings.BotSettings.Biometry" = "Biometry";
+
+"PrivacySettings.ValueCloseFriendsAndPremium" = "Close Friends, Premium";
+"PrivacySettings.ValueCloseFriendsAndPremiumPlus" = "Close Friends, Premium +%@";
+"PrivacySettings.ValuePremium" = "Premium Users";
+"PrivacySettings.ValuePremiumPlus" = "Premium Users +%@";
+"PrivacySettings.ValuePremiumAndContacts" = "Premium & Contacts";
+
+"PrivacySettings.InviteItem" = "Invites";
+"PrivacySettings.InviteSectionFooter" = "You can restrict which users are allowed to add you to groups and channels.";
+
+"PrivacySettings.CategoryPremiumUsers" = "Premium Users";
+"PrivacySettings.SearchUserTypesHeader" = "USER TYPES";
+"PrivacySettings.SearchUsersTitle" = "Add Users";
+"PrivacySettings.SearchUsersPlaceholder" = "Search users and groups";
+
+"Business.Links.PreviewTitle" = "Link to Chat";
+"Business.Links.PreviewText" = "Add a message that will be entered in the message input field for anyone who starts a chat with you using this link:";
+
+"Chat.EmptyStateIntroFooter" = "%@ added the message above for all empty chats";
+"Chat.EmptyStateIntroFooterAction" = "how?";
+"Chat.EmptyStateIntroFooterPremiumActionButton" = "OK";
+
+"Settings.PersonalChannelItem" = "Channel";
+"Settings.PersonalChannelEmptyValue" = "Add";
+"Settings.PersonalChannelAddedToast" = "Personal channel added.";
+"Settings.PersonalChannelUpdatedToast" = "Personal channel updated.";
+"Settings.PersonalChannelRemovedToast" = "Personal channel removed.";
+"Settings.PersonalChannelSelectTitle" = "Channel";
+"Settings.PersonalChannelSelectSubtitle" = "select your channel";
+"Settings.PersonalChannelRemove" = "Hide Channel";
+
+"Profile.PersonalChannelSectionTitle" = "CHANNEL";
+
+"SendInviteLink.TitleUpgradeToPremium" = "Upgrade to Premium";
+"SendInviteLink.TextContactsAndPremiumOneUser" = "**%@** accepts invitations to groups from contacts and **Premium** users.";
+
+"SendInviteLink.TextContactsAndPremiumMultipleUsers_1" = "{user_list}, and **%d** more person only accept invitations to groups from contacts and **Premium** users.";
+"SendInviteLink.TextContactsAndPremiumMultipleUsers_any" = "{user_list}, and **%d** more people only accept invitations to groups from contacts and **Premium** users.";
+
+"SendInviteLink.SubscribeToPremiumButton" = "Subscribe to Telegram Premium";
+"SendInviteLink.PremiumOrSendSectionSeparator" = "or";
+
+"SendInviteLink.TextSendInviteLink" = "You can try to send an invite link instead.";
+"SendInviteLink.StatusAvailableToPremiumOnly" = "Available only to premium users";
+
+"Business.Links.ItemNoClicks" = "no clicks";
+"Business.Links.ItemClickCount_1" = "1 click";
+"Business.Links.ItemClickCount_any" = "%2 clicks";
+"Business.Links.ItemNoText" = "No text";
+"Business.Links.ItemActionShare" = "Share";
+
+"Business.Links.ErrorTooManyLinks" = "You can't create more links";
+"Business.Links.DeleteItemConfirmationAction" = "Delete Link";
+
+"Business.Links.Text" = "Give your customers short links that start a chat with you — and suggest the first message from them to you.";
+
+"Business.Links.CreateAction" = "Create a Link to Chat";
+"Business.Links.LinksSectionHeader" = "LINKS TO CHAT";
+
+"Business.Links.SimpleLinkInfoUsernamePhone" = "You can also use a simple link for a chat with you — [t.me/%1$@](username) or [t.me/\u{2060}+\u{2060}%2$@](phone).";
+"Business.Links.SimpleLinkInfoUsername" = "You can also use a simple link for a chat with you — [t.me/%@](username).";
+"Business.Links.SimpleLinkInfoPhone" = "You can also use a simple link for a chat with you — [t.me/\u{2060}+\u{2060}%@](phone).";
+
+"Business.Links.LinkNameTitle" = "Link Name";
+"Business.Links.LinkNameText" = "Add a name for this link that only you will see.";
+"Business.Links.LinkNameInputPlaceholder" = "Name this link...";
+
+"Business.Links.AlertUnsavedText" = "You have unsaved changes. Reset?";
+"Business.Links.AlertUnsavedAction" = "Reset";
+"Business.Links.EditLinkTitle" = "Link to Chat";
+"Business.Links.EditLinkToastSaved" = "Preset message saved.";
+
+"Business.Intro.Title" = "Intro";
+"Business.Intro.IntroTitlePlaceholder" = "Title";
+"Business.Intro.IntroTextPlaceholder" = "Enter Message";
+"Business.Intro.IntroSticker" = "Choose Sticker";
+"Business.Intro.IntroStickerValueRandom" = "Random";
+"Business.Intro.CustomizeSectionHeader" = "CUSTOMIZE YOUR INTRO";
+"Business.Intro.CustomizeSectionFooter" = "You can customize the message people see before they start a chat with you.";
+"Business.Intro.ResetToDefault" = "Reset to Default";
+
+"ChatbotSetup.Recipients.AddUsers" = "Add Users";
+"ChatbotSetup.Recipients.RemoveAll" = "Remove All Exceptions";
+"ChatbotSetup.Recipients.SelectionTitle" = "Add Exception";
+"ChatbotSetup.Recipients.ExcludedListTitle" = "Excluded Chats";
+"ChatbotSetup.Recipients.IncludedListTitle" = "Included Chats";
+
+"ChatbotSetup.ErrorBotNotBusinessCapable" = "This bot doesn't support Telegram Business yet.";
+
+"ChatbotSetup.RecipientSummary.ValueEmpty" = "Add";
+"ChatbotSetup.RecipientSummary.ValueItems_1" = "1 item";
+"ChatbotSetup.RecipientSummary.ValueItems_any" = "%d items";
+
+"ChatbotSetup.RecipientSummary.ExcludedChatsItem" = "Excluded Chats";
+"ChatbotSetup.RecipientSummary.IncludedChatsItem" = "Included Chats";
+
+"Chat.ToastPhoneNumberCopied" = "Phone number copied to clipboard.";
+
+"Chat.SpeedLimitAlert.Download.Title" = "Download speed limited";
+"Chat.SpeedLimitAlert.Download.Text" = "Subscribe to [Telegram Premium]() and increase download speeds %@ times.";
+
+"Chat.SpeedLimitAlert.Upload.Title" = "Upload speed limited";
+"Chat.SpeedLimitAlert.Upload.Text" = "Subscribe to [Telegram Premium]() and increase upload speeds %@ times.";
+
+"Chat.BusinessBotMessageTooltip" = "Only you can see that this\nmessage was sent by the bot.";
+
+"Chat.BusinessBotPanel.ActionStart" = "START";
+"Chat.BusinessBotPanel.ActionStop" = "STOP";
+"Chat.BusinessBotPanel.StatusPaused" = "bot paused";
+"Chat.BusinessBotPanel.StatusManages" = "bot manages this chat";
+"Chat.BusinessBotPanel.StatusHasAccess" = "bot has access to this chat";
+"Chat.BusinessBotPanel.Menu.RemoveBot" = "Remove bot from this chat";
+"Chat.BusinessBotPanel.Menu.ManageBot" = "Manage Bot";
+
+"Chat.Placeholder.BusinessLinkPreset" = "Add a preset message...";
+
+"BusinessLink.ErrorExpired" = "Link Expired";
+
+"WebApp.AlertBiometryAccessText" = "Do you want to allow %@ to use Face ID?";

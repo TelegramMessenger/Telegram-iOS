@@ -1071,8 +1071,7 @@ func openResolvedUrlImpl(
                     ))
                 }
             } else {
-                //TODO:localize
-                present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: "Link expired.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.BusinessLink_ErrorExpired, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }
     }
 }

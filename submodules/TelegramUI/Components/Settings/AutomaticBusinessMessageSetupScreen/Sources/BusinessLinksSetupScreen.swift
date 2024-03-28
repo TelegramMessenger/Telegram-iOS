@@ -181,7 +181,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                 case .generic:
                     errorText = presentationData.strings.Login_UnknownError
                 case .tooManyLinks:
-                    errorText = "You can't create more links"
+                    errorText = presentationData.strings.Business_Links_ErrorTooManyLinks
                 }
                 
                 environment.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [
@@ -229,7 +229,7 @@ final class BusinessLinksSetupScreenComponent: Component {
             let actionSheet = ActionSheetController(presentationData: presentationData)
             
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: "Delete Link", color: .destructive, action: { [weak self, weak actionSheet] in
+                ActionSheetButtonItem(title: presentationData.strings.Business_Links_DeleteItemConfirmationAction, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
                     guard let self, let component = self.component else {
@@ -308,11 +308,10 @@ final class BusinessLinksSetupScreenComponent: Component {
             let _ = alphaTransition
             let _ = presentationData
             
-            //TODO:localize
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Links to Chat", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.Business_Links, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -359,7 +358,7 @@ final class BusinessLinksSetupScreenComponent: Component {
             
             contentHeight += 129.0
             
-            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Give your customers short links that start a chat with you — and suggest the first message from them to you.", attributes: MarkdownAttributes(
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Business_Links_Text, attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                 bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
                 link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
@@ -406,7 +405,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Create a Link to Chat",
+                            string: environment.strings.Business_Links_CreateAction,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemAccentColor
                         )),
@@ -428,11 +427,11 @@ final class BusinessLinksSetupScreenComponent: Component {
             
             let footerText: String
             if let addressName = component.initialData.accountPeer?.addressName, let phoneNumber = component.initialData.accountPeer?.phone {
-                footerText = "You can also use a simple link for a chat with you — [t.me/\(addressName)](username) or [t.me/\u{2060}+\u{2060}\(phoneNumber)](phone)."
+                footerText = environment.strings.Business_Links_SimpleLinkInfoUsernamePhone(addressName, phoneNumber).string
             } else if let addressName = component.initialData.accountPeer?.addressName {
-                footerText = "You can also use a simple link for a chat with you — [t.me/\(addressName)](username)."
+                footerText = environment.strings.Business_Links_SimpleLinkInfoUsername(addressName).string
             } else if let phoneNumber = component.initialData.accountPeer?.phone {
-                footerText = "You can also use a simple link for a chat with you — [t.me/\u{2060}+\u{2060}\(phoneNumber)](phone)."
+                footerText = environment.strings.Business_Links_SimpleLinkInfoPhone(phoneNumber).string
             } else {
                 footerText = ""
             }
@@ -490,7 +489,6 @@ final class BusinessLinksSetupScreenComponent: Component {
                                     return true
                                 }
                             }
-                            //TODO:localize
                             let controller = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.GroupInfo_InviteLink_CopyAlert_Success), elevatedLayout: false, position: .bottom, animateInAsReplacement: animateAsReplacement, action: { _ in
                                 return false
                             })
@@ -546,7 +544,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "LINKS TO CHAT",
+                            string: environment.strings.Business_Links_LinksSectionHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),

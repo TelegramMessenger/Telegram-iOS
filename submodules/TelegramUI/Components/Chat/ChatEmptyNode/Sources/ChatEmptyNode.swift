@@ -824,13 +824,12 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                         ]
                     }
                 case let .businessLinkSetup(link):
-                    //TODO:localize
                     iconName = "Chat/Empty Chat/BusinessLink"
                     centerText = true
-                    titleString = "Link to Chat"
+                    titleString = interfaceState.strings.Business_Links_PreviewTitle
                     textFontSize = 13.0
                     strings = [
-                        "Add a message that will be entered in the message input field for anyone who starts a chat with you using this link:"
+                        interfaceState.strings.Business_Links_PreviewText
                     ]
                     if link.url.hasPrefix("https://") {
                         businessLink = String(link.url[link.url.index(link.url.startIndex, offsetBy: "https://".count)...])
@@ -965,7 +964,6 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
         
         var linkTextLayout: TextNodeLayout?
         if let linkTextNode {
-            //TODO:localize
             let linkTextLayoutValue = linkTextNode.updateLayoutFullInfo(CGSize(width: maxWidth - insets.left - insets.right - 10.0, height: CGFloat.greatestFiniteMagnitude))
             linkTextLayout = linkTextLayoutValue
             contentHeight += businessLinkTextSpacing + linkTextLayoutValue.size.height + 20.0
@@ -1518,10 +1516,9 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
     private func updateInternal(params: Params, wallpaperBackgroundNode: WallpaperBackgroundNode?) -> CGSize {
         let serviceColor = serviceMessageColorComponents(theme: params.theme, wallpaper: params.chatWallpaper)
         
-        //TODO:localize
         let textString = NSMutableAttributedString()
-        textString.append(NSAttributedString(string: "\(params.peer.compactDisplayTitle) added the message above for all empty chats", font: Font.regular(13.0), textColor: serviceColor.primaryText))
-        textString.append(NSAttributedString(string: "  .how?", font: Font.regular(11.0), textColor: .clear))
+        textString.append(NSAttributedString(string: params.strings.Chat_EmptyStateIntroFooter(params.peer.compactDisplayTitle).string, font: Font.regular(13.0), textColor: serviceColor.primaryText))
+        textString.append(NSAttributedString(string: "  .\(params.strings.Chat_EmptyStateIntroFooterAction)", font: Font.regular(11.0), textColor: .clear))
         self.textNode.attributedText = textString
         
         let maxTextSize = CGSize(width: min(300.0, params.constrainedSize.width - 8.0 * 2.0), height: params.constrainedSize.height - 8.0 * 2.0)
@@ -1597,8 +1594,7 @@ private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
         let textFrame = CGRect(origin: CGPoint(x: 4.0, y: 4.0), size: textLayout.size)
         self.textNode.frame = textFrame
         
-        //TODO:localize
-        self.badgeTextNode.attributedText = NSAttributedString(string: "how?", font: Font.regular(11.0), textColor: serviceColor.primaryText)
+        self.badgeTextNode.attributedText = NSAttributedString(string: params.strings.Chat_EmptyStateIntroFooterAction, font: Font.regular(11.0), textColor: serviceColor.primaryText)
         let badgeTextSize = self.badgeTextNode.updateLayout(CGSize(width: 200.0, height: 100.0))
         if let lastLineFrame = labelRects.last {
             let badgeTextFrame = CGRect(origin: CGPoint(x: lastLineFrame.maxX - badgeTextSize.width - 3.0, y: textFrame.maxY - badgeTextSize.height - 3.0 - UIScreenPixel), size: badgeTextSize)
@@ -1817,7 +1813,6 @@ public final class ChatEmptyNode: ASDisplayNode {
                     
                     let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
                     
-                    //TODO:localize
                     let controller = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.GroupInfo_InviteLink_CopyAlert_Success), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in
                         return false
                     })
@@ -1873,16 +1868,17 @@ public final class ChatEmptyNode: ASDisplayNode {
                 self.attachedDescriptionNode = attachedDescriptionNode
                 self.addSubnode(attachedDescriptionNode)
                 
+                let strings = interfaceState.strings
+                
                 attachedDescriptionNode.action = { [weak self] in
                     guard let self else {
                         return
                     }
                     
-                    //TODO:localize
                     let context = self.context
                     var replaceImpl: ((ViewController) -> Void)?
                     var dismissImpl: (() -> Void)?
-                    let controller = PremiumLimitsListScreen(context: context, subject: .business, source: .other, order: [.business], buttonText: "OK", isPremium: false, forceDark: false)
+                    let controller = PremiumLimitsListScreen(context: context, subject: .business, source: .other, order: [.business], buttonText: strings.Chat_EmptyStateIntroFooterPremiumActionButton, isPremium: false, forceDark: false)
                     controller.action = {
                         if isPremium {
                             dismissImpl?()

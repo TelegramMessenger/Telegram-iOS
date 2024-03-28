@@ -153,8 +153,7 @@ public func botListSettingsScreen(context: AccountContext) -> ViewController {
     )
     |> deliverOnMainQueue
     |> map { presentationData, state, botPeerList -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        //TODO:localize
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Bots"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Settings_BotListSettings), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: botListSettingsEntries(presentationData: presentationData, peers: botPeerList), style: .blocks, animateChanges: true)
         
         return (controllerState, (listState, arguments))

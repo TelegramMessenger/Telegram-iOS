@@ -174,9 +174,8 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
         let arguments = arguments as! SelectivePrivacyPeersControllerArguments
         switch self {
         case let .premiumUsersItem(editing, enabled):
-            //TODO:localize
             let peer: EnginePeer = .user(TelegramUser(
-                id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(1)), accessHash: nil, firstName: "Premium Users", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil))
+                id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(1)), accessHash: nil, firstName: presentationData.strings.PrivacySettings_CategoryPremiumUsers, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil))
             return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, customAvatarIcon: premiumAvatarIcon, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
             }, setPeerIdWithRevealedOptions: { previousId, id in
                 arguments.setPeerIdWithRevealedOptions(previousId, id)
@@ -327,7 +326,8 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             case premiumUsers
         }
         
-        //TODO:localize
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
         var additionalCategories: [ChatListNodeAdditionalCategory] = []
         
         if displayPremiumCategory {
@@ -336,8 +336,8 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
                     id: AdditionalCategoryId.premiumUsers.rawValue,
                     icon: generatePremiumCategoryIcon(size: CGSize(width: 40.0, height: 40.0), cornerRadius: 12.0),
                     smallIcon: generatePremiumCategoryIcon(size: CGSize(width: 22.0, height: 22.0), cornerRadius: 6.0),
-                    title: "Premium Users",
-                    appearance: .option(sectionTitle: "USER TYPES")
+                    title: presentationData.strings.PrivacySettings_CategoryPremiumUsers,
+                    appearance: .option(sectionTitle: presentationData.strings.PrivacySettings_SearchUserTypesHeader)
                 )
             ]
         }
@@ -347,8 +347,8 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
         }
         
         let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
-            title: "Add Users",
-            searchPlaceholder: "Search users and groups",
+            title: presentationData.strings.PrivacySettings_SearchUsersTitle,
+            searchPlaceholder: presentationData.strings.PrivacySettings_SearchUsersPlaceholder,
             selectedChats: Set(),
             additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
             chatListFilters: nil,

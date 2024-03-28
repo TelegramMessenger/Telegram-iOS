@@ -66,8 +66,8 @@ extension ChatControllerImpl {
             var completion: ((String?) -> Void)?
             let alertController = businessLinkNameAlertController(
                 context: self.context,
-                text: "Link Name",
-                subtext: "Add a name for this link that only you will see.",
+                text: self.presentationData.strings.Business_Links_LinkNameTitle,
+                subtext: self.presentationData.strings.Business_Links_LinkNameText,
                 value: currentValue,
                 characterLimit: 32,
                 apply: { value in
@@ -93,8 +93,7 @@ extension ChatControllerImpl {
                     } else {
                         linkUrl = link.url
                     }
-                    //TODO:localize
-                    self.chatTitleView?.titleContent = .custom(value.isEmpty ? "Link to Chat" : value, linkUrl, false)
+                    self.chatTitleView?.titleContent = .custom(value.isEmpty ? self.presentationData.strings.Business_Links_EditLinkTitle : value, linkUrl, false)
                     if case let .customChatContents(customChatContents) = self.subject {
                         customChatContents.businessLinkUpdate(message: link.message, entities: link.entities, title: value.isEmpty ? nil : value)
                     }
