@@ -956,8 +956,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let navigationSeparatorAlpha: CGFloat
         if isMediaOnly {
             navigationSeparatorAlpha = 0.0
+        } else if state.isEditing && self.isSettings {
+            //navigationSeparatorAlpha = min(1.0, contentOffset / (navigationHeight * 0.5))
+            navigationSeparatorAlpha = 0.0
         } else {
-            navigationSeparatorAlpha = state.isEditing && self.isSettings ? min(1.0, contentOffset / (navigationHeight * 0.5)) : 0.0
+            navigationSeparatorAlpha = 0.0
         }
         transition.updateAlpha(node: self.navigationBackgroundBackgroundNode, alpha: 1.0 - navigationSeparatorAlpha)
         transition.updateAlpha(node: self.navigationSeparatorNode, alpha: navigationSeparatorAlpha)

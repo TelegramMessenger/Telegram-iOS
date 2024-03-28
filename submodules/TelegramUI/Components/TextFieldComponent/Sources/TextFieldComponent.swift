@@ -331,6 +331,12 @@ public final class TextFieldComponent: Component {
             }
             
             if let attributedString = attributedString {
+                let current = self.inputState
+                let range = NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)
+                if !self.chatInputTextNode(shouldChangeTextIn: range, replacementText: attributedString.string) {
+                    return false
+                }
+                
                 self.updateInputState { current in
                     if let inputText = current.inputText.mutableCopy() as? NSMutableAttributedString {
                         inputText.replaceCharacters(in: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count), with: attributedString)

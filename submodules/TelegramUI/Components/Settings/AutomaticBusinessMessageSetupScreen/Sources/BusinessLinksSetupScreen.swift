@@ -426,11 +426,11 @@ final class BusinessLinksSetupScreenComponent: Component {
             ))))
             
             let footerText: String
-            if let addressName = component.initialData.accountPeer?.addressName, let phoneNumber = component.initialData.accountPeer?.phone {
+            if let addressName = component.initialData.accountPeer?.addressName, let phoneNumber = component.initialData.accountPeer?.phone, component.initialData.displayPhone {
                 footerText = environment.strings.Business_Links_SimpleLinkInfoUsernamePhone(addressName, phoneNumber).string
             } else if let addressName = component.initialData.accountPeer?.addressName {
                 footerText = environment.strings.Business_Links_SimpleLinkInfoUsername(addressName).string
-            } else if let phoneNumber = component.initialData.accountPeer?.phone {
+            } else if let phoneNumber = component.initialData.accountPeer?.phone, component.initialData.displayPhone {
                 footerText = environment.strings.Business_Links_SimpleLinkInfoPhone(phoneNumber).string
             } else {
                 footerText = ""
@@ -440,7 +440,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
                     header: nil,
-                    footer: AnyComponent(MultilineTextComponent(
+                    footer: footerText.isEmpty ? nil : AnyComponent(MultilineTextComponent(
                         text: .markdown(text: footerText, attributes: MarkdownAttributes(
                             body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                             bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
@@ -613,10 +613,12 @@ public final class BusinessLinksSetupScreen: ViewControllerComponentContainer {
     public final class InitialData: BusinessLinksSetupScreenInitialData {
         fileprivate let accountPeer: TelegramUser?
         fileprivate let businessLinks: TelegramBusinessChatLinks?
+        fileprivate let displayPhone: Bool
         
-        fileprivate init(accountPeer: TelegramUser?, businessLinks: TelegramBusinessChatLinks?) {
+        fileprivate init(accountPeer: TelegramUser?, businessLinks: TelegramBusinessChatLinks?, displayPhone: Bool) {
             self.accountPeer = accountPeer
             self.businessLinks = businessLinks
+            self.displayPhone = displayPhone
         }
     }
     
@@ -661,18 +663,39 @@ public final class BusinessLinksSetupScreen: ViewControllerComponentContainer {
     }
     
     public static func makeInitialData(context: AccountContext) -> Signal<BusinessLinksSetupScreenInitialData, NoError> {
-        return context.engine.data.get(
-            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
-            TelegramEngine.EngineData.Item.Peer.BusinessChatLinks(id: context.account.peerId)
+        let settingsPromise: Promise<AccountPrivacySettings?>
+        if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let current = rootController.getPrivacySettings() {
+            settingsPromise = current
+        } else {
+            settingsPromise = Promise()
+            settingsPromise.set(.single(nil))
+        }
+        
+        return combineLatest(
+            context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+                TelegramEngine.EngineData.Item.Peer.BusinessChatLinks(id: context.account.peerId)
+            ),
+            settingsPromise.get()
+            |> take(1)
         )
-        |> map { peer, businessLinks in
+        |> map { data, settings in
+            let (peer, businessLinks) = data
+            
             var accountPeer: TelegramUser?
             if case let .user(user) = peer {
                 accountPeer = user
             }
+            
+            var displayPhone = true
+            if let settings {
+                displayPhone = settings.phoneDiscoveryEnabled
+            }
+            
             return InitialData(
                 accountPeer: accountPeer,
-                businessLinks: businessLinks
+                businessLinks: businessLinks,
+                displayPhone: displayPhone
             )
         }
     }

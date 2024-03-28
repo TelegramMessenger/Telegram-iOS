@@ -674,6 +674,9 @@ final class BusinessIntroSetupScreenComponent: Component {
             contentHeight += environment.navigationHeight
             contentHeight += 26.0
             
+            let maxTitleLength = 32
+            let maxTextLength = 70
+            
             self.recenterOnTag = nil
             if let hint = transition.userData(TextFieldComponent.AnimationHint.self), let targetView = hint.view {
                 if let titleView = self.introSection.findTaggedView(tag: self.titleInputTag) {
@@ -703,7 +706,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
                 returnKeyType: .next,
-                characterLimit: 32,
+                characterLimit: maxTitleLength,
                 displayCharacterLimit: true,
                 emptyLineHandling: .notAllowed,
                 updated: { _ in
@@ -839,14 +842,16 @@ final class BusinessIntroSetupScreenComponent: Component {
             if self.titleInputState.text.string.isEmpty {
                 titleText = environment.strings.Conversation_EmptyPlaceholder
             } else {
-                titleText = self.titleInputState.text.string
+                let rawTitle = self.titleInputState.text.string
+                titleText = rawTitle.count <= maxTitleLength ? rawTitle : String(rawTitle[rawTitle.startIndex ..< rawTitle.index(rawTitle.startIndex, offsetBy: maxTitleLength)])
             }
             
             let textText: String
             if self.textInputState.text.string.isEmpty {
                 textText = environment.strings.Conversation_GreetingText
             } else {
-                textText = self.textInputState.text.string
+                let rawText = self.textInputState.text.string
+                textText = rawText.count <= maxTextLength ? rawText : String(rawText[rawText.startIndex ..< rawText.index(rawText.startIndex, offsetBy: maxTextLength)])
             }
             
             let introContentSize = self.introContent.update(
