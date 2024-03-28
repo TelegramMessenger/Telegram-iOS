@@ -376,10 +376,10 @@ final class ChatHistoryPreloadManager {
     }
     
     private func update(indices: [(ChatHistoryPreloadIndex, Bool, Bool)], additionalPeerIds: Set<PeerId>) {
-        #if DEBUG
+        /*#if DEBUG
         var indices = indices
         indices.removeAll()
-        #endif
+        #endif*/
         
         self.queue.async {
             var validEntityIds = Set(indices.map { $0.0.entity })
