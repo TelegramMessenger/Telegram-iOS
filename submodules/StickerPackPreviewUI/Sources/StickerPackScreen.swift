@@ -1939,7 +1939,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     actionAreaBottomInset = 2.0
                 }
             }
-            if let (info, _, isInstalled) = self.currentStickerPack, isInstalled, GlobalExperimentalSettings.enableWIPStickers && (!info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)) {
+            if let (info, _, isInstalled) = self.currentStickerPack, isInstalled, !GlobalExperimentalSettings.enableWIPStickers || (!info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)) {
                 buttonHeight = 42.0
                 actionAreaTopInset = 1.0
                 actionAreaBottomInset = 2.0
