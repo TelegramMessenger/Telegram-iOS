@@ -72,6 +72,8 @@ private final class ScrollContent: CombinedComponent {
         let infoBackground = Child(RoundedRectangle.self)
         let infoTitle = Child(MultilineTextComponent.self)
         let infoText = Child(MultilineTextComponent.self)
+        
+        let spaceRegex = try? NSRegularExpression(pattern: "\\[(.*?)\\]", options: [])
                 
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -240,7 +242,20 @@ private final class ScrollContent: CombinedComponent {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
             }
             
-            let infoString = strings.AdsInfo_Launch_Text
+            var infoString = strings.AdsInfo_Launch_Text
+            if let spaceRegex {
+                let nsRange = NSRange(infoString.startIndex..., in: infoString)
+                let matches = spaceRegex.matches(in: infoString, options: [], range: nsRange)
+                var modifiedString = infoString
+                
+                for match in matches.reversed() {
+                    let matchRange = Range(match.range, in: infoString)!
+                    let matchedSubstring = String(infoString[matchRange])
+                    let replacedSubstring = matchedSubstring.replacingOccurrences(of: " ", with: "\u{00A0}")
+                    modifiedString.replaceSubrange(matchRange, with: replacedSubstring)
+                }
+                infoString = modifiedString
+            }
             let infoAttributedString = parseMarkdownIntoAttributedString(infoString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = infoAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
                 infoAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: infoAttributedString.string))

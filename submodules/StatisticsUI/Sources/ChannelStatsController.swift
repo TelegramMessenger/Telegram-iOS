@@ -991,7 +991,13 @@ private enum StatsEntry: ItemListNodeEntry {
                 switch transaction {
                 case let .proceeds(_, fromDate, toDate):
                     title = NSAttributedString(string: presentationData.strings.Monetization_Transaction_Proceeds, font: font, textColor: theme.list.itemPrimaryTextColor)
-                    detailText = "\(stringForMediumCompactDate(timestamp: fromDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)) – \(stringForMediumCompactDate(timestamp: toDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat))"
+                    let fromDateString = stringForMediumCompactDate(timestamp: fromDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, withTime: false)
+                    let toDateString = stringForMediumCompactDate(timestamp: toDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, withTime: false)
+                    if fromDateString == toDateString {
+                        detailText = stringForMediumCompactDate(timestamp: toDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, withTime: true)
+                    } else {
+                        detailText = "\(fromDateString) – \(toDateString)"
+                    }
                 case let .withdrawal(status, _, date, provider, _, _):
                     title = NSAttributedString(string: presentationData.strings.Monetization_Transaction_Withdrawal(provider).string, font: font, textColor: theme.list.itemPrimaryTextColor)
                     labelColor = theme.list.itemDestructiveColor
@@ -999,7 +1005,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     case .succeed:
                         detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
                     case .failed:
-                        detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat) + " – \(presentationData.strings.Monetization_Transaction_Failed)"
+                        detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, withTime: false) + " – \(presentationData.strings.Monetization_Transaction_Failed)"
                         detailColor = .destructive
                     case .pending:
                         detailText = presentationData.strings.Monetization_Transaction_Pending
