@@ -108,13 +108,13 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 case .presence:
                     return .orderedByPresence(options: options)
                 case .natural:
-                    return .natural(options: options, includeChatList: false, topPeers: false)
+                    return .natural(options: options, includeChatList: false, topPeers: .none)
             }
         }
         
         var contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)?
         
-        self.contactListNode = ContactListNode(context: context, presentation: presentation, onlyWriteable: false, displaySortOptions: true, contextAction: { peer, node, gesture, location, isStories in
+        self.contactListNode = ContactListNode(context: context, presentation: presentation, onlyWriteable: false, isGroupInvitation: false, displaySortOptions: true, contextAction: { peer, node, gesture, location, isStories in
             contextAction?(peer, node, gesture, location, isStories)
         })
         

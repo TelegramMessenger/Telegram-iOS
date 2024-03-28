@@ -178,9 +178,11 @@ public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimate
         }
     })
     
-    for entity in generateTextEntities(text.string, enabledTypes: .allUrl) {
-        if case .Url = entity.type {
-            entities.append(entity)
+    if generateLinks {
+        for entity in generateTextEntities(text.string, enabledTypes: .allUrl) {
+            if case .Url = entity.type {
+                entities.append(entity)
+            }
         }
     }
     

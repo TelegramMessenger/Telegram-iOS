@@ -145,6 +145,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
     private var lastTimeStep: Double = 0.0
     
     public var animationSpeed: Float = 1.0
+    public var playsBackwards: Bool = false
     
     public var becameEmpty: (() -> Void)?
     

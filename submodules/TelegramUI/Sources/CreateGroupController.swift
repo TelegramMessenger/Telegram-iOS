@@ -676,7 +676,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     case .supergroup:
                         createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
                         |> map { peerId -> CreateGroupResult? in
-                            return CreateGroupResult(peerId: peerId, failedToInvitePeerIds: [])
+                            return CreateGroupResult(peerId: peerId, result: TelegramInvitePeersResult(forbiddenPeers: []))
                         }
                         |> mapError { error -> CreateGroupError in
                             switch error {
@@ -705,7 +705,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                             }
                             return context.engine.peers.createSupergroup(title: title, description: nil, location: (location.latitude, location.longitude, address))
                             |> map { peerId -> CreateGroupResult? in
-                                return CreateGroupResult(peerId: peerId, failedToInvitePeerIds: [])
+                                return CreateGroupResult(peerId: peerId, result: TelegramInvitePeersResult(forbiddenPeers: []))
                             }
                             |> mapError { error -> CreateGroupError in
                                 switch error {
@@ -731,7 +731,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         let createGroupSignal: (Bool) -> Signal<CreateGroupResult?, CreateGroupError> = { isForum in
                             return context.engine.peers.createSupergroup(title: title, description: nil, isForum: isForum)
                             |> map { peerId -> CreateGroupResult? in
-                                return CreateGroupResult(peerId: peerId, failedToInvitePeerIds: [])
+                                return CreateGroupResult(peerId: peerId, result: TelegramInvitePeersResult(forbiddenPeers: []))
                             }
                             |> mapError { error -> CreateGroupError in
                                 switch error {
@@ -834,7 +834,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                                 let controller = ChatControllerImpl(context: context, chatLocation: .peer(id: result.peerId))
                                 replaceControllerImpl?(controller)
                                 
-                                if !result.failedToInvitePeerIds.isEmpty {
+                                if !result.result.forbiddenPeers.isEmpty {
                                     context.account.viewTracker.forceUpdateCachedPeerData(peerId: result.peerId)
                                     let _ = (context.engine.data.subscribe(
                                         TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: result.peerId)
@@ -847,26 +847,10 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                                             TelegramEngine.EngineData.Item.Peer.Peer(id: result.peerId)
                                         )
                                         |> deliverOnMainQueue).start(next: { peer in
-                                            let _ = controller
-                                            let _ = exportedInvitation
-                                            
                                             if let peer, let exportedInvitation, let link = exportedInvitation.link {
-                                                let _ = (context.engine.data.get(
-                                                    EngineDataList(result.failedToInvitePeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
-                                                )
-                                                |> deliverOnMainQueue).start(next: { peerItems in
-                                                    guard let controller else {
-                                                        return
-                                                    }
-                                                    let _ = controller
-                                                    let _ = peerItems
-                                                    
-                                                    let peers = peerItems.compactMap { $0 }
-                                                    if !peers.isEmpty {
-                                                        let inviteScreen = SendInviteLinkScreen(context: context, peer: peer, link: link, peers: peers)
-                                                        controller.push(inviteScreen)
-                                                    }
-                                                })
+                                                
+                                                let inviteScreen = SendInviteLinkScreen(context: context, peer: peer, link: link, peers: result.result.forbiddenPeers)
+                                                controller?.push(inviteScreen)
                                             }
                                         })
                                     })

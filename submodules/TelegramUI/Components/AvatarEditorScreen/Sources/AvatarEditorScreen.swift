@@ -434,6 +434,7 @@ final class AvatarEditorScreenComponent: Component {
                                             isPremiumLocked: false,
                                             isEmbedded: false,
                                             hasClear: false,
+                                            hasEdit: false,
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
@@ -455,6 +456,7 @@ final class AvatarEditorScreenComponent: Component {
                                             isPremiumLocked: false,
                                             isEmbedded: false,
                                             hasClear: false,
+                                            hasEdit: false,
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
@@ -513,6 +515,7 @@ final class AvatarEditorScreenComponent: Component {
                             isPremiumLocked: false,
                             isEmbedded: false,
                             hasClear: false,
+                            hasEdit: false,
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
@@ -547,6 +550,7 @@ final class AvatarEditorScreenComponent: Component {
                                     isPremiumLocked: false,
                                     isEmbedded: false,
                                     hasClear: false,
+                                    hasEdit: false,
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
@@ -654,6 +658,7 @@ final class AvatarEditorScreenComponent: Component {
                         context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
                     }
                 },
+                editAction: { _ in },
                 pushController: { c in
                 },
                 presentController: { c in
@@ -784,6 +789,7 @@ final class AvatarEditorScreenComponent: Component {
                     } else if groupId == AnyHashable("peerSpecific") {
                     }
                 },
+                editAction: { _ in },
                 pushController: { c in
                 },
                 presentController: { c in

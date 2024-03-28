@@ -282,7 +282,9 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                 return peers
             }
         
-            preloadedGroupPeers.set(context.engine.peers.adminedPublicChannels(scope: .all))
+            preloadedGroupPeers.set(context.engine.peers.adminedPublicChannels(scope: .all) |> map { result in
+                return result.map(\.peer)
+            })
         case let .groups(preloadedPeers):
             peers = .single(preloadedPeers.shuffled())
         default:

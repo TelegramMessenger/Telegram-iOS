@@ -200,6 +200,15 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     }
                 }
             }
+            
+            if controller.chatLocation.peerId == params.chatLocation.asChatLocation.peerId && controller.chatLocation.threadId == params.chatLocation.asChatLocation.threadId && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
+                if let updateTextInputState = params.updateTextInputState {
+                    Queue.mainQueue().after(0.1) {
+                        controller.updateTextInputState(updateTextInputState)
+                    }
+                }
+            }
+            
             controller.purposefulAction = params.purposefulAction
             if let search = params.activateMessageSearch {
                 controller.activateSearch(domain: search.0, query: search.1)

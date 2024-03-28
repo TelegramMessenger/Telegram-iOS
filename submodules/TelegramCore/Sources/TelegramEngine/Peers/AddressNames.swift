@@ -506,9 +506,33 @@ public enum AdminedPublicChannelsScope {
     case all
     case forLocation
     case forVoiceChat
+    case forPersonalProfile
 }
 
-func _internal_adminedPublicChannels(account: Account, scope: AdminedPublicChannelsScope = .all) -> Signal<[Peer], NoError> {
+public final class TelegramAdminedPublicChannel: Equatable {
+    public let peer: EnginePeer
+    public let subscriberCount: Int?
+    
+    public init(peer: EnginePeer, subscriberCount: Int?) {
+        self.peer = peer
+        self.subscriberCount = subscriberCount
+    }
+    
+    public static func ==(lhs: TelegramAdminedPublicChannel, rhs: TelegramAdminedPublicChannel) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.subscriberCount != rhs.subscriberCount {
+            return false
+        }
+        return true
+    }
+}
+
+func _internal_adminedPublicChannels(account: Account, scope: AdminedPublicChannelsScope = .all) -> Signal<[TelegramAdminedPublicChannel], NoError> {
     var flags: Int32 = 0
     switch scope {
     case .all:
@@ -517,28 +541,39 @@ func _internal_adminedPublicChannels(account: Account, scope: AdminedPublicChann
         flags |= (1 << 0)
     case .forVoiceChat:
         flags |= (1 << 2)
+    case .forPersonalProfile:
+        flags |= (1 << 2)
     }
     
     let accountPeerId = account.peerId
     
     return account.network.request(Api.functions.channels.getAdminedPublicChannels(flags: flags))
     |> retryRequest
-    |> mapToSignal { result -> Signal<[Peer], NoError> in
-        return account.postbox.transaction { transaction -> [Peer] in
+    |> mapToSignal { result -> Signal<[TelegramAdminedPublicChannel], NoError> in
+        return account.postbox.transaction { transaction -> [TelegramAdminedPublicChannel] in
             let chats: [Api.Chat]
+            var subscriberCounts: [PeerId: Int] = [:]
             let parsedPeers: AccumulatedPeers
             switch result {
             case let .chats(apiChats):
                 chats = apiChats
+                for chat in apiChats {
+                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _) = chat {
+                        subscriberCounts[chat.peerId] = participantsCount.flatMap(Int.init)
+                    }
+                }
             case let .chatsSlice(_, apiChats):
                 chats = apiChats
             }
             parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
             updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
-            var peers: [Peer] = []
+            var peers: [TelegramAdminedPublicChannel] = []
             for chat in chats {
                 if let peer = transaction.getPeer(chat.peerId) {
-                    peers.append(peer)
+                    peers.append(TelegramAdminedPublicChannel(
+                        peer: EnginePeer(peer),
+                        subscriberCount: subscriberCounts[peer.id]
+                    ))
                 }
             }
             return peers

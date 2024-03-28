@@ -112,11 +112,12 @@ public enum MediaQualityPreset: Int32 {
     case profile
     case profileHigh
     case profileVeryHigh
+    case sticker
     case passthrough
 
     var hasAudio: Bool {
         switch self {
-        case .animation, .profileLow, .profile, .profileHigh, .profileVeryHigh:
+        case .animation, .profileLow, .profile, .profileHigh, .profileVeryHigh, .sticker:
             return false
         default:
             return true
@@ -141,6 +142,8 @@ public enum MediaQualityPreset: Int32 {
             return 720.0
         case .profile, .profileHigh, .profileVeryHigh:
             return 800.0
+        case .sticker:
+            return 512.0
         default:
             return 848.0
         }
@@ -168,6 +171,8 @@ public enum MediaQualityPreset: Int32 {
             return 2000
         case .profileVeryHigh:
             return 2400
+        case .sticker:
+            return 1000
         default:
             return 900
         }
@@ -431,6 +436,10 @@ public final class MediaEditorValues: Codable, Equatable {
     
     var isStory: Bool {
         return self.qualityPreset == nil
+    }
+    
+    var isSticker: Bool {
+        return self.qualityPreset == .sticker
     }
     
     public init(
@@ -1525,9 +1534,11 @@ func targetSize(cropSize: CGSize, rotateSideward: Bool = false) -> CGSize {
     return CGSize(width: renderWidth, height: renderHeight)
 }
 
-public func recommendedVideoExportConfiguration(values: MediaEditorValues, duration: Double, image: Bool = false, forceFullHd: Bool = false, frameRate: Float) -> MediaEditorVideoExport.Configuration {
+public func recommendedVideoExportConfiguration(values: MediaEditorValues, duration: Double, image: Bool = false, forceFullHd: Bool = false, frameRate: Float, isSticker: Bool = false) -> MediaEditorVideoExport.Configuration {
     let compressionProperties: [String: Any]
-    let codecType: AVVideoCodecType
+    let codecType: Any
+    
+    var values = values
     
     var videoBitrate: Int = 3700
     var audioBitrate: Int = 64
@@ -1547,7 +1558,10 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
     let width: Int
     let height: Int
     
+    var frameRate = frameRate
+    
     var useHEVC = hasHEVCHardwareEncoder
+    var useVP9 = false
     if let qualityPreset = values.qualityPreset {
         let maxSize = CGSize(width: qualityPreset.maximumDimensions, height: qualityPreset.maximumDimensions)
         var resultSize = values.originalDimensions.cgSize
@@ -1566,7 +1580,13 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
         
         useHEVC = false
     } else {
-        if values.videoIsFullHd {
+        if isSticker {
+            width = 512
+            height = 512
+            useVP9 = true
+            frameRate = 30
+            values = values.withUpdatedQualityPreset(.sticker)
+        } else if values.videoIsFullHd {
             width = 1080
             height = 1920
         } else {
@@ -1575,7 +1595,10 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
         }
     }
     
-    if useHEVC {
+    if useVP9 {
+        codecType = "VP9"
+        compressionProperties = [:]
+    } else if useHEVC {
         codecType = AVVideoCodecType.hevc
         compressionProperties = [
             AVVideoAverageBitRateKey: videoBitrate * 1000,
@@ -1597,12 +1620,17 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
         AVVideoHeightKey: height
     ]
     
-    let audioSettings: [String: Any] = [
-        AVFormatIDKey: kAudioFormatMPEG4AAC,
-        AVSampleRateKey: 44100,
-        AVEncoderBitRateKey: audioBitrate * 1000,
-        AVNumberOfChannelsKey: audioNumberOfChannels
-    ]
+    let audioSettings: [String: Any]
+    if isSticker {
+        audioSettings = [:]
+    } else {
+        audioSettings = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: 44100,
+            AVEncoderBitRateKey: audioBitrate * 1000,
+            AVNumberOfChannelsKey: audioNumberOfChannels
+        ]
+    }
     
     return MediaEditorVideoExport.Configuration(
         videoSettings: videoSettings,

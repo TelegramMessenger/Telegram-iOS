@@ -383,4 +383,35 @@ public struct PresentationResourcesItemList {
             return generateTintedImage(image: UIImage(bundleImageName: "Chart/Forwards"), color: theme.list.itemSecondaryTextColor)
         })
     }
+    
+    public static func sharedLinkIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.sharedLinkIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
+                UIGraphicsPushContext(context)
+                defer {
+                    UIGraphicsPopContext()
+                }
+                
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(theme.list.itemCheckColors.fillColor.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.list.itemCheckColors.foregroundColor) {
+                    image.draw(at: CGPoint(x: floor((size.width - image.size.width) * 0.5), y: floor((size.height - image.size.height) * 0.5)))
+                }
+            })
+        })
+    }
+    
+    public static func hideIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.hideIconImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/Archive/IconHide"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func peerStatusLockedImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.peerStatusLockedImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: theme.list.itemSecondaryTextColor)
+        })
+    }
 }

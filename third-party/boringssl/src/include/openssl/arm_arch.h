@@ -53,54 +53,13 @@
 #ifndef OPENSSL_HEADER_ARM_ARCH_H
 #define OPENSSL_HEADER_ARM_ARCH_H
 
-#if !defined(__ARM_ARCH__)
-# if defined(__CC_ARM)
-#  define __ARM_ARCH__ __TARGET_ARCH_ARM
-#  if defined(__BIG_ENDIAN)
-#   define __ARMEB__
-#  else
-#   define __ARMEL__
-#  endif
-# elif defined(__GNUC__)
-#  if defined(__aarch64__)
-#    define __ARM_ARCH__ 8
-#    if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#      define __ARMEB__
-#    else
-#      define __ARMEL__
-#    endif
-  // Why doesn't gcc define __ARM_ARCH__? Instead it defines
-  // bunch of below macros. See all_architectires[] table in
-  // gcc/config/arm/arm.c. On a side note it defines
-  // __ARMEL__/__ARMEB__ for little-/big-endian.
-#  elif	defined(__ARM_ARCH)
-#    define __ARM_ARCH__ __ARM_ARCH
-#  elif	defined(__ARM_ARCH_8A__)
-#    define __ARM_ARCH__ 8
-#  elif	defined(__ARM_ARCH_7__)	|| defined(__ARM_ARCH_7A__)	|| \
-	defined(__ARM_ARCH_7R__)|| defined(__ARM_ARCH_7M__)	|| \
-	defined(__ARM_ARCH_7EM__)
-#   define __ARM_ARCH__ 7
-#  elif	defined(__ARM_ARCH_6__)	|| defined(__ARM_ARCH_6J__)	|| \
-	defined(__ARM_ARCH_6K__)|| defined(__ARM_ARCH_6M__)	|| \
-	defined(__ARM_ARCH_6Z__)|| defined(__ARM_ARCH_6ZK__)	|| \
-	defined(__ARM_ARCH_6T2__)
-#   define __ARM_ARCH__ 6
-#  elif	defined(__ARM_ARCH_5__)	|| defined(__ARM_ARCH_5T__)	|| \
-	defined(__ARM_ARCH_5E__)|| defined(__ARM_ARCH_5TE__)	|| \
-	defined(__ARM_ARCH_5TEJ__)
-#   define __ARM_ARCH__ 5
-#  elif	defined(__ARM_ARCH_4__)	|| defined(__ARM_ARCH_4T__)
-#   define __ARM_ARCH__ 4
-#  else
-#   error "unsupported ARM architecture"
-#  endif
-# endif
-#endif
+#include <openssl/target.h>
 
-// Even when building for 32-bit ARM, support for aarch64 crypto instructions
-// will be included.
-#define __ARM_MAX_ARCH__ 8
+// arm_arch.h contains symbols used by ARM assembly, and the C code that calls
+// it. It is included as a public header to simplify the build, but is not
+// intended for external use.
+
+#if defined(OPENSSL_ARM) || defined(OPENSSL_AARCH64)
 
 // ARMV7_NEON is true when a NEON unit is present in the current CPU.
 #define ARMV7_NEON (1 << 0)
@@ -117,5 +76,9 @@
 // ARMV8_PMULL indicates support for carryless multiplication.
 #define ARMV8_PMULL (1 << 5)
 
+// ARMV8_SHA512 indicates support for hardware SHA-512 instructions.
+#define ARMV8_SHA512 (1 << 6)
+
+#endif  // ARM || AARCH64
 
 #endif  // OPENSSL_HEADER_ARM_ARCH_H

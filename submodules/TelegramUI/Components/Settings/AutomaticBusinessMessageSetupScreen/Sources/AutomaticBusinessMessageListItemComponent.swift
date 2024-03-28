@@ -186,9 +186,11 @@ final class GreetingMessageListItemComponent: Component {
                     },
                     openPremiumIntro: {
                     },
-                    openPremiumGift: {
+                    openPremiumGift: { _ in
                     },
                     openActiveSessions: {
+                    },
+                    openBirthdaySetup: {
                     },
                     performActiveSessionAction: { _, _ in
                     },
@@ -239,7 +241,9 @@ final class GreetingMessageListItemComponent: Component {
                         commandPrefix: nil,
                         searchQuery: nil,
                         messageCount: component.count,
-                        hideSeparator: true
+                        hideSeparator: true,
+                        hideDate: true,
+                        hidePeerStatus: true
                     )
                 )),
                 editing: false,

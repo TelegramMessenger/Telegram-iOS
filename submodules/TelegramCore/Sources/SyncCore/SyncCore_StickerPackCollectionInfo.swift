@@ -21,12 +21,6 @@ public struct StickerPackCollectionInfoFlags: OptionSet {
         if flags.contains(StickerPackCollectionInfoFlags.isOfficial) {
             rawValue |= StickerPackCollectionInfoFlags.isOfficial.rawValue
         }
-        if flags.contains(StickerPackCollectionInfoFlags.isAnimated) {
-            rawValue |= StickerPackCollectionInfoFlags.isAnimated.rawValue
-        }
-        if flags.contains(StickerPackCollectionInfoFlags.isVideo) {
-            rawValue |= StickerPackCollectionInfoFlags.isVideo.rawValue
-        }
         if flags.contains(StickerPackCollectionInfoFlags.isEmoji) {
             rawValue |= StickerPackCollectionInfoFlags.isEmoji.rawValue
         }
@@ -39,11 +33,10 @@ public struct StickerPackCollectionInfoFlags: OptionSet {
     
     public static let isMasks = StickerPackCollectionInfoFlags(rawValue: 1 << 0)
     public static let isOfficial = StickerPackCollectionInfoFlags(rawValue: 1 << 1)
-    public static let isAnimated = StickerPackCollectionInfoFlags(rawValue: 1 << 2)
-    public static let isVideo = StickerPackCollectionInfoFlags(rawValue: 1 << 3)
     public static let isEmoji = StickerPackCollectionInfoFlags(rawValue: 1 << 4)
     public static let isAvailableAsChannelStatus = StickerPackCollectionInfoFlags(rawValue: 1 << 5)
     public static let isCustomTemplateEmoji = StickerPackCollectionInfoFlags(rawValue: 1 << 6)
+    public static let isCreator = StickerPackCollectionInfoFlags(rawValue: 1 << 7)
 }
 
 
@@ -115,35 +108,27 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
         if lhs.id != rhs.id {
             return false
         }
-        
         if lhs.title != rhs.title {
             return false
         }
-        
         if lhs.shortName != rhs.shortName {
             return false
         }
-        
         if lhs.hash != rhs.hash {
             return false
         }
-        
         if lhs.immediateThumbnailData != rhs.immediateThumbnailData {
             return false
         }
-        
         if lhs.thumbnailFileId != rhs.thumbnailFileId {
             return false
         }
-        
         if lhs.flags != rhs.flags {
             return false
         }
-        
         if lhs.count != rhs.count {
             return false
         }
-        
         return true
     }
 }

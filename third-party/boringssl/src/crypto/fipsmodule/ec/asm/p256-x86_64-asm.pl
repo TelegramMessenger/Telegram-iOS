@@ -62,6 +62,7 @@ $code.=<<___;
 .extern	OPENSSL_ia32cap_P
 
 # The polynomial
+.section .rodata
 .align 64
 .Lpoly:
 .quad 0xffffffffffffffff, 0x00000000ffffffff, 0x0000000000000000, 0xffffffff00000001
@@ -80,6 +81,7 @@ $code.=<<___;
 .quad 0xf3b9cac2fc632551, 0xbce6faada7179e84, 0xffffffffffffffff, 0xffffffff00000000
 .LordK:
 .quad 0xccd1c8aaee00bc4f
+.text
 ___
 
 {
@@ -96,6 +98,7 @@ $code.=<<___;
 .align	32
 ecp_nistz256_neg:
 .cfi_startproc
+	_CET_ENDBR
 	push	%r12
 .cfi_push	%r12
 	push	%r13
@@ -164,6 +167,7 @@ $code.=<<___;
 .align	32
 ecp_nistz256_ord_mul_mont:
 .cfi_startproc
+	_CET_ENDBR
 ___
 $code.=<<___	if ($addx);
 	leaq	OPENSSL_ia32cap_P(%rip), %rcx
@@ -495,6 +499,7 @@ $code.=<<___;
 .align	32
 ecp_nistz256_ord_sqr_mont:
 .cfi_startproc
+	_CET_ENDBR
 ___
 $code.=<<___	if ($addx);
 	leaq	OPENSSL_ia32cap_P(%rip), %rcx
@@ -1245,6 +1250,7 @@ $code.=<<___;
 .align	32
 ecp_nistz256_mul_mont:
 .cfi_startproc
+	_CET_ENDBR
 ___
 $code.=<<___	if ($addx);
 	leaq	OPENSSL_ia32cap_P(%rip), %rcx
@@ -1547,6 +1553,7 @@ __ecp_nistz256_mul_montq:
 .align	32
 ecp_nistz256_sqr_mont:
 .cfi_startproc
+	_CET_ENDBR
 ___
 $code.=<<___	if ($addx);
 	leaq	OPENSSL_ia32cap_P(%rip), %rcx
@@ -2096,6 +2103,7 @@ $code.=<<___;
 .align	32
 ecp_nistz256_select_w5:
 .cfi_startproc
+	_CET_ENDBR
 ___
 $code.=<<___	if ($avx>1);
 	leaq	OPENSSL_ia32cap_P(%rip), %rax
@@ -2196,6 +2204,7 @@ $code.=<<___;
 .align	32
 ecp_nistz256_select_w7:
 .cfi_startproc
+	_CET_ENDBR
 ___
 $code.=<<___	if ($avx>1);
 	leaq	OPENSSL_ia32cap_P(%rip), %rax
@@ -2401,6 +2410,7 @@ $code.=<<___;
 ecp_nistz256_avx2_select_w7:
 .cfi_startproc
 .Lavx2_select_w7:
+	_CET_ENDBR
 	vzeroupper
 ___
 $code.=<<___	if ($win64);
@@ -2512,6 +2522,7 @@ $code.=<<___;
 .type	ecp_nistz256_avx2_select_w7,\@function,3
 .align	32
 ecp_nistz256_avx2_select_w7:
+	_CET_ENDBR
 	.byte	0x0f,0x0b	# ud2
 	ret
 .size	ecp_nistz256_avx2_select_w7,.-ecp_nistz256_avx2_select_w7
@@ -2716,6 +2727,7 @@ $code.=<<___;
 .align	32
 ecp_nistz256_point_double:
 .cfi_startproc
+	_CET_ENDBR
 ___
 $code.=<<___	if ($addx);
 	leaq	OPENSSL_ia32cap_P(%rip), %rcx
@@ -2968,6 +2980,7 @@ $code.=<<___;
 .align	32
 ecp_nistz256_point_add:
 .cfi_startproc
+	_CET_ENDBR
 ___
 $code.=<<___	if ($addx);
 	leaq	OPENSSL_ia32cap_P(%rip), %rcx
@@ -3366,6 +3379,7 @@ $code.=<<___;
 .align	32
 ecp_nistz256_point_add_affine:
 .cfi_startproc
+	_CET_ENDBR
 ___
 $code.=<<___	if ($addx);
 	leaq	OPENSSL_ia32cap_P(%rip), %rcx
@@ -4153,4 +4167,4 @@ ___
 
 $code =~ s/\`([^\`]*)\`/eval $1/gem;
 print $code;
-close STDOUT or die "error closing STDOUT";
+close STDOUT or die "error closing STDOUT: $!";

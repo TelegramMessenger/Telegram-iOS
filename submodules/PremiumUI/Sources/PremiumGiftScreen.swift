@@ -20,6 +20,7 @@ import ConfettiEffect
 import TextFormat
 import UniversalMediaPlayer
 import InstantPageCache
+import ScrollComponent
 
 extension PremiumGiftSource {
     var identifier: String? {
@@ -274,7 +275,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             if let current = context.state.cachedBoostIcon {
                 boostIcon = current
             } else {
-                boostIcon = generateImage(CGSize(width: 14.0, height: 20.0), rotatedContext: { size, context in
+                boostIcon = generateImage(CGSize(width: 14.0, height: 20.0), contextGenerator: { size, context in
                     context.clear(CGRect(origin: .zero, size: size))
                     if let cgImage = UIImage(bundleImageName: "Premium/BoostChannel")?.cgImage {
                         context.draw(cgImage, in: CGRect(origin: .zero, size: size), byTiling: false)

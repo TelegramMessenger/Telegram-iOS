@@ -342,6 +342,9 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             }
             return canExpandHiddenItems()
         }
+        itemNode.listNode.openBirthdaySetup = { [weak self] in
+            self?.openBirthdaySetup?()
+        }
         
         self.currentItemStateValue.set(itemNode.listNode.state |> map { state in
             let filterId: Int32?
@@ -404,6 +407,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     var endedInteractiveDragging: ((ListView) -> Void)?
     var shouldStopScrolling: ((ListView, CGFloat) -> Bool)?
     var activateChatPreview: ((ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
+    var openBirthdaySetup: (() -> Void)?
     var openStories: ((ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?

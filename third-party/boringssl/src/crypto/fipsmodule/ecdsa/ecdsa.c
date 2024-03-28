@@ -59,29 +59,26 @@
 #include <openssl/err.h>
 #include <openssl/mem.h>
 #include <openssl/sha.h>
-#include <openssl/type_check.h>
 
+#include "../../internal.h"
 #include "../bn/internal.h"
 #include "../ec/internal.h"
-#include "../../internal.h"
+#include "../service_indicator/internal.h"
+#include "internal.h"
 
 
 // digest_to_scalar interprets |digest_len| bytes from |digest| as a scalar for
-// ECDSA. Note this value is not fully reduced modulo the order, only the
-// correct number of bits.
+// ECDSA.
 static void digest_to_scalar(const EC_GROUP *group, EC_SCALAR *out,
                              const uint8_t *digest, size_t digest_len) {
-  const BIGNUM *order = &group->order;
+  const BIGNUM *order = EC_GROUP_get0_order(group);
   size_t num_bits = BN_num_bits(order);
   // Need to truncate digest if it is too long: first truncate whole bytes.
   size_t num_bytes = (num_bits + 7) / 8;
   if (digest_len > num_bytes) {
     digest_len = num_bytes;
   }
-  OPENSSL_memset(out, 0, sizeof(EC_SCALAR));
-  for (size_t i = 0; i < digest_len; i++) {
-    out->bytes[i] = digest[digest_len - 1 - i];
-  }
+  bn_big_endian_to_words(out->words, order->width, digest, digest_len);
 
   // If it is still too long, truncate remaining bits with a shift.
   if (8 * digest_len > num_bits) {
@@ -151,8 +148,8 @@ int ECDSA_SIG_set0(ECDSA_SIG *sig, BIGNUM *r, BIGNUM *s) {
   return 1;
 }
 
-int ECDSA_do_verify(const uint8_t *digest, size_t digest_len,
-                    const ECDSA_SIG *sig, const EC_KEY *eckey) {
+int ecdsa_do_verify_no_self_test(const uint8_t *digest, size_t digest_len,
+                                 const ECDSA_SIG *sig, const EC_KEY *eckey) {
   const EC_GROUP *group = EC_KEY_get0_group(eckey);
   const EC_POINT *pub_key = EC_KEY_get0_public_key(eckey);
   if (group == NULL || pub_key == NULL || sig == NULL) {
@@ -169,8 +166,11 @@ int ECDSA_do_verify(const uint8_t *digest, size_t digest_len,
     return 0;
   }
 
-  // s_inv_mont = s^-1 in the Montgomery domain. This is
-  ec_scalar_inv_montgomery_vartime(group, &s_inv_mont, &s);
+  // s_inv_mont = s^-1 in the Montgomery domain.
+  if (!ec_scalar_to_montgomery_inv_vartime(group, &s_inv_mont, &s)) {
+    OPENSSL_PUT_ERROR(ECDSA, ERR_R_INTERNAL_ERROR);
+    return 0;
+  }
 
   // u1 = m * s^-1 mod order
   // u2 = r * s^-1 mod order
@@ -181,7 +181,7 @@ int ECDSA_do_verify(const uint8_t *digest, size_t digest_len,
   ec_scalar_mul_montgomery(group, &u1, &m, &s_inv_mont);
   ec_scalar_mul_montgomery(group, &u2, &r, &s_inv_mont);
 
-  EC_RAW_POINT point;
+  EC_JACOBIAN point;
   if (!ec_point_mul_scalar_public(group, &point, &u1, &pub_key->raw, &u2)) {
     OPENSSL_PUT_ERROR(ECDSA, ERR_R_EC_LIB);
     return 0;
@@ -195,66 +195,119 @@ int ECDSA_do_verify(const uint8_t *digest, size_t digest_len,
   return 1;
 }
 
-static int ecdsa_sign_setup(const EC_KEY *eckey, EC_SCALAR *out_kinv_mont,
-                            EC_SCALAR *out_r, const uint8_t *digest,
-                            size_t digest_len, const EC_SCALAR *priv_key) {
+int ECDSA_do_verify(const uint8_t *digest, size_t digest_len,
+                    const ECDSA_SIG *sig, const EC_KEY *eckey) {
+  boringssl_ensure_ecc_self_test();
+
+  return ecdsa_do_verify_no_self_test(digest, digest_len, sig, eckey);
+}
+
+static ECDSA_SIG *ecdsa_sign_impl(const EC_GROUP *group, int *out_retry,
+                                  const EC_SCALAR *priv_key, const EC_SCALAR *k,
+                                  const uint8_t *digest, size_t digest_len) {
+  *out_retry = 0;
+
   // Check that the size of the group order is FIPS compliant (FIPS 186-4
   // B.5.2).
-  const EC_GROUP *group = EC_KEY_get0_group(eckey);
   const BIGNUM *order = EC_GROUP_get0_order(group);
   if (BN_num_bits(order) < 160) {
     OPENSSL_PUT_ERROR(ECDSA, EC_R_INVALID_GROUP_ORDER);
-    return 0;
+    return NULL;
   }
 
-  int ret = 0;
-  EC_SCALAR k;
-  EC_RAW_POINT tmp_point;
-  do {
-    // Include the private key and message digest in the k generation.
-    if (eckey->fixed_k != NULL) {
-      if (!ec_bignum_to_scalar(group, &k, eckey->fixed_k)) {
-        goto err;
-      }
-    } else {
-      // Pass a SHA512 hash of the private key and digest as additional data
-      // into the RBG. This is a hardening measure against entropy failure.
-      OPENSSL_STATIC_ASSERT(SHA512_DIGEST_LENGTH >= 32,
-                            "additional_data is too large for SHA-512");
-      SHA512_CTX sha;
-      uint8_t additional_data[SHA512_DIGEST_LENGTH];
-      SHA512_Init(&sha);
-      SHA512_Update(&sha, priv_key->words, order->width * sizeof(BN_ULONG));
-      SHA512_Update(&sha, digest, digest_len);
-      SHA512_Final(additional_data, &sha);
-      if (!ec_random_nonzero_scalar(group, &k, additional_data)) {
-        goto err;
-      }
-    }
+  // Compute r, the x-coordinate of k * generator.
+  EC_JACOBIAN tmp_point;
+  EC_SCALAR r;
+  if (!ec_point_mul_scalar_base(group, &tmp_point, k) ||
+      !ec_get_x_coordinate_as_scalar(group, &r, &tmp_point)) {
+    return NULL;
+  }
 
-    // Compute k^-1 in the Montgomery domain. This is |ec_scalar_to_montgomery|
-    // followed by |ec_scalar_inv_montgomery|, but |ec_scalar_inv_montgomery|
-    // followed by |ec_scalar_from_montgomery| is equivalent and slightly more
-    // efficient.
-    ec_scalar_inv_montgomery(group, out_kinv_mont, &k);
-    ec_scalar_from_montgomery(group, out_kinv_mont, out_kinv_mont);
+  if (constant_time_declassify_int(ec_scalar_is_zero(group, &r))) {
+    *out_retry = 1;
+    return NULL;
+  }
 
-    // Compute r, the x-coordinate of generator * k.
-    if (!ec_point_mul_scalar_base(group, &tmp_point, &k) ||
-        !ec_get_x_coordinate_as_scalar(group, out_r, &tmp_point)) {
-      goto err;
-    }
-  } while (ec_scalar_is_zero(group, out_r));
+  // s = priv_key * r. Note if only one parameter is in the Montgomery domain,
+  // |ec_scalar_mod_mul_montgomery| will compute the answer in the normal
+  // domain.
+  EC_SCALAR s;
+  ec_scalar_to_montgomery(group, &s, &r);
+  ec_scalar_mul_montgomery(group, &s, priv_key, &s);
 
-  ret = 1;
+  // s = m + priv_key * r.
+  EC_SCALAR tmp;
+  digest_to_scalar(group, &tmp, digest, digest_len);
+  ec_scalar_add(group, &s, &s, &tmp);
 
-err:
-  OPENSSL_cleanse(&k, sizeof(k));
+  // s = k^-1 * (m + priv_key * r). First, we compute k^-1 in the Montgomery
+  // domain. This is |ec_scalar_to_montgomery| followed by
+  // |ec_scalar_inv0_montgomery|, but |ec_scalar_inv0_montgomery| followed by
+  // |ec_scalar_from_montgomery| is equivalent and slightly more efficient.
+  // Then, as above, only one parameter is in the Montgomery domain, so the
+  // result is in the normal domain. Finally, note k is non-zero (or computing r
+  // would fail), so the inverse must exist.
+  ec_scalar_inv0_montgomery(group, &tmp, k);     // tmp = k^-1 R^2
+  ec_scalar_from_montgomery(group, &tmp, &tmp);  // tmp = k^-1 R
+  ec_scalar_mul_montgomery(group, &s, &s, &tmp);
+  if (constant_time_declassify_int(ec_scalar_is_zero(group, &s))) {
+    *out_retry = 1;
+    return NULL;
+  }
+
+  CONSTTIME_DECLASSIFY(r.words, sizeof(r.words));
+  CONSTTIME_DECLASSIFY(s.words, sizeof(r.words));
+  ECDSA_SIG *ret = ECDSA_SIG_new();
+  if (ret == NULL ||  //
+      !bn_set_words(ret->r, r.words, order->width) ||
+      !bn_set_words(ret->s, s.words, order->width)) {
+    ECDSA_SIG_free(ret);
+    return NULL;
+  }
   return ret;
+}
+
+ECDSA_SIG *ecdsa_sign_with_nonce_for_known_answer_test(const uint8_t *digest,
+                                                       size_t digest_len,
+                                                       const EC_KEY *eckey,
+                                                       const uint8_t *nonce,
+                                                       size_t nonce_len) {
+  if (eckey->ecdsa_meth && eckey->ecdsa_meth->sign) {
+    OPENSSL_PUT_ERROR(ECDSA, ECDSA_R_NOT_IMPLEMENTED);
+    return NULL;
+  }
+
+  const EC_GROUP *group = EC_KEY_get0_group(eckey);
+  if (group == NULL || eckey->priv_key == NULL) {
+    OPENSSL_PUT_ERROR(ECDSA, ERR_R_PASSED_NULL_PARAMETER);
+    return NULL;
+  }
+  const EC_SCALAR *priv_key = &eckey->priv_key->scalar;
+
+  EC_SCALAR k;
+  if (!ec_scalar_from_bytes(group, &k, nonce, nonce_len)) {
+    return NULL;
+  }
+  int retry_ignored;
+  return ecdsa_sign_impl(group, &retry_ignored, priv_key, &k, digest,
+                         digest_len);
+}
+
+// This function is only exported for testing and is not called in production
+// code.
+ECDSA_SIG *ECDSA_sign_with_nonce_and_leak_private_key_for_testing(
+    const uint8_t *digest, size_t digest_len, const EC_KEY *eckey,
+    const uint8_t *nonce, size_t nonce_len) {
+  boringssl_ensure_ecc_self_test();
+
+  return ecdsa_sign_with_nonce_for_known_answer_test(digest, digest_len, eckey,
+                                                     nonce, nonce_len);
 }
 
 ECDSA_SIG *ECDSA_do_sign(const uint8_t *digest, size_t digest_len,
                          const EC_KEY *eckey) {
+  boringssl_ensure_ecc_self_test();
+
   if (eckey->ecdsa_meth && eckey->ecdsa_meth->sign) {
     OPENSSL_PUT_ERROR(ECDSA, ECDSA_R_NOT_IMPLEMENTED);
     return NULL;
@@ -268,54 +321,52 @@ ECDSA_SIG *ECDSA_do_sign(const uint8_t *digest, size_t digest_len,
   const BIGNUM *order = EC_GROUP_get0_order(group);
   const EC_SCALAR *priv_key = &eckey->priv_key->scalar;
 
-  int ok = 0;
-  ECDSA_SIG *ret = ECDSA_SIG_new();
-  EC_SCALAR kinv_mont, r_mont, s, m, tmp;
-  if (ret == NULL) {
-    OPENSSL_PUT_ERROR(ECDSA, ERR_R_MALLOC_FAILURE);
-    return NULL;
-  }
+  // Pass a SHA512 hash of the private key and digest as additional data
+  // into the RBG. This is a hardening measure against entropy failure.
+  static_assert(SHA512_DIGEST_LENGTH >= 32,
+                "additional_data is too large for SHA-512");
 
-  digest_to_scalar(group, &m, digest, digest_len);
+  FIPS_service_indicator_lock_state();
+
+  SHA512_CTX sha;
+  uint8_t additional_data[SHA512_DIGEST_LENGTH];
+  SHA512_Init(&sha);
+  SHA512_Update(&sha, priv_key->words, order->width * sizeof(BN_ULONG));
+  SHA512_Update(&sha, digest, digest_len);
+  SHA512_Final(additional_data, &sha);
+
+  // Cap iterations so callers who supply invalid values as custom groups do not
+  // infinite loop. This does not impact valid parameters (e.g. those covered by
+  // FIPS) because the probability of requiring even one retry is negligible,
+  // let alone 32.
+  static const int kMaxIterations = 32;
+  ECDSA_SIG *ret = NULL;
+  int iters = 0;
   for (;;) {
-    if (!ecdsa_sign_setup(eckey, &kinv_mont, &r_mont, digest, digest_len,
-                          priv_key) ||
-        !bn_set_words(ret->r, r_mont.words, order->width)) {
-      goto err;
+    EC_SCALAR k;
+    if (!ec_random_nonzero_scalar(group, &k, additional_data)) {
+      ret = NULL;
+      goto out;
     }
 
-    // Compute priv_key * r (mod order). Note if only one parameter is in the
-    // Montgomery domain, |ec_scalar_mod_mul_montgomery| will compute the answer
-    // in the normal domain.
-    ec_scalar_to_montgomery(group, &r_mont, &r_mont);
-    ec_scalar_mul_montgomery(group, &s, priv_key, &r_mont);
+    // TODO(davidben): Move this inside |ec_random_nonzero_scalar| or lower, so
+    // that all scalars we generate are, by default, secret.
+    CONSTTIME_SECRET(k.words, sizeof(k.words));
 
-    // Compute tmp = m + priv_key * r.
-    ec_scalar_add(group, &tmp, &m, &s);
-
-    // Finally, multiply s by k^-1. That was retained in Montgomery form, so the
-    // same technique as the previous multiplication works.
-    ec_scalar_mul_montgomery(group, &s, &tmp, &kinv_mont);
-    if (!bn_set_words(ret->s, s.words, order->width)) {
-      goto err;
+    int retry;
+    ret = ecdsa_sign_impl(group, &retry, priv_key, &k, digest, digest_len);
+    if (ret != NULL || !retry) {
+      goto out;
     }
-    if (!BN_is_zero(ret->s)) {
-      // s != 0 => we have a valid signature
-      break;
+
+    iters++;
+    if (iters > kMaxIterations) {
+      OPENSSL_PUT_ERROR(ECDSA, ECDSA_R_TOO_MANY_ITERATIONS);
+      goto out;
     }
   }
 
-  ok = 1;
-
-err:
-  if (!ok) {
-    ECDSA_SIG_free(ret);
-    ret = NULL;
-  }
-  OPENSSL_cleanse(&kinv_mont, sizeof(kinv_mont));
-  OPENSSL_cleanse(&r_mont, sizeof(r_mont));
-  OPENSSL_cleanse(&s, sizeof(s));
-  OPENSSL_cleanse(&tmp, sizeof(tmp));
-  OPENSSL_cleanse(&m, sizeof(m));
+out:
+  FIPS_service_indicator_unlock_state();
   return ret;
 }

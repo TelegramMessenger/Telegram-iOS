@@ -27,6 +27,7 @@ public final class TextFieldComponent: Component {
     public final class ExternalState {
         public fileprivate(set) var isEditing: Bool = false
         public fileprivate(set) var hasText: Bool = false
+        public fileprivate(set) var text: NSAttributedString = NSAttributedString()
         public fileprivate(set) var textLength: Int = 0
         public var initialText: NSAttributedString?
         
@@ -73,9 +74,11 @@ public final class TextFieldComponent: Component {
             case textFocusChanged
         }
         
+        public weak var view: View?
         public let kind: Kind
         
-        public init(kind: Kind) {
+        public init(view: View?, kind: Kind) {
+            self.view = view
             self.kind = kind
         }
     }
@@ -86,7 +89,14 @@ public final class TextFieldComponent: Component {
         case none
     }
     
+    public enum EmptyLineHandling {
+        case allowed
+        case oneConsecutive
+        case notAllowed
+    }
+    
     public let context: AccountContext
+    public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let externalState: ExternalState
     public let fontSize: CGFloat
@@ -97,14 +107,17 @@ public final class TextFieldComponent: Component {
     public let resetText: NSAttributedString?
     public let isOneLineWhenUnfocused: Bool
     public let characterLimit: Int?
-    public let allowEmptyLines: Bool
+    public let emptyLineHandling: EmptyLineHandling
     public let formatMenuAvailability: FormatMenuAvailability
+    public let returnKeyType: UIReturnKeyType
     public let lockedFormatAction: () -> Void
     public let present: (ViewController) -> Void
     public let paste: (PasteData) -> Void
+    public let returnKeyAction: (() -> Void)?
     
     public init(
         context: AccountContext,
+        theme: PresentationTheme,
         strings: PresentationStrings,
         externalState: ExternalState,
         fontSize: CGFloat,
@@ -115,13 +128,16 @@ public final class TextFieldComponent: Component {
         resetText: NSAttributedString?,
         isOneLineWhenUnfocused: Bool,
         characterLimit: Int? = nil,
-        allowEmptyLines: Bool = true,
+        emptyLineHandling: EmptyLineHandling = .allowed,
         formatMenuAvailability: FormatMenuAvailability,
+        returnKeyType: UIReturnKeyType = .default,
         lockedFormatAction: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
-        paste: @escaping (PasteData) -> Void
+        paste: @escaping (PasteData) -> Void,
+        returnKeyAction: (() -> Void)? = nil
     ) {
         self.context = context
+        self.theme = theme
         self.strings = strings
         self.externalState = externalState
         self.fontSize = fontSize
@@ -132,14 +148,22 @@ public final class TextFieldComponent: Component {
         self.resetText = resetText
         self.isOneLineWhenUnfocused = isOneLineWhenUnfocused
         self.characterLimit = characterLimit
-        self.allowEmptyLines = allowEmptyLines
+        self.emptyLineHandling = emptyLineHandling
         self.formatMenuAvailability = formatMenuAvailability
+        self.returnKeyType = returnKeyType
         self.lockedFormatAction = lockedFormatAction
         self.present = present
         self.paste = paste
+        self.returnKeyAction = returnKeyAction
     }
     
     public static func ==(lhs: TextFieldComponent, rhs: TextFieldComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
         if lhs.strings !== rhs.strings {
             return false
         }
@@ -170,10 +194,13 @@ public final class TextFieldComponent: Component {
         if lhs.characterLimit != rhs.characterLimit {
             return false
         }
-        if lhs.allowEmptyLines != rhs.allowEmptyLines {
+        if lhs.emptyLineHandling != rhs.emptyLineHandling {
             return false
         }
         if lhs.formatMenuAvailability != rhs.formatMenuAvailability {
+            return false
+        }
+        if lhs.returnKeyType != rhs.returnKeyType {
             return false
         }
         return true
@@ -219,7 +246,6 @@ public final class TextFieldComponent: Component {
             self.textView.translatesAutoresizingMaskIntoConstraints = false
             self.textView.backgroundColor = nil
             self.textView.layer.isOpaque = false
-            self.textView.keyboardAppearance = .dark
             self.textView.indicatorStyle = .white
             self.textView.scrollIndicatorInsets = UIEdgeInsets(top: 9.0, left: 0.0, bottom: 9.0, right: 0.0)
             
@@ -231,10 +257,6 @@ public final class TextFieldComponent: Component {
             
             self.textView.customDelegate = self
             self.addSubview(self.textView)
-            
-            if #available(iOS 13.0, *) {
-                self.textView.overrideUserInterfaceStyle = .dark
-            }
             
             self.textView.typingAttributes = [
                 NSAttributedString.Key.font: Font.regular(17.0),
@@ -254,18 +276,18 @@ public final class TextFieldComponent: Component {
             let inputState = f(self.inputState)
             
             let currentAttributedText = self.textView.attributedText
-            let updatedAttributedText = textAttributedStringForStateText(inputState.inputText, fontSize: component.fontSize, textColor: component.textColor, accentTextColor: component.textColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickers.keys), emojiViewProvider: self.emojiViewProvider)
+            let updatedAttributedText = textAttributedStringForStateText(inputState.inputText, fontSize: component.fontSize, textColor: component.textColor, accentTextColor: component.textColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
             if currentAttributedText != updatedAttributedText {
                 self.textView.attributedText = updatedAttributedText
             }
             self.textView.selectedRange = NSMakeRange(inputState.selectionRange.lowerBound, inputState.selectionRange.count)
             
-            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.textColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickers.keys), emojiViewProvider: self.emojiViewProvider)
+            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.textColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
             
             self.updateEntities()
             
             if currentAttributedText != updatedAttributedText && !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -278,7 +300,7 @@ public final class TextFieldComponent: Component {
                 return state.insertText(text)
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -291,7 +313,7 @@ public final class TextFieldComponent: Component {
                 return TextFieldComponent.InputState(inputText: text, selectionRange: selectionRange)
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -309,6 +331,12 @@ public final class TextFieldComponent: Component {
             }
             
             if let attributedString = attributedString {
+                let current = self.inputState
+                let range = NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)
+                if !self.chatInputTextNode(shouldChangeTextIn: range, replacementText: attributedString.string) {
+                    return false
+                }
+                
                 self.updateInputState { current in
                     if let inputText = current.inputText.mutableCopy() as? NSMutableAttributedString {
                         inputText.replaceCharacters(in: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count), with: attributedString)
@@ -319,7 +347,7 @@ public final class TextFieldComponent: Component {
                     }
                 }
                 if !self.isUpdating {
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
                 }
                 component.paste(.text)
                 return false
@@ -379,7 +407,7 @@ public final class TextFieldComponent: Component {
             guard let component = self.component else {
                 return
             }
-            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.textColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickers.keys), emojiViewProvider: self.emojiViewProvider)
+            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.textColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
             refreshChatTextInputTypingAttributes(self.textView, textColor: component.textColor, baseFontSize: component.fontSize)
             self.textView.updateTextContainerInset()
             
@@ -390,11 +418,18 @@ public final class TextFieldComponent: Component {
             
             self.updateEntities()
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
         public func chatInputTextNodeShouldReturn() -> Bool {
+            guard let component = self.component else {
+                return true
+            }
+            if let returnKeyAction = component.returnKeyAction {
+                returnKeyAction()
+                return false
+            }
             return true
         }
         
@@ -412,7 +447,7 @@ public final class TextFieldComponent: Component {
                 return
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(kind: .textFocusChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged)))
             }
             if component.isOneLineWhenUnfocused {
                 Queue.mainQueue().justDispatch {
@@ -423,7 +458,7 @@ public final class TextFieldComponent: Component {
         
         public func chatInputTextNodeDidFinishEditing() {
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(kind: .textFocusChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged)))
             }
         }
         
@@ -552,6 +587,7 @@ public final class TextFieldComponent: Component {
             guard let component = self.component else {
                 return true
             }
+            
             if let characterLimit = component.characterLimit {
                 let string = self.inputState.inputText.string as NSString
                 let updatedString = string.replacingCharacters(in: range, with: text)
@@ -559,10 +595,24 @@ public final class TextFieldComponent: Component {
                     return false
                 }
             }
-            if !component.allowEmptyLines {
+            switch component.emptyLineHandling {
+            case .allowed:
+                break
+            case .oneConsecutive:
                 let string = self.inputState.inputText.string as NSString
                 let updatedString = string.replacingCharacters(in: range, with: text)
                 if updatedString.range(of: "\n\n") != nil {
+                    return false
+                }
+            case .notAllowed:
+                if (range.length == 0 && text == "\n"), let returnKeyAction = component.returnKeyAction {
+                    returnKeyAction()
+                    return false
+                }
+                
+                let string = self.inputState.inputText.string as NSString
+                let updatedString = string.replacingCharacters(in: range, with: text)
+                if updatedString.range(of: "\n") != nil {
                     return false
                 }
             }
@@ -724,7 +774,7 @@ public final class TextFieldComponent: Component {
                 }
             }
             
-            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: component.theme)
             let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
             let controller = chatTextLinkEditController(sharedContext: component.context.sharedContext, updatedPresentationData: updatedPresentationData, account: component.context.account, text: text.string, link: link, apply: { [weak self] link in
                 if let self {
@@ -757,7 +807,7 @@ public final class TextFieldComponent: Component {
                 return TextFieldComponent.InputState(inputText: string, selectionRange: string.length ..< string.length)
             }
             if updateState && !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(kind: .textChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textChanged)))
             }
         }
         
@@ -812,7 +862,7 @@ public final class TextFieldComponent: Component {
             
             self.textView.isScrollEnabled = false
             
-            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.textColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickers.keys), emojiViewProvider: self.emojiViewProvider)
+            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.textColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
             refreshChatTextInputTypingAttributes(self.textView, textColor: component.textColor, baseFontSize: component.fontSize)
             
             if self.textView.subviews.count > 1, animated {
@@ -1048,8 +1098,20 @@ public final class TextFieldComponent: Component {
                 self.isUpdating = false
             }
             
+            let previousComponent = self.component
             self.component = component
             self.state = state
+            
+            if previousComponent?.theme !== component.theme {
+                self.textView.keyboardAppearance = component.theme.overallDarkAppearance ? .dark : .light
+                if #available(iOS 13.0, *) {
+                    self.textView.overrideUserInterfaceStyle = component.theme.overallDarkAppearance ? .dark : .light
+                }
+            }
+            
+            if self.textView.returnKeyType != component.returnKeyType {
+                self.textView.returnKeyType = component.returnKeyType
+            }
             
             if let initialText = component.externalState.initialText {
                 component.externalState.initialText = nil
@@ -1128,6 +1190,7 @@ public final class TextFieldComponent: Component {
             component.externalState.hasText = self.textView.textStorage.length != 0
             component.externalState.isEditing = isEditing
             component.externalState.textLength = self.textView.textStorage.string.count
+            component.externalState.text = NSAttributedString(attributedString: self.textView.textStorage)
             
             if let inputView = component.customInputView {
                 if self.textView.inputView == nil {

@@ -132,6 +132,11 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 }
             }
         }
+        self.contentNode.activateBadgeAction = { [weak self] in
+            if let strongSelf = self, let item = strongSelf.item {
+                item.controllerInteraction.openAdsInfo()
+            }
+        }
         self.contentNode.activateAction = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
                 if let _ = item.message.adAttribute {
@@ -236,6 +241,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
             var subtitle: NSAttributedString?
             var text: String?
             var entities: [MessageTextEntity]?
+            var titleBadge: String?
             var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
             var badge: String?
             
@@ -505,6 +511,10 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     }
                 }
 
+                if adAttribute.canReport {
+                    titleBadge = item.presentationData.strings.Message_AdWhatIsThis
+                }
+                
                 if let buttonText = adAttribute.buttonText {
                     actionTitle = buttonText.uppercased()
                 } else if let author = item.message.author as? TelegramUser, author.botInfo != nil {
@@ -532,7 +542,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 displayLine = true
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, item.read, item.chatLocation, title, subtitle, text, entities, mediaAndFlags, badge, actionIcon, actionTitle, displayLine, layoutConstants, preparePosition, constrainedSize, item.controllerInteraction.presentationContext.animationCache, item.controllerInteraction.presentationContext.animationRenderer)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, item.read, item.chatLocation, title, titleBadge, subtitle, text, entities, mediaAndFlags, badge, actionIcon, actionTitle, displayLine, layoutConstants, preparePosition, constrainedSize, item.controllerInteraction.presentationContext.animationCache, item.controllerInteraction.presentationContext.animationRenderer)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             

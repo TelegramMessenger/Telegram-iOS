@@ -10525,6 +10525,7 @@ Sorry for the inconvenience.";
 
 "Message.AdSponsoredLabel" = "Sponsored";
 "Message.AdRecommendedLabel" = "Recommended";
+"Message.AdWhatIsThis" = "what's this?";
 
 "Stats.StoryTitle" = "Story Statistics";
 
@@ -10673,7 +10674,11 @@ Sorry for the inconvenience.";
 "Premium.Gift.ContactSelection.Proceed" = "Proceed";
 "Premium.Gift.ContactSelection.FrequentContacts" = "FREQUENT CONTACTS";
 "Premium.Gift.ContactSelection.DeselectAll" = "DESELECT ALL";
+"Premium.Gift.ContactSelection.SelectAll" = "SELECT ALL";
 "Premium.Gift.ContactSelection.MaximumReached" = "You can select up to %@ users.";
+"Premium.Gift.ContactSelection.BirthdayToday" = "🎂 BIRTHDAY TODAY";
+"Premium.Gift.ContactSelection.BirthdayYesterday" = "BIRTHDAY YESTERDAY";
+"Premium.Gift.ContactSelection.BirthdayTomorrow" = "BIRTHDAY TOMORROW";
 
 "Premium.Gift.GiftMultipleSubscriptionsFormat" = "%1$@ for %2$@";
 "Premium.Gift.GiftMultipleSubscriptions_1" = "Gift %@ Subscription";
@@ -11347,6 +11352,12 @@ Sorry for the inconvenience.";
 "Premium.Business.Away.Title" = "Away Messages";
 "Premium.Business.Away.Text" = "Define messages that are automatically sent when you are off.";
 
+"Premium.Business.Links.Title" = "Links";
+"Premium.Business.Links.Text" = "Create links that start a chat with you, suggesting the first message.";
+
+"Premium.Business.Intro.Title" = "Intro";
+"Premium.Business.Intro.Text" = "Customize the message people see before they start a chat with you.";
+
 "Premium.Business.Chatbots.Title" = "Chatbots";
 "Premium.Business.Chatbots.Text" = "Add any third party chatbots that will process customer interactions.";
 
@@ -11359,7 +11370,8 @@ Sorry for the inconvenience.";
 "Business.QuickReplies" = "Quick Replies";
 "Business.GreetingMessages" = "Greeting Messages";
 "Business.AwayMessages" = "Away Messages";
-"Business.Chatbots" = "Chatbots";
+"Business.ChatbotsItem" = "Chatbots";
+"Business.Intro" = "Intro";
 
 "Business.LocationInfo" = "Display the location of your business on your account.";
 "Business.OpeningHoursInfo" = "Show to your customers when you are open for business.";
@@ -11367,6 +11379,7 @@ Sorry for the inconvenience.";
 "Business.GreetingMessagesInfo" = "Create greetings that will be automatically sent to new customers.";
 "Business.AwayMessagesInfo" = "Define messages that are automatically sent when you are off.";
 "Business.ChatbotsInfo" = "Add any third-party chatbots that will process customer interactions.";
+"Business.IntroInfo" = "Customize the message people see before they start a chat with you.";
 
 "Business.MoreFeaturesTitle" = "MORE BUSINESS FEATURES";
 "Business.MoreFeaturesInfo" = "Check this section later for new business features.";
@@ -11404,6 +11417,7 @@ Sorry for the inconvenience.";
 "ChatList.ItemMenuEdit" = "Edit";
 "ChatList.ItemMenuDelete" = "Delete";
 "ChatList.PeerTypeNonContact" = "non-contact";
+"ChatList.PeerTypeNonContactUser" = "non-contact";
 
 "ChatListFilter.TagLabelNoTag" = "NO TAG";
 "ChatListFilter.TagLabelPremiumExpired" = "PREMIUM EXPIRED";
@@ -11424,6 +11438,8 @@ Sorry for the inconvenience.";
 "PeerInfo.BusinessHours.StatusOpensOnDate" = "Opens %@";
 "PeerInfo.BusinessHours.StatusOpensTodayAt" = "Opens today at %@";
 "PeerInfo.BusinessHours.StatusOpensTomorrowAt" = "Opens tomorrow at %@";
+"PeerInfo.BusinessHours.StatusOpensInDays_1" = "Opens in 1 day";
+"PeerInfo.BusinessHours.StatusOpensInDays_any" = "Opens in %d days";
 "PeerInfo.BusinessHours.TimezoneSwitchMy" = "my time";
 "PeerInfo.BusinessHours.TimezoneSwitchBusiness" = "local time";
 "PeerInfo.BusinessHours.Label" = "business hours";
@@ -11570,7 +11586,7 @@ Sorry for the inconvenience.";
 "BusinessLocationSetup.AlertUnsavedChanges.Text" = "You have unsaved changes.";
 "BusinessLocationSetup.AlertUnsavedChanges.ResetAction" = "Revert";
 
-"ChatbotSetup.Title" = "Chatbots";
+"ChatbotSetup.TitleItem" = "Chatbots";
 "ChatbotSetup.Text" = "Add a bot to your account to help you automatically process and respond to the messages you receive. [Learn More >]()";
 "ChatbotSetup.TextLink" = "https://telegram.org";
 
@@ -11583,7 +11599,7 @@ Sorry for the inconvenience.";
 "ChatbotSetup.Recipients.IncludedSectionFooter" = "Select chats or entire chat categories which the bot **WILL** have access to.";
 
 "ChatbotSetup.PermissionsSectionHeader" = "BOT PERMISSIONS";
-"ChatbotSetup.PermissionsSectionFooter" = "The bot will be able to view all new incoming messages, but not the messages that had been sent before you added the bot.";
+"ChatbotSetup.PermissionsSectionFooter" = "The bot can only reply on your behalf in chats that were active during the last 24h.";
 "ChatbotSetup.Permission.ReplyToMessages" = "Reply to Messages";
 
 "ChatbotSetup.BotAddAction" = "ADD";
@@ -11594,3 +11610,277 @@ Sorry for the inconvenience.";
 
 "Chat.QuickReplyMediaMessageLimitReachedText_1" = "There can be at most %d message in this chat.";
 "Chat.QuickReplyMediaMessageLimitReachedText_any" = "There can be at most %d messages in this chat.";
+
+"CollectibleItemInfo.StoreName" = "Fragment";
+"CollectibleItemInfo.UsernameTitle" = "%@ is a collectible username that belongs to";
+"CollectibleItemInfo.UsernameText" = "The %1$@ username was acquired on %2$@ on %3$@ for %4$@ (%5$@).";
+"CollectibleItemInfo.PhoneTitle" = "%@ is a collectible phone number that belongs to";
+"CollectibleItemInfo.PhoneText" = "The %1$@ phone number was acquired on %2$@ on %3$@ for %4$@ (%5$@).";
+"CollectibleItemInfo.ButtonOpenInfo" = "Learn More";
+"CollectibleItemInfo.ButtonCopyUsername" = "Copy Link";
+"CollectibleItemInfo.ButtonCopyPhone" = "Copy Phone Number";
+"CollectibleItemInfo.ShareInlineText.LearnMore" = "Learn more >";
+
+"Stickers.Edit" = "EDIT";
+
+"ChannelBoost.Table.NoAds" = "Switch Off Ads";
+
+"ChannelBoost.NoAds" = "Switch Off Ads";
+"ChannelBoost.EnableNoAdsLevelText" = "Your channel needs **Level %1$@** to switch off ads.";
+
+"WebApp.TermsOfUse" = "Terms of Use";
+"WebApp.TermsOfUse_URL" = "https://telegram.org/tos/mini-apps";
+
+"Privacy.Birthday" = "Date of Birth";
+"Privacy.Birthday.WhoCanSeeMyBio" = "WHO CAN SEE MY DATE OF BIRTH";
+"Privacy.Birthday.CustomHelp" = "You can restrict who can see your date of birth with granular precision.";
+"Privacy.Birthday.AlwaysShareWith.Title" = "Always Share With";
+"Privacy.Birthday.NeverShareWith.Title" = "Never Share With";
+"Privacy.Birthday.Setup" = "You haven't entered your date of birth yet.\n[Add my birthday >]()";
+
+"Settings.Birthday" = "Date of Birth";
+"Settings.Birthday.Add" = "Add";
+"Settings.Birthday.Remove" = "Remove Date of Birth";
+"Settings.Birthday.Help" = "Choose who can see your birthday in [Settings]().";
+"Settings.Birthday.ContactsHelp" = "Only your contacts can see your birthday. [Change >]()";
+
+"Birthday.Title" = "Date of Birth";
+"Birthday.Help" = "Choose who can see your birthday in [Settings]().";
+"Birthday.HelpContacts" = "Only your contacts will see your birthday. [Change >]()";
+"Birthday.Save" = "Save";
+"Birthday.Added" = "Date of birth added.";
+
+"Birthday.FloodError" = "Sorry, you can’t change your birthday so often.";
+
+"Chat.BirthdayTooltip" = "🎂 %1$@ is having a birthday today. You can give %2$@ **Telegram Premium** as a birthday gift.";
+
+"ChatList.AddBirthdayTitle" = "Add your birthday! 🎂";
+"ChatList.AddBirthdayText" = "Let your contacts know when you're celebrating.";
+
+"ChatList.BirthdaySingleTitle" = "It's %@'s **birthday** today! 🎂";
+"ChatList.BirthdaySingleText" = "Gift them Telegram Premium.";
+
+"ChatList.BirthdayMultipleTitle_1" = "%@ contact have **birthday** today! 🎂";
+"ChatList.BirthdayMultipleTitle_any" = "%@ contacts have **birthdays** today! 🎂";
+"ChatList.BirthdayMultipleText" = "Gift them Telegram Premium.";
+
+"ChatList.BirthdayInSettingsInfo" = "You can set your date of birth later in **Settings**.";
+
+"UserInfo.Birthday" = "date of birth";
+"UserInfo.BirthdayToday" = "birthday today";
+
+"UserInfo.Age_1" = "%@ year old";
+"UserInfo.Age_any" = "%@ years old";
+
+"Business.Links" = "Links to Chat";
+"Business.LinksInfo" = "Create links that start a chat with you, suggesting the first message.";
+
+"Settings.About.PrivacyHelp" = "You can add a few lines about yourself. Choose who can see your bio in [Settings]().";
+
+"Attachment.Create" = "Create";
+"Attachment.SelectFromFiles" = "Select From Files";
+
+"Stats.Monetization" = "Monetization";
+
+"Monetization.Header" = "Telegram shares 50% of the revenue from ads displayed in your channel. [Learn More >]()";
+"Monetization.ImpressionsTitle" = "AD IMPRESSIONS (BY HOURS)";
+"Monetization.AdRevenueTitle" = "AD REVENUE";
+"Monetization.OverviewTitle" = "PROCEEDS OVERVIEW";
+"Monetization.BalanceTitle" = "AVAILABLE BALANCE";
+"Monetization.Balance.ZeroInfo" = "You will be able to collect rewards using Fragment, a third-party platform used by advertisers to pay for ads. [Learn More >]()";
+"Monetization.Balance.AvailableInfo" = "You can collect your reward using Fragment, a third-party platform used by advertisers to pay for ads. [Learn More >]()";
+"Monetization.Balance.ComingLaterInfo" = "By the end of May, you will be able to collect rewards using Fragment, a third-party platform used by advertisers to pay for ads. [Learn More >]()";
+
+"Monetization.BalanceInfo_URL" = "https://telegram.org";
+"Monetization.BalanceWithdraw" = "Withdraw via Fragment";
+"Monetization.TransactionsTitle" = "TRANSACTION HISTORY";
+
+"Monetization.Overview.Available" = "Balance Available to Withdraw";
+"Monetization.Overview.Current" = "Proceeds Since Last Withdrawal";
+"Monetization.Overview.Total" = "Total Lifetime Proceeds";
+
+"Monetization.Transaction.Proceeds" = "Proceeds from Ads";
+"Monetization.Transaction.Withdrawal" = "Withdrawal via %@";
+"Monetization.Transaction.Refund" = "Refund";
+"Monetization.Transaction.Pending" = "Pending";
+"Monetization.Transaction.Failed" = "Not Completed";
+"Monetization.Transaction.ShowMoreTransactions_1" = "Show %@ More Transaction";
+"Monetization.Transaction.ShowMoreTransactions_any" = "Show %@ More Transactions";
+
+"Monetization.SwitchOffAds" = "Switch off Ads";
+"Monetization.SwitchOffAdsInfo" = "You will not be eligible for any rewards if you switch off ads.";
+
+"Monetization.Withdraw.EnterPassword.Title" = "Enter Password";
+"Monetization.Withdraw.EnterPassword.Text" = "Please enter your Two-Step Verification password to complete this action.";
+"Monetization.Withdraw.EnterPassword.Done" = "Proceed";
+
+"Monetization.TransactionInfo.Proceeds" = "Proceeds from Ads displayed in";
+"Monetization.TransactionInfo.Withdrawal" = "Balance Withdrawal via %@";
+"Monetization.TransactionInfo.Pending" = "Pending";
+"Monetization.TransactionInfo.Failed" = "Not Completed";
+"Monetization.TransactionInfo.Refund" = "Refund";
+"Monetization.TransactionInfo.ViewInExplorer" = "View in Blockchain Explorer";
+
+"Monetization.Intro.Title" = "Earn From Your Channel";
+
+"Monetization.Intro.Ads.Title" = "Telegram Ads";
+"Monetization.Intro.Ads.Text" = "Telegram can display ads in your channel.";
+
+"Monetization.Intro.Split.Title" = "50:50 Revenue Split";
+"Monetization.Intro.Split.Text" = "You receive 50% of the ad revenue in TON.";
+
+"Monetization.Intro.Withdrawal.Title" = "Flexible Withdrawals";
+"Monetization.Intro.Withdrawal.Text" = "You can withdraw your TON any time.";
+
+"Monetization.Intro.Info.Title" = "What's #TON?";
+"Monetization.Intro.Info.Text" = "TON is a blockchain platform and cryptocurrency that Telegram uses for its record scalability and ultra low commissions on transactions. [Learn More >]()";
+"Monetization.Intro.Info.Text_URL" = "https://ton.org";
+
+"Monetization.Intro.Understood" = "Understood";
+
+"ReportAd.Title" = "Report Ad";
+"ReportAd.Help" = "Learn more about [Telegram Ad Policies and Guidelines]().";
+"ReportAd.Help_URL" = "https://promote.telegram.org/guidelines";
+"ReportAd.Reported" = "We will review this ad to ensure it matches our [Ad Policies and Guidelines]().";
+"ReportAd.Hidden" = "Ads are hidden now.";
+
+"AdsInfo.Title" = "About These Ads";
+"AdsInfo.Info" = "Telegram Ads are very different from ads on other platforms. Ads such as this one:";
+"AdsInfo.Respect.Title" = "Respect Your Privacy";
+"AdsInfo.Respect.Text" = "Ads on Telegram do not use your personal information and are based on the channel in which you see them.";
+"AdsInfo.Split.Title" = "Help the Channel Creator";
+"AdsInfo.Split.Text" = "50% of the revenue from Telegram Ads goes to the owner of the channel where they are displayed.";
+"AdsInfo.Ads.Title" = "Can Be Removed";
+"AdsInfo.Ads.Text" = "You can turn off ads by subscribing to [Telegram Premium](), and Level %@ channels can remove them for their subscribers.";
+
+"AdsInfo.Launch.Title" = "Can I Launch an Ad?";
+"AdsInfo.Launch.Text" = "Anyone can create ads to display in this channel – with minimal budgets. Check out the Telegram Ad Platform for details. [Learn More >]()";
+"AdsInfo.Launch.Text_URL" = "https://promote.telegram.org";
+
+"AdsInfo.Understood" = "Understood";
+
+"Chat.ContextMenu.AboutAd" = "About This Ad";
+"Chat.ContextMenu.ReportAd" = "Report Ad";
+"Chat.ContextMenu.RemoveAd" = "Remove Ad";
+
+"Settings.BotListSettings" = "Bot Settings";
+"Settings.BotSettings.Biometry" = "Biometry";
+
+"PrivacySettings.ValueCloseFriendsAndPremium" = "Close Friends, Premium";
+"PrivacySettings.ValueCloseFriendsAndPremiumPlus" = "Close Friends, Premium +%@";
+"PrivacySettings.ValuePremium" = "Premium Users";
+"PrivacySettings.ValuePremiumPlus" = "Premium Users +%@";
+"PrivacySettings.ValuePremiumAndContacts" = "Premium & Contacts";
+
+"PrivacySettings.InviteItem" = "Invites";
+"PrivacySettings.InviteSectionFooter" = "You can restrict which users are allowed to add you to groups and channels.";
+
+"PrivacySettings.CategoryPremiumUsers" = "Premium Users";
+"PrivacySettings.SearchUserTypesHeader" = "USER TYPES";
+"PrivacySettings.SearchUsersTitle" = "Add Users";
+"PrivacySettings.SearchUsersPlaceholder" = "Search users and groups";
+
+"Business.Links.PreviewTitle" = "Link to Chat";
+"Business.Links.PreviewText" = "Add a message that will be entered in the message input field for anyone who starts a chat with you using this link:";
+
+"Chat.EmptyStateIntroFooter" = "%@ added the message above for all empty chats";
+"Chat.EmptyStateIntroFooterAction" = "how?";
+"Chat.EmptyStateIntroFooterPremiumActionButton" = "OK";
+
+"Settings.PersonalChannelItem" = "Channel";
+"Settings.PersonalChannelEmptyValue" = "Add";
+"Settings.PersonalChannelAddedToast" = "Personal channel added.";
+"Settings.PersonalChannelUpdatedToast" = "Personal channel updated.";
+"Settings.PersonalChannelRemovedToast" = "Personal channel removed.";
+"Settings.PersonalChannelSelectTitle" = "Channel";
+"Settings.PersonalChannelSelectSubtitle" = "select your channel";
+"Settings.PersonalChannelRemove" = "Hide Channel";
+
+"Profile.PersonalChannelSectionTitle" = "CHANNEL";
+
+"SendInviteLink.TitleUpgradeToPremium" = "Upgrade to Premium";
+"SendInviteLink.TextContactsAndPremiumOneUser" = "**%@** accepts invitations to groups from contacts and **Premium** users.";
+
+"SendInviteLink.TextContactsAndPremiumMultipleUsers_1" = "{user_list}, and **%d** more person only accept invitations to groups from contacts and **Premium** users.";
+"SendInviteLink.TextContactsAndPremiumMultipleUsers_any" = "{user_list}, and **%d** more people only accept invitations to groups from contacts and **Premium** users.";
+
+"SendInviteLink.SubscribeToPremiumButton" = "Subscribe to Telegram Premium";
+"SendInviteLink.PremiumOrSendSectionSeparator" = "or";
+
+"SendInviteLink.TextSendInviteLink" = "You can try to send an invite link instead.";
+"SendInviteLink.StatusAvailableToPremiumOnly" = "Available only to premium users";
+
+"Business.Links.ItemNoClicks" = "no clicks";
+"Business.Links.ItemClickCount_1" = "1 click";
+"Business.Links.ItemClickCount_any" = "%2 clicks";
+"Business.Links.ItemNoText" = "No text";
+"Business.Links.ItemActionShare" = "Share";
+
+"Business.Links.ErrorTooManyLinks" = "You can't create more links";
+"Business.Links.DeleteItemConfirmationAction" = "Delete Link";
+
+"Business.Links.Text" = "Give your customers short links that start a chat with you — and suggest the first message from them to you.";
+
+"Business.Links.CreateAction" = "Create a Link to Chat";
+"Business.Links.LinksSectionHeader" = "LINKS TO CHAT";
+
+"Business.Links.SimpleLinkInfoUsernamePhone" = "You can also use a simple link for a chat with you — [t.me/%1$@](username) or [t.me/\\u{2060}+\\u{2060}%2$@](phone).";
+"Business.Links.SimpleLinkInfoUsername" = "You can also use a simple link for a chat with you — [t.me/%@](username).";
+"Business.Links.SimpleLinkInfoPhone" = "You can also use a simple link for a chat with you — [t.me/\\u{2060}+\\u{2060}%@](phone).";
+
+"Business.Links.LinkNameTitle" = "Link Name";
+"Business.Links.LinkNameText" = "Add a name for this link that only you will see.";
+"Business.Links.LinkNameInputPlaceholder" = "Name this link...";
+
+"Business.Links.AlertUnsavedText" = "You have unsaved changes. Reset?";
+"Business.Links.AlertUnsavedAction" = "Reset";
+"Business.Links.EditLinkTitle" = "Link to Chat";
+"Business.Links.EditLinkToastSaved" = "Preset message saved.";
+
+"Business.Intro.Title" = "Intro";
+"Business.Intro.IntroTitlePlaceholder" = "Title";
+"Business.Intro.IntroTextPlaceholder" = "Enter Message";
+"Business.Intro.IntroSticker" = "Choose Sticker";
+"Business.Intro.IntroStickerValueRandom" = "Random";
+"Business.Intro.CustomizeSectionHeader" = "CUSTOMIZE YOUR INTRO";
+"Business.Intro.CustomizeSectionFooter" = "You can customize the message people see before they start a chat with you.";
+"Business.Intro.ResetToDefault" = "Reset to Default";
+
+"ChatbotSetup.Recipients.AddUsers" = "Add Users";
+"ChatbotSetup.Recipients.RemoveAll" = "Remove All Exceptions";
+"ChatbotSetup.Recipients.SelectionTitle" = "Add Exception";
+"ChatbotSetup.Recipients.ExcludedListTitle" = "Excluded Chats";
+"ChatbotSetup.Recipients.IncludedListTitle" = "Included Chats";
+
+"ChatbotSetup.ErrorBotNotBusinessCapable" = "This bot doesn't support Telegram Business yet.";
+
+"ChatbotSetup.RecipientSummary.ValueEmpty" = "Add";
+"ChatbotSetup.RecipientSummary.ValueItems_1" = "1 item";
+"ChatbotSetup.RecipientSummary.ValueItems_any" = "%d items";
+
+"ChatbotSetup.RecipientSummary.ExcludedChatsItem" = "Excluded Chats";
+"ChatbotSetup.RecipientSummary.IncludedChatsItem" = "Included Chats";
+
+"Chat.ToastPhoneNumberCopied" = "Phone number copied to clipboard.";
+
+"Chat.SpeedLimitAlert.Download.Title" = "Download speed limited";
+"Chat.SpeedLimitAlert.Download.Text" = "Subscribe to [Telegram Premium]() and increase download speeds %@ times.";
+
+"Chat.SpeedLimitAlert.Upload.Title" = "Upload speed limited";
+"Chat.SpeedLimitAlert.Upload.Text" = "Subscribe to [Telegram Premium]() and increase upload speeds %@ times.";
+
+"Chat.BusinessBotMessageTooltip" = "Only you can see that this\nmessage was sent by the bot.";
+
+"Chat.BusinessBotPanel.ActionStart" = "START";
+"Chat.BusinessBotPanel.ActionStop" = "STOP";
+"Chat.BusinessBotPanel.StatusPaused" = "bot paused";
+"Chat.BusinessBotPanel.StatusManages" = "bot manages this chat";
+"Chat.BusinessBotPanel.StatusHasAccess" = "bot has access to this chat";
+"Chat.BusinessBotPanel.Menu.RemoveBot" = "Remove bot from this chat";
+"Chat.BusinessBotPanel.Menu.ManageBot" = "Manage Bot";
+
+"Chat.Placeholder.BusinessLinkPreset" = "Add a preset message...";
+
+"BusinessLink.ErrorExpired" = "Link Expired";
+
+"WebApp.AlertBiometryAccessText" = "Do you want to allow %@ to use Face ID?";

@@ -214,7 +214,7 @@ func _internal_dismissPeerStatusOptions(account: Account, peerId: PeerId) -> Sig
             if let current = current as? CachedUserData {
                 var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
                 peerStatusSettings.flags = []
-                return current.withUpdatedPeerStatusSettings(PeerStatusSettings(flags: []))
+                return current.withUpdatedPeerStatusSettings(peerStatusSettings)
             } else if let current = current as? CachedGroupData {
                 var peerStatusSettings = current.peerStatusSettings ?? PeerStatusSettings()
                 peerStatusSettings.flags = []

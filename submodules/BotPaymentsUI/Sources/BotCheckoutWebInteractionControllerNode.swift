@@ -130,7 +130,7 @@ final class BotCheckoutWebInteractionControllerNode: ViewControllerTracingNode, 
                 return
             }
             
-            if case let .addPaymentMethod(completion) = self.intent {
+            if case let .addPaymentMethod(_, completion) = self.intent {
                 completion(BotCheckoutPaymentWebToken(title: title, data: credentialsString, saveOnServer: false))
             }
         }

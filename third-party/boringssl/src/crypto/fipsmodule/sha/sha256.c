@@ -60,8 +60,10 @@
 
 #include <openssl/mem.h>
 
-#include "internal.h"
 #include "../../internal.h"
+#include "../digest/md32_common.h"
+#include "../service_indicator/internal.h"
+#include "internal.h"
 
 
 int SHA224_Init(SHA256_CTX *sha) {
@@ -112,73 +114,67 @@ uint8_t *SHA256(const uint8_t *data, size_t len,
   return out;
 }
 
+#if !defined(SHA256_ASM)
+static void sha256_block_data_order(uint32_t state[8], const uint8_t *in,
+                                    size_t num);
+#endif
+
+void SHA256_Transform(SHA256_CTX *c, const uint8_t data[SHA256_CBLOCK]) {
+  sha256_block_data_order(c->h, data, 1);
+}
+
+int SHA256_Update(SHA256_CTX *c, const void *data, size_t len) {
+  crypto_md32_update(&sha256_block_data_order, c->h, c->data, SHA256_CBLOCK,
+                     &c->num, &c->Nh, &c->Nl, data, len);
+  return 1;
+}
+
 int SHA224_Update(SHA256_CTX *ctx, const void *data, size_t len) {
   return SHA256_Update(ctx, data, len);
 }
 
-int SHA224_Final(uint8_t out[SHA224_DIGEST_LENGTH], SHA256_CTX *ctx) {
-  // SHA224_Init sets |ctx->md_len| to |SHA224_DIGEST_LENGTH|, so this has a
-  // smaller output.
-  return SHA256_Final(out, ctx);
+static int sha256_final_impl(uint8_t *out, size_t md_len, SHA256_CTX *c) {
+  crypto_md32_final(&sha256_block_data_order, c->h, c->data, SHA256_CBLOCK,
+                    &c->num, c->Nh, c->Nl, /*is_big_endian=*/1);
+
+  // TODO(davidben): This overflow check one of the few places a low-level hash
+  // 'final' function can fail. SHA-512 does not have a corresponding check.
+  // These functions already misbehave if the caller arbitrarily mutates |c|, so
+  // can we assume one of |SHA256_Init| or |SHA224_Init| was used?
+  if (md_len > SHA256_DIGEST_LENGTH) {
+    return 0;
+  }
+
+  assert(md_len % 4 == 0);
+  const size_t out_words = md_len / 4;
+  for (size_t i = 0; i < out_words; i++) {
+    CRYPTO_store_u32_be(out, c->h[i]);
+    out += 4;
+  }
+
+  FIPS_service_indicator_update_state();
+  return 1;
 }
 
-#define DATA_ORDER_IS_BIG_ENDIAN
+int SHA256_Final(uint8_t out[SHA256_DIGEST_LENGTH], SHA256_CTX *c) {
+  // Ideally we would assert |sha->md_len| is |SHA256_DIGEST_LENGTH| to match
+  // the size hint, but calling code often pairs |SHA224_Init| with
+  // |SHA256_Final| and expects |sha->md_len| to carry the size over.
+  //
+  // TODO(davidben): Add an assert and fix code to match them up.
+  return sha256_final_impl(out, c->md_len, c);
+}
 
-#define HASH_CTX SHA256_CTX
-#define HASH_CBLOCK 64
-#define HASH_DIGEST_LENGTH 32
+int SHA224_Final(uint8_t out[SHA224_DIGEST_LENGTH], SHA256_CTX *ctx) {
+  // This function must be paired with |SHA224_Init|, which sets |ctx->md_len|
+  // to |SHA224_DIGEST_LENGTH|.
+  assert(ctx->md_len == SHA224_DIGEST_LENGTH);
+  return sha256_final_impl(out, SHA224_DIGEST_LENGTH, ctx);
+}
 
-// Note that FIPS180-2 discusses "Truncation of the Hash Function Output."
-// default: case below covers for it. It's not clear however if it's permitted
-// to truncate to amount of bytes not divisible by 4. I bet not, but if it is,
-// then default: case shall be extended. For reference. Idea behind separate
-// cases for pre-defined lenghts is to let the compiler decide if it's
-// appropriate to unroll small loops.
-//
-// TODO(davidben): The small |md_len| case is one of the few places a low-level
-// hash 'final' function can fail. This should never happen.
-#define HASH_MAKE_STRING(c, s)                              \
-  do {                                                      \
-    uint32_t ll;                                            \
-    unsigned int nn;                                        \
-    switch ((c)->md_len) {                                  \
-      case SHA224_DIGEST_LENGTH:                            \
-        for (nn = 0; nn < SHA224_DIGEST_LENGTH / 4; nn++) { \
-          ll = (c)->h[nn];                                  \
-          HOST_l2c(ll, (s));                                \
-        }                                                   \
-        break;                                              \
-      case SHA256_DIGEST_LENGTH:                            \
-        for (nn = 0; nn < SHA256_DIGEST_LENGTH / 4; nn++) { \
-          ll = (c)->h[nn];                                  \
-          HOST_l2c(ll, (s));                                \
-        }                                                   \
-        break;                                              \
-      default:                                              \
-        if ((c)->md_len > SHA256_DIGEST_LENGTH) {           \
-          return 0;                                         \
-        }                                                   \
-        for (nn = 0; nn < (c)->md_len / 4; nn++) {          \
-          ll = (c)->h[nn];                                  \
-          HOST_l2c(ll, (s));                                \
-        }                                                   \
-        break;                                              \
-    }                                                       \
-  } while (0)
+#if !defined(SHA256_ASM)
 
-
-#define HASH_UPDATE SHA256_Update
-#define HASH_TRANSFORM SHA256_Transform
-#define HASH_FINAL SHA256_Final
-#define HASH_BLOCK_DATA_ORDER sha256_block_data_order
-#ifndef SHA256_ASM
-static void sha256_block_data_order(uint32_t *state, const uint8_t *in,
-                                    size_t num);
-#endif
-
-#include "../digest/md32_common.h"
-
-#ifndef SHA256_ASM
+#if !defined(SHA256_ASM_NOHW)
 static const uint32_t K256[64] = {
     0x428a2f98UL, 0x71374491UL, 0xb5c0fbcfUL, 0xe9b5dba5UL, 0x3956c25bUL,
     0x59f111f1UL, 0x923f82a4UL, 0xab1c5ed5UL, 0xd807aa98UL, 0x12835b01UL,
@@ -194,15 +190,17 @@ static const uint32_t K256[64] = {
     0x682e6ff3UL, 0x748f82eeUL, 0x78a5636fUL, 0x84c87814UL, 0x8cc70208UL,
     0x90befffaUL, 0xa4506cebUL, 0xbef9a3f7UL, 0xc67178f2UL};
 
-#define ROTATE(a, n) (((a) << (n)) | ((a) >> (32 - (n))))
-
-// FIPS specification refers to right rotations, while our ROTATE macro
-// is left one. This is why you might notice that rotation coefficients
-// differ from those observed in FIPS document by 32-N...
-#define Sigma0(x) (ROTATE((x), 30) ^ ROTATE((x), 19) ^ ROTATE((x), 10))
-#define Sigma1(x) (ROTATE((x), 26) ^ ROTATE((x), 21) ^ ROTATE((x), 7))
-#define sigma0(x) (ROTATE((x), 25) ^ ROTATE((x), 14) ^ ((x) >> 3))
-#define sigma1(x) (ROTATE((x), 15) ^ ROTATE((x), 13) ^ ((x) >> 10))
+// See FIPS 180-4, section 4.1.2.
+#define Sigma0(x)                                       \
+  (CRYPTO_rotr_u32((x), 2) ^ CRYPTO_rotr_u32((x), 13) ^ \
+   CRYPTO_rotr_u32((x), 22))
+#define Sigma1(x)                                       \
+  (CRYPTO_rotr_u32((x), 6) ^ CRYPTO_rotr_u32((x), 11) ^ \
+   CRYPTO_rotr_u32((x), 25))
+#define sigma0(x) \
+  (CRYPTO_rotr_u32((x), 7) ^ CRYPTO_rotr_u32((x), 18) ^ ((x) >> 3))
+#define sigma1(x) \
+  (CRYPTO_rotr_u32((x), 17) ^ CRYPTO_rotr_u32((x), 19) ^ ((x) >> 10))
 
 #define Ch(x, y, z) (((x) & (y)) ^ ((~(x)) & (z)))
 #define Maj(x, y, z) (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
@@ -225,8 +223,8 @@ static const uint32_t K256[64] = {
     ROUND_00_15(i, a, b, c, d, e, f, g, h);            \
   } while (0)
 
-static void sha256_block_data_order(uint32_t *state, const uint8_t *data,
-                                    size_t num) {
+static void sha256_block_data_order_nohw(uint32_t state[8], const uint8_t *data,
+                                         size_t num) {
   uint32_t a, b, c, d, e, f, g, h, s0, s1, T1;
   uint32_t X[16];
   int i;
@@ -241,55 +239,53 @@ static void sha256_block_data_order(uint32_t *state, const uint8_t *data,
     g = state[6];
     h = state[7];
 
-    uint32_t l;
-
-    HOST_c2l(data, l);
-    T1 = X[0] = l;
+    T1 = X[0] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(0, a, b, c, d, e, f, g, h);
-    HOST_c2l(data, l);
-    T1 = X[1] = l;
+    T1 = X[1] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(1, h, a, b, c, d, e, f, g);
-    HOST_c2l(data, l);
-    T1 = X[2] = l;
+    T1 = X[2] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(2, g, h, a, b, c, d, e, f);
-    HOST_c2l(data, l);
-    T1 = X[3] = l;
+    T1 = X[3] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(3, f, g, h, a, b, c, d, e);
-    HOST_c2l(data, l);
-    T1 = X[4] = l;
+    T1 = X[4] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(4, e, f, g, h, a, b, c, d);
-    HOST_c2l(data, l);
-    T1 = X[5] = l;
+    T1 = X[5] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(5, d, e, f, g, h, a, b, c);
-    HOST_c2l(data, l);
-    T1 = X[6] = l;
+    T1 = X[6] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(6, c, d, e, f, g, h, a, b);
-    HOST_c2l(data, l);
-    T1 = X[7] = l;
+    T1 = X[7] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(7, b, c, d, e, f, g, h, a);
-    HOST_c2l(data, l);
-    T1 = X[8] = l;
+    T1 = X[8] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(8, a, b, c, d, e, f, g, h);
-    HOST_c2l(data, l);
-    T1 = X[9] = l;
+    T1 = X[9] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(9, h, a, b, c, d, e, f, g);
-    HOST_c2l(data, l);
-    T1 = X[10] = l;
+    T1 = X[10] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(10, g, h, a, b, c, d, e, f);
-    HOST_c2l(data, l);
-    T1 = X[11] = l;
+    T1 = X[11] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(11, f, g, h, a, b, c, d, e);
-    HOST_c2l(data, l);
-    T1 = X[12] = l;
+    T1 = X[12] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(12, e, f, g, h, a, b, c, d);
-    HOST_c2l(data, l);
-    T1 = X[13] = l;
+    T1 = X[13] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(13, d, e, f, g, h, a, b, c);
-    HOST_c2l(data, l);
-    T1 = X[14] = l;
+    T1 = X[14] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(14, c, d, e, f, g, h, a, b);
-    HOST_c2l(data, l);
-    T1 = X[15] = l;
+    T1 = X[15] = CRYPTO_load_u32_be(data);
+    data += 4;
     ROUND_00_15(15, b, c, d, e, f, g, h, a);
 
     for (i = 16; i < 64; i += 8) {
@@ -314,23 +310,45 @@ static void sha256_block_data_order(uint32_t *state, const uint8_t *data,
   }
 }
 
-#endif  // !SHA256_ASM
+#endif  // !defined(SHA256_ASM_NOHW)
+
+static void sha256_block_data_order(uint32_t state[8], const uint8_t *data,
+                                    size_t num) {
+#if defined(SHA256_ASM_HW)
+  if (sha256_hw_capable()) {
+    sha256_block_data_order_hw(state, data, num);
+    return;
+  }
+#endif
+#if defined(SHA256_ASM_AVX)
+  if (sha256_avx_capable()) {
+    sha256_block_data_order_avx(state, data, num);
+    return;
+  }
+#endif
+#if defined(SHA256_ASM_SSSE3)
+  if (sha256_ssse3_capable()) {
+    sha256_block_data_order_ssse3(state, data, num);
+    return;
+  }
+#endif
+#if defined(SHA256_ASM_NEON)
+  if (CRYPTO_is_NEON_capable()) {
+    sha256_block_data_order_neon(state, data, num);
+    return;
+  }
+#endif
+  sha256_block_data_order_nohw(state, data, num);
+}
+
+#endif  // !defined(SHA256_ASM)
+
 
 void SHA256_TransformBlocks(uint32_t state[8], const uint8_t *data,
                             size_t num_blocks) {
   sha256_block_data_order(state, data, num_blocks);
 }
 
-#undef DATA_ORDER_IS_BIG_ENDIAN
-#undef HASH_CTX
-#undef HASH_CBLOCK
-#undef HASH_DIGEST_LENGTH
-#undef HASH_MAKE_STRING
-#undef HASH_UPDATE
-#undef HASH_TRANSFORM
-#undef HASH_FINAL
-#undef HASH_BLOCK_DATA_ORDER
-#undef ROTATE
 #undef Sigma0
 #undef Sigma1
 #undef sigma0
@@ -339,5 +357,3 @@ void SHA256_TransformBlocks(uint32_t state[8], const uint8_t *data,
 #undef Maj
 #undef ROUND_00_15
 #undef ROUND_16_63
-#undef HOST_c2l
-#undef HOST_l2c

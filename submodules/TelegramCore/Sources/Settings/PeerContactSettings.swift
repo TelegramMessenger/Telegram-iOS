@@ -6,7 +6,7 @@ import SwiftSignalKit
 extension PeerStatusSettings {
     init(apiSettings: Api.PeerSettings) {
         switch apiSettings {
-            case let .peerSettings(flags, geoDistance, requestChatTitle, requestChatDate):
+            case let .peerSettings(flags, geoDistance, requestChatTitle, requestChatDate, businessBotId, businessBotManageUrl):
                 var result = PeerStatusSettings.Flags()
                 if (flags & (1 << 1)) != 0 {
                     result.insert(.canAddContact)
@@ -32,7 +32,15 @@ extension PeerStatusSettings {
                 if (flags & (1 << 8)) != 0 {
                     result.insert(.suggestAddMembers)
                 }
-                self = PeerStatusSettings(flags: result, geoDistance: geoDistance, requestChatTitle: requestChatTitle, requestChatDate: requestChatDate, requestChatIsChannel: (flags & (1 << 10)) != 0)
+            
+                var managingBot: ManagingBot?
+                if let businessBotId {
+                    let businessBotPaused = (flags & (1 << 11)) != 0
+                    let businessBotCanReply = (flags & (1 << 12)) != 0
+                    managingBot = ManagingBot(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(businessBotId)), manageUrl: businessBotManageUrl, isPaused: businessBotPaused, canReply: businessBotCanReply)
+                }
+            
+                self = PeerStatusSettings(flags: result, geoDistance: geoDistance, requestChatTitle: requestChatTitle, requestChatDate: requestChatDate, requestChatIsChannel: (flags & (1 << 10)) != 0, managingBot: managingBot)
         }
     }
 }

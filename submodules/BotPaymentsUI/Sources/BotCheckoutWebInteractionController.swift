@@ -8,7 +8,7 @@ import TelegramPresentationData
 import AccountContext
 
 enum BotCheckoutWebInteractionControllerIntent {
-    case addPaymentMethod((BotCheckoutPaymentWebToken) -> Void)
+    case addPaymentMethod(customTitle: String?, completion: (BotCheckoutPaymentWebToken) -> Void)
     case externalVerification((Bool) -> Void)
 }
 
@@ -39,10 +39,10 @@ final class BotCheckoutWebInteractionController: ViewController {
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         switch intent {
-            case .addPaymentMethod:
-                self.title = self.presentationData.strings.Checkout_NewCard_Title
-            case .externalVerification:
-                self.title = self.presentationData.strings.Checkout_WebConfirmation_Title
+        case let .addPaymentMethod(customTitle, _):
+            self.title = customTitle ?? self.presentationData.strings.Checkout_NewCard_Title
+        case .externalVerification:
+            self.title = self.presentationData.strings.Checkout_WebConfirmation_Title
         }
     }
     

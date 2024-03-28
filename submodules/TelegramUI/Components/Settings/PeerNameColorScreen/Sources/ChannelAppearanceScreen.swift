@@ -38,100 +38,7 @@ import BundleIconComponent
 import Markdown
 import GroupStickerPackSetupController
 import PeerNameColorItem
-
-private final class EmojiActionIconComponent: Component {
-    let context: AccountContext
-    let color: UIColor
-    let fileId: Int64?
-    let file: TelegramMediaFile?
-    
-    init(
-        context: AccountContext,
-        color: UIColor,
-        fileId: Int64?,
-        file: TelegramMediaFile?
-    ) {
-        self.context = context
-        self.color = color
-        self.fileId = fileId
-        self.file = file
-    }
-    
-    static func ==(lhs: EmojiActionIconComponent, rhs: EmojiActionIconComponent) -> Bool {
-        if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.color != rhs.color {
-            return false
-        }
-        if lhs.fileId != rhs.fileId {
-            return false
-        }
-        if lhs.file != rhs.file {
-            return false
-        }
-        return true
-    }
-    
-    final class View: UIView {
-        private var icon: ComponentView<Empty>?
-        
-        func update(component: EmojiActionIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            let size = CGSize(width: 24.0, height: 24.0)
-            
-            if let fileId = component.fileId {
-                let icon: ComponentView<Empty>
-                if let current = self.icon {
-                    icon = current
-                } else {
-                    icon = ComponentView()
-                    self.icon = icon
-                }
-                let _ = icon.update(
-                    transition: .immediate,
-                    component: AnyComponent(EmojiStatusComponent(
-                        context: component.context,
-                        animationCache: component.context.animationCache,
-                        animationRenderer: component.context.animationRenderer,
-                        content: .animation(
-                            content: .customEmoji(fileId: fileId),
-                            size: size,
-                            placeholderColor: .lightGray,
-                            themeColor: component.color,
-                            loopMode: .forever
-                        ),
-                        isVisibleForAnimations: false,
-                        action: nil
-                    )),
-                    environment: {},
-                    containerSize: size
-                )
-                let iconFrame = CGRect(origin: CGPoint(), size: size)
-                if let iconView = icon.view {
-                    if iconView.superview == nil {
-                        self.addSubview(iconView)
-                    }
-                    iconView.frame = iconFrame
-                }
-            } else {
-                if let icon = self.icon {
-                    self.icon = nil
-                    icon.view?.removeFromSuperview()
-                }
-            }
-            
-            return size
-        }
-    }
-    
-    func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-    }
-}
+import EmojiActionIconComponent
 
 final class ChannelAppearanceScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -1705,7 +1612,7 @@ final class ChannelAppearanceScreenComponent: Component {
                             sectionId: 0,
                             themes: chatThemes,
                             hasNoTheme: true,
-                            animatedEmojiStickers: component.context.animatedEmojiStickers,
+                            animatedEmojiStickers: component.context.animatedEmojiStickersValue,
                             themeSpecificAccentColors: [:],
                             themeSpecificChatWallpapers: [:],
                             nightMode: environment.theme.overallDarkAppearance,

@@ -28,7 +28,7 @@ mkdir -p $INTERDIR
 tar zxf "$BUILD_DIR/$SOURCE_CODE_ARCHIVE" -C $SRCDIR
 cd "${SRCDIR}/opus-"*
 
-if [ "${ARCH}" == "i386" ] || [ "${ARCH}" == "x86_64" ]; then
+if [ "${ARCH}" == "x86_64" ]; then
   PLATFORM="iphonesimulator"
   EXTRA_CFLAGS="-arch ${ARCH}"
   EXTRA_CONFIG="--host=x86_64-apple-darwin"
@@ -39,14 +39,14 @@ elif [ "${ARCH}" == "sim_arm64" ]; then
 else
   PLATFORM="iphoneos"
   EXTRA_CFLAGS="-arch ${ARCH}"
-    EXTRA_CONFIG="--host=arm-apple-darwin"
+  EXTRA_CONFIG="--host=arm-apple-darwin"
 fi
 
 SDK_PATH="$(xcrun --sdk $PLATFORM --show-sdk-path 2>/dev/null)"
 
 mkdir -p "${INTERDIR}"
 
-./configure --enable-float-approx --disable-shared --enable-static --with-pic --disable-extra-programs --disable-doc ${EXTRA_CONFIG} \
+./configure --disable-shared --enable-static --with-pic --disable-extra-programs --disable-doc --disable-asm --enable-intrinsics --enable-deep-plc --enable-dred --enable-osce ${EXTRA_CONFIG} \
   --prefix="${INTERDIR}" \
   LDFLAGS="$LDFLAGS ${OPT_LDFLAGS} -fPIE -miphoneos-version-min=${MINIOSVERSION} -L${OUTPUTDIR}/lib" \
   CFLAGS="$CFLAGS ${EXTRA_CFLAGS} ${OPT_CFLAGS} -fPIE -miphoneos-version-min=${MINIOSVERSION} -I${OUTPUTDIR}/include -isysroot ${SDK_PATH}" \

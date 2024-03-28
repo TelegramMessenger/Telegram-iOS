@@ -10,32 +10,71 @@ import Postbox
 import WallpaperBackgroundNode
 import ChatMessageItemCommon
 
-public class ChatMessageShareButton: HighlightableButtonNode {
+public class ChatMessageShareButton: ASDisplayNode {
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     private var backgroundBlurView: PortalView?
     
-    private let iconNode: ASImageNode
-    private var iconOffset = CGPoint()
+    private let topButton: HighlightTrackingButtonNode
+    private let topIconNode: ASImageNode
+    private var topIconOffset = CGPoint()
+    
+    private var bottomButton: HighlightTrackingButtonNode?
+    private var bottomIconNode: ASImageNode?
+    
+    private var separatorNode: ASDisplayNode?
     
     private var theme: PresentationTheme?
     private var isReplies: Bool = false
+    private var hasMore: Bool = false
     
     private var textNode: ImmediateTextNode?
     
     private var absolutePosition: (CGRect, CGSize)?
     
-    public init() {
-        self.iconNode = ASImageNode()
+    public var pressed: (() -> Void)?
+    public var morePressed: (() -> Void)?
+    
+    override public init() {
+        self.topButton = HighlightTrackingButtonNode()
+        self.topIconNode = ASImageNode()
+        self.topIconNode.displaysAsynchronously = false
         
-        super.init(pointerStyle: nil)
+        super.init()
         
         self.allowsGroupOpacity = true
         
-        self.addSubnode(self.iconNode)
+        self.addSubnode(self.topIconNode)
+        self.addSubnode(self.topButton)
+        
+        self.topButton.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.topButton.highligthedChanged = { [weak self] highlighted in
+            guard let self else {
+                return
+            }
+            if highlighted {
+                self.topIconNode.layer.removeAnimation(forKey: "opacity")
+                self.topIconNode.alpha = 0.4
+                self.textNode?.layer.removeAnimation(forKey: "opacity")
+                self.textNode?.alpha = 0.4
+            } else {
+                self.topIconNode.alpha = 1.0
+                self.topIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                self.textNode?.alpha = 1.0
+                self.textNode?.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+            }
+        }
     }
     
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    @objc private func buttonPressed() {
+        self.pressed?()
+    }
+    
+    @objc private func moreButtonPressed() {
+        self.morePressed?()
     }
     
     public func update(presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction, chatLocation: ChatLocation, subject: ChatControllerSubject?, message: Message, account: Account, disableComments: Bool = false) -> CGSize {
@@ -59,15 +98,26 @@ public class ChatMessageShareButton: HighlightableButtonNode {
             isReplies = false
         }
         
-        if self.theme !== presentationData.theme.theme || self.isReplies != isReplies {
+        var hasMore = false
+        if let adAttribute = message.adAttribute, adAttribute.canReport {
+            hasMore = true
+        }
+        
+        if self.theme !== presentationData.theme.theme || self.isReplies != isReplies || self.hasMore != hasMore {
             self.theme = presentationData.theme.theme
             self.isReplies = isReplies
+            self.hasMore = hasMore
 
             var updatedIconImage: UIImage?
+            var updatedBottomIconImage: UIImage?
             var updatedIconOffset = CGPoint()
-            if message.adAttribute != nil {
+            if let _ = message.adAttribute {
                 updatedIconImage = PresentationResourcesChat.chatFreeCloseButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                 updatedIconOffset = CGPoint(x: UIScreenPixel, y: UIScreenPixel)
+                
+                if hasMore {
+                    updatedBottomIconImage = PresentationResourcesChat.chatFreeMoreButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                }
             } else if case .pinnedMessages = subject {
                 updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                 updatedIconOffset = CGPoint(x: UIScreenPixel, y: 1.0)
@@ -79,11 +129,62 @@ public class ChatMessageShareButton: HighlightableButtonNode {
             } else {
                 updatedIconImage = PresentationResourcesChat.chatFreeShareButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             }
-            //self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
-            self.iconNode.image = updatedIconImage
-            self.iconOffset = updatedIconOffset
+         
+            self.topIconNode.image = updatedIconImage
+            self.topIconOffset = updatedIconOffset
+            
+            if let updatedBottomIconImage {
+                let bottomButton: HighlightTrackingButtonNode
+                let bottomIconNode: ASImageNode
+                let separatorNode: ASDisplayNode
+                if let currentButton = self.bottomButton, let currentIcon = self.bottomIconNode, let currentSeparator = self.separatorNode {
+                    bottomButton = currentButton
+                    bottomIconNode = currentIcon
+                    separatorNode = currentSeparator
+                } else {
+                    bottomButton = HighlightTrackingButtonNode()
+                    bottomButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
+                    self.bottomButton = bottomButton
+                    
+                    bottomIconNode = ASImageNode()
+                    bottomIconNode.displaysAsynchronously = false
+                    self.bottomIconNode = bottomIconNode
+                    
+                    bottomButton.highligthedChanged = { [weak self] highlighted in
+                        guard let self, let bottomIconNode = self.bottomIconNode else {
+                            return
+                        }
+                        if highlighted {
+                            bottomIconNode.layer.removeAnimation(forKey: "opacity")
+                            bottomIconNode.alpha = 0.4
+                        } else {
+                            bottomIconNode.alpha = 1.0
+                            bottomIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                        }
+                    }
+                    
+                    separatorNode = ASDisplayNode()
+                    self.separatorNode = separatorNode
+                    
+                    self.addSubnode(separatorNode)
+                    self.addSubnode(bottomIconNode)
+                    self.addSubnode(bottomButton)
+                }
+                separatorNode.backgroundColor = bubbleVariableColor(variableColor: presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: presentationData.theme.wallpaper).withAlphaComponent(0.15)
+                bottomIconNode.image = updatedBottomIconImage
+            } else {
+                self.bottomButton?.removeFromSupernode()
+                self.bottomButton = nil
+                self.bottomIconNode?.removeFromSupernode()
+                self.bottomIconNode = nil
+                self.separatorNode?.removeFromSupernode()
+                self.separatorNode = nil
+            }
         }
         var size = CGSize(width: 30.0, height: 30.0)
+        if hasMore {
+            size.height += 30.0
+        }
         var offsetIcon = false
         if isReplies, replyCount > 0 {
             offsetIcon = true
@@ -129,13 +230,18 @@ public class ChatMessageShareButton: HighlightableButtonNode {
             backgroundBlurView.view.frame = CGRect(origin: CGPoint(), size: size)
             backgroundBlurView.view.layer.cornerRadius = min(size.width, size.height) / 2.0
         }
+                
+        if let image = self.topIconNode.image {
+            self.topIconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0) + self.topIconOffset.x, y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0) + self.topIconOffset.y), size: image.size)
+        }
+        self.topButton.frame = CGRect(origin: .zero, size: CGSize(width: size.width, height: size.width))
         
-        //self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
-        //self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(self.backgroundNode.bounds.width, self.backgroundNode.bounds.height) / 2.0, transition: .immediate)
-        if let image = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0) + self.iconOffset.x, y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0) + self.iconOffset.y), size: image.size)
+        if let bottomIconNode = self.bottomIconNode, let bottomButton = self.bottomButton, let bottomImage = bottomIconNode.image {
+            bottomIconNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - bottomImage.size.width) / 2.0), y: size.height - size.width + floorToScreenPixels((size.width - bottomImage.size.height) / 2.0)), size: bottomImage.size)
+            bottomButton.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - size.width), size: CGSize(width: size.width, height: size.width))
         }
         
+        self.separatorNode?.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height / 2.0), size: CGSize(width: size.width, height: 1.0 - UIScreenPixel))
         
         if controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
             if self.backgroundContent == nil, let backgroundContent = controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {

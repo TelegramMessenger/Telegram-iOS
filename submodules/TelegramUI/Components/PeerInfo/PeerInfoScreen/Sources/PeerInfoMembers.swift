@@ -274,6 +274,9 @@ private final class PeerInfoMembersContextImpl {
     deinit {
         self.disposable.dispose()
         self.peerDisposable.dispose()
+        for (_, disposable) in self.removingMemberIds {
+            disposable.dispose()
+        }
     }
     
     private func pushState() {
@@ -293,7 +296,7 @@ private final class PeerInfoMembersContextImpl {
     }
     
     func removeMember(memberId: PeerId) {
-        if removingMemberIds[memberId] == nil {
+        if self.removingMemberIds[memberId] == nil {
             let signal: Signal<Never, NoError>
             if self.peerId.namespace == Namespaces.Peer.CloudChannel {
                 signal = context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: self.context.engine, peerId: self.peerId, memberId: memberId, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))

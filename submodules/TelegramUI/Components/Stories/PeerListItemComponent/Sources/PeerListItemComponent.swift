@@ -442,14 +442,14 @@ public final class PeerListItemComponent: Component {
                 }
                 transition.setBounds(view: self.containerButton, bounds: CGRect(origin: CGPoint(x: -offset, y: 0.0), size: self.containerButton.bounds.size))
             }
-            self.swipeOptionContainer.revealOptionSelected = { [weak self] option, animated in
+            self.swipeOptionContainer.revealOptionSelected = { [weak self] option, _ in
                 guard let self, let component = self.component else {
                     return
                 }
                 guard let inlineActions = component.inlineActions else {
                     return
                 }
-                self.swipeOptionContainer.setRevealOptionsOpened(false, animated: animated)
+                self.swipeOptionContainer.setRevealOptionsOpened(false, animated: true)
                 if let inlineAction = inlineActions.actions.first(where: { $0.id == option.key }) {
                     inlineAction.action()
                 }

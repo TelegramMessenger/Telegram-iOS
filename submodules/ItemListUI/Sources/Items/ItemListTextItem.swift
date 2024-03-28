@@ -81,6 +81,8 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
     
     private var item: ItemListTextItem?
     
+    private var chevronImage: UIImage?
+    
     public var tag: ItemListItemTag? {
         return self.item?.tag
     }
@@ -117,6 +119,8 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
     
     public func asyncLayout() -> (_ item: ItemListTextItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.textNode)
+        let currentChevronImage = self.chevronImage
+        let currentItem = self.item
         
         return { item, params, neighbors in
             let leftInset: CGFloat = 15.0
@@ -127,6 +131,12 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
             let largeTitleFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseFontSize))
             let titleBoldFont = Font.semibold(item.presentationData.fontSize.itemListBaseHeaderFontSize)
             
+            var themeUpdated = false
+            var chevronImage = currentChevronImage
+            if currentItem?.presentationData.theme !== item.presentationData.theme {
+                themeUpdated = true
+            }
+            
             let attributedText: NSAttributedString
             switch item.text {
             case let .plain(text):
@@ -134,9 +144,18 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
             case let .large(text):
                 attributedText = NSAttributedString(string: text, font: largeTitleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             case let .markdown(text):
-                attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: item.presentationData.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
+                let mutableAttributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: item.presentationData.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
                     return (TelegramTextAttributes.URL, contents)
-                }))
+                })).mutableCopy() as! NSMutableAttributedString
+                if let _ = text.range(of: ">]"), let range = mutableAttributedText.string.range(of: ">") {
+                    if themeUpdated || currentChevronImage == nil {
+                        chevronImage = generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: item.presentationData.theme.list.itemAccentColor)
+                    }
+                    if let chevronImage {
+                        mutableAttributedText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: mutableAttributedText.string))
+                    }
+                }
+                attributedText = mutableAttributedText
             }
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0 - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -158,6 +177,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    strongSelf.chevronImage = chevronImage
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     strongSelf.activateArea.accessibilityLabel = attributedText.string

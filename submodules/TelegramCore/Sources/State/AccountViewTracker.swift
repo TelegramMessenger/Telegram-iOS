@@ -351,6 +351,9 @@ public final class AccountViewTracker {
     private var quickRepliesUpdateDisposable: Disposable?
     private var quickRepliesUpdateTimestamp: Double = 0.0
     
+    private var businessLinksUpdateDisposable: Disposable?
+    private var businessLinksUpdateTimestamp: Double = 0.0
+    
     init(account: Account) {
         self.account = account
         self.accountPeerId = account.peerId
@@ -377,6 +380,7 @@ public final class AccountViewTracker {
         self.updatedReactionsDisposables.dispose()
         self.externallyUpdatedPeerIdDisposable.dispose()
         self.quickRepliesUpdateDisposable?.dispose()
+        self.businessLinksUpdateDisposable?.dispose()
     }
     
     func reset() {
@@ -1468,7 +1472,7 @@ public final class AccountViewTracker {
                                         if i < slice.count {
                                             let value = result[i]
                                             transaction.updatePeerCachedData(peerIds: Set([slice[i].0]), update: { _, cachedData in
-                                                var cachedData = cachedData as? CachedUserData ?? CachedUserData(about: nil, botInfo: nil, editableBotInfo: nil, peerStatusSettings: nil, pinnedMessageId: nil, isBlocked: false, commonGroupCount: 0, voiceCallsAvailable: true, videoCallsAvailable: true, callsPrivate: true, canPinMessages: true, hasScheduledMessages: true, autoremoveTimeout: .unknown, themeEmoticon: nil, photo: .unknown, personalPhoto: .unknown, fallbackPhoto: .unknown, premiumGiftOptions: [], voiceMessagesAvailable: true, wallpaper: nil, flags: [], businessHours: nil, businessLocation: nil, greetingMessage: nil, awayMessage: nil, connectedBot: nil)
+                                                var cachedData = cachedData as? CachedUserData ?? CachedUserData(about: nil, botInfo: nil, editableBotInfo: nil, peerStatusSettings: nil, pinnedMessageId: nil, isBlocked: false, commonGroupCount: 0, voiceCallsAvailable: true, videoCallsAvailable: true, callsPrivate: true, canPinMessages: true, hasScheduledMessages: true, autoremoveTimeout: .unknown, themeEmoticon: nil, photo: .unknown, personalPhoto: .unknown, fallbackPhoto: .unknown, premiumGiftOptions: [], voiceMessagesAvailable: true, wallpaper: nil, flags: [], businessHours: nil, businessLocation: nil, greetingMessage: nil, awayMessage: nil, connectedBot: nil, businessIntro: .unknown, birthday: nil, personalChannel: .unknown)
                                                 var flags = cachedData.flags
                                                 if case .boolTrue = value {
                                                     flags.insert(.premiumRequired)
@@ -2592,6 +2596,20 @@ public final class AccountViewTracker {
                 self.quickRepliesUpdateTimestamp = timestamp
                 self.quickRepliesUpdateDisposable?.dispose()
                 self.quickRepliesUpdateDisposable = _internal_keepShortcutMessagesUpdated(account: account).startStrict()
+            }
+        }
+    }
+    
+    public func keepBusinessLinksApproximatelyUpdated() {
+        self.queue.async {
+            guard let account = self.account else {
+                return
+            }
+            let timestamp = CFAbsoluteTimeGetCurrent()
+            if self.businessLinksUpdateTimestamp + 16 * 60 * 60 < timestamp {
+                self.businessLinksUpdateTimestamp = timestamp
+                self.businessLinksUpdateDisposable?.dispose()
+                self.businessLinksUpdateDisposable = _internal_refreshBusinessChatLinks(postbox: account.postbox, network: account.network, accountPeerId: account.peerId).startStrict()
             }
         }
     }

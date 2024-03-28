@@ -19,25 +19,42 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
 
     }
     
+    public struct ManagingBot: Codable, Equatable {
+        public var id: PeerId
+        public var manageUrl: String?
+        public var isPaused: Bool
+        public var canReply: Bool
+        
+        public init(id: PeerId, manageUrl: String?, isPaused: Bool, canReply: Bool) {
+            self.id = id
+            self.manageUrl = manageUrl
+            self.isPaused = isPaused
+            self.canReply = canReply
+        }
+    }
+    
     public var flags: PeerStatusSettings.Flags
     public var geoDistance: Int32?
     public var requestChatTitle: String?
     public var requestChatDate: Int32?
     public var requestChatIsChannel: Bool?
+    public var managingBot: ManagingBot?
     
     public init() {
         self.flags = PeerStatusSettings.Flags()
         self.geoDistance = nil
         self.requestChatTitle = nil
         self.requestChatDate = nil
+        self.managingBot = nil
     }
     
-    public init(flags: PeerStatusSettings.Flags, geoDistance: Int32? = nil, requestChatTitle: String? = nil, requestChatDate: Int32? = nil, requestChatIsChannel: Bool? = nil) {
+    public init(flags: PeerStatusSettings.Flags, geoDistance: Int32? = nil, requestChatTitle: String? = nil, requestChatDate: Int32? = nil, requestChatIsChannel: Bool? = nil, managingBot: ManagingBot? = nil) {
         self.flags = flags
         self.geoDistance = geoDistance
         self.requestChatTitle = requestChatTitle
         self.requestChatDate = requestChatDate
         self.requestChatIsChannel = requestChatIsChannel
+        self.managingBot = managingBot
     }
     
     public init(decoder: PostboxDecoder) {
@@ -46,6 +63,7 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         self.requestChatTitle = decoder.decodeOptionalStringForKey("requestChatTitle")
         self.requestChatDate = decoder.decodeOptionalInt32ForKey("requestChatDate")
         self.requestChatIsChannel = decoder.decodeOptionalBoolForKey("requestChatIsChannel")
+        self.managingBot = decoder.decodeCodable(ManagingBot.self, forKey: "managingBot")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -69,6 +87,11 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
             encoder.encodeBool(requestChatIsChannel, forKey: "requestChatIsChannel")
         } else {
             encoder.encodeNil(forKey: "requestChatIsChannel")
+        }
+        if let managingBot = self.managingBot {
+            encoder.encodeCodable(managingBot, forKey: "managingBot")
+        } else {
+            encoder.encodeNil(forKey: "managingBot")
         }
     }
     

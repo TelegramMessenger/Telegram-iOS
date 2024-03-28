@@ -242,7 +242,9 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 @property (nonatomic, copy) void (^ _Nullable signalBarsChanged)(int32_t);
 @property (nonatomic, copy) void (^ _Nullable audioLevelUpdated)(float);
 
-- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue
+- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version
+                        customParameters:(NSString * _Nullable)customParameters
+                                   queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue
                                    proxy:(VoipProxyServerWebrtc * _Nullable)proxy
                              networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving
                             derivedState:(NSData * _Nonnull)derivedState

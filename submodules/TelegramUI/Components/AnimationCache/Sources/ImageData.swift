@@ -365,7 +365,9 @@ extension ImageARGB {
                                 aBuffer.baseAddress!.assumingMemoryBound(to: UInt8.self),
                                 Int32(self.argbPlane.width),
                                 Int32(self.argbPlane.height),
-                                Int32(self.argbPlane.bytesPerRow)
+                                Int32(self.argbPlane.bytesPerRow),
+                                false,
+                                false
                             )
                         }
                     }

@@ -11,6 +11,7 @@ import TelegramCore
 import TelegramPresentationData
 import FastBlur
 import AccountContext
+import ImageTransparency
 
 public struct MediaEditorPlayerState {
     public struct Track: Equatable {
@@ -105,6 +106,7 @@ public final class MediaEditor {
         case asset(PHAsset)
         case draft(MediaEditorDraft)
         case message(MessageId)
+        case sticker(TelegramMediaFile)
         
         var dimensions: PixelDimensions {
             switch self {
@@ -115,6 +117,8 @@ public final class MediaEditor {
             case let .draft(draft):
                 return draft.dimensions
             case .message:
+                return PixelDimensions(width: 1080, height: 1920)
+            case .sticker:
                 return PixelDimensions(width: 1080, height: 1920)
             }
         }
@@ -653,6 +657,19 @@ public final class MediaEditor {
                     )
                 }
             }
+        case .sticker:
+            let image = generateImage(CGSize(width: 1080, height: 1920), contextGenerator: { size, context in
+                context.clear(CGRect(origin: .zero, size: size))
+            }, opaque: false, scale: 1.0)
+            textureSource = .single(
+                TextureSourceResult(
+                    image: image,
+                    nightImage: nil,
+                    player: nil,
+                    playerIsReference: false,
+                    gradientColors: GradientColors(top: .clear, bottom: .clear)
+                )
+            )
         }
         
         self.textureSourceDisposable = (textureSource
@@ -681,7 +698,7 @@ public final class MediaEditor {
                     }
                     
                     
-                    if case .sticker = self.mode {
+                    if case .sticker = self.mode, let cgImage = image.cgImage, !imageHasTransparency(cgImage) {
                         let _ = (cutoutStickerImage(from: image, onlyCheck: true)
                         |> deliverOnMainQueue).start(next: { [weak self] result in
                             guard let self, result != nil else {
@@ -1683,21 +1700,7 @@ public final class MediaEditor {
         self.renderer.renderFrame()
     }
     
-    public func getSeparatedImage(point: CGPoint?) -> Signal<UIImage?, NoError> {
-        guard let textureSource = self.renderer.textureSource as? UniversalTextureSource, let image = textureSource.mainImage else {
-            return .single(nil)
-        }
-        return cutoutImage(from: image, atPoint: point, asImage: true)
-        |> map { result in
-            if let result, case let .image(image) = result {
-                return image
-            } else {
-                return nil
-            }
-        }
-    }
-    
-    public func removeSeparationMask() {
+    public func removeSegmentationMask() {
         self.isCutoutUpdated(false)
         
         self.renderer.currentMainInputMask = nil
@@ -1706,26 +1709,27 @@ public final class MediaEditor {
         }
     }
     
-    public func setSeparationMask(point: CGPoint?) {
+    public func setSegmentationMask(_ image: UIImage) {
         guard let renderTarget = self.previewView, let device = renderTarget.mtlDevice else {
             return
         }
+        
+        self.isCutoutUpdated(true)
+        
+        //TODO:replace with pixelbuffer
+        self.renderer.currentMainInputMask = loadTexture(image: image, device: device)
+        if !self.skipRendering {
+            self.updateRenderChain()
+        }
+    }
+    
+    public func processImage(with f: @escaping (UIImage, UIImage?) -> Void) {
         guard let textureSource = self.renderer.textureSource as? UniversalTextureSource, let image = textureSource.mainImage else {
             return
         }
-        self.isCutoutUpdated(true)
-        
-        let _ = (cutoutImage(from: image, atPoint: point, asImage: false)
-        |> deliverOnMainQueue).start(next: { [weak self] result in
-            guard let self, let result, case let .image(image) = result else {
-                return
-            }
-            //TODO:replace with pixelbuffer
-            self.renderer.currentMainInputMask = loadTexture(image: image, device: device)
-            if !self.skipRendering {
-                self.updateRenderChain()
-            }
-        })
+        Queue.concurrentDefaultQueue().async {
+            f(image, self.resultImage)
+        }
     }
     
     private func maybeGeneratePersonSegmentation(_ image: UIImage?) {

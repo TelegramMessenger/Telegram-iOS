@@ -360,11 +360,11 @@ final class ChatHistoryPreloadManager {
             guard let strongSelf = self else {
                 return
             }
-            #if DEBUG
+            /*#if DEBUG
             if "".isEmpty {
                 return
             }
-            #endif
+            #endif*/
             
             var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []
             for item in loadItems {
@@ -376,6 +376,11 @@ final class ChatHistoryPreloadManager {
     }
     
     private func update(indices: [(ChatHistoryPreloadIndex, Bool, Bool)], additionalPeerIds: Set<PeerId>) {
+        /*#if DEBUG
+        var indices = indices
+        indices.removeAll()
+        #endif*/
+        
         self.queue.async {
             var validEntityIds = Set(indices.map { $0.0.entity })
             for peerId in additionalPeerIds {
@@ -431,7 +436,7 @@ final class ChatHistoryPreloadManager {
                     let key: PostboxViewKey
                     switch index.entity {
                     case let .peer(peerId, threadId):
-                        key = .messageOfInterestHole(location: .peer(peerId: peerId, threadId: threadId), namespace: Namespaces.Message.Cloud, count: 70)
+                        key = .messageOfInterestHole(location: .peer(peerId: peerId, threadId: threadId), namespace: Namespaces.Message.Cloud, count: 50)
                     }
                     view.disposable.set((self.postbox.combinedView(keys: [key])
                     |> deliverOn(self.queue)).start(next: { [weak self] next in

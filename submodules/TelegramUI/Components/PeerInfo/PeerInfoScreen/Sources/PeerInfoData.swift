@@ -33,6 +33,9 @@ final class PeerInfoState {
     let updatingBio: String?
     let avatarUploadProgress: AvatarUploadProgress?
     let highlightedButton: PeerInfoHeaderButtonKey?
+    let isEditingBirthDate: Bool
+    let updatingBirthDate: TelegramBirthday??
+    let personalChannels: [TelegramAdminedPublicChannel]?
     
     init(
         isEditing: Bool,
@@ -40,7 +43,10 @@ final class PeerInfoState {
         updatingAvatar: PeerInfoUpdatingAvatar?,
         updatingBio: String?,
         avatarUploadProgress: AvatarUploadProgress?,
-        highlightedButton: PeerInfoHeaderButtonKey?
+        highlightedButton: PeerInfoHeaderButtonKey?,
+        isEditingBirthDate: Bool,
+        updatingBirthDate: TelegramBirthday??,
+        personalChannels: [TelegramAdminedPublicChannel]?
     ) {
         self.isEditing = isEditing
         self.selectedMessageIds = selectedMessageIds
@@ -48,6 +54,9 @@ final class PeerInfoState {
         self.updatingBio = updatingBio
         self.avatarUploadProgress = avatarUploadProgress
         self.highlightedButton = highlightedButton
+        self.isEditingBirthDate = isEditingBirthDate
+        self.updatingBirthDate = updatingBirthDate
+        self.personalChannels = personalChannels
     }
     
     func withIsEditing(_ isEditing: Bool) -> PeerInfoState {
@@ -57,7 +66,10 @@ final class PeerInfoState {
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
-            highlightedButton: self.highlightedButton
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
         )
     }
     
@@ -68,7 +80,10 @@ final class PeerInfoState {
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
-            highlightedButton: self.highlightedButton
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
         )
     }
     
@@ -79,7 +94,10 @@ final class PeerInfoState {
             updatingAvatar: updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
-            highlightedButton: self.highlightedButton
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
         )
     }
     
@@ -90,7 +108,10 @@ final class PeerInfoState {
             updatingAvatar: self.updatingAvatar,
             updatingBio: updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
-            highlightedButton: self.highlightedButton
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
         )
     }
     
@@ -101,7 +122,10 @@ final class PeerInfoState {
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: avatarUploadProgress,
-            highlightedButton: self.highlightedButton
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
         )
     }
     
@@ -112,7 +136,52 @@ final class PeerInfoState {
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
-            highlightedButton: highlightedButton
+            highlightedButton: highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
+        )
+    }
+    
+    func withIsEditingBirthDate(_ isEditingBirthDate: Bool) -> PeerInfoState {
+        return PeerInfoState(
+            isEditing: self.isEditing,
+            selectedMessageIds: self.selectedMessageIds,
+            updatingAvatar: self.updatingAvatar,
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
+        )
+    }
+    
+    func withUpdatingBirthDate(_ updatingBirthDate: TelegramBirthday??) -> PeerInfoState {
+        return PeerInfoState(
+            isEditing: self.isEditing,
+            selectedMessageIds: self.selectedMessageIds,
+            updatingAvatar: self.updatingAvatar,
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: updatingBirthDate,
+            personalChannels: self.personalChannels
+        )
+    }
+    
+    func withPersonalChannels(_ personalChannels: [TelegramAdminedPublicChannel]?) -> PeerInfoState {
+        return PeerInfoState(
+            isEditing: self.isEditing,
+            selectedMessageIds: self.selectedMessageIds,
+            updatingAvatar: self.updatingAvatar,
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: personalChannels
         )
     }
 }
@@ -184,6 +253,44 @@ final class TelegramGlobalSettings {
     }
 }
 
+final class PeerInfoPersonalChannelData: Equatable {
+    let peer: EnginePeer
+    let subscriberCount: Int?
+    let topMessages: [EngineMessage]
+    let storyStats: PeerStoryStats?
+    let isLoading: Bool
+    
+    init(peer: EnginePeer, subscriberCount: Int?, topMessages: [EngineMessage], storyStats: PeerStoryStats?, isLoading: Bool) {
+        self.peer = peer
+        self.subscriberCount = subscriberCount
+        self.topMessages = topMessages
+        self.storyStats = storyStats
+        self.isLoading = isLoading
+    }
+    
+    static func ==(lhs: PeerInfoPersonalChannelData, rhs: PeerInfoPersonalChannelData) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.subscriberCount != rhs.subscriberCount {
+            return false
+        }
+        if lhs.topMessages != rhs.topMessages {
+            return false
+        }
+        if lhs.storyStats != rhs.storyStats {
+            return false
+        }
+        if lhs.isLoading != rhs.isLoading {
+            return false
+        }
+        return true
+    }
+}
+
 final class PeerInfoScreenData {
     let peer: Peer?
     let chatPeer: Peer?
@@ -209,6 +316,7 @@ final class PeerInfoScreenData {
     let accountIsPremium: Bool
     let hasSavedMessageTags: Bool
     let isPremiumRequiredForStoryPosting: Bool
+    let personalChannel: PeerInfoPersonalChannelData?
     
     let _isContact: Bool
     var forceIsContact: Bool = false
@@ -246,7 +354,8 @@ final class PeerInfoScreenData {
         isPowerSavingEnabled: Bool?,
         accountIsPremium: Bool,
         hasSavedMessageTags: Bool,
-        isPremiumRequiredForStoryPosting: Bool
+        isPremiumRequiredForStoryPosting: Bool,
+        personalChannel: PeerInfoPersonalChannelData?
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -273,6 +382,7 @@ final class PeerInfoScreenData {
         self.accountIsPremium = accountIsPremium
         self.hasSavedMessageTags = hasSavedMessageTags
         self.isPremiumRequiredForStoryPosting = isPremiumRequiredForStoryPosting
+        self.personalChannel = personalChannel
     }
 }
 
@@ -456,6 +566,78 @@ public func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId, c
     }
 }
 
+private func peerInfoPersonalChannel(context: AccountContext, peerId: EnginePeer.Id, isSettings: Bool) -> Signal<PeerInfoPersonalChannelData?, NoError> {
+    return context.engine.data.subscribe(
+        TelegramEngine.EngineData.Item.Peer.PersonalChannel(id: peerId)
+    )
+    |> distinctUntilChanged
+    |> mapToSignal { personalChannel -> Signal<PeerInfoPersonalChannelData?, NoError> in
+        guard case let .known(personalChannelValue) = personalChannel, let personalChannelValue else {
+            return .single(nil)
+        }
+        
+        return context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: personalChannelValue.peerId),
+            TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: personalChannelValue.peerId)
+        )
+        |> mapToSignal { channelPeer, participantCount -> Signal<PeerInfoPersonalChannelData?, NoError> in
+            guard let channelPeer else {
+                return .single(nil)
+            }
+            
+            
+            let polledChannel: Signal<Void, NoError> = Signal<Void, NoError>.single(Void())
+            |> then(
+                context.account.viewTracker.polledChannel(peerId: channelPeer.id)
+                |> ignoreValues
+                |> map { _ -> Void in
+                }
+            )
+            
+            return combineLatest(
+                context.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: channelPeer.id, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 10, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: []),
+                context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Peer.StoryStats(id: channelPeer.id)
+                ),
+                polledChannel
+            )
+            |> map { viewData, storyStats, _ -> PeerInfoPersonalChannelData? in
+                let (view, _, _) = viewData
+                var messages: [EngineMessage] = []
+                for i in (0 ..< view.entries.count).reversed() {
+                    if messages.isEmpty {
+                        messages.append(EngineMessage(view.entries[i].message))
+                    } else if messages[0].groupingKey == view.entries[i].message.groupingKey {
+                        messages.append(EngineMessage(view.entries[i].message))
+                    }
+                }
+                messages = messages.reversed()
+                
+                var isLoading = false
+                if messages.isEmpty && view.isLoading {
+                    isLoading = true
+                }
+                
+                var mappedParticipantCount: Int?
+                if let participantCount {
+                    mappedParticipantCount = participantCount
+                } else if let subscriberCount = personalChannelValue.subscriberCount {
+                    mappedParticipantCount = Int(subscriberCount)
+                }
+                
+                return PeerInfoPersonalChannelData(
+                    peer: channelPeer,
+                    subscriberCount: mappedParticipantCount,
+                    topMessages: messages,
+                    storyStats: storyStats,
+                    isLoading: isLoading
+                )
+            }
+        }
+    }
+    |> distinctUntilChanged
+}
+
 func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, accountsAndPeers: Signal<[(AccountContext, EnginePeer, Int32)], NoError>, activeSessionsContextAndCount: Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError>, notificationExceptions: Signal<NotificationExceptionsList?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, hasPassport: Signal<Bool, NoError>) -> Signal<PeerInfoScreenData, NoError> {
     let preferences = context.sharedContext.accountManager.sharedData(keys: [
         SharedDataKeys.proxySettings,
@@ -586,7 +768,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         hasPassport,
         (context.watchManager?.watchAppInstalled ?? .single(false)),
         context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
-        getServerProvidedSuggestions(account: context.account),
+        context.engine.notices.getServerProvidedSuggestions(),
         context.engine.data.get(
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
@@ -598,9 +780,10 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         }
         |> distinctUntilChanged,
         hasStories,
-        bots
+        bots,
+        peerInfoPersonalChannel(context: context, peerId: peerId, isSettings: true)
     )
-    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots -> PeerInfoScreenData in
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots, personalChannel -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
@@ -670,7 +853,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             isPowerSavingEnabled: isPowerSavingEnabled,
             accountIsPremium: peer?.isPremium ?? false,
             hasSavedMessageTags: false,
-            isPremiumRequiredForStoryPosting: true
+            isPremiumRequiredForStoryPosting: true,
+            personalChannel: personalChannel
         )
     }
 }
@@ -707,7 +891,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 isPowerSavingEnabled: nil,
                 accountIsPremium: false,
                 hasSavedMessageTags: false,
-                isPremiumRequiredForStoryPosting: true
+                isPremiumRequiredForStoryPosting: true,
+                personalChannel: nil
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -916,9 +1101,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 savedMessagesPeer,
                 hasSavedMessagesChats,
                 hasSavedMessages,
-                hasSavedMessageTags
+                hasSavedMessageTags,
+                peerInfoPersonalChannel(context: context, peerId: peerId, isSettings: false)
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, personalChannel -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 
                 if let hasStories {
@@ -979,7 +1165,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     isPowerSavingEnabled: nil,
                     accountIsPremium: accountIsPremium,
                     hasSavedMessageTags: hasSavedMessageTags,
-                    isPremiumRequiredForStoryPosting: false
+                    isPremiumRequiredForStoryPosting: false,
+                    personalChannel: personalChannel
                 )
             }
         case .channel:
@@ -1148,7 +1335,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     isPowerSavingEnabled: nil,
                     accountIsPremium: accountIsPremium,
                     hasSavedMessageTags: hasSavedMessageTags,
-                    isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting
+                    isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
+                    personalChannel: nil
                 )
             }
         case let .group(groupId):
@@ -1440,7 +1628,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     isPowerSavingEnabled: nil,
                     accountIsPremium: accountIsPremium,
                     hasSavedMessageTags: hasSavedMessageTags,
-                    isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting
+                    isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
+                    personalChannel: nil
                 ))
             }
         }

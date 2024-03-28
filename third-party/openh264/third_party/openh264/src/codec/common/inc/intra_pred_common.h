@@ -72,6 +72,11 @@ void WelsI16x16LumaPredH_AArch64_neon (uint8_t* pPred, uint8_t* pRef, const int3
 void WelsI16x16LumaPredV_mmi (uint8_t* pPred, uint8_t* pRef, const int32_t kiStride);
 void WelsI16x16LumaPredH_mmi (uint8_t* pPred, uint8_t* pRef, const int32_t kiStride);
 #endif//HAVE_MMI
+
+#if defined(HAVE_LSX)
+void WelsI16x16LumaPredV_lsx (uint8_t* pPred, uint8_t* pRef, const int32_t kiStride);
+void WelsI16x16LumaPredH_lsx (uint8_t* pPred, uint8_t* pRef, const int32_t kiStride);
+#endif//HAVE_LSX
 #if defined(__cplusplus)
 }
 #endif//__cplusplus

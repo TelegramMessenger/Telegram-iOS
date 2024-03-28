@@ -210,3 +210,54 @@ WELS_EXTERN WelsEmms
     emms    ; empty mmx technology states
     ret
 
+;*****************************************************************************
+;   int32_t WelsCPUDetectAVX512()
+;*****************************************************************************
+WELS_EXTERN WelsCPUDetectAVX512
+%ifdef    X86_32
+    push ebx
+%else
+    push rbx
+%endif
+
+    mov eax, 1
+    mov ecx, 0
+    cpuid
+    and ecx, 0x08000000
+    cmp ecx, 0x08000000            ; check CPUID.1:ECX.OSXSAVE[bit 27]
+    jne avx512_not_supported
+
+    ; check XMM/YMM/zmm/opmask state
+    mov ecx, 0
+    XGETBV                         ; result in EDX:EAX
+    and eax, 0x0D6
+    cmp eax, 0x0D6
+    jne avx512_not_supported
+
+    ; check AVX512 flag CPUID.7:EBX.AVX512F[bit 16]
+    ; EBX[bit 16]: AVX512F
+    ; EBX[bit 28]: AVX512CD
+    ; EBX[bit 17]: AVX512DQ
+    ; EBX[bit 30]: AVX512BW
+    ; EBX[bit 31]: AVX512VL
+    mov eax, 7
+    cpuid
+    and ebx, 0xC0030000
+    mov eax, ebx
+
+%ifdef    X86_32
+    pop ebx
+%else
+    pop rbx
+%endif
+    ret
+
+avx512_not_supported:
+    mov eax, 0
+%ifdef    X86_32
+    pop ebx
+%else
+    pop rbx
+%endif
+    ret
+

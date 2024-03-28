@@ -128,6 +128,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                 isPremiumLocked: !self.hasPremiumForInstallation,
                 isEmbedded: false,
                 hasClear: false,
+                hasEdit: false,
                 collapsedLineCount: 3,
                 displayPremiumBadges: false,
                 headerItem: nil,
@@ -171,6 +172,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
             },
             clearGroup: { _ in
             },
+            editAction: { _ in },
             pushController: { _ in
             },
             presentController: { _ in
@@ -293,6 +295,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                                     isPremiumLocked: false,
                                     isEmbedded: false,
                                     hasClear: false,
+                                    hasEdit: false,
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
@@ -348,6 +351,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                             isPremiumLocked: false,
                             isEmbedded: false,
                             hasClear: false,
+                            hasEdit: false,
                             collapsedLineCount: nil,
                             displayPremiumBadges: false,
                             headerItem: nil,
@@ -382,6 +386,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
                                     isPremiumLocked: false,
                                     isEmbedded: false,
                                     hasClear: false,
+                                    hasEdit: false,
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
@@ -470,6 +475,7 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
             searchInitiallyHidden: false,
             searchAlwaysActive: true,
             searchIsPlaceholderOnly: false,
+            searchUnicodeEmojiOnly: false,
             emptySearchResults: nil,
             enableLongPress: false,
             selectedItems: Set(),

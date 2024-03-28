@@ -12,6 +12,7 @@ import TelegramPresentationData
 import BundleIconComponent
 import AvatarNode
 import AvatarStoryIndicatorComponent
+import ScrollComponent
 
 private final class AvatarComponent: Component {
     let context: AccountContext

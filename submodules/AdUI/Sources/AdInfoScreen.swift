@@ -129,7 +129,7 @@ public final class AdInfoScreen: ViewController {
                         openUrl?(value)
                     }
                 }
-                textNode.linkHighlightColor = self.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.5)
+                textNode.linkHighlightColor = self.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.2)
 
                 if !didAddUrl {
                     didAddUrl = true

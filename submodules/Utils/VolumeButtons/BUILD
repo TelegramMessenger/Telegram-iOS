@@ -12,6 +12,7 @@ swift_library(
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/LegacyComponents",
+        "//submodules/AccountContext",
     ],
     visibility = [
         "//visibility:public",

@@ -20,6 +20,8 @@ public struct CachedChannelFlags: OptionSet {
     public static let canDeleteHistory = CachedChannelFlags(rawValue: 1 << 6)
     public static let antiSpamEnabled = CachedChannelFlags(rawValue: 1 << 7)
     public static let translationHidden = CachedChannelFlags(rawValue: 1 << 8)
+    public static let adsRestricted = CachedChannelFlags(rawValue: 1 << 9)
+    public static let canViewRevenue = CachedChannelFlags(rawValue: 1 << 10)
 }
 
 public struct CachedChannelParticipantsSummary: PostboxCoding, Equatable {
@@ -551,7 +553,7 @@ public final class CachedChannelData: CachedPeerData {
         var peerIds = Set<PeerId>()
         
         if let legacyValue = decoder.decodeOptionalInt32ForKey("pcs") {
-            self.peerStatusSettings = PeerStatusSettings(flags: PeerStatusSettings.Flags(rawValue: legacyValue), geoDistance: nil)
+            self.peerStatusSettings = PeerStatusSettings(flags: PeerStatusSettings.Flags(rawValue: legacyValue), geoDistance: nil, managingBot: nil)
         } else if let peerStatusSettings = decoder.decodeObjectForKey("pss", decoder: { PeerStatusSettings(decoder: $0) }) as? PeerStatusSettings {
             self.peerStatusSettings = peerStatusSettings
         } else {
@@ -990,7 +992,7 @@ public final class CachedChannelData: CachedPeerData {
         if other.emojiPack != self.emojiPack {
             return false
         }
-        
+                
         return true
     }
 }

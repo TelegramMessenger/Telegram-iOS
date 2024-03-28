@@ -220,7 +220,17 @@ func updateChatPresentationInterfaceStateImpl(
         }
     }
     
-    if let (updatedUrlPreviewState, updatedUrlPreviewSignal) = urlPreviewStateForInputText(updatedChatPresentationInterfaceState.interfaceState.composeInputState.inputText, context: selfController.context, currentQuery: selfController.urlPreviewQueryState?.0, forPeerId: selfController.chatLocation.peerId) {
+    var canHaveUrlPreview = true
+    if case let .customChatContents(customChatContents) = updatedChatPresentationInterfaceState.subject {
+        switch customChatContents.kind {
+        case .quickReplyMessageInput:
+            break
+        case .businessLinkSetup:
+            canHaveUrlPreview = false
+        }
+    }
+    
+    if canHaveUrlPreview, let (updatedUrlPreviewState, updatedUrlPreviewSignal) = urlPreviewStateForInputText(updatedChatPresentationInterfaceState.interfaceState.composeInputState.inputText, context: selfController.context, currentQuery: selfController.urlPreviewQueryState?.0, forPeerId: selfController.chatLocation.peerId) {
         selfController.urlPreviewQueryState?.1.dispose()
         var inScope = true
         var inScopeResult: ((TelegramMediaWebpage?) -> (TelegramMediaWebpage, String)?)?
@@ -583,6 +593,10 @@ func updateChatPresentationInterfaceStateImpl(
     }
     
     selfController.updateDownButtonVisibility()
+    
+    if selfController.presentationInterfaceState.hasBirthdayToday {
+        selfController.displayBirthdayTooltip()
+    }
     
     if case .standard(.embedded) = selfController.presentationInterfaceState.mode, let controllerInteraction = selfController.controllerInteraction, let interfaceInteraction = selfController.interfaceInteraction {
         if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(selfController.presentationInterfaceState, context: selfController.context, currentPanel: selfController.customNavigationPanelNode as? ChatTitleAccessoryPanelNode, controllerInteraction: controllerInteraction, interfaceInteraction: interfaceInteraction, force: true) {

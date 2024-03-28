@@ -862,6 +862,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 if let file = content.file, !file.isAnimated, file.isVideo {
                     canFullscreen = true
                 }
+                if content.type == "photo", let _ = content.image {
+                    canEdit = true
+                }
             }
         }
         

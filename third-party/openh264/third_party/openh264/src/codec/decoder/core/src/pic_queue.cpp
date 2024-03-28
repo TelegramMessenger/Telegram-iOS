@@ -107,6 +107,7 @@ PPicture AllocPicture (PWelsDecoderContext pCtx, const int32_t kiPicWidth, const
   pPic->iHeightInPixel = kiPicHeight;
   pPic->iFrameNum      = -1;
   pPic->iRefCount = 0;
+  pPic->pSetUnRef = NULL;
 
   uint32_t uiMbWidth = (kiPicWidth + 15) >> 4;
   uint32_t uiMbHeight = (kiPicHeight + 15) >> 4;

@@ -18,6 +18,26 @@
     return self;
 }
 
+-(instancetype)initWithPixelFormat:(FFMpegAVFramePixelFormat)pixelFormat width:(int32_t)width height:(int32_t)height {
+    self = [super init];
+    if (self != nil) {
+        _impl = av_frame_alloc();
+        switch (pixelFormat) {
+            case FFMpegAVFramePixelFormatYUV:
+                _impl->format = AV_PIX_FMT_YUV420P;
+                break;
+            case FFMpegAVFramePixelFormatYUVA:
+                _impl->format = AV_PIX_FMT_YUVA420P;
+                break;
+        }
+        _impl->width = width;
+        _impl->height = height;
+        
+        av_frame_get_buffer(_impl, 0);
+    }
+    return self;
+}
+
 - (void)dealloc {
     if (_impl) {
         av_frame_free(&_impl);

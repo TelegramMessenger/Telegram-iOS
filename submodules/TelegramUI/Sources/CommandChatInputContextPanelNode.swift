@@ -156,9 +156,11 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                     },
                     openPremiumIntro: {
                     },
-                    openPremiumGift: {
+                    openPremiumGift: { _ in
                     },
                     openActiveSessions: {
+                    },
+                    openBirthdaySetup: {
                     },
                     performActiveSessionAction: { _, _ in
                     },
@@ -224,7 +226,9 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                             commandPrefix: "/\(shortcut.shortcut)",
                             searchQuery: command.searchQuery.flatMap { "/\($0)"},
                             messageCount: shortcut.totalCount,
-                            hideSeparator: false
+                            hideSeparator: false,
+                            hideDate: true,
+                            hidePeerStatus: true
                         )
                     )),
                     editing: false,

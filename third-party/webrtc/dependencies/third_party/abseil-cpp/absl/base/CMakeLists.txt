@@ -49,9 +49,49 @@ absl_cc_library(
   SRCS
     "log_severity.cc"
   DEPS
+    absl::config
     absl::core_headers
   COPTS
     ${ABSL_DEFAULT_COPTS}
+)
+
+absl_cc_library(
+  NAME
+    no_destructor
+  HDRS
+    "no_destructor.h"
+  DEPS
+    absl::config
+    absl::nullability
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+)
+
+absl_cc_library(
+  NAME
+    nullability
+  HDRS
+    "nullability.h"
+  SRCS
+    "internal/nullability_impl.h"
+  DEPS
+    absl::core_headers
+    absl::type_traits
+  COPTS
+    ${ABSL_DEFAULT_COPTS}
+)
+
+absl_cc_test(
+  NAME
+    nullability_test
+  SRCS
+    "nullability_test.cc"
+  COPTS
+    ${ABSL_TEST_COPTS}
+  DEPS
+    absl::core_headers
+    absl::nullability
+    GTest::gtest_main
 )
 
 # Internal-only target, do not depend on directly.
@@ -128,7 +168,6 @@ absl_cc_library(
     "optimization.h"
     "port.h"
     "thread_annotations.h"
-    "internal/thread_annotations.h"
   COPTS
     ${ABSL_DEFAULT_COPTS}
   DEPS
@@ -209,6 +248,7 @@ absl_cc_library(
     absl::core_headers
     absl::dynamic_annotations
     absl::log_severity
+    absl::nullability
     absl::raw_logging_internal
     absl::spinlock_wait
     absl::type_traits
@@ -437,6 +477,7 @@ absl_cc_library(
     absl::base
     absl::config
     absl::core_headers
+    absl::nullability
   PUBLIC
 )
 
@@ -478,6 +519,20 @@ absl_cc_test(
     absl::base
     absl::core_headers
     absl::synchronization
+    GTest::gtest_main
+)
+
+absl_cc_test(
+  NAME
+    no_destructor_test
+  SRCS
+    "no_destructor_test.cc"
+  COPTS
+    ${ABSL_TEST_COPTS}
+  DEPS
+    absl::no_destructor
+    absl::config
+    absl::raw_logging_internal
     GTest::gtest_main
 )
 
@@ -645,25 +700,25 @@ absl_cc_test(
     GTest::gtest_main
 )
 
-# Internal-only target, do not depend on directly.
 absl_cc_library(
   NAME
     prefetch
   HDRS
-    "internal/prefetch.h"
+    "prefetch.h"
   COPTS
     ${ABSL_DEFAULT_COPTS}
   LINKOPTS
     ${ABSL_DEFAULT_LINKOPTS}
   DEPS
     absl::config
+    absl::core_headers
 )
 
 absl_cc_test(
   NAME
     prefetch_test
   SRCS
-    "internal/prefetch_test.cc"
+    "prefetch_test.cc"
   COPTS
     ${ABSL_TEST_COPTS}
   DEPS

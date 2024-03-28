@@ -173,7 +173,8 @@ private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UI
 
 public final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
-    private let bot: Bool
+    private let title: String
+    private let text: String
     
     private let titleNode: ASTextNode
     private let textNode: ASTextNode
@@ -205,15 +206,16 @@ public final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    public init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, bot: Bool = false, actions: [TextAlertAction]) {
+    public init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, title: String, text: String, actions: [TextAlertAction]) {
         self.strings = strings
         self.theme = ptheme
-        self.bot = bot
+        self.title = title
+        self.text = text
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
         self.textNode = ASTextNode()
-        self.textNode.maximumNumberOfLines = 2
+        self.textNode.maximumNumberOfLines = 4
         
         self.inputFieldNode = ChannelOwnershipTransferPasswordFieldNode(theme: ptheme, placeholder: strings.Channel_OwnershipTransfer_PasswordPlaceholder)
         
@@ -278,18 +280,8 @@ public final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     }
     
     public override func updateTheme(_ theme: AlertControllerTheme) {
-        let title: String
-        let text: String
-        if self.bot {
-            title = self.strings.OwnershipTransfer_EnterPassword
-            text = self.strings.OwnershipTransfer_EnterPasswordText
-        } else {
-            title = self.strings.Channel_OwnershipTransfer_EnterPassword
-            text = self.strings.Channel_OwnershipTransfer_EnterPasswordText
-        }
-        
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: self.text, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -434,7 +426,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, u
     
     let disposable = MetaDisposable()
     
-    let contentNode = ChannelOwnershipTransferAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+    let contentNode = ChannelOwnershipTransferAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, title: presentationData.strings.Channel_OwnershipTransfer_EnterPassword, text: presentationData.strings.Channel_OwnershipTransfer_EnterPasswordText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?()
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.OwnershipTransfer_Transfer, action: {
         proceedImpl?()

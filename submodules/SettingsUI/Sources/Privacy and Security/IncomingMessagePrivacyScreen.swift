@@ -167,19 +167,34 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: Bool, u
         }
     )
     
+    let enableSetting: Signal<Bool, NoError> = context.engine.data.subscribe(
+        TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+        TelegramEngine.EngineData.Item.Configuration.App()
+    )
+    |> map { accountPeer, appConfig -> Bool in
+        if let accountPeer, accountPeer.isPremium {
+            return true
+        }
+        if let data = appConfig.data, let setting = data["new_noncontact_peers_require_premium_without_ownpremium"] as? Bool {
+            if setting {
+                return true
+            }
+        }
+        return false
+    }
+    |> distinctUntilChanged
+    
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
-        context.engine.data.subscribe(
-            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
-        ),
-        statePromise.get()
+        statePromise.get(),
+        enableSetting
     )
-    |> map { presentationData, accountPeer, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, enableSetting -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let rightNavigationButton: ItemListNavigationButton? = nil
         
         let title: ItemListControllerTitle = .text(presentationData.strings.Privacy_Messages_Title)
         
-        let entries: [GlobalAutoremoveEntry] = incomingMessagePrivacyScreenEntries(presentationData: presentationData, state: state, isPremium: accountPeer?.isPremium ?? false)
+        let entries: [GlobalAutoremoveEntry] = incomingMessagePrivacyScreenEntries(presentationData: presentationData, state: state, isPremium: enableSetting)
         
         let animateChanges = false
         

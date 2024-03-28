@@ -60,6 +60,18 @@ enum BaseConstants {
         return numberFormatter
     }()
     
+    static let tonNumberFormatter: NumberFormatter = {
+        let numberFormatter = TonNumberFormatter()
+        numberFormatter.allowsFloats = true
+        numberFormatter.numberStyle = .decimal
+        numberFormatter.usesGroupingSeparator = true
+        numberFormatter.groupingSeparator = " "
+        numberFormatter.minimumIntegerDigits = 1
+        numberFormatter.minimumFractionDigits = 0
+        numberFormatter.maximumFractionDigits = 2
+        return numberFormatter
+    }()
+    
     static let detailsNumberFormatter: NumberFormatter = {
         let detailsNumberFormatter = NumberFormatter()
         detailsNumberFormatter.allowsFloats = false

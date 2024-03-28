@@ -2557,6 +2557,9 @@ int32_t WelsDecodeMbCavlcBSlice (PWelsDecoderContext pCtx, PNalUnit pNalCur, uin
     if (-1 == pSlice->iMbSkipRun) {
       return GENERATE_ERROR_NO (ERR_LEVEL_MB_DATA, ERR_INFO_INVALID_MB_SKIP_RUN);
     }
+    if ((uint32_t) (pSlice->iMbSkipRun) > (uint32_t) (pCurDqLayer->iMbWidth * pCurDqLayer->iMbHeight - iMbXy)) {
+      return GENERATE_ERROR_NO (ERR_LEVEL_MB_DATA, ERR_INFO_INVALID_MB_SKIP_RUN);
+    }
   }
   if (pSlice->iMbSkipRun--) {
     int16_t iMv[LIST_A][2] = { { 0, 0 }, { 0, 0 } };

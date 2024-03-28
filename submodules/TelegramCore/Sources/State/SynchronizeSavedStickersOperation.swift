@@ -40,56 +40,57 @@ public func getIsStickerSaved(transaction: Transaction, fileId: MediaId) -> Bool
 public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMediaFile, limit: Int = 5) -> Signal<Void, AddSavedStickerError> {
     return postbox.transaction { transaction -> Signal<Void, AddSavedStickerError> in
         for attribute in file.attributes {
-            if case let .Sticker(_, maybePackReference, _) = attribute, let packReference = maybePackReference {
-                var fetchReference: StickerPackReference?
-                switch packReference {
-                case .name:
-                    fetchReference = packReference
-                case let .id(id, _):
-                    let items = transaction.getItemCollectionItems(collectionId: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id))
-                    var found = false
-                inner: for item in items {
-                    if let stickerItem = item as? StickerPackItem {
-                        if stickerItem.file.fileId == file.fileId {
-                            let stringRepresentations = stickerItem.getStringRepresentationsOfIndexKeys()
-                            found = true
-                            addSavedSticker(transaction: transaction, file: stickerItem.file, stringRepresentations: stringRepresentations)
-                            break inner
+            if case let .Sticker(_, maybePackReference, _) = attribute {
+                if let packReference = maybePackReference {
+                    var fetchReference: StickerPackReference?
+                    switch packReference {
+                    case .name:
+                        fetchReference = packReference
+                    case let .id(id, _):
+                        let items = transaction.getItemCollectionItems(collectionId: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id))
+                        var found = false
+                    inner: for item in items {
+                        if let stickerItem = item as? StickerPackItem {
+                            if stickerItem.file.fileId == file.fileId {
+                                let stringRepresentations = stickerItem.getStringRepresentationsOfIndexKeys()
+                                found = true
+                                addSavedSticker(transaction: transaction, file: stickerItem.file, stringRepresentations: stringRepresentations)
+                                break inner
+                            }
                         }
                     }
-                }
-                    if !found {
-                        fetchReference = packReference
+                        if !found {
+                            fetchReference = packReference
+                        }
+                    case .animatedEmoji, .animatedEmojiAnimations, .dice, .premiumGifts, .emojiGenericAnimations, .iconStatusEmoji, .iconChannelStatusEmoji, .iconTopicEmoji:
+                        break
                     }
-                case .animatedEmoji, .animatedEmojiAnimations, .dice, .premiumGifts, .emojiGenericAnimations, .iconStatusEmoji, .iconChannelStatusEmoji, .iconTopicEmoji:
-                    break
-                }
-                if let fetchReference = fetchReference {
-                    return network.request(Api.functions.messages.getStickerSet(stickerset: fetchReference.apiInputStickerSet, hash: 0))
+                    if let fetchReference = fetchReference {
+                        return network.request(Api.functions.messages.getStickerSet(stickerset: fetchReference.apiInputStickerSet, hash: 0))
                         |> mapError { _ -> AddSavedStickerError in
                             return .generic
                         }
                         |> mapToSignal { result -> Signal<Void, AddSavedStickerError> in
                             var stickerStringRepresentations: [String]?
                             switch result {
-                                case .stickerSetNotModified:
-                                    break
-                                case let .stickerSet(_, packs, _, _):
-                                    var stringRepresentationsByFile: [MediaId: [String]] = [:]
-                                    for pack in packs {
-                                        switch pack {
-                                            case let .stickerPack(text, fileIds):
-                                                for fileId in fileIds {
-                                                    let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                                                    if stringRepresentationsByFile[mediaId] == nil {
-                                                        stringRepresentationsByFile[mediaId] = [text]
-                                                    } else {
-                                                        stringRepresentationsByFile[mediaId]!.append(text)
-                                                    }
-                                                }
+                            case .stickerSetNotModified:
+                                break
+                            case let .stickerSet(_, packs, _, _):
+                                var stringRepresentationsByFile: [MediaId: [String]] = [:]
+                                for pack in packs {
+                                    switch pack {
+                                    case let .stickerPack(text, fileIds):
+                                        for fileId in fileIds {
+                                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                            if stringRepresentationsByFile[mediaId] == nil {
+                                                stringRepresentationsByFile[mediaId] = [text]
+                                            } else {
+                                                stringRepresentationsByFile[mediaId]!.append(text)
+                                            }
                                         }
                                     }
-                                    stickerStringRepresentations = stringRepresentationsByFile[file.fileId]
+                                }
+                                stickerStringRepresentations = stringRepresentationsByFile[file.fileId]
                             }
                             if let stickerStringRepresentations = stickerStringRepresentations {
                                 return postbox.transaction { transaction -> Void in
@@ -99,8 +100,13 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
                                 return .fail(.notFound)
                             }
                         }
+                    }
+                    return .complete()
+                } else {
+                    return postbox.transaction { transaction -> Void in
+                        addSavedSticker(transaction: transaction, file: file, stringRepresentations: [])
+                    } |> mapError { _ -> AddSavedStickerError in }
                 }
-                return .complete()
             }
         }
         return .complete()

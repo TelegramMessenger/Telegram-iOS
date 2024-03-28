@@ -69,17 +69,19 @@
 #include "../internal.h"
 
 
+static CRYPTO_EX_DATA_CLASS g_ex_data_class =
+    CRYPTO_EX_DATA_CLASS_INIT_WITH_APP_DATA;
+
 BIO *BIO_new(const BIO_METHOD *method) {
-  BIO *ret = OPENSSL_malloc(sizeof(BIO));
+  BIO *ret = OPENSSL_zalloc(sizeof(BIO));
   if (ret == NULL) {
-    OPENSSL_PUT_ERROR(BIO, ERR_R_MALLOC_FAILURE);
     return NULL;
   }
 
-  OPENSSL_memset(ret, 0, sizeof(BIO));
   ret->method = method;
   ret->shutdown = 1;
   ret->references = 1;
+  CRYPTO_new_ex_data(&ret->ex_data);
 
   if (method->create != NULL && !method->create(ret)) {
     OPENSSL_free(ret);
@@ -103,6 +105,7 @@ int BIO_free(BIO *bio) {
       bio->method->destroy(bio);
     }
 
+    CRYPTO_free_ex_data(&g_ex_data_class, bio, &bio->ex_data);
     OPENSSL_free(bio);
   }
   return 1;
@@ -192,11 +195,17 @@ int BIO_write_all(BIO *bio, const void *data, size_t len) {
 }
 
 int BIO_puts(BIO *bio, const char *in) {
-  return BIO_write(bio, in, strlen(in));
+  size_t len = strlen(in);
+  if (len > INT_MAX) {
+    // |BIO_write| and the return value both assume the string fits in |int|.
+    OPENSSL_PUT_ERROR(BIO, ERR_R_OVERFLOW);
+    return -1;
+  }
+  return BIO_write(bio, in, (int)len);
 }
 
 int BIO_flush(BIO *bio) {
-  return BIO_ctrl(bio, BIO_CTRL_FLUSH, 0, NULL);
+  return (int)BIO_ctrl(bio, BIO_CTRL_FLUSH, 0, NULL);
 }
 
 long BIO_ctrl(BIO *bio, int cmd, long larg, void *parg) {
@@ -229,11 +238,11 @@ long BIO_int_ctrl(BIO *b, int cmd, long larg, int iarg) {
 }
 
 int BIO_reset(BIO *bio) {
-  return BIO_ctrl(bio, BIO_CTRL_RESET, 0, NULL);
+  return (int)BIO_ctrl(bio, BIO_CTRL_RESET, 0, NULL);
 }
 
 int BIO_eof(BIO *bio) {
-  return BIO_ctrl(bio, BIO_CTRL_EOF, 0, NULL);
+  return (int)BIO_ctrl(bio, BIO_CTRL_EOF, 0, NULL);
 }
 
 void BIO_set_flags(BIO *bio, int flags) {
@@ -261,6 +270,8 @@ int BIO_should_io_special(const BIO *bio) {
 }
 
 int BIO_get_retry_reason(const BIO *bio) { return bio->retry_reason; }
+
+void BIO_set_retry_reason(BIO *bio, int reason) { bio->retry_reason = reason; }
 
 void BIO_clear_flags(BIO *bio, int flags) {
   bio->flags &= ~flags;
@@ -331,14 +342,14 @@ size_t BIO_wpending(const BIO *bio) {
 }
 
 int BIO_set_close(BIO *bio, int close_flag) {
-  return BIO_ctrl(bio, BIO_CTRL_SET_CLOSE, close_flag, NULL);
+  return (int)BIO_ctrl(bio, BIO_CTRL_SET_CLOSE, close_flag, NULL);
 }
 
-OPENSSL_EXPORT size_t BIO_number_read(const BIO *bio) {
+OPENSSL_EXPORT uint64_t BIO_number_read(const BIO *bio) {
   return bio->num_read;
 }
 
-OPENSSL_EXPORT size_t BIO_number_written(const BIO *bio) {
+OPENSSL_EXPORT uint64_t BIO_number_written(const BIO *bio) {
   return bio->num_write;
 }
 
@@ -416,7 +427,7 @@ int BIO_indent(BIO *bio, unsigned indent, unsigned max_indent) {
 }
 
 static int print_bio(const char *str, size_t len, void *bio) {
-  return BIO_write((BIO *)bio, str, len);
+  return BIO_write_all((BIO *)bio, str, len);
 }
 
 void ERR_print_errors(BIO *bio) {
@@ -455,9 +466,11 @@ static int bio_read_all(BIO *bio, uint8_t **out, size_t *out_len,
       OPENSSL_free(*out);
       return 0;
     }
-    const size_t todo = len - done;
-    assert(todo < INT_MAX);
-    const int n = BIO_read(bio, *out + done, todo);
+    size_t todo = len - done;
+    if (todo > INT_MAX) {
+      todo = INT_MAX;
+    }
+    const int n = BIO_read(bio, *out + done, (int)todo);
     if (n == 0) {
       *out_len = done;
       return 1;
@@ -601,7 +614,6 @@ int BIO_read_asn1(BIO *bio, uint8_t **out, size_t *out_len, size_t max_len) {
 
   *out = OPENSSL_malloc(len);
   if (*out == NULL) {
-    OPENSSL_PUT_ERROR(ASN1, ERR_R_MALLOC_FAILURE);
     return 0;
   }
   OPENSSL_memcpy(*out, header, header_len);
@@ -620,23 +632,22 @@ void BIO_set_retry_special(BIO *bio) {
 
 int BIO_set_write_buffer_size(BIO *bio, int buffer_size) { return 0; }
 
-static struct CRYPTO_STATIC_MUTEX g_index_lock = CRYPTO_STATIC_MUTEX_INIT;
+static CRYPTO_MUTEX g_index_lock = CRYPTO_MUTEX_INIT;
 static int g_index = BIO_TYPE_START;
 
 int BIO_get_new_index(void) {
-  CRYPTO_STATIC_MUTEX_lock_write(&g_index_lock);
+  CRYPTO_MUTEX_lock_write(&g_index_lock);
   // If |g_index| exceeds 255, it will collide with the flags bits.
   int ret = g_index > 255 ? -1 : g_index++;
-  CRYPTO_STATIC_MUTEX_unlock_write(&g_index_lock);
+  CRYPTO_MUTEX_unlock_write(&g_index_lock);
   return ret;
 }
 
 BIO_METHOD *BIO_meth_new(int type, const char *name) {
-  BIO_METHOD *method = OPENSSL_malloc(sizeof(BIO_METHOD));
+  BIO_METHOD *method = OPENSSL_zalloc(sizeof(BIO_METHOD));
   if (method == NULL) {
     return NULL;
   }
-  OPENSSL_memset(method, 0, sizeof(BIO_METHOD));
   method->type = type;
   method->name = name;
   return method;
@@ -697,4 +708,19 @@ int BIO_get_shutdown(BIO *bio) { return bio->shutdown; }
 int BIO_meth_set_puts(BIO_METHOD *method, int (*puts)(BIO *, const char *)) {
   // Ignore the parameter. We implement |BIO_puts| using |BIO_write|.
   return 1;
+}
+
+int BIO_get_ex_new_index(long argl, void *argp,
+                                    CRYPTO_EX_unused *unused,
+                                    CRYPTO_EX_dup *dup_unused,
+                                    CRYPTO_EX_free *free_func) {
+  return CRYPTO_get_ex_new_index(&g_ex_data_class, argl, argp, free_func);
+}
+
+int BIO_set_ex_data(BIO *bio, int idx, void *data) {
+  return CRYPTO_set_ex_data(&bio->ex_data, idx, data);
+}
+
+void *BIO_get_ex_data(const BIO *bio, int idx) {
+  return CRYPTO_get_ex_data(&bio->ex_data, idx);
 }

@@ -69,6 +69,11 @@ static int ARGBTranspose(const uint8_t* src_argb,
     }
   }
 #endif
+#if defined(HAS_SCALEARGBROWDOWNEVEN_RVV)
+  if (TestCpuFlag(kCpuHasRVV)) {
+    ScaleARGBRowDownEven = ScaleARGBRowDownEven_RVV;
+  }
+#endif
 
   for (i = 0; i < width; ++i) {  // column of source to row of dest.
     ScaleARGBRowDownEven(src_argb, 0, src_pixel_step, dst_argb, height);
@@ -115,7 +120,6 @@ static int ARGBRotate180(const uint8_t* src_argb,
                          int width,
                          int height) {
   // Swap first and last row and mirror the content. Uses a temporary row.
-  align_buffer_64(row, width * 4);
   const uint8_t* src_bot = src_argb + src_stride_argb * (height - 1);
   uint8_t* dst_bot = dst_argb + dst_stride_argb * (height - 1);
   int half_height = (height + 1) >> 1;
@@ -124,6 +128,9 @@ static int ARGBRotate180(const uint8_t* src_argb,
       ARGBMirrorRow_C;
   void (*CopyRow)(const uint8_t* src_argb, uint8_t* dst_argb, int width) =
       CopyRow_C;
+  align_buffer_64(row, width * 4);
+  if (!row)
+    return 1;
 #if defined(HAS_ARGBMIRRORROW_NEON)
   if (TestCpuFlag(kCpuHasNEON)) {
     ARGBMirrorRow = ARGBMirrorRow_Any_NEON;
@@ -156,6 +163,14 @@ static int ARGBRotate180(const uint8_t* src_argb,
     }
   }
 #endif
+#if defined(HAS_ARGBMIRRORROW_LSX)
+  if (TestCpuFlag(kCpuHasLSX)) {
+    ARGBMirrorRow = ARGBMirrorRow_Any_LSX;
+    if (IS_ALIGNED(width, 8)) {
+      ARGBMirrorRow = ARGBMirrorRow_LSX;
+    }
+  }
+#endif
 #if defined(HAS_ARGBMIRRORROW_LASX)
   if (TestCpuFlag(kCpuHasLASX)) {
     ARGBMirrorRow = ARGBMirrorRow_Any_LASX;
@@ -182,6 +197,11 @@ static int ARGBRotate180(const uint8_t* src_argb,
 #if defined(HAS_COPYROW_NEON)
   if (TestCpuFlag(kCpuHasNEON)) {
     CopyRow = IS_ALIGNED(width * 4, 32) ? CopyRow_NEON : CopyRow_Any_NEON;
+  }
+#endif
+#if defined(HAS_COPYROW_RVV)
+  if (TestCpuFlag(kCpuHasRVV)) {
+    CopyRow = CopyRow_RVV;
   }
 #endif
 

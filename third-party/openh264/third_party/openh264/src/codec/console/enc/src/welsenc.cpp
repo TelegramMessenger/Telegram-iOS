@@ -441,6 +441,7 @@ void PrintHelp() {
   printf ("  -lmaxb       (Layer) (spatial layer max bitrate)\n");
   printf ("  -slcmd       (Layer) (spatial layer slice mode): pls refer to layerX.cfg for details ( -slcnum: set target slice num; -slcsize: set target slice size constraint ; -slcmbnum: set the first slice mb num under some slice modes) \n");
   printf ("  -trace       (Level)\n");
+  printf ("  -fixrc       Enable fix RC overshoot(default: 1)\n");
   printf ("\n");
 }
 
@@ -530,6 +531,12 @@ int ParseCommandLine (int argc, char** argv, SSourcePicture* pSrcPic, SEncParamE
 
     else if (!strcmp (pCommand, "-fs") && (n < argc))
       pSvcParam.bEnableFrameSkip = atoi (argv[n++]) ? true : false;
+
+    else if (!strcmp (pCommand, "-fixrc") && (n < argc))
+      pSvcParam.bFixRCOverShoot = atoi (argv[n++]) ? true : false;
+
+    else if (!strcmp (pCommand, "-idrBitrateRatio") && (n < argc))
+      pSvcParam.iIdrBitrateRatio = atoi (argv[n++]);
 
     else if (!strcmp (pCommand, "-ltr") && (n < argc))
       pSvcParam.bEnableLongTermReference = atoi (argv[n++]) ? true : false;
@@ -694,6 +701,8 @@ int FillSpecificParameters (SEncParamExt& sParam) {
   sParam.bPrefixNalAddingCtrl = 0;
   sParam.iComplexityMode = LOW_COMPLEXITY;
   sParam.bSimulcastAVC         = false;
+  sParam.bFixRCOverShoot = true;
+  sParam.iIdrBitrateRatio = IDR_BITRATE_RATIO * 100;
   int iIndexLayer = 0;
   sParam.sSpatialLayers[iIndexLayer].uiProfileIdc       = PRO_BASELINE;
   sParam.sSpatialLayers[iIndexLayer].iVideoWidth        = 160;
@@ -956,7 +965,9 @@ int ProcessEncoding (ISVCEncoder* pPtrEnc, int argc, char** argv, bool bConfigFi
 
     if (iEncFrames == cmResultSuccess) {
       int iLayer = 0;
+#if defined (STICK_STREAM_SIZE)
       int iFrameSize = 0;
+#endif//STICK_STREAM_SIZE
       while (iLayer < sFbi.iLayerNum) {
         SLayerBSInfo* pLayerBsInfo = &sFbi.sLayerInfo[iLayer];
         if (pLayerBsInfo != NULL) {
@@ -1001,7 +1012,9 @@ int ProcessEncoding (ISVCEncoder* pPtrEnc, int argc, char** argv, bool bConfigFi
               fwrite (pLayerBsInfo->pBsBuf, 1, iLayerSize, pFpBs[pLayerBsInfo->uiSpatialId]);
             }
           }
+#if defined (STICK_STREAM_SIZE)
           iFrameSize += iLayerSize;
+#endif//STICK_STREAM_SIZE
         }
         ++ iLayer;
       }

@@ -35,6 +35,10 @@ public extension TelegramEngine {
             return _internal_updateAbout(account: self.account, about: about)
         }
         
+        public func updateBirthday(birthday: TelegramBirthday?) -> Signal<Never, UpdateBirthdayError> {
+            return _internal_updateBirthday(account: self.account, birthday: birthday)
+        }
+        
         public func observeAvailableColorOptions(scope: PeerColorsScope) -> Signal<EngineAvailableColorOptions, NoError> {
             return _internal_observeAvailableColorOptions(postbox: self.account.postbox, scope: scope)
         }
@@ -204,6 +208,30 @@ public extension TelegramEngine {
         
         public func setAccountConnectedBot(bot: TelegramAccountConnectedBot?) -> Signal<Never, NoError> {
             return _internal_setAccountConnectedBot(account: self.account, bot: bot)
+        }
+        
+        public func updateBusinessIntro(intro: TelegramBusinessIntro?) -> Signal<Never, NoError> {
+            return _internal_updateBusinessIntro(account: self.account, intro: intro)
+        }
+        
+        public func createBusinessChatLink(message: String, entities: [MessageTextEntity], title: String?) -> Signal<TelegramBusinessChatLinks.Link, AddBusinessChatLinkError> {
+            return _internal_createBusinessChatLink(account: self.account, message: message, entities: entities, title: title)
+        }
+        
+        public func editBusinessChatLink(url: String, message: String, entities: [MessageTextEntity], title: String?) -> Signal<TelegramBusinessChatLinks.Link, AddBusinessChatLinkError> {
+            return _internal_editBusinessChatLink(account: self.account, url: url, message: message, entities: entities, title: title)
+        }
+        
+        public func deleteBusinessChatLink(url: String) -> Signal<Never, NoError> {
+            return _internal_deleteBusinessChatLink(account: self.account, url: url)
+        }
+        
+        public func refreshBusinessChatLinks() -> Signal<Never, NoError> {
+            return _internal_refreshBusinessChatLinks(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId)
+        }
+        
+        public func updatePersonalChannel(personalChannel: TelegramPersonalChannel?) -> Signal<Never, NoError> {
+            return _internal_updatePersonalChannel(account: self.account, personalChannel: personalChannel)
         }
     }
 }

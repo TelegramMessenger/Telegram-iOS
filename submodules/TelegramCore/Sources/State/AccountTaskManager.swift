@@ -129,6 +129,7 @@ final class AccountTaskManager {
                     tasks.add(managedSynchronizeAppLogEventsOperations(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     tasks.add(managedNotificationSettingsBehaviors(postbox: self.stateManager.postbox).start())
                     tasks.add(managedThemesUpdates(accountManager: self.accountManager, postbox: self.stateManager.postbox, network: self.stateManager.network).start())
+                    tasks.add(managedContactBirthdays(stateManager: self.stateManager).start())
                     
                     if !self.testingEnvironment {
                         tasks.add(managedChatThemesUpdates(accountManager: self.accountManager, network: self.stateManager.network).start())

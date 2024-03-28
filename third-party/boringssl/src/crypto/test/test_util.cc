@@ -16,6 +16,8 @@
 
 #include <ostream>
 
+#include <openssl/err.h>
+
 #include "../internal.h"
 
 
@@ -39,22 +41,6 @@ std::ostream &operator<<(std::ostream &os, const Bytes &in) {
   return os;
 }
 
-static bool FromHexDigit(uint8_t *out, char c) {
-  if ('0' <= c && c <= '9') {
-    *out = c - '0';
-    return true;
-  }
-  if ('a' <= c && c <= 'f') {
-    *out = c - 'a' + 10;
-    return true;
-  }
-  if ('A' <= c && c <= 'F') {
-    *out = c - 'A' + 10;
-    return true;
-  }
-  return false;
-}
-
 bool DecodeHex(std::vector<uint8_t> *out, const std::string &in) {
   out->clear();
   if (in.size() % 2 != 0) {
@@ -63,8 +49,8 @@ bool DecodeHex(std::vector<uint8_t> *out, const std::string &in) {
   out->reserve(in.size() / 2);
   for (size_t i = 0; i < in.size(); i += 2) {
     uint8_t hi, lo;
-    if (!FromHexDigit(&hi, in[i]) ||
-        !FromHexDigit(&lo, in[i + 1])) {
+    if (!OPENSSL_fromxdigit(&hi, in[i]) ||
+        !OPENSSL_fromxdigit(&lo, in[i + 1])) {
       return false;
     }
     out->push_back((hi << 4) | lo);
@@ -83,3 +69,16 @@ std::string EncodeHex(bssl::Span<const uint8_t> in) {
   return ret;
 }
 
+testing::AssertionResult ErrorEquals(uint32_t err, int lib, int reason) {
+  if (ERR_GET_LIB(err) == lib && ERR_GET_REASON(err) == reason) {
+    return testing::AssertionSuccess();
+  }
+
+  char buf[128], expected[128];
+  return testing::AssertionFailure()
+         << "Got \"" << ERR_error_string_n(err, buf, sizeof(buf))
+         << "\", wanted \""
+         << ERR_error_string_n(ERR_PACK(lib, reason), expected,
+                               sizeof(expected))
+         << "\"";
+}

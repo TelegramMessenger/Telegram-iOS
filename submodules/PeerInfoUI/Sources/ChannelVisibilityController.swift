@@ -1399,6 +1399,9 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         adminedPublicChannels.set(.single(peers))
     } else {
         adminedPublicChannels.set(context.engine.peers.adminedPublicChannels(scope: .all)
+        |> map { result in
+            return result.map(\.peer)
+        }
         |> map(Optional.init))
     }
     
@@ -1406,6 +1409,9 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
     peersDisablingAddressNameAssignment.set(.single(nil) |> then(context.engine.peers.channelAddressNameAssignmentAvailability(peerId: peerId.namespace == Namespaces.Peer.CloudChannel ? peerId : nil) |> mapToSignal { result -> Signal<[EnginePeer]?, NoError> in
         if case .addressNameLimitReached = result {
             return context.engine.peers.adminedPublicChannels(scope: .all)
+            |> map { result in
+                return result.map(\.peer)
+            }
             |> map(Optional.init)
         } else {
             return .single([])
@@ -1478,7 +1484,11 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                         let controller = channelVisibilityController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, mode: .revokeNames(peers), upgradedToSupergroup: { _, _ in }, revokedPeerAddressName: { revokedPeerId in
                             let updatedPublicChannels = peers.filter { $0.id != revokedPeerId }
                             adminedPublicChannels.set(.single(updatedPublicChannels) |> then(
-                                context.engine.peers.adminedPublicChannels(scope: .all) |> map(Optional.init))
+                                context.engine.peers.adminedPublicChannels(scope: .all)
+                                |> map { result in
+                                    return result.map(\.peer)
+                                }
+                                |> map(Optional.init))
                             )
                         })
                         controller.navigationPresentation = .modal

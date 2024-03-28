@@ -17,7 +17,7 @@ objc_library(
         "Public",
     ],
     deps = [
-        "//submodules/ffmpeg:ffmpeg",
+        "//submodules/ffmpeg",
     ],
     visibility = [
         "//visibility:public",

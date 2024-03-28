@@ -549,6 +549,9 @@
         
         if (allowGrouping)
         {
+            if (_groupingChangedDisposable) {
+                [_groupingChangedDisposable dispose];
+            }
             _groupingChangedDisposable = [[SMetaDisposable alloc] init];
             [_groupingChangedDisposable setDisposable:[_selectionContext.groupingChangedSignal startStrictWithNext:^(NSNumber *next)
             {
@@ -561,6 +564,9 @@
             
             if (_editingContext != nil)
             {
+                if (_timersChangedDisposable) {
+                    [_timersChangedDisposable dispose];
+                }
                 _timersChangedDisposable = [[SMetaDisposable alloc] init];
                 [_timersChangedDisposable setDisposable:[_editingContext.timersUpdatedSignal startStrictWithNext:^(__unused NSNumber *next)
                 {
@@ -586,7 +592,9 @@
     self.delegate = nil;
     [_selectionChangedDisposable dispose];
     [_tooltipDismissDisposable dispose];
+    [_timersChangedDisposable dispose];
     [_adjustmentsChangedDisposable dispose];
+    [_groupingChangedDisposable dispose];
 }
 
 - (void)loadView

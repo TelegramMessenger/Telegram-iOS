@@ -21,8 +21,9 @@ public final class AdMessageAttribute: MessageAttribute {
     public let buttonText: String?
     public let sponsorInfo: String?
     public let additionalInfo: String?
+    public let canReport: Bool
 
-    public init(opaqueId: Data, messageType: MessageType, displayAvatar: Bool, target: MessageTarget, buttonText: String?, sponsorInfo: String?, additionalInfo: String?) {
+    public init(opaqueId: Data, messageType: MessageType, displayAvatar: Bool, target: MessageTarget, buttonText: String?, sponsorInfo: String?, additionalInfo: String?, canReport: Bool) {
         self.opaqueId = opaqueId
         self.messageType = messageType
         self.displayAvatar = displayAvatar
@@ -30,6 +31,7 @@ public final class AdMessageAttribute: MessageAttribute {
         self.buttonText = buttonText
         self.sponsorInfo = sponsorInfo
         self.additionalInfo = additionalInfo
+        self.canReport = canReport
     }
 
     public init(decoder: PostboxDecoder) {

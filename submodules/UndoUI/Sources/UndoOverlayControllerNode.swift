@@ -279,6 +279,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     displayUndo = false
                 }
                 self.originalRemainingSeconds = 5
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
             case let .linkCopied(text):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -441,8 +445,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 var resourceReference: MediaResourceReference?
                 
                 if let thumbnail = info.thumbnail {
-                    if info.flags.contains(.isAnimated) || info.flags.contains(.isVideo) {
-                        thumbnailItem = .animated(EngineMediaResource(thumbnail.resource), thumbnail.dimensions, info.flags.contains(.isVideo))
+                    if thumbnail.typeHint != .generic {
+                        thumbnailItem = .animated(EngineMediaResource(thumbnail.resource), thumbnail.dimensions, thumbnail.typeHint == .video)
                     } else {
                         thumbnailItem = .still(thumbnail)
                     }

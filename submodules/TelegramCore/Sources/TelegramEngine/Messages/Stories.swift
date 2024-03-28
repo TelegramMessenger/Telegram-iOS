@@ -1760,6 +1760,8 @@ extension Stories.StoredItem {
                             base = .contacts
                         case .privacyValueAllowCloseFriends:
                             base = .closeFriends
+                        case .privacyValueAllowPremium:
+                            base = .everyone
                         case .privacyValueDisallowAll:
                             base = .nobody
                         case let .privacyValueAllowUsers(users):

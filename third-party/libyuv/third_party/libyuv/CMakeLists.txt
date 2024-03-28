@@ -4,7 +4,7 @@
 
 PROJECT ( YUV C CXX )	# "C" is required even for C++ projects
 CMAKE_MINIMUM_REQUIRED( VERSION 2.8.12 )
-OPTION( TEST "Built unit tests" OFF )
+OPTION( UNIT_TEST "Built unit tests" OFF )
 
 SET ( ly_base_dir	${PROJECT_SOURCE_DIR} )
 SET ( ly_src_dir	${ly_base_dir}/source )
@@ -37,6 +37,10 @@ if(WIN32)
   SET_TARGET_PROPERTIES	( ${ly_lib_shared} PROPERTIES IMPORT_PREFIX "lib" )
 endif()
 
+# this creates the cpuid tool
+ADD_EXECUTABLE      ( cpuid ${ly_base_dir}/util/cpuid.c )
+TARGET_LINK_LIBRARIES  ( cpuid ${ly_lib_static} )
+
 # this creates the conversion tool
 ADD_EXECUTABLE			( yuvconvert ${ly_base_dir}/util/yuvconvert.cc )
 TARGET_LINK_LIBRARIES	( yuvconvert ${ly_lib_static} )
@@ -48,14 +52,17 @@ TARGET_LINK_LIBRARIES  ( yuvconstants ${ly_lib_static} )
 find_package ( JPEG )
 if (JPEG_FOUND)
   include_directories( ${JPEG_INCLUDE_DIR} )
-  target_link_libraries( yuvconvert ${JPEG_LIBRARY} )
+  target_link_libraries( ${ly_lib_shared} ${JPEG_LIBRARY} )
   add_definitions( -DHAVE_JPEG )
 endif()
 
-if(TEST)
+if(UNIT_TEST)
   find_library(GTEST_LIBRARY gtest)
   if(GTEST_LIBRARY STREQUAL "GTEST_LIBRARY-NOTFOUND")
     set(GTEST_SRC_DIR /usr/src/gtest CACHE STRING "Location of gtest sources")
+    if (CMAKE_CROSSCOMPILING)
+      set(GTEST_SRC_DIR third_party/googletest/src/googletest)
+    endif()
     if(EXISTS ${GTEST_SRC_DIR}/src/gtest-all.cc)
       message(STATUS "building gtest from sources in ${GTEST_SRC_DIR}")
       set(gtest_sources ${GTEST_SRC_DIR}/src/gtest-all.cc)
@@ -64,7 +71,7 @@ if(TEST)
       include_directories(${GTEST_SRC_DIR}/include)
       set(GTEST_LIBRARY gtest)
     else()
-      message(FATAL_ERROR "TEST is set but unable to find gtest library")
+      message(FATAL_ERROR "UNIT_TEST is set but unable to find gtest library")
     endif()
   endif()
 

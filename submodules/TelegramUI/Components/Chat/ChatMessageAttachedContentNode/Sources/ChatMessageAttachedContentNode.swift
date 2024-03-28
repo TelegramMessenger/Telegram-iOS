@@ -90,6 +90,9 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var contentFile: ChatMessageInteractiveFileNode?
     private var actionButton: ChatMessageAttachedContentButtonNode?
     private var actionButtonSeparator: SimpleLayer?
+    
+    private var titleBadgeLabel: TextNode?
+    private var titleBadgeButton: HighlightTrackingButtonNode?
     public var statusNode: ChatMessageDateAndStatusNode?
     
     private var closeButton: ComponentView<Empty>?
@@ -104,12 +107,14 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var message: Message?
     private var media: Media?
     private var theme: ChatPresentationThemeData?
+    private var mainColor: UIColor?
     
     private var isHighlighted: Bool = false
     private var highlightTimer: Foundation.Timer?
     
     public var openMedia: ((InteractiveMediaNodeActivateContent) -> Void)?
     public var activateAction: (() -> Void)?
+    public var activateBadgeAction: (() -> Void)?
     public var requestUpdateLayout: (() -> Void)?
     
     private var currentProgressDisposable: Disposable?
@@ -153,7 +158,11 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
         self.activateAction?()
     }
     
-    public typealias AsyncLayout = (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: MediaAutoDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ context: AccountContext, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ chatLocation: ChatLocation, _ title: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ mediaBadge: String?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ constrainedSize: CGSize, _ animationCache: AnimationCache, _ animationRenderer: MultiAnimationRenderer) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void)))
+    @objc private func badgePressed() {
+        self.activateBadgeAction?()
+    }
+    
+    public typealias AsyncLayout = (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: MediaAutoDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ context: AccountContext, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ chatLocation: ChatLocation, _ title: String?, _ titleBadge: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ mediaBadge: String?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ constrainedSize: CGSize, _ animationCache: AnimationCache, _ animationRenderer: MultiAnimationRenderer) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void)))
     
     public func makeProgress() -> Promise<Bool> {
         let progress = Promise<Bool>()
@@ -173,12 +182,13 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
         let makeTitleLayout = TextNodeWithEntities.asyncLayout(self.title)
         let makeSubtitleLayout = TextNodeWithEntities.asyncLayout(self.subtitle)
         let makeTextLayout = TextNodeWithEntities.asyncLayout(self.text)
+        let makeTitleBadgeLayout = TextNode.asyncLayout(self.titleBadgeLabel)
         let makeContentMedia = ChatMessageInteractiveMediaNode.asyncLayout(self.contentMedia)
         let makeContentFile = ChatMessageInteractiveFileNode.asyncLayout(self.contentFile)
         let makeActionButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.actionButton)
         let makeStatusLayout = ChatMessageDateAndStatusNode.asyncLayout(self.statusNode)
         
-        return { [weak self] presentationData, automaticDownloadSettings, associatedData, attributes, context, controllerInteraction, message, messageRead, chatLocation, title, subtitle, text, entities, mediaAndFlags, mediaBadge, actionIcon, actionTitle, displayLine, layoutConstants, preparePosition, constrainedSize, animationCache, animationRenderer in
+        return { [weak self] presentationData, automaticDownloadSettings, associatedData, attributes, context, controllerInteraction, message, messageRead, chatLocation, title, titleBadge, subtitle, text, entities, mediaAndFlags, mediaBadge, actionIcon, actionTitle, displayLine, layoutConstants, preparePosition, constrainedSize, animationCache, animationRenderer in
             let isPreview = presentationData.isPreview
             let fontSize: CGFloat
             if message.adAttribute != nil {
@@ -194,6 +204,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             let textBoldItalicFont = Font.semiboldItalic(fontSize)
             let textFixedFont = Font.regular(fontSize)
             let textBlockQuoteFont = Font.regular(fontSize)
+            let badgeFont = Font.regular(floor(presentationData.fontSize.baseDisplaySize * 11.0 / 17.0))
             
             var incoming = message.effectivelyIncoming(context.account.peerId)
             if let subject = associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
@@ -489,6 +500,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 var titleLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
                 var subtitleLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
                 var textLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
+                var titleBadgeLayoutAndApply: (TextNodeLayout, () -> TextNode)?
                 
                 var remainingCutoutHeight: CGFloat = 0.0
                 var cutoutWidth: CGFloat = 0.0
@@ -508,6 +520,11 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             let titleString = NSAttributedString(string: title, font: titleFont, textColor: mainColor)
                             let titleLayoutAndApplyValue = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: maxContentsWidth, height: 10000.0), alignment: .natural, lineSpacing: textLineSpacing, cutout: cutout, insets: UIEdgeInsets()))
                             titleLayoutAndApply = titleLayoutAndApplyValue
+                            
+                            if let titleBadge {
+                                let titleBadgeString = NSAttributedString(string: titleBadge, font: badgeFont, textColor: mainColor)
+                                titleBadgeLayoutAndApply = makeTitleBadgeLayout(TextNodeLayoutArguments(attributedString: titleBadgeString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxContentsWidth, height: 10000.0)))
+                            }
                             
                             remainingCutoutHeight -= titleLayoutAndApplyValue.0.size.height
                         }
@@ -548,8 +565,13 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                 }
                 
+                let titleBadgePadding: CGFloat = 5.0
+                let titleBadgeSpacing: CGFloat = 5.0
                 if let (titleLayout, _) = titleLayoutAndApply {
                     actualWidth = max(actualWidth, titleLayout.size.width)
+                    if let (titleBadgeLayout, _) = titleBadgeLayoutAndApply {
+                        actualWidth = max(actualWidth, titleLayout.size.width + titleBadgeLayout.size.width + (titleBadgePadding + titleBadgeSpacing) * 2.0)
+                    }
                 }
                 if let (subtitleLayout, _) = subtitleLayoutAndApply {
                     actualWidth = max(actualWidth, subtitleLayout.size.width)
@@ -921,10 +943,13 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             return
                         }
                         
+                        let themeUpdated = self.theme !== presentationData.theme || self.mainColor != mainColor
+                        
                         self.context = context
                         self.message = message
                         self.media = mediaAndFlags?.0
                         self.theme = presentationData.theme
+                        self.mainColor = mainColor
                         
                         animation.animator.updateFrame(layer: self.transformContainer.layer, frame: CGRect(origin: CGPoint(), size: actualSize), completion: nil)
                         
@@ -1061,10 +1086,70 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 title.textNode.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                                 animation.animator.updatePosition(layer: title.textNode.layer, position: titleFrame.origin, completion: nil)
                             }
+                            
+                            if let (titleBadgeLayout, titleBadgeApply) = titleBadgeLayoutAndApply {
+                                let titleBadgeLabel = titleBadgeApply()
+                                let titleBadgeFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + titleBadgeSpacing + titleBadgePadding, y: floorToScreenPixels(titleFrame.midY - titleBadgeLayout.size.height / 2.0)), size: titleBadgeLayout.size)
+                                let badgeBackgroundFrame = titleBadgeFrame.insetBy(dx: -titleBadgePadding, dy: -1.0 + UIScreenPixel)
+                                
+                                let button: HighlightTrackingButtonNode
+                                if let current = self.titleBadgeButton {
+                                    button = current
+                                    button.bounds = CGRect(origin: .zero, size: badgeBackgroundFrame.size)
+                                    animation.animator.updatePosition(layer: button.layer, position: badgeBackgroundFrame.center, completion: nil)
+                                } else {
+                                    button = HighlightTrackingButtonNode()
+                                    button.addTarget(self, action: #selector(self.badgePressed), forControlEvents: .touchUpInside)
+                                    button.frame = badgeBackgroundFrame
+                                    button.highligthedChanged = { [weak self, weak button] highlighted in
+                                        if let self, let button {
+                                            if highlighted {
+                                                button.layer.removeAnimation(forKey: "opacity")
+                                                button.alpha = 0.4
+                                                self.titleBadgeLabel?.layer.removeAnimation(forKey: "opacity")
+                                                self.titleBadgeLabel?.alpha = 0.4
+                                            } else {
+                                                button.alpha = 1.0
+                                                button.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                                                self.titleBadgeLabel?.alpha = 1.0
+                                                self.titleBadgeLabel?.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                                            }
+                                        }
+                                    }
+                                    self.titleBadgeButton = button
+                                    self.transformContainer.addSubnode(button)
+                                }
+                                
+                                if themeUpdated || button.backgroundImage(for: .normal) == nil {
+                                    button.setBackgroundImage(generateFilledCircleImage(diameter: badgeBackgroundFrame.height, color: mainColor.withMultipliedAlpha(0.1))?.stretchableImage(withLeftCapWidth: Int(badgeBackgroundFrame.height / 2), topCapHeight: Int(badgeBackgroundFrame.height / 2)), for: .normal)
+                                }
+                                
+                                if self.titleBadgeLabel !== titleBadgeLabel {
+                                    self.titleBadgeLabel?.removeFromSupernode()
+                                    self.titleBadgeLabel = titleBadgeLabel
+                                    titleBadgeLabel.layer.anchorPoint = CGPoint()
+                                    titleBadgeLabel.isUserInteractionEnabled = false
+                                    self.transformContainer.addSubnode(titleBadgeLabel)
+                                    
+                                    titleBadgeLabel.frame = titleBadgeFrame
+                                    titleBadgeLabel.displaysAsynchronously = !presentationData.isPreview
+                                } else {
+                                    titleBadgeLabel.bounds = CGRect(origin: CGPoint(), size: titleBadgeFrame.size)
+                                    animation.animator.updatePosition(layer: titleBadgeLabel.layer, position: titleBadgeFrame.origin, completion: nil)
+                                }
+                            }
                         } else {
                             if let title = self.title {
                                 self.title = nil
                                 title.textNode.removeFromSupernode()
+                            }
+                            if let titleBadgeLabel = self.titleBadgeLabel {
+                                self.titleBadgeLabel = nil
+                                titleBadgeLabel.removeFromSupernode()
+                            }
+                            if let titleBadgeButton = self.titleBadgeButton {
+                                self.titleBadgeButton = nil
+                                titleBadgeButton.removeFromSupernode()
                             }
                             if let closeButton = self.closeButton {
                                 self.closeButton = nil
@@ -1446,6 +1531,10 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
         }
         
         if let actionButton = self.actionButton, actionButton.frame.contains(point) {
+            return ChatMessageBubbleContentTapAction(content: .ignore)
+        }
+        
+        if let titleBadgeButton = self.titleBadgeButton, titleBadgeButton.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         

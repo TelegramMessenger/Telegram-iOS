@@ -47,8 +47,8 @@ private final class MediaCutoutScreenComponent: Component {
         private let doneButton = ComponentView<Empty>()
         
         private let fadeView = UIView()
-        private let separatedImageView = UIImageView()
-                                
+        private var outlineViews: [StickerCutoutOutlineView] = []
+                        
         private var component: MediaCutoutScreenComponent?
         private weak var state: State?
         private var environment: ViewControllerComponentContainer.Environment?
@@ -57,9 +57,7 @@ private final class MediaCutoutScreenComponent: Component {
             self.buttonsContainerView.clipsToBounds = true
 
             self.fadeView.alpha = 0.0
-            self.fadeView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.6)
-
-            self.separatedImageView.contentMode = .scaleAspectFit
+            self.fadeView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.7)
             
             super.init(frame: frame)
             
@@ -69,7 +67,6 @@ private final class MediaCutoutScreenComponent: Component {
             self.buttonsContainerView.addSubview(self.buttonsBackgroundView)
             
             self.addSubview(self.fadeView)
-            self.addSubview(self.separatedImageView)
             self.addSubview(self.previewContainerView)
             
             self.previewContainerView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.previewTap(_:))))
@@ -89,9 +86,21 @@ private final class MediaCutoutScreenComponent: Component {
                 x: location.x / self.previewContainerView.frame.width,
                 y: location.y / self.previewContainerView.frame.height
             )
-            component.mediaEditor.setSeparationMask(point: point)
             
-            self.playDissolveAnimation()
+            component.mediaEditor.processImage { [weak self] originalImage, _ in
+                cutoutImage(from: originalImage, values: nil, target: .point(point), includeExtracted: false, completion: { [weak self] results in
+                    Queue.mainQueue().async {
+                        if let self, let component = self.component, let result = results.first, let maskImage = result.maskImage {
+                            if case let .image(mask, _) = maskImage {
+                                self.playDissolveAnimation()
+                                component.mediaEditor.setSegmentationMask(mask)
+                            }
+                        }
+                    }
+                })
+            }
+            
+            HapticFeedback().impact(.medium)
         }
         
         func animateInFromEditor() {
@@ -106,6 +115,9 @@ private final class MediaCutoutScreenComponent: Component {
             self.cancelButton.view?.isHidden = true
             
             self.fadeView.layer.animateAlpha(from: self.fadeView.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            for outlineView in self.outlineViews {
+                outlineView.layer.animateAlpha(from: self.fadeView.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            }
             self.buttonsBackgroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                 completion()
             })
@@ -210,7 +222,7 @@ private final class MediaCutoutScreenComponent: Component {
             
             let labelSize = self.label.update(
                 transition: transition,
-                component: AnyComponent(Text(text: "Tap an object to cut it out", font: Font.regular(17.0), color: .white)),
+                component: AnyComponent(Text(text: "Tap on an object to cut it out", font: Font.regular(17.0), color: .white)),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - 88.0, height: 44.0)
             )
@@ -229,28 +241,38 @@ private final class MediaCutoutScreenComponent: Component {
             transition.setFrame(view: self.buttonsBackgroundView, frame: CGRect(origin: .zero, size: buttonsContainerFrame.size))
             
             transition.setFrame(view: self.previewContainerView, frame: previewContainerFrame)
-            transition.setFrame(view: self.separatedImageView, frame: previewContainerFrame)
+            for view in self.outlineViews {
+                transition.setFrame(view: view, frame: previewContainerFrame)
+            }
             
-            let frameWidth = floor(previewContainerFrame.width * 0.97)
+            let frameWidth = floorToScreenPixels(previewContainerFrame.width * 0.97)
             
             self.fadeView.frame = CGRect(x: floorToScreenPixels((previewContainerFrame.width - frameWidth) / 2.0), y: previewContainerFrame.minY + floorToScreenPixels((previewContainerFrame.height - frameWidth) / 2.0), width: frameWidth, height: frameWidth)
             self.fadeView.layer.cornerRadius = frameWidth / 8.0
             
             if isFirstTime {
-                let _ = (component.mediaEditor.getSeparatedImage(point: nil)
-                |> deliverOnMainQueue).start(next: { [weak self] image in
-                    guard let self else {
-                        return
-                    }
-                    self.separatedImageView.image = image
-                    self.state?.updated(transition: .easeInOut(duration: 0.2))
-                })
-            } else {
-                if let _ = self.separatedImageView.image {
-                    transition.setAlpha(view: self.fadeView, alpha: 1.0)
-                } else {
-                    transition.setAlpha(view: self.fadeView, alpha: 0.0)
+                let values = component.mediaEditor.values
+                component.mediaEditor.processImage { originalImage, editedImage in
+                    cutoutImage(from: originalImage, editedImage: editedImage, values: values, target: .all, completion: { results in
+                        Queue.mainQueue().async {
+                            if !results.isEmpty {
+                                for result in results {
+                                    if let extractedImage = result.extractedImage, let maskImage = result.maskImage {
+                                        if case let .image(image, _) = extractedImage, case let .image(_, mask) = maskImage {
+                                            let outlineView = StickerCutoutOutlineView(frame: self.previewContainerView.frame)
+                                            outlineView.update(image: image, maskImage: mask, size: self.previewContainerView.bounds.size, values: values)
+                                            self.insertSubview(outlineView, belowSubview: self.previewContainerView)
+                                            self.outlineViews.append(outlineView)
+                                        }
+                                    }
+                                }
+                                self.state?.updated(transition: .easeInOut(duration: 0.4))
+                            }
+                        }
+                    })
                 }
+            } else {
+                transition.setAlpha(view: self.fadeView, alpha: !self.outlineViews.isEmpty ? 1.0 : 0.0)
             }
             return availableSize
         }

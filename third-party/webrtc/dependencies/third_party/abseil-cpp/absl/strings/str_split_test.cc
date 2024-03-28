@@ -14,30 +14,33 @@
 
 #include "absl/strings/str_split.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <initializer_list>
 #include <list>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/base/dynamic_annotations.h"
 #include "absl/base/macros.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/btree_set.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/node_hash_map.h"
-#include "absl/strings/numbers.h"
+#include "absl/strings/string_view.h"
 
 namespace {
 
 using ::testing::ElementsAre;
+using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
@@ -369,7 +372,7 @@ TEST(SplitIterator, EqualityAsEndCondition) {
 TEST(Splitter, RangeIterators) {
   auto splitter = absl::StrSplit("a,b,c", ',');
   std::vector<absl::string_view> output;
-  for (const absl::string_view& p : splitter) {
+  for (absl::string_view p : splitter) {
     output.push_back(p);
   }
   EXPECT_THAT(output, ElementsAre("a", "b", "c"));
@@ -919,6 +922,45 @@ TEST(Delimiter, ByAnyChar) {
   EXPECT_FALSE(IsFoundAt("a", empty, 0));
   EXPECT_TRUE(IsFoundAt("ab", empty, 1));
   EXPECT_TRUE(IsFoundAt("abc", empty, 1));
+}
+
+//
+// Tests for ByAsciiWhitespace
+//
+TEST(Split, ByAsciiWhitespace) {
+  using absl::ByAsciiWhitespace;
+  using absl::SkipEmpty;
+  std::vector<absl::string_view> results;
+
+  results = absl::StrSplit("aaaa\n", ByAsciiWhitespace());
+  EXPECT_THAT(results, ElementsAre("aaaa", ""));
+
+  results = absl::StrSplit("aaaa\n", ByAsciiWhitespace(), SkipEmpty());
+  EXPECT_THAT(results, ElementsAre("aaaa"));
+
+  results = absl::StrSplit(" ", ByAsciiWhitespace());
+  EXPECT_THAT(results, ElementsAre("", ""));
+
+  results = absl::StrSplit(" ", ByAsciiWhitespace(), SkipEmpty());
+  EXPECT_THAT(results, IsEmpty());
+
+  results = absl::StrSplit("a", ByAsciiWhitespace());
+  EXPECT_THAT(results, ElementsAre("a"));
+
+  results = absl::StrSplit("", ByAsciiWhitespace());
+  EXPECT_THAT(results, ElementsAre(""));
+
+  results = absl::StrSplit("", ByAsciiWhitespace(), SkipEmpty());
+  EXPECT_THAT(results, IsEmpty());
+
+  results = absl::StrSplit("a b\tc\n  d\n", ByAsciiWhitespace());
+  EXPECT_THAT(results, ElementsAre("a", "b", "c", "", "", "d", ""));
+
+  results = absl::StrSplit("a b\tc\n  d  \n", ByAsciiWhitespace(), SkipEmpty());
+  EXPECT_THAT(results, ElementsAre("a", "b", "c", "d"));
+
+  results = absl::StrSplit("a\t\n\v\f\r b", ByAsciiWhitespace(), SkipEmpty());
+  EXPECT_THAT(results, ElementsAre("a", "b"));
 }
 
 //

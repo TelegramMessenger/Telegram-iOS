@@ -393,6 +393,7 @@ final class MutableMessageHistoryView: MutablePostboxView {
                 break
             }
         }
+        
         self.sampledState = self.state.sample(postbox: postbox, clipHoles: self.clipHoles)
         
         self.render(postbox: postbox)

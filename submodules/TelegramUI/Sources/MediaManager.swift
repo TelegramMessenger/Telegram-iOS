@@ -22,7 +22,7 @@ enum SharedMediaPlayerGroup: Int {
 }
 
 private let sharedAudioSession: ManagedAudioSession = {
-    let audioSession = ManagedAudioSession()
+    let audioSession = ManagedAudioSessionImpl()
     let _ = (audioSession.headsetConnected() |> deliverOnMainQueue).startStandalone(next: { value in
         DeviceProximityManager.shared().setGloballyEnabled(!value)
     })

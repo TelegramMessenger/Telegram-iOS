@@ -163,6 +163,8 @@ extension MediaEditorScreen {
                 }
                 
                 switch subject {
+                case .empty:
+                    break
                 case let .image(image, dimensions, _, _):
                     innerSaveDraft(media: .image(image: image, dimensions: dimensions))
                 case let .video(path, _, _, _, _, dimensions, _, _, _):
@@ -193,6 +195,8 @@ extension MediaEditorScreen {
                     if let pixel = generateSingleColorImage(size: CGSize(width: 1, height: 1), color: .black) {
                         innerSaveDraft(media: .image(image: pixel, dimensions: PixelDimensions(width: 1080, height: 1920)))
                     }
+                case .sticker:
+                    break
                 }
                 
                 if case let .draft(draft, _) = actualSubject {

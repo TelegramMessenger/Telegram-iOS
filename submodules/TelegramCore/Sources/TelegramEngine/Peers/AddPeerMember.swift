@@ -4,13 +4,48 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-
 public enum AddGroupMemberError {
     case generic
     case groupFull
-    case privacy
+    case privacy(TelegramInvitePeersResult?)
     case notMutualContact
     case tooManyChannels
+}
+
+public final class TelegramForbiddenInvitePeer: Equatable {
+    public let peer: EnginePeer
+    public let canInviteWithPremium: Bool
+    public let premiumRequiredToContact: Bool
+    
+    public init(peer: EnginePeer, canInviteWithPremium: Bool, premiumRequiredToContact: Bool) {
+        self.peer = peer
+        self.canInviteWithPremium = canInviteWithPremium
+        self.premiumRequiredToContact = premiumRequiredToContact
+    }
+    
+    public static func ==(lhs: TelegramForbiddenInvitePeer, rhs: TelegramForbiddenInvitePeer) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.canInviteWithPremium != rhs.canInviteWithPremium {
+            return false
+        }
+        if lhs.premiumRequiredToContact != rhs.premiumRequiredToContact {
+            return false
+        }
+        return true
+    }
+}
+
+public final class TelegramInvitePeersResult {
+    public let forbiddenPeers: [TelegramForbiddenInvitePeer]
+    
+    public init(forbiddenPeers: [TelegramForbiddenInvitePeer]) {
+        self.forbiddenPeers = forbiddenPeers
+    }
 }
 
 func _internal_addGroupMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, AddGroupMemberError> {
@@ -23,7 +58,7 @@ func _internal_addGroupMember(account: Account, peerId: PeerId, memberId: PeerId
                     case "USERS_TOO_MUCH":
                         return .groupFull
                     case "USER_PRIVACY_RESTRICTED":
-                        return .privacy
+                        return .privacy(nil)
                     case "USER_CHANNELS_TOO_MUCH":
                         return .tooManyChannels
                     case "USER_NOT_MUTUAL_CONTACT":
@@ -33,9 +68,18 @@ func _internal_addGroupMember(account: Account, peerId: PeerId, memberId: PeerId
                     }
                 }
                 |> mapToSignal { result -> Signal<Void, AddGroupMemberError> in
-                    account.stateManager.addUpdates(result)
-                    return account.postbox.transaction { transaction -> Void in
-                        if let message = result.messages.first, let timestamp = message.timestamp {
+                    let updatesValue: Api.Updates
+                    let missingInviteesValue: [Api.MissingInvitee]
+                    switch result {
+                    case let .invitedUsers(updates, missingInvitees):
+                        updatesValue = updates
+                        missingInviteesValue = missingInvitees
+                    }
+                    
+                    account.stateManager.addUpdates(updatesValue)
+                    
+                    return account.postbox.transaction { transaction -> TelegramInvitePeersResult in
+                        if let message = updatesValue.messages.first, let timestamp = message.timestamp {
                             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                 if let cachedData = cachedData as? CachedGroupData, let participants = cachedData.participants {
                                     var updatedParticipants = participants.participants
@@ -55,8 +99,29 @@ func _internal_addGroupMember(account: Account, peerId: PeerId, memberId: PeerId
                                 }
                             })
                         }
+                        
+                        return TelegramInvitePeersResult(forbiddenPeers: missingInviteesValue.compactMap { invitee -> TelegramForbiddenInvitePeer? in
+                            switch invitee {
+                            case let .missingInvitee(flags, userId):
+                                guard let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))) else {
+                                    return nil
+                                }
+                                return TelegramForbiddenInvitePeer(
+                                    peer: EnginePeer(peer),
+                                    canInviteWithPremium: (flags & (1 << 0)) != 0,
+                                    premiumRequiredToContact: (flags & (1 << 1)) != 0
+                                )
+                            }
+                        })
                     }
                     |> mapError { _ -> AddGroupMemberError in }
+                    |> mapToSignal { result -> Signal<Void, AddGroupMemberError> in
+                        if result.forbiddenPeers.isEmpty {
+                            return .single(Void())
+                        } else {
+                            return .fail(.privacy(result))
+                        }
+                    }
                 }
             } else {
                 return .fail(.generic)
@@ -69,7 +134,7 @@ func _internal_addGroupMember(account: Account, peerId: PeerId, memberId: PeerId
 
 public enum AddChannelMemberError {
     case generic
-    case restricted
+    case restricted(TelegramForbiddenInvitePeer?)
     case notMutualContact
     case limitExceeded
     case tooMuchJoined
@@ -94,15 +159,14 @@ func _internal_addChannelMember(account: Account, peerId: PeerId, memberId: Peer
                         updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: nil, rank: nil)
                     }
                     return account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: [inputUser]))
-                    |> map { [$0] }
-                    |> `catch` { error -> Signal<[Api.Updates], AddChannelMemberError> in
+                    |> `catch` { error -> Signal<Api.messages.InvitedUsers, AddChannelMemberError> in
                         switch error.errorDescription {
                             case "USER_CHANNELS_TOO_MUCH":
                                 return .fail(.tooMuchJoined)
                             case "USERS_TOO_MUCH":
                                 return .fail(.limitExceeded)
                             case "USER_PRIVACY_RESTRICTED":
-                                return .fail(.restricted)
+                                return .fail(.restricted(nil))
                             case "USER_NOT_MUTUAL_CONTACT":
                                 return .fail(.notMutualContact)
                             case "USER_BOT":
@@ -118,9 +182,21 @@ func _internal_addChannelMember(account: Account, peerId: PeerId, memberId: Peer
                         }
                     }
                     |> mapToSignal { result -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> in
-                        for updates in result {
-                            account.stateManager.addUpdates(updates)
+                        let updatesValue: Api.Updates
+                        switch result {
+                        case let .invitedUsers(updates, missingInvitees):
+                            if case let .missingInvitee(flags, _) = missingInvitees.first {
+                                return .fail(.restricted(TelegramForbiddenInvitePeer(
+                                    peer: EnginePeer(memberPeer),
+                                    canInviteWithPremium: (flags & (1 << 0)) != 0,
+                                    premiumRequiredToContact: (flags & (1 << 1)) != 0
+                                )))
+                            }
+                            
+                            updatesValue = updates
                         }
+                        
+                        account.stateManager.addUpdates(updatesValue)
                         return account.postbox.transaction { transaction -> (ChannelParticipant?, RenderedChannelParticipant) in
                             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                                 if let cachedData = cachedData as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount, let kickedCount = cachedData.participantsSummary.kickedCount {
@@ -182,8 +258,8 @@ func _internal_addChannelMember(account: Account, peerId: PeerId, memberId: Peer
     }
 }
 
-func _internal_addChannelMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
-    let signal = account.postbox.transaction { transaction -> Signal<Void, AddChannelMemberError> in
+func _internal_addChannelMembers(account: Account, peerId: PeerId, memberIds: [PeerId]) -> Signal<TelegramInvitePeersResult, AddChannelMemberError> {
+    let signal = account.postbox.transaction { transaction -> Signal<TelegramInvitePeersResult, AddChannelMemberError> in
         var memberPeerIds: [PeerId:Peer] = [:]
         var inputUsers: [Api.InputUser] = []
         for memberId in memberIds {
@@ -196,13 +272,13 @@ func _internal_addChannelMembers(account: Account, peerId: PeerId, memberIds: [P
         }
         
         if let peer = transaction.getPeer(peerId), let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
-            let signal = account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: inputUsers))
+            let signal: Signal<TelegramInvitePeersResult, AddChannelMemberError> = account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: inputUsers))
             |> mapError { error -> AddChannelMemberError in
                 switch error.errorDescription {
                    case "CHANNELS_TOO_MUCH":
                         return .tooMuchJoined
                     case "USER_PRIVACY_RESTRICTED":
-                        return .restricted
+                        return .restricted(nil)
                     case "USER_NOT_MUTUAL_CONTACT":
                         return .notMutualContact
                     case "USERS_TOO_MUCH":
@@ -213,14 +289,39 @@ func _internal_addChannelMembers(account: Account, peerId: PeerId, memberIds: [P
                         return .generic
                 }
             }
-            |> map { result in
-                account.stateManager.addUpdates(result)
+            |> mapToQueue { result -> Signal<TelegramInvitePeersResult, AddChannelMemberError> in
+                let updatesValue: Api.Updates
+                let missingInviteesValue: [Api.MissingInvitee]
+                switch result {
+                case let .invitedUsers(updates, missingInvitees):
+                    updatesValue = updates
+                    missingInviteesValue = missingInvitees
+                }
+                
+                account.stateManager.addUpdates(updatesValue)
                 account.viewTracker.forceUpdateCachedPeerData(peerId: peerId)
+                
+                return account.postbox.transaction { transaction -> TelegramInvitePeersResult in
+                    return TelegramInvitePeersResult(forbiddenPeers: missingInviteesValue.compactMap { invitee -> TelegramForbiddenInvitePeer? in
+                        switch invitee {
+                        case let .missingInvitee(flags, userId):
+                            guard let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))) else {
+                                return nil
+                            }
+                            return TelegramForbiddenInvitePeer(
+                                peer: EnginePeer(peer),
+                                canInviteWithPremium: (flags & (1 << 0)) != 0,
+                                premiumRequiredToContact: (flags & (1 << 1)) != 0
+                            )
+                        }
+                    })
+                }
+                |> castError(AddChannelMemberError.self)
             }
 
             return signal
         } else {
-            return .single(Void())
+            return .fail(.generic)
         }
         
     }

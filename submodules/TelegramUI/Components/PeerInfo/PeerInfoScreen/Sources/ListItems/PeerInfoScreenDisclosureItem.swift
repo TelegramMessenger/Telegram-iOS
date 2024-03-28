@@ -5,8 +5,14 @@ import TelegramPresentationData
 
 final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
     enum Label {
+        enum LabelColor {
+            case generic
+            case accent
+        }
+        
         case none
         case text(String)
+        case coloredText(String, LabelColor)
         case badge(String, UIColor)
         case semitransparentBadge(String, UIColor)
         case titleBadge(String, UIColor)
@@ -16,14 +22,14 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
             switch self {
             case .none, .image:
                 return ""
-            case let .text(text), let .badge(text, _), let .semitransparentBadge(text, _), let .titleBadge(text, _):
+            case let .text(text), let .coloredText(text, _), let .badge(text, _), let .semitransparentBadge(text, _), let .titleBadge(text, _):
                 return text
             }
         }
         
         var badgeColor: UIColor? {
             switch self {
-            case .none, .text, .image:
+            case .none, .text, .coloredText, .image:
                 return nil
             case let .badge(_, color), let .semitransparentBadge(_, color), let .titleBadge(_, color):
                 return color
@@ -38,9 +44,10 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
     let text: String
     let icon: UIImage?
     let iconSignal: Signal<UIImage?, NoError>?
+    let hasArrow: Bool
     let action: (() -> Void)?
     
-    init(id: AnyHashable, label: Label = .none, additionalBadgeLabel: String? = nil, additionalBadgeIcon: UIImage? = nil, text: String, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, action: (() -> Void)?) {
+    init(id: AnyHashable, label: Label = .none, additionalBadgeLabel: String? = nil, additionalBadgeIcon: UIImage? = nil, text: String, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, hasArrow: Bool = true, action: (() -> Void)?) {
         self.id = id
         self.label = label
         self.additionalBadgeLabel = additionalBadgeLabel
@@ -48,6 +55,7 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
         self.text = text
         self.icon = icon
         self.iconSignal = iconSignal
+        self.hasArrow = hasArrow
         self.action = action
     }
     
@@ -139,7 +147,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         
         let sideInset: CGFloat = 16.0 + safeInsets.left
         let leftInset = (item.icon == nil && item.iconSignal == nil ? sideInset : sideInset + 29.0 + 16.0)
-        let rightInset = sideInset + 18.0
+        let rightInset = sideInset + (item.hasArrow ? 18.0 : 0.0)
         let separatorInset = item.icon == nil && item.iconSignal == nil ? sideInset : leftInset - 1.0
         let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
         
@@ -157,6 +165,14 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         } else if case .titleBadge = item.label {
             labelColorValue = presentationData.theme.list.itemCheckColors.foregroundColor
             labelFont = Font.medium(11.0)
+        } else if case let .coloredText(_, color) = item.label {
+            switch color {
+            case .generic:
+                labelColorValue = presentationData.theme.list.itemSecondaryTextColor
+            case .accent:
+                labelColorValue = presentationData.theme.list.itemAccentColor
+            }
+            labelFont = titleFont
         } else {
             labelColorValue = presentationData.theme.list.itemSecondaryTextColor
             labelFont = titleFont
@@ -206,7 +222,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
             self.iconNode.removeFromSupernode()
         }
         
-        if let arrowImage = PresentationResourcesItemList.disclosureArrowImage(presentationData.theme) {
+        if item.hasArrow, let arrowImage = PresentationResourcesItemList.disclosureArrowImage(presentationData.theme) {
             self.arrowNode.image = arrowImage
             let arrowFrame = CGRect(origin: CGPoint(x: width - 7.0 - arrowImage.size.width - safeInsets.right, y: floorToScreenPixels((height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
             transition.updateFrame(node: self.arrowNode, frame: arrowFrame)

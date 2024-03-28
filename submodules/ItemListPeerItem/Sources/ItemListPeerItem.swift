@@ -445,6 +445,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     let threadInfo: EngineMessageHistoryThread.Info?
     let height: ItemListPeerItemHeight
     let aliasHandling: ItemListPeerItemAliasHandling
+    let customAvatarIcon: UIImage?
     let nameColor: ItemListPeerItemNameColor
     let nameStyle: ItemListPeerItemNameStyle
     let presence: EnginePeer.Presence?
@@ -486,6 +487,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         threadInfo: EngineMessageHistoryThread.Info? = nil,
         height: ItemListPeerItemHeight = .peerList,
         aliasHandling: ItemListPeerItemAliasHandling = .standard,
+        customAvatarIcon: UIImage? = nil,
         nameColor: ItemListPeerItemNameColor = .primary,
         nameStyle: ItemListPeerItemNameStyle = .distinctBold,
         presence: EnginePeer.Presence?,
@@ -493,7 +495,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         label: ItemListPeerItemLabel,
         editing: ItemListPeerItemEditing,
         revealOptions: ItemListPeerItemRevealOptions? = nil,
-        switchValue: ItemListPeerItemSwitch?,
+        switchValue: ItemListPeerItemSwitch? = nil,
         enabled: Bool,
         highlighted: Bool = false,
         selectable: Bool,
@@ -526,6 +528,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.threadInfo = threadInfo
         self.height = height
         self.aliasHandling = aliasHandling
+        self.customAvatarIcon = customAvatarIcon
         self.nameColor = nameColor
         self.nameStyle = nameStyle
         self.presence = presence
@@ -568,6 +571,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         threadInfo: EngineMessageHistoryThread.Info? = nil,
         height: ItemListPeerItemHeight = .peerList,
         aliasHandling: ItemListPeerItemAliasHandling = .standard,
+        customAvatarIcon: UIImage? = nil,
         nameColor: ItemListPeerItemNameColor = .primary,
         nameStyle: ItemListPeerItemNameStyle = .distinctBold,
         presence: EnginePeer.Presence?,
@@ -608,6 +612,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.threadInfo = threadInfo
         self.height = height
         self.aliasHandling = aliasHandling
+        self.customAvatarIcon = customAvatarIcon
         self.nameColor = nameColor
         self.nameStyle = nameStyle
         self.presence = presence
@@ -716,6 +721,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     fileprivate let avatarNode: AvatarNode
     private var avatarIconComponent: EmojiStatusComponent?
     private var avatarIconView: ComponentView<Empty>?
+    
+    private var customAvatarIconView: UIImageView?
     
     private var avatarButton: HighlightTrackingButton?
     
@@ -1701,6 +1708,25 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         shimmerNode.removeFromSupernode()
                     }
                     
+                    if let customAvatarIcon = item.customAvatarIcon {
+                        strongSelf.avatarNode.isHidden = true
+                        
+                        let customAvatarIconView: UIImageView
+                        if let current = strongSelf.customAvatarIconView {
+                            customAvatarIconView = current
+                        } else {
+                            customAvatarIconView = UIImageView()
+                            strongSelf.customAvatarIconView = customAvatarIconView
+                            strongSelf.containerNode.view.addSubview(customAvatarIconView)
+                        }
+                        customAvatarIconView.image = customAvatarIcon
+                        
+                        transition.updateFrame(view: customAvatarIconView, frame: strongSelf.avatarNode.frame)
+                    } else if let customAvatarIconView = strongSelf.customAvatarIconView {
+                        strongSelf.customAvatarIconView = nil
+                        customAvatarIconView.removeFromSuperview()
+                    }
+                    
                     strongSelf.backgroundNode.isHidden = !item.displayDecorations
                     strongSelf.highlightedBackgroundNode.isHidden = !item.displayDecorations || !item.highlightable
                     
@@ -1843,6 +1869,10 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
         if let avatarButton = self.avatarButton {
             avatarButton.frame = avatarFrame
+        }
+        
+        if let customAvatarIconView = self.customAvatarIconView {
+            transition.updateFrame(view: customAvatarIconView, frame: avatarFrame)
         }
         
         if let avatarIconComponentView = self.avatarIconView?.view {

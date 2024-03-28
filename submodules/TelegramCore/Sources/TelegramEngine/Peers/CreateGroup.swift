@@ -15,14 +15,14 @@ public enum CreateGroupError {
 
 public struct CreateGroupResult {
     public var peerId: EnginePeer.Id
-    public var failedToInvitePeerIds: [EnginePeer.Id]
+    public var result: TelegramInvitePeersResult
     
     public init(
         peerId: EnginePeer.Id,
-        failedToInvitePeerIds: [EnginePeer.Id]
+        result: TelegramInvitePeersResult
     ) {
         self.peerId = peerId
-        self.failedToInvitePeerIds = failedToInvitePeerIds
+        self.result = result
     }
 }
 
@@ -49,33 +49,43 @@ func _internal_createGroup(account: Account, title: String, peerIds: [PeerId], t
             }
             return .generic
         }
-        |> mapToSignal { updates -> Signal<CreateGroupResult?, CreateGroupError> in
-            var failedToInvitePeerIds: [EnginePeer.Id] = []
-            failedToInvitePeerIds = []
-            switch updates {
-            case let .updates(updates, _, _, _, _):
-                for update in updates {
-                    if case let .updateGroupInvitePrivacyForbidden(userId) = update {
-                        failedToInvitePeerIds.append(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(userId)))
-                    }
-                }
-            default:
-                break
+        |> mapToSignal { result -> Signal<CreateGroupResult?, CreateGroupError> in
+            let updatesValue: Api.Updates
+            let missingInviteesValue: [Api.MissingInvitee]
+            switch result {
+            case let .invitedUsers(updates, missingInvitees):
+                updatesValue = updates
+                missingInviteesValue = missingInvitees
             }
             
-            account.stateManager.addUpdates(updates)
-            if let message = updates.messages.first, let peerId = apiMessagePeerId(message) {
+            account.stateManager.addUpdates(updatesValue)
+            if let message = updatesValue.messages.first, let peerId = apiMessagePeerId(message) {
                 return account.postbox.multiplePeersView([peerId])
                 |> filter { view in
                     return view.peers[peerId] != nil
                 }
                 |> take(1)
                 |> castError(CreateGroupError.self)
-                |> map { _ -> CreateGroupResult in
-                    return CreateGroupResult(
-                        peerId: peerId,
-                        failedToInvitePeerIds: failedToInvitePeerIds
-                    )
+                |> mapToSignal { _ -> Signal<CreateGroupResult?, CreateGroupError> in
+                    return account.postbox.transaction { transaction -> CreateGroupResult in
+                        return CreateGroupResult(
+                            peerId: peerId,
+                            result: TelegramInvitePeersResult(forbiddenPeers: missingInviteesValue.compactMap { invitee -> TelegramForbiddenInvitePeer? in
+                                switch invitee {
+                                case let .missingInvitee(flags, userId):
+                                    guard let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))) else {
+                                        return nil
+                                    }
+                                    return TelegramForbiddenInvitePeer(
+                                        peer: EnginePeer(peer),
+                                        canInviteWithPremium: (flags & (1 << 0)) != 0,
+                                        premiumRequiredToContact: (flags & (1 << 1)) != 0
+                                    )
+                                }
+                            })
+                        )
+                    }
+                    |> castError(CreateGroupError.self)
                 }
             } else {
                 return .single(nil)

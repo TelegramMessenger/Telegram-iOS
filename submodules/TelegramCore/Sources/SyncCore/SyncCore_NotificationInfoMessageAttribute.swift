@@ -12,9 +12,9 @@ public struct NotificationInfoMessageAttributeFlags: OptionSet {
         self.rawValue = 0
     }
     
-    public static let muted = NotificationInfoMessageAttributeFlags(rawValue: 1)
-    public static let personal = NotificationInfoMessageAttributeFlags(rawValue: 2)
-
+    public static let muted = NotificationInfoMessageAttributeFlags(rawValue: 1 << 0)
+    public static let personal = NotificationInfoMessageAttributeFlags(rawValue: 1 << 1)
+    public static let automaticMessage = NotificationInfoMessageAttributeFlags(rawValue: 1 << 2)
 }
 
 public class NotificationInfoMessageAttribute: MessageAttribute {

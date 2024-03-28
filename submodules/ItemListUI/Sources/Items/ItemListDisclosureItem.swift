@@ -39,19 +39,28 @@ public enum ItemListDisclosureLabelStyle {
     case image(image: UIImage, size: CGSize)
 }
 
+public enum ItemListDisclosureItemDetailLabelColor {
+    case generic
+    case constructive
+    case destructive
+}
+
 public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let icon: UIImage?
     let context: AccountContext?
     let iconPeer: EnginePeer?
     let title: String
+    let attributedTitle: NSAttributedString?
     let titleColor: ItemListDisclosureItemTitleColor
     let titleFont: ItemListDisclosureItemTitleFont
     let titleIcon: UIImage?
     let enabled: Bool
     let label: String
+    let attributedLabel: NSAttributedString?
     let labelStyle: ItemListDisclosureLabelStyle
     let additionalDetailLabel: String?
+    let additionalDetailLabelColor: ItemListDisclosureItemDetailLabelColor
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let disclosureStyle: ItemListDisclosureStyle
@@ -60,19 +69,22 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     public let tag: ItemListItemTag?
     public let shimmeringIndex: Int?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, context: AccountContext? = nil, iconPeer: EnginePeer? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, titleFont: ItemListDisclosureItemTitleFont = .regular, titleIcon: UIImage? = nil, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, additionalDetailLabel: String? = nil, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil, shimmeringIndex: Int? = nil) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, context: AccountContext? = nil, iconPeer: EnginePeer? = nil, title: String, attributedTitle: NSAttributedString? = nil, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, titleFont: ItemListDisclosureItemTitleFont = .regular, titleIcon: UIImage? = nil, label: String, attributedLabel: NSAttributedString? = nil, labelStyle: ItemListDisclosureLabelStyle = .text, additionalDetailLabel: String? = nil, additionalDetailLabelColor: ItemListDisclosureItemDetailLabelColor = .generic, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil, shimmeringIndex: Int? = nil) {
         self.presentationData = presentationData
         self.icon = icon
         self.context = context
         self.iconPeer = iconPeer
         self.title = title
+        self.attributedTitle = attributedTitle
         self.titleColor = titleColor
         self.titleFont = titleFont
         self.titleIcon = titleIcon
         self.enabled = enabled
         self.labelStyle = labelStyle
         self.label = label
+        self.attributedLabel = attributedLabel
         self.additionalDetailLabel = additionalDetailLabel
+        self.additionalDetailLabelColor = additionalDetailLabelColor
         self.sectionId = sectionId
         self.style = style
         self.disclosureStyle = disclosureStyle
@@ -358,7 +370,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 maxTitleWidth -= 12.0
             }
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTitleWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: item.attributedTitle ?? NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: item.attributedTitle != nil ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: maxTitleWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let detailFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             
@@ -392,15 +404,24 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 multilineLabel = true
             }
             
-            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor: labelBadgeColor), backgroundColor: nil, maximumNumberOfLines: multilineLabel ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: labelConstrain, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: item.attributedLabel ?? NSAttributedString(string: item.label, font: labelFont, textColor: labelBadgeColor), backgroundColor: nil, maximumNumberOfLines: multilineLabel ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: labelConstrain, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var additionalDetailLabelInfo: (TextNodeLayout, () -> TextNode)?
             if let additionalDetailLabel = item.additionalDetailLabel {
                 var detailRightInset: CGFloat = 20.0 + params.rightInset + additionalTextRightInset
                 if labelLayout.size.width != 0 {
-                    detailRightInset += labelLayout.size.width + 12.0
+                    detailRightInset += labelLayout.size.width + 7.0
                 }
-                additionalDetailLabelInfo = makeAdditionalDetailLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: additionalDetailLabel, font: detailFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - detailRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let additionalDetailColor: UIColor
+                switch item.additionalDetailLabelColor {
+                case .generic:
+                    additionalDetailColor = item.presentationData.theme.list.itemSecondaryTextColor
+                case .constructive:
+                    additionalDetailColor = item.presentationData.theme.list.itemDisclosureActions.constructive.fillColor
+                case .destructive:
+                    additionalDetailColor = item.presentationData.theme.list.itemDestructiveColor
+                }
+                additionalDetailLabelInfo = makeAdditionalDetailLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: additionalDetailLabel, font: detailFont, textColor: additionalDetailColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - detailRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             }
             
             let verticalInset: CGFloat

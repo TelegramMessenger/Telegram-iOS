@@ -104,14 +104,14 @@ private struct DownloadWrapper {
         self.useMainConnection = useMainConnection
     }
     
-    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, expectedResponseSize: Int32?) -> Signal<(T, NetworkResponseInfo), MTRpcError> {
+    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), tag: MediaResourceFetchTag?, continueInBackground: Bool, expectedResponseSize: Int32?, onFloodWaitError: @escaping (String) -> Void) -> Signal<(T, NetworkResponseInfo), MTRpcError> {
         let target: MultiplexedRequestTarget
         if self.isCdn {
             target = .cdn(Int(self.datacenterId))
         } else {
             target = .main(Int(self.datacenterId))
         }
-        return network.multiplexedRequestManager.requestWithAdditionalInfo(to: target, consumerId: self.consumerId, resourceId: self.resourceId, data: data, tag: tag, continueInBackground: continueInBackground, expectedResponseSize: expectedResponseSize)
+        return network.multiplexedRequestManager.requestWithAdditionalInfo(to: target, consumerId: self.consumerId, resourceId: self.resourceId, data: data, tag: tag, continueInBackground: continueInBackground, onFloodWaitError: onFloodWaitError, expectedResponseSize: expectedResponseSize)
         |> mapError { error, _ -> MTRpcError in
             return error
         }
@@ -192,7 +192,7 @@ private final class MultipartCdnHashSource {
             clusterContext = ClusterContext(disposable: disposable)
             self.clusterContexts[offset] = clusterContext
 
-            disposable.set((self.masterDownload.request(Api.functions.upload.getCdnFileHashes(fileToken: Buffer(data: self.fileToken), offset: offset), tag: nil, continueInBackground: self.continueInBackground, expectedResponseSize: nil)
+            disposable.set((self.masterDownload.request(Api.functions.upload.getCdnFileHashes(fileToken: Buffer(data: self.fileToken), offset: offset), tag: nil, continueInBackground: self.continueInBackground, expectedResponseSize: nil, onFloodWaitError: { _ in })
             |> map { partHashes, _ -> [Int64: Data] in
                 var parsedPartHashes: [Int64: Data] = [:]
                 for part in partHashes {
@@ -322,7 +322,7 @@ private enum MultipartFetchSource {
         }
     }
     
-    func request(offset: Int64, limit: Int64, tag: MediaResourceFetchTag?, resource: TelegramMediaResource, resourceReference: FetchResourceReference, fileReference: Data?, continueInBackground: Bool) -> Signal<(Data, NetworkResponseInfo), MultipartFetchDownloadError> {
+    func request(offset: Int64, limit: Int64, tag: MediaResourceFetchTag?, resource: TelegramMediaResource, resourceReference: FetchResourceReference, fileReference: Data?, continueInBackground: Bool, onFloodWaitError: @escaping (String) -> Void) -> Signal<(Data, NetworkResponseInfo), MultipartFetchDownloadError> {
         var resourceReferenceValue: MediaResourceReference?
         switch resourceReference {
         case .forceRevalidate:
@@ -348,7 +348,9 @@ private enum MultipartFetchSource {
                             case .revalidate:
                                 return .fail(.revalidateMediaReference)
                             case let .location(parsedLocation):                            
-                                return download.request(Api.functions.upload.getFile(flags: 0, location: parsedLocation, offset: offset, limit: Int32(limit)), tag: tag, continueInBackground: continueInBackground, expectedResponseSize: Int32(limit))
+                                return download.request(Api.functions.upload.getFile(flags: 0, location: parsedLocation, offset: offset, limit: Int32(limit)), tag: tag, continueInBackground: continueInBackground, expectedResponseSize: Int32(limit), onFloodWaitError: { error in
+                                    onFloodWaitError(error)
+                                })
                                 |> mapError { error -> MultipartFetchDownloadError in
                                     if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_")  {
                                         return .revalidateMediaReference
@@ -380,7 +382,9 @@ private enum MultipartFetchSource {
                                 }
                         }
                     case let .web(_, location):
-                        return download.request(Api.functions.upload.getWebFile(location: location, offset: Int32(offset), limit: Int32(limit)), tag: tag, continueInBackground: continueInBackground, expectedResponseSize: Int32(limit))
+                        return download.request(Api.functions.upload.getWebFile(location: location, offset: Int32(offset), limit: Int32(limit)), tag: tag, continueInBackground: continueInBackground, expectedResponseSize: Int32(limit), onFloodWaitError: { error in
+                            onFloodWaitError(error)
+                        })
                         |> mapError { error -> MultipartFetchDownloadError in
                             if error.errorDescription == "WEBFILE_NOT_AVAILABLE" {
                                 return .webfileNotAvailable
@@ -404,7 +408,9 @@ private enum MultipartFetchSource {
                     updatedLength += 1
                 }
                 
-                let part = download.request(Api.functions.upload.getCdnFile(fileToken: Buffer(data: fileToken), offset: offset, limit: Int32(updatedLength)), tag: nil, continueInBackground: continueInBackground, expectedResponseSize: Int32(updatedLength))
+                let part = download.request(Api.functions.upload.getCdnFile(fileToken: Buffer(data: fileToken), offset: offset, limit: Int32(updatedLength)), tag: nil, continueInBackground: continueInBackground, expectedResponseSize: Int32(updatedLength), onFloodWaitError: { error in
+                    onFloodWaitError(error)
+                })
                 |> mapError { _ -> MultipartFetchDownloadError in
                     return .generic
                 }
@@ -723,6 +729,21 @@ private final class MultipartFetchManager {
         }
     }
     
+    
+    private func processFloodWaitError(error: String) {
+        var networkSpeedLimitSubject: NetworkSpeedLimitedEvent.DownloadSubject?
+        if let location = self.parameters?.location {
+            if let messageId = location.messageId {
+                networkSpeedLimitSubject = .message(messageId)
+            }
+        }
+        if let subject = networkSpeedLimitSubject {
+            if error.hasPrefix("FLOOD_PREMIUM_WAIT") {
+                self.network.addNetworkSpeedLimitedEvent(event: .download(subject))
+            }
+        }
+    }
+    
     func checkState() {
         guard let currentIntervals = self.currentIntervals else {
             return
@@ -836,7 +857,15 @@ private final class MultipartFetchManager {
             }
             
             let partSize: Int32 = Int32(downloadRange.upperBound - downloadRange.lowerBound)
-            let part = self.source.request(offset: downloadRange.lowerBound, limit: downloadRange.upperBound - downloadRange.lowerBound, tag: self.parameters?.tag, resource: self.resource, resourceReference: self.resourceReference, fileReference: self.fileReference, continueInBackground: self.continueInBackground)
+            let queue = self.queue
+            let part = self.source.request(offset: downloadRange.lowerBound, limit: downloadRange.upperBound - downloadRange.lowerBound, tag: self.parameters?.tag, resource: self.resource, resourceReference: self.resourceReference, fileReference: self.fileReference, continueInBackground: self.continueInBackground, onFloodWaitError: { [weak self] error in
+                queue.async {
+                    guard let self else {
+                        return
+                    }
+                    self.processFloodWaitError(error: error)
+                }
+            })
             |> deliverOn(self.queue)
             let partDisposable = MetaDisposable()
             self.fetchingParts[downloadRange.lowerBound] = FetchingPart(size: Int64(downloadRange.count), disposable: partDisposable)
@@ -873,7 +902,7 @@ private final class MultipartFetchManager {
                     case .fatal:
                         strongSelf.finishWithError(.generic)
                     case .revalidateMediaReference:
-                        if !strongSelf.revalidatingMediaReference && !strongSelf.revalidatedMediaReference {
+                        if !strongSelf.revalidatingMediaReference {
                             strongSelf.revalidatingMediaReference = true
                             for (_, part) in strongSelf.fetchingParts {
                                 part.disposable.dispose()
@@ -919,7 +948,7 @@ private final class MultipartFetchManager {
                             case let .cdn(_, _, fileToken, _, _, _, masterDownload, _):
                                 if !strongSelf.reuploadingToCdn {
                                     strongSelf.reuploadingToCdn = true
-                                    let reupload: Signal<[Api.FileHash], NoError> = masterDownload.request(Api.functions.upload.reuploadCdnFile(fileToken: Buffer(data: fileToken), requestToken: Buffer(data: token)), tag: nil, continueInBackground: strongSelf.continueInBackground, expectedResponseSize: nil)
+                                    let reupload: Signal<[Api.FileHash], NoError> = masterDownload.request(Api.functions.upload.reuploadCdnFile(fileToken: Buffer(data: fileToken), requestToken: Buffer(data: token)), tag: nil, continueInBackground: strongSelf.continueInBackground, expectedResponseSize: nil, onFloodWaitError: { _ in })
                                     |> map { result, _ -> [Api.FileHash] in
                                         return result
                                     }

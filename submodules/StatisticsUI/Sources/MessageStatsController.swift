@@ -160,7 +160,7 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .publicForwardsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .overview(_, stats, storyViews, publicShares):
-                return StatsOverviewItem(presentationData: presentationData, isGroup: false, stats: stats as! Stats, storyViews: storyViews, publicShares: publicShares, sectionId: self.section, style: .blocks)
+                return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: false, stats: stats as! Stats, storyViews: storyViews, publicShares: publicShares, sectionId: self.section, style: .blocks)
             case let .interactionsGraph(_, _, _, graph, type, noInitialZoom), let .reactionsGraph(_, _, _, graph, type, noInitialZoom):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, noInitialZoom: noInitialZoom, getDetailsData: { date, completion in
                     let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in

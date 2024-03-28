@@ -1,10 +1,80 @@
 import Foundation
 import UIKit
+import AVKit
 import SwiftSignalKit
 import MediaPlayer
-
 import LegacyComponents
+import AccountContext
 
+private protocol VolumeButtonHandlerImpl {
+}
+
+private final class LegacyHandlerImpl: VolumeButtonHandlerImpl {
+    private let handler: PGCameraVolumeButtonHandler
+    
+    init(
+        context: SharedAccountContext,
+        performAction: @escaping (VolumeButtonsListener.Action) -> Void
+    ) {
+        self.handler = PGCameraVolumeButtonHandler(upButtonPressedBlock: {
+            performAction(.up)
+        }, upButtonReleasedBlock: {
+            performAction(.upRelease)
+        }, downButtonPressedBlock: {
+            performAction(.down)
+        }, downButtonReleasedBlock: {
+            performAction(.downRelease)
+        })
+        self.handler.enabled = true
+    }
+    
+    deinit {
+        self.handler.enabled = false
+    }
+}
+
+@available(iOS 17.2, *)
+private final class AVCaptureEventHandlerImpl: VolumeButtonHandlerImpl {
+    private let interaction: AVCaptureEventInteraction
+    
+    init(
+        context: SharedAccountContext,
+        performAction: @escaping (VolumeButtonsListener.Action) -> Void
+    ) {
+        self.interaction = AVCaptureEventInteraction(
+            primary: { event in
+                switch event.phase {
+                case .began:
+                    performAction(.down)
+                case .ended:
+                    performAction(.downRelease)
+                case .cancelled:
+                    performAction(.downRelease)
+                @unknown default:
+                    break
+                }
+            },
+            secondary: { event in
+                switch event.phase {
+                case .began:
+                    performAction(.up)
+                case .ended:
+                    performAction(.upRelease)
+                case .cancelled:
+                    performAction(.upRelease)
+                @unknown default:
+                    break
+                }
+            }
+        )
+        self.interaction.isEnabled = true
+        context.mainWindow?.viewController?.view.addInteraction(self.interaction)
+    }
+    
+    deinit {
+        self.interaction.isEnabled = false
+    }
+}
 
 public class VolumeButtonsListener {
     private final class ListenerReference {
@@ -17,38 +87,27 @@ public class VolumeButtonsListener {
         }
     }
     
-    private enum Action {
+    fileprivate enum Action {
         case up
         case upRelease
         case down
         case downRelease
     }
-    
+        
     private final class SharedContext: NSObject {
-        private var handler: PGCameraVolumeButtonHandler?
+        private var handler: VolumeButtonHandlerImpl?
+        private weak var sharedAccountContext: SharedAccountContext?
         
         private var nextListenerId: Int = 0
         private var listeners: [ListenerReference] = []
         
         override init() {
             super.init()
-                    
-            /*self.disposable = (shouldBeActive
-            |> deliverOnMainQueue).start(next: { [weak self] value in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.handler.enabled = value
-            })*/
-        }
-        
-        deinit {
-            if let handler = self.handler {
-                handler.enabled = false
-            }
         }
         
         func add(listener: VolumeButtonsListener) -> Int {
+            self.sharedAccountContext = listener.sharedAccountContext
+            
             let id = self.nextListenerId
             self.nextListenerId += 1
             
@@ -69,7 +128,7 @@ public class VolumeButtonsListener {
             }
         }
         
-        private func performAction(action: Action) {
+        private func performAction(_ action: Action) {
             for i in (0 ..< self.listeners.count).reversed() {
                 if let listener = self.listeners[i].listener, listener.isActive {
                     switch action {
@@ -100,27 +159,29 @@ public class VolumeButtonsListener {
             }
             
             if isActive {
-                if self.handler == nil {
-                    self.handler = PGCameraVolumeButtonHandler(upButtonPressedBlock: { [weak self] in
-                        self?.performAction(action: .up)
-                    }, upButtonReleasedBlock: { [weak self] in
-                        self?.performAction(action: .upRelease)
-                    }, downButtonPressedBlock: { [weak self] in
-                        self?.performAction(action: .down)
-                    }, downButtonReleasedBlock: { [weak self] in
-                        self?.performAction(action: .downRelease)
-                    })
+                if let sharedAccountContext = self.sharedAccountContext {
+                    let performAction: (VolumeButtonsListener.Action) -> Void = { [weak self] action in
+                        self?.performAction(action)
+                    }
+                    if #available(iOS 17.2, *) {
+                        self.handler = AVCaptureEventHandlerImpl(
+                            context: sharedAccountContext,
+                            performAction: performAction
+                        )
+                    } else {
+                        self.handler = LegacyHandlerImpl(
+                            context: sharedAccountContext,
+                            performAction: performAction
+                        )
+                    }
                 }
-                self.handler?.enabled = true
             } else {
-                if let handler = self.handler {
-                    self.handler = nil
-                    
-                    handler.enabled = false
-                }
+                self.handler = nil
             }
         }
     }
+    
+    fileprivate let sharedAccountContext: SharedAccountContext
     
     private static var sharedContext: SharedContext = {
         return SharedContext()
@@ -137,12 +198,14 @@ public class VolumeButtonsListener {
     private var disposable: Disposable?
     
     public init(
+        sharedContext: SharedAccountContext,
         shouldBeActive: Signal<Bool, NoError>,
         upPressed: @escaping () -> Void,
         upReleased: @escaping () -> Void = {},
         downPressed: @escaping () -> Void,
         downReleased: @escaping () -> Void = {}
     ) {
+        self.sharedAccountContext = sharedContext
         self.upPressed = upPressed
         self.upReleased = upReleased
         self.downPressed = downPressed

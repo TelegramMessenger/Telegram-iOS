@@ -507,7 +507,7 @@ TEST_P(CordRepBtreeTest, AppendToTreeTwoDeep) {
   for (size_t i = max_cap * max_cap + 1; i < max_cap * max_cap * max_cap; ++i) {
     // Ref top level tree based on param.
     // Ref child node once every 16 iterations, and leaf node every 4
-    // iterrations which  which should not have an observable effect other than
+    // iterations which  which should not have an observable effect other than
     //  the node and/or the leaf below it being copied.
     refs.RefIf(shared(), tree);
     refs.RefIf(i % 16 == 0, tree->Edges().back());
@@ -568,7 +568,7 @@ TEST_P(CordRepBtreeTest, PrependToTreeTwoDeep) {
   for (size_t i = max_cap * max_cap + 1; i < max_cap * max_cap * max_cap; ++i) {
     // Ref top level tree based on param.
     // Ref child node once every 16 iterations, and leaf node every 4
-    // iterrations which  which should not have an observable effect other than
+    // iterations which  which should not have an observable effect other than
     //  the node and/or the leaf below it being copied.
     refs.RefIf(shared(), tree);
     refs.RefIf(i % 16 == 0, tree->Edges().back());
@@ -1355,9 +1355,9 @@ TEST(CordRepBtreeTest, AssertValid) {
 
 TEST(CordRepBtreeTest, CheckAssertValidShallowVsDeep) {
   // Restore exhaustive validation on any exit.
-  const bool exhaustive_validation = cord_btree_exhaustive_validation.load();
+  const bool exhaustive_validation = IsCordBtreeExhaustiveValidationEnabled();
   auto cleanup = absl::MakeCleanup([exhaustive_validation] {
-    cord_btree_exhaustive_validation.store(exhaustive_validation);
+    SetCordBtreeExhaustiveValidation(exhaustive_validation);
   });
 
   // Create a tree of at least 2 levels, and mess with the original flat, which
@@ -1372,7 +1372,7 @@ TEST(CordRepBtreeTest, CheckAssertValidShallowVsDeep) {
   }
   flat->length = 100;
 
-  cord_btree_exhaustive_validation.store(false);
+  SetCordBtreeExhaustiveValidation(false);
   EXPECT_FALSE(CordRepBtree::IsValid(tree));
   EXPECT_TRUE(CordRepBtree::IsValid(tree, true));
   EXPECT_FALSE(CordRepBtree::IsValid(tree, false));
@@ -1382,7 +1382,7 @@ TEST(CordRepBtreeTest, CheckAssertValidShallowVsDeep) {
   EXPECT_DEBUG_DEATH(CordRepBtree::AssertValid(tree, false), ".*");
 #endif
 
-  cord_btree_exhaustive_validation.store(true);
+  SetCordBtreeExhaustiveValidation(true);
   EXPECT_FALSE(CordRepBtree::IsValid(tree));
   EXPECT_FALSE(CordRepBtree::IsValid(tree, true));
   EXPECT_FALSE(CordRepBtree::IsValid(tree, false));

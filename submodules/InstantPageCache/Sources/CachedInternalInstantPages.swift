@@ -48,6 +48,14 @@ public func cachedPrivacyPage(context: AccountContext) -> Signal<ResolvedUrl, No
     return cachedInternalInstantPage(context: context, url: privacyUrl)
 }
 
+public func cachedWebAppTermsPage(context: AccountContext) -> Signal<ResolvedUrl, NoError> {
+    var privacyUrl = context.sharedContext.currentPresentationData.with { $0 }.strings.WebApp_TermsOfUse_URL
+    if privacyUrl == "WebApp.TermsOfUse_URL" || privacyUrl.isEmpty {
+        privacyUrl = "https://telegram.org/tos/mini-apps"
+    }
+    return cachedInternalInstantPage(context: context, url: privacyUrl)
+}
+
 private func cachedInternalInstantPage(context: AccountContext, url: String) -> Signal<ResolvedUrl, NoError> {
     let (cachedUrl, anchor) = extractAnchor(string: url)
     return cachedInstantPage(engine: context.engine, url: cachedUrl)

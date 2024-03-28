@@ -381,7 +381,7 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .topInvitersTitle(_, text, dates):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: dates, color: .generic), sectionId: self.section)
             case let .overview(_, stats):
-                return StatsOverviewItem(presentationData: presentationData, isGroup: true, stats: stats, sectionId: self.section, style: .blocks)
+                return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: true, stats: stats, sectionId: self.section, style: .blocks)
             case let .growthGraph(_, _, _, graph, type),
                  let .membersGraph(_, _, _, graph, type),
                  let .newMembersBySourceGraph(_, _, _, graph, type),

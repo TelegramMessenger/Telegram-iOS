@@ -15,7 +15,7 @@ genrule(
     name = "opus_build",
     srcs = [
         "build-opus-bazel.sh",
-        "opus-1.3.1.tar.gz",
+        "opus-1.5.1.tar.gz",
     ],
     cmd_bash = 
     """
@@ -38,11 +38,11 @@ genrule(
     mkdir -p "$$BUILD_DIR"
 
     cp $(location :build-opus-bazel.sh) "$$BUILD_DIR/"
-    cp $(location :opus-1.3.1.tar.gz) "$$BUILD_DIR/"
+    cp $(location :opus-1.5.1.tar.gz) "$$BUILD_DIR/"
 
     mkdir -p "$$BUILD_DIR/Public/opus"
 
-    sh $$BUILD_DIR/build-opus-bazel.sh $$BUILD_ARCH "$$BUILD_DIR" opus-1.3.1.tar.gz
+    sh $$BUILD_DIR/build-opus-bazel.sh $$BUILD_ARCH "$$BUILD_DIR" opus-1.5.1.tar.gz
     """ +
     "\n".join([
         "cp -f \"$$BUILD_DIR/built/include/opus/{}\" \"$(location Public/opus/{})\"".format(header, header) for header in headers

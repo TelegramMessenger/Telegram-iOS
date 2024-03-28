@@ -8,7 +8,7 @@ import GZip
 import AppBundle
 import LegacyComponents
 
-private let sceneVersion: Int = 2
+private let sceneVersion: Int = 3
 
 private func deg2rad(_ number: Float) -> Float {
     return number * .pi / 180
@@ -345,8 +345,12 @@ class PremiumCoinComponent: Component {
                     return
                 }
                 
-                if #available(iOS 17.0, *), let material = node.geometry?.materials.first {
-                    material.metalness.intensity = 0.3
+                if let material = node.geometry?.materials.first {
+                    if node.name == "Logos" {
+                        material.metalness.intensity = 0.1
+                    } else {
+                        material.metalness.intensity = 0.3
+                    }
                 }
                 
                 let animation = CABasicAnimation(keyPath: "contentsTransform")

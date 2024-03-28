@@ -10,6 +10,7 @@ import BlurredBackgroundComponent
 import Markdown
 import TelegramPresentationData
 import BundleIconComponent
+import ScrollComponent
 
 private final class HeaderComponent: Component {
     let context: AccountContext
@@ -301,14 +302,14 @@ private final class BusinessListComponent: CombinedComponent {
             let strings = context.component.context.sharedContext.currentPresentationData.with { $0 }.strings
             
             let colors = [
-                UIColor(rgb: 0x007aff),
-                UIColor(rgb: 0x798aff),
-                UIColor(rgb: 0xac64f3),
-                UIColor(rgb: 0xc456ae),
-                UIColor(rgb: 0xe95d44),
-                UIColor(rgb: 0xf2822a),
-                UIColor(rgb: 0xe79519),
-                UIColor(rgb: 0xe7ad19)
+                UIColor(rgb: 0xef6922),
+                UIColor(rgb: 0xe54937),
+                UIColor(rgb: 0xdb374b),
+                UIColor(rgb: 0xbc4395),
+                UIColor(rgb: 0x9b4fed),
+                UIColor(rgb: 0x8958ff),
+                UIColor(rgb: 0x676bff),
+                UIColor(rgb: 0x007aff)
             ]
             
             let titleColor = theme.list.itemPrimaryTextColor
@@ -399,6 +400,34 @@ private final class BusinessListComponent: CombinedComponent {
             
             items.append(
                 AnyComponentWithIdentity(
+                    id: "links",
+                    component: AnyComponent(ParagraphComponent(
+                        title: strings.Premium_Business_Links_Title,
+                        titleColor: titleColor,
+                        text: strings.Premium_Business_Links_Text,
+                        textColor: textColor,
+                        iconName: "Premium/Business/Links",
+                        iconColor: colors[5]
+                    ))
+                )
+            )
+            
+            items.append(
+                AnyComponentWithIdentity(
+                    id: "intro",
+                    component: AnyComponent(ParagraphComponent(
+                        title: strings.Premium_Business_Intro_Title,
+                        titleColor: titleColor,
+                        text: strings.Premium_Business_Intro_Text,
+                        textColor: textColor,
+                        iconName: "Premium/Business/Intro",
+                        iconColor: colors[6]
+                    ))
+                )
+            )
+            
+            items.append(
+                AnyComponentWithIdentity(
                     id: "chatbots",
                     component: AnyComponent(ParagraphComponent(
                         title: strings.Premium_Business_Chatbots_Title,
@@ -406,7 +435,7 @@ private final class BusinessListComponent: CombinedComponent {
                         text: strings.Premium_Business_Chatbots_Text,
                         textColor: textColor,
                         iconName: "Premium/Business/Chatbots",
-                        iconColor: colors[5]
+                        iconColor: colors[7]
                     ))
                 )
             )

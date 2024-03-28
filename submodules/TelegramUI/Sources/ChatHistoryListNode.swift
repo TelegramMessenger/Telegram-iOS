@@ -708,6 +708,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     
     var frozenMessageForScrollingReset: EngineMessage.Id?
     
+    private var hasDisplayedBusinessBotMessageTooltip: Bool = false
+    
     private let _isReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     public var isReady: Signal<Bool, NoError> {
         return self._isReady.get()
@@ -1380,9 +1382,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         }
         |> distinctUntilChanged
         
-        let animatedEmojiStickers: Signal<[String: [StickerPackItem]], NoError> = (context as! AccountContextImpl).animatedEmojiStickersSignal
-        
-        let additionalAnimatedEmojiStickers = (context as! AccountContextImpl).additionalAnimatedEmojiStickers
+        let animatedEmojiStickers: Signal<[String: [StickerPackItem]], NoError> = context.animatedEmojiStickers
+        let additionalAnimatedEmojiStickers = context.additionalAnimatedEmojiStickers
         
         let previousHistoryAppearsCleared = self.previousHistoryAppearsCleared
                 
@@ -2487,6 +2488,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             var allVisibleAnchorMessageIds: [(MessageId, Int)] = []
             var visibleAdOpaqueIds: [Data] = []
             var peerIdsWithRefreshStories: [PeerId] = []
+            var visibleBusinessBotMessageId: EngineMessage.Id?
             
             if indexRange.0 <= indexRange.1 {
                 for i in (indexRange.0 ... indexRange.1) {
@@ -2680,6 +2682,15 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             hasAction = true
                         }
                     }
+                    if let _ = message.inlineBotAttribute {
+                        if let visibleBusinessBotMessageIdValue = visibleBusinessBotMessageId {
+                            if visibleBusinessBotMessageIdValue < message.id {
+                                visibleBusinessBotMessageId = message.id
+                            }
+                        } else {
+                            visibleBusinessBotMessageId = message.id
+                        }
+                    }
                     if !hasAction {
                         switch message.id.peerId.namespace {
                         case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
@@ -2694,6 +2705,15 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                         for media in message.media {
                             if let _ = media as? TelegramMediaAction {
                                 hasAction = true
+                            }
+                        }
+                        if let _ = message.inlineBotAttribute {
+                            if let visibleBusinessBotMessageIdValue = visibleBusinessBotMessageId {
+                                if visibleBusinessBotMessageIdValue < message.id {
+                                    visibleBusinessBotMessageId = message.id
+                                }
+                            } else {
+                                visibleBusinessBotMessageId = message.id
                             }
                         }
                         if !hasAction {
@@ -2871,6 +2891,23 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 self.remainingDynamicAdMessageDistance = remainingDynamicAdMessageDistance
                             }
                         }
+                    }
+                }
+            }
+            
+            if let visibleBusinessBotMessageId, !self.hasDisplayedBusinessBotMessageTooltip {
+                var foundItemNode: ChatMessageItemView?
+                self.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, item.message.id == visibleBusinessBotMessageId {
+                        foundItemNode = itemNode
+                    }
+                }
+                
+                if let foundItemNode {
+                    self.hasDisplayedBusinessBotMessageTooltip = true
+                    
+                    if let controllerNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode, let chatController = controllerNode.interfaceInteraction?.chatController() as? ChatControllerImpl {
+                        chatController.displayBusinessBotMessageTooltip(itemNode: foundItemNode)
                     }
                 }
             }

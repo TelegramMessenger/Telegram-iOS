@@ -46,16 +46,13 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  * ==================================================================== */
 
-#include <openssl/type_check.h>
-
 #include <assert.h>
 #include <string.h>
 
 #include "internal.h"
 
 
-OPENSSL_STATIC_ASSERT(16 % sizeof(size_t) == 0,
-                      "block cannot be divided into size_t");
+static_assert(16 % sizeof(size_t) == 0, "block cannot be divided into size_t");
 
 void CRYPTO_cfb128_encrypt(const uint8_t *in, uint8_t *out, size_t len,
                            const AES_KEY *key, uint8_t ivec[16], unsigned *num,
@@ -72,10 +69,11 @@ void CRYPTO_cfb128_encrypt(const uint8_t *in, uint8_t *out, size_t len,
     }
     while (len >= 16) {
       (*block)(ivec, ivec, key);
-      for (; n < 16; n += sizeof(size_t)) {
-        size_t tmp = load_word_le(ivec + n) ^ load_word_le(in + n);
-        store_word_le(ivec + n, tmp);
-        store_word_le(out + n, tmp);
+      for (; n < 16; n += sizeof(crypto_word_t)) {
+        crypto_word_t tmp =
+            CRYPTO_load_word_le(ivec + n) ^ CRYPTO_load_word_le(in + n);
+        CRYPTO_store_word_le(ivec + n, tmp);
+        CRYPTO_store_word_le(out + n, tmp);
       }
       len -= 16;
       out += 16;
@@ -101,10 +99,10 @@ void CRYPTO_cfb128_encrypt(const uint8_t *in, uint8_t *out, size_t len,
     }
     while (len >= 16) {
       (*block)(ivec, ivec, key);
-      for (; n < 16; n += sizeof(size_t)) {
-        size_t t = load_word_le(in + n);
-        store_word_le(out + n, load_word_le(ivec + n) ^ t);
-        store_word_le(ivec + n, t);
+      for (; n < 16; n += sizeof(crypto_word_t)) {
+        crypto_word_t t = CRYPTO_load_word_le(in + n);
+        CRYPTO_store_word_le(out + n, CRYPTO_load_word_le(ivec + n) ^ t);
+        CRYPTO_store_word_le(ivec + n, t);
       }
       len -= 16;
       out += 16;

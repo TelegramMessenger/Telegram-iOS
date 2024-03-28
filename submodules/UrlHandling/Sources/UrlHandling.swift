@@ -74,6 +74,7 @@ public enum ParsedInternalPeerUrlParameter {
     case appStart(String, String?)
     case story(Int32)
     case boost
+    case text(String)
 }
 
 public enum ParsedInternalUrl {
@@ -96,11 +97,12 @@ public enum ParsedInternalUrl {
     case share(url: String?, text: String?, to: String?)
     case wallpaper(WallpaperUrlParameter)
     case theme(String)
-    case phone(String, String?, String?)
+    case phone(String, String?, String?, String?)
     case startAttach(String, String?, String?)
     case contactToken(String)
     case chatFolder(slug: String)
     case premiumGiftCode(slug: String)
+    case messageLink(slug: String)
 }
 
 private enum ParsedUrl {
@@ -132,6 +134,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                 if component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789+").inverted) == nil {
                     var attach: String?
                     var startAttach: String?
+                    var text: String?
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -139,12 +142,14 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     attach = value
                                 } else if queryItem.name == "startattach" {
                                     startAttach = value
+                                } else if queryItem.name == "text" {
+                                    text = value
                                 }
                             }
                         }
                     }
                     
-                    return .phone(component.replacingOccurrences(of: "+", with: ""), attach, startAttach)
+                    return .phone(component.replacingOccurrences(of: "+", with: ""), attach, startAttach, text)
                 } else {
                     return .join(String(component.dropFirst()))
                 }
@@ -246,7 +251,9 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
-                                if queryItem.name == "attach" {
+                                if queryItem.name == "text" {
+                                    return .peer(.name(peerName), .text(value))
+                                } else if queryItem.name == "attach" {
                                     var startAttach: String?
                                     for queryItem in queryItems {
                                         if queryItem.name == "startattach", let value = queryItem.value {
@@ -458,6 +465,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     return .peer(.name(pathComponents[1]), .boost)
                 } else if pathComponents[0] == "giftcode", pathComponents.count == 2 {
                     return .premiumGiftCode(slug: pathComponents[1])
+                } else if pathComponents[0] == "m" {
+                    return .messageLink(slug: pathComponents[1])
                 } else if pathComponents.count == 3 && pathComponents[0] == "c" {
                     if let channelId = Int64(pathComponents[1]), let messageId = Int32(pathComponents[2]) {
                         var threadId: Int32?
@@ -600,10 +609,14 @@ private enum ResolveInternalUrlResult {
 
 private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl) -> Signal<ResolveInternalUrlResult, NoError> {
     switch url {
-        case let .phone(phone, attach, startAttach):
+        case let .phone(phone, attach, startAttach, text):
             return context.engine.peers.resolvePeerByPhone(phone: phone)
             |> mapToSignal { peer -> Signal<ResolveInternalUrlResult, NoError> in
                 if let peer = peer?._asPeer() {
+                    var textInputState: ChatTextInputState?
+                    if let text, !text.isEmpty {
+                        textInputState = ChatTextInputState(inputText: NSAttributedString(string: text))
+                    }
                     if let attach = attach {
                         return context.engine.peers.resolvePeerByName(name: attach)
                         |> map { result -> ResolveInternalUrlResult in
@@ -614,12 +627,12 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 if let botPeer = botPeer?._asPeer() {
                                     return .result(.peer(peer, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: startAttach, justInstalled: false))))
                                 } else {
-                                    return .result(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                    return .result(.peer(peer, .chat(textInputState: textInputState, subject: nil, peekData: nil)))
                                 }
                             }
                         }
                     } else {
-                        return .single(.result(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))))
+                        return .single(.result(.peer(peer, .chat(textInputState: textInputState, subject: nil, peekData: nil))))
                     }
                 } else {
                     return .single(.result(.peer(nil, .info(nil))))
@@ -667,6 +680,12 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                 if let peer = peer {
                     if let parameter = parameter {
                         switch parameter {
+                            case let .text(text):
+                                var textInputState: ChatTextInputState?
+                                if !text.isEmpty {
+                                    textInputState = ChatTextInputState(inputText: NSAttributedString(string: text))
+                                }
+                                return .single(.result(.peer(peer._asPeer(), .chat(textInputState: textInputState, subject: nil, peekData: nil))))
                             case let .botStart(payload):
                                 return .single(.result(.botStart(peer: peer._asPeer(), payload: payload)))
                             case let .groupBotStart(payload, adminRights):
@@ -976,6 +995,28 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             }
         case let .premiumGiftCode(slug):
             return .single(.result(.premiumGiftCode(slug: slug)))
+        case let .messageLink(slug):
+            return .single(.progress)
+            |> then(context.engine.peers.resolveMessageLink(slug: slug)
+            |> mapToSignal { result -> Signal<ResolveInternalUrlResult, NoError> in
+                guard let result else {
+                    return .single(.result(.messageLink(link: nil)))
+                }
+                var customEmojiIds: [Int64] = []
+                for entity in result.entities {
+                    if case let .CustomEmoji(_, fileId) = entity.type {
+                        if !customEmojiIds.contains(fileId) {
+                            customEmojiIds.append(fileId)
+                        }
+                    }
+                }
+                
+                return context.engine.stickers.resolveInlineStickers(fileIds: customEmojiIds)
+                |> mapToSignal { _ -> Signal<ResolveInternalUrlResult, NoError> in
+                    return .single(.result(.messageLink(link: result)))
+                }
+            })
+            
     }
 }
 

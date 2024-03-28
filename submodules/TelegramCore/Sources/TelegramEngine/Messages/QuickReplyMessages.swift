@@ -388,7 +388,7 @@ func _internal_sendMessageShortcut(account: Account, peerId: PeerId, id: Int32) 
         guard let peer, let inputPeer = apiInputPeer(peer) else {
             return .complete()
         }
-        return account.network.request(Api.functions.messages.sendQuickReplyMessages(peer: inputPeer, shortcutId: id))
+        return account.network.request(Api.functions.messages.sendQuickReplyMessages(peer: inputPeer, shortcutId: id, id: [], randomId: []))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
@@ -428,16 +428,19 @@ public final class TelegramBusinessRecipients: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case categories
         case additionalPeers
+        case excludePeers
         case exclude
     }
     
     public let categories: Categories
     public let additionalPeers: Set<PeerId>
+    public let excludePeers: Set<PeerId>
     public let exclude: Bool
     
-    public init(categories: Categories, additionalPeers: Set<PeerId>, exclude: Bool) {
+    public init(categories: Categories, additionalPeers: Set<PeerId>, excludePeers: Set<PeerId>, exclude: Bool) {
         self.categories = categories
         self.additionalPeers = additionalPeers
+        self.excludePeers = excludePeers
         self.exclude = exclude
     }
     
@@ -446,6 +449,11 @@ public final class TelegramBusinessRecipients: Codable, Equatable {
         
         self.categories = Categories(rawValue: try container.decode(Int32.self, forKey: .categories))
         self.additionalPeers = Set(try container.decode([PeerId].self, forKey: .additionalPeers))
+        if let excludePeers = try container.decodeIfPresent([PeerId].self, forKey: .excludePeers) {
+            self.excludePeers = Set(excludePeers)
+        } else {
+            self.excludePeers = Set()
+        }
         self.exclude = try container.decode(Bool.self, forKey: .exclude)
     }
     
@@ -454,6 +462,7 @@ public final class TelegramBusinessRecipients: Codable, Equatable {
         
         try container.encode(self.categories.rawValue, forKey: .categories)
         try container.encode(Array(self.additionalPeers).sorted(), forKey: .additionalPeers)
+        try container.encode(Array(self.excludePeers).sorted(), forKey: .excludePeers)
         try container.encode(self.exclude, forKey: .exclude)
     }
     
@@ -466,6 +475,9 @@ public final class TelegramBusinessRecipients: Codable, Equatable {
             return false
         }
         if lhs.additionalPeers != rhs.additionalPeers {
+            return false
+        }
+        if lhs.excludePeers != rhs.excludePeers {
             return false
         }
         if lhs.exclude != rhs.exclude {
@@ -643,6 +655,63 @@ public final class TelegramBusinessAwayMessage: Codable, Equatable {
     }
 }
 
+public final class TelegramBusinessIntro: Codable, Equatable {
+    private enum CodingKeys: String, CodingKey {
+        case title
+        case text
+        case stickerFile
+    }
+    
+    public let title: String
+    public let text: String
+    public let stickerFile: TelegramMediaFile?
+    
+    public init(title: String, text: String, stickerFile: TelegramMediaFile?) {
+        self.title = title
+        self.text = text
+        self.stickerFile = stickerFile
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.title = try container.decode(String.self, forKey: .title)
+        self.text = try container.decode(String.self, forKey: .text)
+        
+        if let stickerFileData = try container.decodeIfPresent(Data.self, forKey: .stickerFile) {
+            self.stickerFile = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: stickerFileData)))
+        } else {
+            self.stickerFile = nil
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.title, forKey: .title)
+        try container.encode(self.text, forKey: .text)
+        
+        if let stickerFile = self.stickerFile {
+            let innerEncoder = PostboxEncoder()
+            stickerFile.encode(innerEncoder)
+            try container.encode(innerEncoder.makeData(), forKey: .stickerFile)
+        }
+    }
+    
+    public static func ==(lhs: TelegramBusinessIntro, rhs: TelegramBusinessIntro) -> Bool {
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.stickerFile != rhs.stickerFile {
+            return false
+        }
+        return true
+    }
+}
+
 extension TelegramBusinessAwayMessage {
     convenience init(apiAwayMessage: Api.BusinessAwayMessage) {
         switch apiAwayMessage {
@@ -669,6 +738,32 @@ extension TelegramBusinessAwayMessage {
     }
 }
 
+extension TelegramBusinessIntro {
+    convenience init(apiBusinessIntro: Api.BusinessIntro) {
+        switch apiBusinessIntro {
+        case let .businessIntro(_, title, description, sticker):
+            self.init(title: title, text: description, stickerFile: sticker.flatMap(telegramMediaFileFromApiDocument))
+        }
+    }
+    
+    func apiInputIntro() -> Api.InputBusinessIntro {
+        var flags: Int32 = 0
+        var sticker: Api.InputDocument?
+        if let stickerFile = self.stickerFile {
+            if let fileResource = stickerFile.resource as? CloudDocumentMediaResource, let resource = stickerFile.resource as? TelegramCloudMediaResourceWithFileReference, let reference = resource.fileReference {
+                flags |= 1 << 0
+                sticker = .inputDocument(id: fileResource.fileId, accessHash: fileResource.accessHash, fileReference: Buffer(data: reference))
+            }
+        }
+        return .inputBusinessIntro(
+            flags: flags,
+            title: self.title,
+            description: self.text,
+            sticker: sticker
+        )
+    }
+}
+
 extension TelegramBusinessRecipients {
     convenience init(apiValue: Api.BusinessRecipients) {
         switch apiValue {
@@ -689,7 +784,34 @@ extension TelegramBusinessRecipients {
             
             self.init(
                 categories: categories,
-                additionalPeers:  Set((users ?? []).map(PeerId.init)),
+                additionalPeers: Set((users ?? []).map( { PeerId(namespace: Namespaces.Peer.CloudUser, id: ._internalFromInt64Value($0)) })),
+                excludePeers: Set(),
+                exclude: (flags & (1 << 5)) != 0
+            )
+        }
+    }
+    
+    convenience init(apiValue: Api.BusinessBotRecipients) {
+        switch apiValue {
+        case let .businessBotRecipients(flags, users, excludeUsers):
+            var categories: Categories = []
+            if (flags & (1 << 0)) != 0 {
+                categories.insert(.existingChats)
+            }
+            if (flags & (1 << 1)) != 0 {
+                categories.insert(.newChats)
+            }
+            if (flags & (1 << 2)) != 0 {
+                categories.insert(.contacts)
+            }
+            if (flags & (1 << 3)) != 0 {
+                categories.insert(.nonContacts)
+            }
+            
+            self.init(
+                categories: categories,
+                additionalPeers: Set((users ?? []).map( { PeerId(namespace: Namespaces.Peer.CloudUser, id: ._internalFromInt64Value($0)) })),
+                excludePeers: Set((excludeUsers ?? []).map( { PeerId(namespace: Namespaces.Peer.CloudUser, id: ._internalFromInt64Value($0)) })),
                 exclude: (flags & (1 << 5)) != 0
             )
         }
@@ -723,6 +845,43 @@ extension TelegramBusinessRecipients {
         }
         
         return .inputBusinessRecipients(flags: flags, users: users)
+    }
+    
+    func apiInputBotValue(additionalPeers: [Peer], excludePeers: [Peer]) -> Api.InputBusinessBotRecipients {
+        var users: [Api.InputUser]?
+        if !additionalPeers.isEmpty {
+            users = additionalPeers.compactMap(apiInputUser)
+        }
+        var excludeUsers: [Api.InputUser]?
+        if !excludePeers.isEmpty {
+            excludeUsers = excludePeers.compactMap(apiInputUser)
+        }
+        
+        var flags: Int32 = 0
+        
+        if self.categories.contains(.existingChats) {
+            flags |= 1 << 0
+        }
+        if self.categories.contains(.newChats) {
+            flags |= 1 << 1
+        }
+        if self.categories.contains(.contacts) {
+            flags |= 1 << 2
+        }
+        if self.categories.contains(.nonContacts) {
+            flags |= 1 << 3
+        }
+        if self.exclude {
+            flags |= 1 << 5
+        }
+        if users != nil {
+            flags |= 1 << 4
+        }
+        if excludeUsers != nil {
+            flags |= 1 << 6
+        }
+        
+        return .inputBusinessBotRecipients(flags: flags, users: users, excludeUsers: excludeUsers)
     }
 }
 
@@ -826,6 +985,39 @@ func _internal_updateBusinessAwayMessage(account: Account, awayMessage: Telegram
     |> then(remoteApply)
 }
 
+func _internal_updateBusinessIntro(account: Account, intro: TelegramBusinessIntro?) -> Signal<Never, NoError> {
+    let remoteApply = account.postbox.transaction { transaction -> Void in
+        return
+    }
+    |> mapToSignal { _ -> Signal<Never, NoError> in
+        var flags: Int32 = 0
+        var inputIntro: Api.InputBusinessIntro?
+        
+        if let intro {
+            flags |= 1 << 0
+            inputIntro = intro.apiInputIntro()
+        }
+        
+        return account.network.request(Api.functions.account.updateBusinessIntro(flags: flags, intro: inputIntro))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Never, NoError> in
+            return .complete()
+        }
+    }
+    
+    return account.postbox.transaction { transaction in
+        transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, current in
+            var current = (current as? CachedUserData) ?? CachedUserData()
+            current = current.withUpdatedBusinessIntro(intro)
+            return current
+        })
+    }
+    |> ignoreValues
+    |> then(remoteApply)
+}
+
 public final class TelegramAccountConnectedBot: Codable, Equatable {
     public let id: PeerId
     public let recipients: TelegramBusinessRecipients
@@ -855,23 +1047,27 @@ public final class TelegramAccountConnectedBot: Codable, Equatable {
 }
 
 public func _internal_setAccountConnectedBot(account: Account, bot: TelegramAccountConnectedBot?) -> Signal<Never, NoError> {
-    let remoteApply = account.postbox.transaction { transaction -> (Peer?, [Peer]) in
+    let remoteApply = account.postbox.transaction { transaction -> (Peer?, [Peer], [Peer]) in
         guard let bot else {
-            return (nil, [])
+            return (nil, [], [])
         }
-        return (transaction.getPeer(bot.id), bot.recipients.additionalPeers.compactMap(transaction.getPeer))
+        return (
+            transaction.getPeer(bot.id),
+            bot.recipients.additionalPeers.compactMap(transaction.getPeer),
+            bot.recipients.excludePeers.compactMap(transaction.getPeer)
+        )
     }
-    |> mapToSignal { botUser, additionalPeers in
+    |> mapToSignal { botUser, additionalPeers, excludePeers in
         var flags: Int32 = 0
         var mappedBot: Api.InputUser = .inputUserEmpty
-        var mappedRecipients: Api.InputBusinessRecipients = .inputBusinessRecipients(flags: 0, users: nil)
+        var mappedRecipients: Api.InputBusinessBotRecipients = .inputBusinessBotRecipients(flags: 0, users: nil, excludeUsers: nil)
         
         if let bot, let inputBotUser = botUser.flatMap(apiInputUser) {
             mappedBot = inputBotUser
             if bot.canReply {
                 flags |= 1 << 0
             }
-            mappedRecipients = bot.recipients.apiInputValue(additionalPeers: additionalPeers)
+            mappedRecipients = bot.recipients.apiInputBotValue(additionalPeers: additionalPeers, excludePeers: excludePeers)
         }
         
         return account.network.request(Api.functions.account.updateConnectedBot(flags: flags, bot: mappedBot, recipients: mappedRecipients))
@@ -891,6 +1087,38 @@ public func _internal_setAccountConnectedBot(account: Account, bot: TelegramAcco
         transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, current in
             var current = (current as? CachedUserData) ?? CachedUserData()
             current = current.withUpdatedConnectedBot(bot)
+            return current
+        })
+    }
+    |> ignoreValues
+    |> then(remoteApply)
+}
+
+func _internal_updatePersonalChannel(account: Account, personalChannel: TelegramPersonalChannel?) -> Signal<Never, NoError> {
+    let remoteApply = account.postbox.transaction { transaction -> Peer? in
+        guard let personalChannel else {
+            return nil
+        }
+        return (
+            transaction.getPeer(personalChannel.peerId)
+        )
+    }
+    |> mapToSignal { peer in
+        let inputPeer = peer.flatMap(apiInputChannel)
+        
+        return account.network.request(Api.functions.account.updatePersonalChannel(channel: inputPeer ?? .inputChannelEmpty))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Never, NoError> in
+            return .complete()
+        }
+    }
+    
+    return account.postbox.transaction { transaction in
+        transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, current in
+            var current = (current as? CachedUserData) ?? CachedUserData()
+            current = current.withUpdatedPersonalChannel(personalChannel)
             return current
         })
     }

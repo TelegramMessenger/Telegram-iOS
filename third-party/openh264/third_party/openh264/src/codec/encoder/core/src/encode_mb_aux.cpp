@@ -623,5 +623,21 @@ void WelsInitEncodingFuncs (SWelsFuncPtrList* pFuncList, uint32_t  uiCpuFlag) {
     pFuncList->pfCopy16x8NotAligned     = WelsCopy16x8_msa;
   }
 #endif
+
+#if defined(HAVE_LSX)
+  if (uiCpuFlag & WELS_CPU_LSX) {
+    pFuncList->pfCopy8x8Aligned         = WelsCopy8x8_lsx;
+    pFuncList->pfCopy16x16Aligned       = WelsCopy16x16_lsx;
+    pFuncList->pfCopy16x16NotAligned    = WelsCopy16x16NotAligned_lsx;
+    pFuncList->pfQuantizationFour4x4    = WelsQuantFour4x4_lsx;
+    pFuncList->pfQuantizationFour4x4Max = WelsQuantFour4x4Max_lsx;
+  }
+#endif
+#if defined(HAVE_LASX)
+  if (uiCpuFlag & WELS_CPU_LASX) {
+    pFuncList->pfDctT4                  = WelsDctT4_lasx;
+    pFuncList->pfDctFourT4              = WelsDctFourT4_lasx;
+}
+#endif
 }
 }

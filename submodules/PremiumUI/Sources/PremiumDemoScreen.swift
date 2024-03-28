@@ -1424,6 +1424,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case businessQuickReplies
         case businessAwayMessage
         case businessChatBots
+        case businessIntro
+        case businessLinks
     }
     
     public enum Source: Equatable {

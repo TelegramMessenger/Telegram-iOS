@@ -54,7 +54,7 @@ echo "" >>codec_ver.h
 
 echo "#endif  // CODEC_VER_H" >>codec_ver.h
 
-mv -f codec_ver.h ../api/svc/codec_ver.h
+mv -f codec_ver.h ../api/wels/codec_ver.h
 
 # Ignore non-utf8 chars in the input
 export LC_ALL=C

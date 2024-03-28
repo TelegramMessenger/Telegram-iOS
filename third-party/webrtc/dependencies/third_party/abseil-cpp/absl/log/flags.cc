@@ -28,6 +28,7 @@
 #include "absl/flags/marshalling.h"
 #include "absl/log/globals.h"
 #include "absl/log/internal/config.h"
+#include "absl/log/internal/vlog_config.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/string_view.h"
 
@@ -90,23 +91,53 @@ ABSL_FLAG(std::string, log_backtrace_at, "",
     .OnUpdate([] {
       const std::string log_backtrace_at =
           absl::GetFlag(FLAGS_log_backtrace_at);
-      if (log_backtrace_at.empty()) return;
+      if (log_backtrace_at.empty()) {
+        absl::ClearLogBacktraceLocation();
+        return;
+      }
 
       const size_t last_colon = log_backtrace_at.rfind(':');
-      if (last_colon == log_backtrace_at.npos) return;
+      if (last_colon == log_backtrace_at.npos) {
+        absl::ClearLogBacktraceLocation();
+        return;
+      }
 
       const absl::string_view file =
           absl::string_view(log_backtrace_at).substr(0, last_colon);
       int line;
-      if (absl::SimpleAtoi(
+      if (!absl::SimpleAtoi(
               absl::string_view(log_backtrace_at).substr(last_colon + 1),
               &line)) {
-        absl::SetLogBacktraceLocation(file, line);
+        absl::ClearLogBacktraceLocation();
+        return;
       }
+      absl::SetLogBacktraceLocation(file, line);
     });
 
 ABSL_FLAG(bool, log_prefix, true,
           "Prepend the log prefix to the start of each log line")
     .OnUpdate([] {
       absl::log_internal::RawEnableLogPrefix(absl::GetFlag(FLAGS_log_prefix));
+    });
+
+ABSL_FLAG(int, v, 0,
+          "Show all VLOG(m) messages for m <= this. Overridable by --vmodule.")
+    .OnUpdate([] {
+      absl::log_internal::UpdateGlobalVLogLevel(absl::GetFlag(FLAGS_v));
+    });
+
+ABSL_FLAG(
+    std::string, vmodule, "",
+    "per-module log verbosity level."
+    " Argument is a comma-separated list of <module name>=<log level>."
+    " <module name> is a glob pattern, matched against the filename base"
+    " (that is, name ignoring .cc/.h./-inl.h)."
+    " A pattern without slashes matches just the file name portion, otherwise"
+    " the whole file path below the workspace root"
+    " (still without .cc/.h./-inl.h) is matched."
+    " ? and * in the glob pattern match any single or sequence of characters"
+    " respectively including slashes."
+    " <log level> overrides any value given by --v.")
+    .OnUpdate([] {
+      absl::log_internal::UpdateVModule(absl::GetFlag(FLAGS_vmodule));
     });

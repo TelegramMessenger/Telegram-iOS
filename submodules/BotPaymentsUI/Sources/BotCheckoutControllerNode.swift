@@ -812,7 +812,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             }
         }
         
-        let openNewCard: (String?) -> Void = { [weak self] customUrl in
+        let openNewCard: (String?, String?) -> Void = { [weak self] customUrl, customTitle in
             if let strongSelf = self, let paymentForm = strongSelf.paymentFormValue {
                 if customUrl == nil, let nativeProvider = paymentForm.nativeProvider, nativeProvider.name == "stripe" {
                     guard let paramsData = nativeProvider.params.data(using: .utf8) else {
@@ -970,7 +970,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 } else {
                     var dismissImpl: (() -> Void)?
-                    let controller = BotCheckoutWebInteractionController(context: context, url: customUrl ?? paymentForm.url, intent: .addPaymentMethod({ [weak self] token in
+                    let controller = BotCheckoutWebInteractionController(context: context, url: customUrl ?? paymentForm.url, intent: .addPaymentMethod(customTitle: customTitle, completion: { [weak self] token in
                         dismissImpl?()
                         
                         guard let strongSelf = self else {
@@ -1069,14 +1069,14 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 strongSelf.controller?.view.endEditing(true)
                 let methods = availablePaymentMethods(form: paymentForm, current: strongSelf.currentPaymentMethod)
                 if methods.isEmpty {
-                    openNewCard(nil)
+                    openNewCard(nil, nil)
                 } else {
                     strongSelf.present(BotCheckoutPaymentMethodSheetController(context: strongSelf.context, currentMethod: strongSelf.currentPaymentMethod, methods: methods, applyValue: { method in
                         applyPaymentMethod(method)
                     }, newCard: {
-                        openNewCard(nil)
-                    }, otherMethod: { url in
-                        openNewCard(url)
+                        openNewCard(nil, nil)
+                    }, otherMethod: { url, title in
+                        openNewCard(url, title)
                     }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             }

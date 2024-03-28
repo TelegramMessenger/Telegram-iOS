@@ -73,6 +73,9 @@ extern "C" {
 // space. On successful exit, |*sig_len| is set to the actual number of bytes
 // written. The |type| argument should be zero. It returns one on success and
 // zero otherwise.
+//
+// WARNING: |digest| must be the output of some hash function on the data to be
+// signed. Passing unhashed inputs will not result in a secure signature scheme.
 OPENSSL_EXPORT int ECDSA_sign(int type, const uint8_t *digest,
                               size_t digest_len, uint8_t *sig,
                               unsigned int *sig_len, const EC_KEY *key);
@@ -81,6 +84,10 @@ OPENSSL_EXPORT int ECDSA_sign(int type, const uint8_t *digest,
 // signature by |key| of |digest|. (The |type| argument should be zero.) It
 // returns one on success or zero if the signature is invalid or an error
 // occurred.
+//
+// WARNING: |digest| must be the output of some hash function on the data to be
+// verified. Passing unhashed inputs will not result in a secure signature
+// scheme.
 OPENSSL_EXPORT int ECDSA_verify(int type, const uint8_t *digest,
                                 size_t digest_len, const uint8_t *sig,
                                 size_t sig_len, const EC_KEY *key);
@@ -124,12 +131,19 @@ OPENSSL_EXPORT int ECDSA_SIG_set0(ECDSA_SIG *sig, BIGNUM *r, BIGNUM *s);
 
 // ECDSA_do_sign signs |digest_len| bytes from |digest| with |key| and returns
 // the resulting signature structure, or NULL on error.
+//
+// WARNING: |digest| must be the output of some hash function on the data to be
+// signed. Passing unhashed inputs will not result in a secure signature scheme.
 OPENSSL_EXPORT ECDSA_SIG *ECDSA_do_sign(const uint8_t *digest,
                                         size_t digest_len, const EC_KEY *key);
 
 // ECDSA_do_verify verifies that |sig| constitutes a valid signature by |key|
 // of |digest|. It returns one on success or zero if the signature is invalid
 // or on error.
+//
+// WARNING: |digest| must be the output of some hash function on the data to be
+// verified. Passing unhashed inputs will not result in a secure signature
+// scheme.
 OPENSSL_EXPORT int ECDSA_do_verify(const uint8_t *digest, size_t digest_len,
                                    const ECDSA_SIG *sig, const EC_KEY *key);
 
@@ -162,21 +176,38 @@ OPENSSL_EXPORT int ECDSA_SIG_to_bytes(uint8_t **out_bytes, size_t *out_len,
 OPENSSL_EXPORT size_t ECDSA_SIG_max_len(size_t order_len);
 
 
+// Testing-only functions.
+
+// ECDSA_sign_with_nonce_and_leak_private_key_for_testing behaves like
+// |ECDSA_do_sign| but uses |nonce| for the ECDSA nonce 'k', instead of a random
+// value. |nonce| is interpreted as a big-endian integer. It must be reduced
+// modulo the group order and padded with zeros up to |BN_num_bytes(order)|
+// bytes.
+//
+// WARNING: This function is only exported for testing purposes, when using test
+// vectors or fuzzing strategies. It must not be used outside tests and may leak
+// any private keys it is used with.
+OPENSSL_EXPORT ECDSA_SIG *
+ECDSA_sign_with_nonce_and_leak_private_key_for_testing(const uint8_t *digest,
+                                                       size_t digest_len,
+                                                       const EC_KEY *eckey,
+                                                       const uint8_t *nonce,
+                                                       size_t nonce_len);
+
+
 // Deprecated functions.
 
-// d2i_ECDSA_SIG parses an ASN.1, DER-encoded, signature from |len| bytes at
-// |*inp|. If |out| is not NULL then, on exit, a pointer to the result is in
-// |*out|. Note that, even if |*out| is already non-NULL on entry, it will not
-// be written to. Rather, a fresh |ECDSA_SIG| is allocated and the previous one
-// is freed. On successful exit, |*inp| is advanced past the DER structure. It
-// returns the result or NULL on error.
+// d2i_ECDSA_SIG parses aa DER-encoded ECDSA-Sig-Value structure from |len|
+// bytes at |*inp|, as described in |d2i_SAMPLE|.
+//
+// Use |ECDSA_SIG_parse| instead.
 OPENSSL_EXPORT ECDSA_SIG *d2i_ECDSA_SIG(ECDSA_SIG **out, const uint8_t **inp,
                                         long len);
 
-// i2d_ECDSA_SIG marshals a signature from |sig| to an ASN.1, DER
-// structure. If |outp| is not NULL then the result is written to |*outp| and
-// |*outp| is advanced just past the output. It returns the number of bytes in
-// the result, whether written or not, or a negative value on error.
+// i2d_ECDSA_SIG marshals |sig| as a DER-encoded ECDSA-Sig-Value, as described
+// in |i2d_SAMPLE|.
+//
+// Use |ECDSA_SIG_marshal| instead.
 OPENSSL_EXPORT int i2d_ECDSA_SIG(const ECDSA_SIG *sig, uint8_t **outp);
 
 
@@ -201,5 +232,6 @@ BSSL_NAMESPACE_END
 #define ECDSA_R_NOT_IMPLEMENTED 103
 #define ECDSA_R_RANDOM_NUMBER_GENERATION_FAILED 104
 #define ECDSA_R_ENCODE_ERROR 105
+#define ECDSA_R_TOO_MANY_ITERATIONS 106
 
 #endif  // OPENSSL_HEADER_ECDSA_H

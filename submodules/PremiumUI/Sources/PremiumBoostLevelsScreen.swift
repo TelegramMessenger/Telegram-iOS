@@ -20,6 +20,8 @@ import SolidRoundedButtonComponent
 import BlurredBackgroundComponent
 import UndoUI
 import ConfettiEffect
+import PremiumPeerShortcutComponent
+import ScrollComponent
 
 func requiredBoostSubjectLevel(subject: BoostSubject, group: Bool, context: AccountContext, configuration: PremiumConfiguration) -> Int32 {
     switch subject {
@@ -55,22 +57,12 @@ func requiredBoostSubjectLevel(subject: BoostSubject, group: Bool, context: Acco
         return configuration.minGroupAudioTranscriptionLevel
     case .emojiPack:
         return configuration.minGroupEmojiPackLevel
+    case .noAds:
+        return configuration.minChannelRestrictAdsLevel
     }
 }
 
-public enum BoostSubject: Equatable {
-    case stories
-    case channelReactions(reactionCount: Int32)
-    case nameColors(colors: PeerNameColor)
-    case nameIcon
-    case profileColors(colors: PeerNameColor)
-    case profileIcon
-    case emojiStatus
-    case wallpaper
-    case customWallpaper
-    case audioTranscription
-    case emojiPack
-    
+extension BoostSubject {
     public func requiredLevel(group: Bool, context: AccountContext, configuration: PremiumConfiguration) -> Int32 {
         return requiredBoostSubjectLevel(subject: self, group: group, context: context, configuration: configuration)
     }
@@ -247,6 +239,7 @@ private final class LevelSectionComponent: CombinedComponent {
         case customWallpaper
         case audioTranscription
         case emojiPack
+        case noAds
         
         func title(strings: PresentationStrings, isGroup: Bool) -> String {
             switch self {
@@ -274,6 +267,8 @@ private final class LevelSectionComponent: CombinedComponent {
                 return strings.GroupBoost_Table_Group_VoiceToText
             case .emojiPack:
                 return strings.GroupBoost_Table_Group_EmojiPack
+            case .noAds:
+                return strings.ChannelBoost_Table_NoAds
             }
         }
         
@@ -303,6 +298,8 @@ private final class LevelSectionComponent: CombinedComponent {
                 return "Premium/BoostPerk/AudioTranscription"
             case .emojiPack:
                 return "Premium/BoostPerk/EmojiPack"
+            case .noAds:
+                return "Premium/BoostPerk/NoAds"
             }
         }
     }
@@ -639,6 +636,8 @@ private final class SheetContent: CombinedComponent {
                             textString = ""
                         case .emojiPack:
                             textString = strings.GroupBoost_EnableEmojiPackLevelText("\(requiredLevel)").string
+                        case .noAds:
+                            textString = strings.ChannelBoost_EnableNoAdsLevelText("\(requiredLevel)").string
                         }
                     } else {
                         let boostsString = strings.ChannelBoost_MoreBoostsNeeded_Boosts(Int32(remaining))
@@ -733,11 +732,10 @@ private final class SheetContent: CombinedComponent {
                 let peerShortcut = peerShortcut.update(
                     component: Button(
                         content: AnyComponent(
-                            PeerShortcutComponent(
+                            PremiumPeerShortcutComponent(
                                 context: component.context,
                                 theme: component.theme,
                                 peer: peer
-                                
                             )
                         ),
                         action: {
@@ -1095,85 +1093,101 @@ private final class SheetContent: CombinedComponent {
                 isFeatures = true
             }
                         
-            if let nextLevels {
-                for level in nextLevels {
-                    var perks: [LevelSectionComponent.Perk] = []
-                    
-                    perks.append(.story(level))
-                    
-                    if !isGroup {
-                        perks.append(.reaction(level))
-                    }
-                    
-                    var nameColorsCount: Int32 = 0
-                    for (colorLevel, count) in nameColorsAtLevel {
-                        if level >= colorLevel && colorLevel == 1 {
-                            nameColorsCount = count
-                        }
-                    }
-                    if !isGroup && nameColorsCount > 0 {
-                        perks.append(.nameColor(nameColorsCount))
-                    }
-                    
-                    var profileColorsCount: Int32 = 0
-                    for (colorLevel, count) in profileColorsAtLevel {
-                        if level >= colorLevel {
-                            profileColorsCount += count
-                        }
-                    }
-                    if profileColorsCount > 0 {
-                        perks.append(.profileColor(profileColorsCount))
-                    }
+            
+            func layoutLevel(_ level: Int32) {
+                var perks: [LevelSectionComponent.Perk] = []
                 
-                    if isGroup && level >= requiredBoostSubjectLevel(subject: .emojiPack, group: isGroup, context: component.context, configuration: premiumConfiguration) {
-                        perks.append(.emojiPack)
-                    }
+                perks.append(.story(level))
                 
-                    if level >= requiredBoostSubjectLevel(subject: .profileIcon, group: isGroup, context: component.context, configuration: premiumConfiguration) {
-                        perks.append(.profileIcon)
+                if !isGroup {
+                    perks.append(.reaction(level))
+                }
+                
+                var nameColorsCount: Int32 = 0
+                for (colorLevel, count) in nameColorsAtLevel {
+                    if level >= colorLevel && colorLevel == 1 {
+                        nameColorsCount = count
                     }
-                    
-                    if isGroup && level >= requiredBoostSubjectLevel(subject: .audioTranscription, group: isGroup, context: component.context, configuration: premiumConfiguration) {
-                        perks.append(.audioTranscription)
+                }
+                if !isGroup && nameColorsCount > 0 {
+                    perks.append(.nameColor(nameColorsCount))
+                }
+                
+                var profileColorsCount: Int32 = 0
+                for (colorLevel, count) in profileColorsAtLevel {
+                    if level >= colorLevel {
+                        profileColorsCount += count
                     }
-                    
-                    var linkColorsCount: Int32 = 0
-                    for (colorLevel, count) in nameColorsAtLevel {
-                        if level >= colorLevel {
-                            linkColorsCount += count
-                        }
+                }
+                if profileColorsCount > 0 {
+                    perks.append(.profileColor(profileColorsCount))
+                }
+            
+                if isGroup && level >= requiredBoostSubjectLevel(subject: .emojiPack, group: isGroup, context: component.context, configuration: premiumConfiguration) {
+                    perks.append(.emojiPack)
+                }
+            
+                if level >= requiredBoostSubjectLevel(subject: .profileIcon, group: isGroup, context: component.context, configuration: premiumConfiguration) {
+                    perks.append(.profileIcon)
+                }
+                
+                if isGroup && level >= requiredBoostSubjectLevel(subject: .audioTranscription, group: isGroup, context: component.context, configuration: premiumConfiguration) {
+                    perks.append(.audioTranscription)
+                }
+                
+                var linkColorsCount: Int32 = 0
+                for (colorLevel, count) in nameColorsAtLevel {
+                    if level >= colorLevel {
+                        linkColorsCount += count
                     }
-                    if !isGroup && linkColorsCount > 0 {
-                        perks.append(.linkColor(linkColorsCount))
-                    }
-                                        
-                    if !isGroup && level >= requiredBoostSubjectLevel(subject: .nameIcon, group: isGroup, context: component.context, configuration: premiumConfiguration) {
-                        perks.append(.linkIcon)
-                    }
-                    if level >= requiredBoostSubjectLevel(subject: .emojiStatus, group: isGroup, context: component.context, configuration: premiumConfiguration) {
-                        perks.append(.emojiStatus)
-                    }
-                    if level >= requiredBoostSubjectLevel(subject: .wallpaper, group: isGroup, context: component.context, configuration: premiumConfiguration) {
-                        perks.append(.wallpaper(8))
-                    }
-                    if level >= requiredBoostSubjectLevel(subject: .customWallpaper, group: isGroup, context: component.context, configuration: premiumConfiguration) {
-                        perks.append(.customWallpaper)
-                    }
-                    
-                    levelItems.append(
-                        AnyComponentWithIdentity(
-                            id: level, component: AnyComponent(
-                                LevelSectionComponent(
-                                    theme: component.theme,
-                                    strings: component.strings,
-                                    level: level,
-                                    isFirst: !isFeatures && levelItems.isEmpty,
-                                    perks: perks.reversed(),
-                                    isGroup: isGroup
-                                )
+                }
+                if !isGroup && linkColorsCount > 0 {
+                    perks.append(.linkColor(linkColorsCount))
+                }
+                                    
+                if !isGroup && level >= requiredBoostSubjectLevel(subject: .nameIcon, group: isGroup, context: component.context, configuration: premiumConfiguration) {
+                    perks.append(.linkIcon)
+                }
+                if level >= requiredBoostSubjectLevel(subject: .emojiStatus, group: isGroup, context: component.context, configuration: premiumConfiguration) {
+                    perks.append(.emojiStatus)
+                }
+                if level >= requiredBoostSubjectLevel(subject: .wallpaper, group: isGroup, context: component.context, configuration: premiumConfiguration) {
+                    perks.append(.wallpaper(8))
+                }
+                if level >= requiredBoostSubjectLevel(subject: .customWallpaper, group: isGroup, context: component.context, configuration: premiumConfiguration) {
+                    perks.append(.customWallpaper)
+                }
+                if !isGroup && level >= requiredBoostSubjectLevel(subject: .noAds, group: isGroup, context: component.context, configuration: premiumConfiguration) {
+                    perks.append(.noAds)
+                }
+                
+                levelItems.append(
+                    AnyComponentWithIdentity(
+                        id: level, component: AnyComponent(
+                            LevelSectionComponent(
+                                theme: component.theme,
+                                strings: component.strings,
+                                level: level,
+                                isFirst: !isFeatures && levelItems.isEmpty,
+                                perks: perks.reversed(),
+                                isGroup: isGroup
                             )
                         )
                     )
+                )
+            }
+            
+            if let nextLevels {
+                for level in nextLevels {
+                    layoutLevel(level)
+                }
+            }
+           
+            if !isGroup {
+                let noAdsLevel = requiredBoostSubjectLevel(subject: .noAds, group: false, context: component.context, configuration: premiumConfiguration)
+                if let nextLevels, noAdsLevel <= nextLevels.upperBound {
+                } else if level < noAdsLevel {
+                    layoutLevel(noAdsLevel)
                 }
             }
             
@@ -1443,6 +1457,8 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                             titleString = strings.GroupBoost_AudioTranscription
                         case .emojiPack:
                             titleString = strings.GroupBoost_EmojiPack
+                        case .noAds:
+                            titleString = strings.ChannelBoost_NoAds
                         }
                     } else {
                         titleString = isGroup == true ? strings.GroupBoost_Title_Current : strings.ChannelBoost_Title_Current

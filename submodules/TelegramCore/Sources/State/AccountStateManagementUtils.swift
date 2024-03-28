@@ -3452,7 +3452,17 @@ func replayFinalState(
                         if message.flags.contains(.Incoming) {
                             addedOperationIncomingMessageIds.append(id)
                             if let authorId = message.authorId {
-                                recordPeerActivityTimestamp(peerId: authorId, timestamp: message.timestamp, into: &peerActivityTimestamps)
+                                var isAutomatic = false
+                                for attribute in message.attributes {
+                                    if let attribute = attribute as? NotificationInfoMessageAttribute {
+                                        if attribute.flags.contains(.automaticMessage) {
+                                            isAutomatic = true
+                                        }
+                                    }
+                                }
+                                if !isAutomatic {
+                                    recordPeerActivityTimestamp(peerId: authorId, timestamp: message.timestamp, into: &peerActivityTimestamps)
+                                }
                             }
                         }
                         if message.flags.contains(.WasScheduled) {

@@ -406,7 +406,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
                 characterLimit: 256,
-                allowEmptyLines: false,
+                emptyLineHandling: .oneConsecutive,
                 updated: { _ in
                 },
                 textUpdateTransition: .spring(duration: 0.4),
@@ -509,7 +509,6 @@ final class BusinessLocationSetupScreenComponent: Component {
             contentHeight += mapSectionSize.height
             
             var deleteSectionHeight: CGFloat = 0.0
-            
             deleteSectionHeight += sectionSpacing
             let deleteSectionSize = self.deleteSection.update(
                 transition: transition,

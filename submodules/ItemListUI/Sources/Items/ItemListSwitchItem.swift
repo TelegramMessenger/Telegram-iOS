@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import SwitchNode
 import AppBundle
+import ComponentFlow
 
 public enum ItemListSwitchItemNodeType {
     case regular
@@ -17,6 +18,7 @@ public class ItemListSwitchItem: ListViewItem, ItemListItem {
     let icon: UIImage?
     let title: String
     let text: String?
+    let titleBadgeComponent: AnyComponent<Empty>?
     let value: Bool
     let type: ItemListSwitchItemNodeType
     let enableInteractiveChanges: Bool
@@ -31,11 +33,12 @@ public class ItemListSwitchItem: ListViewItem, ItemListItem {
     let activatedWhileDisabled: () -> Void
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, title: String, text: String? = nil, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, displayLocked: Bool = false, disableLeadingInset: Bool = false, maximumNumberOfLines: Int = 1, noCorners: Bool = false, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void, activatedWhileDisabled: @escaping () -> Void = {}, tag: ItemListItemTag? = nil) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, title: String, text: String? = nil, titleBadgeComponent: AnyComponent<Empty>? = nil, value: Bool, type: ItemListSwitchItemNodeType = .regular, enableInteractiveChanges: Bool = true, enabled: Bool = true, displayLocked: Bool = false, disableLeadingInset: Bool = false, maximumNumberOfLines: Int = 1, noCorners: Bool = false, sectionId: ItemListSectionId, style: ItemListStyle, updated: @escaping (Bool) -> Void, activatedWhileDisabled: @escaping () -> Void = {}, tag: ItemListItemTag? = nil) {
         self.presentationData = presentationData
         self.icon = icon
         self.title = title
         self.text = text
+        self.titleBadgeComponent = titleBadgeComponent
         self.value = value
         self.type = type
         self.enableInteractiveChanges = enableInteractiveChanges
@@ -133,6 +136,8 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
     private var switchNode: ASDisplayNode & ItemListSwitchNodeImpl
     private let switchGestureNode: ASDisplayNode
     private var disabledOverlayNode: ASDisplayNode?
+    
+    private var titleBadgeComponentView: ComponentView<Empty>?
     
     private var lockedIconNode: ASImageNode?
     
@@ -469,6 +474,32 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                     } else if let lockedIconNode = strongSelf.lockedIconNode {
                         strongSelf.lockedIconNode = nil
                         lockedIconNode.removeFromSupernode()
+                    }
+                    
+                    if let component = item.titleBadgeComponent {
+                        let componentView: ComponentView<Empty>
+                        if let current = strongSelf.titleBadgeComponentView {
+                            componentView = current
+                        } else {
+                            componentView = ComponentView<Empty>()
+                            strongSelf.titleBadgeComponentView = componentView
+                        }
+                        
+                        let badgeSize = componentView.update(
+                            transition: .immediate,
+                            component: component,
+                            environment: {},
+                            containerSize: contentSize
+                        )
+                        if let view = componentView.view {
+                            if view.superview == nil {
+                                strongSelf.view.addSubview(view)
+                            }
+                            view.frame = CGRect(origin: CGPoint(x: strongSelf.titleNode.frame.maxX + 7.0, y: floor((contentSize.height - badgeSize.height) / 2.0)), size: badgeSize)
+                        }
+                    } else if let componentView = strongSelf.titleBadgeComponentView {
+                        strongSelf.titleBadgeComponentView = nil
+                        componentView.view?.removeFromSuperview()
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 44.0 + UIScreenPixel + UIScreenPixel))

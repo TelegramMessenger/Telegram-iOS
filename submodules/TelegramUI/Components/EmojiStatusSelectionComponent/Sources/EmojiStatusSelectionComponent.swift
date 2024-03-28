@@ -167,6 +167,11 @@ public final class EmojiStatusSelectionComponent: Component {
             
             let topPanelHeight: CGFloat = component.hideTopPanel ? 0.0 : 42.0
             
+            var forceUpdate = false
+            if let _ = transition.userData(PagerComponentForceUpdate.self) {
+                forceUpdate = true
+            }
+            
             let keyboardSize = self.keyboardView.update(
                 transition: transition,//.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
@@ -210,6 +215,7 @@ public final class EmojiStatusSelectionComponent: Component {
                     customTintColor: component.color
                 )),
                 environment: {},
+                forceUpdate: forceUpdate, 
                 containerSize: availableSize
             )
             if let keyboardComponentView = self.keyboardView.view {
@@ -462,6 +468,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     },
                     clearGroup: { groupId in
                     },
+                    editAction: { _ in },
                     pushController: { c in
                     },
                     presentController: { c in
@@ -584,6 +591,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                             isPremiumLocked: false,
                                             isEmbedded: false,
                                             hasClear: false,
+                                            hasEdit: false,
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,
@@ -639,6 +647,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                     isPremiumLocked: false,
                                     isEmbedded: false,
                                     hasClear: false,
+                                    hasEdit: false,
                                     collapsedLineCount: nil,
                                     displayPremiumBadges: false,
                                     headerItem: nil,
@@ -671,6 +680,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                             isPremiumLocked: false,
                                             isEmbedded: false,
                                             hasClear: false,
+                                            hasEdit: false,
                                             collapsedLineCount: nil,
                                             displayPremiumBadges: false,
                                             headerItem: nil,

@@ -48,6 +48,7 @@ public final class ListSectionHeaderNode: ASDisplayNode {
         if (self.action != nil) != (self.actionButton != nil) {
             if let _ = self.action {
                 let actionButtonLabel = ImmediateTextNode()
+                actionButtonLabel.displaysAsynchronously = false
                 self.addSubnode(actionButtonLabel)
                 self.actionButtonLabel = actionButtonLabel
                 let actionButton = HighlightableButtonNode()
@@ -134,7 +135,7 @@ public final class ListSectionHeaderNode: ASDisplayNode {
     public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
         self.validLayout = (size, leftInset, rightInset)
         let labelSize = self.label.updateLayout(CGSize(width: max(0.0, size.width - leftInset - rightInset - 18.0), height: size.height))
-        self.label.frame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: 6.0 + UIScreenPixel), size: labelSize)
+        self.label.frame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: 6.0 + UIScreenPixel), size: CGSize(width: labelSize.width, height: size.height))
         
         if let actionButton = self.actionButton, let actionButtonLabel = self.actionButtonLabel {
             let buttonSize = actionButtonLabel.updateLayout(CGSize(width: size.width, height: size.height))

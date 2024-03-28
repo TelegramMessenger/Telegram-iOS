@@ -151,3 +151,15 @@ public protocol PeerSelectionController: ViewController {
     var inProgress: Bool { get set }
     var customDismiss: (() -> Void)? { get set }
 }
+
+public enum SelectivePrivacySettingsKind {
+    case presence
+    case groupInvitations
+    case voiceCalls
+    case profilePhoto
+    case forwards
+    case phoneNumber
+    case voiceMessages
+    case bio
+    case birthday
+}

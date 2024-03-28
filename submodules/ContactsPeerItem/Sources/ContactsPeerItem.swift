@@ -387,7 +387,7 @@ private let avatarFont = avatarPlaceholderFont(size: 16.0)
 public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let topSeparatorNode: ASDisplayNode
-    private let separatorNode: ASDisplayNode
+    public let separatorNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     private let maskNode: ASImageNode
     
@@ -406,12 +406,12 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var avatarBadge: UIImageView?
     private var avatarIconView: ComponentHostView<Empty>?
     private var avatarIconComponent: EmojiStatusComponent?
-    private let titleNode: TextNode
+    public let titleNode: TextNode
     private var credibilityIconView: ComponentHostView<Empty>?
     private var credibilityIconComponent: EmojiStatusComponent?
     private var verifiedIconView: ComponentHostView<Empty>?
     private var verifiedIconComponent: EmojiStatusComponent?
-    private let statusNode: TextNode
+    public let statusNode: TextNode
     private var statusIconNode: ASImageNode?
     private var badgeBackgroundNode: ASImageNode?
     private var badgeTextNode: TextNode?

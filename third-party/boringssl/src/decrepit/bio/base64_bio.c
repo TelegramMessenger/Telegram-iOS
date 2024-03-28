@@ -89,14 +89,10 @@ typedef struct b64_struct {
 } BIO_B64_CTX;
 
 static int b64_new(BIO *bio) {
-  BIO_B64_CTX *ctx;
-
-  ctx = OPENSSL_malloc(sizeof(*ctx));
+  BIO_B64_CTX *ctx = OPENSSL_zalloc(sizeof(*ctx));
   if (ctx == NULL) {
     return 0;
   }
-
-  OPENSSL_memset(ctx, 0, sizeof(*ctx));
 
   ctx->cont = 1;
   ctx->start = 1;
@@ -513,17 +509,10 @@ static long b64_ctrl(BIO *b, int cmd, long num, void *ptr) {
 }
 
 static long b64_callback_ctrl(BIO *b, int cmd, bio_info_cb fp) {
-  long ret = 1;
-
   if (b->next_bio == NULL) {
     return 0;
   }
-  switch (cmd) {
-    default:
-      ret = BIO_callback_ctrl(b->next_bio, cmd, fp);
-      break;
-  }
-  return ret;
+  return BIO_callback_ctrl(b->next_bio, cmd, fp);
 }
 
 static const BIO_METHOD b64_method = {

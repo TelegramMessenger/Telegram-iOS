@@ -20,12 +20,14 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <openssl/err.h>
+#include <openssl/mem.h>
 
 #include "../internal.h"
 #include "./test_util.h"
@@ -56,11 +58,11 @@ static const char *FindDelimiter(const char *str) {
 // leading and trailing whitespace removed.
 static std::string StripSpace(const char *str, size_t len) {
   // Remove leading space.
-  while (len > 0 && isspace(*str)) {
+  while (len > 0 && OPENSSL_isspace(*str)) {
     str++;
     len--;
   }
-  while (len > 0 && isspace(str[len - 1])) {
+  while (len > 0 && OPENSSL_isspace(str[len - 1])) {
     len--;
   }
   return std::string(str, len);
@@ -96,7 +98,7 @@ FileTest::ReadResult FileTest::ReadNext() {
   ClearTest();
 
   static const size_t kBufLen = 8192 * 4;
-  std::unique_ptr<char[]> buf(new char[kBufLen]);
+  auto buf = std::make_unique<char[]>(kBufLen);
 
   bool in_instruction_block = false;
   is_at_new_instruction_block_ = false;
@@ -179,7 +181,7 @@ FileTest::ReadResult FileTest::ReadNext() {
       kv = std::string(kv.begin() + 1, kv.end() - 1);
 
       for (;;) {
-        size_t idx = kv.find(",");
+        size_t idx = kv.find(',');
         if (idx == std::string::npos) {
           idx = kv.size();
         }
@@ -205,11 +207,10 @@ FileTest::ReadResult FileTest::ReadNext() {
 
       // Duplicate keys are rewritten to have “/2”, “/3”, … suffixes.
       std::string mapped_key = key;
-      for (unsigned i = 2; attributes_.count(mapped_key) != 0; i++) {
-        char suffix[32];
-        snprintf(suffix, sizeof(suffix), "/%u", i);
-        suffix[sizeof(suffix)-1] = 0;
-        mapped_key = key + suffix;
+      // If absent, the value will be zero-initialized.
+      const size_t num_occurrences = ++attribute_count_[key];
+      if (num_occurrences > 1) {
+        mapped_key += "/" + std::to_string(num_occurrences);
       }
 
       unused_attributes_.insert(mapped_key);
@@ -317,6 +318,7 @@ void FileTest::ClearTest() {
   start_line_ = 0;
   type_.clear();
   parameter_.clear();
+  attribute_count_.clear();
   attributes_.clear();
   unused_attributes_.clear();
   unused_instructions_.clear();
@@ -377,7 +379,8 @@ class FileLineReader : public FileTest::LineReader {
       return FileTest::kReadError;
     }
 
-    if (fgets(out, len, file_) == nullptr) {
+    len = std::min(len, size_t{INT_MAX});
+    if (fgets(out, static_cast<int>(len), file_) == nullptr) {
       return feof(file_) ? FileTest::kReadEOF : FileTest::kReadError;
     }
 
@@ -406,8 +409,7 @@ int FileTestMain(FileTestFunc run_test, void *arg, const char *path) {
 }
 
 int FileTestMain(const FileTest::Options &opts) {
-  std::unique_ptr<FileLineReader> reader(
-      new FileLineReader(opts.path));
+  auto reader = std::make_unique<FileLineReader>(opts.path);
   if (!reader->is_open()) {
     fprintf(stderr, "Could not open file %s: %s.\n", opts.path,
             strerror(errno));

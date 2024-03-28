@@ -74,6 +74,12 @@
 #define WELS_CPU_AVX2       0x00000000  /* !AVX2 */
 #endif
 
+#define WELS_CPU_AVX512F    0x00080000  /* AVX512F */
+#define WELS_CPU_AVX512CD   0x00100000  /* AVX512CD */
+#define WELS_CPU_AVX512DQ   0x00200000  /* AVX512DQ */
+#define WELS_CPU_AVX512BW   0x00400000  /* AVX512BW */
+#define WELS_CPU_AVX512VL   0x00800000  /* AVX512VL */
+
 #define WELS_CPU_CACHELINE_16    0x10000000    /* CacheLine Size 16 */
 #define WELS_CPU_CACHELINE_32    0x20000000    /* CacheLine Size 32 */
 #define WELS_CPU_CACHELINE_64    0x40000000    /* CacheLine Size 64 */
@@ -87,6 +93,8 @@
 /* For loongson */
 #define WELS_CPU_MMI        0x00000001  /* mmi */
 #define WELS_CPU_MSA        0x00000002  /* msa */
+#define WELS_CPU_LSX        0x00000003  /* lsx */
+#define WELS_CPU_LASX       0x00000004  /* lasx */
 
 /*
  *  Interfaces for CPU core feature detection as below

@@ -26,8 +26,10 @@ By default the cpu is detected and the most advanced form of SIMD is used.  But 
     LIBYUV_DISABLE_AVX512VBMI
     LIBYUV_DISABLE_AVX512VBMI2
     LIBYUV_DISABLE_AVX512VBITALG
-    LIBYUV_DISABLE_AVX512VPOPCNTDQ
-    LIBYUV_DISABLE_GFNI
+    LIBYUV_DISABLE_AVX10
+    LIBYUV_DISABLE_AVXVNNI
+    LIBYUV_DISABLE_AVXVNNIINT8
+    LIBYUV_DISABLE_AMXINT8
 
 ## ARM CPUs
 
@@ -39,6 +41,9 @@ By default the cpu is detected and the most advanced form of SIMD is used.  But 
 ## LOONGARCH CPUs
     LIBYUV_DISABLE_LSX
     LIBYUV_DISABLE_LASX
+
+## RISCV CPUs
+    LIBYUV_DISABLE_RVV
 
 # Test Width/Height/Repeat
 

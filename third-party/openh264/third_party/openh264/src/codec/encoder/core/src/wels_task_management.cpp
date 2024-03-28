@@ -102,8 +102,12 @@ WelsErrorType CWelsTaskManageBase::Init (sWelsEncCtx* pEncCtx) {
   iReturn = CWelsThreadPool::SetThreadNum (m_iThreadNum);
   m_pThreadPool = (CWelsThreadPool::AddReference());
   if ((iReturn != ENC_RETURN_SUCCESS) && pEncCtx) {
-    WelsLog (& (pEncCtx->sLogCtx), WELS_LOG_WARNING, "Set Thread Num to %d did not succeed, current thread num in use: %d",
-             m_iThreadNum, m_pThreadPool->GetThreadNum());
+    int32_t current_thread_num = m_pThreadPool->GetThreadNum();
+    if (m_iThreadNum != current_thread_num) {
+      WelsLog (& (pEncCtx->sLogCtx), WELS_LOG_WARNING,
+               "Set Thread Num to %d did not succeed, current thread num in use: %d",
+               m_iThreadNum, current_thread_num);
+    }
   }
   WELS_VERIFY_RETURN_IF (ENC_RETURN_MEMALLOCERR, NULL == m_pThreadPool)
   //fprintf(stdout, "m_pThreadPool = &(CWelsThreadPool::GetInstance3\n");
