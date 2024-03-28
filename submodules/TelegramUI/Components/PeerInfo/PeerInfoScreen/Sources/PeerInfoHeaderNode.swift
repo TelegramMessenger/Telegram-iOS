@@ -144,6 +144,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let navigationTitleNode: ImmediateTextNode
     let navigationSeparatorNode: ASDisplayNode
     let navigationButtonContainer: PeerInfoHeaderNavigationButtonContainerNode
+    let editingNavigationBackgroundNode: NavigationBackgroundNode
+    let editingNavigationBackgroundSeparator: ASDisplayNode
     
     var performButtonAction: ((PeerInfoHeaderButtonKey, ContextGesture?) -> Void)?
     var requestAvatarExpansion: ((Bool, [AvatarGalleryEntry], AvatarGalleryEntry?, (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?) -> Void)?
@@ -260,6 +262,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.navigationSeparatorNode = ASDisplayNode()
         
         self.navigationButtonContainer = PeerInfoHeaderNavigationButtonContainerNode()
+        self.editingNavigationBackgroundNode = NavigationBackgroundNode(color: .clear, enableBlur: true)
+        self.editingNavigationBackgroundSeparator = ASDisplayNode()
         
         self.backgroundNode = NavigationBackgroundNode(color: .clear)
         self.backgroundNode.isHidden = true
@@ -310,6 +314,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.navigationBackgroundNode.addSubnode(self.navigationBackgroundBackgroundNode)
         self.navigationBackgroundNode.addSubnode(self.navigationTitleNode)
         self.navigationBackgroundNode.addSubnode(self.navigationSeparatorNode)
+        self.addSubnode(self.editingNavigationBackgroundNode)
+        self.addSubnode(self.editingNavigationBackgroundSeparator)
         self.addSubnode(self.navigationButtonContainer)
         self.addSubnode(self.separatorNode)
         
@@ -631,6 +637,24 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             navigationTransition = animateHeader ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
         }
         
+        let editingBackgroundAlpha: CGFloat
+        if state.isEditing {
+            editingBackgroundAlpha = max(0.0, min(1.0, contentOffset / 20.0))
+        } else {
+            editingBackgroundAlpha = 0.0
+        }
+        
+        self.editingNavigationBackgroundSeparator.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
+        self.editingNavigationBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
+        
+        let editingNavigationBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: navigationHeight))
+        transition.updateFrame(node: self.editingNavigationBackgroundNode, frame: editingNavigationBackgroundFrame)
+        self.editingNavigationBackgroundNode.update(size: editingNavigationBackgroundFrame.size, transition: transition)
+        transition.updateFrame(node: self.editingNavigationBackgroundSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: editingNavigationBackgroundFrame.maxY), size: CGSize(width: width, height: UIScreenPixel)))
+        
+        transition.updateAlpha(node: self.editingNavigationBackgroundNode, alpha: editingBackgroundAlpha)
+        transition.updateAlpha(node: self.editingNavigationBackgroundSeparator, alpha: editingBackgroundAlpha)
+        
         let backgroundBannerAlpha: CGFloat
         
         var effectiveSeparatorAlpha: CGFloat
@@ -681,6 +705,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             
             self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - innerBackgroundTransitionFraction), forceKeepBlur: true, transition: transition)
+            navigationTransition.updateAlpha(node: self.expandedBackgroundNode, alpha: state.isEditing ? 0.0 : 1.0)
             
             if state.isEditing {
                 backgroundBannerAlpha = 0.0
@@ -1398,6 +1423,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             effectiveSeparatorAlpha = secondarySeparatorAlpha
         }
         if self.customNavigationContentNode != nil {
+            effectiveSeparatorAlpha = 0.0
+        }
+        if state.isEditing {
             effectiveSeparatorAlpha = 0.0
         }
         transition.updateAlpha(node: self.separatorNode, alpha: effectiveSeparatorAlpha)
