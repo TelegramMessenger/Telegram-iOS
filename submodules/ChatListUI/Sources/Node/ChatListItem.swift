@@ -97,13 +97,15 @@ public enum ChatListItemContent {
         public var messageCount: Int?
         public var hideSeparator: Bool
         public var hideDate: Bool
+        public var hidePeerStatus: Bool
         
-        public init(commandPrefix: String?, searchQuery: String?, messageCount: Int?, hideSeparator: Bool, hideDate: Bool) {
+        public init(commandPrefix: String?, searchQuery: String?, messageCount: Int?, hideSeparator: Bool, hideDate: Bool, hidePeerStatus: Bool) {
             self.commandPrefix = commandPrefix
             self.searchQuery = searchQuery
             self.messageCount = messageCount
             self.hideSeparator = hideSeparator
             self.hideDate = hideDate
+            self.hidePeerStatus = hidePeerStatus
         }
     }
     
@@ -2340,7 +2342,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             
                             attributedText = foldLineBreaks(draftText)
                         }
-                    } else if let message = messages.first {
+                    } else if let message = messages.last {
                         var composedString: NSMutableAttributedString
                         
                         if let peerText = peerText {
@@ -2942,7 +2944,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         break
                     }
                 } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
-                    if case let .peer(peerData) = item.content, peerData.customMessageListData != nil {
+                    if case let .peer(peerData) = item.content, peerData.customMessageListData?.hidePeerStatus == true {
                         currentCredibilityIconContent = nil
                     } else if case .savedMessagesChats = item.chatListLocation, peer.id == item.context.account.peerId {
                         currentCredibilityIconContent = nil

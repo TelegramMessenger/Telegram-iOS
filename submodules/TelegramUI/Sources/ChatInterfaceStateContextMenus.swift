@@ -499,8 +499,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 opaqueId: adAttribute.opaqueId,
                                 title: title,
                                 options: options,
-                                completed: {
-                                    
+                                completed: { [weak interfaceInteraction] in
+                                    guard let interfaceInteraction else {
+                                        return
+                                    }
+                                    guard let chatController = interfaceInteraction.chatController() as? ChatControllerImpl else {
+                                        return
+                                    }
+                                    chatController.removeAd(opaqueId: adAttribute.opaqueId)
                                 }
                             )
                         )

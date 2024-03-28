@@ -272,7 +272,8 @@ final class QuickReplySetupScreenComponent: Component {
                             searchQuery: nil,
                             messageCount: item.totalCount,
                             hideSeparator: false,
-                            hideDate: true
+                            hideDate: true,
+                            hidePeerStatus: true
                         )
                     )),
                     editing: isEditing,

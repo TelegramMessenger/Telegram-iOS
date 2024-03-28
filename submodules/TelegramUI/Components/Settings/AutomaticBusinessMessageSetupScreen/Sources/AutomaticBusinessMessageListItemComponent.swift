@@ -242,7 +242,8 @@ final class GreetingMessageListItemComponent: Component {
                         searchQuery: nil,
                         messageCount: component.count,
                         hideSeparator: true,
-                        hideDate: true
+                        hideDate: true,
+                        hidePeerStatus: true
                     )
                 )),
                 editing: false,

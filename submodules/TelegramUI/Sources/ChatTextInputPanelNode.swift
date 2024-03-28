@@ -3321,7 +3321,16 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     }
     
     private func updateCounterTextNode(transition: ContainedViewLayoutTransition) {
-        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let editMessage = presentationInterfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
+        var inputTextMaxLength: Int32?
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            if let editMessage = presentationInterfaceState.interfaceState.editMessage, let inputTextMaxLengthValue = editMessage.inputTextMaxLength {
+                inputTextMaxLength = inputTextMaxLengthValue
+            } else if case let .customChatContents(customChatContents) = presentationInterfaceState.subject, case .businessLinkSetup = customChatContents.kind {
+                inputTextMaxLength = 4096
+            }
+        }
+        
+        if let presentationInterfaceState = self.presentationInterfaceState, let textInputNode = self.textInputNode, let inputTextMaxLength {
             let textCount = Int32(textInputNode.textView.text.count)
             let counterColor: UIColor = textCount > inputTextMaxLength ? presentationInterfaceState.theme.chat.inputPanel.panelControlDestructiveColor : presentationInterfaceState.theme.chat.inputPanel.panelControlColor
             

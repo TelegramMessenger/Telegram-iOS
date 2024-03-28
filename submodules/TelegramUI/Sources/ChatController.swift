@@ -8459,6 +8459,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     customChatContents.enqueueMessages(messages: messages)
                     strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                 case let .businessLinkSetup(link):
+                    if messages.count > 1 {
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: "The message text limit is 4096 characters", actions: [
+                            TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})
+                        ]), in: .window(.root))
+                        
+                        return
+                    }
+                    
                     var text: String = ""
                     var entities: [MessageTextEntity] = []
                     if let message = messages.first {
