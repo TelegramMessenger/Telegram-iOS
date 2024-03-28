@@ -321,7 +321,12 @@ private final class SendInviteLinkScreenComponent: Component {
                 self.scrollContentView.addSubview(avatarsNode.view)
             }
             
-            let avatarPeers = component.peers.map(\.peer)
+            let avatarPeers: [EnginePeer]
+            if !premiumRestrictedUsers.isEmpty {
+                avatarPeers = premiumRestrictedUsers.map(\.peer)
+            } else {
+                avatarPeers = component.peers.map(\.peer)
+            }
             let avatarsContent = self.avatarsContext.update(peers: avatarPeers.count <= 3 ? avatarPeers : Array(avatarPeers.prefix(upTo: 3)), animated: false)
             let avatarsSize = avatarsNode.update(
                 context: component.context,

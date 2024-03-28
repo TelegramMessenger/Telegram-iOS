@@ -675,6 +675,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             }
                         }
                     }
+                } else if parsedUrl.host == "message" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var parameter: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "slug" {
+                                        parameter = value
+                                    }
+                                }
+                            }
+                        }
+                        if let parameter {
+                            convertedUrl = "https://t.me/m/\(parameter)"
+                        }
+                    }
                 }
                 
                 if parsedUrl.host == "resolve" {

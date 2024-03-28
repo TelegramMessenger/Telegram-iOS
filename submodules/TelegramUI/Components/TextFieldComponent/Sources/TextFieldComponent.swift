@@ -89,6 +89,12 @@ public final class TextFieldComponent: Component {
         case none
     }
     
+    public enum EmptyLineHandling {
+        case allowed
+        case oneConsecutive
+        case notAllowed
+    }
+    
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
@@ -101,7 +107,7 @@ public final class TextFieldComponent: Component {
     public let resetText: NSAttributedString?
     public let isOneLineWhenUnfocused: Bool
     public let characterLimit: Int?
-    public let allowEmptyLines: Bool
+    public let emptyLineHandling: EmptyLineHandling
     public let formatMenuAvailability: FormatMenuAvailability
     public let lockedFormatAction: () -> Void
     public let present: (ViewController) -> Void
@@ -120,7 +126,7 @@ public final class TextFieldComponent: Component {
         resetText: NSAttributedString?,
         isOneLineWhenUnfocused: Bool,
         characterLimit: Int? = nil,
-        allowEmptyLines: Bool = true,
+        emptyLineHandling: EmptyLineHandling = .allowed,
         formatMenuAvailability: FormatMenuAvailability,
         lockedFormatAction: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
@@ -138,7 +144,7 @@ public final class TextFieldComponent: Component {
         self.resetText = resetText
         self.isOneLineWhenUnfocused = isOneLineWhenUnfocused
         self.characterLimit = characterLimit
-        self.allowEmptyLines = allowEmptyLines
+        self.emptyLineHandling = emptyLineHandling
         self.formatMenuAvailability = formatMenuAvailability
         self.lockedFormatAction = lockedFormatAction
         self.present = present
@@ -182,7 +188,7 @@ public final class TextFieldComponent: Component {
         if lhs.characterLimit != rhs.characterLimit {
             return false
         }
-        if lhs.allowEmptyLines != rhs.allowEmptyLines {
+        if lhs.emptyLineHandling != rhs.emptyLineHandling {
             return false
         }
         if lhs.formatMenuAvailability != rhs.formatMenuAvailability {
@@ -566,10 +572,19 @@ public final class TextFieldComponent: Component {
                     return false
                 }
             }
-            if !component.allowEmptyLines {
+            switch component.emptyLineHandling {
+            case .allowed:
+                break
+            case .oneConsecutive:
                 let string = self.inputState.inputText.string as NSString
                 let updatedString = string.replacingCharacters(in: range, with: text)
                 if updatedString.range(of: "\n\n") != nil {
+                    return false
+                }
+            case .notAllowed:
+                let string = self.inputState.inputText.string as NSString
+                let updatedString = string.replacingCharacters(in: range, with: text)
+                if updatedString.range(of: "\n") != nil {
                     return false
                 }
             }

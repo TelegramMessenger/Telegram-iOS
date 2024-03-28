@@ -767,7 +767,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                 autocorrectionType: .no,
                 characterLimit: 32,
                 displayCharacterLimit: true,
-                allowEmptyLines: false,
+                emptyLineHandling: .notAllowed,
                 updated: { _ in
                 },
                 textUpdateTransition: .spring(duration: 0.4),
@@ -788,7 +788,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                 autocorrectionType: .no,
                 characterLimit: 70,
                 displayCharacterLimit: true,
-                allowEmptyLines: false,
+                emptyLineHandling: .notAllowed,
                 updated: { _ in
                 },
                 textUpdateTransition: .spring(duration: 0.4),
