@@ -295,7 +295,7 @@ final class ChatbotSetupScreenComponent: Component {
                             break
                         case let .result(peer):
                             let previousState = self.botResolutionState?.state
-                            if let peer {
+                            if let peer, case let .user(user) = peer, user.botInfo != nil {
                                 self.botResolutionState?.state = .found(peer: peer, isInstalled: false)
                             } else {
                                 self.botResolutionState?.state = .notFound

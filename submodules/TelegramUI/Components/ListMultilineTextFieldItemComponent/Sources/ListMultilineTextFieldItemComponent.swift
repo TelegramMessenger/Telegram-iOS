@@ -30,6 +30,12 @@ public final class ListMultilineTextFieldItemComponent: Component {
         }
     }
     
+    public enum EmptyLineHandling {
+        case allowed
+        case oneConsecutive
+        case notAllowed
+    }
+    
     public let externalState: ExternalState?
     public let context: AccountContext
     public let theme: PresentationTheme
@@ -39,10 +45,12 @@ public final class ListMultilineTextFieldItemComponent: Component {
     public let placeholder: String
     public let autocapitalizationType: UITextAutocapitalizationType
     public let autocorrectionType: UITextAutocorrectionType
+    public let returnKeyType: UIReturnKeyType
     public let characterLimit: Int?
     public let displayCharacterLimit: Bool
-    public let allowEmptyLines: Bool
+    public let emptyLineHandling: EmptyLineHandling
     public let updated: ((String) -> Void)?
+    public let returnKeyAction: (() -> Void)?
     public let textUpdateTransition: Transition
     public let tag: AnyObject?
     
@@ -56,10 +64,12 @@ public final class ListMultilineTextFieldItemComponent: Component {
         placeholder: String,
         autocapitalizationType: UITextAutocapitalizationType = .sentences,
         autocorrectionType: UITextAutocorrectionType = .default,
+        returnKeyType: UIReturnKeyType = .default,
         characterLimit: Int? = nil,
         displayCharacterLimit: Bool = false,
-        allowEmptyLines: Bool = true,
+        emptyLineHandling: EmptyLineHandling = .allowed,
         updated: ((String) -> Void)?,
+        returnKeyAction: (() -> Void)? = nil,
         textUpdateTransition: Transition = .immediate,
         tag: AnyObject? = nil
     ) {
@@ -72,10 +82,12 @@ public final class ListMultilineTextFieldItemComponent: Component {
         self.placeholder = placeholder
         self.autocapitalizationType = autocapitalizationType
         self.autocorrectionType = autocorrectionType
+        self.returnKeyType = returnKeyType
         self.characterLimit = characterLimit
         self.displayCharacterLimit = displayCharacterLimit
-        self.allowEmptyLines = allowEmptyLines
+        self.emptyLineHandling = emptyLineHandling
         self.updated = updated
+        self.returnKeyAction = returnKeyAction
         self.textUpdateTransition = textUpdateTransition
         self.tag = tag
     }
@@ -108,13 +120,16 @@ public final class ListMultilineTextFieldItemComponent: Component {
         if lhs.autocorrectionType != rhs.autocorrectionType {
             return false
         }
+        if lhs.returnKeyType != rhs.returnKeyType {
+            return false
+        }
         if lhs.characterLimit != rhs.characterLimit {
             return false
         }
         if lhs.displayCharacterLimit != rhs.displayCharacterLimit {
             return false
         }
-        if lhs.allowEmptyLines != rhs.allowEmptyLines {
+        if lhs.emptyLineHandling != rhs.emptyLineHandling {
             return false
         }
         if (lhs.updated == nil) != (rhs.updated == nil) {
@@ -190,6 +205,12 @@ public final class ListMultilineTextFieldItemComponent: Component {
             return false
         }
         
+        public func activateInput() {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                textFieldView.activateInput()
+            }
+        }
+        
         func update(component: ListMultilineTextFieldItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -225,6 +246,16 @@ public final class ListMultilineTextFieldItemComponent: Component {
                 self.measureTextLimitLabel = nil
             }
             
+            let mappedEmptyLineHandling: TextFieldComponent.EmptyLineHandling
+            switch component.emptyLineHandling {
+            case .allowed:
+                mappedEmptyLineHandling = .allowed
+            case .oneConsecutive:
+                mappedEmptyLineHandling = .oneConsecutive
+            case .notAllowed:
+                mappedEmptyLineHandling = .notAllowed
+            }
+            
             let textFieldSize = self.textField.update(
                 transition: transition,
                 component: AnyComponent(TextFieldComponent(
@@ -242,13 +273,20 @@ public final class ListMultilineTextFieldItemComponent: Component {
                     },
                     isOneLineWhenUnfocused: false,
                     characterLimit: component.characterLimit,
-                    allowEmptyLines: component.allowEmptyLines,
+                    emptyLineHandling: mappedEmptyLineHandling,
                     formatMenuAvailability: .none,
+                    returnKeyType: component.returnKeyType,
                     lockedFormatAction: {
                     },
                     present: { _ in
                     },
                     paste: { _ in
+                    },
+                    returnKeyAction: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.returnKeyAction?()
                     }
                 )),
                 environment: {},

@@ -406,7 +406,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
                 characterLimit: 256,
-                allowEmptyLines: false,
+                emptyLineHandling: .oneConsecutive,
                 updated: { _ in
                 },
                 textUpdateTransition: .spring(duration: 0.4),

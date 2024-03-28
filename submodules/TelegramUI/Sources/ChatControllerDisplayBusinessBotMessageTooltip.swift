@@ -17,7 +17,7 @@ extension ChatControllerImpl {
             guard let self, let itemNode else {
                 return
             }
-            if value >= 1 {
+            if value >= 2 {
                 return
             }
             
@@ -29,7 +29,7 @@ extension ChatControllerImpl {
             let location = CGPoint(x: bounds.midX, y: bounds.minY - 11.0)
             
             //TODO:localize
-            let tooltipController = TooltipController(content: .text("Only you can see that this message was sent by the bot."), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, balancedTextLayout: true, timeout: 3.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+            let tooltipController = TooltipController(content: .text("Only you can see that this\nmessage was sent by the bot."), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, balancedTextLayout: true, timeout: 3.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
             self.checksTooltipController = tooltipController
             tooltipController.dismissed = { [weak self, weak tooltipController] _ in
                 if let strongSelf = self, let tooltipController = tooltipController, strongSelf.checksTooltipController === tooltipController {
@@ -57,6 +57,11 @@ extension ChatControllerImpl {
                 return (self.chatDisplayNode, CGRect(origin: location, size: CGSize()))
             }))
             
+            #if DEBUG
+            if "".isEmpty {
+                return
+            }
+            #endif
             let _ = ApplicationSpecificNotice.incrementBusinessBotMessageTooltip(accountManager: self.context.sharedContext.accountManager).startStandalone()
         })
     }
