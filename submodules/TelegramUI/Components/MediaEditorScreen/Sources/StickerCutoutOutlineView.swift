@@ -146,10 +146,7 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
     }
     let minSide = min(size.width, size.height)
     let scaledImageSize = image.extent.size.aspectFilled(CGSize(width: minSide, height: minSide))
-    let positionOffset = CGPoint(
-        x: (size.width - scaledImageSize.width) / 2.0,
-        y: (size.height - scaledImageSize.height) / 2.0
-    )
+
     
     var contour = findContours(pixelBuffer: pixelBuffer)
     contour = simplify(contour, tolerance: 1.4)
@@ -162,6 +159,11 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
     let position = values.cropOffset
     let rotation = values.cropRotation
     let scale = values.cropScale
+    
+    let positionOffset = CGPoint(
+        x: (size.width - scaledImageSize.width * scale) / 2.0,
+        y: (size.height - scaledImageSize.height * scale) / 2.0
+    )
     
     transform = transform.translatedBy(x: positionOffset.x + position.x * secondScale, y: positionOffset.y + position.y * secondScale)
     transform = transform.rotated(by: rotation)

@@ -3703,24 +3703,34 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             let peerBio = cachedData.about ?? ""
                                                         
                             if (peer.firstName ?? "") != firstName || (peer.lastName ?? "") != lastName || (bio ?? "") != peerBio || (cachedData.birthday != birthday) {
-                                var updateNameSignal: Signal<Void, NoError> = .complete()
+                                var updateNameSignal: Signal<Void, UpdateInfoError> = .complete()
                                 var hasProgress = false
                                 if (peer.firstName ?? "") != firstName || (peer.lastName ?? "") != lastName {
                                     updateNameSignal = context.engine.accountData.updateAccountPeerName(firstName: firstName, lastName: lastName)
+                                    |> castError(UpdateInfoError.self)
                                     hasProgress = true
                                 }
-                                var updateBioSignal: Signal<Void, NoError> = .complete()
+                                
+                                enum UpdateInfoError {
+                                    case generic
+                                    case birthdayFlood
+                                }
+                                
+                                var updateBioSignal: Signal<Void, UpdateInfoError> = .complete()
                                 if let bio, bio != cachedData.about {
                                     updateBioSignal = context.engine.accountData.updateAbout(about: bio)
-                                    |> `catch` { _ -> Signal<Void, NoError> in
+                                    |> `catch` { _ -> Signal<Void, UpdateInfoError> in
                                         return .complete()
                                     }
                                     hasProgress = true
                                 }
-                                var updatedBirthdaySignal: Signal<Never, NoError> = .complete()
+                                var updatedBirthdaySignal: Signal<Never, UpdateInfoError> = .complete()
                                 if let birthday, birthday != cachedData.birthday {
                                     updatedBirthdaySignal = context.engine.accountData.updateBirthday(birthday: birthday)
-                                    |> `catch` { _ -> Signal<Never, NoError> in
+                                    |> `catch` { error -> Signal<Never, UpdateInfoError> in
+                                        if case .flood = error {
+                                            return .fail(.birthdayFlood)
+                                        }
                                         return .complete()
                                     }
                                     hasProgress = true
@@ -3738,7 +3748,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                     strongSelf.controller?.present(statusController, in: .window(.root))
                                 }
                                 strongSelf.activeActionDisposable.set((combineLatest(updateNameSignal, updateBioSignal, updatedBirthdaySignal) |> deliverOnMainQueue
-                                |> deliverOnMainQueue).startStrict(completed: {
+                                |> deliverOnMainQueue).startStrict(error: { [weak self] error in
+                                    dismissStatus?()
+                                    
+                                    guard let self else {
+                                        return
+                                    }
+                                    if case .birthdayFlood = error {
+                                        self.controller?.present(textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: self.presentationData.strings.Birthday_FloodError, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                    }
+                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
+                                }, completed: {
                                     dismissStatus?()
                                     
                                     guard let strongSelf = self else {
