@@ -2372,11 +2372,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, isEditing: isEditing, expandIfNeeded: expandIfNeeded, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
     }
     
-    public func makeStickerEditorScreen(context: AccountContext, source: Any?, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, @escaping () -> Void) -> Void) -> ViewController {
+    public func makeStickerEditorScreen(context: AccountContext, source: Any?, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, [String], @escaping () -> Void) -> Void) -> ViewController {
         let subject: MediaEditorScreen.Subject
         let mode: MediaEditorScreen.Mode.StickerEditorMode
-        if let file = source as? TelegramMediaFile {
-            subject = .sticker(file)
+        if let (file, emoji) = source as? (TelegramMediaFile, [String]) {
+            subject = .sticker(file, emoji)
             mode = .editing
         } else if let asset = source as? PHAsset {
             subject = .asset(asset)
@@ -2409,8 +2409,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
                 return nil
             }, completion: { result, commit in
-                if case let .sticker(file) = result.media {
-                    completion(file, {
+                if case let .sticker(file, emoji) = result.media {
+                    completion(file, emoji, {
                         commit({})
                     })
                 }

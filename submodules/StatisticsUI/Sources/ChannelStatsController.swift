@@ -2109,9 +2109,11 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     requestWithdrawImpl = {
         let controller = revenueWithdrawalController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, present: { c, _ in
             presentImpl?(c)
-        }, completion: { url in
+        }, completion: { [weak revenueContext] url in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+            
+            revenueContext?.reload()
         })
         presentImpl?(controller)
     }

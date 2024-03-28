@@ -1766,7 +1766,7 @@ extension ChatControllerImpl {
                         
                         Queue.mainQueue().after(0.1) {
                             commit({})
-                            if case let .sticker(file) = result.media {
+                            if case let .sticker(file, _) = result.media {
                                 self?.enqueueStickerFile(file)
                             }
                         }

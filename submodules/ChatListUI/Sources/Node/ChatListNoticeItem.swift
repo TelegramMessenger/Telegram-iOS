@@ -417,7 +417,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.closeButton = closeButton
                             }
                             
-                            if themeUpdated {
+                            if themeUpdated || closeButton.image(for: .normal) == nil {
                                 closeButton.setImage(PresentationResourcesItemList.itemListCloseIconImage(item.theme), for: .normal)
                             }
                             
