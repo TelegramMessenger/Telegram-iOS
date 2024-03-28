@@ -220,34 +220,21 @@ private final class RevenueStatsTransactionsContextImpl {
         let peerId = self.peerId
         let lastOffset = self.lastOffset
         
-        self.disposable.set((self.account.postbox.transaction { transaction -> (Peer, Int32?)? in
-            let statsDatacenterId = (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.statsDatacenterId
+        self.disposable.set((self.account.postbox.transaction { transaction -> Peer? in
             guard let peer = transaction.getPeer(peerId) else {
                 return nil
             }
-            return (peer, statsDatacenterId)
+            return peer
         }
-        |> mapToSignal { data -> Signal<([RevenueStatsTransactionsContext.State.Transaction], Int32, Int32?), NoError> in
-            if let (peer, statsDatacenterId) = data {
+        |> mapToSignal { peer -> Signal<([RevenueStatsTransactionsContext.State.Transaction], Int32, Int32?), NoError> in
+            if let peer {
                 guard let inputChannel = apiInputChannel(peer) else {
                     return .complete()
                 }
                 let offset = lastOffset ?? 0
                 let limit: Int32 = lastOffset == nil ? 25 : 50
                 
-                let request = Api.functions.stats.getBroadcastRevenueTransactions(channel: inputChannel, offset: offset, limit: limit)
-                let signal: Signal<Api.stats.BroadcastRevenueTransactions, MTRpcError>
-                if let statsDatacenterId = statsDatacenterId, account.network.datacenterId != statsDatacenterId {
-                    signal = account.network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
-                    |> castError(MTRpcError.self)
-                    |> mapToSignal { worker in
-                        return worker.request(request)
-                    }
-                } else {
-                    signal = account.network.request(request, automaticFloodWait: false)
-                }
-                
-                return signal
+                return account.network.request(Api.functions.stats.getBroadcastRevenueTransactions(channel: inputChannel, offset: offset, limit: limit), automaticFloodWait: false)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.stats.BroadcastRevenueTransactions?, NoError> in
                     return .single(nil)
