@@ -4431,11 +4431,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         
             transition.setFrame(view: self.selectionContainerView, frame: CGRect(origin: .zero, size: previewFrame.size))
             
-            let stickerFrameWidth = floor(previewSize.width * 0.97)
+            let stickerFrameWidth = floorToScreenPixels(previewSize.width * 0.97)
             if let stickerBackgroundView = self.stickerBackgroundView, let stickerOverlayLayer = self.stickerOverlayLayer, let stickerFrameLayer = self.stickerFrameLayer {
                 stickerOverlayLayer.frame = CGRect(origin: .zero, size: previewSize)
                 
-                let stickerFrameRect = CGRect(origin: CGPoint(x: floor((previewSize.width - stickerFrameWidth) / 2.0), y: floor((previewSize.height - stickerFrameWidth) / 2.0)), size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth))
+                let stickerFrameRect = CGRect(origin: CGPoint(x: floorToScreenPixels((previewSize.width - stickerFrameWidth) / 2.0), y: floorToScreenPixels((previewSize.height - stickerFrameWidth) / 2.0)), size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth))
                  
                 let overlayOuterRect = UIBezierPath(rect: CGRect(origin: .zero, size: previewSize))
                 let overlayInnerRect = UIBezierPath(cgPath: CGPath(roundedRect: stickerFrameRect, cornerWidth: stickerFrameWidth / 8.0, cornerHeight: stickerFrameWidth / 8.0, transform: nil))
