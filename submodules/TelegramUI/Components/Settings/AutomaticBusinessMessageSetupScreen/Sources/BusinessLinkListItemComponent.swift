@@ -21,6 +21,7 @@ final class BusinessLinkListItemComponent: Component {
     let action: () -> Void
     let deleteAction: () -> Void
     let shareAction: () -> Void
+    let contextAction: ((ContextExtractedContentContainingView, ContextGesture) -> Void)?
     
     init(
         context: AccountContext,
@@ -29,7 +30,8 @@ final class BusinessLinkListItemComponent: Component {
         link: TelegramBusinessChatLinks.Link,
         action: @escaping () -> Void,
         deleteAction: @escaping () -> Void,
-        shareAction: @escaping () -> Void
+        shareAction: @escaping () -> Void,
+        contextAction: ((ContextExtractedContentContainingView, ContextGesture) -> Void)?
     ) {
         self.context = context
         self.theme = theme
@@ -38,6 +40,7 @@ final class BusinessLinkListItemComponent: Component {
         self.action = action
         self.deleteAction = deleteAction
         self.shareAction = shareAction
+        self.contextAction = contextAction
     }
 
     static func ==(lhs: BusinessLinkListItemComponent, rhs: BusinessLinkListItemComponent) -> Bool {
@@ -56,7 +59,8 @@ final class BusinessLinkListItemComponent: Component {
         return true
     }
 
-    final class View: UIView, ListSectionComponent.ChildView {
+    final class View: ContextControllerSourceView, ListSectionComponent.ChildView {
+        private let extractedContainerView: ContextExtractedContentContainingView
         private let containerButton: HighlightTrackingButton
         private let swipeOptionContainer: ListItemSwipeOptionContainer
         
@@ -71,7 +75,10 @@ final class BusinessLinkListItemComponent: Component {
         var customUpdateIsHighlighted: ((Bool) -> Void)?
         private(set) var separatorInset: CGFloat = 0.0
         
+        private var isExtractedToContextMenu: Bool = false
+        
         override init(frame: CGRect) {
+            self.extractedContainerView = ContextExtractedContentContainingView()
             self.containerButton = HighlightTrackingButton()
             self.containerButton.layer.anchorPoint = CGPoint()
             self.containerButton.isExclusiveTouch = true
@@ -79,6 +86,11 @@ final class BusinessLinkListItemComponent: Component {
             self.swipeOptionContainer = ListItemSwipeOptionContainer(frame: CGRect())
             
             super.init(frame: frame)
+            
+            self.addSubview(self.extractedContainerView)
+            self.targetViewForActivationProgress = self.extractedContainerView.contentView
+            
+            self.extractedContainerView.contentView.addSubview(self.swipeOptionContainer)
             
             self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
             self.containerButton.internalHighligthedChanged = { [weak self] isHighlighted in
@@ -108,9 +120,38 @@ final class BusinessLinkListItemComponent: Component {
                 }
             }
             
-            self.addSubview(self.swipeOptionContainer)
-            
             self.swipeOptionContainer.addSubview(self.containerButton)
+            
+            self.extractedContainerView.isExtractedToContextPreviewUpdated = { [weak self] value in
+                guard let self, let component = self.component else {
+                    return
+                }
+                self.containerButton.clipsToBounds = value
+                self.containerButton.backgroundColor = value ? component.theme.list.itemBlocksBackgroundColor : nil
+                self.containerButton.layer.cornerRadius = value ? 10.0 : 0.0
+            }
+            self.extractedContainerView.willUpdateIsExtractedToContextPreview = { [weak self] value, transition in
+                guard let self else {
+                    return
+                }
+                self.isExtractedToContextMenu = value
+                
+                let mappedTransition: Transition
+                if value {
+                    mappedTransition = Transition(transition)
+                } else {
+                    mappedTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                }
+                self.componentState?.updated(transition: mappedTransition)
+            }
+            
+            self.activated = { [weak self] gesture, _ in
+                guard let self, let component = self.component else {
+                    gesture.cancel()
+                    return
+                }
+                component.contextAction?(self.extractedContainerView, gesture)
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -128,12 +169,20 @@ final class BusinessLinkListItemComponent: Component {
             self.component = component
             self.componentState = state
             
+            let leftInset: CGFloat = 0.0
             let leftContentInset: CGFloat = 62.0
-            let rightInset: CGFloat = 8.0
+            var rightInset: CGFloat = 8.0
             let topInset: CGFloat = 9.0
             let bottomInset: CGFloat = 9.0
             let titleViewCountSpacing: CGFloat = 4.0
             let titleTextSpacing: CGFloat = 4.0
+            
+            var innerInsets = UIEdgeInsets()
+            if self.isExtractedToContextMenu {
+                rightInset += 2.0
+                innerInsets.left += 2.0
+                innerInsets.right += 2.0
+            }
             
             let viewCountText: String
             if component.link.viewCount == 0 {
@@ -149,7 +198,7 @@ final class BusinessLinkListItemComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
-            let viewCountFrame = CGRect(origin: CGPoint(x: availableSize.width - rightInset - viewCountSize.width, y: topInset + 2.0), size: viewCountSize)
+            let viewCountFrame = CGRect(origin: CGPoint(x: availableSize.width - rightInset - innerInsets.left - viewCountSize.width, y: topInset + 2.0), size: viewCountSize)
             if let viewCountView = self.viewCount.view {
                 if viewCountView.superview == nil {
                     viewCountView.isUserInteractionEnabled = false
@@ -166,9 +215,9 @@ final class BusinessLinkListItemComponent: Component {
                     text: .plain(NSAttributedString(string: component.link.title ?? component.link.url, font: Font.regular(16.0), textColor: component.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - leftContentInset - rightInset - viewCountSize.width - titleViewCountSpacing, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - leftInset - leftContentInset - rightInset - viewCountSize.width - titleViewCountSpacing, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: leftContentInset, y: topInset), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: leftInset + leftContentInset, y: topInset), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
@@ -213,7 +262,7 @@ final class BusinessLinkListItemComponent: Component {
                 adjustQuoteFontSize: false,
                 cachedMessageSyntaxHighlight: nil
             )
-            let (textLayout, textApply) = asyncLayout(TextNodeLayoutArguments(attributedString: textString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: availableSize.width - leftContentInset - rightInset, height: 100.0)))
+            let (textLayout, textApply) = asyncLayout(TextNodeLayoutArguments(attributedString: textString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: availableSize.width - leftContentInset - leftInset - rightInset, height: 100.0)))
             let _ = textApply(TextNodeWithEntities.Arguments(
                 context: component.context,
                 cache: component.context.animationCache,
@@ -222,7 +271,7 @@ final class BusinessLinkListItemComponent: Component {
                 attemptSynchronous: true
             ))
             let textSize = textLayout.size
-            let textFrame = CGRect(origin: CGPoint(x: leftContentInset, y: titleFrame.maxY + titleTextSpacing), size: textLayout.size)
+            let textFrame = CGRect(origin: CGPoint(x: leftInset + leftContentInset, y: titleFrame.maxY + titleTextSpacing), size: textLayout.size)
             if self.text.textNode.view.superview == nil {
                 self.text.textNode.view.isUserInteractionEnabled = false
                 self.containerButton.addSubview(self.text.textNode.view)
@@ -237,17 +286,24 @@ final class BusinessLinkListItemComponent: Component {
                     self.iconView.isUserInteractionEnabled = false
                     self.containerButton.addSubview(self.iconView)
                 }
-                let iconFrame = CGRect(origin: CGPoint(x: floor((leftContentInset - image.size.width) * 0.5), y: floor((size.height - image.size.height) * 0.5)), size: image.size)
+                let iconFrame = CGRect(origin: CGPoint(x: leftInset + floor((leftContentInset - image.size.width) * 0.5), y: floor((size.height - image.size.height) * 0.5)), size: image.size)
                 transition.setFrame(view: self.iconView, frame: iconFrame)
             }
             
             let swipeOptionContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size)
             transition.setFrame(view: self.swipeOptionContainer, frame: swipeOptionContainerFrame)
             
-            transition.setPosition(view: self.containerButton, position: CGPoint())
-            transition.setBounds(view: self.containerButton, bounds: CGRect(origin: self.containerButton.bounds.origin, size: size))
+            let containerButtonFrame = CGRect(origin: CGPoint(x: innerInsets.left, y: innerInsets.top), size: CGSize(width: size.width - innerInsets.left - innerInsets.right, height: size.height - innerInsets.top - innerInsets.bottom))
+            
+            transition.setPosition(view: self.containerButton, position: containerButtonFrame.origin)
+            transition.setBounds(view: self.containerButton, bounds: CGRect(origin: self.containerButton.bounds.origin, size: containerButtonFrame.size))
             
             self.swipeOptionContainer.updateLayout(size: swipeOptionContainerFrame.size, leftInset: 0.0, rightInset: 0.0)
+            
+            let resultBounds = CGRect(origin: CGPoint(), size: size)
+            transition.setFrame(view: self.extractedContainerView, frame: resultBounds)
+            transition.setFrame(view: self.extractedContainerView.contentView, frame: resultBounds)
+            self.extractedContainerView.contentRect = resultBounds
             
             var rightOptions: [ListItemSwipeOptionContainer.Option] = []
             rightOptions = [

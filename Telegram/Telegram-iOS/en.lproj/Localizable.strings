@@ -11613,9 +11613,9 @@ Sorry for the inconvenience.";
 
 "CollectibleItemInfo.StoreName" = "Fragment";
 "CollectibleItemInfo.UsernameTitle" = "%@ is a collectible username that belongs to";
-"CollectibleItemInfo.UsernameText" = "The %1$@ username was acquired on %2$@ on %3$@ for %4$@ (%5$@).";
+"CollectibleItemInfo.UsernameText" = "The username %1$@ was acquired on %2$@ on %3$@ for %4$@ (%5$@).";
 "CollectibleItemInfo.PhoneTitle" = "%@ is a collectible phone number that belongs to";
-"CollectibleItemInfo.PhoneText" = "The %1$@ phone number was acquired on %2$@ on %3$@ for %4$@ (%5$@).";
+"CollectibleItemInfo.PhoneText" = "The phone number %1$@ was acquired on %2$@ on %3$@ for %4$@ (%5$@).";
 "CollectibleItemInfo.ButtonOpenInfo" = "Learn More";
 "CollectibleItemInfo.ButtonCopyUsername" = "Copy Link";
 "CollectibleItemInfo.ButtonCopyPhone" = "Copy Phone Number";
@@ -11660,7 +11660,7 @@ Sorry for the inconvenience.";
 "ChatList.BirthdaySingleTitle" = "It's %@'s **birthday** today! 🎂";
 "ChatList.BirthdaySingleText" = "Gift them Telegram Premium.";
 
-"ChatList.BirthdayMultipleTitle_1" = "%@ contact have **birthday** today! 🎂";
+"ChatList.BirthdayMultipleTitle_1" = "%@ contact has a **birthday** today! 🎂";
 "ChatList.BirthdayMultipleTitle_any" = "%@ contacts have **birthdays** today! 🎂";
 "ChatList.BirthdayMultipleText" = "Gift them Telegram Premium.";
 
@@ -11689,7 +11689,7 @@ Sorry for the inconvenience.";
 "Monetization.BalanceTitle" = "AVAILABLE BALANCE";
 "Monetization.Balance.ZeroInfo" = "You will be able to collect rewards using Fragment, a third-party platform used by advertisers to pay for ads. [Learn More >]()";
 "Monetization.Balance.AvailableInfo" = "You can collect your reward using Fragment, a third-party platform used by advertisers to pay for ads. [Learn More >]()";
-"Monetization.Balance.ComingLaterInfo" = "By the end of May, you will be able to collect rewards using Fragment, a third-party platform used by advertisers to pay for ads. [Learn More >]()";
+"Monetization.Balance.ComingLaterInfo" = "In the coming weeks, you will be able to collect rewards using Fragment, a third-party platform used by advertisers to pay for ads. [Learn More >]()";
 
 "Monetization.BalanceInfo_URL" = "https://telegram.org";
 "Monetization.BalanceWithdraw" = "Withdraw via Fragment";
@@ -11733,14 +11733,14 @@ Sorry for the inconvenience.";
 "Monetization.Intro.Withdrawal.Text" = "You can withdraw your TON any time.";
 
 "Monetization.Intro.Info.Title" = "What's #TON?";
-"Monetization.Intro.Info.Text" = "TON is a blockchain platform and cryptocurrency that Telegram uses for its record scalability and ultra low commissions on transactions. [Learn More >]()";
+"Monetization.Intro.Info.Text" = "TON is a blockchain platform and cryptocurrency that Telegram uses for its high speed and commissions on transactions. [Learn More >]()";
 "Monetization.Intro.Info.Text_URL" = "https://ton.org";
 
 "Monetization.Intro.Understood" = "Understood";
 
 "ReportAd.Title" = "Report Ad";
 "ReportAd.Help" = "Learn more about [Telegram Ad Policies and Guidelines]().";
-"ReportAd.Help_URL" = "https://promote.telegram.org/guidelines";
+"ReportAd.Help_URL" = "https://ads.telegram.org/guidelines";
 "ReportAd.Reported" = "We will review this ad to ensure it matches our [Ad Policies and Guidelines]().";
 "ReportAd.Hidden" = "Ads are hidden now.";
 
