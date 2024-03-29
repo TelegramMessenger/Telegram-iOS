@@ -181,7 +181,7 @@ class BarsComponentController: GeneralChartComponentController {
             verticalScalesRenderer.setVisible(true, animated: animated)
             
             if let secondaryScalesRenderer = self.secondaryScalesRenderer {
-                let (range, labels) = verticalLimitsLabels(verticalRange: range, secondary: true)
+                let (_, labels) = verticalLimitsLabels(verticalRange: range, secondary: true)
                // if secondaryScalesRenderer.verticalRange.end != range {
                     secondaryScalesRenderer.setup(verticalLimitsLabels: labels, animated: animated)
                // }

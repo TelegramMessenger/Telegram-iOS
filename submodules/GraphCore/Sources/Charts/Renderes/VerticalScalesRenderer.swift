@@ -9,11 +9,10 @@
 import Foundation
 #if os(macOS)
 import Cocoa
+typealias UIColor = NSColor
 #else
 import UIKit
 #endif
-
-typealias UIColor = NSColor
 
 class VerticalScalesRenderer: BaseChartRenderer {
     private var verticalLabelsAndLines: [LinesChartLabel] = []
