@@ -18,6 +18,7 @@ import BundleIconComponent
 import TextFormat
 import UndoUI
 import ShareController
+import ContextUI
 
 final class BusinessLinksSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -535,6 +536,54 @@ final class BusinessLinksSetupScreenComponent: Component {
                             return
                         }
                         self.openShareLink(url: link.url)
+                    },
+                    contextAction: { [weak self] sourceView, gesture in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                        
+                        var itemList: [ContextMenuItem] = []
+                        itemList.append(.action(ContextMenuActionItem(
+                            text: presentationData.strings.Business_Links_ItemActionShare,
+                            textColor: .primary,
+                            icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) },
+                            action: { [weak self] c, _ in
+                                c.dismiss(completion: {
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.openShareLink(url: link.url)
+                                })
+                            })
+                        ))
+                        itemList.append(.action(ContextMenuActionItem(
+                            text: presentationData.strings.Common_Delete,
+                            textColor: .destructive,
+                            icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) },
+                            action: { [weak self] c, _ in
+                                c.dismiss(completion: {
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.openDeleteLink(url: link.url)
+                                })
+                            })
+                        ))
+                        let items = ContextController.Items(content: .list(itemList))
+                        
+                        let controller = ContextController(
+                            presentationData: presentationData,
+                            source: .extracted(BusineesLinkListContextExtractedContentSource(contentView: sourceView)), items: .single(items), recognizer: nil, gesture: gesture)
+                        
+                        self.environment?.controller()?.forEachController({ controller in
+                            if let controller = controller as? UndoOverlayController {
+                                controller.dismiss()
+                            }
+                            return true
+                        })
+                        self.environment?.controller()?.presentInGlobalOverlay(controller)
                     }
                 ))))
             }
@@ -706,5 +755,25 @@ public final class BusinessLinksSetupScreen: ViewControllerComponentContainer {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+    }
+}
+
+private final class BusineesLinkListContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = false
+    let blurBackground: Bool = true
+    
+    private let contentView: ContextExtractedContentContainingView
+    
+    init(contentView: ContextExtractedContentContainingView) {
+        self.contentView = contentView
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(containingItem: .view(self.contentView), contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }
