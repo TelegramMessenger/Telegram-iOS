@@ -9,7 +9,6 @@
 import Foundation
 #if os(macOS)
 import Cocoa
-
 typealias UIColor = NSColor
 #else
 import UIKit
