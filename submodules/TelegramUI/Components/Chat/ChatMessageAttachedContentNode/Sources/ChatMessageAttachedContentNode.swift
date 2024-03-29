@@ -1089,7 +1089,14 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             
                             if let (titleBadgeLayout, titleBadgeApply) = titleBadgeLayoutAndApply {
                                 let titleBadgeLabel = titleBadgeApply()
-                                let titleBadgeFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + titleBadgeSpacing + titleBadgePadding, y: floorToScreenPixels(titleFrame.midY - titleBadgeLayout.size.height / 2.0)), size: titleBadgeLayout.size)
+                                var titleLineWidth: CGFloat = 0.0
+                                if let firstLine = titleLayout.linesRects().first {
+                                    titleLineWidth = firstLine.width
+                                } else {
+                                    titleLineWidth = titleFrame.width
+                                }
+                                
+                                let titleBadgeFrame = CGRect(origin: CGPoint(x: titleFrame.minX + titleLineWidth + titleBadgeSpacing + titleBadgePadding, y: floorToScreenPixels(titleFrame.midY - titleBadgeLayout.size.height / 2.0)), size: titleBadgeLayout.size)
                                 let badgeBackgroundFrame = titleBadgeFrame.insetBy(dx: -titleBadgePadding, dy: -1.0 + UIScreenPixel)
                                 
                                 let button: HighlightTrackingButtonNode
