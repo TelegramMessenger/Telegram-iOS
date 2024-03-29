@@ -980,8 +980,9 @@ private enum StatsEntry: ItemListNodeEntry {
                     arguments.openMonetizationInfo()
                 })
             case let .adsTransaction(_, theme, transaction):
-                let font = Font.regular(presentationData.fontSize.itemListBaseFontSize)
-                let smallLabelFont = Font.regular(floor(presentationData.fontSize.itemListBaseFontSize / 17.0 * 13.0))
+                let font = Font.with(size: floor(presentationData.fontSize.itemListBaseFontSize))
+                let smallLabelFont = Font.with(size: floor(presentationData.fontSize.itemListBaseFontSize / 17.0 * 13.0))
+            
                 var labelColor = theme.list.itemDisclosureActions.constructive.fillColor
            
                 let title: NSAttributedString
@@ -1016,7 +1017,11 @@ private enum StatsEntry: ItemListNodeEntry {
                 }
             
                 let label = amountAttributedString(formatBalanceText(transaction.amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, showPlus: true), integralFont: font, fractionalFont: smallLabelFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
-                label.append(NSAttributedString(string: " TON", font: smallLabelFont, textColor: labelColor))
+            
+                label.append(NSAttributedString(string: " $   ", font: smallLabelFont, textColor: labelColor))
+                if let range = label.string.range(of: "$"), let icon = generateTintedImage(image: UIImage(bundleImageName: "Ads/Ton"), color: labelColor) {
+                    label.addAttribute(.attachment, value: icon, range: NSRange(range, in: label.string))
+                }
                 
                 return ItemListDisclosureItem(presentationData: presentationData, title: "", attributedTitle: title, label: "", attributedLabel: label, labelStyle: .coloredText(labelColor), additionalDetailLabel: detailText, additionalDetailLabelColor: detailColor, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
                     arguments.openTransaction(transaction)
