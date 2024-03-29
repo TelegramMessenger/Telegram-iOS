@@ -78,7 +78,7 @@ private final class ChatBusinessLinkTitlePanelComponent: Component {
                 transition: transition,
                 component: AnyComponent(PlainButtonComponent(
                     content: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Copy Link", font: Font.regular(17.0), textColor: component.theme.rootController.navigationBar.accentTextColor))
+                        text: .plain(NSAttributedString(string: component.strings.GroupInfo_InviteLink_CopyLink, font: Font.regular(17.0), textColor: component.theme.rootController.navigationBar.accentTextColor))
                     )),
                     effectAlignment: .center,
                     minSize: CGSize(width: floor(availableSize.width * 0.5), height: size.height),
@@ -107,7 +107,7 @@ private final class ChatBusinessLinkTitlePanelComponent: Component {
                 transition: transition,
                 component: AnyComponent(PlainButtonComponent(
                     content: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Share Link", font: Font.regular(17.0), textColor: component.theme.rootController.navigationBar.accentTextColor))
+                        text: .plain(NSAttributedString(string: component.strings.GroupInfo_InviteLink_ShareLink, font: Font.regular(17.0), textColor: component.theme.rootController.navigationBar.accentTextColor))
                     )),
                     effectAlignment: .center,
                     minSize: CGSize(width: floor(availableSize.width * 0.5), height: size.height),

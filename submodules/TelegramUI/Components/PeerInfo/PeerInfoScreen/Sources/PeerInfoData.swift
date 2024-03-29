@@ -607,7 +607,7 @@ private func peerInfoPersonalChannel(context: AccountContext, peerId: EnginePeer
                 for i in (0 ..< view.entries.count).reversed() {
                     if messages.isEmpty {
                         messages.append(EngineMessage(view.entries[i].message))
-                    } else if messages[0].groupingKey == view.entries[i].message.groupingKey {
+                    } else if messages[0].groupingKey != nil && messages[0].groupingKey == view.entries[i].message.groupingKey {
                         messages.append(EngineMessage(view.entries[i].message))
                     }
                 }
