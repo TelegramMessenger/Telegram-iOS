@@ -40,6 +40,40 @@ public struct Font {
         public static let monospacedNumbers = Traits(rawValue: 1 << 1)
     }
     
+    public enum Width {
+        case standard
+        case condensed
+        case compressed
+        case expanded
+        
+        @available(iOS 16.0, *)
+        var width: UIFont.Width {
+            switch self {
+            case .standard:
+                return .standard
+            case .condensed:
+                return .condensed
+            case .compressed:
+                return .compressed
+            case .expanded:
+                return .expanded
+            }
+        }
+        
+        var key: String {
+            switch self {
+            case .standard:
+                return "standard"
+            case .condensed:
+                return "condensed"
+            case .compressed:
+                return "compressed"
+            case .expanded:
+                return "expanded"
+            }
+        }
+    }
+    
     public enum Weight {
         case regular
         case thin
@@ -124,8 +158,8 @@ public struct Font {
 
     private static let cache = Cache()
     
-    public static func with(size: CGFloat, design: Design = .regular, weight: Weight = .regular, traits: Traits = []) -> UIFont {
-        let key = "\(size)_\(design.key)_\(weight.key)_\(traits.rawValue)"
+    public static func with(size: CGFloat, design: Design = .regular, weight: Weight = .regular, width: Width = .standard, traits: Traits = []) -> UIFont {
+        let key = "\(size)_\(design.key)_\(weight.key)_\(width.key)_\(traits.rawValue)"
         
         if let cachedFont = self.cache.get(key) {
             return cachedFont
@@ -169,7 +203,14 @@ public struct Font {
                     ])
                 }
             }
-         
+            if #available(iOS 16.0, *) {
+                if width != .standard {
+                    updatedDescriptor = updatedDescriptor?.addingAttributes([
+                        UIFontDescriptor.AttributeName.traits: [UIFontDescriptor.TraitKey.width: width.width]
+                    ])
+                }
+            }
+            
             let font: UIFont
             if let updatedDescriptor = updatedDescriptor {
                 font = UIFont(descriptor: updatedDescriptor, size: size)

@@ -44,10 +44,13 @@ private func renderIcon(name: String, backgroundColors: [UIColor]? = nil) -> UII
             context.drawLinearGradient(gradient, start: CGPoint(x: size.width, y: size.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
             
             context.resetClip()
-        }
-        
-        if let image = UIImage(bundleImageName: name)?.cgImage {
-            context.draw(image, in: bounds)
+            if let image = generateTintedImage(image: UIImage(bundleImageName: name), color: .white)?.cgImage {
+                context.draw(image, in: bounds)
+            }
+        } else {
+            if let image = UIImage(bundleImageName: name)?.cgImage {
+                context.draw(image, in: bounds)
+            }
         }
     })
 }

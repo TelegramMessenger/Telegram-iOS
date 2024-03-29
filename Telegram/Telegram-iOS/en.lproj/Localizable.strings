@@ -11689,7 +11689,7 @@ Sorry for the inconvenience.";
 "Monetization.BalanceTitle" = "AVAILABLE BALANCE";
 "Monetization.Balance.ZeroInfo" = "You will be able to collect rewards using Fragment, a third-party platform used by advertisers to pay for ads. [Learn More >]()";
 "Monetization.Balance.AvailableInfo" = "You can collect your reward using Fragment, a third-party platform used by advertisers to pay for ads. [Learn More >]()";
-"Monetization.Balance.ComingLaterInfo" = "By the end of May, you will be able to collect rewards using Fragment, a third-party platform used by advertisers to pay for ads. [Learn More >]()";
+"Monetization.Balance.ComingLaterInfo" = "In the coming weeks you will be able to collect your reward using Fragment, a third-party platform used by advertisers to pay ads. [Learn More >]()";
 
 "Monetization.BalanceInfo_URL" = "https://telegram.org";
 "Monetization.BalanceWithdraw" = "Withdraw via Fragment";
@@ -11733,13 +11733,13 @@ Sorry for the inconvenience.";
 "Monetization.Intro.Withdrawal.Text" = "You can withdraw your TON any time.";
 
 "Monetization.Intro.Info.Title" = "What's #TON?";
-"Monetization.Intro.Info.Text" = "TON is a blockchain platform and cryptocurrency that Telegram uses for its record scalability and ultra low commissions on transactions. [Learn More >]()";
+"Monetization.Intro.Info.Text" = "TON is a blockchain platform and cryptocurrency that Telegram uses for its high speed and low commisions on transactions. [Learn More >]()";
 "Monetization.Intro.Info.Text_URL" = "https://ton.org";
 
 "Monetization.Intro.Understood" = "Understood";
 
 "ReportAd.Title" = "Report Ad";
-"ReportAd.Help" = "Learn more about [Telegram Ad Policies and Guidelines]().";
+"ReportAd.Help" = "Learn more about our [Ad Policies and Guidelines]().";
 "ReportAd.Help_URL" = "https://promote.telegram.org/guidelines";
 "ReportAd.Reported" = "We will review this ad to ensure it matches our [Ad Policies and Guidelines]().";
 "ReportAd.Hidden" = "Ads are hidden now.";
