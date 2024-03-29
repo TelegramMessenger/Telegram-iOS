@@ -341,7 +341,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
             }
             
             if let adAttribute = message.adAttribute {
-                if adAttribute.displayAvatar && !adAttribute.canReport {
+                if adAttribute.displayAvatar {
                     hasAvatar = adAttribute.displayAvatar
                 }
             }

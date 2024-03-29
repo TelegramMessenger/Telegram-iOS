@@ -326,7 +326,7 @@ private class AdMessagesHistoryContextImpl {
             case .recommended:
                 mappedMessageType = .recommended
             }
-            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, displayAvatar: self.displayAvatar, target: target, buttonText: self.buttonText, sponsorInfo: self.sponsorInfo, additionalInfo: self.additionalInfo, canReport: self.canReport))
+            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, displayAvatar: self.displayAvatar && !self.canReport, target: target, buttonText: self.buttonText, sponsorInfo: self.sponsorInfo, additionalInfo: self.additionalInfo, canReport: self.canReport))
             if !self.textEntities.isEmpty {
                 let attribute = TextEntitiesMessageAttribute(entities: self.textEntities)
                 attributes.append(attribute)
@@ -404,9 +404,14 @@ private class AdMessagesHistoryContextImpl {
             let messageStableVersion = UInt32(bitPattern: Int32(truncatingIfNeeded: messageHash))
             
             var media: [Media] = self.media
-            if media.isEmpty, case let .invite(invite) = self.target, let image = invite.image {
-                media.append(image)
+            if media.isEmpty {
+                if case let .invite(invite) = self.target, let image = invite.image {
+                    media.append(image)
+                } else if self.displayAvatar && self.canReport, let profileImage = author.smallProfileImage {
+                    media.append(TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [profileImage], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: []))
+                }
             }
+            
 
             return Message(
                 stableId: 0,

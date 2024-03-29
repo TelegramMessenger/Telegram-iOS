@@ -1415,7 +1415,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 ignoreForward = true
                 effectiveAuthor = author
                 displayAuthorInfo = !mergedTop.merged && incoming
-                hasAvatar = adAttribute.displayAvatar && !adAttribute.canReport
+                hasAvatar = adAttribute.displayAvatar
             } else {
                 effectiveAuthor = firstMessage.author
                 
