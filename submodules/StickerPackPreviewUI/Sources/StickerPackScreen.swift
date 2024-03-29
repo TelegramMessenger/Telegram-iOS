@@ -74,8 +74,16 @@ private struct StickerPackPreviewGridTransaction {
     let updates: [GridNodeUpdateItem]
     let scrollToItem: GridNodeScrollToItem?
     
-    init(previousList: [StickerPackPreviewGridEntry], list: [StickerPackPreviewGridEntry], context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, scrollToItem: GridNodeScrollToItem?, isEditable: Bool, isEditing: Bool) {
-        let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: previousList, rightList: list)
+    init(previousList: [StickerPackPreviewGridEntry], list: [StickerPackPreviewGridEntry], context: AccountContext, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, scrollToItem: GridNodeScrollToItem?, isEditable: Bool, isEditing: Bool, invert: Bool = false) {
+        var (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: previousList, rightList: list)
+        
+        if invert, deleteIndices.count == 1, indicesAndItems.count == 1 {
+            if let _ = deleteIndices.first, let insertion = indicesAndItems.first, let update = updateIndices.first {
+                deleteIndices = [insertion.0]
+                indicesAndItems = [(update.0, update.1, update.2)]
+                updateIndices = [(update.2, insertion.1, update.0)]
+            }
+        }
         
         self.deletions = deleteIndices
         self.insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(context: context, interaction: interaction, theme: theme, strings: strings, animationCache: animationCache, animationRenderer: animationRenderer, isEditable: isEditable, isEditing: isEditing), previousIndex: $0.2) }
@@ -487,6 +495,9 @@ private final class StickerPackContainer: ASDisplayNode {
                     if let (info, _, _) = strongSelf.currentStickerPack, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                         canEdit = true
                     }
+                    if !GlobalExperimentalSettings.enableWIPStickers {
+                        canEdit = false
+                    }
                     
                     let accountPeerId = strongSelf.context.account.peerId
                     return combineLatest(
@@ -565,7 +576,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                                     if let self, let (info, items, installed) = self.currentStickerPack {
                                                         let updatedItems = items.filter { $0.file.fileId != item.file.fileId }
                                                         self.currentStickerPack = (info, updatedItems, installed)
-                                                        self.updateEntries()
+                                                        self.reorderAndUpdateEntries()
                                                         
                                                         let _ = self.context.engine.stickers.deleteStickerFromStickerSet(sticker: .stickerPack(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), media: item.file)).startStandalone()
                                                     }
@@ -652,7 +663,7 @@ private final class StickerPackContainer: ASDisplayNode {
     
     private var reorderFeedback: HapticFeedback?
     private var reorderNode: ReorderingItemNode?
-    
+    private var reorderInitialIndex: Int?
     private var isReordering = false
     private var reorderPosition: Int?
     
@@ -664,6 +675,15 @@ private final class StickerPackContainer: ASDisplayNode {
         }
         
         self.interaction.reorderingFileId = itemNode.stickerPackItem?.file.fileId
+        
+        var reorderInitialIndex: Int = 0
+        for entry in self.currentEntries {
+            if case let .sticker(_, _, item, _, _, _, _, _) = entry, item?.file.fileId == itemNode.stickerPackItem?.file.fileId {
+                break
+            }
+            reorderInitialIndex += 1
+        }
+        self.reorderInitialIndex = reorderInitialIndex
                 
         let reorderNode = ReorderingItemNode(itemNode: itemNode, initialLocation: itemNode.frame.origin)
         self.reorderNode = reorderNode
@@ -679,21 +699,12 @@ private final class StickerPackContainer: ASDisplayNode {
     
     private func endReordering(point: CGPoint?) {
         self.interaction.reorderingFileId = nil
+        self.reorderInitialIndex = nil
         
         if let reorderNode = self.reorderNode {
             self.reorderNode = nil
         
             if let itemNode = reorderNode.itemNode, let _ = point {
-//                var targetNode: StickerPackPreviewGridItemNode?
-//                if let itemNode = self.gridNode.itemNodeAtPoint(point) as? StickerPackPreviewGridItemNode {
-//                    targetNode = itemNode
-//                }
-                
-//                let _ = itemNode
-//                let _ = targetNode
-//                if let targetNode = targetNode, let sourceItem = itemNode.asset as? TGMediaSelectableItem, let targetItem = targetNode.asset as? TGMediaSelectableItem, let targetIndex = self.interaction?.selectionState?.index(of: targetItem) {
-//                    self.interaction?.selectionState?.move(sourceItem, to: targetIndex)
-//                }
                 reorderNode.animateCompletion(completion: { [weak reorderNode] in
                     reorderNode?.removeFromSupernode()
                 })
@@ -723,7 +734,12 @@ private final class StickerPackContainer: ASDisplayNode {
                 targetNode = itemNode
             }
             
-            var reorderPosition: Int?
+            var previousReorderPosition = self.reorderPosition
+            if previousReorderPosition == nil {
+                previousReorderPosition = self.reorderInitialIndex
+            }
+            
+            var reorderPosition = self.reorderPosition
             if targetNode !== reorderNode.itemNode {
                 var index = 0
                 for entry in self.currentEntries {
@@ -735,9 +751,14 @@ private final class StickerPackContainer: ASDisplayNode {
                 }
             }
             
+            var invert = false
+            if let previousReorderPosition, let reorderPosition, reorderPosition < previousReorderPosition {
+                invert = true
+            }
+            
             if self.reorderPosition != reorderPosition {
                 self.reorderPosition = reorderPosition
-                self.updateEntries()
+                self.reorderAndUpdateEntries(invert: invert)
             }
         }
     }
@@ -955,7 +976,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 case .none:
                     buttonColor = self.presentationData.theme.list.itemAccentColor
                 case let .result(info, _, installed):
-                    if info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
+                    if GlobalExperimentalSettings.enableWIPStickers && info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                         buttonColor = installed ? self.presentationData.theme.list.itemAccentColor : self.presentationData.theme.list.itemCheckColors.foregroundColor
                     } else {
                         buttonColor = installed ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemCheckColors.foregroundColor
@@ -993,6 +1014,9 @@ private final class StickerPackContainer: ASDisplayNode {
         var isEditable = false
         if let info = self.currentStickerPack?.0, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
             isEditable = true
+        }
+        if !GlobalExperimentalSettings.enableWIPStickers {
+            isEditable = false
         }
         
         let transaction: StickerPackPreviewGridTransaction
@@ -1082,7 +1106,7 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         })))
         
-        if let (info, packItems, _) = self.currentStickerPack, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
+        if GlobalExperimentalSettings.enableWIPStickers, let (info, packItems, _) = self.currentStickerPack, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
             //TODO:localize
             items.append(.separator)
             if packItems.count > 0 {
@@ -1215,11 +1239,11 @@ private final class StickerPackContainer: ASDisplayNode {
                     context: context,
                     source: result,
                     transitionArguments: transitionView.flatMap { ($0, transitionRect, transitionImage) },
-                    completion: { file, commit in
+                    completion: { file, emoji, commit in
                         dismissImpl?()
                         let sticker = ImportSticker(
                             resource: file.resource,
-                            emojis: ["😀"],
+                            emojis: emoji,
                             dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
                             mimeType: file.mimeType,
                             keywords: ""
@@ -1229,7 +1253,7 @@ private final class StickerPackContainer: ASDisplayNode {
                         |> deliverOnMainQueue).start(completed: {
                             commit()
                             
-                            let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
+                            let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
                             (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
                             
                             Queue.mainQueue().after(0.1) {
@@ -1258,9 +1282,17 @@ private final class StickerPackContainer: ASDisplayNode {
         
         let context = self.context
         let controller = self.context.sharedContext.makeStickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData, completion: { file in
+            var emoji = "🫥"
+            for attribute in file.attributes {
+                if case let .Sticker(displayText, _, _) = attribute {
+                    emoji = displayText
+                    break
+                }
+            }
+            
             let sticker = ImportSticker(
                 resource: file.resource,
-                emojis: ["😀"],
+                emojis: [emoji],
                 dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
                 mimeType: file.mimeType,
                 keywords: ""
@@ -1268,7 +1300,7 @@ private final class StickerPackContainer: ASDisplayNode {
             let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
             let _ = (context.engine.stickers.addStickerToStickerSet(packReference: packReference, sticker: sticker)
             |> deliverOnMainQueue).start(completed: {
-                let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
+                let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
                 (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
                 
                 Queue.mainQueue().after(0.1) {
@@ -1280,9 +1312,15 @@ private final class StickerPackContainer: ASDisplayNode {
     }
     
     private func openEditSticker(_ initialFile: TelegramMediaFile) {
-        guard let (info, _, _) = self.currentStickerPack else {
+        guard let (info, items, _) = self.currentStickerPack else {
             return
         }
+        
+        var emoji: [String] = []
+        if let item = items.first(where: { $0.file.fileId == initialFile.fileId }) {
+            emoji = item.getStringRepresentationsOfIndexKeys()
+        }
+        
         let context = self.context
         let updatedPresentationData = self.controller?.updatedPresentationData
         let navigationController = self.controller?.parentNavigationController as? NavigationController
@@ -1291,12 +1329,12 @@ private final class StickerPackContainer: ASDisplayNode {
         
         let controller = context.sharedContext.makeStickerEditorScreen(
             context: context,
-            source: initialFile,
+            source: (initialFile, emoji),
             transitionArguments: nil,
-            completion: { file, commit in
+            completion: { file, emoji, commit in
                 let sticker = ImportSticker(
                     resource: file.resource,
-                    emojis: ["😀"],
+                    emojis: emoji,
                     dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
                     mimeType: file.mimeType,
                     keywords: ""
@@ -1307,7 +1345,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 |> deliverOnMainQueue).start(completed: {
                     commit()
                     
-                    let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
+                    let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
                     (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
                 })
             }
@@ -1402,7 +1440,7 @@ private final class StickerPackContainer: ASDisplayNode {
             }
             self.requestDismiss()
         } else if let (info, _, installed) = self.currentStickerPack {
-            if installed, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
+            if GlobalExperimentalSettings.enableWIPStickers, installed, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                 self.updateIsEditing(!self.isEditing)
                 return
             }
@@ -1477,7 +1515,7 @@ private final class StickerPackContainer: ASDisplayNode {
         if let currentContents = self.currentContents, currentContents.count == 1, let content = currentContents.first, case let .result(info, _, installed) = content {
             if installed {
                 let text: String
-                if info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
+                if GlobalExperimentalSettings.enableWIPStickers, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                     if self.isEditing {
                         var updated = false
                         if let current = self.buttonNode.attributedTitle(for: .normal)?.string, !current.isEmpty && current != self.presentationData.strings.Common_Done {
@@ -1656,7 +1694,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 self.controller?.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.StickerPack_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 self.controller?.dismiss(animated: true, completion: nil)
             case let .result(info, items, installed):
-                isEditable = info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)
+                isEditable = GlobalExperimentalSettings.enableWIPStickers && info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)
                 self.onReady()
                 if !items.isEmpty && self.currentStickerPack == nil {
                     if let _ = self.validLayout, abs(self.expandScrollProgress - 1.0) < .ulpOfOne {
@@ -1740,7 +1778,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     self.updateButton(count: count)
                 }
                 
-                if info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
+                if GlobalExperimentalSettings.enableWIPStickers && info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                     entries.append(.add)
                 }
             }
@@ -1767,7 +1805,7 @@ private final class StickerPackContainer: ASDisplayNode {
         }
     }
     
-    func updateEntries() {
+    func reorderAndUpdateEntries(invert: Bool = false) {
         guard let (info, items, _) = self.currentStickerPack else {
             return
         }
@@ -1806,10 +1844,10 @@ private final class StickerPackContainer: ASDisplayNode {
             
             entries.append(.sticker(index: entries.count, stableId: resolvedStableId, stickerItem: item, isEmpty: false, isPremium: isPremium, isLocked: isLocked, isEditing: false, isAdd: false))
         }
-        
+
         var currentIndex: Int = 0
         for item in generalItems {
-            if self.isReordering, let reorderNode = self.reorderNode, let reorderItem = reorderNode.itemNode?.stickerPackItem, let reorderPosition {
+            if self.isReordering, let reorderNode = self.reorderNode, let reorderItem = reorderNode.itemNode?.stickerPackItem, let reorderPosition = self.reorderPosition {
                 if currentIndex == reorderPosition {
                     addItem(reorderItem, false, false)
                     currentIndex += 1
@@ -1841,7 +1879,7 @@ private final class StickerPackContainer: ASDisplayNode {
         self.currentEntries = entries
         
         if let controller = self.controller {
-            let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil, isEditable: info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji), isEditing: self.isEditing)
+            let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil, isEditable: GlobalExperimentalSettings.enableWIPStickers && info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji), isEditing: self.isEditing, invert: invert)
             self.enqueueTransaction(transaction)
         }
     }
@@ -1901,7 +1939,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     actionAreaBottomInset = 2.0
                 }
             }
-            if let (info, _, isInstalled) = self.currentStickerPack, isInstalled, !info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
+            if let (info, _, isInstalled) = self.currentStickerPack, isInstalled, !GlobalExperimentalSettings.enableWIPStickers || (!info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)) {
                 buttonHeight = 42.0
                 actionAreaTopInset = 1.0
                 actionAreaBottomInset = 2.0
@@ -2079,7 +2117,7 @@ private final class StickerPackContainer: ASDisplayNode {
         }
         let transaction = self.enqueuedTransactions.removeFirst()
         
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: transaction.deletions, insertItems: transaction.insertions, updateItems: transaction.updates, scrollToItem: transaction.scrollToItem, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { [weak self] _ in
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: transaction.deletions, insertItems: transaction.insertions, updateItems: transaction.updates, scrollToItem: transaction.scrollToItem, updateLayout: nil, itemTransition: self.isReordering ? .animated(duration: 0.3, curve: .easeInOut) : .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { [weak self] _ in
             guard let self else {
                 return
             }

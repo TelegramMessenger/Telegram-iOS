@@ -991,7 +991,13 @@ private enum StatsEntry: ItemListNodeEntry {
                 switch transaction {
                 case let .proceeds(_, fromDate, toDate):
                     title = NSAttributedString(string: presentationData.strings.Monetization_Transaction_Proceeds, font: font, textColor: theme.list.itemPrimaryTextColor)
-                    detailText = "\(stringForMediumCompactDate(timestamp: fromDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)) – \(stringForMediumCompactDate(timestamp: toDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat))"
+                    let fromDateString = stringForMediumCompactDate(timestamp: fromDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, withTime: false)
+                    let toDateString = stringForMediumCompactDate(timestamp: toDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, withTime: false)
+                    if fromDateString == toDateString {
+                        detailText = stringForMediumCompactDate(timestamp: toDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, withTime: true)
+                    } else {
+                        detailText = "\(fromDateString) – \(toDateString)"
+                    }
                 case let .withdrawal(status, _, date, provider, _, _):
                     title = NSAttributedString(string: presentationData.strings.Monetization_Transaction_Withdrawal(provider).string, font: font, textColor: theme.list.itemPrimaryTextColor)
                     labelColor = theme.list.itemDestructiveColor
@@ -999,7 +1005,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     case .succeed:
                         detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
                     case .failed:
-                        detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat) + " – \(presentationData.strings.Monetization_Transaction_Failed)"
+                        detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, withTime: false) + " – \(presentationData.strings.Monetization_Transaction_Failed)"
                         detailColor = .destructive
                     case .pending:
                         detailText = presentationData.strings.Monetization_Transaction_Pending
@@ -1385,14 +1391,14 @@ private func monetizationEntries(
     entries.append(.adsProceedsTitle(presentationData.theme, presentationData.strings.Monetization_OverviewTitle))
     entries.append(.adsProceedsOverview(presentationData.theme, data, diamond))
     
-    var withdrawalAvailable = false
+    var isCreator = false
     if let peer, case let .channel(channel) = peer, channel.flags.contains(.isCreator) {
-        withdrawalAvailable = true
+        isCreator = true
     }
     entries.append(.adsBalanceTitle(presentationData.theme, presentationData.strings.Monetization_BalanceTitle))
-    entries.append(.adsBalance(presentationData.theme, data, withdrawalAvailable && data.availableBalance > 0, monetizationConfiguration.withdrawalAvailable, diamond))
+    entries.append(.adsBalance(presentationData.theme, data, isCreator && data.availableBalance > 0, monetizationConfiguration.withdrawalAvailable, diamond))
 
-    if withdrawalAvailable {
+    if isCreator {
         let withdrawalInfoText: String
         if data.availableBalance == 0 {
             withdrawalInfoText = presentationData.strings.Monetization_Balance_ZeroInfo
@@ -1433,13 +1439,15 @@ private func monetizationEntries(
         }
     }
     
-    var switchOffAdds: Bool? = nil
-    if let boostData, boostData.level >= premiumConfiguration.minChannelRestrictAdsLevel {
-        switchOffAdds = adsRestricted
+    if isCreator {
+        var switchOffAdds: Bool? = nil
+        if let boostData, boostData.level >= premiumConfiguration.minChannelRestrictAdsLevel {
+            switchOffAdds = adsRestricted
+        }
+        
+        entries.append(.adsCpmToggle(presentationData.theme, presentationData.strings.Monetization_SwitchOffAds, premiumConfiguration.minChannelRestrictAdsLevel, switchOffAdds))
+        entries.append(.adsCpmInfo(presentationData.theme, presentationData.strings.Monetization_SwitchOffAdsInfo))
     }
-    
-    entries.append(.adsCpmToggle(presentationData.theme, presentationData.strings.Monetization_SwitchOffAds, premiumConfiguration.minChannelRestrictAdsLevel, switchOffAdds))
-    entries.append(.adsCpmInfo(presentationData.theme, presentationData.strings.Monetization_SwitchOffAdsInfo))
     
     return entries
 }
@@ -1815,7 +1823,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
         case .monetization:
-            if revenueState == nil {
+            if revenueState?.stats == nil {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }
         }
@@ -2109,9 +2117,11 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     requestWithdrawImpl = {
         let controller = revenueWithdrawalController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, present: { c, _ in
             presentImpl?(c)
-        }, completion: { url in
+        }, completion: { [weak revenueContext] url in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+            
+            revenueContext?.reload()
         })
         presentImpl?(controller)
     }

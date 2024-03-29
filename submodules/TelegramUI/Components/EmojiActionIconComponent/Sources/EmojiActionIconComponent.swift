@@ -47,6 +47,7 @@ public final class EmojiActionIconComponent: Component {
             let size = CGSize(width: 24.0, height: 24.0)
             
             if let fileId = component.fileId {
+                var iconSize = size
                 let icon: ComponentView<Empty>
                 if let current = self.icon {
                     icon = current
@@ -56,6 +57,9 @@ public final class EmojiActionIconComponent: Component {
                 }
                 let content: EmojiStatusComponent.AnimationContent
                 if let file = component.file {
+                    if let dimensions = file.dimensions {
+                        iconSize = dimensions.cgSize.aspectFitted(size)
+                    }
                     content = .file(file: file)
                 } else {
                     content = .customEmoji(fileId: fileId)
@@ -68,7 +72,7 @@ public final class EmojiActionIconComponent: Component {
                         animationRenderer: component.context.animationRenderer,
                         content: .animation(
                             content: content,
-                            size: size,
+                            size: iconSize,
                             placeholderColor: .lightGray,
                             themeColor: component.color,
                             loopMode: .forever
@@ -77,9 +81,9 @@ public final class EmojiActionIconComponent: Component {
                         action: nil
                     )),
                     environment: {},
-                    containerSize: size
+                    containerSize: iconSize
                 )
-                let iconFrame = CGRect(origin: CGPoint(), size: size)
+                let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) * 0.5), y: floor((size.height - iconSize.height) * 0.5)), size: iconSize)
                 if let iconView = icon.view {
                     if iconView.superview == nil {
                         self.addSubview(iconView)

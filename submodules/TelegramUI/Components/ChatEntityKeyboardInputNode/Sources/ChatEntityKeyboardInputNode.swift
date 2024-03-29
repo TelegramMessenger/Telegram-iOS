@@ -184,7 +184,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
-        let stickerItems = EmojiPagerContentComponent.stickerInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, stickerNamespaces: stickerNamespaces, stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds, chatPeerId: chatPeerId, hasSearch: hasSearch, hasTrending: hasTrending, forceHasPremium: false, hasEdit: true, hideBackground: hideBackground)
+        let stickerItems = EmojiPagerContentComponent.stickerInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, stickerNamespaces: stickerNamespaces, stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds, chatPeerId: chatPeerId, hasSearch: hasSearch, hasTrending: hasTrending, forceHasPremium: false, hasEdit: GlobalExperimentalSettings.enableWIPStickers, hideBackground: hideBackground)
         
         let reactions: Signal<[String], NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.App())
         |> map { appConfiguration -> [String] in

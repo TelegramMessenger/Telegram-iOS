@@ -1873,8 +1873,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                             placeholder = interfaceState.strings.Chat_Placeholder_AwayMessage
                         }
                     case .businessLinkSetup:
-                        //TODO:localize
-                        placeholder = "Add a preset message..."
+                        placeholder = interfaceState.strings.Chat_Placeholder_BusinessLinkPreset
                     }
                 }
 

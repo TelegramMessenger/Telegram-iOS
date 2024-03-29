@@ -1112,13 +1112,12 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
             displayPersonalChannel = true
         }
         if displayPersonalChannel {
-            //TODO:localize
             var personalChannelTitle: String?
             if let personalChannel = data.personalChannel {
                 personalChannelTitle = personalChannel.peer.compactDisplayTitle
             }
             
-            items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? "Add"), text: "Channel", icon: nil, action: {
+            items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerPersonalChannel, label: .text(personalChannelTitle ?? presentationData.strings.Settings_PersonalChannelEmptyValue), text: presentationData.strings.Settings_PersonalChannelItem, icon: nil, action: {
                 interaction.editingOpenPersonalChannel()
             }))
         }
@@ -1194,8 +1193,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             if let subscriberCount = personalChannel.subscriberCount {
                 label = presentationData.strings.Conversation_StatusSubscribers(Int32(subscriberCount))
             }
-            //TODO:localize
-            items[.personalChannel]?.append(PeerInfoScreenHeaderItem(id: 0, text: "CHANNEL", label: label))
+            items[.personalChannel]?.append(PeerInfoScreenHeaderItem(id: 0, text: presentationData.strings.Profile_PersonalChannelSectionTitle, label: label))
             items[.personalChannel]?.append(PeerInfoScreenPersonalChannelItem(id: 1, context: context, data: personalChannel, controller: { [weak interaction] in
                 guard let interaction else {
                     return nil
@@ -3703,24 +3701,34 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             let peerBio = cachedData.about ?? ""
                                                         
                             if (peer.firstName ?? "") != firstName || (peer.lastName ?? "") != lastName || (bio ?? "") != peerBio || (cachedData.birthday != birthday) {
-                                var updateNameSignal: Signal<Void, NoError> = .complete()
+                                var updateNameSignal: Signal<Void, UpdateInfoError> = .complete()
                                 var hasProgress = false
                                 if (peer.firstName ?? "") != firstName || (peer.lastName ?? "") != lastName {
                                     updateNameSignal = context.engine.accountData.updateAccountPeerName(firstName: firstName, lastName: lastName)
+                                    |> castError(UpdateInfoError.self)
                                     hasProgress = true
                                 }
-                                var updateBioSignal: Signal<Void, NoError> = .complete()
+                                
+                                enum UpdateInfoError {
+                                    case generic
+                                    case birthdayFlood
+                                }
+                                
+                                var updateBioSignal: Signal<Void, UpdateInfoError> = .complete()
                                 if let bio, bio != cachedData.about {
                                     updateBioSignal = context.engine.accountData.updateAbout(about: bio)
-                                    |> `catch` { _ -> Signal<Void, NoError> in
+                                    |> `catch` { _ -> Signal<Void, UpdateInfoError> in
                                         return .complete()
                                     }
                                     hasProgress = true
                                 }
-                                var updatedBirthdaySignal: Signal<Never, NoError> = .complete()
+                                var updatedBirthdaySignal: Signal<Never, UpdateInfoError> = .complete()
                                 if let birthday, birthday != cachedData.birthday {
                                     updatedBirthdaySignal = context.engine.accountData.updateBirthday(birthday: birthday)
-                                    |> `catch` { _ -> Signal<Never, NoError> in
+                                    |> `catch` { error -> Signal<Never, UpdateInfoError> in
+                                        if case .flood = error {
+                                            return .fail(.birthdayFlood)
+                                        }
                                         return .complete()
                                     }
                                     hasProgress = true
@@ -3738,7 +3746,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                     strongSelf.controller?.present(statusController, in: .window(.root))
                                 }
                                 strongSelf.activeActionDisposable.set((combineLatest(updateNameSignal, updateBioSignal, updatedBirthdaySignal) |> deliverOnMainQueue
-                                |> deliverOnMainQueue).startStrict(completed: {
+                                |> deliverOnMainQueue).startStrict(error: { [weak self] error in
+                                    dismissStatus?()
+                                    
+                                    guard let self else {
+                                        return
+                                    }
+                                    if case .birthdayFlood = error {
+                                        self.controller?.present(textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: self.presentationData.strings.Birthday_FloodError, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                    }
+                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
+                                }, completed: {
                                     dismissStatus?()
                                     
                                     guard let strongSelf = self else {
@@ -7712,18 +7730,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 
-                //TODO:localize
                 let toastText: String
                 var mappedChannel: TelegramPersonalChannel?
                 if let channel {
                     mappedChannel = TelegramPersonalChannel(peerId: channel.peer.id, subscriberCount: channel.subscriberCount.flatMap(Int32.init(clamping:)), topMessageId: nil)
                     if initialData.channelId != nil {
-                        toastText = "Personal channel updated."
+                        toastText = self.presentationData.strings.Settings_PersonalChannelUpdatedToast
                     } else {
-                        toastText = "Personal channel added."
+                        toastText = self.presentationData.strings.Settings_PersonalChannelAddedToast
                     }
                 } else {
-                    toastText = "Personal channel removed."
+                    toastText = self.presentationData.strings.Settings_PersonalChannelRemovedToast
                 }
                 let _ = self.context.engine.accountData.updatePersonalChannel(personalChannel: mappedChannel).startStandalone()
                 

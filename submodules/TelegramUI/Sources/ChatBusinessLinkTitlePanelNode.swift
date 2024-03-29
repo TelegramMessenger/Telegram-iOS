@@ -172,7 +172,6 @@ final class ChatBusinessLinkTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
         
-        //TODO:localize
         let controller = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.GroupInfo_InviteLink_CopyAlert_Success), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in
             return false
         })

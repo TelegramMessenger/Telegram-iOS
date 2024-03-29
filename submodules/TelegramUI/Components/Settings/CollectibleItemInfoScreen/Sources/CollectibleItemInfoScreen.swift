@@ -523,8 +523,7 @@ private final class CollectibleItemInfoScreenContentComponent: Component {
                         case let .phoneNumber(phoneNumber):
                             let formattedPhoneNumber = formatPhoneNumber(context: component.context, number: phoneNumber.phoneNumber)
                             UIPasteboard.general.string = formattedPhoneNumber
-                            //TODO:localize
-                            toastText = "Phone number copied to clipboard."
+                            toastText = environment.strings.Chat_ToastPhoneNumberCopied
                         }
                         
                         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }

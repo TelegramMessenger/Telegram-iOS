@@ -77,6 +77,7 @@ final class BusinessIntroSetupScreenComponent: Component {
         private let introSection = ComponentView<Empty>()
         private let deleteSection = ComponentView<Empty>()
         
+        private var ignoreScrolling: Bool = false
         private var isUpdating: Bool = false
         
         private var component: BusinessIntroSetupScreenComponent?
@@ -161,7 +162,9 @@ final class BusinessIntroSetupScreenComponent: Component {
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            self.updateScrolling(transition: .immediate)
+            if !self.ignoreScrolling {
+                self.updateScrolling(transition: .immediate)
+            }
         }
         
         private var scrolledUp = true
@@ -303,71 +306,6 @@ final class BusinessIntroSetupScreenComponent: Component {
                                     self.state?.updated(transition: .immediate)
                                 } else {
                                     let context = component.context
-                                
-                                    /*let localSets = context.engine.stickers.searchStickerSets(query: query)
-                                    let remoteSets: Signal<FoundStickerSets?, NoError> = .single(nil) |> then(
-                                        context.engine.stickers.searchStickerSetsRemotely(query: query)
-                                        |> map(Optional.init)
-                                    )
-                                    
-                                    let resultSignal = combineLatest(
-                                        localSets,
-                                        remoteSets
-                                    )
-                                    |> mapToSignal { localSets, remoteSets -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
-                                        if localSets.infos.isEmpty && remoteSets == nil {
-                                            return .complete()
-                                        }
-                                        var items: [EmojiPagerContentComponent.Item] = []
-                                        
-                                        var mergedSets = localSets
-                                        if let remoteSets {
-                                            mergedSets = mergedSets.merge(with: remoteSets)
-                                        }
-                                        
-                                        var existingIds = Set<MediaId>()
-                                        for entry in mergedSets.entries {
-                                            guard let stickerPackItem = entry.item as? StickerPackItem else {
-                                                continue
-                                            }
-                                            let itemFile = stickerPackItem.file
-                                            
-                                            if existingIds.contains(itemFile.fileId) {
-                                                continue
-                                            }
-                                            existingIds.insert(itemFile.fileId)
-                                            
-                                            let animationData = EntityKeyboardAnimationData(file: itemFile)
-                                            let item = EmojiPagerContentComponent.Item(
-                                                animationData: animationData,
-                                                content: .animation(animationData),
-                                                itemFile: itemFile,
-                                                subgroupId: nil,
-                                                icon: .none,
-                                                tintMode: animationData.isTemplate ? .primary : .none
-                                            )
-                                            items.append(item)
-                                        }
-                                    
-                                        return .single([EmojiPagerContentComponent.ItemGroup(
-                                            supergroupId: "search",
-                                            groupId: "search",
-                                            title: nil,
-                                            subtitle: nil,
-                                            badge: nil,
-                                            actionButtonTitle: nil,
-                                            isFeatured: false,
-                                            isPremiumLocked: false,
-                                            isEmbedded: false,
-                                            hasClear: false,
-                                            hasEdit: false,
-                                            collapsedLineCount: nil,
-                                            displayPremiumBadges: false,
-                                            headerItem: nil,
-                                            fillWithLoadingPlaceholders: false,
-                                            items: items
-                                        )])
-                                    }*/
                                     
                                     let stickers: Signal<[(String?, FoundStickerItem)], NoError> = Signal { subscriber in
                                         var signals: Signal<[Signal<(String?, [FoundStickerItem]), NoError>], NoError> = .single([])
@@ -708,11 +646,10 @@ final class BusinessIntroSetupScreenComponent: Component {
             let _ = alphaTransition
             let _ = presentationData
             
-            //TODO:localize
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Intro", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.Business_Intro_Title, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -736,6 +673,9 @@ final class BusinessIntroSetupScreenComponent: Component {
             
             contentHeight += environment.navigationHeight
             contentHeight += 26.0
+            
+            let maxTitleLength = 32
+            let maxTextLength = 70
             
             self.recenterOnTag = nil
             if let hint = transition.userData(TextFieldComponent.AnimationHint.self), let targetView = hint.view {
@@ -762,13 +702,23 @@ final class BusinessIntroSetupScreenComponent: Component {
                 resetText: self.resetTitle.flatMap {
                     return ListMultilineTextFieldItemComponent.ResetText(value: $0)
                 },
-                placeholder: "Enter Title",
+                placeholder: environment.strings.Business_Intro_IntroTitlePlaceholder,
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
-                characterLimit: 32,
+                returnKeyType: .next,
+                characterLimit: maxTitleLength,
                 displayCharacterLimit: true,
-                allowEmptyLines: false,
+                emptyLineHandling: .notAllowed,
                 updated: { _ in
+                },
+                returnKeyAction: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    
+                    if let titleView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
+                        titleView.activateInput()
+                    }
                 },
                 textUpdateTransition: .spring(duration: 0.4),
                 tag: self.titleInputTag
@@ -783,13 +733,22 @@ final class BusinessIntroSetupScreenComponent: Component {
                 resetText: self.resetText.flatMap {
                     return ListMultilineTextFieldItemComponent.ResetText(value: $0)
                 },
-                placeholder: "Enter Message",
+                placeholder: environment.strings.Business_Intro_IntroTextPlaceholder,
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
+                returnKeyType: .done,
                 characterLimit: 70,
                 displayCharacterLimit: true,
-                allowEmptyLines: false,
+                emptyLineHandling: .notAllowed,
                 updated: { _ in
+                },
+                returnKeyAction: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    if let titleView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
+                        titleView.endEditing(true)
+                    }
                 },
                 textUpdateTransition: .spring(duration: 0.4),
                 tag: self.textInputTag
@@ -807,7 +766,7 @@ final class BusinessIntroSetupScreenComponent: Component {
             } else {
                 stickerIcon = ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "Random",
+                        string: environment.strings.Business_Intro_IntroStickerValueRandom,
                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                         textColor: environment.theme.list.itemSecondaryTextColor
                     )),
@@ -820,7 +779,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Choose Sticker",
+                            string: environment.strings.Business_Intro_IntroSticker,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -848,7 +807,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "CUSTOMIZE YOUR INTRO",
+                            string: environment.strings.Business_Intro_CustomizeSectionHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -856,7 +815,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "You can customize the message people see before they start a chat with you.",
+                            string: environment.strings.Business_Intro_CustomizeSectionFooter,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -881,16 +840,18 @@ final class BusinessIntroSetupScreenComponent: Component {
             
             let titleText: String
             if self.titleInputState.text.string.isEmpty {
-                titleText = "No messages here yet..."
+                titleText = environment.strings.Conversation_EmptyPlaceholder
             } else {
-                titleText = self.titleInputState.text.string
+                let rawTitle = self.titleInputState.text.string
+                titleText = rawTitle.count <= maxTitleLength ? rawTitle : String(rawTitle[rawTitle.startIndex ..< rawTitle.index(rawTitle.startIndex, offsetBy: maxTitleLength)])
             }
             
             let textText: String
             if self.textInputState.text.string.isEmpty {
-                textText = "Send a message or tap on the greeting below"
+                textText = environment.strings.Conversation_GreetingText
             } else {
-                textText = self.textInputState.text.string
+                let rawText = self.textInputState.text.string
+                textText = rawText.count <= maxTextLength ? rawText : String(rawText[rawText.startIndex ..< rawText.index(rawText.startIndex, offsetBy: maxTextLength)])
             }
             
             let introContentSize = self.introContent.update(
@@ -940,7 +901,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "Reset to Default",
+                                        string: environment.strings.Business_Intro_ResetToDefault,
                                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                         textColor: environment.theme.list.itemDestructiveColor
                                     )),
@@ -1018,7 +979,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                     var stickerSearchResults: EmojiPagerContentComponent.EmptySearchResults?
                     if !stickerSearchResult.groups.contains(where: { !$0.items.isEmpty || $0.fillWithLoadingPlaceholders }) {
                         stickerSearchResults = EmojiPagerContentComponent.EmptySearchResults(
-                            text: "No stickers found",
+                            text: environment.strings.Stickers_NoStickersFound,
                             iconFile: nil
                         )
                     }
@@ -1083,6 +1044,7 @@ final class BusinessIntroSetupScreenComponent: Component {
             
             let previousBounds = self.scrollView.bounds
             
+            self.ignoreScrolling = true
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
             if self.scrollView.frame != CGRect(origin: CGPoint(), size: availableSize) {
                 self.scrollView.frame = CGRect(origin: CGPoint(), size: availableSize)
@@ -1123,6 +1085,7 @@ final class BusinessIntroSetupScreenComponent: Component {
             }
             
             self.topOverscrollLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: -3000.0), size: CGSize(width: availableSize.width, height: 3000.0))
+            self.ignoreScrolling = false
             
             self.updateScrolling(transition: transition)
             

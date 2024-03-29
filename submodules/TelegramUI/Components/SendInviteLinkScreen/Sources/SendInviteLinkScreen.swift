@@ -16,6 +16,7 @@ import Markdown
 import UndoUI
 import AnimatedAvatarSetNode
 import AvatarNode
+import TelegramStringFormatting
 
 private final class SendInviteLinkScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -321,7 +322,12 @@ private final class SendInviteLinkScreenComponent: Component {
                 self.scrollContentView.addSubview(avatarsNode.view)
             }
             
-            let avatarPeers = component.peers.map(\.peer)
+            let avatarPeers: [EnginePeer]
+            if !premiumRestrictedUsers.isEmpty {
+                avatarPeers = premiumRestrictedUsers.map(\.peer)
+            } else {
+                avatarPeers = component.peers.map(\.peer)
+            }
             let avatarsContent = self.avatarsContext.update(peers: avatarPeers.count <= 3 ? avatarPeers : Array(avatarPeers.prefix(upTo: 3)), animated: false)
             let avatarsSize = avatarsNode.update(
                 context: component.context,
@@ -385,11 +391,10 @@ private final class SendInviteLinkScreenComponent: Component {
                     self.premiumButton = premiumButton
                 }
                 
-                //TODO:localize
                 let premiumTitleSize = premiumTitle.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Upgrade to Premium", font: Font.semibold(24.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                        text: .plain(NSAttributedString(string: environment.strings.SendInviteLink_TitleUpgradeToPremium, font: Font.semibold(24.0), textColor: environment.theme.list.itemPrimaryTextColor))
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
@@ -405,33 +410,38 @@ private final class SendInviteLinkScreenComponent: Component {
                 contentHeight += premiumTitleSize.height
                 contentHeight += 8.0
                 
-                //TODO:localize
                 let text: String
                 if premiumRestrictedUsers.count == 1 {
-                    text = "**\(premiumRestrictedUsers[0].peer.compactDisplayTitle)** accepts invitations to groups from contacts and **Premium** users."
+                    text = environment.strings.SendInviteLink_TextContactsAndPremiumOneUser(premiumRestrictedUsers[0].peer.compactDisplayTitle).string
                 } else {
                     let extraCount = premiumRestrictedUsers.count - 3
                     
-                    var peersText = ""
+                    var peersTextArray: [String] = []
                     for i in 0 ..< min(3, premiumRestrictedUsers.count) {
-                        if extraCount == 0 && i == premiumRestrictedUsers.count - 1 {
-                            peersText.append(", and ")
-                        } else if i != 0 {
-                            peersText.append(", ")
+                        peersTextArray.append("**\(premiumRestrictedUsers[i].peer.compactDisplayTitle)**")
+                    }
+                    
+                    var peersText = ""
+                    if #available(iOS 13.0, *) {
+                        let listFormatter = ListFormatter()
+                        listFormatter.locale = localeWithStrings(environment.strings)
+                        if let value = listFormatter.string(from: peersTextArray) {
+                            peersText = value
                         }
-                        peersText.append("**")
-                        peersText.append(premiumRestrictedUsers[i].peer.compactDisplayTitle)
-                        peersText.append("**")
+                    }
+                    if peersText.isEmpty {
+                        for i in 0 ..< peersTextArray.count {
+                            if i != 0 {
+                                peersText.append(", ")
+                            }
+                            peersText.append(peersTextArray[i])
+                        }
                     }
                     
                     if extraCount >= 1 {
-                        if extraCount == 1 {
-                            text = "\(peersText), and **\(extraCount)** more person only accept invitations to groups from contacts and **Premium** users."
-                        } else {
-                            text = "\(peersText), and **\(extraCount)** more people only accept invitations to groups from contacts and **Premium** users."
-                        }
+                        text = environment.strings.SendInviteLink_TextContactsAndPremiumMultipleUsers(Int32(extraCount)).replacingOccurrences(of: "{user_list}", with: peersText)
                     } else {
-                        text = "\(peersText) only accept invitations to groups from contacts and **Premium** users."
+                        text = environment.strings.SendInviteLink_TextContactsAndPremiumOneUser(peersText).string
                     }
                 }
                 
@@ -464,7 +474,7 @@ private final class SendInviteLinkScreenComponent: Component {
                 contentHeight += premiumTextSize.height
                 contentHeight += 22.0
                 
-                let premiumButtonTitle = "Subscribe to Telegram Premium"
+                let premiumButtonTitle = environment.strings.SendInviteLink_SubscribeToPremiumButton
                 let premiumButtonSize = premiumButton.update(
                     transition: transition,
                     component: AnyComponent(SolidRoundedButtonComponent(
@@ -497,7 +507,6 @@ private final class SendInviteLinkScreenComponent: Component {
                             
                             controller.dismiss()
                             
-                            //TODO:localize
                             let premiumController = component.context.sharedContext.makePremiumIntroController(context: component.context, source: .settings, forceDark: false, dismissed: nil)
                             navigationController?.pushViewController(premiumController)
                         }
@@ -550,7 +559,7 @@ private final class SendInviteLinkScreenComponent: Component {
                     let premiumSeparatorTextSize = premiumSeparatorText.update(
                         transition: .immediate,
                         component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: "or", font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor))
+                            text: .plain(NSAttributedString(string: environment.strings.SendInviteLink_PremiumOrSendSectionSeparator, font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor))
                         )),
                         environment: {},
                         containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
@@ -653,8 +662,7 @@ private final class SendInviteLinkScreenComponent: Component {
                 let text: String
                 if !premiumRestrictedUsers.isEmpty {
                     if component.link != nil {
-                        //TODO:localize
-                        text = "You can try to send an invite link instead."
+                        text = environment.strings.SendInviteLink_TextSendInviteLink
                     } else {
                         if component.peers.count == 1 {
                             text = environment.strings.SendInviteLink_TextUnavailableSingleUser(component.peers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)).string
@@ -733,8 +741,7 @@ private final class SendInviteLinkScreenComponent: Component {
                         let itemSubtitle: PeerListItemComponent.Subtitle
                         let canBeSelected = component.link != nil && !peer.premiumRequiredToContact
                         if peer.premiumRequiredToContact {
-                            //TODO:localize
-                            itemSubtitle = .text(text: "Available only to premium users", icon: .lock)
+                            itemSubtitle = .text(text: environment.strings.SendInviteLink_StatusAvailableToPremiumOnly, icon: .lock)
                         } else {
                             itemSubtitle = .presence(component.peerPresences[peer.peer.id])
                         }

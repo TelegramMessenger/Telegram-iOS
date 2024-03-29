@@ -13,6 +13,7 @@ import Lottie
 import AppBundle
 import AvatarNode
 import ComponentFlow
+import PagerComponent
 import EmojiStatusSelectionComponent
 import EntityKeyboard
 import ComponentDisplayAdapters
@@ -72,13 +73,45 @@ public final class ReactionItem {
     }
 }
 
-public enum ReactionContextItem {
+public enum ReactionContextItem: Equatable {
+    public static func == (lhs: ReactionContextItem, rhs: ReactionContextItem) -> Bool {
+        switch lhs {
+        case let .staticEmoji(emoji):
+            if case .staticEmoji(emoji) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .reaction(lhsReaction):
+            if case let .reaction(rhsReaction) = rhs {
+                return lhsReaction.reaction == rhsReaction.reaction
+            } else {
+                return false
+            }
+        case .premium:
+            if case .premium = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    case staticEmoji(String)
     case reaction(ReactionItem)
     case premium
     
     public var reaction: ReactionItem.Reaction? {
         if case let .reaction(item) = self {
             return item.reaction
+        } else {
+            return nil
+        }
+    }
+    
+    public var emoji: String? {
+        if case let .staticEmoji(emoji) = self {
+            return emoji
         } else {
             return nil
         }
@@ -273,8 +306,26 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private let presentationData: PresentationData
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
-    private let items: [ReactionContextItem]
-    private let selectedItems: Set<MessageReaction.Reaction>
+    public var items: [ReactionContextItem] {
+        didSet {
+            var updated = false
+            if oldValue != self.items {
+                for (_, itemNode) in self.visibleItemNodes {
+                    itemNode.selectionView?.removeFromSuperview()
+                    itemNode.selectionTintView?.removeFromSuperview()
+                    itemNode.removeFromSupernode()
+                }
+                self.visibleItemNodes.removeAll()
+                updated = true
+            }
+            self.skipApperanceAnimation = true
+            self.updateScrolling(transition: updated ? .immediate : .animated(duration: 0.25, curve: .easeInOut))
+            self.skipApperanceAnimation = false
+        }
+    }
+    private var skipApperanceAnimation = false
+    
+    public var selectedItems: Set<AnyHashable>
     private let getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?
     private let isExpandedUpdated: (ContainedViewLayoutTransition) -> Void
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -320,6 +371,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var customReactionSource: (view: UIView, rect: CGRect, layer: CALayer, item: ReactionItem)?
     
+    public var emojiSelected: ((String) -> Void)?
     public var reactionSelected: ((UpdateMessageReaction, Bool) -> Void)?
     public var premiumReactionsSelected: ((TelegramMediaFile?) -> Void)?
     
@@ -346,6 +398,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var currentContentHeight: CGFloat = 46.0
     public private(set) var isExpanded: Bool = false
     public private(set) var canBeExpanded: Bool = false
+    private var isCollapsing: Bool = false
     
     private var animateFromExtensionDistance: CGFloat = 0.0
     private var extensionDistance: CGFloat = 0.0
@@ -392,6 +445,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     public var reduceMotion: Bool = false
     
+    public var isEmojiOnly: Bool = false
+    
     public static func randomGenericReactionEffect(context: AccountContext) -> Signal<String?, NoError> {
         return context.engine.stickers.loadedStickerPack(reference: .emojiGenericAnimations, forceActualized: false)
         |> map { result -> [TelegramMediaFile]? in
@@ -428,7 +483,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], selectedItems: Set<MessageReaction.Reaction>, title: String? = nil, reactionsLocked: Bool, alwaysAllowPremiumReactions: Bool, allPresetReactionsAreAvailable: Bool, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void) {
+    public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], selectedItems: Set<AnyHashable>, title: String? = nil, reactionsLocked: Bool, alwaysAllowPremiumReactions: Bool, allPresetReactionsAreAvailable: Bool, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.items = items
@@ -628,9 +683,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 if !strongSelf.canBeExpanded {
                     strongSelf.canBeExpanded = true
                     
-                    let horizontalExpandRecognizer = UIPanGestureRecognizer(target: strongSelf, action: #selector(strongSelf.horizontalExpandGesture(_:)))
-                    strongSelf.view.addGestureRecognizer(horizontalExpandRecognizer)
-                    strongSelf.horizontalExpandRecognizer = horizontalExpandRecognizer
+                    if !strongSelf.isEmojiOnly {
+                        let horizontalExpandRecognizer = UIPanGestureRecognizer(target: strongSelf, action: #selector(strongSelf.horizontalExpandGesture(_:)))
+                        strongSelf.view.addGestureRecognizer(horizontalExpandRecognizer)
+                        strongSelf.horizontalExpandRecognizer = horizontalExpandRecognizer
+                    }
                 }
                 strongSelf.updateEmojiContent(emojiContent)
                 
@@ -748,8 +805,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    public func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, centerAligned: Bool = false, isCoveredByInput: Bool, isAnimatingOut: Bool, transition: ContainedViewLayoutTransition) {
-        self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, centerAligned: centerAligned, isCoveredByInput: isCoveredByInput, isAnimatingOut: isAnimatingOut, transition: transition, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
+    public func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, centerAligned: Bool = false, isCoveredByInput: Bool, isAnimatingOut: Bool, forceUpdate: Bool = false, transition: ContainedViewLayoutTransition) {
+        self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, centerAligned: centerAligned, isCoveredByInput: isCoveredByInput, isAnimatingOut: isAnimatingOut, forceUpdate: forceUpdate, transition: transition, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
     }
     
     public func updateIsIntersectingContent(isIntersectingContent: Bool, transition: ContainedViewLayoutTransition) {
@@ -963,7 +1020,14 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     isPreviewing = true
                 }
                 
-                if let reaction = self.items[i].reaction, self.selectedItems.contains(reaction.rawValue), !isPreviewing {
+                var isSelected = false
+                if let reaction = self.items[i].reaction, self.selectedItems.contains(reaction.rawValue) {
+                    isSelected = true
+                } else if let emoji = self.items[i].emoji, self.selectedItems.contains(emoji) {
+                    isSelected = true
+                }
+                
+                if isSelected && !isPreviewing {
                     itemFrame = itemFrame.insetBy(dx: (itemFrame.width - 0.8 * itemFrame.width) * 0.5, dy: (itemFrame.height - 0.8 * itemFrame.height) * 0.5)
                 }
                 
@@ -979,29 +1043,60 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     animateIn = self.didAnimateIn
                     itemTransition = .immediate
                     
-                    if case let .reaction(item) = self.items[i] {
+                    switch self.items[i] {
+                    case let .reaction(item):
                         itemNode = ReactionNode(context: self.context, theme: self.presentationData.theme, item: item, animationCache: self.animationCache, animationRenderer: self.animationRenderer, loopIdle: loopIdle, isLocked: self.reactionsLocked)
                         maskNode = nil
-                    } else {
+                    case let .staticEmoji(emoji):
+                        itemNode = EmojiItemNode(theme: self.presentationData.theme, emoji: emoji)
+                        maskNode = nil
+                    case .premium:
                         itemNode = PremiumReactionsNode(theme: self.presentationData.theme)
                         maskNode = itemNode.maskNode
                     }
                     self.visibleItemNodes[i] = itemNode
                     
                     self.scrollNode.addSubnode(itemNode)
-                    if let itemNode = itemNode as? ReactionNode {
-                        if let reaction = self.items[i].reaction, self.selectedItems.contains(reaction.rawValue) {
-                            self.mirrorContentScrollView.addSubview(itemNode.selectionTintView)
-                            self.scrollNode.view.addSubview(itemNode.selectionView)
-                        }
-                    }
-                    
+                                        
                     if let maskNode = maskNode {
                         self.visibleItemMaskNodes[i] = maskNode
                         self.backgroundMaskNode.addSubnode(maskNode)
                     }
                 }
                 maskTransition = itemTransition
+                
+                if let selectionView = itemNode.selectionView, let selectionTintView = itemNode.selectionTintView {
+                    if isSelected {
+                        if selectionView.superview == nil {
+                            self.mirrorContentScrollView.addSubview(selectionTintView)
+                            self.scrollNode.view.addSubview(selectionView)
+                            
+                            selectionView.alpha = 1.0
+                            selectionTintView.alpha = 1.0
+                            if transition.isAnimated {
+                                selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                selectionTintView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                transition.animateTransformScale(view: selectionView, from: 0.1)
+                                transition.animateTransformScale(view: selectionTintView, from: 0.1)
+                            }
+                        }
+                    } else {
+                        if selectionView.superview != nil {
+                            selectionView.alpha = 0.0
+                            selectionTintView.alpha = 0.0
+                            if transition.isAnimated {
+                                selectionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+                                    selectionTintView.removeFromSuperview()
+                                    selectionView.removeFromSuperview()
+                                })
+                                selectionTintView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                            } else {
+                                selectionTintView.removeFromSuperview()
+                                selectionView.removeFromSuperview()
+                            }
+                        }
+                    }
+                }
                 
                 if let maskNode = maskNode {
                     let maskFrame = CGRect(origin: CGPoint(x: -self.scrollNode.view.contentOffset.x + itemFrame.minX, y: 0.0), size: CGSize(width: itemFrame.width, height: itemFrame.height + 12.0))
@@ -1032,7 +1127,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         itemNode.isUserInteractionEnabled = true
                     }
                     
-                    itemTransition.updateFrame(node: itemNode, frame: itemFrame, beginWithCurrentState: true, completion: { [weak self, weak itemNode] completed in
+                    itemTransition.updateFrameAsPositionAndBounds(node: itemNode, frame: itemFrame, beginWithCurrentState: true, completion: { [weak self, weak itemNode] completed in
                         guard let strongSelf = self, let itemNode = itemNode else {
                             return
                         }
@@ -1047,39 +1142,39 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     })
                     itemNode.updateLayout(size: itemFrame.size, isExpanded: false, largeExpanded: false, isPreviewing: isPreviewing, transition: itemTransition)
                     
-                    if let itemNode = itemNode as? ReactionNode {
-                        if let reaction = self.items[i].reaction, self.selectedItems.contains(reaction.rawValue) {
-                            itemNode.selectionTintView.isHidden = false
-                            itemNode.selectionView.isHidden = false
-                        }
-                        itemTransition.updatePosition(layer: itemNode.selectionTintView.layer, position: selectionItemFrame.center)
-                        itemTransition.updateBounds(layer: itemNode.selectionTintView.layer, bounds: CGRect(origin: CGPoint(), size: selectionItemFrame.size))
-                        itemTransition.updateCornerRadius(layer: itemNode.selectionTintView.layer, cornerRadius: min(selectionItemFrame.width, selectionItemFrame.height) / 2.0)
+                    if let selectionView = itemNode.selectionView, let selectionTintView = itemNode.selectionTintView {
+                        let cornerRadius = min(selectionItemFrame.width, selectionItemFrame.height) / 2.0
+                        itemTransition.updatePosition(layer: selectionTintView.layer, position: selectionItemFrame.center)
+                        itemTransition.updateBounds(layer: selectionTintView.layer, bounds: CGRect(origin: CGPoint(), size: selectionItemFrame.size))
+                        itemTransition.updateCornerRadius(layer: selectionTintView.layer, cornerRadius: cornerRadius)
                         
-                        itemTransition.updatePosition(layer: itemNode.selectionView.layer, position: selectionItemFrame.center)
-                        itemTransition.updateBounds(layer: itemNode.selectionView.layer, bounds: CGRect(origin: CGPoint(), size: selectionItemFrame.size))
-                        itemTransition.updateCornerRadius(layer: itemNode.selectionView.layer, cornerRadius: min(selectionItemFrame.width, selectionItemFrame.height) / 2.0)
+                        itemTransition.updatePosition(layer: selectionView.layer, position: selectionItemFrame.center)
+                        itemTransition.updateBounds(layer: selectionView.layer, bounds: CGRect(origin: CGPoint(), size: selectionItemFrame.size))
+                        itemTransition.updateCornerRadius(layer: selectionView.layer, cornerRadius: cornerRadius)
                     }
                     
-                    if animateIn {
+                    if animateIn && !self.skipApperanceAnimation {
                         itemNode.appear(animated: !self.context.sharedContext.currentPresentationData.with({ $0 }).reduceMotion && !self.reduceMotion)
                     }
                     
                     if !self.reactionsLocked, self.getEmojiContent != nil, i == itemLayout.visibleItemCount - 1, let itemNode = itemNode as? ReactionNode {
                         let itemScale: CGFloat = 0.001 * (1.0 - compressionFactor) + normalItemScale * compressionFactor
-                        transition.updateSublayerTransformScale(node: itemNode, scale: itemScale)
-                        transition.updateTransformScale(layer: itemNode.selectionView.layer, scale: CGPoint(x: itemScale, y: itemScale))
-                        transition.updateTransformScale(layer: itemNode.selectionTintView.layer, scale: CGPoint(x: itemScale, y: itemScale))
-                        
                         let alphaFraction = min(compressionFactor, 0.2) / 0.2
+                        transition.updateSublayerTransformScale(node: itemNode, scale: itemScale)
                         transition.updateAlpha(node: itemNode, alpha: alphaFraction)
-                        transition.updateAlpha(layer: itemNode.selectionView.layer, alpha: alphaFraction)
-                        transition.updateAlpha(layer: itemNode.selectionTintView.layer, alpha: alphaFraction)
+                        
+                        if let selectionView = itemNode.selectionView, let selectionTintView = itemNode.selectionTintView {
+                            transition.updateTransformScale(layer: selectionView.layer, scale: CGPoint(x: itemScale, y: itemScale))
+                            transition.updateAlpha(layer: selectionView.layer, alpha: alphaFraction)
+                            
+                            transition.updateTransformScale(layer: selectionTintView.layer, scale: CGPoint(x: itemScale, y: itemScale))
+                            transition.updateAlpha(layer: selectionTintView.layer, alpha: alphaFraction)
+                        }
                     } else {
                         transition.updateSublayerTransformScale(node: itemNode, scale: normalItemScale)
-                        if let itemNode = itemNode as? ReactionNode {
-                            transition.updateSublayerTransformScale(layer: itemNode.selectionView.layer, scale: CGPoint(x: normalItemScale, y: normalItemScale))
-                            transition.updateSublayerTransformScale(layer: itemNode.selectionTintView.layer, scale: CGPoint(x: normalItemScale, y: normalItemScale))
+                        if let selectionView = itemNode.selectionView, let selectionTintView = itemNode.selectionTintView {
+                            transition.updateSublayerTransformScale(layer: selectionView.layer, scale: CGPoint(x: normalItemScale, y: normalItemScale))
+                            transition.updateSublayerTransformScale(layer: selectionTintView.layer, scale: CGPoint(x: normalItemScale, y: normalItemScale))
                         }
                     }
                 }
@@ -1137,7 +1232,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    private func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, centerAligned: Bool, isCoveredByInput: Bool, isAnimatingOut: Bool, transition: ContainedViewLayoutTransition, animateInFromAnchorRect: CGRect?, animateOutToAnchorRect: CGRect?, animateReactionHighlight: Bool = false) {
+    private func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, centerAligned: Bool, isCoveredByInput: Bool, isAnimatingOut: Bool, forceUpdate: Bool = false, transition: ContainedViewLayoutTransition, animateInFromAnchorRect: CGRect?, animateOutToAnchorRect: CGRect?, animateReactionHighlight: Bool = false) {
         if let expandItemView = self.expandItemView {
             expandItemView.updateTheme(theme: self.presentationData.theme)
         }
@@ -1259,7 +1354,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             itemSpacing: itemSpacing
         )
         
-        if (self.isExpanded || self.reactionSelectionComponentHost != nil), let _ = self.getEmojiContent, !self.reactionsLocked {
+        if (self.isExpanded || (self.reactionSelectionComponentHost != nil && !self.isCollapsing)), let _ = self.getEmojiContent, !self.reactionsLocked {
             let reactionSelectionComponentHost: ComponentView<Empty>
             var componentTransition = Transition(transition)
             if let current = self.reactionSelectionComponentHost {
@@ -1286,6 +1381,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     hideTopPanel = true
                 }
                 
+                if forceUpdate {
+                    componentTransition = componentTransition.withUserData(PagerComponentForceUpdate())
+                }
+                
                 let _ = reactionSelectionComponentHost.update(
                     transition: componentTransition,
                     component: AnyComponent(EmojiStatusSelectionComponent(
@@ -1307,6 +1406,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                     )),
                     environment: {},
+                    forceUpdate: forceUpdate,
                     containerSize: CGSize(width: actualBackgroundFrame.width, height: self.emojiContentHeight)
                 )
                 if let componentView = reactionSelectionComponentHost.view {
@@ -1320,9 +1420,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         for (_, itemNode) in self.visibleItemNodes {
                             itemNode.isHidden = true
                             
-                            if let itemNode = itemNode as? ReactionNode {
-                                itemNode.selectionView.isHidden = true
-                                itemNode.selectionTintView.isHidden = true
+                            if let selectionView = itemNode.selectionView, let selectionTintView = itemNode.selectionTintView {
+                                selectionView.isHidden = true
+                                selectionTintView.isHidden = true
                             }
                         }
                         if let emojiView = reactionSelectionComponentHost.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("emoji"))) as? EmojiPagerContentComponent.View {
@@ -1351,7 +1451,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                 mirrorContentClippingView.clipsToBounds = false
                                 
                                 var animationOffsetY: CGFloat = 0.0
-                                if self.alwaysAllowPremiumReactions {
+                                if self.isEmojiOnly {
+                                    animationOffsetY += 54.0
+                                } else if self.alwaysAllowPremiumReactions {
                                     animationOffsetY += -4.0
                                 } else {
                                     animationOffsetY += 46.0 + 54.0 - 4.0
@@ -1389,7 +1491,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     
                     if animateIn {
                         var animationOffsetY: CGFloat = 0.0
-                        if self.alwaysAllowPremiumReactions {
+                        if self.isEmojiOnly {
+                            animationOffsetY += 54.0
+                        } else if self.alwaysAllowPremiumReactions {
                             animationOffsetY += 4.0
                         } else {
                             animationOffsetY += 46.0 + 54.0 - 4.0
@@ -1399,6 +1503,46 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
             }
+        } else if !self.isExpanded, let reactionSelectionComponentHost = self.reactionSelectionComponentHost {
+            self.reactionSelectionComponentHost = nil
+            if let componentView = reactionSelectionComponentHost.view {
+                self.scrollNode.isHidden = false
+                self.mirrorContentScrollView.isHidden = false
+                
+                if let expandItemView = self.expandItemView {
+                    expandItemView.alpha = 1.0
+                    expandItemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    expandItemView.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false)
+                    expandItemView.tintView.alpha = 1.0
+                    expandItemView.tintView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    expandItemView.tintView.layer.animateScale(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false)
+                }
+                
+                for (_, itemNode) in self.visibleItemNodes {
+                    itemNode.isHidden = false
+                    itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    transition.animatePositionAdditive(layer: itemNode.layer, offset: CGPoint(x: 0.0, y: 54.0))
+                    
+                    if let selectionView = itemNode.selectionView, let selectionTintView = itemNode.selectionTintView {
+                        transition.animatePositionAdditive(layer: selectionView.layer, offset: CGPoint(x: 0.0, y: 54.0))
+                        transition.animatePositionAdditive(layer: selectionTintView.layer, offset: CGPoint(x: 0.0, y: 54.0))
+                        
+                        selectionView.isHidden = false
+                        selectionTintView.isHidden = false
+                    }
+                }
+                transition.updatePosition(layer: componentView.layer, position: componentView.layer.position.offsetBy(dx: 0.0, dy: -30.0))
+                transition.updateAlpha(layer: componentView.layer, alpha: 0.0, completion: { _ in
+                    componentView.removeFromSuperview()
+                })
+                if let emojiView = reactionSelectionComponentHost.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("emoji"))) as? EmojiPagerContentComponent.View, let mirrorContentClippingView = emojiView.mirrorContentClippingView {
+                    transition.updatePosition(layer: mirrorContentClippingView.layer, position: mirrorContentClippingView.layer.position.offsetBy(dx: 0.0, dy: -30.0))
+                    transition.updateAlpha(layer: mirrorContentClippingView.layer, alpha: 0.0, completion: { _ in
+                        mirrorContentClippingView.removeFromSuperview()
+                    })
+                }
+            }
+            self.isCollapsing = false
         }
         
         transition.updateFrame(node: self.backgroundNode, frame: visualBackgroundFrame, beginWithCurrentState: true)
@@ -1465,7 +1609,16 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { [weak self] groupId, item, sourceView, sourceRect, sourceLayer, isLongPress in
-                guard let strongSelf = self, let availableReactions = strongSelf.availableReactions, let itemFile = item.itemFile else {
+                guard let strongSelf = self, let availableReactions = strongSelf.availableReactions else {
+                    return
+                }
+                
+                if case let .staticEmoji(emoji) = item.content {
+                    strongSelf.emojiSelected?(emoji)
+                    return
+                }
+                
+                guard let itemFile = item.itemFile else {
                     return
                 }
                 
@@ -1629,6 +1782,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         self.emojiSearchState.set(.single(EmojiSearchState(result: nil, isSearching: false)))
                     } else {
                         let context = self.context
+                        let isEmojiOnly = self.isEmojiOnly
                         
                         var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query, completeMatch: false)
                         if !languageCode.lowercased().hasPrefix("en") {
@@ -1661,63 +1815,29 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         
                         let resultSignal = signal
                         |> mapToSignal { keywords -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
-                            return combineLatest(
-                                context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000) |> take(1),
-                                context.engine.stickers.availableReactions() |> take(1),
-                                hasPremium |> take(1),
-                                remotePacksSignal
-                            )
-                            |> map { view, availableReactions, hasPremium, foundPacks -> [EmojiPagerContentComponent.ItemGroup] in
-                                var result: [(String, TelegramMediaFile?, String)] = []
-                                
-                                var allEmoticons: [String: String] = [:]
-                                for keyword in keywords {
-                                    for emoticon in keyword.emoticons {
-                                        allEmoticons[emoticon] = keyword.keyword
-                                    }
+                            var allEmoticons: [String: String] = [:]
+                            for keyword in keywords {
+                                for emoticon in keyword.emoticons {
+                                    allEmoticons[emoticon] = keyword.keyword
                                 }
-                                
-                                for entry in view.entries {
-                                    guard let item = entry.item as? StickerPackItem else {
-                                        continue
-                                    }
-                                    for attribute in item.file.attributes {
-                                        switch attribute {
-                                        case let .CustomEmoji(_, _, alt, _):
-                                            if !item.file.isPremiumEmoji || hasPremium {
-                                                if !alt.isEmpty, let keyword = allEmoticons[alt] {
-                                                    result.append((alt, item.file, keyword))
-                                                } else if alt == query {
-                                                    result.append((alt, item.file, alt))
-                                                }
-                                            }
-                                        default:
-                                            break
-                                        }
-                                    }
-                                }
-                                
+                            }
+                            if isEmojiOnly {
                                 var items: [EmojiPagerContentComponent.Item] = []
-                                
-                                var existingIds = Set<MediaId>()
-                                for item in result {
-                                    if let itemFile = item.1 {
-                                        if existingIds.contains(itemFile.fileId) {
-                                            continue
+                                for (_, list) in EmojiPagerContentComponent.staticEmojiMapping {
+                                    for emojiString in list {
+                                        if allEmoticons[emojiString] != nil {
+                                            let item = EmojiPagerContentComponent.Item(
+                                                animationData: nil,
+                                                content: .staticEmoji(emojiString),
+                                                itemFile: nil,
+                                                subgroupId: nil,
+                                                icon: .none,
+                                                tintMode: .none
+                                            )
+                                            items.append(item)
                                         }
-                                        existingIds.insert(itemFile.fileId)
-                                        let animationData = EntityKeyboardAnimationData(file: itemFile)
-                                        let item = EmojiPagerContentComponent.Item(
-                                            animationData: animationData,
-                                            content: .animation(animationData),
-                                            itemFile: itemFile, subgroupId: nil,
-                                            icon: .none,
-                                            tintMode: animationData.isTemplate ? .primary : .none
-                                        )
-                                        items.append(item)
                                     }
                                 }
-                                
                                 var resultGroups: [EmojiPagerContentComponent.ItemGroup] = []
                                 resultGroups.append(EmojiPagerContentComponent.ItemGroup(
                                     supergroupId: "search",
@@ -1737,60 +1857,138 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                     fillWithLoadingPlaceholders: false,
                                     items: items
                                 ))
-                                
-                                for (collectionId, info, _, _) in foundPacks.sets.infos {
-                                    if let info = info as? StickerPackCollectionInfo {
-                                        var topItems: [StickerPackItem] = []
-                                        for e in foundPacks.sets.entries {
-                                            if let item = e.item as? StickerPackItem {
-                                                if e.index.collectionId == collectionId {
-                                                    topItems.append(item)
+                                return .single(resultGroups)
+                            } else {
+                                return combineLatest(
+                                    context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000) |> take(1),
+                                    context.engine.stickers.availableReactions() |> take(1),
+                                    hasPremium |> take(1),
+                                    remotePacksSignal
+                                )
+                                |> map { view, availableReactions, hasPremium, foundPacks -> [EmojiPagerContentComponent.ItemGroup] in
+                                    var result: [(String, TelegramMediaFile?, String)] = []
+                                    
+                                    var allEmoticons: [String: String] = [:]
+                                    for keyword in keywords {
+                                        for emoticon in keyword.emoticons {
+                                            allEmoticons[emoticon] = keyword.keyword
+                                        }
+                                    }
+                                    
+                                    for entry in view.entries {
+                                        guard let item = entry.item as? StickerPackItem else {
+                                            continue
+                                        }
+                                        for attribute in item.file.attributes {
+                                            switch attribute {
+                                            case let .CustomEmoji(_, _, alt, _):
+                                                if !item.file.isPremiumEmoji || hasPremium {
+                                                    if !alt.isEmpty, let keyword = allEmoticons[alt] {
+                                                        result.append((alt, item.file, keyword))
+                                                    } else if alt == query {
+                                                        result.append((alt, item.file, alt))
+                                                    }
                                                 }
+                                            default:
+                                                break
                                             }
                                         }
-                                        
-                                        var groupItems: [EmojiPagerContentComponent.Item] = []
-                                        for item in topItems {
-                                            var tintMode: EmojiPagerContentComponent.Item.TintMode = .none
-                                            if item.file.isCustomTemplateEmoji {
-                                                tintMode = .primary
+                                    }
+                                    
+                                    var items: [EmojiPagerContentComponent.Item] = []
+                                    
+                                    var existingIds = Set<MediaId>()
+                                    for item in result {
+                                        if let itemFile = item.1 {
+                                            if existingIds.contains(itemFile.fileId) {
+                                                continue
                                             }
-                                            
-                                            let animationData = EntityKeyboardAnimationData(file: item.file)
-                                            let resultItem = EmojiPagerContentComponent.Item(
+                                            existingIds.insert(itemFile.fileId)
+                                            let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                            let item = EmojiPagerContentComponent.Item(
                                                 animationData: animationData,
                                                 content: .animation(animationData),
-                                                itemFile: item.file,
-                                                subgroupId: nil,
+                                                itemFile: itemFile, subgroupId: nil,
                                                 icon: .none,
-                                                tintMode: tintMode
+                                                tintMode: animationData.isTemplate ? .primary : .none
                                             )
-                                            
-                                            groupItems.append(resultItem)
+                                            items.append(item)
                                         }
-                                        
-                                        resultGroups.append(EmojiPagerContentComponent.ItemGroup(
-                                            supergroupId: AnyHashable(info.id),
-                                            groupId: AnyHashable(info.id),
-                                            title: info.title,
-                                            subtitle: nil,
-                                            badge: nil,
-                                            actionButtonTitle: nil,
-                                            isFeatured: false,
-                                            isPremiumLocked: false,
-                                            isEmbedded: false,
-                                            hasClear: false,
-                                            hasEdit: false,
-                                            collapsedLineCount: 3,
-                                            displayPremiumBadges: false,
-                                            headerItem: nil,
-                                            fillWithLoadingPlaceholders: false,
-                                            items: groupItems
-                                        ))
                                     }
+                                    
+                                    var resultGroups: [EmojiPagerContentComponent.ItemGroup] = []
+                                    resultGroups.append(EmojiPagerContentComponent.ItemGroup(
+                                        supergroupId: "search",
+                                        groupId: "search",
+                                        title: nil,
+                                        subtitle: nil,
+                                        badge: nil,
+                                        actionButtonTitle: nil,
+                                        isFeatured: false,
+                                        isPremiumLocked: false,
+                                        isEmbedded: false,
+                                        hasClear: false,
+                                        hasEdit: false,
+                                        collapsedLineCount: nil,
+                                        displayPremiumBadges: false,
+                                        headerItem: nil,
+                                        fillWithLoadingPlaceholders: false,
+                                        items: items
+                                    ))
+                                    
+                                    for (collectionId, info, _, _) in foundPacks.sets.infos {
+                                        if let info = info as? StickerPackCollectionInfo {
+                                            var topItems: [StickerPackItem] = []
+                                            for e in foundPacks.sets.entries {
+                                                if let item = e.item as? StickerPackItem {
+                                                    if e.index.collectionId == collectionId {
+                                                        topItems.append(item)
+                                                    }
+                                                }
+                                            }
+                                            
+                                            var groupItems: [EmojiPagerContentComponent.Item] = []
+                                            for item in topItems {
+                                                var tintMode: EmojiPagerContentComponent.Item.TintMode = .none
+                                                if item.file.isCustomTemplateEmoji {
+                                                    tintMode = .primary
+                                                }
+                                                
+                                                let animationData = EntityKeyboardAnimationData(file: item.file)
+                                                let resultItem = EmojiPagerContentComponent.Item(
+                                                    animationData: animationData,
+                                                    content: .animation(animationData),
+                                                    itemFile: item.file,
+                                                    subgroupId: nil,
+                                                    icon: .none,
+                                                    tintMode: tintMode
+                                                )
+                                                
+                                                groupItems.append(resultItem)
+                                            }
+                                            
+                                            resultGroups.append(EmojiPagerContentComponent.ItemGroup(
+                                                supergroupId: AnyHashable(info.id),
+                                                groupId: AnyHashable(info.id),
+                                                title: info.title,
+                                                subtitle: nil,
+                                                badge: nil,
+                                                actionButtonTitle: nil,
+                                                isFeatured: false,
+                                                isPremiumLocked: false,
+                                                isEmbedded: false,
+                                                hasClear: false,
+                                                hasEdit: false,
+                                                collapsedLineCount: 3,
+                                                displayPremiumBadges: false,
+                                                headerItem: nil,
+                                                fillWithLoadingPlaceholders: false,
+                                                items: groupItems
+                                            ))
+                                        }
+                                    }
+                                    return resultGroups
                                 }
-                                
-                                return resultGroups
                             }
                         }
                         
@@ -2533,6 +2731,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     } else {
                         self.reactionSelected?(reactionItem.updateMessageReaction, false)
                     }
+                case let .staticEmoji(emoji):
+                    self.emojiSelected?(emoji)
                 case .premium:
                     self.premiumReactionsSelected?(nil)
                 }
@@ -2573,6 +2773,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
         self.hapticFeedback?.tap()
         
+        self.view.endEditing(true)
         self.longPressRecognizer?.isEnabled = false
         
         self.animateFromExtensionDistance = 0.0
@@ -2581,7 +2782,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.contentTopInset = self.titleLabelHeight ?? 0.0
         self.currentContentHeight = 46.0
         self.isExpanded = false
+        self.isCollapsing = true
         self.isExpandedUpdated(.animated(duration: 0.4, curve: .spring))
+        
+        self.emojiSearchDisposable.set(nil)
+        self.emojiSearchState.set(.single(EmojiSearchState(result: nil, isSearching: false)))
     }
     
     public func highlightGestureMoved(location: CGPoint, hover: Bool) {
@@ -2693,6 +2898,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 return nil
             }
             return .reaction(itemNode.item)
+        } else if let itemNode = itemNode as? EmojiItemNode {
+            return .staticEmoji(itemNode.emoji)
         } else if let _ = itemNode as? PremiumReactionsNode {
             return .premium
         }

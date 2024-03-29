@@ -58,13 +58,13 @@ public struct RevenueStatsContextState: Equatable {
 }
 
 private func requestRevenueStats(postbox: Postbox, network: Network, peerId: PeerId, dark: Bool = false) -> Signal<RevenueStats?, NoError> {
-    return postbox.transaction { transaction -> (Int32, Peer)? in
-        if let peer = transaction.getPeer(peerId), let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData {
-            return (cachedData.statsDatacenterId, peer)
+    return postbox.transaction { transaction -> Peer? in
+        if let peer = transaction.getPeer(peerId) {
+            return peer
         }
         return nil
-    } |> mapToSignal { data -> Signal<RevenueStats?, NoError> in
-        guard let (statsDatacenterId, peer) = data, let inputChannel = apiInputChannel(peer) else {
+    } |> mapToSignal { peer -> Signal<RevenueStats?, NoError> in
+        guard let peer, let inputChannel = apiInputChannel(peer) else {
             return .never()
         }
         
@@ -73,18 +73,7 @@ private func requestRevenueStats(postbox: Postbox, network: Network, peerId: Pee
             flags |= (1 << 1)
         }
         
-        let signal: Signal<Api.stats.BroadcastRevenueStats, MTRpcError>
-        if network.datacenterId != statsDatacenterId {
-            signal = network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
-            |> castError(MTRpcError.self)
-            |> mapToSignal { worker in
-                return worker.request(Api.functions.stats.getBroadcastRevenueStats(flags: flags, channel: inputChannel))
-            }
-        } else {
-            signal = network.request(Api.functions.stats.getBroadcastRevenueStats(flags: flags, channel: inputChannel))
-        }
-        
-        return signal
+        return network.request(Api.functions.stats.getBroadcastRevenueStats(flags: flags, channel: inputChannel))
         |> map { result -> RevenueStats? in
             return RevenueStats(apiRevenueStats: result, peerId: peerId)
         }
@@ -110,7 +99,6 @@ private final class RevenueStatsContextImpl {
     }
     
     private let disposable = MetaDisposable()
-    private let disposables = DisposableDict<String>()
     
     init(postbox: Postbox, network: Network, peerId: PeerId) {
         assert(Queue.mainQueue().isCurrent())
@@ -127,10 +115,9 @@ private final class RevenueStatsContextImpl {
     deinit {
         assert(Queue.mainQueue().isCurrent())
         self.disposable.dispose()
-        self.disposables.dispose()
     }
     
-    private func load() {
+    fileprivate func load() {
         assert(Queue.mainQueue().isCurrent())
         
         self.disposable.set((requestRevenueStats(postbox: self.postbox, network: self.network, peerId: self.peerId)
@@ -141,7 +128,7 @@ private final class RevenueStatsContextImpl {
             }
         }))
     }
-    
+        
     func loadDetailedGraph(_ graph: StatsGraph, x: Int64) -> Signal<StatsGraph?, NoError> {
         if let token = graph.token {
             return requestGraph(postbox: self.postbox, network: self.network, peerId: self.peerId, token: token, x: x)
@@ -170,6 +157,12 @@ public final class RevenueStatsContext {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
             return RevenueStatsContextImpl(postbox: postbox, network: network, peerId: peerId)
         })
+    }
+    
+    public func reload() {
+        self.impl.with { impl in
+            impl.load()
+        }
     }
             
     public func loadDetailedGraph(_ graph: StatsGraph, x: Int64) -> Signal<StatsGraph?, NoError> {
@@ -227,34 +220,21 @@ private final class RevenueStatsTransactionsContextImpl {
         let peerId = self.peerId
         let lastOffset = self.lastOffset
         
-        self.disposable.set((self.account.postbox.transaction { transaction -> (Peer, Int32?)? in
-            let statsDatacenterId = (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.statsDatacenterId
+        self.disposable.set((self.account.postbox.transaction { transaction -> Peer? in
             guard let peer = transaction.getPeer(peerId) else {
                 return nil
             }
-            return (peer, statsDatacenterId)
+            return peer
         }
-        |> mapToSignal { data -> Signal<([RevenueStatsTransactionsContext.State.Transaction], Int32, Int32?), NoError> in
-            if let (peer, statsDatacenterId) = data {
+        |> mapToSignal { peer -> Signal<([RevenueStatsTransactionsContext.State.Transaction], Int32, Int32?), NoError> in
+            if let peer {
                 guard let inputChannel = apiInputChannel(peer) else {
                     return .complete()
                 }
                 let offset = lastOffset ?? 0
                 let limit: Int32 = lastOffset == nil ? 25 : 50
                 
-                let request = Api.functions.stats.getBroadcastRevenueTransactions(channel: inputChannel, offset: offset, limit: limit)
-                let signal: Signal<Api.stats.BroadcastRevenueTransactions, MTRpcError>
-                if let statsDatacenterId = statsDatacenterId, account.network.datacenterId != statsDatacenterId {
-                    signal = account.network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
-                    |> castError(MTRpcError.self)
-                    |> mapToSignal { worker in
-                        return worker.request(request)
-                    }
-                } else {
-                    signal = account.network.request(request, automaticFloodWait: false)
-                }
-                
-                return signal
+                return account.network.request(Api.functions.stats.getBroadcastRevenueTransactions(channel: inputChannel, offset: offset, limit: limit), automaticFloodWait: false)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.stats.BroadcastRevenueTransactions?, NoError> in
                     return .single(nil)

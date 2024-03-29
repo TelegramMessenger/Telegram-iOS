@@ -295,7 +295,7 @@ final class ChatbotSetupScreenComponent: Component {
                             break
                         case let .result(peer):
                             let previousState = self.botResolutionState?.state
-                            if let peer {
+                            if let peer, case let .user(user) = peer, user.botInfo != nil {
                                 self.botResolutionState?.state = .found(peer: peer, isInstalled: false)
                             } else {
                                 self.botResolutionState?.state = .notFound
@@ -689,8 +689,7 @@ final class ChatbotSetupScreenComponent: Component {
                                 self.botResolutionState = botResolutionState
                                 self.state?.updated(transition: .spring(duration: 0.3))
                             } else {
-                                //TODO:localize
-                                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "This bot doesn't support Telegram Business yet.", actions: [
+                                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.ChatbotSetup_ErrorBotNotBusinessCapable, actions: [
                                     TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                                     })
                                 ]), in: .window(.root))
@@ -834,25 +833,20 @@ final class ChatbotSetupScreenComponent: Component {
             contentHeight += accessSectionSize.height
             contentHeight += sectionSpacing
             
-            //TODO:localize
             let categoriesAndUsersItemCount = self.additionalPeerList.categories.count + self.additionalPeerList.peers.count
             let excludedSectionValue: String
             if categoriesAndUsersItemCount == 0 {
-                excludedSectionValue = "Add"
-            } else if categoriesAndUsersItemCount == 1 {
-                excludedSectionValue = "1 item"
+                excludedSectionValue = environment.strings.ChatbotSetup_RecipientSummary_ValueEmpty
             } else {
-                excludedSectionValue = "\(categoriesAndUsersItemCount) items"
+                excludedSectionValue = environment.strings.ChatbotSetup_RecipientSummary_ValueItems(Int32(categoriesAndUsersItemCount))
             }
             
             let excludedUsersItemCount = self.additionalPeerList.excludePeers.count
             let excludedUsersValue: String
             if excludedUsersItemCount == 0 {
-                excludedUsersValue = "Add"
-            } else if excludedUsersItemCount == 1 {
-                excludedUsersValue = "1 item"
+                excludedUsersValue = environment.strings.ChatbotSetup_RecipientSummary_ValueEmpty
             } else {
-                excludedUsersValue = "\(excludedUsersItemCount) items"
+                excludedUsersValue = environment.strings.ChatbotSetup_RecipientSummary_ValueItems(Int32(excludedUsersItemCount))
             }
             
             var excludedSectionItems: [AnyComponentWithIdentity<Empty>] = []
@@ -861,7 +855,7 @@ final class ChatbotSetupScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: self.hasAccessToAllChatsByDefault ? "Excluded Chats" : "Included Chats",
+                            string: self.hasAccessToAllChatsByDefault ? environment.strings.ChatbotSetup_RecipientSummary_ExcludedChatsItem : environment.strings.ChatbotSetup_RecipientSummary_IncludedChatsItem,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -920,7 +914,6 @@ final class ChatbotSetupScreenComponent: Component {
             contentHeight += excludedSectionSize.height
             contentHeight += sectionSpacing
             
-            //TODO:localize
             var excludedUsersContentHeight: CGFloat = 0.0
             var excludedUsersSectionItems: [AnyComponentWithIdentity<Empty>] = []
             excludedUsersSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
@@ -928,7 +921,7 @@ final class ChatbotSetupScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Excluded Chats",
+                            string: environment.strings.ChatbotSetup_RecipientSummary_ExcludedChatsItem,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),

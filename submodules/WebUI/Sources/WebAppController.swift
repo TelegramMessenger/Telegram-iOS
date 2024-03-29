@@ -1498,14 +1498,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.sendBiometryInfoReceivedEvent()
                 }
                 
-                //TODO:localize
                 var alertTitle: String?
                 let alertText: String
                 if let reason {
-                    alertTitle = "Do you want to allow \(botPeer.compactDisplayTitle) to use Face ID?"
+                    alertTitle = self.presentationData.strings.WebApp_AlertBiometryAccessText(botPeer.compactDisplayTitle).string
                     alertText = reason
                 } else {
-                    alertText = "Do you want to allow \(botPeer.compactDisplayTitle) to use Face ID?"
+                    alertText = self.presentationData.strings.WebApp_AlertBiometryAccessText(botPeer.compactDisplayTitle).string
                 }
                 controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: alertTitle, text: alertText, actions: [
                     TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_No, action: {

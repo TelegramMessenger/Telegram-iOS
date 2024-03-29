@@ -73,6 +73,8 @@ private final class SheetContent: CombinedComponent {
         let infoTitle = Child(MultilineTextWithEntitiesComponent.self)
         let infoText = Child(MultilineTextComponent.self)
         
+        let spaceRegex = try? NSRegularExpression(pattern: "\\[(.*?)\\]", options: [])
+        
         return { context in
             let environment = context.environment[EnvironmentType.self]
             let component = context.component
@@ -146,8 +148,7 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + title.size.height / 2.0))
             )
             contentSize.height += title.size.height
-            contentSize.height += spacing
-            
+            contentSize.height += spacing - 2.0
             
             var items: [AnyComponentWithIdentity<Empty>] = []
             items.append(
@@ -199,7 +200,7 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + list.size.height / 2.0))
             )
             contentSize.height += list.size.height
-            contentSize.height += spacing - 9.0
+            contentSize.height += spacing - 13.0
             
             let infoTitleString = strings.Monetization_Intro_Info_Title
             let infoTitleAttributedString = NSMutableAttributedString(string: infoTitleString, font: titleFont, textColor: textColor)
@@ -225,7 +226,21 @@ private final class SheetContent: CombinedComponent {
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            let infoString = strings.Monetization_Intro_Info_Text
+            var infoString = strings.Monetization_Intro_Info_Text
+            if let spaceRegex {
+                let nsRange = NSRange(infoString.startIndex..., in: infoString)
+                let matches = spaceRegex.matches(in: infoString, options: [], range: nsRange)
+                var modifiedString = infoString
+                
+                for match in matches.reversed() {
+                    let matchRange = Range(match.range, in: infoString)!
+                    let matchedSubstring = String(infoString[matchRange])
+                    let replacedSubstring = matchedSubstring.replacingOccurrences(of: " ", with: "\u{00A0}")
+                    modifiedString.replaceSubrange(matchRange, with: replacedSubstring)
+                }
+                infoString = modifiedString
+            }
+
             let infoAttributedString = parseMarkdownIntoAttributedString(infoString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = infoAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
                 infoAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: infoAttributedString.string))
@@ -583,7 +598,7 @@ private final class ParagraphComponent: CombinedComponent {
                 .position(CGPoint(x: 47.0, y: textTopInset + 18.0))
             )
         
-            return CGSize(width: context.availableSize.width, height: textTopInset + title.size.height + text.size.height + 20.0)
+            return CGSize(width: context.availableSize.width, height: textTopInset + title.size.height + text.size.height + 18.0)
         }
     }
 }
