@@ -175,16 +175,16 @@ class BarsComponentController: GeneralChartComponentController {
                                                                calculatingRange: horizontalRange,
                                                                addBounds: true) {
             let (range, labels) = verticalLimitsLabels(verticalRange: range, secondary: false)
-            if verticalScalesRenderer.verticalRange.end != range {
+           // if verticalScalesRenderer.verticalRange.end != range {
                 verticalScalesRenderer.setup(verticalLimitsLabels: labels, animated: animated)
-            }
+           // }
             verticalScalesRenderer.setVisible(true, animated: animated)
             
             if let secondaryScalesRenderer = self.secondaryScalesRenderer {
                 let (range, labels) = verticalLimitsLabels(verticalRange: range, secondary: true)
-                if secondaryScalesRenderer.verticalRange.end != range {
+               // if secondaryScalesRenderer.verticalRange.end != range {
                     secondaryScalesRenderer.setup(verticalLimitsLabels: labels, animated: animated)
-                }
+               // }
                 secondaryScalesRenderer.setVisible(true, animated: animated)
             }
             

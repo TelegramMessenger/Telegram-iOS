@@ -365,7 +365,7 @@ public final class RevenueStatsTransactionsContext {
     }
 }
 
-public enum RequestRevenueWithdrawalError {
+public enum RequestRevenueWithdrawalError : Equatable {
     case generic
     case twoStepAuthMissing
     case twoStepAuthTooFresh(Int32)

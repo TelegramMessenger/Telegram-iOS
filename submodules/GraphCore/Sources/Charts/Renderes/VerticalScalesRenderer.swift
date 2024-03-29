@@ -13,6 +13,8 @@ import Cocoa
 import UIKit
 #endif
 
+typealias UIColor = NSColor
+
 class VerticalScalesRenderer: BaseChartRenderer {
     private var verticalLabelsAndLines: [LinesChartLabel] = []
     private var animatedVerticalLabelsAndLines: [AnimatedLinesChartLabels] = []
