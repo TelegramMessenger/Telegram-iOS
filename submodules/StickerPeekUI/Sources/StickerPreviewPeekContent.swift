@@ -42,10 +42,11 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     let isCreating: Bool
     let selectedEmoji: [String]
     let selectedEmojiUpdated: ([String]) -> Void
+    let recommendedEmoji: [String]
     let menu: [ContextMenuItem]
     let openPremiumIntro: () -> Void
     
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, item: StickerPreviewPeekItem, isLocked: Bool = false, isCreating: Bool = false, selectedEmoji: [String] = [], selectedEmojiUpdated: @escaping ([String]) -> Void = { _ in }, menu: [ContextMenuItem], openPremiumIntro: @escaping () -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, item: StickerPreviewPeekItem, isLocked: Bool = false, isCreating: Bool = false, selectedEmoji: [String] = [], selectedEmojiUpdated: @escaping ([String]) -> Void = { _ in }, recommendedEmoji: [String] = [], menu: [ContextMenuItem], openPremiumIntro: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -54,6 +55,7 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
         self.isCreating = isCreating
         self.selectedEmoji = selectedEmoji
         self.selectedEmojiUpdated = selectedEmojiUpdated
+        self.recommendedEmoji = recommendedEmoji
         if isLocked {
             self.menu = []
         } else {
@@ -84,7 +86,7 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     
     public func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)? {
         if self.isCreating {
-            return EmojiStickerAccessoryNode(context: self.context, theme: self.theme, selectedEmoji: self.selectedEmoji, selectedEmojiUpdated: self.selectedEmojiUpdated)
+            return EmojiStickerAccessoryNode(context: self.context, theme: self.theme, recommendedEmoji: self.recommendedEmoji, selectedEmoji: self.selectedEmoji, selectedEmojiUpdated: self.selectedEmojiUpdated)
         }
         if self.isLocked {
             return PremiumStickerPackAccessoryNode(theme: self.theme, strings: self.strings, isEmoji: self.item.file?.isCustomEmoji ?? false, proceed: self.openPremiumIntro)
@@ -363,10 +365,14 @@ final class PremiumStickerPackAccessoryNode: SparseNode, PeekControllerAccessory
     }
 }
 
-private func topItems(selectedEmoji: [String] = [], count: Int) -> [String] {
-    let defaultItems: [String] = [
+private func topItems(selectedEmoji: [String] = [], recommendedEmoji: [String], count: Int) -> [String] {
+    var defaultItems: [String] = [
         "👍", "👎", "❤", "🔥", "🥰", "👏", "😁"
     ]
+    if !recommendedEmoji.isEmpty, let firstEmoji = recommendedEmoji.first {
+        defaultItems.removeLast()
+        defaultItems.append(firstEmoji)
+    }
     var result = selectedEmoji.filter { !defaultItems.contains($0) }
     result.append(contentsOf: defaultItems)
     return Array(result.prefix(count))
@@ -382,12 +388,12 @@ final class EmojiStickerAccessoryNode: SparseNode, PeekControllerAccessoryNode {
     
     private var scheduledCollapse = false
     
-    init(context: AccountContext, theme: PresentationTheme, selectedEmoji: [String], selectedEmojiUpdated: @escaping ([String]) -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, recommendedEmoji: [String], selectedEmoji: [String], selectedEmojiUpdated: @escaping ([String]) -> Void) {
         self.context = context
                 
         var layoutImpl: ((ContainedViewLayoutTransition) -> Void)?
         
-        let items = topItems(selectedEmoji: selectedEmoji, count: 7)
+        let items = topItems(selectedEmoji: selectedEmoji, recommendedEmoji: recommendedEmoji, count: 7)
         let selectedItems = ValuePromise<[String]>(selectedEmoji)
         
         //TODO:localize
@@ -412,7 +418,7 @@ final class EmojiStickerAccessoryNode: SparseNode, PeekControllerAccessoryNode {
                         subject: .stickerAlt,
                         hasTrending: false,
                         topReactionItems: [],
-                        topEmojiItems: topItems(selectedEmoji: selectedItems, count: 7),
+                        topEmojiItems: topItems(selectedEmoji: selectedItems, recommendedEmoji: recommendedEmoji, count: 7),
                         areUnicodeEmojiEnabled: true,
                         areCustomEmojiEnabled: false,
                         chatPeerId: context.account.peerId,
@@ -476,7 +482,7 @@ final class EmojiStickerAccessoryNode: SparseNode, PeekControllerAccessoryNode {
                 return
             }
             self.reactionContextNode.selectedItems = Set(items)
-            self.reactionContextNode.items = topItems(selectedEmoji: items, count: 7).map { .staticEmoji($0) }
+            self.reactionContextNode.items = topItems(selectedEmoji: items, recommendedEmoji: recommendedEmoji, count: 7).map { .staticEmoji($0) }
         })
     }
     

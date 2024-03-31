@@ -2568,6 +2568,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self.isCutout = isCutout
                 self.requestLayout(forceUpdate: true, transition: .immediate)
             }
+            mediaEditor.classificationUpdated = { [weak self] classes in
+                guard let  self else {
+                    return
+                }
+                self.controller?.stickerRecommendedEmoji = emojiForClasses(classes.map { $0.0 })
+            }
             
             if case .message = effectiveSubject {
             } else {
@@ -5764,6 +5770,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
     }
     
+    private var stickerRecommendedEmoji: [String] = []
     private var stickerSelectedEmoji: [String] = []
     private func effectiveStickerEmoji() -> [String] {
         guard !self.stickerSelectedEmoji.isEmpty else {
@@ -5924,6 +5931,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.stickerSelectedEmoji = selectedEmoji
                     }
                 },
+                recommendedEmoji: stickerRecommendedEmoji,
                 menu: menuItems,
                 openPremiumIntro: {}
             ), 
