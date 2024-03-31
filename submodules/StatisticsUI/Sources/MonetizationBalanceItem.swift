@@ -8,14 +8,12 @@ import TelegramPresentationData
 import ItemListUI
 import SolidRoundedButtonNode
 import TelegramCore
-import EmojiTextAttachmentView
 import TextFormat
 
 final class MonetizationBalanceItem: ListViewItem, ItemListItem {
     let context: AccountContext
     let presentationData: ItemListPresentationData
     let stats: RevenueStats
-    let animatedEmoji: TelegramMediaFile?
     let canWithdraw: Bool
     let isEnabled: Bool
     let withdrawAction: () -> Void
@@ -26,7 +24,6 @@ final class MonetizationBalanceItem: ListViewItem, ItemListItem {
         context: AccountContext,
         presentationData: ItemListPresentationData,
         stats: RevenueStats,
-        animatedEmoji: TelegramMediaFile?,
         canWithdraw: Bool,
         isEnabled: Bool,
         withdrawAction: @escaping () -> Void,
@@ -36,7 +33,6 @@ final class MonetizationBalanceItem: ListViewItem, ItemListItem {
         self.context = context
         self.presentationData = presentationData
         self.stats = stats
-        self.animatedEmoji = animatedEmoji
         self.canWithdraw = canWithdraw
         self.isEnabled = isEnabled
         self.withdrawAction = withdrawAction
@@ -86,7 +82,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private var animatedEmojiLayer: InlineStickerItemLayer?
+    private let iconNode: ASImageNode
     private let balanceTextNode: TextNode
     private let valueTextNode: TextNode
     
@@ -117,6 +113,10 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
         
+        self.iconNode = ASImageNode()
+        self.iconNode.isUserInteractionEnabled = false
+        self.iconNode.displaysAsynchronously = false
+        
         self.balanceTextNode = TextNode()
         self.balanceTextNode.isUserInteractionEnabled = false
         self.balanceTextNode.displaysAsynchronously = false
@@ -129,6 +129,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.addSubnode(self.iconNode)
         self.addSubnode(self.balanceTextNode)
         self.addSubnode(self.valueTextNode)
     }
@@ -197,6 +198,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
             
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
                 if let strongSelf = self {
+                    let themeUpdated = strongSelf.item?.presentationData.theme !== item.presentationData.theme
                     strongSelf.item = item
                     
                     let _ = balanceApply()
@@ -269,32 +271,20 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
                     
-                    var emojiItemFrame: CGRect = .zero
-                    var emojiItemSize: CGFloat = 0.0
-                    if let animatedEmoji = item.animatedEmoji {
-                        emojiItemSize = floorToScreenPixels(46.0 * 20.0 / 17.0)
-                        
-                        emojiItemFrame = CGRect(origin: CGPoint(x: -emojiItemSize / 2.0 - 5.0, y: -3.0), size: CGSize()).insetBy(dx: -emojiItemSize / 2.0, dy: -emojiItemSize / 2.0)
-                        emojiItemFrame.origin.x = floorToScreenPixels(emojiItemFrame.origin.x)
-                        emojiItemFrame.origin.y = floorToScreenPixels(emojiItemFrame.origin.y)
-                        
-                        let itemLayer: InlineStickerItemLayer
-                        if let current = strongSelf.animatedEmojiLayer {
-                            itemLayer = current
-                        } else {
-                            let pointSize = floor(emojiItemSize * 1.3)
-                            itemLayer = InlineStickerItemLayer(context: item.context, userLocation: .other, attemptSynchronousLoad: true, emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: animatedEmoji.fileId.id, file: animatedEmoji, custom: nil), file: animatedEmoji, cache: item.context.animationCache, renderer: item.context.animationRenderer, placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, pointSize: CGSize(width: pointSize, height: pointSize), dynamicColor: nil)
-                            strongSelf.animatedEmojiLayer = itemLayer
-                            strongSelf.layer.addSublayer(itemLayer)
-                            
-                            itemLayer.isVisibleForAnimations = true
-                        }
+                    if themeUpdated {
+                        strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: item.presentationData.theme.list.itemAccentColor)
                     }
-                    
-                    let balanceTotalWidth: CGFloat = emojiItemSize + balanceLayout.size.width
-                    let balanceTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - balanceTotalWidth) / 2.0) + emojiItemSize, y: verticalInset), size: balanceLayout.size)
+
+                    var emojiItemSize = CGSize()
+                    if let icon = strongSelf.iconNode.image {
+                        emojiItemSize = icon.size
+                    }
+                                        
+                    let balanceTotalWidth: CGFloat = emojiItemSize.width + balanceLayout.size.width
+                    let balanceTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - balanceTotalWidth) / 2.0) + emojiItemSize.width, y: verticalInset), size: balanceLayout.size)
                     strongSelf.balanceTextNode.frame = balanceTextFrame
-                    strongSelf.animatedEmojiLayer?.frame = emojiItemFrame.offsetBy(dx: balanceTextFrame.minX, dy: balanceTextFrame.midY)
+                    
+                    strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: balanceTextFrame.minX - emojiItemSize.width - 7.0, y: floorToScreenPixels(balanceTextFrame.midY - emojiItemSize.height / 2.0) - 3.0), size: emojiItemSize)
                     
                     strongSelf.valueTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - valueLayout.size.width) / 2.0), y: balanceTextFrame.maxY - 5.0), size: valueLayout.size)
                                       

@@ -12,7 +12,6 @@ import SheetComponent
 import BundleIconComponent
 import BalancedTextComponent
 import MultilineTextComponent
-import MultilineTextWithEntitiesComponent
 import SolidRoundedButtonComponent
 import LottieComponent
 import AccountContext
@@ -44,6 +43,7 @@ private final class SheetContent: CombinedComponent {
     final class State: ComponentState {
         var cachedIconImage: (UIImage, PresentationTheme)?
         var cachedChevronImage: (UIImage, PresentationTheme)?
+        var cachedTonImage: (UIImage, PresentationTheme)?
         
         let playOnce =  ActionSlot<Void>()
         private var didPlayAnimation = false
@@ -70,7 +70,7 @@ private final class SheetContent: CombinedComponent {
         let actionButton = Child(SolidRoundedButtonComponent.self)
         
         let infoBackground = Child(RoundedRectangle.self)
-        let infoTitle = Child(MultilineTextWithEntitiesComponent.self)
+        let infoTitle = Child(MultilineTextComponent.self)
         let infoText = Child(MultilineTextComponent.self)
         
         let spaceRegex = try? NSRegularExpression(pattern: "\\[(.*?)\\]", options: [])
@@ -202,18 +202,20 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += list.size.height
             contentSize.height += spacing - 13.0
             
-            let infoTitleString = strings.Monetization_Intro_Info_Title
+            if state.cachedTonImage == nil || state.cachedTonImage?.1 !== environment.theme {
+                state.cachedTonImage = (generateTintedImage(image: UIImage(bundleImageName: "Ads/TonAbout"), color: linkColor)!, theme)
+            }
+            
+            let infoTitleString = strings.Monetization_Intro_Info_Title.replacingOccurrences(of: "#", with: " # ")
             let infoTitleAttributedString = NSMutableAttributedString(string: infoTitleString, font: titleFont, textColor: textColor)
             let range = (infoTitleAttributedString.string as NSString).range(of: "#")
-            if range.location != NSNotFound, let emojiFile = component.context.animatedEmojiStickersValue["💎"]?.first?.file {
-                infoTitleAttributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: emojiFile.fileId.id, file: emojiFile), range: range)
+            if range.location != NSNotFound, let icon = state.cachedTonImage?.0 {
+                infoTitleAttributedString.addAttribute(.attachment, value: icon, range: range)
+                infoTitleAttributedString.addAttribute(.foregroundColor, value: linkColor, range: range)
+                infoTitleAttributedString.addAttribute(.baselineOffset, value: 1.0, range: range)
             }
             let infoTitle = infoTitle.update(
-                component: MultilineTextWithEntitiesComponent(
-                    context: component.context,
-                    animationCache: component.context.animationCache,
-                    animationRenderer: component.context.animationRenderer,
-                    placeholderColor: environment.theme.list.mediaPlaceholderColor,
+                component: MultilineTextComponent(
                     text: .plain(infoTitleAttributedString),
                     horizontalAlignment: .center
                 ),
@@ -244,6 +246,7 @@ private final class SheetContent: CombinedComponent {
             let infoAttributedString = parseMarkdownIntoAttributedString(infoString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = infoAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
                 infoAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: infoAttributedString.string))
+                infoAttributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: infoAttributedString.string))
             }
             let infoText = infoText.update(
                 component: MultilineTextComponent(

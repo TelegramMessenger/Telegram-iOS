@@ -108,16 +108,16 @@ private final class ValueItemNode: ASDisplayNode {
     private let valueNode: TextNode
     private let titleNode: TextNode
     private let deltaNode: TextNode
-    private var animatedEmojiLayer: InlineStickerItemLayer?
+    private var iconNode: ASImageNode?
     
-    var currentBackgroundColor: UIColor?
+    var currentTheme: PresentationTheme?
     var pressed: (() -> Void)?
       
     override init() {
         self.valueNode = TextNode()
         self.titleNode = TextNode()
         self.deltaNode = TextNode()
-      
+        
         super.init()
         
         self.isUserInteractionEnabled = false
@@ -127,13 +127,13 @@ private final class ValueItemNode: ASDisplayNode {
         self.addSubnode(self.deltaNode)
     }
             
-    static func asyncLayout(_ current: ValueItemNode?) -> (_ context: AccountContext, _ width: CGFloat, _ presentationData: ItemListPresentationData, _ value: String, _ title: String, _ delta: (String, DeltaColor)?, _ animatedEmoji: TelegramMediaFile?) -> (CGSize, () -> ValueItemNode) {
+    static func asyncLayout(_ current: ValueItemNode?) -> (_ context: AccountContext, _ width: CGFloat, _ presentationData: ItemListPresentationData, _ value: String, _ title: String, _ delta: (String, DeltaColor)?, _ isTon: Bool) -> (CGSize, () -> ValueItemNode) {
         
         let maybeMakeValueLayout = (current?.valueNode).flatMap(TextNode.asyncLayout)
         let maybeMakeTitleLayout = (current?.titleNode).flatMap(TextNode.asyncLayout)
         let maybeMakeDeltaLayout = (current?.deltaNode).flatMap(TextNode.asyncLayout)
         
-        return { context, width, presentationData, value, title, delta, animatedEmoji in
+        return { context, width, presentationData, value, title, delta, isTon in
             let targetNode: ValueItemNode
             if let current = current {
                 targetNode = current
@@ -164,6 +164,7 @@ private final class ValueItemNode: ASDisplayNode {
                         
             let fontSize = presentationData.fontSize.itemListBaseFontSize
             let valueFont = Font.semibold(fontSize)
+            let smallValueFont = Font.semibold(fontSize / 17.0 * 13.0)
             let titleFont = Font.regular(presentationData.fontSize.itemListBaseHeaderFontSize)
             let deltaFont = Font.regular(presentationData.fontSize.itemListBaseHeaderFontSize)
         
@@ -183,10 +184,17 @@ private final class ValueItemNode: ASDisplayNode {
             } else {
                 deltaColor = presentationData.theme.list.freeTextErrorColor
             }
-            let placeholderColor = presentationData.theme.list.mediaPlaceholderColor
             
             let constrainedSize = CGSize(width: width, height: CGFloat.greatestFiniteMagnitude)
-            let (valueLayout, valueApply) = makeValueLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: value, font: valueFont, textColor: valueColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let valueString: NSAttributedString
+            if isTon {
+                valueString = amountAttributedString(value, integralFont: valueFont, fractionalFont: smallValueFont, color: valueColor)
+            } else {
+                valueString = NSAttributedString(string: value, font: valueFont, textColor: valueColor)
+            }
+            
+            let (valueLayout, valueApply) = makeValueLayout(TextNodeLayoutArguments(attributedString: valueString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -195,34 +203,43 @@ private final class ValueItemNode: ASDisplayNode {
             let horizontalSpacing: CGFloat = 4.0
             let size = CGSize(width: valueLayout.size.width + horizontalSpacing + deltaLayout.size.width, height: valueLayout.size.height + titleLayout.size.height)
             return (size, {
+                var themeUpdated = false
+                if targetNode.currentTheme !== presentationData.theme {
+                    themeUpdated = true
+                }
+                targetNode.currentTheme = presentationData.theme
+                
                 let _ = valueApply()
                 let _ = titleApply()
                 let _ = deltaApply()
                 
                 var valueOffset: CGFloat = 0.0
-                if let animatedEmoji {
-                    let itemSize = floorToScreenPixels(fontSize * 20.0 / 17.0)
-                    
-                    var itemFrame = CGRect(origin: CGPoint(x: itemSize / 2.0 - 1.0, y: itemSize / 2.0), size: CGSize()).insetBy(dx: -itemSize / 2.0, dy: -itemSize / 2.0)
-                    itemFrame.origin.x = floorToScreenPixels(itemFrame.origin.x)
-                    itemFrame.origin.y = floorToScreenPixels(itemFrame.origin.y)
-                    
-                    let itemLayer: InlineStickerItemLayer
-                    if let current = targetNode.animatedEmojiLayer {
-                        itemLayer = current
+                if isTon {
+                    let iconNode: ASImageNode
+                    if let current = targetNode.iconNode {
+                        iconNode = current
                     } else {
-                        let pointSize = floor(itemSize * 1.3)
-                        itemLayer = InlineStickerItemLayer(context: context, userLocation: .other, attemptSynchronousLoad: true, emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: animatedEmoji.fileId.id, file: animatedEmoji, custom: nil), file: animatedEmoji, cache: context.animationCache, renderer: context.animationRenderer, placeholderColor: placeholderColor, pointSize: CGSize(width: pointSize, height: pointSize), dynamicColor: nil)
-                        targetNode.animatedEmojiLayer = itemLayer
-                        targetNode.layer.addSublayer(itemLayer)
-                        
-                        itemLayer.isVisibleForAnimations = true
+                        iconNode = ASImageNode()
+                        iconNode.displaysAsynchronously = false
+                        targetNode.iconNode = iconNode
+                        targetNode.addSubnode(iconNode)
                     }
-                    valueOffset += 22.0
                     
-                    itemLayer.frame = itemFrame
+                    if themeUpdated {
+                        iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonMedium"), color: presentationData.theme.list.itemAccentColor)
+                    }
+                    
+                    if let icon = iconNode.image {
+                        let iconFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((valueLayout.size.height - icon.size.height) / 2.0) - 1.0), size: icon.size)
+                        iconNode.frame = iconFrame
+                    }
+                    
+                    valueOffset += 17.0
+                } else if let iconNode = targetNode.iconNode {
+                    iconNode.removeFromSupernode()
+                    targetNode.iconNode = nil
                 }
-                
+               
                 let valueFrame = CGRect(origin: CGPoint(x: valueOffset, y: 0.0), size: valueLayout.size)
                 let titleFrame = CGRect(origin: CGPoint(x: 0.0, y: valueFrame.maxY), size: titleLayout.size)
                 let deltaFrame = CGRect(origin: CGPoint(x: valueFrame.maxX + horizontalSpacing, y: valueFrame.maxY - deltaLayout.size.height - 2.0 - UIScreenPixel), size: deltaLayout.size)
@@ -365,7 +382,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     compactNumericCountString(stats.views),
                     item.presentationData.strings.Stats_Message_Views,
                     nil,
-                    nil
+                    false
                 )
                 
                 topRightItemLayoutAndApply = makeTopRightItemLayout(
@@ -375,7 +392,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.publicShares.flatMap { compactNumericCountString(Int($0)) } ?? "–",
                     item.presentationData.strings.Stats_Message_PublicShares,
                     nil,
-                    nil
+                    false
                 )
                 
                 middle1LeftItemLayoutAndApply = makeMiddle1LeftItemLayout(
@@ -385,7 +402,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     compactNumericCountString(stats.reactions),
                     item.presentationData.strings.Stats_Message_Reactions,
                     nil,
-                    nil
+                    false
                 )
                 
                 middle1RightItemLayoutAndApply = makeMiddle1RightItemLayout(
@@ -395,7 +412,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.publicShares.flatMap { "≈\( compactNumericCountString(max(0, stats.forwards - Int($0))))" } ?? "–",
                     item.presentationData.strings.Stats_Message_PrivateShares,
                     nil,
-                    nil
+                    false
                 )
                 
                 height += topRightItemLayoutAndApply!.0.height * 2.0 + verticalSpacing
@@ -407,7 +424,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     compactNumericCountString(views.seenCount),
                     item.presentationData.strings.Stats_Message_Views,
                     nil,
-                    nil
+                    false
                 )
                 
                 topRightItemLayoutAndApply = makeTopRightItemLayout(
@@ -417,7 +434,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.publicShares.flatMap { compactNumericCountString(Int($0)) } ?? "–",
                     item.presentationData.strings.Stats_Message_PublicShares,
                     nil,
-                    nil
+                    false
                 )
                 
                 middle1LeftItemLayoutAndApply = makeMiddle1LeftItemLayout(
@@ -427,7 +444,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     compactNumericCountString(views.reactedCount),
                     item.presentationData.strings.Stats_Message_Reactions,
                     nil,
-                    nil
+                    false
                 )
                 
                 middle1RightItemLayoutAndApply = makeMiddle1RightItemLayout(
@@ -437,7 +454,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.publicShares.flatMap { "≈\( compactNumericCountString(max(0, views.forwardCount - Int($0))))" } ?? "–",
                     item.presentationData.strings.Stats_Message_PrivateShares,
                     nil,
-                    nil
+                    false
                 )
                 
                 height += topRightItemLayoutAndApply!.0.height * 2.0 + verticalSpacing
@@ -449,7 +466,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     "\(stats.level)",
                     item.presentationData.strings.Stats_Boosts_Level,
                     nil,
-                    nil
+                    false
                 )
                 
                 var premiumSubscribers: Double = 0.0
@@ -464,7 +481,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     "≈\(Int(stats.premiumAudience?.value ?? 0))",
                     item.isGroup ? item.presentationData.strings.Stats_Boosts_PremiumMembers : item.presentationData.strings.Stats_Boosts_PremiumSubscribers,
                     (String(format: "%.02f%%", premiumSubscribers * 100.0), .generic),
-                    nil
+                    false
                 )
                 
                 middle1LeftItemLayoutAndApply = makeMiddle1LeftItemLayout(
@@ -474,7 +491,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     "\(stats.boosts)",
                     item.presentationData.strings.Stats_Boosts_ExistingBoosts,
                     nil,
-                    nil
+                    false
                 )
                 
                 let boostsLeft: Int32
@@ -490,7 +507,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     "\(boostsLeft)",
                     item.presentationData.strings.Stats_Boosts_BoostsToLevelUp,
                     nil,
-                    nil
+                    false
                 )
                 
                 if twoColumnLayout {
@@ -515,7 +532,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     compactNumericCountString(Int(stats.followers.current)),
                     item.presentationData.strings.Stats_Followers,
                     (followersDelta.text, followersDelta.positive ? .positive : .negative),
-                    nil
+                    false
                 )
                 
                 var enabledNotifications: Double = 0.0
@@ -529,7 +546,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     String(format: "%.02f%%", enabledNotifications * 100.0),
                     item.presentationData.strings.Stats_EnabledNotifications,
                     nil,
-                    nil
+                    false
                 )
                 
                 let hasMessages = stats.viewsPerPost.current > 0 || viewsPerPostDelta.hasValue
@@ -588,7 +605,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         value,
                         title,
                         delta,
-                        nil
+                        false
                     )
                 }
                 if let (value, title, delta) = items[1] {
@@ -599,7 +616,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         value,
                         title,
                         delta,
-                        nil
+                        false
                     )
                 }
                 if let (value, title, delta) = items[2] {
@@ -610,7 +627,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         value,
                         title,
                         delta,
-                        nil
+                        false
                     )
                 }
                 if let (value, title, delta) = items[3] {
@@ -621,7 +638,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         value,
                         title,
                         delta,
-                        nil
+                        false
                     )
                 }
                 if let (value, title, delta) = items[4] {
@@ -632,7 +649,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         value,
                         title,
                         delta,
-                        nil
+                        false
                     )
                 }
                 if let (value, title, delta) = items[5] {
@@ -643,7 +660,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         value,
                         title,
                         delta,
-                        nil
+                        false
                     )
                 }
 
@@ -667,7 +684,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     compactNumericCountString(Int(stats.members.current)),
                     item.presentationData.strings.Stats_GroupMembers,
                     (membersDelta.text, membersDelta.positive ? .positive : .negative),
-                    nil
+                    false
                 )
                 
                 let messagesDelta = deltaText(stats.messages)
@@ -678,7 +695,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     compactNumericCountString(Int(stats.messages.current)),
                     item.presentationData.strings.Stats_GroupMessages,
                     (messagesDelta.text, messagesDelta.positive ? .positive : .negative),
-                    nil
+                    false
                 )
                 
                 if displayBottomRow {
@@ -689,7 +706,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         compactNumericCountString(Int(stats.viewers.current)),
                         item.presentationData.strings.Stats_GroupViewers,
                         (viewersDelta.text, viewersDelta.positive ? .positive : .negative),
-                        nil
+                        false
                     )
                     
                     middle1RightItemLayoutAndApply = makeMiddle1RightItemLayout(
@@ -699,7 +716,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         compactNumericCountString(Int(stats.posters.current)),
                         item.presentationData.strings.Stats_GroupPosters,
                         (postersDelta.text, postersDelta.positive ? .positive : .negative),
-                        nil
+                        false
                     )
                 }
                 
@@ -711,7 +728,6 @@ class StatsOverviewItemNode: ListViewItemNode {
             } else if let stats = item.stats as? RevenueStats {
                 twoColumnLayout = false
                 
-                
                 topLeftItemLayoutAndApply = makeTopLeftItemLayout(
                     item.context,
                     params.width,
@@ -719,7 +735,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     formatBalanceText(stats.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
                     item.presentationData.strings.Monetization_Overview_Available,
                     (stats.availableBalance == 0 ? "" : "≈\(formatUsdValue(stats.availableBalance, rate: stats.usdRate))", .generic),
-                    item.animatedEmoji
+                    true
                 )
                 
                 topRightItemLayoutAndApply = makeTopRightItemLayout(
@@ -729,7 +745,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     formatBalanceText(stats.currentBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
                     item.presentationData.strings.Monetization_Overview_Current,
                     (stats.currentBalance == 0 ? "" : "≈\(formatUsdValue(stats.currentBalance, rate: stats.usdRate))", .generic),
-                    item.animatedEmoji
+                    true
                 )
                 
                 middle1LeftItemLayoutAndApply = makeMiddle1LeftItemLayout(
@@ -739,7 +755,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     formatBalanceText(stats.overallRevenue, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
                     item.presentationData.strings.Monetization_Overview_Total,
                     (stats.overallRevenue == 0 ? "" : "≈\(formatUsdValue(stats.overallRevenue, rate: stats.usdRate))", .generic),
-                    item.animatedEmoji
+                    true
                 )
                 
                 height += topLeftItemLayoutAndApply!.0.height * 3.0 + verticalSpacing * 2.0
