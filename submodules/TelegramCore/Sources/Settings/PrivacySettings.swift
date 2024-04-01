@@ -107,21 +107,21 @@ public enum SelectivePrivacySettings: Equatable {
 }
 
 public struct AccountPrivacySettings: Equatable {
-    public let presence: SelectivePrivacySettings
-    public let groupInvitations: SelectivePrivacySettings
-    public let voiceCalls: SelectivePrivacySettings
-    public let voiceCallsP2P: SelectivePrivacySettings
-    public let profilePhoto: SelectivePrivacySettings
-    public let forwards: SelectivePrivacySettings
-    public let phoneNumber: SelectivePrivacySettings
-    public let phoneDiscoveryEnabled: Bool
-    public let voiceMessages: SelectivePrivacySettings
-    public let bio: SelectivePrivacySettings
-    public let birthday: SelectivePrivacySettings
+    public var presence: SelectivePrivacySettings
+    public var groupInvitations: SelectivePrivacySettings
+    public var voiceCalls: SelectivePrivacySettings
+    public var voiceCallsP2P: SelectivePrivacySettings
+    public var profilePhoto: SelectivePrivacySettings
+    public var forwards: SelectivePrivacySettings
+    public var phoneNumber: SelectivePrivacySettings
+    public var phoneDiscoveryEnabled: Bool
+    public var voiceMessages: SelectivePrivacySettings
+    public var bio: SelectivePrivacySettings
+    public var birthday: SelectivePrivacySettings
     
-    public let globalSettings: GlobalPrivacySettings
-    public let accountRemovalTimeout: Int32
-    public let messageAutoremoveTimeout: Int32?
+    public var globalSettings: GlobalPrivacySettings
+    public var accountRemovalTimeout: Int32
+    public var messageAutoremoveTimeout: Int32?
     
     public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, bio: SelectivePrivacySettings, birthday: SelectivePrivacySettings, globalSettings: GlobalPrivacySettings, accountRemovalTimeout: Int32, messageAutoremoveTimeout: Int32?) {
         self.presence = presence

@@ -7,6 +7,7 @@ import MtProtoKit
 public enum CreateSecretChatError {
     case generic
     case limitExceeded
+    case premiumRequired(EnginePeer)
 }
 
 func _internal_createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId, CreateSecretChatError> {
@@ -34,6 +35,8 @@ func _internal_createSecretChat(account: Account, peerId: PeerId) -> Signal<Peer
                         |> mapError { error -> CreateSecretChatError in
                             if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
                                 return .limitExceeded
+                            } else if error.errorDescription.hasPrefix("PRIVACY_PREMIUM_REQUIRED") {
+                                return .premiumRequired(.init(peer))
                             } else {
                                 return .generic
                             }
