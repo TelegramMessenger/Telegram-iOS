@@ -961,12 +961,11 @@ private enum StatsEntry: ItemListNodeEntry {
                 })
             case let .adsProceedsOverview(_, stats, animatedEmoji):
                 return StatsOverviewItem(context: arguments.context, presentationData: presentationData, isGroup: false, stats: stats, animatedEmoji: animatedEmoji, sectionId: self.section, style: .blocks)
-            case let .adsBalance(_, stats, canWithdraw, isEnabled, animatedEmoji):
+            case let .adsBalance(_, stats, canWithdraw, isEnabled, _):
                 return MonetizationBalanceItem(
                     context: arguments.context,
                     presentationData: presentationData,
                     stats: stats,
-                    animatedEmoji: animatedEmoji,
                     canWithdraw: canWithdraw,
                     isEnabled: isEnabled,
                     withdrawAction: {
@@ -1018,9 +1017,10 @@ private enum StatsEntry: ItemListNodeEntry {
             
                 let label = amountAttributedString(formatBalanceText(transaction.amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, showPlus: true), integralFont: font, fractionalFont: smallLabelFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
             
-                label.append(NSAttributedString(string: " $   ", font: smallLabelFont, textColor: labelColor))
-                if let range = label.string.range(of: "$"), let icon = generateTintedImage(image: UIImage(bundleImageName: "Ads/Ton"), color: labelColor) {
+                label.insert(NSAttributedString(string: " $ ", font: font, textColor: labelColor), at: 1)
+                if let range = label.string.range(of: "$"), let icon = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonMedium"), color: labelColor) {
                     label.addAttribute(.attachment, value: icon, range: NSRange(range, in: label.string))
+                    label.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: label.string))
                 }
                 
                 return ItemListDisclosureItem(presentationData: presentationData, title: "", attributedTitle: title, label: "", attributedLabel: label, labelStyle: .coloredText(labelColor), additionalDetailLabel: detailText, additionalDetailLabelColor: detailColor, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
@@ -1383,13 +1383,13 @@ private func monetizationEntries(
     var entries: [StatsEntry] = []
     entries.append(.adsHeader(presentationData.theme, presentationData.strings.Monetization_Header))
     
-    entries.append(.adsImpressionsTitle(presentationData.theme, presentationData.strings.Monetization_ImpressionsTitle))
     if !data.topHoursGraph.isEmpty {
+        entries.append(.adsImpressionsTitle(presentationData.theme, presentationData.strings.Monetization_ImpressionsTitle))
         entries.append(.adsImpressionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.topHoursGraph, .hourlyStep))
     }
     
-    entries.append(.adsRevenueTitle(presentationData.theme, presentationData.strings.Monetization_AdRevenueTitle))
     if !data.revenueGraph.isEmpty {
+        entries.append(.adsRevenueTitle(presentationData.theme, presentationData.strings.Monetization_AdRevenueTitle))
         entries.append(.adsRevenueGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.revenueGraph, .currency, data.usdRate))
     }
         

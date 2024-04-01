@@ -196,6 +196,8 @@ public final class MediaEditor {
     public var canCutoutUpdated: (Bool) -> Void = { _ in }
     public var isCutoutUpdated: (Bool) -> Void = { _ in }
     
+    public var classificationUpdated: ([(String, Float)]) -> Void = { _ in }
+    
     private var textureCache: CVMetalTextureCache!
     
     public var hasPortraitMask: Bool {
@@ -697,18 +699,22 @@ public final class MediaEditor {
                         textureSource.setMainInput(.image(image))
                     }
                     
-                    
-                    if case .sticker = self.mode, let cgImage = image.cgImage, !imageHasTransparency(cgImage) {
-                        let _ = (cutoutStickerImage(from: image, onlyCheck: true)
-                        |> deliverOnMainQueue).start(next: { [weak self] result in
-                            guard let self, result != nil else {
-                                return
-                            }
-                            self.canCutout = true
-                            self.canCutoutUpdated(true)
+                    if case .sticker = self.mode, let cgImage = image.cgImage {
+                        if !imageHasTransparency(cgImage) {
+                            let _ = (cutoutStickerImage(from: image, onlyCheck: true)
+                            |> deliverOnMainQueue).start(next: { [weak self] result in
+                                guard let self, result != nil else {
+                                    return
+                                }
+                                self.canCutout = true
+                                self.canCutoutUpdated(true)
+                            })
+                        }
+                        let _ = (classifyImage(image)
+                        |> deliverOnMainQueue).start(next: { [weak self] classes in
+                            self?.classificationUpdated(classes)
                         })
                     }
-                    
                 }
                 if let player, let playerItem = player.currentItem, !textureSourceResult.playerIsReference {
                     textureSource.setMainInput(.video(playerItem))
