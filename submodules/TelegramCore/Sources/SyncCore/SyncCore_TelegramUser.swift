@@ -37,7 +37,7 @@ public struct BotUserInfoFlags: OptionSet {
     public static let requiresGeolocationForInlineRequests = BotUserInfoFlags(rawValue: (1 << 3))
     public static let canBeAddedToAttachMenu = BotUserInfoFlags(rawValue: (1 << 4))
     public static let canEdit = BotUserInfoFlags(rawValue: (1 << 5))
-    public static let isBusiness = BotUserInfoFlags(rawValue: (1 << 5))
+    public static let isBusiness = BotUserInfoFlags(rawValue: (1 << 6))
 }
 
 public struct BotUserInfo: PostboxCoding, Equatable {
