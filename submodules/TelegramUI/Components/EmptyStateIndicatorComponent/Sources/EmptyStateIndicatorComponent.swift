@@ -15,6 +15,7 @@ public final class EmptyStateIndicatorComponent: Component {
     public let title: String
     public let text: String
     public let actionTitle: String?
+    public let fitToHeight: Bool
     public let action: () -> Void
     public let additionalActionTitle: String?
     public let additionalAction: () -> Void
@@ -22,6 +23,7 @@ public final class EmptyStateIndicatorComponent: Component {
     public init(
         context: AccountContext,
         theme: PresentationTheme,
+        fitToHeight: Bool,
         animationName: String,
         title: String,
         text: String,
@@ -32,6 +34,7 @@ public final class EmptyStateIndicatorComponent: Component {
     ) {
         self.context = context
         self.theme = theme
+        self.fitToHeight = fitToHeight
         self.animationName = animationName
         self.title = title
         self.text = text
@@ -46,6 +49,9 @@ public final class EmptyStateIndicatorComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.fitToHeight != rhs.fitToHeight {
             return false
         }
         if lhs.animationName != rhs.animationName {
@@ -205,7 +211,12 @@ public final class EmptyStateIndicatorComponent: Component {
                 totalHeight += buttonSpacing + additionalButtonSize.height
             }
             
-            var contentY = floor((availableSize.height - totalHeight) * 0.5)
+            var contentY: CGFloat
+            if component.fitToHeight {
+                contentY = 0.0
+            } else {
+                contentY = floor((availableSize.height - totalHeight) * 0.5)
+            }
             
             if let animationView = self.animation.view {
                 if animationView.superview == nil {
@@ -243,7 +254,11 @@ public final class EmptyStateIndicatorComponent: Component {
                 contentY += additionalButtonSize.height
             }
             
-            return availableSize
+            if component.fitToHeight {
+                return CGSize(width: availableSize.width, height: totalHeight)
+            } else {
+                return availableSize
+            }
         }
     }
 

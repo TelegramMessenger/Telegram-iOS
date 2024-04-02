@@ -11884,3 +11884,6 @@ Sorry for the inconvenience.";
 "BusinessLink.ErrorExpired" = "Link Expired";
 
 "WebApp.AlertBiometryAccessText" = "Do you want to allow %@ to use Face ID?";
+
+"StoryList.SubtitleArchived_1" = "1 archived post";
+"StoryList.SubtitleArchived_any" = "%d archived posts";

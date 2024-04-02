@@ -365,6 +365,7 @@ private final class PeerInfoPendingPane {
         hasBecomeReady: @escaping (PeerInfoPaneKey) -> Void,
         parentController: ViewController?,
         openMediaCalendar: @escaping () -> Void,
+        openAddStory: @escaping () -> Void,
         paneDidScroll: @escaping () -> Void,
         ensureRectVisible: @escaping (UIView, CGRect) -> Void,
         externalDataUpdated: @escaping (ContainedViewLayoutTransition) -> Void
@@ -372,8 +373,8 @@ private final class PeerInfoPendingPane {
         let captureProtected = data.peer?.isCopyProtectionEnabled ?? false
         let paneNode: PeerInfoPaneNode
         switch key {
-        case .stories:
-            let visualPaneNode = PeerInfoStoryPaneNode(context: context, peerId: peerId, chatLocation: chatLocation, contentType: .photoOrVideo, captureProtected: captureProtected, isSaved: false, isArchive: false, navigationController: chatControllerInteraction.navigationController, listContext: data.storyListContext)
+        case .stories, .storyArchive:
+            let visualPaneNode = PeerInfoStoryPaneNode(context: context, peerId: peerId, chatLocation: chatLocation, contentType: .photoOrVideo, captureProtected: captureProtected, isSaved: false, isArchive: key == .storyArchive, isProfileEmbedded: true, navigationController: chatControllerInteraction.navigationController, listContext: key == .storyArchive ? data.storyArchiveListContext : data.storyListContext)
             paneNode = visualPaneNode
             visualPaneNode.openCurrentDate = {
                 openMediaCalendar()
@@ -383,6 +384,9 @@ private final class PeerInfoPendingPane {
             }
             visualPaneNode.ensureRectVisible = { sourceView, rect in
                 ensureRectVisible(sourceView, rect)
+            }
+            visualPaneNode.emptyAction = {
+                openAddStory()
             }
         case .media:
             let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .photoOrVideo, captureProtected: captureProtected)
@@ -500,6 +504,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     var requestUpdate: ((ContainedViewLayoutTransition) -> Void)?
 
     var openMediaCalendar: (() -> Void)?
+    var openAddStory: (() -> Void)?
     var paneDidScroll: (() -> Void)?
     
     var ensurePaneRectVisible: ((UIView, CGRect) -> Void)?
@@ -848,6 +853,9 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                     openMediaCalendar: { [weak self] in
                         self?.openMediaCalendar?()
                     },
+                    openAddStory: { [weak self] in
+                        self?.openAddStory?()
+                    },
                     paneDidScroll: { [weak self] in
                         self?.paneDidScroll?()
                     },
@@ -1010,6 +1018,9 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
             switch key {
             case .stories:
                 title = presentationData.strings.PeerInfo_PaneStories
+            case .storyArchive:
+                //TODO:localize
+                title = "Archived Posts"
             case .media:
                 title = presentationData.strings.PeerInfo_PaneMedia
             case .files:

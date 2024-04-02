@@ -9,6 +9,7 @@ import ComponentFlow
 public final class SliderComponent: Component {
     public let valueCount: Int
     public let value: Int
+    public let markPositions: Bool
     public let trackBackgroundColor: UIColor
     public let trackForegroundColor: UIColor
     public let valueUpdated: (Int) -> Void
@@ -17,6 +18,7 @@ public final class SliderComponent: Component {
     public init(
         valueCount: Int,
         value: Int,
+        markPositions: Bool,
         trackBackgroundColor: UIColor,
         trackForegroundColor: UIColor,
         valueUpdated: @escaping (Int) -> Void,
@@ -24,6 +26,7 @@ public final class SliderComponent: Component {
     ) {
         self.valueCount = valueCount
         self.value = value
+        self.markPositions = markPositions
         self.trackBackgroundColor = trackBackgroundColor
         self.trackForegroundColor = trackForegroundColor
         self.valueUpdated = valueUpdated
@@ -35,6 +38,9 @@ public final class SliderComponent: Component {
             return false
         }
         if lhs.value != rhs.value {
+            return false
+        }
+        if lhs.markPositions != rhs.markPositions {
             return false
         }
         if lhs.trackBackgroundColor != rhs.trackBackgroundColor {
@@ -97,6 +103,7 @@ public final class SliderComponent: Component {
                 sliderView.maximumValue = CGFloat(component.valueCount - 1)
                 sliderView.positionsCount = component.valueCount
                 sliderView.useLinesForPositions = true
+                sliderView.markPositions = component.markPositions
                 
                 sliderView.backgroundColor = nil
                 sliderView.isOpaque = false

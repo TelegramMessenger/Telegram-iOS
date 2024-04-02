@@ -1463,7 +1463,9 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                                 values: valueList.map { item in
                                     return environment.strings.MessageTimer_Days(Int32(item))
                                 },
+                                markPositions: true,
                                 selectedIndex: selectedInactivityIndex,
+                                title: nil,
                                 selectedIndexUpdated: { [weak self] index in
                                     guard let self else {
                                         return
