@@ -30,7 +30,7 @@ private final class OverlayMediaVideoNodeData {
 
 
 
-final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
+final class OverlayMediaControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private let updatePossibleEmbeddingItem: (OverlayMediaControllerEmbeddingItem?) -> Void
     private let embedPossibleEmbeddingItem: (OverlayMediaControllerEmbeddingItem) -> Bool
     
@@ -61,12 +61,12 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
         
         let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
         panRecognizer.cancelsTouchesInView = false
-        panRecognizer.delegate = self
+        panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.view.addGestureRecognizer(panRecognizer)
         
         let pinchRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.pinchGesture(_:)))
         pinchRecognizer.cancelsTouchesInView = false
-        pinchRecognizer.delegate = self
+        pinchRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.view.addGestureRecognizer(pinchRecognizer)
     }
     

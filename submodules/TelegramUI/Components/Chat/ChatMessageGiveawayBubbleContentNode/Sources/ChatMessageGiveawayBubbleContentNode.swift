@@ -24,7 +24,7 @@ private let titleFont = Font.medium(15.0)
 private let textFont = Font.regular(13.0)
 private let boldTextFont = Font.semibold(13.0)
 
-public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode, UIGestureRecognizerDelegate {
+public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode, ASGestureRecognizerDelegate {
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     
     private let placeholderNode: StickerShimmerEffectNode
@@ -170,7 +170,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
         super.didLoad()
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.bubbleTap(_:)))
-        tapRecognizer.delegate = self
+        tapRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.view.addGestureRecognizer(tapRecognizer)
     }
 

@@ -446,7 +446,7 @@ private final class PeerInfoPendingPane {
     }
 }
 
-final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
+final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private let context: AccountContext
     private let peerId: PeerId
     private let chatLocation: ChatLocation
@@ -602,7 +602,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
             }
             return [.left, .right]
         })
-        panRecognizer.delegate = self
+        panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
         self.view.addGestureRecognizer(panRecognizer)

@@ -153,7 +153,7 @@ final class RecentSessionScreen: ViewController {
     }
 }
 
-private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
+private class RecentSessionScreenNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private weak var controller: RecentSessionScreen?
@@ -459,7 +459,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         
         self.addSubnode(self.dimNode)
         
-        self.wrappingScrollNode.view.delegate = self
+        self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.addSubnode(self.wrappingScrollNode)
         
         self.wrappingScrollNode.addSubnode(self.backgroundNode)

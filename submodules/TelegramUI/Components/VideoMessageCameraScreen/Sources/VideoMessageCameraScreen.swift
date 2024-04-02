@@ -539,7 +539,7 @@ public class VideoMessageCameraScreen: ViewController {
         case video(Video)
     }
     
-    fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
+    fileprivate final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
         private weak var controller: VideoMessageCameraScreen?
         private let context: AccountContext
         fileprivate var camera: Camera?

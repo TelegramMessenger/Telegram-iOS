@@ -10,7 +10,7 @@ import ShareController
 import OpenInExternalAppUI
 import TelegramUIPreferences
 
-class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+class InstantPageReferenceControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
     private let sourceLocation: InstantPageSourceLocation
     private let theme: InstantPageTheme
@@ -84,7 +84,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         self.addSubnode(self.dimNode)
         
-        self.wrappingScrollNode.view.delegate = self
+        self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.addSubnode(self.wrappingScrollNode)
         
         self.wrappingScrollNode.addSubnode(self.contentBackgroundNode)

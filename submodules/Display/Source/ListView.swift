@@ -149,7 +149,7 @@ private func cancelContextGestures(view: UIView) {
     }
 }
 
-open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGestureRecognizerDelegate {
+open class ListView: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     public struct ScrollingIndicatorState {
         public struct Item {
             public var index: Int
@@ -494,13 +494,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.scroller.alwaysBounceVertical = true
         self.scroller.contentSize = CGSize(width: 0.0, height: infiniteScrollSize * 2.0)
         self.scroller.isHidden = true
-        self.scroller.delegate = self
+        self.scroller.delegate = self.wrappedScrollViewDelegate
         self.view.addSubview(self.scroller)
         self.scroller.panGestureRecognizer.cancelsTouchesInView = true
         self.view.addGestureRecognizer(self.scroller.panGestureRecognizer)
                 
         let trackingRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.trackingGesture(_:)))
-        trackingRecognizer.delegate = self
+        trackingRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         trackingRecognizer.cancelsTouchesInView = false
         self.view.addGestureRecognizer(trackingRecognizer)
 
@@ -534,7 +534,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         tapGestureRecognizer.isEnabled = false
-        tapGestureRecognizer.delegate = self
+        tapGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.view.addGestureRecognizer(tapGestureRecognizer)
         self.tapGestureRecognizer = tapGestureRecognizer
         

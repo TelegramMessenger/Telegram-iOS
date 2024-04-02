@@ -105,7 +105,7 @@ private enum FilteredItemNeighbor {
     case item(FormControllerItem)
 }
 
-public class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: ViewControllerTracingNode, UIScrollViewDelegate {
+public class FormControllerNode<InitParams, InnerState: FormControllerInnerState>: ViewControllerTracingNode, ASScrollViewDelegate {
     private typealias InternalState = FormControllerInternalState<InnerState>
     typealias State = FormControllerState<InnerState>
     typealias Entry = InnerState.Entry
@@ -142,7 +142,7 @@ public class FormControllerNode<InitParams, InnerState: FormControllerInnerState
         
         self.scrollNode.backgroundColor = nil
         self.scrollNode.isOpaque = false
-        self.scrollNode.delegate = self
+        self.scrollNode.delegate = self.wrappedScrollViewDelegate
         self.addSubnode(self.scrollNode)
         
         self.scrollNode.view.delaysContentTouches = true

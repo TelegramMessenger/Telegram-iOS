@@ -1,7 +1,7 @@
 import UIKit
 import AsyncDisplayKit
 
-final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
+final class ActionSheetItemGroupNode: ASDisplayNode, ASScrollViewDelegate {
     private let theme: ActionSheetControllerTheme
     
     private let centerDimView: UIImageView
@@ -60,7 +60,7 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         self.view.addSubview(self.bottomDimView)
         self.view.addSubview(self.trailingDimView)
         
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         
         self.clippingNode.view.addSubview(self.backgroundEffectView)
         self.clippingNode.addSubnode(self.scrollNode)

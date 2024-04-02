@@ -263,7 +263,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
             
-    fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
+    fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, ASScrollViewDelegate {
         private weak var controller: WebAppController?
         
         private let backgroundNode: ASDisplayNode
@@ -321,7 +321,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             webView.alpha = 0.0
             webView.navigationDelegate = self
             webView.uiDelegate = self
-            webView.scrollView.delegate = self
+            webView.scrollView.delegate = self.wrappedScrollViewDelegate
             webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: [], context: nil)
             webView.tintColor = self.presentationData.theme.rootController.tabBar.iconColor
             webView.handleScriptMessage = { [weak self] message in

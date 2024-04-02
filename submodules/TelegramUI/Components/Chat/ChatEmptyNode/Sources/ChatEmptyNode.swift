@@ -86,7 +86,7 @@ public protocol ChatEmptyNodeStickerContentNode: ASDisplayNode {
     var stickerNode: ChatMediaInputStickerGridItemNode { get }
 }
 
-public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeStickerContentNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
+public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeStickerContentNode, ChatEmptyNodeContent, ASGestureRecognizerDelegate {
     private let context: AccountContext
     private let interaction: ChatPanelInterfaceInteraction?
     
@@ -134,7 +134,7 @@ public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNod
         super.didLoad()
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.stickerTapGesture(_:)))
-        tapRecognizer.delegate = self
+        tapRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.stickerNode.view.addGestureRecognizer(tapRecognizer)
     }
     
@@ -295,7 +295,7 @@ public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNod
     }
 }
 
-public final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerContentNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
+public final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerContentNode, ChatEmptyNodeContent, ASGestureRecognizerDelegate {
     private let context: AccountContext
     private let interaction: ChatPanelInterfaceInteraction?
     
@@ -342,7 +342,7 @@ public final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeS
         super.didLoad()
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.stickerTapGesture(_:)))
-        tapRecognizer.delegate = self
+        tapRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.stickerNode.view.addGestureRecognizer(tapRecognizer)
     }
     
@@ -1082,7 +1082,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
     }
 }
 
-public final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
+public final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeContent, ASGestureRecognizerDelegate {
     private let context: AccountContext
     
     private let titleNode: ImmediateTextNode

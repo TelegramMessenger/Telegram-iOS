@@ -110,7 +110,7 @@ private extension ContextControllerTakeViewInfo.ContainingItem {
     }
 }
 
-final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextControllerPresentationNode, UIScrollViewDelegate {
+final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextControllerPresentationNode, ASScrollViewDelegate {
     enum ContentSource {
         case location(ContextLocationContentSource)
         case reference(ContextReferenceContentSource)
@@ -339,7 +339,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         //self.addSubnode(self.contentRectDebugNode)
         #endif
 
-        self.scroller.delegate = self
+        self.scroller.delegate = self.wrappedScrollViewDelegate
         
         self.dismissTapNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dismissTapGesture(_:))))
         

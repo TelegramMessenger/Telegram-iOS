@@ -35,7 +35,7 @@ final class ChatSendAsPeerListContextItem: ContextMenuCustomItem {
     }
 }
 
-private final class ChatSendAsPeerListContextItemNode: ASDisplayNode, ContextMenuCustomNode, ContextActionNodeProtocol, UIScrollViewDelegate {
+private final class ChatSendAsPeerListContextItemNode: ASDisplayNode, ContextMenuCustomNode, ContextActionNodeProtocol, ASScrollViewDelegate {
     private let item: ChatSendAsPeerListContextItem
     private let presentationData: PresentationData
     private let getController: () -> ContextControllerProtocol?
@@ -146,7 +146,7 @@ private final class ChatSendAsPeerListContextItemNode: ASDisplayNode, ContextMen
     override func didLoad() {
         super.didLoad()
         
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.scrollNode.view.alwaysBounceVertical = false
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 5.0, right: 0.0)

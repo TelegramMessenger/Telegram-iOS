@@ -247,7 +247,7 @@ public final class InviteLinkInviteController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, transition: transition)
     }
 
-    class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
+    class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
         private weak var controller: InviteLinkInviteController?
         
         private let context: AccountContext
@@ -574,7 +574,7 @@ public final class InviteLinkInviteController: ViewController {
             self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             
             let panRecognizer = DirectionalPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-            panRecognizer.delegate = self
+            panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             panRecognizer.delaysTouchesBegan = false
             panRecognizer.cancelsTouchesInView = true
             self.view.addGestureRecognizer(panRecognizer)

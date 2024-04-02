@@ -149,7 +149,7 @@ private func calcPatternColors(for state: ThemeColorState) -> [UIColor] {
     }
 }
 
-final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate {
+final class ThemeAccentColorControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private let context: AccountContext
     private var theme: PresentationTheme
     private let mode: ThemeAccentColorControllerMode
@@ -625,7 +625,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.isPagingEnabled = true
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.pageControlNode.setPage(0.0)
         self.colorPanelNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.patternPanelNode.view.disablesInteractiveTransitionGestureRecognizer = true

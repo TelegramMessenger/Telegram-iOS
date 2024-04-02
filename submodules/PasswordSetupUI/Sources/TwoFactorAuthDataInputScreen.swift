@@ -1268,7 +1268,7 @@ private final class TwoFactorDataInputTextNode: ASDisplayNode, UITextFieldDelega
     }
 }
 
-private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
+private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private var presentationData: PresentationData
     private let mode: TwoFactorDataInputMode
     private let action: () -> Void
@@ -1818,7 +1818,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {

@@ -279,7 +279,7 @@ private class StickerNode: ASDisplayNode {
     }
 }
 
-private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
+private class StickersCarouselNode: ASDisplayNode, ASScrollViewDelegate {
     private let context: AccountContext
     private let stickers: [TelegramMediaFile]
     private let tapAction: () -> Void
@@ -331,7 +331,7 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     override func didLoad() {
         super.didLoad()
         
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.showsVerticalScrollIndicator = false
         self.scrollNode.view.canCancelContentTouches = true

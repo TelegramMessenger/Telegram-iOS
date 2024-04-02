@@ -191,7 +191,7 @@ class StackItemContainerNode: ASDisplayNode {
     }
 }
 
-public class StackContainerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+public class StackContainerNode: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     private let scrollNode: ASScrollNode
     private var nodes: [StackItemContainerNode]
     
@@ -222,11 +222,11 @@ public class StackContainerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureR
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
         
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.scrollNode.view.alwaysBounceVertical = true
         
         let deleteGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(didPanToDelete(gestureRecognizer:)))
-        deleteGestureRecognizer.delegate = self
+        deleteGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         deleteGestureRecognizer.delaysTouchesBegan = true
         self.scrollNode.view.addGestureRecognizer(deleteGestureRecognizer)
         self.deleteGestureRecognizer = deleteGestureRecognizer

@@ -4,7 +4,7 @@ import SwiftSignalKit
 
 private let containerInsets = UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0)
 
-final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
+final class ActionSheetControllerNode: ASDisplayNode, ASScrollViewDelegate {
     var theme: ActionSheetControllerTheme {
         didSet {
             self.itemGroupsContainerNode.theme = self.theme
@@ -64,7 +64,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         super.init()
                 
-        self.scrollView.delegate = self
+        self.scrollView.delegate = self.wrappedScrollViewDelegate
         
         self.addSubnode(self.scrollNode)
         

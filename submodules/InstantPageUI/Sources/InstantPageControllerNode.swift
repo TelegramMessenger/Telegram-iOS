@@ -18,7 +18,7 @@ import UndoUI
 import ContextUI
 import TranslateUI
 
-final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
+final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private weak var controller: InstantPageController?
     private let context: AccountContext
     private var settings: InstantPagePresentationSettings?
@@ -137,7 +137,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.addSubnode(self.scrollNodeFooter)
         self.addSubnode(self.navigationBar)
         self.scrollNode.view.delaysContentTouches = false
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         
         self.navigationBar.back = navigateBack
         self.navigationBar.share = { [weak self] in

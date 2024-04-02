@@ -387,7 +387,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
     private static let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
     private static let reactionIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReactionIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
     
-    private final class ReactionsTabNode: ASDisplayNode, UIScrollViewDelegate {
+    private final class ReactionsTabNode: ASDisplayNode, ASScrollViewDelegate {
         private final class ItemNode: HighlightTrackingButtonNode {
             let context: AccountContext
             let displayReadTimestamps: Bool
@@ -868,7 +868,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             super.init()
             
             self.addSubnode(self.scrollNode)
-            self.scrollNode.view.delegate = self
+            self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
             
             self.clipsToBounds = true
             
@@ -1101,7 +1101,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         }
     }
     
-    final class ItemsNode: ASDisplayNode, ContextControllerItemsNode, UIGestureRecognizerDelegate {
+    final class ItemsNode: ASDisplayNode, ContextControllerItemsNode, ASGestureRecognizerDelegate {
         private let context: AccountContext
         private let displayReadTimestamps: Bool
         private let availableReactions: AvailableReactions?
@@ -1266,7 +1266,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 }
                 return [.left, .right]
             })
-            panRecognizer.delegate = self
+            panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             self.view.addGestureRecognizer(panRecognizer)
         }
         

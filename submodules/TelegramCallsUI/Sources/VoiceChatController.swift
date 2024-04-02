@@ -254,7 +254,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
         case fullscreen(controlsHidden: Bool)
     }
     
-    fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
+    fileprivate final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
         private struct ListTransition {
             let deletions: [ListViewDeleteItem]
             let insertions: [ListViewInsertItem]
@@ -3022,11 +3022,11 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             
             let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.actionButtonPressGesture(_:)))
             longTapRecognizer.minimumPressDuration = 0.001
-            longTapRecognizer.delegate = self
+            longTapRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             self.actionButton.view.addGestureRecognizer(longTapRecognizer)
             
             let panRecognizer = DirectionalPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-            panRecognizer.delegate = self
+            panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             panRecognizer.delaysTouchesBegan = false
             panRecognizer.cancelsTouchesInView = true
             self.view.addGestureRecognizer(panRecognizer)
@@ -6747,7 +6747,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                             self.updateDecorationsLayout(transition: transition)
                         }
                     }
-                    if false, let (peerId, _) = minimalVisiblePeerid {
+                    if !"".isEmpty, let (peerId, _) = minimalVisiblePeerid {
                         var index = 0
                         for item in self.currentEntries {
                             if case let .peer(entry, _) = item, entry.peer.id == peerId {

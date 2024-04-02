@@ -1047,7 +1047,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
     }
 }
 
-public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     public enum ContentType {
         case photoOrVideo
         case photo
@@ -2157,7 +2157,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         if isSelecting {
             if self.gridSelectionGesture == nil {
                 let selectionGesture = MediaPickerGridSelectionGesture<Int32>()
-                selectionGesture.delegate = self
+                selectionGesture.delegate = self.wrappedGestureRecognizerDelegate
                 selectionGesture.sideInset = 44.0
                 selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
                     self?.itemGrid.isScrollEnabled = isEnabled

@@ -241,7 +241,7 @@ private final class TitleLabelView: UIView {
     }
 }
 
-public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
+public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
     private struct ItemLayout {
         var itemSize: CGFloat
         var visibleItemCount: Int
@@ -590,7 +590,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.addSubnode(self.backgroundNode)
         
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         
         self.addSubnode(self.contentContainer)
         self.addSubnode(self.previewingItemContainer)

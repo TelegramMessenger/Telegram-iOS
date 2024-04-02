@@ -259,7 +259,7 @@ private var timerValues: [Int32] = {
     return values
 }()
 
-class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPickerViewDataSource, UIPickerViewDelegate {
+class ChatTimerScreenNode: ViewControllerTracingNode, ASScrollViewDelegate, UIPickerViewDataSource, UIPickerViewDelegate {
     private let context: AccountContext
     private let controllerStyle: ChatTimerScreenStyle
     private var presentationData: PresentationData
@@ -400,7 +400,7 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         self.addSubnode(self.dimNode)
         
-        self.wrappingScrollNode.view.delegate = self
+        self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.addSubnode(self.wrappingScrollNode)
         
         self.wrappingScrollNode.addSubnode(self.backgroundNode)

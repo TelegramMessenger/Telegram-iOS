@@ -92,7 +92,7 @@ enum BotCheckoutInfoControllerStatus {
     case verifying
 }
 
-final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
     private weak var navigationBar: NavigationBar?
     private let invoice: BotPaymentInvoice
@@ -244,7 +244,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
         self.scrollNode.view.alwaysBounceVertical = true
         self.scrollNode.view.showsVerticalScrollIndicator = false
         self.scrollNode.view.showsHorizontalScrollIndicator = false
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         
         self.addSubnode(self.scrollNode)
         
