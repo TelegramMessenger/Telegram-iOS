@@ -230,7 +230,7 @@ private class AdMessagesHistoryContextImpl {
             self.sponsorInfo = try container.decodeIfPresent(String.self, forKey: .sponsorInfo)
             self.additionalInfo = try container.decodeIfPresent(String.self, forKey: .additionalInfo)
             
-            self.canReport = try container.decodeIfPresent(Bool.self, forKey: .displayAvatar) ?? false
+            self.canReport = try container.decodeIfPresent(Bool.self, forKey: .canReport) ?? false
         }
 
         public func encode(to encoder: Encoder) throws {
