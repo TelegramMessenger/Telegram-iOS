@@ -1068,6 +1068,8 @@ public func _internal_setAccountConnectedBot(account: Account, bot: TelegramAcco
                 flags |= 1 << 0
             }
             mappedRecipients = bot.recipients.apiInputBotValue(additionalPeers: additionalPeers, excludePeers: excludePeers)
+        } else {
+            flags |= 1 << 1
         }
         
         return account.network.request(Api.functions.account.updateConnectedBot(flags: flags, bot: mappedBot, recipients: mappedRecipients))
