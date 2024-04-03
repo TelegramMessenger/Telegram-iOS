@@ -11800,9 +11800,12 @@ Sorry for the inconvenience.";
 
 "SendInviteLink.TitleUpgradeToPremium" = "Upgrade to Premium";
 "SendInviteLink.TextContactsAndPremiumOneUser" = "**%@** accepts invitations to groups from contacts and **Premium** users.";
+"SendInviteLink.ChannelTextContactsAndPremiumOneUser" = "**%@** accepts invitations to channels from contacts and **Premium** users.";
 
 "SendInviteLink.TextContactsAndPremiumMultipleUsers_1" = "{user_list}, and **%d** more person only accept invitations to groups from contacts and **Premium** users.";
 "SendInviteLink.TextContactsAndPremiumMultipleUsers_any" = "{user_list}, and **%d** more people only accept invitations to groups from contacts and **Premium** users.";
+"SendInviteLink.ChannelTextContactsAndPremiumMultipleUsers_1" = "{user_list}, and **%d** more person only accept invitations to channels from contacts and **Premium** users.";
+"SendInviteLink.ChannelTextContactsAndPremiumMultipleUsers_any" = "{user_list}, and **%d** more people only accept invitations to channels from contacts and **Premium** users.";
 
 "SendInviteLink.SubscribeToPremiumButton" = "Subscribe to Telegram Premium";
 "SendInviteLink.PremiumOrSendSectionSeparator" = "or";

@@ -6514,10 +6514,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                     let text: String
                     switch error {
-                        case .limitExceeded:
-                            text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
-                        default:
-                            text = strongSelf.presentationData.strings.Login_UnknownError
+                    case .limitExceeded:
+                        text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
+                    case .premiumRequired:
+                        text = strongSelf.presentationData.strings.Conversation_SendMessageErrorNonPremiumForbidden(displayTitle).string
+                    default:
+                        text = strongSelf.presentationData.strings.Login_UnknownError
                     }
                     strongSelf.controller?.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }))

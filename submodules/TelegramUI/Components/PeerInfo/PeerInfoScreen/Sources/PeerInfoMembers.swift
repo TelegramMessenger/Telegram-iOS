@@ -309,7 +309,8 @@ private final class PeerInfoMembersContextImpl {
                 guard let strongSelf = self else {
                     return
                 }
-                if let _ = strongSelf.removingMemberIds.removeValue(forKey: memberId) {
+                if let disposable = strongSelf.removingMemberIds.removeValue(forKey: memberId) {
+                    disposable.dispose()
                     strongSelf.pushState()
                 }
             }
