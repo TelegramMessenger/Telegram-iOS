@@ -25,7 +25,7 @@ public func attachmentDefaultTopInset(layout: ContainerViewLayout?) -> CGFloat {
     }
 }
 
-final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
+final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     let wrappingNode: ASDisplayNode
     let clipNode: ASDisplayNode
     let container: NavigationContainer
@@ -112,7 +112,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         super.didLoad()
         
         let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-        panRecognizer.delegate = self
+        panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
         self.panGestureRecognizer = panRecognizer

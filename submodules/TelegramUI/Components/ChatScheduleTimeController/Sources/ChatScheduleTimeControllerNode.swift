@@ -11,7 +11,7 @@ import SolidRoundedButtonNode
 import PresentationDataUtils
 import UIKitRuntimeUtils
 
-class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+class ChatScheduleTimeControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
     private let mode: ChatScheduleTimeControllerMode
     private let controllerStyle: ChatScheduleTimeControllerStyle
@@ -128,7 +128,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         self.addSubnode(self.dimNode)
         
-        self.wrappingScrollNode.view.delegate = self
+        self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.addSubnode(self.wrappingScrollNode)
         
         self.wrappingScrollNode.addSubnode(self.backgroundNode)

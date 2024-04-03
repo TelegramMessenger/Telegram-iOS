@@ -169,7 +169,7 @@ private var smallUnitValues: [Int32] = {
     return values
 }()
 
-class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPickerViewDataSource, UIPickerViewDelegate {
+class LocationDistancePickerScreenNode: ViewControllerTracingNode, ASScrollViewDelegate, UIPickerViewDataSource, UIPickerViewDelegate {
     private let context: AccountContext
     private let controllerStyle: LocationDistancePickerScreenStyle
     private var presentationData: PresentationData
@@ -277,7 +277,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         self.addSubnode(self.dimNode)
         
-        self.wrappingScrollNode.view.delegate = self
+        self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.addSubnode(self.wrappingScrollNode)
         
         self.wrappingScrollNode.addSubnode(self.backgroundNode)

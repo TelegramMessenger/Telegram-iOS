@@ -100,7 +100,7 @@ public final class MultiplexedVideoNodeFiles {
     }
 }
 
-public final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
+public final class MultiplexedVideoNode: ASDisplayNode, ASScrollViewDelegate {
     private let account: Account
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -236,7 +236,7 @@ public final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         
         let recognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         self.view.addGestureRecognizer(recognizer)

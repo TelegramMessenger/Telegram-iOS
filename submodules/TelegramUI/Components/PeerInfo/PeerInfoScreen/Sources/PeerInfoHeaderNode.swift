@@ -88,6 +88,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     private let isOpenedFromChat: Bool
     private let isSettings: Bool
+    private let isMyProfile: Bool
     private let videoCallsEnabled: Bool
     private let forumTopicThreadId: Int64?
     private let chatLocation: ChatLocation
@@ -179,12 +180,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     private var validLayout: (width: CGFloat, deviceMetrics: DeviceMetrics)?
     
-    init(context: AccountContext, controller: PeerInfoScreenImpl, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool, forumTopicThreadId: Int64?, chatLocation: ChatLocation) {
+    init(context: AccountContext, controller: PeerInfoScreenImpl, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool, isMyProfile: Bool, forumTopicThreadId: Int64?, chatLocation: ChatLocation) {
         self.context = context
         self.controller = controller
         self.isAvatarExpanded = avatarInitiallyExpanded
         self.isOpenedFromChat = isOpenedFromChat
         self.isSettings = isSettings
+        self.isMyProfile = isMyProfile
         self.videoCallsEnabled = true
         self.forumTopicThreadId = forumTopicThreadId
         self.chatLocation = chatLocation
@@ -522,7 +524,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let credibilityIcon: CredibilityIcon
         var verifiedIcon: CredibilityIcon = .none
         if let peer = peer {
-            if peer.id == self.context.account.peerId && !self.isSettings {
+            if peer.id == self.context.account.peerId && !self.isSettings && !self.isMyProfile {
                 credibilityIcon = .none
             } else if peer.isFake {
                 credibilityIcon = .fake
@@ -535,7 +537,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 credibilityIcon = .emojiStatus(emojiStatus)
             } else if peer.isVerified {
                 credibilityIcon = .verified
-            } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled && (peer.id != self.context.account.peerId || self.isSettings) {
+            } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled && (peer.id != self.context.account.peerId || self.isSettings || self.isMyProfile) {
                 credibilityIcon = .premium
             } else {
                 credibilityIcon = .none
@@ -554,7 +556,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.editingContentNode.alpha = state.isEditing ? 1.0 : 0.0
         
-        let editingContentHeight = self.editingContentNode.update(width: width, safeInset: containerInset, statusBarHeight: statusBarHeight, navigationHeight: navigationHeight, isModalOverlay: isModalOverlay, peer: state.isEditing ? peer : nil, threadData: threadData, chatLocation: self.chatLocation, cachedData: cachedData, isContact: isContact, isSettings: isSettings, presentationData: presentationData, transition: transition)
+        let editingContentHeight = self.editingContentNode.update(width: width, safeInset: containerInset, statusBarHeight: statusBarHeight, navigationHeight: navigationHeight, isModalOverlay: isModalOverlay, peer: state.isEditing ? peer : nil, threadData: threadData, chatLocation: self.chatLocation, cachedData: cachedData, isContact: isContact, isSettings: isSettings || isMyProfile, presentationData: presentationData, transition: transition)
         transition.updateFrame(node: self.editingContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -contentOffset), size: CGSize(width: width, height: editingContentHeight)))
         
         let avatarOverlayFarme = self.editingContentNode.convert(self.editingContentNode.avatarNode.frame, to: self)
@@ -694,7 +696,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             let backgroundTransitionStepDistance: CGFloat = 50.0
             var backgroundTransitionDistance: CGFloat = navigationHeight + panelWithAvatarHeight - backgroundTransitionStepDistance
-            if self.isSettings {
+            if self.isSettings || self.isMyProfile {
                 backgroundTransitionDistance -= 100.0
             }
             if isMediaOnly {
@@ -978,15 +980,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.navigationBackgroundBackgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
         self.navigationSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
 
-        let navigationSeparatorAlpha: CGFloat
-        if isMediaOnly {
-            navigationSeparatorAlpha = 0.0
-        } else if state.isEditing && self.isSettings {
-            //navigationSeparatorAlpha = min(1.0, contentOffset / (navigationHeight * 0.5))
-            navigationSeparatorAlpha = 0.0
-        } else {
-            navigationSeparatorAlpha = 0.0
-        }
+        let navigationSeparatorAlpha: CGFloat = 0.0
         transition.updateAlpha(node: self.navigationBackgroundBackgroundNode, alpha: 1.0 - navigationSeparatorAlpha)
         transition.updateAlpha(node: self.navigationSeparatorNode, alpha: navigationSeparatorAlpha)
 
@@ -994,7 +988,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let expandedAvatarControlsHeight: CGFloat = 61.0
         var expandedAvatarListHeight = min(width, containerHeight - expandedAvatarControlsHeight)
-        if self.isSettings {
+        if self.isSettings || self.isMyProfile {
             expandedAvatarListHeight = expandedAvatarListHeight + 60.0
         } else {
             expandedAvatarListHeight = expandedAvatarListHeight + 98.0
@@ -1002,8 +996,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let expandedAvatarListSize = CGSize(width: width, height: expandedAvatarListHeight)
         
-        let actionButtonKeys: [PeerInfoHeaderButtonKey] = self.isSettings ? [] : peerInfoHeaderActionButtons(peer: peer, isSecretChat: isSecretChat, isContact: isContact)
-        let buttonKeys: [PeerInfoHeaderButtonKey] = self.isSettings ? [] : peerInfoHeaderButtons(peer: peer, cachedData: cachedData, isOpenedFromChat: self.isOpenedFromChat, isExpanded: true, videoCallsEnabled: width > 320.0 && self.videoCallsEnabled, isSecretChat: isSecretChat, isContact: isContact, threadInfo: threadData?.info)
+        let actionButtonKeys: [PeerInfoHeaderButtonKey] = (self.isSettings || self.isMyProfile) ? [] : peerInfoHeaderActionButtons(peer: peer, isSecretChat: isSecretChat, isContact: isContact)
+        let buttonKeys: [PeerInfoHeaderButtonKey] = (self.isSettings || self.isMyProfile) ? [] : peerInfoHeaderButtons(peer: peer, cachedData: cachedData, isOpenedFromChat: self.isOpenedFromChat, isExpanded: true, videoCallsEnabled: width > 320.0 && self.videoCallsEnabled, isSecretChat: isSecretChat, isContact: isContact, threadInfo: threadData?.info)
         
         var isPremium = false
         var isVerified = false
@@ -1029,7 +1023,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if let peer = peer {
             var title: String
-            if peer.id == self.context.account.peerId && !self.isSettings {
+            if peer.id == self.context.account.peerId && !self.isSettings && !self.isMyProfile {
                 if case .replyThread = self.chatLocation {
                     title = presentationData.strings.Conversation_MyNotes
                 } else {
@@ -1069,6 +1063,26 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white, shadowColor: titleShadowColor)
                 
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
+            } else if self.isMyProfile {
+                let subtitleColor: UIColor
+                subtitleColor = .white
+                
+                subtitleStringText = presentationData.strings.Presence_online
+                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor)
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white, shadowColor: titleShadowColor)
+                
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
+
+                let (maybePanelStatusData, _, _) = panelStatusData
+                if let panelStatusData = maybePanelStatusData {
+                    let subtitleColor: UIColor
+                    if panelStatusData.isActivity {
+                        subtitleColor = UIColor.white
+                    } else {
+                        subtitleColor = UIColor.white
+                    }
+                    panelSubtitleString = (panelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor))
+                }
             } else if let _ = threadData {
                 let subtitleColor: UIColor
                 subtitleColor = UIColor.white
@@ -1341,14 +1355,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let expandedTitleScale: CGFloat = 0.8
         
         var bottomShadowHeight: CGFloat = 88.0
-        if !self.isSettings {
+        if !self.isSettings && !self.isMyProfile {
             bottomShadowHeight += 100.0
         }
         let bottomShadowFrame = CGRect(origin: CGPoint(x: 0.0, y: expandedAvatarHeight - bottomShadowHeight), size: CGSize(width: width, height: bottomShadowHeight))
         transition.updateFrame(node: self.avatarListNode.listContainerNode.bottomShadowNode, frame: bottomShadowFrame, beginWithCurrentState: true)
         self.avatarListNode.listContainerNode.bottomShadowNode.update(size: bottomShadowFrame.size, transition: transition)
         
-        let singleTitleLockOffset: CGFloat = (peer?.id == self.context.account.peerId || subtitleSize.height.isZero) ? 8.0 : 0.0
+        let singleTitleLockOffset: CGFloat = ((peer?.id == self.context.account.peerId && !self.isMyProfile) || subtitleSize.height.isZero) ? 8.0 : 0.0
         
         let titleLockOffset: CGFloat = 7.0 + singleTitleLockOffset
         let titleMaxLockOffset: CGFloat = 7.0
@@ -1358,14 +1372,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.isAvatarExpanded {
             let minTitleSize = CGSize(width: titleSize.width * expandedTitleScale, height: titleSize.height * expandedTitleScale)
             var minTitleFrame = CGRect(origin: CGPoint(x: 16.0, y: expandedAvatarHeight - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
-            if !self.isSettings {
+            if !self.isSettings && !self.isMyProfile {
                 minTitleFrame.origin.y -= 83.0
             }
 
             titleFrame = CGRect(origin: CGPoint(x: minTitleFrame.midX - titleSize.width / 2.0, y: minTitleFrame.midY - titleSize.height / 2.0), size: titleSize)
             
             var titleCollapseOffset = titleFrame.midY - statusBarHeight - titleLockOffset
-            if case .regular = metrics.widthClass, !isSettings {
+            if case .regular = metrics.widthClass, !isSettings, !isMyProfile {
                 titleCollapseOffset -= 7.0
             }
             titleOffset = -min(titleCollapseOffset, contentOffset)
@@ -1377,7 +1391,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 9.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
             
             var titleCollapseOffset = titleFrame.midY - statusBarHeight - titleLockOffset
-            if case .regular = metrics.widthClass, !isSettings {
+            if case .regular = metrics.widthClass, !isSettings, !isMyProfile {
                 titleCollapseOffset -= 7.0
             }
             titleOffset = -min(titleCollapseOffset, contentOffset)
@@ -1408,7 +1422,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let effectiveAreaExpansionFraction: CGFloat
         if state.isEditing {
             effectiveAreaExpansionFraction = 0.0
-        } else if isSettings {
+        } else if isSettings || isMyProfile {
             var paneAreaExpansionDelta = (self.frame.maxY - navigationHeight) - contentOffset
             paneAreaExpansionDelta = max(0.0, min(paneAreaExpansionDelta, paneAreaExpansionDistance))
             effectiveAreaExpansionFraction = 1.0 - paneAreaExpansionDelta / paneAreaExpansionDistance
@@ -1716,12 +1730,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             rawHeight = navigationHeight + panelWithAvatarHeight
             var expandablePart: CGFloat = panelWithAvatarHeight - contentOffset
-            if self.isSettings {
+            if self.isSettings || self.isMyProfile {
                 expandablePart += 20.0
             } else {
                 if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.peerId == self.context.account.peerId {
                     expandablePart = 0.0
-                } else if peer?.id == self.context.account.peerId {
+                } else if peer?.id == self.context.account.peerId && !self.isMyProfile {
                     expandablePart = 0.0
                 } else {
                     expandablePart += 99.0
@@ -2140,7 +2154,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         if !state.isEditing {
-            if !isSettings {
+            if !isSettings && !isMyProfile {
                 if self.isAvatarExpanded {
                     resolvedHeight -= 21.0
                 } else {

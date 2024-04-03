@@ -32,7 +32,7 @@ public class GridNodeScrollerView: UIScrollView {
     }
 }
 
-open class GridNodeScroller: ASDisplayNode, UIGestureRecognizerDelegate {
+open class GridNodeScroller: ASDisplayNode, ASGestureRecognizerDelegate {
     public var scrollView: UIScrollView {
         return self.view as! UIScrollView
     }

@@ -288,7 +288,7 @@ private final class MediaCutoutScreenComponent: Component {
 }
 
 public final class MediaCutoutScreen: ViewController {
-    fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
+    fileprivate final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
         private weak var controller: MediaCutoutScreen?
         private let context: AccountContext
     

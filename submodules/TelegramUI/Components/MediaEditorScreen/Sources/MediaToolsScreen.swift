@@ -954,7 +954,7 @@ private final class MediaToolsScreenComponent: Component {
 }
 
 public final class MediaToolsScreen: ViewController {
-    fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
+    fileprivate final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
         private weak var controller: MediaToolsScreen?
         private let context: AccountContext
     

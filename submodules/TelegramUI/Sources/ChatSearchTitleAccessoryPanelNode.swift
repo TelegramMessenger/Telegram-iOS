@@ -26,7 +26,7 @@ private let backgroundTagImage: UIImage? = {
     }
 }()
 
-final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, ChatControllerCustomNavigationPanelNode, UIScrollViewDelegate {
+final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, ChatControllerCustomNavigationPanelNode, ASScrollViewDelegate {
     private struct Params: Equatable {
         var width: CGFloat
         var leftInset: CGFloat
@@ -466,7 +466,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
         self.scrollView.alwaysBounceHorizontal = false
         self.scrollView.alwaysBounceVertical = false
         self.scrollView.scrollsToTop = false
-        self.scrollView.delegate = self
+        self.scrollView.delegate = self.wrappedScrollViewDelegate
         
         self.view.addSubview(self.scrollView)
         

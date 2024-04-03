@@ -387,7 +387,7 @@ private final class FrameNode: ASDisplayNode {
     }
 }
 
-private final class QrCodeScanScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
+private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private weak var controller: QrCodeScanScreen?

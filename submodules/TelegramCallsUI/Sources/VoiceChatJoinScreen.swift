@@ -176,7 +176,7 @@ public final class VoiceChatJoinScreen: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 
-    class Node: ViewControllerTracingNode, UIScrollViewDelegate {
+    class Node: ViewControllerTracingNode, ASScrollViewDelegate {
         private let context: AccountContext
         private var presentationData: PresentationData
         private let asSpeaker: Bool
@@ -285,7 +285,7 @@ public final class VoiceChatJoinScreen: ViewController {
             self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             self.addSubnode(self.dimNode)
             
-            self.wrappingScrollNode.view.delegate = self
+            self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
             self.addSubnode(self.wrappingScrollNode)
             
             self.cancelButtonNode.setTitle(self.presentationData.strings.Common_Cancel, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)

@@ -9,7 +9,7 @@ import TelegramPresentationData
 import AccountContext
 import StickerResources
 
-final class StickerPreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
+final class StickerPreviewControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private let context: AccountContext
     private let presentationData: PresentationData
     

@@ -48,7 +48,7 @@ public final class EntitySearchContainerController: ViewController {
         self.node.containerLayoutUpdated(layout, transition: transition)
     }
     
-    private class Node: ViewControllerTracingNode, UIScrollViewDelegate {
+    private class Node: ViewControllerTracingNode, ASScrollViewDelegate {
         private weak var controller: EntitySearchContainerController?
         
         private let containerNode: EntitySearchContainerNode

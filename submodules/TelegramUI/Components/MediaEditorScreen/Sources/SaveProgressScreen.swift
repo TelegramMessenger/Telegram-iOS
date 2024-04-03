@@ -384,7 +384,7 @@ public final class SaveProgressScreenComponent: Component {
 }
 
 public final class SaveProgressScreen: ViewController {
-    fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
+    fileprivate final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
         private weak var controller: SaveProgressScreen?
         private let context: AccountContext
     

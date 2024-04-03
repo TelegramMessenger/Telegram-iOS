@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
+public final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     private final class Child {
         let value: ViewController
         var layout: ContainerViewLayout
@@ -151,7 +151,7 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
         if #available(iOS 13.4, *) {
             panRecognizer.allowedScrollTypesMask = .continuous
         }
-        panRecognizer.delegate = self
+        panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
         self.panRecognizer = panRecognizer

@@ -189,6 +189,62 @@ private let viewCountImage: UIImage = {
     return image!
 }()
 
+private let privacyTypeImageScaleFactor: CGFloat = {
+    return 0.9
+}()
+
+private let privacyTypeEveryoneImage: UIImage = {
+    let baseImage = UIImage(bundleImageName: "Stories/PrivacyEveryone")!
+    let imageSize = CGSize(width: floor(baseImage.size.width * privacyTypeImageScaleFactor), height: floor(baseImage.size.width * privacyTypeImageScaleFactor))
+    let image = generateImage(imageSize, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        UIGraphicsPushContext(context)
+        baseImage.draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
+    })
+    return image!
+}()
+
+private let privacyTypeContactsImage: UIImage = {
+    let baseImage = UIImage(bundleImageName: "Stories/PrivacyContacts")!
+    let imageSize = CGSize(width: floor(baseImage.size.width * privacyTypeImageScaleFactor), height: floor(baseImage.size.width * privacyTypeImageScaleFactor))
+    let image = generateImage(imageSize, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        UIGraphicsPushContext(context)
+        baseImage.draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
+    })
+    return image!
+}()
+
+private let privacyTypeCloseFriendsImage: UIImage = {
+    let baseImage = UIImage(bundleImageName: "Stories/PrivacyCloseFriends")!
+    let imageSize = CGSize(width: floor(baseImage.size.width * privacyTypeImageScaleFactor), height: floor(baseImage.size.width * privacyTypeImageScaleFactor))
+    let image = generateImage(imageSize, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        UIGraphicsPushContext(context)
+        baseImage.draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
+    })
+    return image!
+}()
+
+private let privacyTypeSelectedImage: UIImage = {
+    let baseImage = UIImage(bundleImageName: "Stories/PrivacySelectedContacts")!
+    let imageSize = CGSize(width: floor(baseImage.size.width * privacyTypeImageScaleFactor), height: floor(baseImage.size.width * privacyTypeImageScaleFactor))
+    let image = generateImage(imageSize, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        UIGraphicsPushContext(context)
+        baseImage.draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
+    })
+    return image!
+}()
+
 private final class DurationLayer: CALayer {
     override init() {
         super.init()
@@ -264,6 +320,41 @@ private final class DurationLayer: CALayer {
             self.contents = image?.cgImage
         }
     }
+    
+    func update(privacyType: Stories.Item.Privacy.Base, isMin: Bool) {
+        if isMin {
+            self.contents = nil
+        } else {
+            let iconImage: UIImage
+            switch privacyType {
+            case .everyone:
+                iconImage = privacyTypeEveryoneImage
+            case .contacts:
+                iconImage = privacyTypeContactsImage
+            case .closeFriends:
+                iconImage = privacyTypeCloseFriendsImage
+            case .nobody:
+                iconImage = privacyTypeSelectedImage
+            }
+            
+            let sideInset: CGFloat = 0.0
+            let verticalInset: CGFloat = 0.0
+            let image = generateImage(CGSize(width: iconImage.size.width + sideInset * 2.0, height: iconImage.size.height + verticalInset * 2.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                context.setBlendMode(.normal)
+                
+                context.setShadow(offset: CGSize(width: 0.0, height: 0.0), blur: 2.5, color: UIColor(rgb: 0x000000, alpha: 0.22).cgColor)
+                
+                UIGraphicsPushContext(context)
+                
+                iconImage.draw(in: CGRect(origin: CGPoint(x: (size.width - iconImage.size.width) * 0.5, y: (size.height - iconImage.size.height) * 0.5), size: iconImage.size))
+                
+                UIGraphicsPopContext()
+            })
+            self.contents = image?.cgImage
+        }
+    }
 }
 
 private protocol ItemLayer: SparseItemGridLayer {
@@ -276,7 +367,7 @@ private protocol ItemLayer: SparseItemGridLayer {
     var hasContents: Bool { get set }
     func setSpoilerContents(_ contents: Any?)
     
-    func updateDuration(viewCount: Int32?, duration: Int32?, isMin: Bool, minFactor: CGFloat)
+    func updateDuration(viewCount: Int32?, duration: Int32?, privacy: Stories.Item.Privacy.Base?, isMin: Bool, minFactor: CGFloat)
     func updateSelection(theme: CheckNodeTheme, isSelected: Bool?, animated: Bool)
     func updateHasSpoiler(hasSpoiler: Bool)
     
@@ -288,8 +379,10 @@ private final class GenericItemLayer: CALayer, ItemLayer {
     var item: VisualMediaItem?
     var viewCountLayer: DurationLayer?
     var durationLayer: DurationLayer?
+    var privacyTypeLayer: DurationLayer?
     var leftShadowLayer: SimpleLayer?
     var rightShadowLayer: SimpleLayer?
+    var topRightShadowLayer: SimpleLayer?
     var minFactor: CGFloat = 1.0
     var selectionLayer: GridMessageSelectionLayer?
     var dustLayer: MediaDustLayer?
@@ -335,7 +428,7 @@ private final class GenericItemLayer: CALayer, ItemLayer {
         self.item = item
     }
 
-    func updateDuration(viewCount: Int32?, duration: Int32?, isMin: Bool, minFactor: CGFloat) {
+    func updateDuration(viewCount: Int32?, duration: Int32?, privacy: Stories.Item.Privacy.Base?, isMin: Bool, minFactor: CGFloat) {
         self.minFactor = minFactor
         
         if let viewCount {
@@ -371,6 +464,23 @@ private final class GenericItemLayer: CALayer, ItemLayer {
             durationLayer.removeFromSuperlayer()
         }
         
+        if let privacy {
+            if let privacyTypeLayer = self.privacyTypeLayer {
+                privacyTypeLayer.update(privacyType: privacy, isMin: isMin)
+            } else {
+                let privacyTypeLayer = DurationLayer()
+                privacyTypeLayer.contentsGravity = .bottomRight
+                privacyTypeLayer.update(privacyType: privacy, isMin: isMin)
+                self.addSublayer(privacyTypeLayer)
+                privacyTypeLayer.frame = CGRect(origin: CGPoint(x: self.bounds.width - 2.0, y: 3.0), size: CGSize())
+                privacyTypeLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
+                self.privacyTypeLayer = privacyTypeLayer
+            }
+        } else if let privacyTypeLayer = self.privacyTypeLayer {
+            self.privacyTypeLayer = nil
+            privacyTypeLayer.removeFromSuperlayer()
+        }
+        
         let size = self.bounds.size
         
         if self.viewCountLayer != nil {
@@ -402,6 +512,22 @@ private final class GenericItemLayer: CALayer, ItemLayer {
             if let rightShadowLayer = self.rightShadowLayer {
                 self.rightShadowLayer = nil
                 rightShadowLayer.removeFromSuperlayer()
+            }
+        }
+        
+        if self.privacyTypeLayer != nil {
+            if self.topRightShadowLayer == nil {
+                let topRightShadowLayer = SimpleLayer()
+                self.topRightShadowLayer = topRightShadowLayer
+                self.insertSublayer(topRightShadowLayer, at: 0)
+                topRightShadowLayer.contents = rightShadowImage.cgImage
+                let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+                topRightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
+            }
+        } else {
+            if let topRightShadowLayer = self.topRightShadowLayer {
+                self.topRightShadowLayer = nil
+                topRightShadowLayer.removeFromSuperlayer()
             }
         }
     }
@@ -468,6 +594,9 @@ private final class GenericItemLayer: CALayer, ItemLayer {
         if let durationLayer = self.durationLayer {
             durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 4.0), size: CGSize())
         }
+        if let privacyTypeLayer = self.privacyTypeLayer {
+            privacyTypeLayer.frame = CGRect(origin: CGPoint(x: size.width - 2.0, y: 3.0), size: CGSize())
+        }
         
         if let leftShadowLayer = self.leftShadowLayer {
             let shadowSize = CGSize(width: min(size.width, leftShadowImage.size.width), height: min(size.height, leftShadowImage.size.height))
@@ -477,6 +606,11 @@ private final class GenericItemLayer: CALayer, ItemLayer {
         if let rightShadowLayer = self.rightShadowLayer {
             let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
             rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
+        }
+        
+        if let topRightShadowLayer = self.topRightShadowLayer {
+            let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+            topRightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: 0.0), size: shadowSize)
         }
         
         if let binding = binding as? SparseItemGridBindingImpl, let item = item as? VisualMediaItem, let previousItem = self.item, previousItem.story.media.id != item.story.media.id {
@@ -489,11 +623,14 @@ private final class ItemTransitionView: UIView {
     private weak var itemLayer: CALayer?
     private var copyDurationLayer: SimpleLayer?
     private var copyViewCountLayer: SimpleLayer?
+    private var copyPrivacyTypeLayer: SimpleLayer?
     private var copyLeftShadowLayer: SimpleLayer?
     private var copyRightShadowLayer: SimpleLayer?
+    private var copyTopRightShadowLayer: SimpleLayer?
     
     private var viewCountLayerBottomLeftPosition: CGPoint?
     private var durationLayerBottomLeftPosition: CGPoint?
+    private var privacyTypeLayerTopRightPosition: CGPoint?
     
     init(itemLayer: CALayer?) {
         self.itemLayer = itemLayer
@@ -505,13 +642,17 @@ private final class ItemTransitionView: UIView {
             
             var viewCountLayer: CALayer?
             var durationLayer: CALayer?
+            var privacyTypeLayer: CALayer?
             var leftShadowLayer: CALayer?
             var rightShadowLayer: CALayer?
+            var topRightShadowLayer: CALayer?
             if let itemLayer = itemLayer as? GenericItemLayer {
                 viewCountLayer = itemLayer.viewCountLayer
                 durationLayer = itemLayer.durationLayer
+                privacyTypeLayer = itemLayer.privacyTypeLayer
                 leftShadowLayer = itemLayer.leftShadowLayer
                 rightShadowLayer = itemLayer.rightShadowLayer
+                topRightShadowLayer = itemLayer.topRightShadowLayer
                 self.layer.contents = itemLayer.contents
             }
             
@@ -537,6 +678,17 @@ private final class ItemTransitionView: UIView {
                 self.copyRightShadowLayer = copyLayer
             }
             
+            if let topRightShadowLayer {
+                let copyLayer = SimpleLayer()
+                copyLayer.contents = topRightShadowLayer.contents
+                copyLayer.contentsRect = topRightShadowLayer.contentsRect
+                copyLayer.contentsGravity = topRightShadowLayer.contentsGravity
+                copyLayer.contentsScale = topRightShadowLayer.contentsScale
+                copyLayer.frame = topRightShadowLayer.frame
+                self.layer.addSublayer(copyLayer)
+                self.copyTopRightShadowLayer = copyLayer
+            }
+            
             if let viewCountLayer {
                 let copyViewCountLayer = SimpleLayer()
                 copyViewCountLayer.contents = viewCountLayer.contents
@@ -548,6 +700,19 @@ private final class ItemTransitionView: UIView {
                 self.copyViewCountLayer = copyViewCountLayer
                 
                 self.viewCountLayerBottomLeftPosition = CGPoint(x: viewCountLayer.frame.minX, y: itemLayer.bounds.height - viewCountLayer.frame.maxY)
+            }
+            
+            if let privacyTypeLayer {
+                let copyPrivacyTypeLayer = SimpleLayer()
+                copyPrivacyTypeLayer.contents = privacyTypeLayer.contents
+                copyPrivacyTypeLayer.contentsRect = privacyTypeLayer.contentsRect
+                copyPrivacyTypeLayer.contentsGravity = privacyTypeLayer.contentsGravity
+                copyPrivacyTypeLayer.contentsScale = privacyTypeLayer.contentsScale
+                copyPrivacyTypeLayer.frame = privacyTypeLayer.frame
+                self.layer.addSublayer(copyPrivacyTypeLayer)
+                self.copyPrivacyTypeLayer = copyPrivacyTypeLayer
+                
+                self.privacyTypeLayerTopRightPosition = CGPoint(x: itemLayer.bounds.width - privacyTypeLayer.frame.maxX, y: privacyTypeLayer.frame.minY)
             }
             
             if let durationLayer {
@@ -576,8 +741,12 @@ private final class ItemTransitionView: UIView {
             transition.setFrame(layer: copyDurationLayer, frame: CGRect(origin: CGPoint(x: size.width - durationLayerBottomLeftPosition.x - copyDurationLayer.bounds.width, y: size.height - durationLayerBottomLeftPosition.y - copyDurationLayer.bounds.height), size: copyDurationLayer.bounds.size))
         }
         
-        if let copyViewCountLayer = self.copyViewCountLayer, let viewcountLayerBottomLeftPosition = self.viewCountLayerBottomLeftPosition {
-            transition.setFrame(layer: copyViewCountLayer, frame: CGRect(origin: CGPoint(x: viewcountLayerBottomLeftPosition.x, y: size.height - viewcountLayerBottomLeftPosition.y - copyViewCountLayer.bounds.height), size: copyViewCountLayer.bounds.size))
+        if let copyViewCountLayer = self.copyViewCountLayer, let viewCountLayerBottomLeftPosition = self.viewCountLayerBottomLeftPosition {
+            transition.setFrame(layer: copyViewCountLayer, frame: CGRect(origin: CGPoint(x: viewCountLayerBottomLeftPosition.x, y: size.height - viewCountLayerBottomLeftPosition.y - copyViewCountLayer.bounds.height), size: copyViewCountLayer.bounds.size))
+        }
+        
+        if let privacyTypeLayer = self.copyPrivacyTypeLayer, let privacyTypeLayerTopRightPosition = self.privacyTypeLayerTopRightPosition {
+            transition.setFrame(layer: privacyTypeLayer, frame: CGRect(origin: CGPoint(x: size.width - privacyTypeLayerTopRightPosition.x, y: privacyTypeLayerTopRightPosition.y), size: privacyTypeLayer.bounds.size))
         }
         
         if let copyLeftShadowLayer = self.copyLeftShadowLayer {
@@ -587,6 +756,10 @@ private final class ItemTransitionView: UIView {
         if let copyRightShadowLayer = self.copyRightShadowLayer {
             transition.setFrame(layer: copyRightShadowLayer, frame: CGRect(origin: CGPoint(x: size.width - copyRightShadowLayer.bounds.width, y: size.height - copyRightShadowLayer.bounds.height), size: copyRightShadowLayer.bounds.size))
         }
+        
+        if let copyTopRightShadowLayer = self.copyTopRightShadowLayer {
+            transition.setFrame(layer: copyTopRightShadowLayer, frame: CGRect(origin: CGPoint(x: size.width - copyTopRightShadowLayer.bounds.width, y: 0.0), size: copyTopRightShadowLayer.bounds.size))
+        }
     }
 }
 
@@ -595,6 +768,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
     let chatLocation: ChatLocation
     let directMediaImageCache: DirectMediaImageCache
     let captureProtected: Bool
+    let displayPrivacy: Bool
     var strings: PresentationStrings
     var chatPresentationData: ChatPresentationData
     var checkNodeTheme: CheckNodeTheme
@@ -613,11 +787,12 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
 
     private var shimmerImages: [CGFloat: UIImage] = [:]
 
-    init(context: AccountContext, chatLocation: ChatLocation, directMediaImageCache: DirectMediaImageCache, captureProtected: Bool) {
+    init(context: AccountContext, chatLocation: ChatLocation, directMediaImageCache: DirectMediaImageCache, captureProtected: Bool, displayPrivacy: Bool) {
         self.context = context
         self.chatLocation = chatLocation
         self.directMediaImageCache = directMediaImageCache
         self.captureProtected = false
+        self.displayPrivacy = displayPrivacy
 
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         self.strings = presentationData.strings
@@ -794,6 +969,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                     viewCount = Int32(value)
                 }
                 
+                var privacyType: EngineStoryPrivacy.Base?
+                if self.displayPrivacy, let value = story.privacy {
+                    privacyType = value.base
+                }
+                
                 var duration: Int32?
                 var isMin: Bool = false
                 if let file = selectedMedia as? TelegramMediaFile, !file.isAnimated {
@@ -802,7 +982,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                     }
                     isMin = layer.bounds.width < 80.0
                 }
-                layer.updateDuration(viewCount: viewCount, duration: duration, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0))
+                layer.updateDuration(viewCount: viewCount, duration: duration, privacy: privacyType, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0))
             }
             
             var isSelected: Bool?
@@ -867,7 +1047,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
     }
 }
 
-public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     public enum ContentType {
         case photoOrVideo
         case photo
@@ -895,6 +1075,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private let chatLocation: ChatLocation
     private let isSaved: Bool
     private let isArchive: Bool
+    private let isProfileEmbedded: Bool
     public private(set) var contentType: ContentType
     private var contentTypePromise: ValuePromise<ContentType>
     
@@ -1002,7 +1183,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     
     private var emptyStateView: ComponentView<Empty>?
         
-    public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, navigationController: @escaping () -> NavigationController?, listContext: PeerStoryListContext?) {
+    public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, isProfileEmbedded: Bool, navigationController: @escaping () -> NavigationController?, listContext: PeerStoryListContext?) {
         self.context = context
         self.peerId = peerId
         self.chatLocation = chatLocation
@@ -1011,6 +1192,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         self.navigationController = navigationController
         self.isSaved = isSaved
         self.isArchive = isArchive
+        self.isProfileEmbedded = isProfileEmbedded
         
         self.isSelectionModeActive = isArchive
 
@@ -1024,7 +1206,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             context: context,
             chatLocation: .peer(id: peerId),
             directMediaImageCache: self.directMediaImageCache,
-            captureProtected: captureProtected
+            captureProtected: captureProtected,
+            displayPrivacy: isProfileEmbedded && !self.isArchive
         )
 
         self.listSource = listContext ?? PeerStoryListContext(account: context.account, peerId: peerId, isArchived: self.isArchive)
@@ -1421,7 +1604,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             strongSelf.itemGrid.cancelGestures()
         }
         
-        self.statusPromise.set(.single(PeerInfoStatusData(text: "", isActivity: false, key: .stories)))
+        self.statusPromise.set(.single(PeerInfoStatusData(text: "", isActivity: false, key: self.isArchive ? .storyArchive : .stories)))
 
         /*self.storedStateDisposable = (visualMediaStoredState(engine: context.engine, peerId: peerId, messageTag: self.stateTag)
         |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -1671,11 +1854,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             } else {
                 if self.isSaved {
                     title = self.presentationData.strings.StoryList_SubtitleSaved(Int32(state.totalCount))
+                } else if self.isArchive {
+                    title = self.presentationData.strings.StoryList_SubtitleArchived(Int32(state.totalCount))
                 } else {
                     title = self.presentationData.strings.StoryList_SubtitleCount(Int32(state.totalCount))
                 }
             }
-            self.statusPromise.set(.single(PeerInfoStatusData(text: title, isActivity: false, key: .stories)))
+            self.statusPromise.set(.single(PeerInfoStatusData(text: title, isActivity: false, key: self.isArchive ? .storyArchive : .stories)))
             
             let timezoneOffset = Int32(TimeZone.current.secondsFromGMT())
 
@@ -1952,12 +2137,19 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             itemLayer.updateSelection(theme: self.itemGridBinding.checkNodeTheme, isSelected: self.itemInteraction.selectedIds?.contains(item.story.id), animated: animated)
         }
 
-        let isSelecting = self._itemInteraction?.selectedIds != nil
+        var isSelecting = false
+        if let selectedIds = self._itemInteraction?.selectedIds, !selectedIds.isEmpty {
+            isSelecting = true
+        }
         self.itemGrid.pinchEnabled = !isSelecting
         
         var enableDismissGesture = true
-        if let items = self.items, items.items.isEmpty {
-        } else if isSelecting {
+        if self.isProfileEmbedded {
+            enableDismissGesture = true
+        } else if let items = self.items, items.items.isEmpty {
+        }
+        
+        if isSelecting {
             enableDismissGesture = false
         }
         self.view.disablesInteractiveTransitionGestureRecognizer = !enableDismissGesture
@@ -1965,7 +2157,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         if isSelecting {
             if self.gridSelectionGesture == nil {
                 let selectionGesture = MediaPickerGridSelectionGesture<Int32>()
-                selectionGesture.delegate = self
+                selectionGesture.delegate = self.wrappedGestureRecognizerDelegate
                 selectionGesture.sideInset = 44.0
                 selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
                     self?.itemGrid.isScrollEnabled = isEnabled
@@ -2030,6 +2222,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 component: AnyComponent(EmptyStateIndicatorComponent(
                     context: self.context,
                     theme: presentationData.theme,
+                    fitToHeight: self.isProfileEmbedded,
                     animationName: "StoryListEmpty",
                     title: self.isArchive ? presentationData.strings.StoryList_ArchivedEmptyState_Title : presentationData.strings.StoryList_SavedEmptyPosts_Title,
                     text: self.isArchive ? presentationData.strings.StoryList_ArchivedEmptyState_Text : presentationData.strings.StoryList_SavedEmptyPosts_Text,
@@ -2040,7 +2233,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         }
                         self.emptyAction?()
                     },
-                    additionalActionTitle: self.isArchive ? nil : presentationData.strings.StoryList_SavedEmptyAction,
+                    additionalActionTitle: (self.isArchive || self.isProfileEmbedded) ? nil : presentationData.strings.StoryList_SavedEmptyAction,
                     additionalAction: { [weak self] in
                         guard let self else {
                             return
@@ -2051,6 +2244,14 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 environment: {},
                 containerSize: CGSize(width: size.width, height: size.height - topInset - bottomInset)
             )
+            
+            let emptyStateFrame: CGRect
+            if self.isProfileEmbedded {
+                emptyStateFrame = CGRect(origin: CGPoint(x: floor((size.width - emptyStateSize.width) * 0.5), y: max(topInset, floor((visibleHeight - topInset - bottomInset - emptyStateSize.height) * 0.5))), size: emptyStateSize)
+            } else {
+                emptyStateFrame = CGRect(origin: CGPoint(x: floor((size.width - emptyStateSize.width) * 0.5), y: topInset), size: emptyStateSize)
+            }
+            
             if let emptyStateComponentView = emptyStateView.view {
                 if emptyStateComponentView.superview == nil {
                     self.view.addSubview(emptyStateComponentView)
@@ -2058,12 +2259,20 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         emptyStateComponentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                 }
-                emptyStateTransition.setFrame(view: emptyStateComponentView, frame: CGRect(origin: CGPoint(x: floor((size.width - emptyStateSize.width) * 0.5), y: topInset), size: emptyStateSize))
+                emptyStateTransition.setFrame(view: emptyStateComponentView, frame: emptyStateFrame)
             }
-            if self.didUpdateItemsOnce {
-                Transition(animation: .curve(duration: 0.2, curve: .easeInOut)).setBackgroundColor(view: self.view, color: presentationData.theme.list.blocksBackgroundColor)
+            
+            let backgroundColor: UIColor
+            if self.isProfileEmbedded {
+                backgroundColor = presentationData.theme.list.plainBackgroundColor
             } else {
-                self.view.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+                backgroundColor = presentationData.theme.list.blocksBackgroundColor
+            }
+            
+            if self.didUpdateItemsOnce {
+                Transition(animation: .curve(duration: 0.2, curve: .easeInOut)).setBackgroundColor(view: self.view, color: backgroundColor)
+            } else {
+                self.view.backgroundColor = backgroundColor
             }
         } else {
             if let emptyStateView = self.emptyStateView {
@@ -2076,7 +2285,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     })
                 }
                 
-                subTransition.setBackgroundColor(view: self.view, color: presentationData.theme.list.blocksBackgroundColor)
+                if self.isProfileEmbedded {
+                    subTransition.setBackgroundColor(view: self.view, color: presentationData.theme.list.plainBackgroundColor)
+                } else {
+                    subTransition.setBackgroundColor(view: self.view, color: presentationData.theme.list.blocksBackgroundColor)
+                }
             } else {
                 self.view.backgroundColor = .clear
             }

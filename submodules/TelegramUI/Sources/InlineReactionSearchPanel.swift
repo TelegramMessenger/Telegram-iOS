@@ -17,7 +17,7 @@ import UndoUI
 import ChatControllerInteraction
 import ChatInputContextPanelNode
 
-private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollViewDelegate {
+private final class InlineReactionSearchStickersNode: ASDisplayNode, ASScrollViewDelegate {
     private final class DisplayItem {
         let file: TelegramMediaFile
         let frame: CGRect
@@ -78,7 +78,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
         self.scrollNode.view.alwaysBounceVertical = true
         self.scrollNode.view.showsVerticalScrollIndicator = false
         self.scrollNode.view.showsHorizontalScrollIndicator = false
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         
         self.addSubnode(self.scrollNode)
     }

@@ -1389,7 +1389,7 @@ public class CameraScreen: ViewController {
         }
     }
 
-    fileprivate final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
+    fileprivate final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
         private weak var controller: CameraScreen?
         private let context: AccountContext
         fileprivate var camera: Camera?
@@ -1700,7 +1700,7 @@ public class CameraScreen: ViewController {
             self.previewContainerView.addGestureRecognizer(pinchGestureRecognizer)
             
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-            panGestureRecognizer.delegate = self
+            panGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             panGestureRecognizer.maximumNumberOfTouches = 1
             self.panGestureRecognizer = panGestureRecognizer
             self.previewContainerView.addGestureRecognizer(panGestureRecognizer)
@@ -1713,7 +1713,7 @@ public class CameraScreen: ViewController {
             self.previewContainerView.addGestureRecognizer(doubleGestureRecognizer)
             
             let pipPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePipPan(_:)))
-            pipPanGestureRecognizer.delegate = self
+            pipPanGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             self.previewContainerView.addGestureRecognizer(pipPanGestureRecognizer)
             self.pipPanGestureRecognizer = pipPanGestureRecognizer
         }

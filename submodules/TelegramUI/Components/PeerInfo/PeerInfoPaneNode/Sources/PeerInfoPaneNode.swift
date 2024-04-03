@@ -8,6 +8,7 @@ import TelegramPresentationData
 public enum PeerInfoPaneKey: Int32 {
     case members
     case stories
+    case storyArchive
     case media
     case savedMessagesChats
     case savedMessages

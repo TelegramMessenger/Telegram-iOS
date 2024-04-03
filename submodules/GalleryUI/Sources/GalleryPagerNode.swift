@@ -76,7 +76,7 @@ public struct GalleryPagerTransaction {
     }
 }
 
-public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     private let pageGap: CGFloat
     private let disableTapNavigation: Bool
     
@@ -142,7 +142,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         self.scrollView.alwaysBounceHorizontal = !pageGap.isZero
         self.scrollView.bounces = !pageGap.isZero
         self.scrollView.isPagingEnabled = true
-        self.scrollView.delegate = self
+        self.scrollView.delegate = self.wrappedScrollViewDelegate
         self.scrollView.clipsToBounds = false
         self.scrollView.scrollsToTop = false
         self.scrollView.delaysContentTouches = false
@@ -167,7 +167,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.delegate = self
+        recognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.tapRecognizer = recognizer
         recognizer.tapActionAtPoint = { [weak self] point in
             guard let strongSelf = self, strongSelf.pagingEnabled else {

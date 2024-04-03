@@ -73,6 +73,7 @@ public struct PresentationResourcesSettings {
     public static let stories = renderIcon(name: "Settings/Menu/Stories")
     public static let premiumGift = renderIcon(name: "Settings/Menu/Gift")
     public static let business = renderIcon(name: "Settings/Menu/Business", backgroundColors: [UIColor(rgb: 0xA95CE3), UIColor(rgb: 0xF16B80)])
+    public static let myProfile = renderIcon(name: "Settings/Menu/Profile")
     
     public static let premium = generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)

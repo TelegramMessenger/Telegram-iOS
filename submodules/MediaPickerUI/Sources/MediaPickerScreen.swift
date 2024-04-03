@@ -210,7 +210,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     
     var dismissAll: () -> Void = { }
     
-    private class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
+    private class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
         enum DisplayMode {
             case all
             case selected
@@ -440,7 +440,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 
             } else {
                 let selectionGesture = MediaPickerGridSelectionGesture<TGMediaSelectableItem>()
-                selectionGesture.delegate = self
+                selectionGesture.delegate = self.wrappedGestureRecognizerDelegate
                 selectionGesture.began = { [weak self] in
                     self?.controller?.cancelPanGesture()
                 }

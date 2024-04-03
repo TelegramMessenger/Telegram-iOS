@@ -338,7 +338,7 @@ public final class SparseItemGrid: ASDisplayNode {
         }
     }
 
-    private final class Viewport: ASDisplayNode, UIScrollViewDelegate {
+    private final class Viewport: ASDisplayNode, ASScrollViewDelegate {
         final class VisibleItem: SparseItemGridDisplayItem {
             let layer: SparseItemGridLayer?
             let view: SparseItemGridView?
@@ -527,7 +527,7 @@ public final class SparseItemGrid: ASDisplayNode {
 
             self.anchorPoint = CGPoint()
 
-            self.scrollView.delegate = self
+            self.scrollView.delegate = self.wrappedScrollViewDelegate
             self.view.addSubview(self.scrollView)
         }
 

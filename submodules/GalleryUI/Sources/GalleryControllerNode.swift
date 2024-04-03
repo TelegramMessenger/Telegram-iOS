@@ -6,7 +6,7 @@ import Postbox
 import SwipeToDismissGesture
 import AccountContext
 
-open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     public var statusBar: StatusBar?
     public var navigationBar: NavigationBar? {
         didSet {
@@ -143,7 +143,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         self.scrollView.alwaysBounceHorizontal = false
         self.scrollView.alwaysBounceVertical = false
         self.scrollView.clipsToBounds = false
-        self.scrollView.delegate = self
+        self.scrollView.delegate = self.wrappedScrollViewDelegate
         self.scrollView.scrollsToTop = false
         self.view.addSubview(self.scrollView)
         

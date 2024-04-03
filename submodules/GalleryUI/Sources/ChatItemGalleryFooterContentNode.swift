@@ -123,7 +123,7 @@ class CaptionScrollWrapperNode: ASDisplayNode {
 
 
 
-final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScrollViewDelegate {
+final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private var theme: PresentationTheme
@@ -638,7 +638,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     
     override func didLoad() {
         super.didLoad()
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.scrollNode.view.showsVerticalScrollIndicator = false
         
         let backwardLongPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.seekBackwardLongPress(_:)))

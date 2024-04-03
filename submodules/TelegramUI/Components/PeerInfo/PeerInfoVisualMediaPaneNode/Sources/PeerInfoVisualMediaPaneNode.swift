@@ -1051,7 +1051,7 @@ public protocol PeerInfoScreenNodeProtocol: AnyObject {
     func displaySharedMediaFastScrollingTooltip()
 }
 
-public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     public enum ContentType {
         case photoOrVideo
         case photo
@@ -2067,7 +2067,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
             if isSelecting {
                 if self.gridSelectionGesture == nil {
                     let selectionGesture = MediaPickerGridSelectionGesture<EngineMessage.Id>()
-                    selectionGesture.delegate = self
+                    selectionGesture.delegate = self.wrappedGestureRecognizerDelegate
                     selectionGesture.sideInset = 44.0
                     selectionGesture.updateIsScrollEnabled = { [weak self] isEnabled in
                         self?.itemGrid.isScrollEnabled = isEnabled

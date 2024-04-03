@@ -21,7 +21,7 @@ private func formattedText(_ text: String, fontSize: CGFloat, color: UIColor, li
     return parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(fontSize), textColor: color), bold: MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: color), link: MarkdownAttributeSet(font: Font.regular(fontSize), textColor: linkColor), linkAttribute: { _ in return (TelegramTextAttributes.URL, "") }), textAlignment: textAlignment)
 }
 
-private final class WebAppTermsAlertContentNode: AlertContentNode, UIGestureRecognizerDelegate {
+private final class WebAppTermsAlertContentNode: AlertContentNode, ASGestureRecognizerDelegate {
     private let strings: PresentationStrings
     private let title: String
     private let text: String
@@ -144,7 +144,7 @@ private final class WebAppTermsAlertContentNode: AlertContentNode, UIGestureReco
         super.didLoad()
         
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.acceptTap(_:)))
-        tapGesture.delegate = self
+        tapGesture.delegate = self.wrappedGestureRecognizerDelegate
         self.view.addGestureRecognizer(tapGesture)
         
         if let firstAction = self.actionNodes.first {

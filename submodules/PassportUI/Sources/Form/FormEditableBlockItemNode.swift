@@ -6,7 +6,7 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 
-class FormEditableBlockItemNode<Item: FormControllerItem>: ASDisplayNode, FormControllerItemNode, FormBlockItemNodeProto, UIGestureRecognizerDelegate {
+class FormEditableBlockItemNode<Item: FormControllerItem>: ASDisplayNode, FormControllerItemNode, FormBlockItemNodeProto, ASGestureRecognizerDelegate {
     private let topSeparatorInset: FormBlockItemInset
     
     private let highlightedBackgroundNode: ASDisplayNode

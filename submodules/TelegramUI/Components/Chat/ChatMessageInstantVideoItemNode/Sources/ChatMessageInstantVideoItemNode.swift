@@ -34,7 +34,7 @@ private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
-public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerDelegate {
+public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureRecognizerDelegate {
     public let contextSourceNode: ContextExtractedContentContainingNode
     public let containerNode: ContextControllerSourceNode
     public let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode

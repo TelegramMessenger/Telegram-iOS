@@ -3,7 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 
-final class WallpaperCropNode: ASDisplayNode, UIScrollViewDelegate {
+final class WallpaperCropNode: ASDisplayNode, ASScrollViewDelegate {
     let scrollNode: ASScrollNode
     
     private var ignoreZoom = false
@@ -34,7 +34,7 @@ final class WallpaperCropNode: ASDisplayNode, UIScrollViewDelegate {
         
         super.init()
         
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.scrollNode.view.showsVerticalScrollIndicator = false
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.clipsToBounds = false

@@ -247,7 +247,7 @@ func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIView) -> 
     return targetWindowFrame
 }
 
-final class ContextControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+final class ContextControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private weak var controller: ContextController?
     private var presentationData: PresentationData
     
@@ -408,7 +408,7 @@ final class ContextControllerNode: ViewControllerTracingNode, UIScrollViewDelega
             self?.updateLayout()
         }
         
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         
         if blurBackground {
             self.view.addSubview(self.effectView)

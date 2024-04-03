@@ -155,7 +155,7 @@ private final class ActionSheetItemNode: ASDisplayNode {
     }
 }
 
-final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private let sourceSendButton: ASDisplayNode
@@ -382,7 +382,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         self.scrollNode.view.showsVerticalScrollIndicator = false
         self.scrollNode.view.delaysContentTouches = false
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.scrollNode.view.alwaysBounceVertical = true
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never

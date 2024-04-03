@@ -461,6 +461,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                     captureProtected: false,
                     isSaved: true,
                     isArchive: component.scope == .archive,
+                    isProfileEmbedded: false,
                     navigationController: { [weak self] in
                         guard let self else {
                             return nil

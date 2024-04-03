@@ -594,7 +594,7 @@ private enum ItemsLayout {
     }
 }
 
-final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
+final class ChatListSearchMediaNode: ASDisplayNode, ASScrollViewDelegate {
     enum ContentType {
         case photoOrVideo
         case gifs
@@ -664,7 +664,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
         self.scrollNode.view.scrollsToTop = false
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         
         self.addSubnode(self.scrollNode)
         self.addSubnode(self.floatingHeaderNode)

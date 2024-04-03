@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import Display
 
 final class FormControllerScrollerNodeView: UIScrollView {
     weak var target: FormControllerScrollerNode?
@@ -46,7 +47,7 @@ final class FormControllerScrollerNodeView: UIScrollView {
     }
 }
 
-final class FormControllerScrollerNode: ASDisplayNode, UIScrollViewDelegate {
+final class FormControllerScrollerNode: ASDisplayNode, ASScrollViewDelegate {
     override var view: FormControllerScrollerNodeView {
         return super.view as! FormControllerScrollerNodeView
     }
@@ -66,7 +67,7 @@ final class FormControllerScrollerNode: ASDisplayNode, UIScrollViewDelegate {
     
     override func didLoad() {
         super.didLoad()
-        self.view.delegate = self
+        self.view.delegate = self.wrappedScrollViewDelegate
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {

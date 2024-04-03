@@ -63,7 +63,7 @@ private final class InstantPageSlideshowItemNode: ASDisplayNode {
     }
 }
 
-private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDelegate {
+private final class InstantPageSlideshowPagerNode: ASDisplayNode, ASScrollViewDelegate {
     private let context: AccountContext
     private let sourceLocation: InstantPageSourceLocation
     private let theme: InstantPageTheme
@@ -123,7 +123,7 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
         self.scrollView.alwaysBounceHorizontal = !pageGap.isZero
         self.scrollView.bounces = !pageGap.isZero
         self.scrollView.isPagingEnabled = true
-        self.scrollView.delegate = self
+        self.scrollView.delegate = self.wrappedScrollViewDelegate
         self.scrollView.clipsToBounds = false
         self.scrollView.scrollsToTop = false
         self.view.addSubview(self.scrollView)
