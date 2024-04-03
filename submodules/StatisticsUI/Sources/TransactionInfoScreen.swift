@@ -133,20 +133,21 @@ private final class SheetContent: CombinedComponent {
             
             let integralFont = Font.with(size: 48.0, design: .round, weight: .semibold)
             let fractionalFont = Font.with(size: 24.0, design: .round, weight: .semibold)
+            let labelColor: UIColor
             
             var showPeer = false
             switch component.transaction {
             case let .proceeds(amount, fromDate, toDate):
-                amountString = amountAttributedString(formatBalanceText(amount, decimalSeparator: dateTimeFormat.decimalSeparator, showPlus: true), integralFont: integralFont, fractionalFont: fractionalFont, color: theme.list.itemDisclosureActions.constructive.fillColor).mutableCopy() as! NSMutableAttributedString
-                amountString.append(NSAttributedString(string: " TON", font: fractionalFont, textColor: theme.list.itemDisclosureActions.constructive.fillColor))
+                labelColor = theme.list.itemDisclosureActions.constructive.fillColor
+                amountString = amountAttributedString(formatBalanceText(amount, decimalSeparator: dateTimeFormat.decimalSeparator, showPlus: true), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
                 dateString = "\(stringForMediumCompactDate(timestamp: fromDate, strings: strings, dateTimeFormat: dateTimeFormat)) – \(stringForMediumCompactDate(timestamp: toDate, strings: strings, dateTimeFormat: dateTimeFormat))"
                 titleString = strings.Monetization_TransactionInfo_Proceeds
                 buttonTitle = strings.Common_OK
                 explorerUrl = nil
                 showPeer = true
             case let .withdrawal(status, amount, date, provider, _, transactionUrl):
-                amountString = amountAttributedString(formatBalanceText(amount, decimalSeparator: dateTimeFormat.decimalSeparator), integralFont: integralFont, fractionalFont: fractionalFont, color: theme.list.itemDestructiveColor).mutableCopy() as! NSMutableAttributedString
-                amountString.append(NSAttributedString(string: " TON", font: fractionalFont, textColor: theme.list.itemDestructiveColor))
+                labelColor = theme.list.itemDestructiveColor
+                amountString = amountAttributedString(formatBalanceText(amount, decimalSeparator: dateTimeFormat.decimalSeparator), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
                 dateString = stringForFullDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat)
                 
                 switch status {
@@ -163,12 +164,18 @@ private final class SheetContent: CombinedComponent {
                 }
                 explorerUrl = transactionUrl
             case let .refund(amount, date, _):
+                labelColor = theme.list.itemDisclosureActions.constructive.fillColor
                 titleString = strings.Monetization_TransactionInfo_Refund
-                amountString = amountAttributedString(formatBalanceText(amount, decimalSeparator: dateTimeFormat.decimalSeparator, showPlus: true), integralFont: integralFont, fractionalFont: fractionalFont, color: theme.list.itemDisclosureActions.constructive.fillColor).mutableCopy() as! NSMutableAttributedString
-                amountString.append(NSAttributedString(string: " TON", font: fractionalFont, textColor: theme.list.itemDisclosureActions.constructive.fillColor))
+                amountString = amountAttributedString(formatBalanceText(amount, decimalSeparator: dateTimeFormat.decimalSeparator, showPlus: true), integralFont: integralFont, fractionalFont: fractionalFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
                 dateString = stringForFullDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat)
                 buttonTitle = strings.Common_OK
                 explorerUrl = nil
+            }
+            
+            amountString.insert(NSAttributedString(string: " $ ", font: integralFont, textColor: labelColor), at: 1)
+            if let range = amountString.string.range(of: "$"), let icon = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonBig"), color: labelColor) {
+                amountString.addAttribute(.attachment, value: icon, range: NSRange(range, in: amountString.string))
+                amountString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: amountString.string))
             }
             
             let amount = amount.update(

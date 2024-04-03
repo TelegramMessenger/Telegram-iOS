@@ -510,6 +510,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         break
                     }
                 }
+                if adAttribute.displayAvatar && adAttribute.canReport, let profileImage = item.message.author?.smallProfileImage {
+                    mediaAndFlags = (TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [profileImage], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: []), [.preferMediaInline])
+                }
 
                 if adAttribute.canReport {
                     titleBadge = item.presentationData.strings.Message_AdWhatIsThis

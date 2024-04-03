@@ -476,6 +476,50 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         var actions: [ContextMenuItem] = []
         
+        if adAttribute.sponsorInfo != nil || adAttribute.additionalInfo != nil {
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfo, textColor: .primary, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { c, _ in
+                var subItems: [ContextMenuItem] = []
+                
+                subItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, textColor: .primary, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+                }, iconSource: nil, iconPosition: .left, action: { c, _ in
+                    c.popItems()
+                })))
+                
+                subItems.append(.separator)
+                
+                if let sponsorInfo = adAttribute.sponsorInfo {
+                    subItems.append(.action(ContextMenuActionItem(text: sponsorInfo, textColor: .primary, textLayout: .multiline, textFont: .custom(font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 0.8)), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                        return nil
+                    }, iconSource: nil, action: { [weak controllerInteraction] c, _ in
+                        c.dismiss(completion: {
+                            UIPasteboard.general.string = sponsorInfo
+                            
+                            let content: UndoOverlayContent = .copy(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfoCopied)
+                            controllerInteraction?.displayUndo(content)
+                        })
+                    })))
+                }
+                if let additionalInfo = adAttribute.additionalInfo {
+                    subItems.append(.action(ContextMenuActionItem(text: additionalInfo, textColor: .primary, textLayout: .multiline, textFont: .custom(font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 0.8)), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                        return nil
+                    }, iconSource: nil, action: { [weak controllerInteraction] c, _ in
+                        c.dismiss(completion: {
+                            UIPasteboard.general.string = additionalInfo
+                            
+                            let content: UndoOverlayContent = .copy(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfoCopied)
+                            controllerInteraction?.displayUndo(content)
+                        })
+                    })))
+                }
+                
+                c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
+            })))
+            actions.append(.separator)
+        }
+        
         if adAttribute.canReport {
             actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AboutAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
@@ -532,50 +576,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 })
             })))
         } else {
-            if adAttribute.sponsorInfo != nil || adAttribute.additionalInfo != nil {
-                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfo, textColor: .primary, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: theme.actionSheet.primaryTextColor)
-                }, iconSource: nil, action: { c, _ in
-                    var subItems: [ContextMenuItem] = []
-                    
-                    subItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, textColor: .primary, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
-                    }, iconSource: nil, iconPosition: .left, action: { c, _ in
-                        c.popItems()
-                    })))
-                    
-                    subItems.append(.separator)
-                    
-                    if let sponsorInfo = adAttribute.sponsorInfo {
-                        subItems.append(.action(ContextMenuActionItem(text: sponsorInfo, textColor: .primary, textLayout: .multiline, textFont: .custom(font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 0.8)), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
-                            return nil
-                        }, iconSource: nil, action: { [weak controllerInteraction] c, _ in
-                            c.dismiss(completion: {
-                                UIPasteboard.general.string = sponsorInfo
-                                
-                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfoCopied)
-                                controllerInteraction?.displayUndo(content)
-                            })
-                        })))
-                    }
-                    if let additionalInfo = adAttribute.additionalInfo {
-                        subItems.append(.action(ContextMenuActionItem(text: additionalInfo, textColor: .primary, textLayout: .multiline, textFont: .custom(font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 0.8)), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
-                            return nil
-                        }, iconSource: nil, action: { [weak controllerInteraction] c, _ in
-                            c.dismiss(completion: {
-                                UIPasteboard.general.string = additionalInfo
-                                
-                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfoCopied)
-                                controllerInteraction?.displayUndo(content)
-                            })
-                        })))
-                    }
-                    
-                    c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
-                })))
-                actions.append(.separator)
-            }
-            
             actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
             }, iconSource: nil, action: { _, f in
