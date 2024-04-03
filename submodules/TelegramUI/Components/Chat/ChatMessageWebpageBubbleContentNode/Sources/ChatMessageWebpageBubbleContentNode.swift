@@ -515,30 +515,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     titleBadge = item.presentationData.strings.Message_AdWhatIsThis
                 }
                 
-                if let buttonText = adAttribute.buttonText {
-                    actionTitle = buttonText.uppercased()
-                } else if let author = item.message.author as? TelegramUser, author.botInfo != nil {
-                    if case .botApp = adAttribute.target {
-                        actionTitle = item.presentationData.strings.Conversation_LaunchApp
-                    } else {
-                        actionTitle = item.presentationData.strings.Conversation_ViewBot
-                    }
-                } else if let author = item.message.author as? TelegramChannel, case .group = author.info {
-                    if case let .peer(_, messageId, _) = adAttribute.target, messageId != nil {
-                        actionTitle = item.presentationData.strings.Conversation_ViewPost
-                    } else {
-                        actionTitle = item.presentationData.strings.Conversation_ViewGroup
-                    }
-                } else {
-                    if case .webPage = adAttribute.target {
-                        actionTitle = item.presentationData.strings.Conversation_OpenLink
-                        actionIcon = .link
-                    } else if case let .peer(_, messageId, _) = adAttribute.target, messageId != nil {
-                        actionTitle = item.presentationData.strings.Conversation_ViewMessage
-                    } else {
-                        actionTitle = item.presentationData.strings.Conversation_ViewChannel
-                    }
-                }
+                actionTitle = adAttribute.buttonText.uppercased()
                 displayLine = true
             }
             

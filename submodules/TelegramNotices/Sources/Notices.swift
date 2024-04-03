@@ -194,7 +194,6 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case outgoingVideoMessagePlayOnceTip = 63
     case savedMessageTagLabelSuggestion = 65
     case dismissedBusinessBadge = 68
-    case dismissedBirthdayPremiumGifts = 69
     case monetizationIntroDismissed = 70
     case businessBotMessageTooltip = 71
     case dismissedBusinessIntroBadge = 72
@@ -511,11 +510,7 @@ private struct ApplicationSpecificNoticeKeys {
     static func dismissedBusinessBadge() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedBusinessBadge.key)
     }
-    
-    static func dismissedBirthdayPremiumGifts() -> NoticeEntryKey {
-        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedBirthdayPremiumGifts.key)
-    }
-    
+        
     static func dismissedBirthdayPremiumGiftTip(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: dismissedBirthdayPremiumGiftTipNamespace), key: noticeKey(peerId: peerId, key: 0))
     }
@@ -2119,25 +2114,6 @@ public struct ApplicationSpecificNotice {
             }
         }
         |> take(1)
-    }
-    
-    public static func dismissedBirthdayPremiumGifts(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<[Int64]?, NoError> {
-        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedBirthdayPremiumGifts())
-        |> map { view -> [Int64]? in
-            if let value = view.value?.get(ApplicationSpecificInt64ArrayNotice.self) {
-                return value.values
-            } else {
-                return nil
-            }
-        }
-    }
-    
-    public static func setDismissedBirthdayPremiumGifts(accountManager: AccountManager<TelegramAccountManagerTypes>, values: [Int64]) -> Signal<Void, NoError> {
-        return accountManager.transaction { transaction -> Void in
-            if let entry = CodableEntry(ApplicationSpecificInt64ArrayNotice(values: values)) {
-                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedBirthdayPremiumGifts(), entry)
-            }
-        }
     }
     
     public static func dismissedBirthdayPremiumGiftTip(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId) -> Signal<Int32?, NoError> {

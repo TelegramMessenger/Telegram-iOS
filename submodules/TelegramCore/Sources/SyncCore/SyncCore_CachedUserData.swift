@@ -297,6 +297,7 @@ public struct CachedUserFlags: OptionSet {
     public static let isBlockedFromStories = CachedUserFlags(rawValue: 1 << 1)
     public static let readDatesPrivate = CachedUserFlags(rawValue: 1 << 2)
     public static let premiumRequired = CachedUserFlags(rawValue: 1 << 3)
+    public static let adsEnabled = CachedUserFlags(rawValue: 1 << 4)
 }
 
 public final class EditableBotInfo: PostboxCoding, Equatable {

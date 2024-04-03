@@ -1653,6 +1653,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         let optionsSection = Child(SectionGroupComponent.self)
         let businessSection = Child(ListSectionComponent.self)
         let moreBusinessSection = Child(ListSectionComponent.self)
+        let adsSettingsSection = Child(ListSectionComponent.self)
         let perksSection = Child(ListSectionComponent.self)
         let infoBackground = Child(RoundedRectangle.self)
         let infoTitle = Child(MultilineTextComponent.self)
@@ -2464,6 +2465,69 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 size.height += 23.0
             }
             
+            let termsFont = Font.regular(13.0)
+            let boldTermsFont = Font.semibold(13.0)
+            let italicTermsFont = Font.italic(13.0)
+            let boldItalicTermsFont = Font.semiboldItalic(13.0)
+            let monospaceTermsFont = Font.monospace(13.0)
+            let termsTextColor = environment.theme.list.freeTextColor
+            let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
+                return (TelegramTextAttributes.URL, contents)
+            })
+            
+            let layoutAdsSettings = {
+                size.height += 8.0
+                
+                var adsSettingsItems: [AnyComponentWithIdentity<Empty>] = []
+                adsSettingsItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                    theme: environment.theme,
+                    title: AnyComponent(VStack([
+                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: environment.strings.Business_DontHideAds,
+                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                textColor: environment.theme.list.itemPrimaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        ))),
+                    ], alignment: .left, spacing: 2.0)),
+                    accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: false, action: { [weak state] value in
+                        let _ = accountContext.engine.accountData.updateAdMessagesEnabled(enabled: value).startStandalone()
+                        state?.updated(transition: .immediate)
+                    })),
+                    action: nil
+                ))))
+                
+                let adsSettingsSection = adsSettingsSection.update(
+                    component: ListSectionComponent(
+                        theme: environment.theme,
+                        header: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: strings.Business_AdsTitle.uppercased(),
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        )),
+                        footer: AnyComponent(MultilineTextComponent(
+                            text: .markdown(text: environment.strings.Business_AdsInfo, attributes: termsMarkdownAttributes),
+                            maximumNumberOfLines: 0
+                        )),
+                        items: adsSettingsItems
+                    ),
+                    environment: {},
+                    availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
+                    transition: context.transition
+                )
+                context.add(adsSettingsSection
+                    .position(CGPoint(x: availableWidth / 2.0, y: size.height + adsSettingsSection.size.height / 2.0))
+                    .clipsToBounds(true)
+                    .cornerRadius(10.0)
+                )
+                size.height += adsSettingsSection.size.height
+                size.height += 23.0
+            }
+            
             let copyLink = context.component.copyLink
             if case .emojiStatus = context.component.source {
                 layoutPerks()
@@ -2499,6 +2563,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     layoutBusinessPerks()
                     if context.component.isPremium == true {
                         layoutMoreBusinessPerks()
+                        layoutAdsSettings()
                     }
                 } else {
                     layoutPerks()
@@ -2556,17 +2621,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     )
                     size.height += infoBackground.size.height
                     size.height += 6.0
-                    
-                    let termsFont = Font.regular(13.0)
-                    let boldTermsFont = Font.semibold(13.0)
-                    let italicTermsFont = Font.italic(13.0)
-                    let boldItalicTermsFont = Font.semiboldItalic(13.0)
-                    let monospaceTermsFont = Font.monospace(13.0)
-                    let termsTextColor = environment.theme.list.freeTextColor
-                    let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
-                        return (TelegramTextAttributes.URL, contents)
-                    })
-                               
+                                                   
                     var isGiftView = false
                     if case let .gift(fromId, _, _, _) = context.component.source {
                         if fromId == context.component.context.account.peerId {

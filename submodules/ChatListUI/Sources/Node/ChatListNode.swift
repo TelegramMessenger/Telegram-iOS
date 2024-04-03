@@ -1808,11 +1808,8 @@ public final class ChatListNode: ListView {
                 self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_BirthdayInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
                     return true
                 }))
-            case let .birthdayPremiumGift(peers, _):
-                let peerIds = peers.sorted { lhs, rhs in
-                    return lhs.id < rhs.id
-                }
-                let _ = ApplicationSpecificNotice.setDismissedBirthdayPremiumGifts(accountManager: self.context.sharedContext.accountManager, values: peerIds.map { $0.id.toInt64() }).start()
+            case .birthdayPremiumGift:
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .todayBirthdays).startStandalone()
                 self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_PremiumGiftInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
                     return true
                 }))
@@ -1909,13 +1906,13 @@ public final class ChatListNode: ListView {
             
             let suggestedChatListNoticeSignal: Signal<ChatListNotice?, NoError> = combineLatest(
                 context.engine.notices.getServerProvidedSuggestions(),
+                context.engine.notices.getServerDismissedSuggestions(),
                 twoStepData,
                 newSessionReviews(postbox: context.account.postbox),
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Birthday(id: context.account.peerId)),
-                context.account.stateManager.contactBirthdays,
-                ApplicationSpecificNotice.dismissedBirthdayPremiumGifts(accountManager: context.sharedContext.accountManager)
+                context.account.stateManager.contactBirthdays
             )
-            |> mapToSignal { suggestions, configuration, newSessionReviews, birthday, birthdays, dismissedBirthdayPeerIds -> Signal<ChatListNotice?, NoError> in
+            |> mapToSignal { suggestions, dismissedSuggestions, configuration, newSessionReviews, birthday, birthdays -> Signal<ChatListNotice?, NoError> in
                 if let newSessionReview = newSessionReviews.first {
                     return .single(.reviewLogin(newSessionReview: newSessionReview, totalCount: newSessionReviews.count))
                 }
@@ -1943,6 +1940,10 @@ public final class ChatListNode: ListView {
                 }
                 todayBirthdayPeerIds.sort { lhs, rhs in
                     return lhs < rhs
+                }
+                
+                if dismissedSuggestions.contains(.todayBirthdays) {
+                    todayBirthdayPeerIds = []
                 }
                 
                 if suggestions.contains(.setupBirthday) && birthday == nil {
@@ -1989,7 +1990,7 @@ public final class ChatListNode: ListView {
                             return nil
                         }
                     }
-                } else if !todayBirthdayPeerIds.isEmpty && todayBirthdayPeerIds.map({ $0.toInt64() }) != dismissedBirthdayPeerIds {
+                } else if !todayBirthdayPeerIds.isEmpty {
                     return context.engine.data.get(
                         EngineDataMap(todayBirthdayPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
                     )

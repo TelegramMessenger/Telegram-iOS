@@ -14,6 +14,7 @@ public enum ServerProvidedSuggestion: String {
     case restorePremium = "PREMIUM_RESTORE"
     case xmasPremiumGift = "PREMIUM_CHRISTMAS"
     case setupBirthday = "BIRTHDAY_SETUP"
+    case todayBirthdays = "BIRTHDAY_CONTACTS_TODAY"
 }
 
 private var dismissedSuggestionsPromise = ValuePromise<[AccountRecordId: Set<ServerProvidedSuggestion>]>([:])
@@ -41,6 +42,30 @@ func _internal_getServerProvidedSuggestions(account: Account) -> Signal<[ServerP
         return listItems.compactMap { item -> ServerProvidedSuggestion? in
             return ServerProvidedSuggestion(rawValue: item)
         }.filter { !dismissedSuggestions.contains($0) }
+    }
+    |> distinctUntilChanged
+}
+
+func _internal_getServerDismissedSuggestions(account: Account) -> Signal<[ServerProvidedSuggestion], NoError> {
+    let key: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
+    return combineLatest(account.postbox.combinedView(keys: [key]), dismissedSuggestionsPromise.get())
+    |> map { views, dismissedSuggestionsValue -> [ServerProvidedSuggestion] in
+        let dismissedSuggestions = dismissedSuggestionsValue[account.id] ?? Set()
+        guard let view = views.views[key] as? PreferencesView else {
+            return []
+        }
+        guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
+            return []
+        }
+        guard let data = appConfiguration.data, let listItems = data["hidden_suggestions"] as? [String] else {
+            return []
+        }
+
+        var items = listItems.compactMap { item -> ServerProvidedSuggestion? in
+            return ServerProvidedSuggestion(rawValue: item)
+        }
+        items.append(contentsOf: dismissedSuggestions)
+        return items
     }
     |> distinctUntilChanged
 }
