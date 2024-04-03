@@ -419,7 +419,7 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
     return options
 }
 
-func updatedChatEditInterfaceMessageState(state: ChatPresentationInterfaceState, message: Message) -> ChatPresentationInterfaceState {
+func updatedChatEditInterfaceMessageState(context: AccountContext, state: ChatPresentationInterfaceState, message: Message) -> (ChatPresentationInterfaceState, (UrlPreviewState?, Disposable)?) {
     var updated = state
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
@@ -451,7 +451,16 @@ func updatedChatEditInterfaceMessageState(state: ChatPresentationInterfaceState,
         content = .media(mediaOptions: messageMediaEditingOptions(message: message))
     }
     updated = updated.updatedEditMessageState(ChatEditInterfaceMessageState(content: content, mediaReference: nil))
-    return updated
+    
+    var previewState: (UrlPreviewState?, Disposable)?
+    if let (updatedEditingUrlPreviewState, _) = urlPreviewStateForInputText(updated.interfaceState.editMessage?.inputState.inputText, context: context, currentQuery: nil, forPeerId: state.chatLocation.peerId) {
+        previewState = (updatedEditingUrlPreviewState, EmptyDisposable)
+    }
+    
+    return (
+        updated,
+        previewState
+    )
 }
 
 func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?, readStats: MessageReadStats? = nil, messageNode: ChatMessageItemView? = nil) -> Signal<ContextController.Items, NoError> {

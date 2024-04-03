@@ -854,7 +854,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let expiryDate = calendar.date(byAdding: .day, value: 3, to: calendar.date(from: components)!)!
     let expiryTime = Int32(expiryDate.timeIntervalSince1970)
     
-    let minDate = currentTime + 60 * 30
+    let minDate = currentTime + 60 * 1
     let maxDate = currentTime + context.userLimits.maxGiveawayPeriodSeconds
     
     let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, time: expiryTime)
@@ -1099,7 +1099,9 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
             let quantity: Int32
             switch state.mode {
             case .giveaway:
-                purpose = .giveaway(boostPeer: peerId, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, showWinners: state.showWinners, prizeDescription: state.prizeDescription.isEmpty ? nil : state.prizeDescription, randomId: Int64.random(in: .min ..< .max), untilDate: state.time, currency: currency, amount: amount)
+                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                let untilDate = max(state.time, currentTime + 60)
+                purpose = .giveaway(boostPeer: peerId, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, showWinners: state.showWinners, prizeDescription: state.prizeDescription.isEmpty ? nil : state.prizeDescription, randomId: Int64.random(in: .min ..< .max), untilDate: untilDate, currency: currency, amount: amount)
                 quantity = selectedProduct.giftOption.storeQuantity
             case .gift:
                 purpose = .giftCode(peerIds: state.peers, boostPeer: peerId, currency: currency, amount: amount)
