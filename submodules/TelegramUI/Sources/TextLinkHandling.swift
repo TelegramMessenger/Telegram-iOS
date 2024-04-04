@@ -62,7 +62,8 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
             if let controller = controller {
                 switch result {
                     case let .externalUrl(url):
-                        context.sharedContext.applicationBindings.openUrl(url)
+                        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: false, presentationData: context.sharedContext.currentPresentationData.with({ $0 }), navigationController: controller.navigationController as? NavigationController, dismissInput: {
+                        })
                     case let .peer(peer, navigation):
                         openResolvedPeerImpl(peer.flatMap(EnginePeer.init), navigation)
                     case let .botStart(peer, payload):
