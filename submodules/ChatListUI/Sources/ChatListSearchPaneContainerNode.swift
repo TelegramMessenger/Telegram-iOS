@@ -142,7 +142,7 @@ private final class ChatListSearchPendingPane {
     }
 }
 
-final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
+final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private let context: AccountContext
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
@@ -234,7 +234,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
             }
             return [.left, .right]
         })
-        panRecognizer.delegate = self
+        panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
         self.view.addGestureRecognizer(panRecognizer)

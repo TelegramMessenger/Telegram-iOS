@@ -1362,6 +1362,21 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
+                static func toggleSponsoredMessages(enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1176919155)
+                    enabled.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.toggleSponsoredMessages", parameters: [("enabled", String(describing: enabled))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
                 static func toggleUsername(username: String, active: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1490465654)
@@ -2770,11 +2785,12 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
-                static func getChannelRecommendations(channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
+                static func getChannelRecommendations(flags: Int32, channel: Api.InputChannel?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-2085155433)
-                    channel.serialize(buffer, true)
-                    return (FunctionDescription(name: "channels.getChannelRecommendations", parameters: [("channel", String(describing: channel))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Chats? in
+                    buffer.appendInt32(631707458)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {channel!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "channels.getChannelRecommendations", parameters: [("flags", String(describing: flags)), ("channel", String(describing: channel))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Chats? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.Chats?
                         if let signature = reader.readInt32() {
@@ -7816,12 +7832,14 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func setChatAvailableReactions(peer: Api.InputPeer, availableReactions: Api.ChatReactions) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func setChatAvailableReactions(flags: Int32, peer: Api.InputPeer, availableReactions: Api.ChatReactions, reactionsLimit: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-21928079)
+                    buffer.appendInt32(1511328724)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     availableReactions.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.setChatAvailableReactions", parameters: [("peer", String(describing: peer)), ("availableReactions", String(describing: availableReactions))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(reactionsLimit!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.setChatAvailableReactions", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("availableReactions", String(describing: availableReactions)), ("reactionsLimit", String(describing: reactionsLimit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

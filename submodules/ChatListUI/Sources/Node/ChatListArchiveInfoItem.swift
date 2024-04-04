@@ -156,7 +156,7 @@ private final class InfoPageNode: ASDisplayNode {
     }
 }
 
-class ChatListArchiveInfoItemNode: ListViewItemNode, UIScrollViewDelegate {
+class ChatListArchiveInfoItemNode: ListViewItemNode, ASScrollViewDelegate {
     private var item: ChatListArchiveInfoItem?
     
     private let scrollNode: ASScrollNode
@@ -187,7 +187,7 @@ class ChatListArchiveInfoItemNode: ListViewItemNode, UIScrollViewDelegate {
         
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.isPagingEnabled = true
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.pageControlNode.setPage(0.0)
     }
     

@@ -198,8 +198,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1605510357] = { return Api.ChatAdminRights.parse_chatAdminRights($0) }
     dict[-219353309] = { return Api.ChatAdminWithInvites.parse_chatAdminWithInvites($0) }
     dict[-1626209256] = { return Api.ChatBannedRights.parse_chatBannedRights($0) }
-    dict[1153455271] = { return Api.ChatFull.parse_channelFull($0) }
-    dict[-908914376] = { return Api.ChatFull.parse_chatFull($0) }
+    dict[-1146407795] = { return Api.ChatFull.parse_channelFull($0) }
+    dict[640893467] = { return Api.ChatFull.parse_chatFull($0) }
     dict[-840897472] = { return Api.ChatInvite.parse_chatInvite($0) }
     dict[1516793212] = { return Api.ChatInvite.parse_chatInviteAlready($0) }
     dict[1634294960] = { return Api.ChatInvite.parse_chatInvitePeek($0) }
@@ -857,9 +857,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1239335713] = { return Api.ShippingOption.parse_shippingOption($0) }
     dict[-2010155333] = { return Api.SimpleWebViewResult.parse_simpleWebViewResultUrl($0) }
     dict[-425595208] = { return Api.SmsJob.parse_smsJob($0) }
-    dict[-313293833] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
+    dict[-1611532106] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
     dict[1124938064] = { return Api.SponsoredMessageReportOption.parse_sponsoredMessageReportOption($0) }
-    dict[1035529315] = { return Api.SponsoredWebPage.parse_sponsoredWebPage($0) }
     dict[-884757282] = { return Api.StatsAbsValueAndPrev.parse_statsAbsValueAndPrev($0) }
     dict[-1237848657] = { return Api.StatsDateRangeDays.parse_statsDateRangeDays($0) }
     dict[-1901828938] = { return Api.StatsGraph.parse_statsGraph($0) }
@@ -1931,8 +1930,6 @@ public extension Api {
             case let _1 as Api.SponsoredMessage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SponsoredMessageReportOption:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.SponsoredWebPage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StatsAbsValueAndPrev:
                 _1.serialize(buffer, boxed)

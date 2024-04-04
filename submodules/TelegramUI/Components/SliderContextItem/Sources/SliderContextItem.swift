@@ -27,7 +27,7 @@ public final class SliderContextItem: ContextMenuCustomItem {
 
 private let textFont = Font.with(size: 17.0, design: .regular, traits: .monospacedNumbers)
 
-private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode, UIGestureRecognizerDelegate {
+private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode, ASGestureRecognizerDelegate {
     private var presentationData: PresentationData
     
     private(set) var vibrancyEffectView: UIVisualEffectView?
@@ -134,7 +134,7 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode,
         }
         
         let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-        panGestureRecognizer.delegate = self
+        panGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.view.addGestureRecognizer(panGestureRecognizer)
         
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))

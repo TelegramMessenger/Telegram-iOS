@@ -751,7 +751,7 @@ private func generateShadowImage() -> UIImage? {
     })?.stretchableImage(withLeftCapWidth: 20, topCapHeight: 0)
 }
 
-private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
+private class ChatQrCodeScreenNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private weak var controller: ChatQrCodeScreen?
@@ -1285,7 +1285,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     override public func didLoad() {
         super.didLoad()
         
-        self.wrappingScrollNode.view.delegate = self
+        self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
         }

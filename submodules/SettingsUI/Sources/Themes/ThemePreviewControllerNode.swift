@@ -31,7 +31,7 @@ private func generateMaskImage(color: UIColor) -> UIImage? {
     })
 }
 
-final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
+final class ThemePreviewControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private let context: AccountContext
     private var previewTheme: PresentationTheme
     private var presentationData: PresentationData
@@ -318,7 +318,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.isPagingEnabled = true
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.pageControlNode.setPage(0.0)
     }
     

@@ -42,6 +42,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         _value = _startValue;
         _dotSize = 10.5f;
         _minimumUndottedValue = -1;
+        _markPositions = true;
         
         _lineSize = TGPhotoEditorSliderViewLineSize;
         _knobPadding = TGPhotoEditorSliderViewInternalMargin;
@@ -214,6 +215,12 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     {
         for (NSInteger i = 0; i < self.positionsCount; i++)
         {
+            if (!self.markPositions) {
+                if (i != 0 && i != self.positionsCount - 1) {
+                    continue;
+                }
+            }
+            
             if (self.useLinesForPositions) {
                 CGSize lineSize = CGSizeMake(4.0, 12.0);
                 CGRect lineRect = CGRectMake(margin - lineSize.width / 2.0f + totalLength / (self.positionsCount - 1) * i, (sideLength - lineSize.height) / 2, lineSize.width, lineSize.height);

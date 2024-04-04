@@ -21,6 +21,8 @@ import AnimatedTextComponent
 import TextFormat
 import AudioToolbox
 import PremiumLockButtonSubtitleComponent
+import ListSectionComponent
+import ListItemSliderSelectorComponent
 
 final class PeerAllowedReactionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -57,6 +59,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
         private var reactionsTitleText: ComponentView<Empty>?
         private var reactionsInfoText: ComponentView<Empty>?
         private var reactionInput: ComponentView<Empty>?
+        private var reactionCountSection: ComponentView<Empty>?
         private let actionButton = ComponentView<Empty>()
         
         private var reactionSelectionControl: ComponentView<Empty>?
@@ -81,6 +84,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
         
         private var displayInput: Bool = false
         private var recenterOnCaret: Bool = false
+        
+        private var allowedReactionCount: Int = 11
         
         private var isApplyingSettings: Bool = false
         private var applyDisposable: Disposable?
@@ -775,6 +780,86 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 }
                 contentHeight += reactionsInfoTextSize.height
                 contentHeight += 6.0
+                
+                contentHeight += 32.0
+                
+                let reactionCountSection: ComponentView<Empty>
+                if let current = self.reactionCountSection {
+                    reactionCountSection = current
+                } else {
+                    reactionCountSection = ComponentView()
+                    self.reactionCountSection = reactionCountSection
+                }
+                
+                let reactionCountValueList = (1 ... 11).map { i -> String in
+                    return "\(i)"
+                }
+                //TODO:localize
+                let sliderTitle: String
+                if self.allowedReactionCount == 1 {
+                    sliderTitle = "1 reaction"
+                } else {
+                    sliderTitle = "\(self.allowedReactionCount) reactions"
+                }
+                let reactionCountSectionSize = reactionCountSection.update(
+                    transition: transition,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "MAXIMUM REACTIONS PER POST",
+                                font: Font.regular(13.0),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        )),
+                        footer: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "Limit the number of different reactions that can be added to a post, including already published posts.",
+                                font: Font.regular(13.0),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        )),
+                        items: [
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemSliderSelectorComponent(
+                                theme: environment.theme,
+                                values: reactionCountValueList.map { item in
+                                    return item
+                                },
+                                markPositions: false,
+                                selectedIndex: max(0, min(reactionCountValueList.count - 1, self.allowedReactionCount - 1)),
+                                title: sliderTitle,
+                                selectedIndexUpdated: { [weak self] index in
+                                    guard let self else {
+                                        return
+                                    }
+                                    let index = max(1, min(reactionCountValueList.count, index + 1))
+                                    self.allowedReactionCount = index
+                                    self.state?.updated(transition: .immediate)
+                                }
+                            )))
+                        ],
+                        displaySeparators: false
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                let reactionCountSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: reactionCountSectionSize)
+                if let reactionCountSectionView = reactionCountSection.view {
+                    if reactionCountSectionView.superview == nil {
+                        self.scrollView.addSubview(reactionCountSectionView)
+                    }
+                    if animateIn {
+                        reactionCountSectionView.frame = reactionCountSectionFrame
+                        if !transition.animation.isImmediate {
+                            reactionCountSectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        }
+                    } else {
+                        transition.setFrame(view: reactionCountSectionView, frame: reactionCountSectionFrame)
+                    }
+                }
+                contentHeight += reactionCountSectionSize.height
             } else {
                 if let reactionsTitleText = self.reactionsTitleText {
                     self.reactionsTitleText = nil
@@ -811,6 +896,19 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             })
                         } else {
                             reactionsInfoTextView.removeFromSuperview()
+                        }
+                    }
+                }
+                
+                if let reactionCountSection = self.reactionCountSection {
+                    self.reactionCountSection = nil
+                    if let reactionCountSectionView = reactionCountSection.view {
+                        if !transition.animation.isImmediate {
+                            reactionCountSectionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak reactionCountSectionView] _ in
+                                reactionCountSectionView?.removeFromSuperview()
+                            })
+                        } else {
+                            reactionCountSectionView.removeFromSuperview()
                         }
                     }
                 }

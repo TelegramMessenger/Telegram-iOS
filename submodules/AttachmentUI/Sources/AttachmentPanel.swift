@@ -680,7 +680,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
     }
 }
 
-final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
+final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
     private let context: AccountContext
     private let isScheduledMessages: Bool
     private var presentationData: PresentationData
@@ -1026,7 +1026,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             self.containerNode.layer.cornerCurve = .continuous
         }
     
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.showsVerticalScrollIndicator = false
         

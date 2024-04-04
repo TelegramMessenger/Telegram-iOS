@@ -106,7 +106,7 @@ class HistoryNodeContainer: ASDisplayNode {
     }
 }
 
-class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
+class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     let context: AccountContext
     let chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
@@ -1163,7 +1163,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if self.scrollContainerNode == nil {
                 let scrollContainerNode = ScrollContainerNode()
                 scrollContainerNode.view.delaysContentTouches = false
-                scrollContainerNode.view.delegate = self
+                scrollContainerNode.view.delegate = self.wrappedScrollViewDelegate
                 scrollContainerNode.view.alwaysBounceVertical = true
                 if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                     scrollContainerNode.view.contentInsetAdjustmentBehavior = .never

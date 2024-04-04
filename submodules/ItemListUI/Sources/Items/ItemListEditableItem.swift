@@ -58,7 +58,7 @@ public final class ItemListRevealOptionsGestureRecognizer: UIPanGestureRecognize
     }
 }
 
-open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerDelegate {
+open class ItemListRevealOptionsItemNode: ListViewItemNode, ASGestureRecognizerDelegate {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     private var leftRevealNode: ItemListRevealOptionsNode?
@@ -96,13 +96,13 @@ open class ItemListRevealOptionsItemNode: ListViewItemNode, UIGestureRecognizerD
         
         let recognizer = ItemListRevealOptionsGestureRecognizer(target: self, action: #selector(self.revealGesture(_:)))
         self.recognizer = recognizer
-        recognizer.delegate = self
+        recognizer.delegate = self.wrappedGestureRecognizerDelegate
         recognizer.allowAnyDirection = self.allowAnyDirection
         self.view.addGestureRecognizer(recognizer)
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.revealTapGesture(_:)))
         self.tapRecognizer = tapRecognizer
-        tapRecognizer.delegate = self
+        tapRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.view.addGestureRecognizer(tapRecognizer)
         
         self.view.disablesInteractiveTransitionGestureRecognizer = self.allowAnyDirection

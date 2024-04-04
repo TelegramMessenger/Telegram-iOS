@@ -975,7 +975,7 @@ private func monthMetadata(calendar: Calendar, for baseDate: Date, currentYear: 
 }
 
 public final class CalendarMessageScreen: ViewController {
-    private final class Node: ViewControllerTracingNode, UIScrollViewDelegate {
+    private final class Node: ViewControllerTracingNode, ASScrollViewDelegate {
         struct SelectionState {
             var dayRange: ClosedRange<Int32>?
         }
@@ -1173,7 +1173,7 @@ public final class CalendarMessageScreen: ViewController {
 
             self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
 
-            self.scrollView.delegate = self
+            self.scrollView.delegate = self.wrappedScrollViewDelegate
             self.addSubnode(self.contextGestureContainerNode)
             self.contextGestureContainerNode.view.addSubview(self.scrollView)
 

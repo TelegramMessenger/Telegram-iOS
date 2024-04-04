@@ -46,7 +46,7 @@ private struct StickerPackPreviewGridTransaction {
     }
 }
 
-final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+final class StickerPackPreviewControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
     private let openShare: (() -> Void)?
     private var presentationData: PresentationData
@@ -152,7 +152,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         self.addSubnode(self.dimNode)
         
-        self.wrappingScrollNode.view.delegate = self
+        self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.addSubnode(self.wrappingScrollNode)
         
         self.wrappingScrollNode.addSubnode(self.cancelButtonNode)

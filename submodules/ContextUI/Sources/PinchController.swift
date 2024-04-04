@@ -133,7 +133,7 @@ private func cancelContextGestures(view: UIView) {
     }
 }
 
-public final class PinchSourceContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
+public final class PinchSourceContainerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     public let contentNode: ASDisplayNode
     public var contentRect: CGRect = CGRect()
     private(set) var naturalContentFrame: CGRect?

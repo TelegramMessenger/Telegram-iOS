@@ -1463,6 +1463,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         
         var isPremium: Bool?
         var peer: EnginePeer?
+        var adsEnabled = false
         
         private var disposable: Disposable?
         private(set) var configuration = PremiumIntroConfiguration.defaultValue
@@ -1470,6 +1471,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         private var stickersDisposable: Disposable?
         private var newPerksDisposable: Disposable?
         private var preloadDisposableSet =  DisposableSet()
+        private var adsEnabledDisposable: Disposable?
         
         var price: String? {
             return self.products?.first(where: { $0.id == self.selectedProductId })?.price
@@ -1490,6 +1492,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 return false
             }
         }
+        
+        var cachedChevronImage: (UIImage, PresentationTheme)?
         
         init(
             context: AccountContext,
@@ -1581,6 +1585,15 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 self.newPerks = newPerks
                 self.updated()
             })
+            
+            self.adsEnabledDisposable = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.AdsEnabled(id: context.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] adsEnabled in
+                guard let self else {
+                    return
+                }
+                self.adsEnabled = adsEnabled
+                self.updated()
+            })
         }
         
         deinit {
@@ -1588,6 +1601,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             self.preloadDisposableSet.dispose()
             self.stickersDisposable?.dispose()
             self.newPerksDisposable?.dispose()
+            self.adsEnabledDisposable?.dispose()
         }
         
         private var updatedPeerStatus: PeerEmojiStatus?
@@ -1653,6 +1667,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         let optionsSection = Child(SectionGroupComponent.self)
         let businessSection = Child(ListSectionComponent.self)
         let moreBusinessSection = Child(ListSectionComponent.self)
+        let adsSettingsSection = Child(ListSectionComponent.self)
         let perksSection = Child(ListSectionComponent.self)
         let infoBackground = Child(RoundedRectangle.self)
         let infoTitle = Child(MultilineTextComponent.self)
@@ -2464,6 +2479,94 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 size.height += 23.0
             }
             
+            let termsFont = Font.regular(13.0)
+            let boldTermsFont = Font.semibold(13.0)
+            let italicTermsFont = Font.italic(13.0)
+            let boldItalicTermsFont = Font.semiboldItalic(13.0)
+            let monospaceTermsFont = Font.monospace(13.0)
+            let termsTextColor = environment.theme.list.freeTextColor
+            let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
+                return (TelegramTextAttributes.URL, contents)
+            })
+            
+            let layoutAdsSettings = {
+                size.height += 8.0
+                
+                var adsSettingsItems: [AnyComponentWithIdentity<Empty>] = []
+                adsSettingsItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                    theme: environment.theme,
+                    title: AnyComponent(VStack([
+                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: environment.strings.Business_DontHideAds,
+                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                textColor: environment.theme.list.itemPrimaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        ))),
+                    ], alignment: .left, spacing: 2.0)),
+                    accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: state.adsEnabled, action: { [weak state] value in
+                        let _ = accountContext.engine.accountData.updateAdMessagesEnabled(enabled: value).startStandalone()
+                        state?.updated(transition: .immediate)
+                    })),
+                    action: nil
+                ))))
+                
+                let adsInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Business_AdsInfo, attributes: termsMarkdownAttributes, textAlignment: .natural
+                ))
+                if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== theme {
+                    state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: environment.theme.list.itemAccentColor)!, theme)
+                }
+                if let range = adsInfoString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
+                    adsInfoString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: adsInfoString.string))
+                }
+                let controller = environment.controller
+                let adsInfoTapActionImpl: ([NSAttributedString.Key: Any]) -> Void = { _ in
+                    if let controller = controller() as? PremiumIntroScreen {
+                        controller.context.sharedContext.openExternalUrl(context: controller.context, urlContext: .generic, url: environment.strings.Business_AdsInfo_URL, forceExternal: true, presentationData: controller.context.sharedContext.currentPresentationData.with({$0}), navigationController: nil, dismissInput: {})
+                    }
+                }
+                let adsSettingsSection = adsSettingsSection.update(
+                    component: ListSectionComponent(
+                        theme: environment.theme,
+                        header: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: strings.Business_AdsTitle.uppercased(),
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        )),
+                        footer: AnyComponent(MultilineTextComponent(
+                            text: .plain(adsInfoString),
+                            maximumNumberOfLines: 0,
+                            highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
+                            highlightAction: { attributes in
+                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                    return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                                } else {
+                                    return nil
+                                }
+                            },
+                            tapAction: { attributes, _ in
+                                adsInfoTapActionImpl(attributes)
+                            }
+                        )),
+                        items: adsSettingsItems
+                    ),
+                    environment: {},
+                    availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
+                    transition: context.transition
+                )
+                context.add(adsSettingsSection
+                    .position(CGPoint(x: availableWidth / 2.0, y: size.height + adsSettingsSection.size.height / 2.0))
+                    .clipsToBounds(true)
+                    .cornerRadius(10.0)
+                )
+                size.height += adsSettingsSection.size.height
+                size.height += 23.0
+            }
+            
             let copyLink = context.component.copyLink
             if case .emojiStatus = context.component.source {
                 layoutPerks()
@@ -2499,6 +2602,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     layoutBusinessPerks()
                     if context.component.isPremium == true {
                         layoutMoreBusinessPerks()
+                        layoutAdsSettings()
                     }
                 } else {
                     layoutPerks()
@@ -2556,17 +2660,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     )
                     size.height += infoBackground.size.height
                     size.height += 6.0
-                    
-                    let termsFont = Font.regular(13.0)
-                    let boldTermsFont = Font.semibold(13.0)
-                    let italicTermsFont = Font.italic(13.0)
-                    let boldItalicTermsFont = Font.semiboldItalic(13.0)
-                    let monospaceTermsFont = Font.monospace(13.0)
-                    let termsTextColor = environment.theme.list.freeTextColor
-                    let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
-                        return (TelegramTextAttributes.URL, contents)
-                    })
-                               
+                                                   
                     var isGiftView = false
                     if case let .gift(fromId, _, _, _) = context.component.source {
                         if fromId == context.component.context.account.peerId {

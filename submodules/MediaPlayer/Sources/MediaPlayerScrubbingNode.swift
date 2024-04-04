@@ -63,7 +63,7 @@ public func parseMediaPlayerChapters(_ string: NSAttributedString) -> [MediaPlay
     return chapters
 }
 
-private final class MediaPlayerScrubbingNodeButton: ASDisplayNode, UIGestureRecognizerDelegate {
+private final class MediaPlayerScrubbingNodeButton: ASDisplayNode, ASGestureRecognizerDelegate {
     var beginScrubbing: (() -> Void)?
     var endScrubbing: ((Bool) -> Void)?
     var updateScrubbing: ((CGFloat, Double) -> Void)?
@@ -83,7 +83,7 @@ private final class MediaPlayerScrubbingNodeButton: ASDisplayNode, UIGestureReco
         self.view.disablesInteractiveTransitionGestureRecognizer = true
         
         let gestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-        gestureRecognizer.delegate = self
+        gestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.view.addGestureRecognizer(gestureRecognizer)
     }
     

@@ -19,6 +19,7 @@
 
 @property (nonatomic, assign) bool displayEdges;
 @property (nonatomic, assign) bool useLinesForPositions;
+@property (nonatomic, assign) bool markPositions;
 
 @property (nonatomic, readonly) bool knobStartedDragging;
 

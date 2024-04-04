@@ -316,7 +316,7 @@ final class TabBarNodeItem {
     }
 }
 
-class TabBarNode: ASDisplayNode, UIGestureRecognizerDelegate {
+class TabBarNode: ASDisplayNode, ASGestureRecognizerDelegate {
     var tabBarItems: [TabBarNodeItem] = [] {
         didSet {
             self.reloadTabBarItems()
@@ -389,7 +389,7 @@ class TabBarNode: ASDisplayNode, UIGestureRecognizerDelegate {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.delegate = self
+        recognizer.delegate = self.wrappedGestureRecognizerDelegate
         recognizer.tapActionAtPoint = { _ in
             return .keepWithSingleTap
         }

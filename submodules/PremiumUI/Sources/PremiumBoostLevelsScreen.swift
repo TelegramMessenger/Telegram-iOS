@@ -1596,7 +1596,7 @@ public class PremiumBoostLevelsScreen: ViewController {
         case features
     }
     
-    final class Node: ViewControllerTracingNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+    final class Node: ViewControllerTracingNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
         private var presentationData: PresentationData
         private weak var controller: PremiumBoostLevelsScreen?
                 
@@ -1727,7 +1727,7 @@ public class PremiumBoostLevelsScreen: ViewController {
             super.didLoad()
             
             let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-            panRecognizer.delegate = self
+            panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             panRecognizer.delaysTouchesBegan = false
             panRecognizer.cancelsTouchesInView = true
             self.panGestureRecognizer = panRecognizer

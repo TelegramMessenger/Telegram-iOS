@@ -711,7 +711,7 @@ private func interpolateColors(from: [String: UIColor], to: [String: UIColor], f
     return colors
 }
 
-private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
+private class ChatThemeScreenNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private weak var controller: ChatThemeScreen?
@@ -842,7 +842,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         
         self.addSubnode(self.dimNode)
         
-        self.wrappingScrollNode.view.delegate = self
+        self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.addSubnode(self.wrappingScrollNode)
         
         self.wrappingScrollNode.addSubnode(self.backgroundNode)

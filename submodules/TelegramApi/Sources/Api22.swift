@@ -477,31 +477,27 @@ public extension Api {
     }
 }
 public extension Api {
-    indirect enum SponsoredMessage: TypeConstructorDescription {
-        case sponsoredMessage(flags: Int32, randomId: Buffer, fromId: Api.Peer?, chatInvite: Api.ChatInvite?, chatInviteHash: String?, channelPost: Int32?, startParam: String?, webpage: Api.SponsoredWebPage?, app: Api.BotApp?, message: String, entities: [Api.MessageEntity]?, buttonText: String?, sponsorInfo: String?, additionalInfo: String?)
+    enum SponsoredMessage: TypeConstructorDescription {
+        case sponsoredMessage(flags: Int32, randomId: Buffer, url: String, title: String, message: String, entities: [Api.MessageEntity]?, photo: Api.Photo?, buttonText: String, sponsorInfo: String?, additionalInfo: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sponsoredMessage(let flags, let randomId, let fromId, let chatInvite, let chatInviteHash, let channelPost, let startParam, let webpage, let app, let message, let entities, let buttonText, let sponsorInfo, let additionalInfo):
+                case .sponsoredMessage(let flags, let randomId, let url, let title, let message, let entities, let photo, let buttonText, let sponsorInfo, let additionalInfo):
                     if boxed {
-                        buffer.appendInt32(-313293833)
+                        buffer.appendInt32(-1611532106)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeBytes(randomId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 3) != 0 {fromId!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 4) != 0 {chatInvite!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 4) != 0 {serializeString(chatInviteHash!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(channelPost!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 9) != 0 {webpage!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 10) != 0 {app!.serialize(buffer, true)}
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
                     serializeString(message, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(entities!.count))
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
-                    if Int(flags) & Int(1 << 11) != 0 {serializeString(buttonText!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 6) != 0 {photo!.serialize(buffer, true)}
+                    serializeString(buttonText, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 7) != 0 {serializeString(sponsorInfo!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 8) != 0 {serializeString(additionalInfo!, buffer: buffer, boxed: false)}
                     break
@@ -510,8 +506,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .sponsoredMessage(let flags, let randomId, let fromId, let chatInvite, let chatInviteHash, let channelPost, let startParam, let webpage, let app, let message, let entities, let buttonText, let sponsorInfo, let additionalInfo):
-                return ("sponsoredMessage", [("flags", flags as Any), ("randomId", randomId as Any), ("fromId", fromId as Any), ("chatInvite", chatInvite as Any), ("chatInviteHash", chatInviteHash as Any), ("channelPost", channelPost as Any), ("startParam", startParam as Any), ("webpage", webpage as Any), ("app", app as Any), ("message", message as Any), ("entities", entities as Any), ("buttonText", buttonText as Any), ("sponsorInfo", sponsorInfo as Any), ("additionalInfo", additionalInfo as Any)])
+                case .sponsoredMessage(let flags, let randomId, let url, let title, let message, let entities, let photo, let buttonText, let sponsorInfo, let additionalInfo):
+                return ("sponsoredMessage", [("flags", flags as Any), ("randomId", randomId as Any), ("url", url as Any), ("title", title as Any), ("message", message as Any), ("entities", entities as Any), ("photo", photo as Any), ("buttonText", buttonText as Any), ("sponsorInfo", sponsorInfo as Any), ("additionalInfo", additionalInfo as Any)])
     }
     }
     
@@ -520,56 +516,38 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Buffer?
             _2 = parseBytes(reader)
-            var _3: Api.Peer?
-            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.Peer
-            } }
-            var _4: Api.ChatInvite?
-            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.ChatInvite
-            } }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
             var _5: String?
-            if Int(_1!) & Int(1 << 4) != 0 {_5 = parseString(reader) }
-            var _6: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_6 = reader.readInt32() }
-            var _7: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_7 = parseString(reader) }
-            var _8: Api.SponsoredWebPage?
-            if Int(_1!) & Int(1 << 9) != 0 {if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.SponsoredWebPage
-            } }
-            var _9: Api.BotApp?
-            if Int(_1!) & Int(1 << 10) != 0 {if let signature = reader.readInt32() {
-                _9 = Api.parse(reader, signature: signature) as? Api.BotApp
-            } }
-            var _10: String?
-            _10 = parseString(reader)
-            var _11: [Api.MessageEntity]?
+            _5 = parseString(reader)
+            var _6: [Api.MessageEntity]?
             if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _11 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
             } }
-            var _12: String?
-            if Int(_1!) & Int(1 << 11) != 0 {_12 = parseString(reader) }
-            var _13: String?
-            if Int(_1!) & Int(1 << 7) != 0 {_13 = parseString(reader) }
-            var _14: String?
-            if Int(_1!) & Int(1 << 8) != 0 {_14 = parseString(reader) }
+            var _7: Api.Photo?
+            if Int(_1!) & Int(1 << 6) != 0 {if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.Photo
+            } }
+            var _8: String?
+            _8 = parseString(reader)
+            var _9: String?
+            if Int(_1!) & Int(1 << 7) != 0 {_9 = parseString(reader) }
+            var _10: String?
+            if Int(_1!) & Int(1 << 8) != 0 {_10 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 0) == 0) || _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 9) == 0) || _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 10) == 0) || _9 != nil
-            let _c10 = _10 != nil
-            let _c11 = (Int(_1!) & Int(1 << 1) == 0) || _11 != nil
-            let _c12 = (Int(_1!) & Int(1 << 11) == 0) || _12 != nil
-            let _c13 = (Int(_1!) & Int(1 << 7) == 0) || _13 != nil
-            let _c14 = (Int(_1!) & Int(1 << 8) == 0) || _14 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 {
-                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, fromId: _3, chatInvite: _4, chatInviteHash: _5, channelPost: _6, startParam: _7, webpage: _8, app: _9, message: _10!, entities: _11, buttonText: _12, sponsorInfo: _13, additionalInfo: _14)
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 6) == 0) || _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 7) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 8) == 0) || _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, url: _3!, title: _4!, message: _5!, entities: _6, photo: _7, buttonText: _8!, sponsorInfo: _9, additionalInfo: _10)
             }
             else {
                 return nil
@@ -610,56 +588,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.SponsoredMessageReportOption.sponsoredMessageReportOption(text: _1!, option: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum SponsoredWebPage: TypeConstructorDescription {
-        case sponsoredWebPage(flags: Int32, url: String, siteName: String, photo: Api.Photo?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .sponsoredWebPage(let flags, let url, let siteName, let photo):
-                    if boxed {
-                        buffer.appendInt32(1035529315)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(url, buffer: buffer, boxed: false)
-                    serializeString(siteName, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {photo!.serialize(buffer, true)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .sponsoredWebPage(let flags, let url, let siteName, let photo):
-                return ("sponsoredWebPage", [("flags", flags as Any), ("url", url as Any), ("siteName", siteName as Any), ("photo", photo as Any)])
-    }
-    }
-    
-        public static func parse_sponsoredWebPage(_ reader: BufferReader) -> SponsoredWebPage? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: Api.Photo?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.Photo
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.SponsoredWebPage.sponsoredWebPage(flags: _1!, url: _2!, siteName: _3!, photo: _4)
             }
             else {
                 return nil
@@ -914,6 +842,50 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.StatsGroupTopInviter.statsGroupTopInviter(userId: _1!, invitations: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum StatsGroupTopPoster: TypeConstructorDescription {
+        case statsGroupTopPoster(userId: Int64, messages: Int32, avgChars: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsGroupTopPoster(let userId, let messages, let avgChars):
+                    if boxed {
+                        buffer.appendInt32(-1660637285)
+                    }
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt32(messages, buffer: buffer, boxed: false)
+                    serializeInt32(avgChars, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsGroupTopPoster(let userId, let messages, let avgChars):
+                return ("statsGroupTopPoster", [("userId", userId as Any), ("messages", messages as Any), ("avgChars", avgChars as Any)])
+    }
+    }
+    
+        public static func parse_statsGroupTopPoster(_ reader: BufferReader) -> StatsGroupTopPoster? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.StatsGroupTopPoster.statsGroupTopPoster(userId: _1!, messages: _2!, avgChars: _3!)
             }
             else {
                 return nil

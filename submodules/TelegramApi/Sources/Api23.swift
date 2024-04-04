@@ -1,48 +1,4 @@
 public extension Api {
-    enum StatsGroupTopPoster: TypeConstructorDescription {
-        case statsGroupTopPoster(userId: Int64, messages: Int32, avgChars: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsGroupTopPoster(let userId, let messages, let avgChars):
-                    if boxed {
-                        buffer.appendInt32(-1660637285)
-                    }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeInt32(messages, buffer: buffer, boxed: false)
-                    serializeInt32(avgChars, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsGroupTopPoster(let userId, let messages, let avgChars):
-                return ("statsGroupTopPoster", [("userId", userId as Any), ("messages", messages as Any), ("avgChars", avgChars as Any)])
-    }
-    }
-    
-        public static func parse_statsGroupTopPoster(_ reader: BufferReader) -> StatsGroupTopPoster? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.StatsGroupTopPoster.statsGroupTopPoster(userId: _1!, messages: _2!, avgChars: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
     enum StatsPercentValue: TypeConstructorDescription {
         case statsPercentValue(part: Double, total: Double)
     

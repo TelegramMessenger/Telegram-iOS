@@ -90,7 +90,7 @@ final class VoiceChatRecordingSetupController: ViewController {
     }
 }
 
-private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
     enum MediaMode {
         case videoAndAudio
         case audioOnly
@@ -263,7 +263,7 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         self.addSubnode(self.dimNode)
         
-        self.wrappingScrollNode.view.delegate = self
+        self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.addSubnode(self.wrappingScrollNode)
                 
         self.wrappingScrollNode.addSubnode(self.backgroundNode)

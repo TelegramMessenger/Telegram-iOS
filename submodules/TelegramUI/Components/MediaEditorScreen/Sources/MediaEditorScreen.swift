@@ -2121,7 +2121,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
     }
     
-    final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
+    final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
         private weak var controller: MediaEditorScreen?
         private let context: AccountContext
         fileprivate var interaction: DrawingToolsInteraction?
@@ -2750,28 +2750,28 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.view.disablesInteractiveKeyboardGestureRecognizer = true
             
             let dismissPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handleDismissPan(_:)))
-            dismissPanGestureRecognizer.delegate = self
+            dismissPanGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             dismissPanGestureRecognizer.maximumNumberOfTouches = 1
             self.previewContainerView.addGestureRecognizer(dismissPanGestureRecognizer)
             self.dismissPanGestureRecognizer = dismissPanGestureRecognizer
             
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-            panGestureRecognizer.delegate = self
+            panGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             panGestureRecognizer.minimumNumberOfTouches = 1
             panGestureRecognizer.maximumNumberOfTouches = 2
             self.view.addGestureRecognizer(panGestureRecognizer)
             self.panGestureRecognizer = panGestureRecognizer
             
             let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.handlePinch(_:)))
-            pinchGestureRecognizer.delegate = self
+            pinchGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             self.previewContainerView.addGestureRecognizer(pinchGestureRecognizer)
             
             let rotateGestureRecognizer = UIRotationGestureRecognizer(target: self, action: #selector(self.handleRotate(_:)))
-            rotateGestureRecognizer.delegate = self
+            rotateGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             self.previewContainerView.addGestureRecognizer(rotateGestureRecognizer)
             
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
-            tapGestureRecognizer.delegate = self
+            tapGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             self.previewContainerView.addGestureRecognizer(tapGestureRecognizer)
             
             self.interaction = DrawingToolsInteraction(

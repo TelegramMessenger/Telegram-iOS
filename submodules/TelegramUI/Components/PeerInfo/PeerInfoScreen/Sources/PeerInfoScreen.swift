@@ -518,6 +518,7 @@ private enum PeerInfoSettingsSection {
     case emojiStatus
     case powerSaving
     case businessSetup
+    case profile
 }
 
 private enum PeerInfoReportType {
@@ -725,6 +726,7 @@ private enum SettingsSection: Int, CaseIterable {
     case edit
     case phone
     case accounts
+    case myProfile
     case proxy
     case apps
     case shortcuts
@@ -850,6 +852,11 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             }))
         }
         
+        //TODO:localize
+        items[.myProfile]!.append(PeerInfoScreenDisclosureItem(id: 0, text: "My Profile", icon: PresentationResourcesSettings.myProfile, action: {
+            interaction.openSettings(.profile)
+        }))
+        
         if !settings.proxySettings.servers.isEmpty {
             let proxyType: String
             if settings.proxySettings.enabled, let activeServer = settings.proxySettings.activeServer {
@@ -891,10 +898,6 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             appIndex += 1
         }
     }
-    
-    items[.apps]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_MyStories, icon: PresentationResourcesSettings.stories, action: {
-        interaction.openSettings(.stories)
-    }))
     
     items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_SavedMessages, icon: PresentationResourcesSettings.savedMessages, action: {
         interaction.openSettings(.savedMessages)
@@ -994,7 +997,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     return result
 }
 
-private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoState, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction) -> [(AnyHashable, [PeerInfoScreenItem])] {
+private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoState, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, isMyProfile: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
     guard let data = data else {
         return []
     }
@@ -1028,7 +1031,9 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     let ItemBirthdayHelp = 12
     let ItemPeerPersonalChannel = 13
     
-    items[.help]!.append(PeerInfoScreenCommentItem(id: ItemNameHelp, text: presentationData.strings.EditProfile_NameAndPhotoOrVideoHelp))
+    if !isMyProfile {
+        items[.help]!.append(PeerInfoScreenCommentItem(id: ItemNameHelp, text: presentationData.strings.EditProfile_NameAndPhotoOrVideoHelp))
+    }
     
     if let cachedData = data.cachedData as? CachedUserData {
         items[.bio]!.append(PeerInfoScreenMultilineInputItem(id: ItemBio, text: state.updatingBio ?? (cachedData.about ?? ""), placeholder: presentationData.strings.UserInfo_About_Placeholder, textUpdated: { updatedText in
@@ -1056,27 +1061,30 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         birthDateString = presentationData.strings.Settings_Birthday_Add
     }
     
-    let isEditingBirthDate = state.isEditingBirthDate
-    items[.birthday]!.append(PeerInfoScreenDisclosureItem(id: ItemBirthday, label: .coloredText(birthDateString, isEditingBirthDate ? .accent : .generic), text: presentationData.strings.Settings_Birthday, icon: nil, hasArrow: false, action: {
-        interaction.updateIsEditingBirthdate(!isEditingBirthDate)
-    }))
-    if isEditingBirthDate, let birthday {
-        items[.birthday]!.append(PeerInfoScreenBirthdatePickerItem(id: ItemBirthdayPicker, value: birthday, valueUpdated: { value in
-            interaction.updateBirthdate(value)
+    if !isMyProfile {
+        let isEditingBirthDate = state.isEditingBirthDate
+        items[.birthday]!.append(PeerInfoScreenDisclosureItem(id: ItemBirthday, label: .coloredText(birthDateString, isEditingBirthDate ? .accent : .generic), text: presentationData.strings.Settings_Birthday, icon: nil, hasArrow: false, action: {
+            interaction.updateIsEditingBirthdate(!isEditingBirthDate)
         }))
-        items[.birthday]!.append(PeerInfoScreenActionItem(id: ItemBirthdayRemove, text: presentationData.strings.Settings_Birthday_Remove, alignment: .natural, action: {
-            interaction.updateBirthdate(.some(nil))
-            interaction.updateIsEditingBirthdate(false)
+        if isEditingBirthDate, let birthday {
+            items[.birthday]!.append(PeerInfoScreenBirthdatePickerItem(id: ItemBirthdayPicker, value: birthday, valueUpdated: { value in
+                interaction.updateBirthdate(value)
+            }))
+            items[.birthday]!.append(PeerInfoScreenActionItem(id: ItemBirthdayRemove, text: presentationData.strings.Settings_Birthday_Remove, alignment: .natural, action: {
+                interaction.updateBirthdate(.some(nil))
+                interaction.updateIsEditingBirthdate(false)
+            }))
+        }
+        
+        
+        var birthdayIsForContactsOnly = false
+        if let birthdayPrivacy = data.globalSettings?.privacySettings?.birthday, case .enableContacts = birthdayPrivacy {
+            birthdayIsForContactsOnly = true
+        }
+        items[.birthday]!.append(PeerInfoScreenCommentItem(id: ItemBirthdayHelp, text: birthdayIsForContactsOnly ? presentationData.strings.Settings_Birthday_ContactsHelp : presentationData.strings.Settings_Birthday_Help, linkAction: { _ in
+            interaction.openBirthdatePrivacy()
         }))
     }
-    
-    var birthdayIsForContactsOnly = false
-    if let birthdayPrivacy = data.globalSettings?.privacySettings?.birthday, case .enableContacts = birthdayPrivacy {
-        birthdayIsForContactsOnly = true
-    }
-    items[.birthday]!.append(PeerInfoScreenCommentItem(id: ItemBirthdayHelp, text: birthdayIsForContactsOnly ? presentationData.strings.Settings_Birthday_ContactsHelp : presentationData.strings.Settings_Birthday_Help, linkAction: { _ in
-        interaction.openBirthdatePrivacy()
-    }))
     
     if let user = data.peer as? TelegramUser {
         items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPhoneNumber, label: .text(user.phone.flatMap({ formatPhoneNumber(context: context, number: $0) }) ?? ""), text: presentationData.strings.Settings_PhoneNumber, action: {
@@ -1091,7 +1099,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
           interaction.openSettings(.username)
     }))
     
-    if let peer = data.peer as? TelegramUser {
+    if !isMyProfile, let peer = data.peer as? TelegramUser {
         var colors: [PeerNameColors.Colors] = []
         if let nameColor = peer.nameColor.flatMap({ context.peerNameColors.get($0, dark: presentationData.theme.overallDarkAppearance) }) {
             colors.append(nameColor)
@@ -1123,9 +1131,11 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         }
     }
     
-    items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
-        interaction.openSettings(.addAccount)
-    }))
+    if !isMyProfile {
+        items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
+            interaction.openSettings(.addAccount)
+        }))
+    }
     
     var hasPremiumAccounts = false
     if data.peer?.isPremium == true && !context.account.testingEnvironment {
@@ -1142,11 +1152,13 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         }
     }
     
-    items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: hasPremiumAccounts ? presentationData.strings.Settings_AddAnotherAccount_PremiumHelp : presentationData.strings.Settings_AddAnotherAccount_Help))
-    
-    items[.logout]!.append(PeerInfoScreenActionItem(id: ItemLogout, text: presentationData.strings.Settings_Logout, color: .destructive, alignment: .center, action: {
-        interaction.openSettings(.logout)
-    }))
+    if !isMyProfile {
+        items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: hasPremiumAccounts ? presentationData.strings.Settings_AddAnotherAccount_PremiumHelp : presentationData.strings.Settings_AddAnotherAccount_Help))
+        
+        items[.logout]!.append(PeerInfoScreenActionItem(id: ItemLogout, text: presentationData.strings.Settings_Logout, color: .destructive, alignment: .center, action: {
+            interaction.openSettings(.logout)
+        }))
+    }
     
     var result: [(AnyHashable, [PeerInfoScreenItem])] = []
     for section in Section.allCases {
@@ -2359,7 +2371,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
     return result
 }
 
-final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodeProtocol, UIScrollViewDelegate {
+final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodeProtocol, ASScrollViewDelegate {
     private weak var controller: PeerInfoScreenImpl?
     
     private let context: AccountContext
@@ -2371,6 +2383,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     
     let isSettings: Bool
+    let isMyProfile: Bool
     private let isMediaOnly: Bool
     let initialExpandPanes: Bool
     
@@ -2488,7 +2501,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     private var didSetReady = false
     
-    init(controller: PeerInfoScreenImpl, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], isSettings: Bool, hintGroupInCommon: PeerId?, requestsContext: PeerInvitationImportersContext?, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, initialPaneKey: PeerInfoPaneKey?) {
+    init(controller: PeerInfoScreenImpl, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], isSettings: Bool, isMyProfile: Bool, hintGroupInCommon: PeerId?, requestsContext: PeerInvitationImportersContext?, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, initialPaneKey: PeerInfoPaneKey?) {
         self.controller = controller
         self.context = context
         self.peerId = peerId
@@ -2499,9 +2512,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.reactionSourceMessageId = reactionSourceMessageId
         self.callMessages = callMessages
         self.isSettings = isSettings
+        self.isMyProfile = isMyProfile
         self.chatLocation = chatLocation
         self.chatLocationContextHolder = chatLocationContextHolder
-        self.isMediaOnly = context.account.peerId == peerId && !isSettings
+        self.isMediaOnly = context.account.peerId == peerId && !isSettings && !isMyProfile
         self.initialExpandPanes = initialPaneKey != nil
         
         self.scrollNode = ASScrollNode()
@@ -2512,7 +2526,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         if case let .replyThread(message) = chatLocation {
             forumTopicThreadId = message.threadId
         }
-        self.headerNode = PeerInfoHeaderNode(context: context, controller: controller, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, isMediaOnly: self.isMediaOnly, isSettings: isSettings, forumTopicThreadId: forumTopicThreadId, chatLocation: self.chatLocation)
+        self.headerNode = PeerInfoHeaderNode(context: context, controller: controller, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, isMediaOnly: self.isMediaOnly, isSettings: isSettings, isMyProfile: isMyProfile, forumTopicThreadId: forumTopicThreadId, chatLocation: self.chatLocation)
         self.paneContainerNode = PeerInfoPaneContainerNode(context: context, updatedPresentationData: controller.updatedPresentationData, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, isMediaOnly: self.isMediaOnly, initialPaneKey: initialPaneKey)
         
         super.init()
@@ -3297,7 +3311,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         self.scrollNode.view.alwaysBounceVertical = true
         self.scrollNode.view.scrollsToTop = false
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.paneContainerNode)
         
@@ -3435,6 +3449,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return
             }
             strongSelf.openMediaCalendar()
+        }
+        
+        self.paneContainerNode.openAddStory = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.headerNode.navigationButtonContainer.performAction?(.postStory, nil, nil)
         }
 
         self.paneContainerNode.paneDidScroll = { [weak self] in
@@ -4180,7 +4201,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.controller?.present(emojiStatusSelectionController, in: .window(.root))
             }
         } else {
-            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder)
+            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, isMyProfile: self.isMyProfile, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder)
                        
             var previousTimestamp: Double?
             self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, emojiStatusFileAndPack, white in
@@ -9186,6 +9207,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
         case .proxy:
             self.controller?.push(proxySettingsController(context: self.context))
+        case .profile:
+            self.controller?.push(PeerInfoScreenImpl(
+                context: self.context,
+                updatedPresentationData: self.controller?.updatedPresentationData,
+                peerId: self.context.account.peerId,
+                avatarInitiallyExpanded: false,
+                isOpenedFromChat: false,
+                nearbyPeerDistance: nil,
+                reactionSourceMessageId: nil,
+                callMessages: [],
+                isMyProfile: true
+            ))
         case .stories:
             push(PeerInfoStoryGridScreen(context: self.context, peerId: self.context.account.peerId, scope: .saved))
         case .savedMessages:
@@ -10503,7 +10536,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             var validEditingSections: [AnyHashable] = []
-            let editItems = self.isSettings ? settingsEditingItems(data: self.data, state: self.state, context: self.context, presentationData: self.presentationData, interaction: self.interaction) : editingItems(data: self.data, state: self.state, chatLocation: self.chatLocation, context: self.context, presentationData: self.presentationData, interaction: self.interaction)
+            let editItems = (self.isSettings || self.isMyProfile) ? settingsEditingItems(data: self.data, state: self.state, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isMyProfile: self.isMyProfile) : editingItems(data: self.data, state: self.state, chatLocation: self.chatLocation, context: self.context, presentationData: self.presentationData, interaction: self.interaction)
 
             for (sectionId, sectionItems) in editItems {
                 var insets = UIEdgeInsets()
@@ -10827,7 +10860,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 } else if peerInfoCanEdit(peer: self.data?.peer, chatLocation: self.chatLocation, threadData: self.data?.threadData, cachedData: self.data?.cachedData, isContact: self.data?.isContact) {
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 }
-                if let data = self.data, !data.isPremiumRequiredForStoryPosting || data.accountIsPremium, let channel = data.peer as? TelegramChannel,  channel.hasPermission(.postStories) {
+                if let data = self.data, !data.isPremiumRequiredForStoryPosting || data.accountIsPremium, let channel = data.peer as? TelegramChannel, channel.hasPermission(.postStories) {
+                    rightNavigationButtons.insert(PeerInfoHeaderNavigationButtonSpec(key: .postStory, isForExpandedView: false), at: 0)
+                } else if self.isMyProfile {
                     rightNavigationButtons.insert(PeerInfoHeaderNavigationButtonSpec(key: .postStory, isForExpandedView: false), at: 0)
                 }
                 
@@ -11182,6 +11217,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     private let reactionSourceMessageId: MessageId?
     private let callMessages: [Message]
     private let isSettings: Bool
+    private let isMyProfile: Bool
     private let hintGroupInCommon: PeerId?
     private weak var requestsContext: PeerInvitationImportersContext?
     private let switchToRecommendedChannels: Bool
@@ -11241,7 +11277,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], isSettings: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil, forumTopicThread: ChatReplyThreadMessage? = nil, switchToRecommendedChannels: Bool = false) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], isSettings: Bool = false, isMyProfile: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil, forumTopicThread: ChatReplyThreadMessage? = nil, switchToRecommendedChannels: Bool = false) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId
@@ -11251,6 +11287,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         self.reactionSourceMessageId = reactionSourceMessageId
         self.callMessages = callMessages
         self.isSettings = isSettings
+        self.isMyProfile = isMyProfile
         self.hintGroupInCommon = hintGroupInCommon
         self.requestsContext = requestsContext
         self.switchToRecommendedChannels = switchToRecommendedChannels
@@ -11587,7 +11624,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeerDistance: self.nearbyPeerDistance, reactionSourceMessageId: self.reactionSourceMessageId, callMessages: self.callMessages, isSettings: self.isSettings, hintGroupInCommon: self.hintGroupInCommon, requestsContext: self.requestsContext, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, initialPaneKey: self.switchToRecommendedChannels ? .recommended : nil)
+        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeerDistance: self.nearbyPeerDistance, reactionSourceMessageId: self.reactionSourceMessageId, callMessages: self.callMessages, isSettings: self.isSettings, isMyProfile: self.isMyProfile, hintGroupInCommon: self.hintGroupInCommon, requestsContext: self.requestsContext, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, initialPaneKey: self.switchToRecommendedChannels ? .recommended : nil)
         self.controllerNode.accountsAndPeers.set(self.accountsAndPeers.get() |> map { $0.1 })
         self.controllerNode.activeSessionsContextAndCount.set(self.activeSessionsContextAndCount.get())
         self.cachedDataPromise.set(self.controllerNode.cachedDataPromise.get())

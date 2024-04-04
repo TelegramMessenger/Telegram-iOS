@@ -83,7 +83,7 @@ private class SegmentedControlItemNode: HighlightTrackingButtonNode {
     }
 }
 
-public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDelegate {
+public final class SegmentedControlNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var theme: SegmentedControlTheme
     private var _items: [SegmentedControlItem]
     private var _selectedIndex: Int = 0
@@ -224,7 +224,7 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
         self.view.disablesInteractiveTransitionGestureRecognizer = true
        
         let gestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-        gestureRecognizer.delegate = self
+        gestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.view.addGestureRecognizer(gestureRecognizer)
         self.gestureRecognizer = gestureRecognizer
     }

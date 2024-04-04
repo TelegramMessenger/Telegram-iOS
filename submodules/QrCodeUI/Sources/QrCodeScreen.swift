@@ -182,7 +182,7 @@ public final class QrCodeScreen: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 
-    class Node: ViewControllerTracingNode, UIScrollViewDelegate {
+    class Node: ViewControllerTracingNode, ASScrollViewDelegate {
         private let context: AccountContext
         private let subject: QrCodeScreen.Subject
         private var presentationData: PresentationData
@@ -279,7 +279,7 @@ public final class QrCodeScreen: ViewController {
             self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             self.addSubnode(self.dimNode)
             
-            self.wrappingScrollNode.view.delegate = self
+            self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
             self.addSubnode(self.wrappingScrollNode)
             
             self.wrappingScrollNode.addSubnode(self.backgroundNode)

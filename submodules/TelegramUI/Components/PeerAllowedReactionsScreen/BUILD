@@ -33,6 +33,8 @@ swift_library(
         "//submodules/UndoUI",
         "//submodules/TextFormat",
         "//submodules/Components/HierarchyTrackingLayer",
+        "//submodules/TelegramUI/Components/ListSectionComponent",
+        "//submodules/TelegramUI/Components/ListItemSliderSelectorComponent",
     ],
     visibility = [
         "//visibility:public",

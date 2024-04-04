@@ -25,6 +25,10 @@ public extension TelegramEngine {
             return _internal_getServerProvidedSuggestions(account: self.account)
         }
         
+        public func getServerDismissedSuggestions() -> Signal<[ServerProvidedSuggestion], NoError> {
+            return _internal_getServerDismissedSuggestions(account: self.account)
+        }
+        
         public func dismissServerProvidedSuggestion(suggestion: ServerProvidedSuggestion) -> Signal<Never, NoError> {
             return _internal_dismissServerProvidedSuggestion(account: self.account, suggestion: suggestion)
         }

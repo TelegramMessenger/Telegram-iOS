@@ -3,7 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 
-open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate {
+open class ZoomableContentGalleryItemNode: GalleryItemNode, ASScrollViewDelegate {
     public let scrollNode: ASScrollNode
     
     private var containerLayout: ContainerViewLayout?
@@ -34,7 +34,7 @@ open class ZoomableContentGalleryItemNode: GalleryItemNode, UIScrollViewDelegate
     
         super.init()
         
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.scrollNode.view.showsVerticalScrollIndicator = false
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.clipsToBounds = false

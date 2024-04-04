@@ -112,7 +112,7 @@ final class VoiceChatCameraPreviewController: ViewController {
     }
 }
 
-private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private weak var controller: VoiceChatCameraPreviewController?
     private let sharedContext: SharedAccountContext
     private var presentationData: PresentationData
@@ -223,7 +223,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         self.addSubnode(self.dimNode)
         
-        self.wrappingScrollNode.view.delegate = self
+        self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.addSubnode(self.wrappingScrollNode)
                 
         self.wrappingScrollNode.addSubnode(self.backgroundNode)
@@ -510,7 +510,7 @@ private class VoiceChatCameraPreviewControllerNode: ViewControllerTracingNode, U
 private let textFont = Font.with(size: 14.0, design: .camera, weight: .regular)
 private let selectedTextFont = Font.with(size: 14.0, design: .camera, weight: .semibold)
 
-private class WheelControlNode: ASDisplayNode, UIGestureRecognizerDelegate {
+private class WheelControlNode: ASDisplayNode, ASGestureRecognizerDelegate {
     struct Item: Equatable {
         public let title: String
         

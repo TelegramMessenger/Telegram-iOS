@@ -1101,7 +1101,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         case additional
     }
     
-    final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
+    final class NavigationContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         let backgroundNode: NavigationBackgroundNode
         let parentShadowNode: ASImageNode
         
@@ -1136,7 +1136,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 let _ = strongSelf
                 return [.right]
             })
-            panRecognizer.delegate = self
+            panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
             self.view.addGestureRecognizer(panRecognizer)
             self.panRecognizer = panRecognizer
         }

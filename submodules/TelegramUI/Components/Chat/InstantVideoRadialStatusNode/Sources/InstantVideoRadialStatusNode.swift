@@ -62,7 +62,7 @@ private extension CGPoint {
     }
 }
 
-public final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDelegate {
+public final class InstantVideoRadialStatusNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private let color: UIColor
     private let hasSeek: Bool
     private let sparks: Bool
@@ -177,11 +177,11 @@ public final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecogni
         }
         
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
-        tapGestureRecognizer.delegate = self
+        tapGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.view.addGestureRecognizer(tapGestureRecognizer)
         
         let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-        panGestureRecognizer.delegate = self
+        panGestureRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         self.view.addGestureRecognizer(panGestureRecognizer)
     }
     

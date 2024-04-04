@@ -12,7 +12,7 @@ import DirectionalPanGesture
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
 
-final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestureRecognizerDelegate {
+final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestureRecognizerDelegate {
     let ready = Promise<Bool>()
     
     private let context: AccountContext
@@ -336,7 +336,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         
         let panRecognizer = DirectionalPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-        panRecognizer.delegate = self
+        panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
         panRecognizer.shouldBegin = { [weak self] point in

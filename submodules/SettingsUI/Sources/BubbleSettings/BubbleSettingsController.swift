@@ -29,7 +29,7 @@ private func generateMaskImage(color: UIColor) -> UIImage? {
     })
 }
 
-private final class BubbleSettingsControllerNode: ASDisplayNode, UIScrollViewDelegate {
+private final class BubbleSettingsControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private let context: AccountContext
     private var presentationThemeSettings: PresentationThemeSettings
     private var presentationData: PresentationData
@@ -132,7 +132,7 @@ private final class BubbleSettingsControllerNode: ASDisplayNode, UIScrollViewDel
         self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.isPagingEnabled = true
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.scrollNode.view.alwaysBounceHorizontal = false
     }
     

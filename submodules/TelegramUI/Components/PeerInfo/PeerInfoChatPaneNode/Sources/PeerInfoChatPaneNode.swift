@@ -89,7 +89,7 @@ private final class SearchNavigationContentNode: ASDisplayNode, PeerInfoPanelNod
     }
 }
 
-public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     private let context: AccountContext
     private let peerId: EnginePeer.Id
     private let navigationController: () -> NavigationController?

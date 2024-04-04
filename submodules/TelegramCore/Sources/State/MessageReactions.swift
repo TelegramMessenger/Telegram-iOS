@@ -674,7 +674,7 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
             mappedReactions = .chatReactionsNone
         }
         
-        return account.network.request(Api.functions.messages.setChatAvailableReactions(peer: inputPeer, availableReactions: mappedReactions))
+        return account.network.request(Api.functions.messages.setChatAvailableReactions(flags: 0, peer: inputPeer, availableReactions: mappedReactions, reactionsLimit: nil))
         |> map(Optional.init)
         |> `catch` { error -> Signal<Api.Updates?, UpdatePeerAllowedReactionsError> in
             if error.errorDescription == "CHAT_NOT_MODIFIED" {

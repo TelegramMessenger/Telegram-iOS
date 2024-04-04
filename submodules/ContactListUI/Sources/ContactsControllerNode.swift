@@ -44,7 +44,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
+final class ContactsControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     let contactListNode: ContactListNode
     
     private let context: AccountContext

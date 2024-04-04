@@ -9,7 +9,7 @@ import ActivityIndicator
 import AccountContext
 import ShareController
 
-final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     
@@ -121,7 +121,7 @@ final class LanguageLinkPreviewControllerNode: ViewControllerTracingNode, UIScro
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         self.addSubnode(self.dimNode)
         
-        self.wrappingScrollNode.view.delegate = self
+        self.wrappingScrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.addSubnode(self.wrappingScrollNode)
         
         self.cancelButtonNode.setTitle(self.presentationData.strings.Common_Cancel, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)

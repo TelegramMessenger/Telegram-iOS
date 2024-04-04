@@ -6,7 +6,7 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 
-public final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
+public final class MediaNavigationAccessoryContainerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private let displayBackground: Bool
 
     public let backgroundNode: ASDisplayNode

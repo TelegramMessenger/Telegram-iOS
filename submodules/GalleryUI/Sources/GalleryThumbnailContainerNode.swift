@@ -48,7 +48,7 @@ private final class GalleryThumbnailItemNode: ASDisplayNode {
     }
 }
 
-public final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDelegate {
+public final class GalleryThumbnailContainerNode: ASDisplayNode, ASScrollViewDelegate {
     public let groupId: Int64
     private let scrollNode: ASScrollNode
     
@@ -69,7 +69,7 @@ public final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDel
         
         super.init()
         
-        self.scrollNode.view.delegate = self
+        self.scrollNode.view.delegate = self.wrappedScrollViewDelegate
         self.scrollNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.showsVerticalScrollIndicator = false
