@@ -18,6 +18,7 @@ final class AccountTaskManager {
         
         private var stateDisposable: Disposable?
         private let tasksDisposable = MetaDisposable()
+        private let configurationDisposable = MetaDisposable()
         
         private let managedTopReactionsDisposable = MetaDisposable()
         
@@ -118,7 +119,7 @@ final class AccountTaskManager {
                     self.managedTopReactionsDisposable.set(managedTopReactions(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     
                     //tasks.add(managedVoipConfigurationUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
-                    tasks.add(managedAppConfigurationUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
+                    self.reloadAppConfiguration()
                     tasks.add(managedPremiumPromoConfigurationUpdates(accountPeerId: self.accountPeerId, postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     tasks.add(managedAutodownloadSettingsUpdates(accountManager: self.accountManager, network: self.stateManager.network).start())
                     tasks.add(managedTermsOfServiceUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network, stateManager: self.stateManager).start())
@@ -143,7 +144,12 @@ final class AccountTaskManager {
         deinit {
             self.stateDisposable?.dispose()
             self.tasksDisposable.dispose()
+            self.configurationDisposable.dispose()
             self.managedTopReactionsDisposable.dispose()
+        }
+        
+        func reloadAppConfiguration() {
+            self.configurationDisposable.set(managedAppConfigurationUpdates(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
         }
     }
     
@@ -157,5 +163,11 @@ final class AccountTaskManager {
         self.impl = QueueLocalObject(queue: queue, generate: {
             return Impl(queue: queue, accountPeerId: stateManager.accountPeerId, stateManager: stateManager, accountManager: accountManager, networkArguments: networkArguments, viewTracker: viewTracker, mediaReferenceRevalidationContext: mediaReferenceRevalidationContext, isMainApp: isMainApp, testingEnvironment: testingEnvironment)
         })
+    }
+    
+    func reloadAppConfiguration() {
+        self.impl.with { impl in
+            impl.reloadAppConfiguration()
+        }
     }
 }

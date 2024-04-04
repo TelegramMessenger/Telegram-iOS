@@ -1278,6 +1278,7 @@ public class Account {
         
         self.stateManager.updateConfigRequested = { [weak self] in
             self?.restartConfigurationUpdates()
+            self?.taskManager?.reloadAppConfiguration()
         }
         self.restartConfigurationUpdates()
         

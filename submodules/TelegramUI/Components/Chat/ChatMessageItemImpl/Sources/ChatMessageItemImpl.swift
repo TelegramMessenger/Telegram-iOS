@@ -340,12 +340,6 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                 hasAvatar = true
             }
             
-            if let adAttribute = message.adAttribute {
-                if adAttribute.displayAvatar {
-                    hasAvatar = adAttribute.displayAvatar
-                }
-            }
-            
             if hasAvatar {
                 if let effectiveAuthor = effectiveAuthor {
                     var storyStats: PeerStoryStats?

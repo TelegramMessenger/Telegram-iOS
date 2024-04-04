@@ -2205,18 +2205,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 filterImpl?()
                 completion?()
                 
-                if let currentBirthdays {
-                    let today = Calendar(identifier: .gregorian).component(.day, from: Date())
-                    var todayBirthdayPeerIds: [EnginePeer.Id] = []
-                    for (peerId, birthday) in currentBirthdays {
-                        if birthday.day == today {
-                            todayBirthdayPeerIds.append(peerId)
-                        }
-                    }
-                    let peerIds = todayBirthdayPeerIds.sorted { lhs, rhs in
-                        return lhs < rhs
-                    }
-                    let _ = ApplicationSpecificNotice.setDismissedBirthdayPremiumGifts(accountManager: context.sharedContext.accountManager, values: peerIds.map { $0.toInt64() }).start()
+                if case .chatList = source, let _ = currentBirthdays {
+                    let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .todayBirthdays).startStandalone()
                 }
             })
             pushImpl = { [weak giftController] c in

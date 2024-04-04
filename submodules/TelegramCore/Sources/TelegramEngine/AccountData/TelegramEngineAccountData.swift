@@ -233,5 +233,9 @@ public extension TelegramEngine {
         public func updatePersonalChannel(personalChannel: TelegramPersonalChannel?) -> Signal<Never, NoError> {
             return _internal_updatePersonalChannel(account: self.account, personalChannel: personalChannel)
         }
+        
+        public func updateAdMessagesEnabled(enabled: Bool) -> Signal<Never, AdMessagesEnableError> {
+            return _internal_updateAdMessagesEnabled(account: self.account, enabled: enabled)
+        }
     }
 }

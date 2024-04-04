@@ -4080,45 +4080,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId), let adAttribute = message.adAttribute else {
                 return
             }
-            
             self.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId)
-            
-            switch adAttribute.target {
-            case let .peer(id, messageId, startParam):
-                if case let .peer(currentPeerId) = self.chatLocation, currentPeerId == id {
-                    if let messageId {
-                        self.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)), rememberInStack: false)
-                    }
-                } else {
-                    let navigationData: ChatControllerInteractionNavigateToPeer
-                    if let bot = message.author as? TelegramUser, bot.botInfo != nil, let startParam = startParam {
-                        navigationData = .withBotStartPayload(ChatControllerInitialBotStart(payload: startParam, behavior: .interactive))
-                    } else {
-                        var subject: ChatControllerSubject?
-                        if let messageId = messageId {
-                            subject = .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil)
-                        }
-                        navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
-                    }
-                    let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: id))
-                    |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
-                        if let self, let peer = peer {
-                            self.openPeer(peer: peer, navigation: navigationData, fromMessage: nil)
-                        }
-                    })
-                }
-            case let .join(_, joinHash, _):
-                self.controllerInteraction?.openJoinLink(joinHash)
-            case let .webPage(_, url):
-                self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: false, external: true))
-            case let .botApp(peerId, botApp, startParam):
-                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
-                    if let self, let peer {
-                        self.presentBotApp(botApp: botApp, botPeer: peer, payload: startParam)
-                    }
-                })
-            }
+            self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: adAttribute.url, concealed: false, external: true))
         }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId, maxQuantity in
             guard let self else {
                 return

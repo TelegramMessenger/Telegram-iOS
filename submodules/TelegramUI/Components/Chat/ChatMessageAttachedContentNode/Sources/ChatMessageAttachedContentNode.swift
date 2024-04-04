@@ -314,9 +314,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 contentMediaAspectFilled = flags.contains(.preferMediaAspectFilled)
             }
             var contentMediaInline = false
-            
-            var contentMediaImagePeer: EnginePeer?
-            
+                        
             if let (media, flags) = mediaAndFlags {
                 contentMediaInline = flags.contains(.preferMediaInline)
                 
@@ -362,9 +360,6 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 } else if let _ = media as? TelegramMediaStory {
                     contentMediaValue = media
                 }
-            } else if let adAttribute = message.adAttribute, case let .join(_, _, peer) = adAttribute.target, let peer, peer.largeProfileImage != nil {
-                contentMediaInline = true
-                contentMediaImagePeer = peer
             }
             
             var maxWidth: CGFloat = .greatestFiniteMagnitude
@@ -408,9 +403,6 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     
                     inlineMediaAndSize = nil
                 }
-            } else if let contentMediaImagePeer {
-                contentMediaContinueLayout = nil
-                inlineMediaAndSize = (.peerAvatar(contentMediaImagePeer), CGSize(width: 54.0, height: 54.0))
             } else {
                 contentMediaContinueLayout = nil
                 inlineMediaAndSize = nil

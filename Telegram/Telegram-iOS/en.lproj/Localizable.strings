@@ -11890,3 +11890,8 @@ Sorry for the inconvenience.";
 
 "StoryList.SubtitleArchived_1" = "1 archived post";
 "StoryList.SubtitleArchived_any" = "%d archived posts";
+
+"Business.AdsTitle" = "ADS IN CHANNELS";
+"Business.DontHideAds" = "Do Not Hide Ads";
+"Business.AdsInfo" = "As a Premium subscriber, you don't see any ads on Telegram, but you can turn them on, for example, to view your own ads that you launched on the [Telegram Ad Platform >]()";
+"Business.AdsInfo_URL" = "https://promote.telegram.org";
