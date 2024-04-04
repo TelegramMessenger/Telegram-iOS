@@ -1463,6 +1463,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         
         var isPremium: Bool?
         var peer: EnginePeer?
+        var adsEnabled = false
         
         private var disposable: Disposable?
         private(set) var configuration = PremiumIntroConfiguration.defaultValue
@@ -1470,6 +1471,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         private var stickersDisposable: Disposable?
         private var newPerksDisposable: Disposable?
         private var preloadDisposableSet =  DisposableSet()
+        private var adsEnabledDisposable: Disposable?
         
         var price: String? {
             return self.products?.first(where: { $0.id == self.selectedProductId })?.price
@@ -1490,6 +1492,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 return false
             }
         }
+        
+        var cachedChevronImage: (UIImage, PresentationTheme)?
         
         init(
             context: AccountContext,
@@ -1581,6 +1585,15 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 self.newPerks = newPerks
                 self.updated()
             })
+            
+            self.adsEnabledDisposable = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.AdsEnabled(id: context.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] adsEnabled in
+                guard let self else {
+                    return
+                }
+                self.adsEnabled = adsEnabled
+                self.updated()
+            })
         }
         
         deinit {
@@ -1588,6 +1601,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             self.preloadDisposableSet.dispose()
             self.stickersDisposable?.dispose()
             self.newPerksDisposable?.dispose()
+            self.adsEnabledDisposable?.dispose()
         }
         
         private var updatedPeerStatus: PeerEmojiStatus?
@@ -2491,13 +2505,27 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             maximumNumberOfLines: 1
                         ))),
                     ], alignment: .left, spacing: 2.0)),
-                    accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: false, action: { [weak state] value in
+                    accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: state.adsEnabled, action: { [weak state] value in
                         let _ = accountContext.engine.accountData.updateAdMessagesEnabled(enabled: value).startStandalone()
                         state?.updated(transition: .immediate)
                     })),
                     action: nil
                 ))))
                 
+                let adsInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Business_AdsInfo, attributes: termsMarkdownAttributes, textAlignment: .natural
+                ))
+                if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== theme {
+                    state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: environment.theme.list.itemAccentColor)!, theme)
+                }
+                if let range = adsInfoString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
+                    adsInfoString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: adsInfoString.string))
+                }
+                let controller = environment.controller
+                let adsInfoTapActionImpl: ([NSAttributedString.Key: Any]) -> Void = { _ in
+                    if let controller = controller() as? PremiumIntroScreen {
+                        controller.context.sharedContext.openExternalUrl(context: controller.context, urlContext: .generic, url: environment.strings.Business_AdsInfo_URL, forceExternal: true, presentationData: controller.context.sharedContext.currentPresentationData.with({$0}), navigationController: nil, dismissInput: {})
+                    }
+                }
                 let adsSettingsSection = adsSettingsSection.update(
                     component: ListSectionComponent(
                         theme: environment.theme,
@@ -2510,8 +2538,19 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             maximumNumberOfLines: 0
                         )),
                         footer: AnyComponent(MultilineTextComponent(
-                            text: .markdown(text: environment.strings.Business_AdsInfo, attributes: termsMarkdownAttributes),
-                            maximumNumberOfLines: 0
+                            text: .plain(adsInfoString),
+                            maximumNumberOfLines: 0,
+                            highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
+                            highlightAction: { attributes in
+                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                    return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                                } else {
+                                    return nil
+                                }
+                            },
+                            tapAction: { attributes, _ in
+                                adsInfoTapActionImpl(attributes)
+                            }
                         )),
                         items: adsSettingsItems
                     ),
