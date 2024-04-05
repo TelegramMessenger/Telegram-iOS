@@ -50,14 +50,25 @@ public extension TelegramEngine {
             return _internal_acceptAndShareContact(account: self.account, peerId: peerId)
         }
 
-        public func searchRemotePeers(query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
-            return _internal_searchPeers(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, query: query)
+        public func searchRemotePeers(query: String, scope: TelegramSearchPeersScope = .everywhere) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
+            return _internal_searchPeers(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, query: query, scope: scope)
         }
 
-        public func searchLocalPeers(query: String) -> Signal<[EngineRenderedPeer], NoError> {
+        public func searchLocalPeers(query: String, scope: TelegramSearchPeersScope = .everywhere) -> Signal<[EngineRenderedPeer], NoError> {
             return self.account.postbox.searchPeers(query: query)
             |> map { peers in
-                return peers.map(EngineRenderedPeer.init)
+                switch scope {
+                case .everywhere:
+                    return peers.map(EngineRenderedPeer.init)
+                case .channels:
+                    return peers.filter { peer in
+                        if let channel = peer.peer as? TelegramChannel, case .broadcast = channel.info {
+                            return true
+                        } else {
+                            return false
+                        }
+                    } .map(EngineRenderedPeer.init)
+                }
             }
         }
 

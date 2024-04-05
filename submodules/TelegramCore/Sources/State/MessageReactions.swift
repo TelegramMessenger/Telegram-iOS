@@ -654,7 +654,7 @@ public enum UpdatePeerAllowedReactionsError {
     case boostRequired
 }
 
-func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allowedReactions: PeerAllowedReactions) -> Signal<Never, UpdatePeerAllowedReactionsError> {
+func _internal_updatePeerReactionSettings(account: Account, peerId: PeerId, reactionSettings: PeerReactionSettings) -> Signal<Never, UpdatePeerAllowedReactionsError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
@@ -664,8 +664,10 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
             return .fail(.generic)
         }
         
+        var flags: Int32 = 0
+        
         let mappedReactions: Api.ChatReactions
-        switch allowedReactions {
+        switch reactionSettings.allowedReactions {
         case .all:
             mappedReactions = .chatReactionsAll(flags: 0)
         case let .limited(array):
@@ -674,7 +676,13 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
             mappedReactions = .chatReactionsNone
         }
         
-        return account.network.request(Api.functions.messages.setChatAvailableReactions(flags: 0, peer: inputPeer, availableReactions: mappedReactions, reactionsLimit: nil))
+        var reactionLimitValue: Int32?
+        if let maxReactionCount = reactionSettings.maxReactionCount {
+            flags |= 1 << 0
+            reactionLimitValue = maxReactionCount
+        }
+        
+        return account.network.request(Api.functions.messages.setChatAvailableReactions(flags: flags, peer: inputPeer, availableReactions: mappedReactions, reactionsLimit: reactionLimitValue))
         |> map(Optional.init)
         |> `catch` { error -> Signal<Api.Updates?, UpdatePeerAllowedReactionsError> in
             if error.errorDescription == "CHAT_NOT_MODIFIED" {
@@ -693,9 +701,9 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
             return account.postbox.transaction { transaction -> Void in
                 transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                     if let current = current as? CachedChannelData {
-                        return current.withUpdatedAllowedReactions(.known(allowedReactions))
+                        return current.withUpdatedReactionSettings(.known(reactionSettings))
                     } else if let current = current as? CachedGroupData {
-                        return current.withUpdatedAllowedReactions(.known(allowedReactions))
+                        return current.withUpdatedReactionSettings(.known(reactionSettings))
                     } else {
                         return current
                     }

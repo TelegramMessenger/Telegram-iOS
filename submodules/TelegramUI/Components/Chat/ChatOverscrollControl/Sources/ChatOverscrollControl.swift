@@ -949,7 +949,7 @@ final class OverscrollContentsComponent: Component {
                     component: AnyComponent(AvatarComponent(
                         context: component.context,
                         peer: peer,
-                        badge: isFullyExpanded ? AvatarComponent.Badge(count: component.unreadCount, backgroundColor: component.backgroundColor, foregroundColor: component.foregroundColor) : nil,
+                        badge: (isFullyExpanded && component.unreadCount != 0) ? AvatarComponent.Badge(count: component.unreadCount, backgroundColor: component.backgroundColor, foregroundColor: component.foregroundColor) : nil,
                         rect: avatarFrame.offsetBy(dx: self.avatarExtraScalingContainer.frame.midX + component.absoluteRect.minX, dy: self.avatarExtraScalingContainer.frame.midY + component.absoluteRect.minY),
                         withinSize: component.absoluteSize,
                         wallpaperNode: component.wallpaperNode

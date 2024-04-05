@@ -422,6 +422,11 @@ public final class Transaction {
         return self.postbox?.chatListTable.getAllPeerIds() ?? []
     }
     
+    public func chatListGetAllPeerIds(groupId: PeerGroupId) -> [PeerId] {
+        assert(!self.disposed)
+        return self.postbox?.chatListTable.getAllPeerIds(groupId: groupId) ?? []
+    }
+    
     public func updateCurrentPeerNotificationSettings(_ notificationSettings: [PeerId: PeerNotificationSettings]) {
         assert(!self.disposed)
         self.postbox?.updateCurrentPeerNotificationSettings(notificationSettings)

@@ -285,22 +285,24 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             if let strongSelf = self, let key = key {
                 var filterKey: ChatListSearchFilter
                 switch key {
-                    case .chats:
-                        filterKey = .chats
-                    case .topics:
-                        filterKey = .topics
-                    case .media:
-                        filterKey = .media
-                    case .downloads:
-                        filterKey = .downloads
-                    case .links:
-                        filterKey = .links
-                    case .files:
-                        filterKey = .files
-                    case .music:
-                        filterKey = .music
-                    case .voice:
-                        filterKey = .voice
+                case .chats:
+                    filterKey = .chats
+                case .topics:
+                    filterKey = .topics
+                case .channels:
+                    filterKey = .channels
+                case .media:
+                    filterKey = .media
+                case .downloads:
+                    filterKey = .downloads
+                case .links:
+                    filterKey = .links
+                case .files:
+                    filterKey = .files
+                case .music:
+                    filterKey = .music
+                case .voice:
+                    filterKey = .voice
                 }
                 strongSelf.selectedFilter = .filter(filterKey)
                 strongSelf.selectedFilterPromise.set(.single(strongSelf.selectedFilter))
@@ -337,26 +339,28 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             var peer = strongSelf.currentSearchOptions.peer
             
             switch filter {
-                case .chats:
-                    key = .chats
-                case .topics:
-                    key = .topics
-                case .media:
-                    key = .media
-                case .downloads:
-                    key = .downloads
-                case .links:
-                    key = .links
-                case .files:
-                    key = .files
-                case .music:
-                    key = .music
-                case .voice:
-                    key = .voice
-                case let .date(minDate, maxDate, title):
-                    date = (minDate, maxDate, title)
-                case let .peer(id, isGroup, _, compactDisplayTitle):
-                    peer = (id, isGroup, compactDisplayTitle)
+            case .chats:
+                key = .chats
+            case .topics:
+                key = .topics
+            case .channels:
+                key = .channels
+            case .media:
+                key = .media
+            case .downloads:
+                key = .downloads
+            case .links:
+                key = .links
+            case .files:
+                key = .files
+            case .music:
+                key = .music
+            case .voice:
+                key = .voice
+            case let .date(minDate, maxDate, title):
+                date = (minDate, maxDate, title)
+            case let .peer(id, isGroup, _, compactDisplayTitle):
+                peer = (id, isGroup, compactDisplayTitle)
             }
             
             if let key = key {
@@ -380,7 +384,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 switch filter {
                 case let .filter(filter):
                     switch filter {
-                    case .downloads:
+                    case .downloads, .channels:
                         return false
                     default:
                         return true
@@ -631,22 +635,24 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     public func search(filter: ChatListSearchFilter, query: String?) {
         let key: ChatListSearchPaneKey
         switch filter {
-            case .topics:
-                key = .topics
-            case .media:
-                key = .media
-            case .links:
-                key = .links
-            case .files:
-                key = .files
-            case .music:
-                key = .music
-            case .voice:
-                key = .voice
-            case .downloads:
-                key = .downloads
-            default:
-                key = .chats
+        case .topics:
+            key = .topics
+        case .channels:
+            key = .channels
+        case .media:
+            key = .media
+        case .links:
+            key = .links
+        case .files:
+            key = .files
+        case .music:
+            key = .music
+        case .voice:
+            key = .voice
+        case .downloads:
+            key = .downloads
+        default:
+            key = .chats
         }
         self.paneContainerNode.requestSelectPane(key)
         self.updateSearchOptions(nil)

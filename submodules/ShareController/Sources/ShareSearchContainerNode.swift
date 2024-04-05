@@ -270,7 +270,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 let foundLocalPeers = context.stateManager.postbox.searchPeers(query: query.lowercased())
                 let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError> = .single(([], [], true))
                 |> then(
-                    _internal_searchPeers(accountPeerId: context.accountPeerId, postbox: context.stateManager.postbox, network: context.stateManager.network, query: query)
+                    _internal_searchPeers(accountPeerId: context.accountPeerId, postbox: context.stateManager.postbox, network: context.stateManager.network, query: query, scope: .everywhere)
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     |> map { a, b -> ([FoundPeer], [FoundPeer], Bool) in
                         return (a, b, false)

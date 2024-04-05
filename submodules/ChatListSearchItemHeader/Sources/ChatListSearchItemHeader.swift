@@ -19,6 +19,7 @@ public enum ChatListSearchItemHeaderType {
     case mapAddress
     case nearbyVenues
     case chats
+    case channels
     case chatTypes
     case faq
     case messages(location: String?)
@@ -62,6 +63,9 @@ public enum ChatListSearchItemHeaderType {
                 return strings.Map_PlacesNearby
             case .chats:
                 return strings.Cache_ByPeerHeader
+            case .channels:
+                //TODO:localize
+                return "Channels"
             case .chatTypes:
                 return strings.ChatList_ChatTypesSection
             case .faq:
@@ -123,6 +127,8 @@ public enum ChatListSearchItemHeaderType {
                 return .nearbyVenues
             case .chats:
                 return .chats
+            case .channels:
+                return .channels
             case .chatTypes:
                 return .chatTypes
             case .faq:
@@ -170,6 +176,7 @@ private enum ChatListSearchItemHeaderId: Hashable {
     case mapAddress
     case nearbyVenues
     case chats
+    case channels
     case chatTypes
     case faq
     case messages

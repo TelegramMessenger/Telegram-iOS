@@ -22,18 +22,24 @@ public func peerMessageAllowedReactions(context: AccountContext, message: Messag
     return combineLatest(
         context.engine.data.get(
             TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId),
-            TelegramEngine.EngineData.Item.Peer.AllowedReactions(id: message.id.peerId)
+            TelegramEngine.EngineData.Item.Peer.ReactionSettings(id: message.id.peerId)
         ),
         context.engine.stickers.availableReactions() |> take(1)
     )
     |> map { data, availableReactions -> AllowedReactions? in
-        let (peer, allowedReactions) = data
+        let (peer, reactionSettings) = data
         
-        if let effectiveReactions = message.effectiveReactions(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)), effectiveReactions.count >= 11 {
+        let maxReactionCount: Int
+        if let value = reactionSettings.knownValue?.maxReactionCount {
+            maxReactionCount = Int(value)
+        } else {
+            maxReactionCount = 11
+        }
+        if let effectiveReactions = message.effectiveReactions(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)), effectiveReactions.count >= maxReactionCount {
             return .set(Set(effectiveReactions.map(\.value)))
         }
         
-        switch allowedReactions {
+        switch reactionSettings {
         case .unknown:
             if case let .channel(channel) = peer, case .broadcast = channel.info {
                 if let availableReactions = availableReactions {
@@ -44,7 +50,7 @@ public func peerMessageAllowedReactions(context: AccountContext, message: Messag
             }
             return .all
         case let .known(value):
-            switch value {
+            switch value.allowedReactions {
             case .all:
                 if case let .channel(channel) = peer, case .broadcast = channel.info {
                     if let availableReactions = availableReactions {

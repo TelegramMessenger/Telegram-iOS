@@ -25,6 +25,10 @@ func _internal_clearRecentlySearchedPeers(postbox: Postbox) -> Signal<Void, NoEr
 
 public struct RecentlySearchedPeerSubpeerSummary: Equatable {
     public let count: Int
+    
+    public init(count: Int) {
+        self.count = count
+    }
 }
 
 public struct RecentlySearchedPeer: Equatable {
@@ -33,6 +37,14 @@ public struct RecentlySearchedPeer: Equatable {
     public let notificationSettings: TelegramPeerNotificationSettings?
     public let unreadCount: Int32
     public let subpeerSummary: RecentlySearchedPeerSubpeerSummary?
+    
+    public init(peer: RenderedPeer, presence: TelegramUserPresence?, notificationSettings: TelegramPeerNotificationSettings?, unreadCount: Int32, subpeerSummary: RecentlySearchedPeerSubpeerSummary?) {
+        self.peer = peer
+        self.presence = presence
+        self.notificationSettings = notificationSettings
+        self.unreadCount = unreadCount
+        self.subpeerSummary = subpeerSummary
+    }
 }
 
 public func _internal_recentlySearchedPeers(postbox: Postbox) -> Signal<[RecentlySearchedPeer], NoError> {

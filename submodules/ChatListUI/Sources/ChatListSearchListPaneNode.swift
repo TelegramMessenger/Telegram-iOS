@@ -38,14 +38,19 @@ private enum ChatListRecentEntryStableId: Hashable {
 }
 
 private enum ChatListRecentEntry: Comparable, Identifiable {
+    enum Section {
+        case local
+        case recommendedChannels
+    }
+    
     case topPeers([EnginePeer], PresentationTheme, PresentationStrings)
-    case peer(index: Int, peer: RecentlySearchedPeer, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, EngineGlobalNotificationSettings, PeerStoryStats?, Bool)
+    case peer(index: Int, peer: RecentlySearchedPeer, Section, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, EngineGlobalNotificationSettings, PeerStoryStats?, Bool)
     
     var stableId: ChatListRecentEntryStableId {
         switch self {
             case .topPeers:
                 return .topPeers
-            case let .peer(_, peer, _, _, _, _, _, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _, _, _, _, _):
                 return .peerId(peer.peer.peerId)
         }
     }
@@ -67,8 +72,8 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsPeer, lhsTheme, lhsStrings, lhsTimeFormat, lhsSortOrder, lhsDisplayOrder, lhsGlobalNotificationsSettings, lhsStoryStats, lhsRequiresPremiumForMessaging):
-                if case let .peer(rhsIndex, rhsPeer, rhsTheme, rhsStrings, rhsTimeFormat, rhsSortOrder, rhsDisplayOrder, rhsGlobalNotificationsSettings, rhsStoryStats, rhsRequiresPremiumForMessaging) = rhs, lhsPeer == rhsPeer && lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings && lhsTimeFormat == rhsTimeFormat && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsGlobalNotificationsSettings == rhsGlobalNotificationsSettings && lhsStoryStats == rhsStoryStats && lhsRequiresPremiumForMessaging == rhsRequiresPremiumForMessaging {
+            case let .peer(lhsIndex, lhsPeer, lhsSection, lhsTheme, lhsStrings, lhsTimeFormat, lhsSortOrder, lhsDisplayOrder, lhsGlobalNotificationsSettings, lhsStoryStats, lhsRequiresPremiumForMessaging):
+                if case let .peer(rhsIndex, rhsPeer, rhsSection, rhsTheme, rhsStrings, rhsTimeFormat, rhsSortOrder, rhsDisplayOrder, rhsGlobalNotificationsSettings, rhsStoryStats, rhsRequiresPremiumForMessaging) = rhs, lhsPeer == rhsPeer && lhsSection == rhsSection && lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings && lhsTimeFormat == rhsTimeFormat && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsGlobalNotificationsSettings == rhsGlobalNotificationsSettings && lhsStoryStats == rhsStoryStats && lhsRequiresPremiumForMessaging == rhsRequiresPremiumForMessaging {
                     return true
                 } else {
                     return false
@@ -80,17 +85,17 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
         switch lhs {
             case .topPeers:
                 return true
-            case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _):
+            case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _, _):
                 switch rhs {
                     case .topPeers:
                         return false
-                case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _):
+                case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _):
                         return lhsIndex <= rhsIndex
                 }
         }
     }
     
-    func item(context: AccountContext, presentationData: ChatListPresentationData, filter: ChatListNodePeersFilter, peerSelected: @escaping (EnginePeer, Int64?) -> Void, disabledPeerSelected: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, clearRecentlySearchedPeers: @escaping () -> Void, deletePeer: @escaping (EnginePeer.Id) -> Void, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, openStories: @escaping (EnginePeer.Id, AvatarNode) -> Void) -> ListViewItem {
+    func item(context: AccountContext, presentationData: ChatListPresentationData, filter: ChatListNodePeersFilter, key: ChatListSearchPaneKey, peerSelected: @escaping (EnginePeer, Int64?) -> Void, disabledPeerSelected: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, clearRecentlySearchedPeers: @escaping () -> Void, deletePeer: @escaping (EnginePeer.Id) -> Void, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, openStories: @escaping (EnginePeer.Id, AvatarNode) -> Void) -> ListViewItem {
         switch self {
             case let .topPeers(peers, theme, strings):
                 return ChatListRecentPeersListItem(theme: theme, strings: strings, context: context, peers: peers, peerSelected: { peer in
@@ -102,7 +107,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         gesture?.cancel()
                     }
                 })
-            case let .peer(_, peer, theme, strings, timeFormat, nameSortOrder, nameDisplayOrder, globalNotificationSettings, storyStats, requiresPremiumForMessaging):
+            case let .peer(_, peer, section, theme, strings, timeFormat, nameSortOrder, nameDisplayOrder, globalNotificationSettings, storyStats, requiresPremiumForMessaging):
                 let primaryPeer: EnginePeer
                 var chatPeer: EnginePeer?
                 let maybeChatPeer = EnginePeer(peer.peer.peers[peer.peer.peerId]!)
@@ -215,6 +220,20 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     badge = ContactsPeerItemBadge(count: peer.unreadCount, type: isMuted ? .inactive : .active)
                 }
             
+                let header: ChatListSearchItemHeader?
+                if case .channels = key {
+                    if case .recommendedChannels = section {
+                        //TODO:localize
+                        header = ChatListSearchItemHeader(type: .text("RECOMMENDED CHANNELS", 0), theme: theme, strings: strings)
+                    } else {
+                        header = nil
+                    }
+                } else {
+                    header = ChatListSearchItemHeader(type: .recentPeers, theme: theme, strings: strings, actionTitle: strings.WebSearch_RecentSectionClear, action: {
+                        clearRecentlySearchedPeers()
+                    })
+                }
+            
                 return ContactsPeerItem(
                     presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat),
                     sortOrder: nameSortOrder,
@@ -229,9 +248,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     selection: .none,
                     editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
                     index: nil,
-                    header: ChatListSearchItemHeader(type: .recentPeers, theme: theme, strings: strings, actionTitle: strings.WebSearch_RecentSectionClear, action: {
-                        clearRecentlySearchedPeers()
-                    }),
+                    header: header,
                     action: { _ in
                         if let chatPeer = peer.peer.peers[peer.peer.peerId] {
                             peerSelected(EnginePeer(chatPeer), nil)
@@ -243,7 +260,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         }
                     },
                     deletePeer: deletePeer,
-                    contextAction: peerContextAction.flatMap { peerContextAction in
+                    contextAction: key == .channels ? nil : peerContextAction.flatMap { peerContextAction in
                         return { node, gesture, location in
                             if let chatPeer = peer.peer.peers[peer.peer.peerId] {
                                 peerContextAction(EnginePeer(chatPeer), .recentSearch, node, gesture, location)
@@ -673,13 +690,17 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         actionTitle = strings.ChatList_Search_ShowLess
                     }
                     let headerType: ChatListSearchItemHeaderType
-                    if filter.contains(.onlyGroups) {
-                        headerType = .chats
+                    if case .channels = key {
+                        headerType = .channels
                     } else {
-                        if let _ = requestPeerType {
+                        if filter.contains(.onlyGroups) {
                             headerType = .chats
                         } else {
-                            headerType = .localPeers
+                            if let _ = requestPeerType {
+                                headerType = .chats
+                            } else {
+                                headerType = .localPeers
+                            }
                         }
                     }
                     header = ChatListSearchItemHeader(type: headerType, theme: theme, strings: strings, actionTitle: actionTitle, action: actionTitle == nil ? nil : {
@@ -923,12 +944,12 @@ public struct ChatListSearchContainerTransition {
     }
 }
 
-private func chatListSearchContainerPreparedRecentTransition(from fromEntries: [ChatListRecentEntry], to toEntries: [ChatListRecentEntry], context: AccountContext, presentationData: ChatListPresentationData, filter: ChatListNodePeersFilter, peerSelected: @escaping (EnginePeer, Int64?) -> Void, disabledPeerSelected: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, clearRecentlySearchedPeers: @escaping () -> Void, deletePeer: @escaping (EnginePeer.Id) -> Void, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, openStories: @escaping (EnginePeer.Id, AvatarNode) -> Void) -> ChatListSearchContainerRecentTransition {
+private func chatListSearchContainerPreparedRecentTransition(from fromEntries: [ChatListRecentEntry], to toEntries: [ChatListRecentEntry], context: AccountContext, presentationData: ChatListPresentationData, filter: ChatListNodePeersFilter, key: ChatListSearchPaneKey, peerSelected: @escaping (EnginePeer, Int64?) -> Void, disabledPeerSelected: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, clearRecentlySearchedPeers: @escaping () -> Void, deletePeer: @escaping (EnginePeer.Id) -> Void, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, openStories: @escaping (EnginePeer.Id, AvatarNode) -> Void) -> ChatListSearchContainerRecentTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, filter: filter, peerSelected: peerSelected, disabledPeerSelected: disabledPeerSelected, peerContextAction: peerContextAction, clearRecentlySearchedPeers: clearRecentlySearchedPeers, deletePeer: deletePeer, animationCache: animationCache, animationRenderer: animationRenderer, openStories: openStories), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, filter: filter, peerSelected: peerSelected, disabledPeerSelected: disabledPeerSelected, peerContextAction: peerContextAction, clearRecentlySearchedPeers: clearRecentlySearchedPeers, deletePeer: deletePeer, animationCache: animationCache, animationRenderer: animationRenderer, openStories: openStories), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, filter: filter, key: key, peerSelected: peerSelected, disabledPeerSelected: disabledPeerSelected, peerContextAction: peerContextAction, clearRecentlySearchedPeers: clearRecentlySearchedPeers, deletePeer: deletePeer, animationCache: animationCache, animationRenderer: animationRenderer, openStories: openStories), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, filter: filter, key: key, peerSelected: peerSelected, disabledPeerSelected: disabledPeerSelected, peerContextAction: peerContextAction, clearRecentlySearchedPeers: clearRecentlySearchedPeers, deletePeer: deletePeer, animationCache: animationCache, animationRenderer: animationRenderer, openStories: openStories), directionHint: nil) }
     
     return ChatListSearchContainerRecentTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -1132,22 +1153,24 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         let tagMask: EngineMessage.Tags?
         switch key {
-            case .chats:
-                tagMask = nil
-            case .topics:
-                tagMask = nil
-            case .media:
-                tagMask = .photoOrVideo
-            case .downloads:
-                tagMask = nil
-            case .links:
-                tagMask = .webPage
-            case .files:
-                tagMask = .file
-            case .music:
-                tagMask = .music
-            case .voice:
-                tagMask = .voiceOrInstantVideo
+        case .chats:
+            tagMask = nil
+        case .topics:
+            tagMask = nil
+        case .channels:
+            tagMask = nil
+        case .media:
+            tagMask = .photoOrVideo
+        case .downloads:
+            tagMask = nil
+        case .links:
+            tagMask = .webPage
+        case .files:
+            tagMask = .file
+        case .music:
+            tagMask = .music
+        case .voice:
+            tagMask = .voiceOrInstantVideo
         }
         self.tagMask = tagMask
         
@@ -1344,7 +1367,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         let foundItems: Signal<([ChatListSearchEntry], Bool)?, NoError> = combineLatest(queue: .mainQueue(), searchQuery, searchOptions, downloadItems)
         |> mapToSignal { [weak self] query, options, downloadItems -> Signal<([ChatListSearchEntry], Bool)?, NoError> in
-            if query == nil && options == nil && [.chats, .topics].contains(key) {
+            if query == nil && options == nil && [.chats, .topics, .channels].contains(key) {
                 let _ = currentRemotePeers.swap(nil)
                 return .single(nil)
             }
@@ -1572,6 +1595,67 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                     return (peers: peers, unread: unread, recentlySearchedPeerIds: recentlySearchedPeerIds)
                 }
+            } else if let query = query, key == .channels {
+                foundLocalPeers = context.engine.contacts.searchLocalPeers(query: query.lowercased(), scope: .channels)
+                |> mapToSignal { local -> Signal<([EnginePeer.Id: Optional<EnginePeer.NotificationSettings>], [EnginePeer.Id: Int], [EngineRenderedPeer], EngineGlobalNotificationSettings), NoError> in
+                    var peerIds = Set<EnginePeer.Id>()
+                    var peers: [EngineRenderedPeer] = []
+                    
+                    for peer in local {
+                        if !peerIds.contains(peer.peerId) {
+                            peerIds.insert(peer.peerId)
+                            peers.append(peer)
+                        }
+                    }
+                    
+                    return context.engine.data.subscribe(
+                        EngineDataMap(
+                            peerIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.NotificationSettings in
+                                return TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId)
+                            }
+                        ),
+                        EngineDataMap(
+                            peerIds.map { peerId -> TelegramEngine.EngineData.Item.Messages.PeerUnreadCount in
+                                return TelegramEngine.EngineData.Item.Messages.PeerUnreadCount(id: peerId)
+                            }
+                        ),
+                        TelegramEngine.EngineData.Item.NotificationSettings.Global()
+                    )
+                    |> map { notificationSettings, unreadCounts, globalNotificationSettings in
+                        return (notificationSettings, unreadCounts, peers, globalNotificationSettings)
+                    }
+                }
+                |> map { notificationSettings, unreadCounts, peers, globalNotificationSettings -> (peers: [EngineRenderedPeer], unread: [EnginePeer.Id: (Int32, Bool)], recentlySearchedPeerIds: Set<EnginePeer.Id>) in
+                    var unread: [EnginePeer.Id: (Int32, Bool)] = [:]
+                    for peer in peers {
+                        var isMuted = false
+                        if let peerNotificationSettings = notificationSettings[peer.peerId], let peerNotificationSettings {
+                            if case let .muted(until) = peerNotificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                                isMuted = true
+                            } else if case .default = peerNotificationSettings.muteState {
+                                if let peer = peer.peer {
+                                    if case .user = peer {
+                                        isMuted = !globalNotificationSettings.privateChats.enabled
+                                    } else if case .legacyGroup = peer {
+                                        isMuted = !globalNotificationSettings.groupChats.enabled
+                                    } else if case let .channel(channel) = peer {
+                                        switch channel.info {
+                                        case .group:
+                                            isMuted = !globalNotificationSettings.groupChats.enabled
+                                        case .broadcast:
+                                            isMuted = !globalNotificationSettings.channels.enabled
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        let unreadCount = unreadCounts[peer.peerId]
+                        if let unreadCount = unreadCount, unreadCount > 0 {
+                            unread[peer.peerId] = (Int32(unreadCount), isMuted)
+                        }
+                    }
+                    return (peers: peers, unread: unread, recentlySearchedPeerIds: Set())
+                }
             } else {
                 foundLocalPeers = .single((peers: [], unread: [:], recentlySearchedPeerIds: Set()))
                 
@@ -1591,29 +1675,40 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     )
                 )
+            } else if let query = query, case .channels = key {
+                foundRemotePeers = (
+                    .single((currentRemotePeersValue.0, currentRemotePeersValue.1, true))
+                    |> then(
+                        context.engine.contacts.searchRemotePeers(query: query, scope: .channels)
+                        |> map { ($0.0, $0.1, false) }
+                        |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                    )
+                )
             } else {
                 foundRemotePeers = .single(([], [], false))
             }
             let searchLocations: [SearchMessagesLocation]
             if let options = options {
                 if case let .forum(peerId) = location {
-                    searchLocations = [.peer(peerId: peerId, fromId: nil, tags: tagMask, reactions: nil, threadId: nil, minDate: options.date?.0, maxDate: options.date?.1), .general(tags: tagMask, minDate: options.date?.0, maxDate: options.date?.1)]
+                    searchLocations = [.peer(peerId: peerId, fromId: nil, tags: tagMask, reactions: nil, threadId: nil, minDate: options.date?.0, maxDate: options.date?.1), .general(scope: .everywhere, tags: tagMask, minDate: options.date?.0, maxDate: options.date?.1)]
                 } else if let (peerId, _, _) = options.peer {
                     searchLocations = [.peer(peerId: peerId, fromId: nil, tags: tagMask, reactions: nil, threadId: nil, minDate: options.date?.0, maxDate: options.date?.1)]
                 } else {
                     if case let .chatList(groupId) = location, case .archive = groupId {
                         searchLocations = [.group(groupId: groupId._asGroup(), tags: tagMask, minDate: options.date?.0, maxDate: options.date?.1)]
                     } else {
-                        searchLocations = [.general(tags: tagMask, minDate: options.date?.0, maxDate: options.date?.1)]
+                        searchLocations = [.general(scope: .everywhere, tags: tagMask, minDate: options.date?.0, maxDate: options.date?.1)]
                     }
                 }
             } else {
-                if case let .forum(peerId) = location {
-                    searchLocations = [.peer(peerId: peerId, fromId: nil, tags: tagMask, reactions: nil, threadId: nil, minDate: nil, maxDate: nil), .general(tags: tagMask, minDate: nil, maxDate: nil)]
+                if case .channels = key {
+                    searchLocations = [.general(scope: .channels, tags: tagMask, minDate: nil, maxDate: nil)]
+                } else if case let .forum(peerId) = location {
+                    searchLocations = [.peer(peerId: peerId, fromId: nil, tags: tagMask, reactions: nil, threadId: nil, minDate: nil, maxDate: nil), .general(scope: .everywhere, tags: tagMask, minDate: nil, maxDate: nil)]
                 } else if case let .chatList(groupId) = location, case .archive = groupId {
                     searchLocations = [.group(groupId: groupId._asGroup(), tags: tagMask, minDate: nil, maxDate: nil)]
                 } else {
-                    searchLocations = [.general(tags: tagMask, minDate: nil, maxDate: nil)]
+                    searchLocations = [.general(scope: .everywhere, tags: tagMask, minDate: nil, maxDate: nil)]
                 }
             }
             
@@ -2649,16 +2744,21 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }))
         
         let previousRecentItems = Atomic<[ChatListRecentEntry]?>(value: nil)
-        let hasRecentPeers = context.engine.peers.recentPeers()
-        |> map { value -> Bool in
-            switch value {
+        let hasRecentPeers: Signal<Bool, NoError>
+        if case .channels = key {
+            hasRecentPeers = .single(false)
+        } else {
+            hasRecentPeers = context.engine.peers.recentPeers()
+            |> map { value -> Bool in
+                switch value {
                 case let .peers(peers):
                     return !peers.isEmpty
                 case .disabled:
                     return false
+                }
             }
+            |> distinctUntilChanged
         }
-        |> distinctUntilChanged
         
         var recentItems = combineLatest(
             hasRecentPeers,
@@ -2728,7 +2828,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                     peerIds.insert(peer.id)
                     
-                    entries.append(.peer(index: index, peer: searchedPeer, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameSortOrder, presentationData.nameDisplayOrder, globalNotificationSettings, peerStoryStats[peer.id], requiresPremiumForMessaging[peer.id] ?? false))
+                    entries.append(.peer(index: index, peer: searchedPeer, .local, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameSortOrder, presentationData.nameDisplayOrder, globalNotificationSettings, peerStoryStats[peer.id], requiresPremiumForMessaging[peer.id] ?? false))
                     index += 1
                 }
             }
@@ -2741,6 +2841,133 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
         if case .savedMessagesChats = location {
             recentItems = .single([])
+        }
+        if case .channels = key {
+            let localChannels = context.engine.messages.getAllLocalChannels()
+            let remoteChannels: Signal<RecommendedChannels?, NoError> = context.engine.peers.recommendedChannels(peerId: nil)
+            
+            let _ = self.context.engine.peers.requestGlobalRecommendedChannelsIfNeeded().startStandalone()
+            
+            recentItems = combineLatest(
+                localChannels,
+                remoteChannels
+            )
+            |> mapToSignal { localChannelIds, remoteChannels -> Signal<[ChatListRecentEntry], NoError> in
+                var allChannelIds = localChannelIds
+                
+                var cachedSubscribers: [EnginePeer.Id: Int32] = [:]
+                if let remoteChannels {
+                    for channel in remoteChannels.channels {
+                        if !allChannelIds.contains(channel.peer.id) {
+                            allChannelIds.append(channel.peer.id)
+                        }
+                        cachedSubscribers[channel.peer.id] = channel.subscribers
+                    }
+                }
+                
+                return context.engine.data.subscribe(
+                    EngineDataMap(
+                        allChannelIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.Peer in
+                            return TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                        }
+                    ),
+                    EngineDataMap(
+                        allChannelIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.NotificationSettings in
+                            return TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId)
+                        }
+                    ),
+                    EngineDataMap(
+                        allChannelIds.map { peerId -> TelegramEngine.EngineData.Item.Messages.PeerUnreadCount in
+                            return TelegramEngine.EngineData.Item.Messages.PeerUnreadCount(id: peerId)
+                        }
+                    ),
+                    EngineDataMap(
+                        allChannelIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.ParticipantCount in
+                            return TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: peerId)
+                        }
+                    ),
+                    TelegramEngine.EngineData.Item.NotificationSettings.Global()
+                )
+                |> map { peers, notificationSettings, unreadCounts, participantCounts, globalNotificationSettings -> [ChatListRecentEntry] in
+                    var result: [ChatListRecentEntry] = []
+                    var existingIds = Set<PeerId>()
+                    
+                    for id in localChannelIds {
+                        if existingIds.contains(id) {
+                            continue
+                        }
+                        existingIds.insert(id)
+                        guard let peer = peers[id], let peer else {
+                            continue
+                        }
+                        let peerNotificationSettings = notificationSettings[id]
+                        var subpeerSummary: RecentlySearchedPeerSubpeerSummary?
+                        if let count = participantCounts[id], let count {
+                            subpeerSummary = RecentlySearchedPeerSubpeerSummary(count: Int(count))
+                        } else if let count = cachedSubscribers[id] {
+                            subpeerSummary = RecentlySearchedPeerSubpeerSummary(count: Int(count))
+                        }
+                        result.append(.peer(
+                            index: result.count,
+                            peer: RecentlySearchedPeer(
+                                peer: RenderedPeer(peer: peer._asPeer()),
+                                presence: nil,
+                                notificationSettings: peerNotificationSettings.flatMap({ $0._asNotificationSettings() }),
+                                unreadCount: 0,
+                                subpeerSummary: subpeerSummary
+                            ),
+                            .local,
+                            presentationData.theme,
+                            presentationData.strings,
+                            presentationData.dateTimeFormat,
+                            presentationData.nameSortOrder,
+                            presentationData.nameDisplayOrder,
+                            globalNotificationSettings,
+                            nil,
+                            false
+                        ))
+                    }
+                    if let remoteChannels {
+                        for channel in remoteChannels.channels {
+                            if existingIds.contains(channel.peer.id) {
+                                continue
+                            }
+                            existingIds.insert(channel.peer.id)
+                            guard let peer = peers[channel.peer.id], let peer else {
+                                continue
+                            }
+                            let peerNotificationSettings = notificationSettings[channel.peer.id]
+                            var subpeerSummary: RecentlySearchedPeerSubpeerSummary?
+                            if let count = participantCounts[channel.peer.id], let count {
+                                subpeerSummary = RecentlySearchedPeerSubpeerSummary(count: Int(count))
+                            } else if let count = cachedSubscribers[channel.peer.id] {
+                                subpeerSummary = RecentlySearchedPeerSubpeerSummary(count: Int(count))
+                            }
+                            result.append(.peer(
+                                index: result.count,
+                                peer: RecentlySearchedPeer(
+                                    peer: RenderedPeer(peer: peer._asPeer()),
+                                    presence: nil,
+                                    notificationSettings: peerNotificationSettings.flatMap({ $0._asNotificationSettings() }),
+                                    unreadCount: 0,
+                                    subpeerSummary: subpeerSummary
+                                ),
+                                .recommendedChannels,
+                                presentationData.theme,
+                                presentationData.strings,
+                                presentationData.dateTimeFormat,
+                                presentationData.nameSortOrder,
+                                presentationData.nameDisplayOrder,
+                                globalNotificationSettings,
+                                nil,
+                                false
+                            ))
+                        }
+                    }
+                    
+                    return result
+                }
+            }
         }
         
         if case .chats = key, !peersFilter.contains(.excludeRecent) {
@@ -2755,18 +2982,49 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if let strongSelf = self {
                 let previousEntries = previousRecentItems.swap(entries)
                 
-                let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, context: context, presentationData: presentationData, filter: peersFilter, peerSelected: { peer, threadId in
-                    interaction.openPeer(peer, nil, threadId, true)
-                    if threadId == nil {
-                        switch location {
-                        case .chatList, .forum:
-                            let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).startStandalone()
-                        case .savedMessagesChats:
-                            break
+                var firstTime = previousEntries == nil
+                if let previousEntries {
+                    if previousEntries.count < entries.count {
+                        firstTime = true
+                    }
+                }
+                
+                let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, context: context, presentationData: presentationData, filter: peersFilter, key: key, peerSelected: { peer, threadId in
+                    guard let self else {
+                        return
+                    }
+                    
+                    if case .channels = key {
+                        if let navigationController = self.navigationController {
+                            var customChatNavigationStack: [EnginePeer.Id] = []
+                            if let entries = previousRecentItems.with({ $0 }) {
+                                for entry in entries {
+                                    if case let .peer(_, peer, _, _, _, _, _, _, _, _, _) = entry {
+                                        customChatNavigationStack.append(peer.peer.peerId)
+                                    }
+                                }
+                            }
+                            
+                            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                                navigationController: navigationController,
+                                context: self.context,
+                                chatLocation: .peer(peer),
+                                keepStack: .always,
+                                customChatNavigationStack: customChatNavigationStack
+                            ))
+                        }
+                    } else {
+                        interaction.openPeer(peer, nil, threadId, true)
+                        if threadId == nil {
+                            switch location {
+                            case .chatList, .forum:
+                                let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).startStandalone()
+                            case .savedMessagesChats:
+                                break
+                            }
                         }
                     }
-                    self?.recentListNode.clearHighlightAnimated(true)
+                    self.recentListNode.clearHighlightAnimated(true)
                 }, disabledPeerSelected: { peer, threadId, reason in
                     interaction.openDisabledPeer(peer, threadId, reason)
                 }, peerContextAction: { peer, source, node, gesture, location in
@@ -3395,7 +3653,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
-            if isFirstTime && [.chats, .topics].contains(self.key) {
+            if isFirstTime && [.chats, .topics, .channels].contains(self.key) {
                 options.insert(.PreferSynchronousDrawing)
                 options.insert(.PreferSynchronousResourceLoading)
             } else if transition.animated {
@@ -3468,7 +3726,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         strongSelf.emptyResultsAnimationNode.visibility = emptyResults
                     }
                                              
-                    var displayPlaceholder = transition.isLoading && (![.chats, .topics].contains(strongSelf.key) || (strongSelf.currentEntries?.isEmpty ?? true))
+                    var displayPlaceholder = transition.isLoading && (![.chats, .topics, .channels].contains(strongSelf.key) || (strongSelf.currentEntries?.isEmpty ?? true))
                     if strongSelf.key == .downloads {
                         displayPlaceholder = false
                     }
@@ -3703,7 +3961,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
             
             let items = (0 ..< 2).compactMap { _ -> ListViewItem? in
                 switch key {
-                    case .chats, .topics, .downloads:
+                    case .chats, .topics, .channels, .downloads:
                         let message = EngineMessage(
                             stableId: 0,
                             stableVersion: 0,

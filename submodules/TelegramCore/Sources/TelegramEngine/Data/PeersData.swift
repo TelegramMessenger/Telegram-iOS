@@ -596,9 +596,49 @@ public extension TelegramEngine.EngineData.Item {
                     preconditionFailure()
                 }
                 if let cachedData = view.cachedPeerData as? CachedChannelData {
-                    return cachedData.allowedReactions
+                    switch cachedData.reactionSettings {
+                    case let .known(value):
+                        return .known(value.allowedReactions)
+                    case .unknown:
+                        return .unknown
+                    }
                 } else if let cachedData = view.cachedPeerData as? CachedGroupData {
-                    return cachedData.allowedReactions
+                    switch cachedData.reactionSettings {
+                    case let .known(value):
+                        return .known(value.allowedReactions)
+                    case .unknown:
+                        return .unknown
+                    }
+                } else {
+                    return .unknown
+                }
+            }
+        }
+        
+        public struct ReactionSettings: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = EnginePeerCachedInfoItem<PeerReactionSettings>
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                if let cachedData = view.cachedPeerData as? CachedChannelData {
+                    return cachedData.reactionSettings
+                } else if let cachedData = view.cachedPeerData as? CachedGroupData {
+                    return cachedData.reactionSettings
                 } else {
                     return .unknown
                 }

@@ -916,6 +916,8 @@ public protocol PeerInfoScreen: ViewController {
     var privacySettings: Promise<AccountPrivacySettings?> { get }
     
     func openBirthdaySetup()
+    func toggleStorySelection(ids: [Int32], isSelected: Bool)
+    func cancelItemSelection()
 }
 
 public extension Peer {
