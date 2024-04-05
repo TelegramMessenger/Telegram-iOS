@@ -779,6 +779,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     .withUpdatedBoostsToUnrestrict(boostsUnrestrict)
                                                     .withUpdatedAppliedBoosts(appliedBoosts)
                                                     .withUpdatedEmojiPack(emojiPack)
+                                                    .withUpdatedReactionsLimit(reactionsLimit)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
