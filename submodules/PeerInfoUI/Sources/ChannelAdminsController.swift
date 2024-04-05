@@ -228,25 +228,20 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 }
             case .adminsInfo:
                 switch rhs {
-                    case .recentActions, .antiSpam, .antiSpamInfo, .adminsHeader, .addAdmin, .adminsInfo:
+                    case .recentActions, .antiSpam, .antiSpamInfo, .adminsHeader, .addAdmin, .adminPeerItem, .adminsInfo:
                         return false
                     default:
                         return true
                 }
             case .signMessages:
                 switch rhs {
-                    case .recentActions, .antiSpam, .antiSpamInfo, .adminsHeader, .addAdmin, .adminsInfo, .signMessages:
+                    case .recentActions, .antiSpam, .antiSpamInfo, .adminsHeader, .addAdmin, .adminPeerItem, .adminsInfo, .signMessages:
                         return false
                     default:
                         return true
                 }
             case .signMessagesInfo:
-                switch rhs {
-                    case .recentActions, .antiSpam, .antiSpamInfo, .adminsHeader, .addAdmin, .adminsInfo, .signMessages, .signMessagesInfo:
-                        return false
-                    default:
-                        return true
-                }
+                return false
         }
     }
     
