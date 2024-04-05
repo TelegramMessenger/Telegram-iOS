@@ -654,7 +654,7 @@ public enum UpdatePeerAllowedReactionsError {
     case boostRequired
 }
 
-func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allowedReactions: PeerAllowedReactions) -> Signal<Never, UpdatePeerAllowedReactionsError> {
+func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allowedReactions: PeerAllowedReactions, reactionsLimit: Int32?) -> Signal<Never, UpdatePeerAllowedReactionsError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
@@ -674,7 +674,12 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
             mappedReactions = .chatReactionsNone
         }
         
-        return account.network.request(Api.functions.messages.setChatAvailableReactions(flags: 0, peer: inputPeer, availableReactions: mappedReactions, reactionsLimit: nil))
+        var flags: Int32 = 0
+        if let reactionsLimit {
+            flags |= (1 << 0)
+        }
+        
+        return account.network.request(Api.functions.messages.setChatAvailableReactions(flags: flags, peer: inputPeer, availableReactions: mappedReactions, reactionsLimit: reactionsLimit))
         |> map(Optional.init)
         |> `catch` { error -> Signal<Api.Updates?, UpdatePeerAllowedReactionsError> in
             if error.errorDescription == "CHAT_NOT_MODIFIED" {
@@ -693,7 +698,7 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
             return account.postbox.transaction { transaction -> Void in
                 transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                     if let current = current as? CachedChannelData {
-                        return current.withUpdatedAllowedReactions(.known(allowedReactions))
+                        return current.withUpdatedAllowedReactions(.known(allowedReactions)).withUpdatedReactionsLimit(reactionsLimit)
                     } else if let current = current as? CachedGroupData {
                         return current.withUpdatedAllowedReactions(.known(allowedReactions))
                     } else {

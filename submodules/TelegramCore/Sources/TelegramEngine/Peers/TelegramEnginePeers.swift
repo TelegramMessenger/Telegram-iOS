@@ -1038,8 +1038,8 @@ public extension TelegramEngine {
             return _internal_updatePeerSendAsPeer(account: self.account, peerId: peerId, sendAs: sendAs)
         }
         
-        public func updatePeerAllowedReactions(peerId: PeerId, allowedReactions: PeerAllowedReactions) -> Signal<Never, UpdatePeerAllowedReactionsError> {
-            return _internal_updatePeerAllowedReactions(account: account, peerId: peerId, allowedReactions: allowedReactions)
+        public func updatePeerAllowedReactions(peerId: PeerId, allowedReactions: PeerAllowedReactions, reactionsLimit: Int32?) -> Signal<Never, UpdatePeerAllowedReactionsError> {
+            return _internal_updatePeerAllowedReactions(account: account, peerId: peerId, allowedReactions: allowedReactions, reactionsLimit: reactionsLimit)
         }
         
         public func notificationSoundList() -> Signal<NotificationSoundList?, NoError> {
