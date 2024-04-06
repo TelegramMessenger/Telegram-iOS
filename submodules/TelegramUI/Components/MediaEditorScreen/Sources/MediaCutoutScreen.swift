@@ -159,14 +159,30 @@ private final class MediaCutoutScreenComponent: Component {
                 return
             }
             controller.drawingView.isUserInteractionEnabled = true
-            if case .restore = controller.mode {
-                let overlayView = controller.overlayView
-                let backgroundView = controller.backgroundView
-                overlayView.alpha = 1.0
-                overlayView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                backgroundView.alpha = 0.0
-                backgroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+           
+            self.updateBackgroundViews()
+        }
+        
+        func updateBackgroundViews() {
+            guard let controller = self.environment?.controller() as? MediaCutoutScreen else {
+                return
             }
+            let overlayView = controller.overlayView
+            let backgroundView = controller.backgroundView
+            
+            let overlayAlpha: CGFloat
+            let backgroundAlpha: CGFloat
+            switch controller.mode {
+            case .restore:
+                overlayAlpha = 1.0
+                backgroundAlpha = 0.0
+            default:
+                overlayAlpha = 0.0
+                backgroundAlpha = 1.0
+            }
+            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+            transition.setAlpha(view: overlayView, alpha: overlayAlpha)
+            transition.setAlpha(view: backgroundView, alpha: backgroundAlpha)
         }
         
         private var animatingOut = false
@@ -211,14 +227,12 @@ private final class MediaCutoutScreenComponent: Component {
                 return
             }
             controller.drawingView.isUserInteractionEnabled = false
-            if case .restore = controller.mode {
-                let overlayView = controller.overlayView
-                let backgroundView = controller.backgroundView
-                overlayView.alpha = 0.0
-                overlayView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
-                backgroundView.alpha = 1.0
-                backgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            }
+            
+            let overlayView = controller.overlayView
+            let backgroundView = controller.backgroundView
+            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+            transition.setAlpha(view: overlayView, alpha: 0.0)
+            transition.setAlpha(view: backgroundView, alpha: 1.0)
         }
         
         public func playDissolveAnimation() {
@@ -489,6 +503,16 @@ final class MediaCutoutScreen: ViewController {
             return result
         }
         
+        func requestLayout(transition: Transition) {
+            if let layout = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, forceUpdate: true, transition: transition)
+                
+                if let view = self.componentHost.view as? MediaCutoutScreenComponent.View {
+                    view.updateBackgroundViews()
+                }
+            }
+        }
+        
         func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, animateOut: Bool = false, transition: Transition) {
             guard let controller = self.controller else {
                 return
@@ -565,7 +589,12 @@ final class MediaCutoutScreen: ViewController {
     }
     
     fileprivate let context: AccountContext
-    fileprivate let mode: Mode
+    public var mode: Mode {
+        didSet {
+            self.updateDrawingState()
+            self.node.requestLayout(transition: .easeInOut(duration: 0.2))
+        }
+    }
     fileprivate let mediaEditor: MediaEditor
     fileprivate let maskWrapperView: UIView
     fileprivate let previewView: MediaEditorPreviewView
@@ -610,13 +639,7 @@ final class MediaCutoutScreen: ViewController {
         
         self.statusBar.statusBarStyle = .White
         
-        if let toolState = drawingView.appliedToolState {
-            if case .erase = mode {
-                drawingView.updateToolState(toolState.withUpdatedColor(DrawingColor(color: .black)))
-            } else if case .restore = mode {
-                drawingView.updateToolState(toolState.withUpdatedColor(DrawingColor(color: .white)))
-            }
-        }
+        self.updateDrawingState()
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -627,6 +650,16 @@ final class MediaCutoutScreen: ViewController {
         self.displayNode = Node(controller: self)
 
         super.displayNodeDidLoad()
+    }
+    
+    private func updateDrawingState() {
+        if let toolState = self.drawingView.appliedToolState {
+            if case .erase = mode {
+                self.drawingView.updateToolState(toolState.withUpdatedColor(DrawingColor(color: .black)))
+            } else if case .restore = mode {
+                self.drawingView.updateToolState(toolState.withUpdatedColor(DrawingColor(color: .white)))
+            }
+        }
     }
             
     func requestDismiss(animated: Bool) {

@@ -13,7 +13,7 @@ import FastBlur
 import AccountContext
 import ImageTransparency
 
-public struct MediaEditorPlayerState {
+public struct MediaEditorPlayerState: Equatable {
     public struct Track: Equatable {
         public enum Content: Equatable {
             case video(frames: [UIImage], framesUpdateTimestamp: Double)

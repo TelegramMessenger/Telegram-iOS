@@ -245,8 +245,10 @@ final class MediaEditorScreenComponent: Component {
             }
             |> deliverOnMainQueue).start(next: { [weak self] playerState in
                 if let self {
-                    self.playerState = playerState
-                    self.updated()
+                    if self.playerState != playerState {
+                        self.playerState = playerState
+                        self.updated()
+                    }
                 }
             })
             
@@ -4421,6 +4423,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         fileprivate var drawingScreen: DrawingScreen?
         fileprivate var stickerScreen: StickerPickerScreen?
+        fileprivate weak var cutoutScreen: MediaCutoutScreen?
         private var defaultToEmoji = false
         
         private var previousDrawingData: Data?
@@ -4685,28 +4688,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     self.controller?.present(controller, in: .current)
                                     self.animateOutToTool(tool: mode)
                                 case .cutout, .cutoutErase, .cutoutRestore:
-                                    if self.isDisplayingTool != nil {
-                                        guard self.isDisplayingTool != mode else {
-                                            return
-                                        }
-                                        self.isDisplayingTool = mode
-                                        if let state = self.stickerMaskDrawingView?.appliedToolState {
-                                            switch mode {
-                                            case .cutoutErase:
-                                                self.stickerMaskDrawingView?.updateToolState(state.withUpdatedColor(DrawingColor(color: .black)))
-                                            case .cutoutRestore:
-                                                self.stickerMaskDrawingView?.updateToolState(state.withUpdatedColor(DrawingColor(color: .white)))
-                                            default:
-                                                break
-                                            }
-                                        }
-                                        self.requestUpdate(transition: .easeInOut(duration: 0.2))
-                                        return
-                                    }
-                                    
-                                    guard let mediaEditor = self.mediaEditor, let stickerMaskDrawingView = self.stickerMaskDrawingView, let stickerBackgroundView = self.stickerBackgroundView else {
-                                        return
-                                    }
                                     let cutoutMode: MediaCutoutScreen.Mode
                                     switch mode {
                                     case .cutout:
@@ -4717,6 +4698,19 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         cutoutMode = .restore
                                     default:
                                         cutoutMode = .cutout
+                                    }
+                                    
+                                    if self.isDisplayingTool != nil {
+                                        guard self.isDisplayingTool != mode else {
+                                            return
+                                        }
+                                        self.isDisplayingTool = mode
+                                        self.cutoutScreen?.mode = cutoutMode
+                                        self.requestUpdate(transition: .easeInOut(duration: 0.2))
+                                        return
+                                    }
+                                    guard let mediaEditor = self.mediaEditor, let stickerMaskDrawingView = self.stickerMaskDrawingView, let stickerBackgroundView = self.stickerBackgroundView else {
+                                        return
                                     }
                                     let cutoutController = MediaCutoutScreen(
                                         context: self.context,
@@ -4734,6 +4728,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         }
                                     }
                                     controller.present(cutoutController, in: .window(.root))
+                                    self.cutoutScreen = cutoutController
                                     self.animateOutToTool(tool: mode, inPlace: true)
                                     
                                     controller.hapticFeedback.impact(.medium)
@@ -4776,6 +4771,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     if let drawingImage = stickerMaskDrawingView.drawingImage {
                                         mediaEditor.setSegmentationMask(drawingImage)
                                     }
+                                    
+                                    if self.isDisplayingTool == .cutoutRestore && !stickerMaskDrawingView.internalState.canUndo && !controller.node.isCutout {
+                                        self.cutoutScreen?.mode = .erase
+                                        self.isDisplayingTool = .cutoutErase
+                                        self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
+                                    }
                                 } else if controller.node.isCutout {
                                     let action = {
                                         let snapshotView = self.previewView.snapshotView(afterScreenUpdates: false)
@@ -4796,6 +4797,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         }
                                     } else {
                                         action()
+                                    }
+                                    
+                                    if self.isDisplayingTool == .cutoutRestore {
+                                        self.cutoutScreen?.mode = .erase
+                                        self.isDisplayingTool = .cutoutErase
+                                        self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
                                     }
                                 }
                             }
