@@ -6231,6 +6231,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     
     private var stickerRecommendedEmoji: [String] = []
     private var stickerSelectedEmoji: [String] = []
+   
     private func effectiveStickerEmoji() -> [String] {
         let filtered = self.stickerSelectedEmoji.filter { !$0.isEmpty }
         guard !filtered.isEmpty else {
@@ -6238,6 +6239,23 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         return filtered
     }
+    
+    private func preferredStickerDuration() -> Double {
+        var duration: Double = 3.0
+        var stickerDurations: [Double] = []
+        self.node.entitiesView.eachView { entityView in
+            if let stickerEntityView = entityView as? DrawingStickerEntityView {
+                if let duration = stickerEntityView.duration, duration > 0.0 {
+                    stickerDurations.append(duration)
+                }
+            }
+        }
+        if !stickerDurations.isEmpty {
+            duration = stickerDurations.max() ?? 3.0
+        }
+        return duration
+    }
+    
     private weak var stickerResultController: PeekController?
     func presentStickerPreview(image: UIImage) {
         guard let mediaEditor = self.node.mediaEditor else {
@@ -6257,8 +6275,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self.context.account.postbox.mediaBox.storeResourceData(isVideo ? thumbnailResource.id : resource.id, data: data)
             }
         }
-        var file = stickerFile(resource: resource, thumbnailResource: thumbnailResource, size: Int64(0), dimensions: PixelDimensions(image.size), isVideo: isVideo)
-        let emoji = self.stickerSelectedEmoji
+        var file = stickerFile(resource: resource, thumbnailResource: thumbnailResource, size: Int64(0), dimensions: PixelDimensions(image.size), duration: self.preferredStickerDuration(), isVideo: isVideo)
         
         var menuItems: [ContextMenuItem] = []
         if case let .stickerEditor(mode) = self.mode {
@@ -6274,7 +6291,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     } else {
                         self.stickerResultController?.disappeared = nil
                         self.completion(MediaEditorScreen.Result(
-                            media: .sticker(file: file, emoji: emoji),
+                            media: .sticker(file: file, emoji: self.effectiveStickerEmoji()),
                             mediaAreas: [],
                             caption: NSAttributedString(),
                             options: MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false),
@@ -6465,8 +6482,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     ImportSticker(
                         resource: .standalone(resource: file.resource),
                         emojis: self.effectiveStickerEmoji(),
-                        dimensions: PixelDimensions(width: 512, height: 512),
-                        mimeType: "image/webp",
+                        dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
+                        duration: file.duration,
+                        mimeType: file.mimeType,
                         keywords: ""
                     )
                 ],
@@ -6512,9 +6530,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     private func uploadSticker(_ file: TelegramMediaFile, action: StickerAction) {
         let context = self.context
         let dimensions = PixelDimensions(width: 512, height: 512)
+        let duration = file.duration
         let mimeType = file.mimeType
         let isVideo = file.mimeType == "video/webm"
-        let emoji = self.stickerSelectedEmoji
+        let emojis = self.effectiveStickerEmoji()
         
         var isUpdate = false
         if case .update = action {
@@ -6578,13 +6597,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let resource = resource as? CloudDocumentMediaResource {
                         return .single(.progress(1.0)) |> then(.single(.complete(resource, mimeType)))
                     } else {
-                        return context.engine.stickers.uploadSticker(peer: peer._asPeer(), resource: resource, alt: "", dimensions: dimensions, mimeType: mimeType)
+                        return context.engine.stickers.uploadSticker(peer: peer._asPeer(), resource: resource, alt: "", dimensions: dimensions, duration: duration, mimeType: mimeType)
                         |> mapToSignal { status -> Signal<UploadStickerStatus, UploadStickerError> in
                             switch status {
                             case let .progress(progress):
                                 return .single(.progress(isVideo ? 0.5 + progress * 0.5 : progress))
                             case let .complete(resource, _):
-                                let file = stickerFile(resource: resource, thumbnailResource: file.previewRepresentations.first?.resource, size: file.size ?? 0, dimensions: dimensions, isVideo: isVideo)
+                                let file = stickerFile(resource: resource, thumbnailResource: file.previewRepresentations.first?.resource, size: file.size ?? 0, dimensions: dimensions, duration: file.duration, isVideo: isVideo)
                                 switch action {
                                 case .send:
                                     return .single(status)
@@ -6599,8 +6618,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 case let .createStickerPack(title):
                                     let sticker = ImportSticker(
                                         resource: .standalone(resource: resource),
-                                        emojis: self.effectiveStickerEmoji(),
+                                        emojis: emojis,
                                         dimensions: dimensions,
+                                        duration: duration,
                                         mimeType: mimeType,
                                         keywords: ""
                                     )
@@ -6618,8 +6638,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 case let .addToStickerPack(pack, _):
                                     let sticker = ImportSticker(
                                         resource: .standalone(resource: resource),
-                                        emojis: self.effectiveStickerEmoji(),
+                                        emojis: emojis,
                                         dimensions: dimensions,
+                                        duration: duration,
                                         mimeType: mimeType,
                                         keywords: ""
                                     )
@@ -6659,10 +6680,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 let result: MediaEditorScreen.Result
                 switch action {
                 case .update:
-                    result = MediaEditorScreen.Result(media: .sticker(file: file, emoji: emoji))
+                    result = MediaEditorScreen.Result(media: .sticker(file: file, emoji: emojis))
                 case .upload, .send:
-                    let file = stickerFile(resource: resource, thumbnailResource: file.previewRepresentations.first?.resource, size: resource.size ?? 0, dimensions: dimensions, isVideo: isVideo)
-                    result = MediaEditorScreen.Result(media: .sticker(file: file, emoji: emoji))
+                    let file = stickerFile(resource: resource, thumbnailResource: file.previewRepresentations.first?.resource, size: resource.size ?? 0, dimensions: dimensions, duration: self.preferredStickerDuration(), isVideo: isVideo)
+                    result = MediaEditorScreen.Result(media: .sticker(file: file, emoji: emojis))
                 default:
                     result = MediaEditorScreen.Result()
                 }
@@ -6844,18 +6865,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     duration = video.duration.seconds
                 }
                 if isSticker {
-                    duration = 3.0
-                    var stickerDurations: [Double] = []
-                    self.node.entitiesView.eachView { entityView in
-                        if let stickerEntityView = entityView as? DrawingStickerEntityView {
-                            if let duration = stickerEntityView.duration, duration > 0.0 {
-                                stickerDurations.append(duration)
-                            }
-                        }
-                    }
-                    if !stickerDurations.isEmpty {
-                        duration = stickerDurations.max() ?? 3.0
-                    }
+                    duration = self.preferredStickerDuration()
                 }
                 let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values, duration: duration, forceFullHd: true, frameRate: 60.0, isSticker: isSticker)
                 let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).\(fileExtension)"
@@ -7610,12 +7620,15 @@ extension MediaScrubberComponent.Track {
     }
 }
 
-private func stickerFile(resource: TelegramMediaResource, thumbnailResource: TelegramMediaResource?, size: Int64, dimensions: PixelDimensions, isVideo: Bool) -> TelegramMediaFile {
+private func stickerFile(resource: TelegramMediaResource, thumbnailResource: TelegramMediaResource?, size: Int64, dimensions: PixelDimensions, duration: Double?, isVideo: Bool) -> TelegramMediaFile {
     var fileAttributes: [TelegramMediaFileAttribute] = []
     fileAttributes.append(.FileName(fileName: isVideo ? "sticker.webm" : "sticker.webp"))
     fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
-    fileAttributes.append(.ImageSize(size: dimensions))
-    
+    if isVideo {
+        fileAttributes.append(.Video(duration: duration ?? 3.0, size: dimensions, flags: [], preloadSize: nil))
+    } else {
+        fileAttributes.append(.ImageSize(size: dimensions))
+    }
     var previewRepresentations: [TelegramMediaImageRepresentation] = []
     if let thumbnailResource {
         previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil))

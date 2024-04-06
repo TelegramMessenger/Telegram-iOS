@@ -761,7 +761,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 if file.isAnimatedSticker {
                     thumbnailItem = .animated(EngineMediaResource(file.resource))
                     resourceReference = MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)
-                } else if let dimensions = file.dimensions, let resource = chatMessageStickerResource(file: file, small: true) as? TelegramMediaResource {
+                } else if let dimensions = file.dimensions, let resource = chatMessageStickerResource(file: file, small: false) as? TelegramMediaResource {
                     thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
                     resourceReference = MediaResourceReference.media(media: .standalone(media: file), resource: resource)
                 }

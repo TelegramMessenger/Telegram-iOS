@@ -717,6 +717,16 @@ private final class StickerPackContainer: ASDisplayNode {
                 
                 if let reorderPosition = self.reorderPosition, let file = itemNode.stickerPackItem?.file {
                     let _ = self.context.engine.stickers.reorderSticker(sticker: .standalone(media: file), position: reorderPosition).startStandalone()
+                    
+                    if let (info, items, isInstalled) = self.currentStickerPack {
+                        var updatedItems = items
+                        if let index = items.firstIndex(where: { $0.file.fileId == file.fileId }) {
+                            let item = items[index]
+                            updatedItems.remove(at: index)
+                            updatedItems.insert(item, at: reorderPosition)
+                        }
+                        self.currentStickerPack = (info, updatedItems, isInstalled)
+                    }
                 }
             } else {
                 reorderNode.removeFromSupernode()
@@ -1256,6 +1266,7 @@ private final class StickerPackContainer: ASDisplayNode {
                             resource: .standalone(resource: file.resource),
                             emojis: emoji,
                             dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
+                            duration: file.duration,
                             mimeType: file.mimeType,
                             keywords: ""
                         )
@@ -1305,6 +1316,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 resource: file.resourceReference(file.media.resource),
                 emojis: [emoji],
                 dimensions: file.media.dimensions ?? PixelDimensions(width: 512, height: 512),
+                duration: file.media.duration,
                 mimeType: file.media.mimeType,
                 keywords: ""
             )
@@ -1347,6 +1359,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     resource: .standalone(resource: file.resource),
                     emojis: emoji,
                     dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
+                    duration: file.duration,
                     mimeType: file.mimeType,
                     keywords: ""
                 )
@@ -1856,12 +1869,14 @@ private final class StickerPackContainer: ASDisplayNode {
             entries.append(.sticker(index: entries.count, stableId: resolvedStableId, stickerItem: item, isEmpty: false, isPremium: isPremium, isLocked: isLocked, isEditing: false, isAdd: false))
         }
 
+        var addedReorderItem = false
         var currentIndex: Int = 0
         for item in generalItems {
-            if self.isReordering, let reorderNode = self.reorderNode, let reorderItem = reorderNode.itemNode?.stickerPackItem, let reorderPosition = self.reorderPosition {
+            if self.isReordering, let reorderItem = self.reorderNode?.itemNode?.stickerPackItem, let reorderPosition = self.reorderPosition {
                 if currentIndex == reorderPosition {
                     addItem(reorderItem, false, false)
                     currentIndex += 1
+                    addedReorderItem = true
                 }
                     
                 if item.file.fileId == reorderItem.file.fileId {
@@ -1874,6 +1889,11 @@ private final class StickerPackContainer: ASDisplayNode {
                 addItem(item, false, false)
                 currentIndex += 1
             }
+        }
+        if !addedReorderItem, let reorderItem = self.reorderNode?.itemNode?.stickerPackItem, let reorderPosition = self.reorderPosition, currentIndex == reorderPosition {
+            addItem(reorderItem, false, false)
+            currentIndex += 1
+            addedReorderItem = true
         }
         
         if !premiumConfiguration.isPremiumDisabled {
