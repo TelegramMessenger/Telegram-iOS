@@ -519,6 +519,7 @@ private enum PeerInfoSettingsSection {
     case powerSaving
     case businessSetup
     case profile
+    case premiumManagement
 }
 
 private enum PeerInfoReportType {
@@ -789,7 +790,12 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     }
     
     if let settings = data.globalSettings {
-        if settings.suggestPhoneNumberConfirmation, let peer = data.peer as? TelegramUser {
+        if settings.premiumGracePeriod {
+            items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: "Your access to Telegram Premium will expire soon!", text: .markdown("Unfortunately, your latest payment didn't come through. To keep your access to exclusive features, please renew the subscription."), isWarning: true, linkAction: nil))
+            items[.phone]!.append(PeerInfoScreenActionItem(id: 1, text: "Restore Subscription", action: {
+                interaction.openSettings(.premiumManagement)
+            }))
+        } else if settings.suggestPhoneNumberConfirmation, let peer = data.peer as? TelegramUser {
             let phoneNumber = formatPhoneNumber(context: context, number: peer.phone ?? "")
             items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: presentationData.strings.Settings_CheckPhoneNumberTitle(phoneNumber).string, text: .markdown(presentationData.strings.Settings_CheckPhoneNumberText), linkAction: { link in
                 if case .tap = link {
@@ -9359,8 +9365,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             push(usernameSetupController(context: self.context))
         case .addAccount:
             let _ = (activeAccountsAndPeers(context: context)
-                     |> take(1)
-                     |> deliverOnMainQueue
+            |> take(1)
+            |> deliverOnMainQueue
             ).startStandalone(next: { [weak self] accountAndPeer, accountsAndPeers in
                 guard let strongSelf = self else {
                     return
@@ -9419,6 +9425,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             push(energySavingSettingsScreen(context: self.context))
         case .businessSetup:
             push(self.context.sharedContext.makeBusinessSetupScreen(context: self.context))
+        case .premiumManagement:
+            guard let controller = self.controller else {
+                return
+            }
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+            let url = premiumConfiguration.subscriptionManagementUrl
+            guard !url.isEmpty else {
+                return
+            }
+            self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: !url.hasPrefix("tg://") && !url.contains("?start="), presentationData: self.context.sharedContext.currentPresentationData.with({$0}), navigationController: controller.navigationController as? NavigationController, dismissInput: {})
         }
     }
     

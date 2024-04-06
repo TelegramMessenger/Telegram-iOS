@@ -6,13 +6,15 @@ final class MediaEditorRenderChain {
     let sharpenPass = SharpenRenderPass()
     let blurPass = BlurRenderPass()
     let adjustmentsPass = AdjustmentsRenderPass()
+    let stickerOutlinePass = StickerOutlineRenderPass()
     
     var renderPasses: [RenderPass] {
         return [
             self.enhancePass,
             self.sharpenPass,
             self.blurPass,
-            self.adjustmentsPass
+            self.adjustmentsPass,
+            self.stickerOutlinePass
         ]
     }
     
@@ -138,6 +140,12 @@ final class MediaEditorRenderChain {
                     self.adjustmentsPass.blueCurve = blueDataPoints
                 } else {
                     self.adjustmentsPass.adjustments.hasCurves = 0.0
+                }
+            case .stickerOutline:
+                if let value = value as? Float {
+                    self.stickerOutlinePass.value = value
+                } else {
+                    self.stickerOutlinePass.value = 0.0
                 }
             }
         }

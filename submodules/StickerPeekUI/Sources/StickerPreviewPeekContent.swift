@@ -17,9 +17,32 @@ import ReactionSelectionNode
 import EntityKeyboard
 
 public enum StickerPreviewPeekItem: Equatable {
+    public static func == (lhs: StickerPreviewPeekItem, rhs: StickerPreviewPeekItem) -> Bool {
+        switch lhs {
+        case let .pack(lhsPack):
+            if case let .pack(rhsPack) = rhs, lhsPack == rhsPack {
+                return true
+            } else {
+                return false
+            }
+        case let .found(lhsItem):
+            if case let .found(rhsItem) = rhs, lhsItem == rhsItem {
+                return true
+            } else {
+                return false
+            }
+        case let .portal(lhsPortal):
+            if case let .portal(rhsPortal) = rhs, lhsPortal === rhsPortal {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
     case pack(TelegramMediaFile)
     case found(FoundStickerItem)
-    case image(UIImage)
+    case portal(PortalView)
     
     public var file: TelegramMediaFile? {
         switch self {
@@ -27,7 +50,7 @@ public enum StickerPreviewPeekItem: Equatable {
             return file
         case let .found(item):
             return item.file
-        case .image:
+        case .portal:
             return nil
         }
     }
@@ -112,6 +135,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
     public var imageNode: TransformImageNode
     public var animationNode: AnimatedStickerNode?
     public var additionalAnimationNode: AnimatedStickerNode?
+    private let portalWrapperNode: ASDisplayNode
     
     private let effectDisposable = MetaDisposable()
     
@@ -172,10 +196,13 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             }
             
             self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: file, small: false, fetched: true))
-        } else if case let .image(image) = item {
-            self.imageNode.contents = image.cgImage
+        } else if case .portal = item {
             self._ready.set(.single(true))
         }
+        
+        self.portalWrapperNode = ASDisplayNode()
+        self.portalWrapperNode.clipsToBounds = true
+        self.portalWrapperNode.isUserInteractionEnabled = false
         
         super.init()
         
@@ -202,6 +229,8 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             self.addSubnode(additionalAnimationNode)
         }
         
+        self.addSubnode(self.portalWrapperNode)
+        
         if let animationNode = self.animationNode {
             animationNode.started = { [weak self] in
                 guard let strongSelf = self else {
@@ -222,6 +251,15 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
     deinit {
         self.effectDisposable.dispose()
     }
+    
+    public override func didLoad() {
+        super.didLoad()
+        
+        if case let .portal(portalView) = self.item {
+            self.portalWrapperNode.view.addSubview(portalView.view)
+        }
+    }
+    
     
     public func ready() -> Signal<Bool, NoError> {
         return self._ready.get()
@@ -271,6 +309,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             centerOffset = imageFrame.minX - originalImageFrame.minX
         }
         self.imageNode.frame = imageFrame
+        
         if let animationNode = self.animationNode {
             animationNode.frame = imageFrame
             animationNode.updateLayout(size: imageSize)
@@ -279,6 +318,17 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                 additionalAnimationNode.frame = imageFrame.offsetBy(dx: -imageFrame.width * 0.245 + 21.0, dy: -1.0).insetBy(dx: -imageFrame.width * 0.245, dy: -imageFrame.height * 0.245)
                 additionalAnimationNode.updateLayout(size: additionalAnimationNode.frame.size)
             }
+        }
+        
+        if case let .portal(portalView) = self.item {
+            self.portalWrapperNode.bounds = CGRect(origin: .zero, size: imageFrame.size)
+            self.portalWrapperNode.position = imageFrame.center
+            self.portalWrapperNode.cornerRadius = imageFrame.size.width / 8.0
+            
+            portalView.view.center = CGPoint(x: imageFrame.size.width / 2.0, y: imageFrame.size.height / 2.0)
+            
+            let scale = 180.0 / (size.width * 1.04)
+            portalView.view.transform = CGAffineTransformMakeScale(scale, scale)
         }
         
         self.textNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - textSize.width) / 2.0) - centerOffset, y: -textSize.height - textSpacing), size: textSize)

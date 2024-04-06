@@ -180,9 +180,19 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                 }
             }
             
+            var justUpdated = false
             return cachedChatTranslationState(engine: context.engine, peerId: peerId)
             |> mapToSignal { cached in
-                if let cached, cached.baseLang == baseLang {
+                let skipCached: Bool
+                #if DEBUG
+                skipCached = true
+                if justUpdated {
+                    return .complete()
+                }
+                #else
+                skipCached = false
+                #endif
+                if let cached, cached.baseLang == baseLang, !skipCached {
                     if !dontTranslateLanguages.contains(cached.fromLang) {
                         return .single(cached)
                     } else {
@@ -280,6 +290,7 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                             }
                             let state = ChatTranslationState(baseLang: baseLang, fromLang: fromLang, toLang: nil, isEnabled: false)
                             let _ = updateChatTranslationState(engine: context.engine, peerId: peerId, state: state).start()
+                            justUpdated = true
                             if !dontTranslateLanguages.contains(fromLang) {
                                 return state
                             } else {

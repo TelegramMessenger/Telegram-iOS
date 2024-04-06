@@ -4,6 +4,7 @@ import MetalKit
 import SwiftSignalKit
 import TelegramCore
 import Postbox
+import ImageTransparency
 
 enum ExportWriterStatus {
     case unknown
@@ -629,7 +630,7 @@ public final class MediaEditorVideoExport {
                 }
             }
             if case let .image(image) = self.subject, let texture = self.composer?.textureForImage(image) {
-                mainInput = .texture(texture, self.imageArguments?.position ?? .zero)
+                mainInput = .texture(texture, self.imageArguments?.position ?? .zero, imageHasTransparency(image))
                 
                 if !updatedProgress, let imageArguments = self.imageArguments, let duration = self.durationValue {
                     let progress = imageArguments.position.seconds / duration.seconds

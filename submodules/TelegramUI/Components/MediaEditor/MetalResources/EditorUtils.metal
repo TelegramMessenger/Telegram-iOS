@@ -202,3 +202,8 @@ float2 coordRot(float2 tc, float angle) {
   rotY = rotY * 0.5 + 0.5;
   return float2(rotX, rotY);
 }
+
+float sdfRoundedRectangle(float2 uv, float2 position, float2 size, float radius) {
+    float2 q = abs(uv - position) - size + radius;
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
+}

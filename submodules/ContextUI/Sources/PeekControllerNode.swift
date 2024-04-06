@@ -286,7 +286,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
             topAccessoryNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4, initialVelocity: 0.0, damping: 110.0)
             topAccessoryNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
         }
-                
+                        
         if case .press = self.content.menuActivation() {
             self.hapticFeedback.tap()
         } else {
@@ -306,12 +306,11 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         var scaleCompleted = false
         var positionCompleted = false
-        let outCompletion = { [weak self] in
+        let outCompletion = {
             if scaleCompleted && positionCompleted {
-                self?.controller?.disappeared?()
             }
         }
-        
+
         let offset = CGPoint(x: rect.midX - self.containerNode.position.x, y: rect.midY - self.containerNode.position.y)
         self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint()), to: NSValue(cgPoint: offset), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, removeOnCompletion: false, additive: true, completion: { _ in
             positionCompleted = true
@@ -320,6 +319,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         })
 
         if let _ = self.controller?.disappeared {
+            self.controller?.disappeared?()
             let scale = rect.width / self.contentNode.frame.width
             self.containerNode.layer.animateScale(from: 1.0, to: scale, duration: 0.25, removeOnCompletion: false, completion: { _ in
                 scaleCompleted = true

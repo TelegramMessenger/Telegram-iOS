@@ -226,7 +226,7 @@ const CGSize TGPhotoPaintingMaxSize = { 1920.0f, 1920.0f };
         };
         [_paintingWrapperView addSubview:_drawingView];
         
-        [_drawingView setupWithDrawingData:_photoEditor.paintingData.drawingData];
+        [_drawingView setupWithDrawingData:_photoEditor.paintingData.drawingData storeAsClear:false];
     }
     
     _entitiesView.hasSelectionChanged = ^(bool hasSelection) {

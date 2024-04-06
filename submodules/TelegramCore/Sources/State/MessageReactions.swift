@@ -675,7 +675,7 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
         }
         
         var flags: Int32 = 0
-        if let reactionsLimit {
+        if let _ = reactionsLimit {
             flags |= (1 << 0)
         }
         

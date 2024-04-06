@@ -16,18 +16,6 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
     private var isVisible = true
     private var isPlaying = false
     
-    public weak var previewView: MediaEditorPreviewView? {
-        didSet {
-            if let previewView = self.previewView {
-                previewView.isUserInteractionEnabled = false
-                previewView.layer.allowsEdgeAntialiasing = true
-                self.addSubview(previewView)
-            } else {
-                oldValue?.removeFromSuperview()
-            }
-        }
-    }
-        
     private let snapTool = DrawingEntitySnapTool()
     
     init(context: AccountContext, entity: DrawingMediaEntity) {
@@ -45,14 +33,7 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
-    deinit {
-        if let previewView = self.previewView {
-            previewView.removeFromSuperview()
-            self.previewView = nil
-        }
-    }
-    
+        
     public override func play() {
         self.isVisible = true
         self.applyVisibility()
@@ -66,7 +47,6 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
     public override func seek(to timestamp: Double) {
         self.isVisible = false
         self.isPlaying = false
-        
     }
     
     override func resetToStart() {
@@ -83,7 +63,6 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
         let isPlaying = self.isVisible
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
-            
         }
     }
     
@@ -95,9 +74,6 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
                 
         if size.width > 0 && self.currentSize != size {
             self.currentSize = size
-            if self.previewView?.superview === self {
-                self.previewView?.frame = CGRect(origin: .zero, size: size)
-            }
             self.update(animated: false)
         }
     }
@@ -111,11 +87,6 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
         
         self.bounds = CGRect(origin: .zero, size: size)
         self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.mediaEntity.rotation), scale, scale)
-    
-//        if self.previewView?.superview === self {
-//            self.previewView?.layer.transform = CATransform3DMakeScale(self.mediaEntity.mirrored ? -1.0 : 1.0, 1.0, 1.0)
-//            self.previewView?.frame = self.bounds
-//        }
     
         super.update(animated: animated)
         

@@ -540,8 +540,11 @@ private final class StickerPackContainer: ASDisplayNode {
                                     f(.default)
                                     
                                     if let strongSelf = self {
-                                        let _ = strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred).start(next: { _ in
-                                            
+                                        let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
+                                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                                            if let self, let contorller = self.controller, case .generic = result {
+                                                contorller.present(UndoOverlayController(presentationData: self.presentationData, content: .sticker(context: context, file: item.file, loop: true, title: nil, text: !isStarred ? self.presentationData.strings.Conversation_StickerAddedToFavorites : self.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
+                                            }
                                         })
                                     }
                                 })))
@@ -967,7 +970,9 @@ private final class StickerPackContainer: ASDisplayNode {
             let buttonColor: UIColor
             var buttonFont: UIFont = Font.semibold(17.0)
             
-            if let controller = self.controller, let _ = controller.mainActionTitle {
+            if self.isEditing {
+                buttonColor = self.presentationData.theme.list.itemCheckColors.foregroundColor
+            } else if let controller = self.controller, let _ = controller.mainActionTitle {
                 buttonColor = self.presentationData.theme.list.itemCheckColors.foregroundColor
             } else {
                 switch currentContents {
@@ -1036,6 +1041,10 @@ private final class StickerPackContainer: ASDisplayNode {
         self.reorderingGestureRecognizer?.isEnabled = isEditing
         if let (layout, _, _, _) = self.validLayout {
             self.updateLayout(layout: layout, transition: .animated(duration: 0.3, curve: .easeInOut))
+        }
+        
+        if isEditing {
+            self.expandIfNeeded(force: true)
         }
     }
     
@@ -2122,12 +2131,16 @@ private final class StickerPackContainer: ASDisplayNode {
                 return
             }
             
-            if self.currentEntries.count >= 15, self.controller?.expandIfNeeded == true, !self.didAutomaticExpansion {
-                self.didAutomaticExpansion = true
-                self.gridNode.autoscroll(toOffset: CGPoint(x: 0.0, y: max(0.0, self.gridNode.scrollView.contentSize.height - self.gridNode.scrollView.contentInset.top - self.gridNode.scrollView.bounds.height)), duration: 0.4)
-                self.skipNextGridLayoutUpdate = true
-            }
+            self.expandIfNeeded()
         })
+    }
+    
+    private func expandIfNeeded(force: Bool = false) {
+        if self.currentEntries.count >= 15, force || (self.controller?.expandIfNeeded == true && !self.didAutomaticExpansion) {
+            self.didAutomaticExpansion = true
+            self.gridNode.autoscroll(toOffset: CGPoint(x: 0.0, y: max(0.0, self.gridNode.scrollView.contentSize.height - self.gridNode.scrollView.contentInset.top - self.gridNode.scrollView.bounds.height)), duration: 0.4)
+            self.skipNextGridLayoutUpdate = true
+        }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

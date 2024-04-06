@@ -24,3 +24,5 @@ half powerCurve(half inVal, half mag);
 
 float pnoise3D(float3 p);
 float2 coordRot(float2 tc, float angle);
+
+float sdfRoundedRectangle(float2 uv, float2 position, float2 size, float radius);

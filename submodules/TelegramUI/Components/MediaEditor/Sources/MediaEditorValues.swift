@@ -21,6 +21,7 @@ public enum EditorToolKey: Int32, CaseIterable {
     case highlightsTint
     case blur
     case curves
+    case stickerOutline
     
     static let adjustmentToolsKeys: [EditorToolKey] = [
         .enhance,

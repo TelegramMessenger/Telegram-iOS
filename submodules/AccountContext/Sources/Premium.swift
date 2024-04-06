@@ -120,6 +120,7 @@ public struct PremiumConfiguration {
     public static var defaultValue: PremiumConfiguration {
         return PremiumConfiguration(
             isPremiumDisabled: false,
+            subscriptionManagementUrl: "",
             showPremiumGiftInAttachMenu: false,
             showPremiumGiftInTextField: false,
             giveawayGiftsPurchaseAvailable: false,
@@ -144,6 +145,7 @@ public struct PremiumConfiguration {
     }
     
     public let isPremiumDisabled: Bool
+    public let subscriptionManagementUrl: String
     public let showPremiumGiftInAttachMenu: Bool
     public let showPremiumGiftInTextField: Bool
     public let giveawayGiftsPurchaseAvailable: Bool
@@ -158,7 +160,6 @@ public struct PremiumConfiguration {
     public let minChannelWallpaperLevel: Int32
     public let minChannelCustomWallpaperLevel: Int32
     public let minChannelRestrictAdsLevel: Int32
-    
     public let minGroupProfileIconLevel: Int32
     public let minGroupEmojiStatusLevel: Int32
     public let minGroupWallpaperLevel: Int32
@@ -168,6 +169,7 @@ public struct PremiumConfiguration {
     
     fileprivate init(
         isPremiumDisabled: Bool,
+        subscriptionManagementUrl: String,
         showPremiumGiftInAttachMenu: Bool,
         showPremiumGiftInTextField: Bool,
         giveawayGiftsPurchaseAvailable: Bool,
@@ -190,6 +192,7 @@ public struct PremiumConfiguration {
         minGroupAudioTranscriptionLevel: Int32
     ) {
         self.isPremiumDisabled = isPremiumDisabled
+        self.subscriptionManagementUrl = subscriptionManagementUrl
         self.showPremiumGiftInAttachMenu = showPremiumGiftInAttachMenu
         self.showPremiumGiftInTextField = showPremiumGiftInTextField
         self.giveawayGiftsPurchaseAvailable = giveawayGiftsPurchaseAvailable
@@ -220,6 +223,7 @@ public struct PremiumConfiguration {
             }
             return PremiumConfiguration(
                 isPremiumDisabled: data["premium_purchase_blocked"] as? Bool ?? defaultValue.isPremiumDisabled,
+                subscriptionManagementUrl: data["premium_manage_subscription_url"] as? String ?? "",
                 showPremiumGiftInAttachMenu: data["premium_gift_attach_menu_icon"] as? Bool ?? defaultValue.showPremiumGiftInAttachMenu,
                 showPremiumGiftInTextField: data["premium_gift_text_field_icon"] as? Bool ?? defaultValue.showPremiumGiftInTextField,
                 giveawayGiftsPurchaseAvailable: data["giveaway_gifts_purchase_available"] as? Bool ?? defaultValue.giveawayGiftsPurchaseAvailable,

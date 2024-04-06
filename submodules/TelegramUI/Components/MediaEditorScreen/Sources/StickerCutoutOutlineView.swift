@@ -66,13 +66,13 @@ final class StickerCutoutOutlineView: UIView {
         let randomBeginTime = (previousBeginTime + 4) % 6
         previousBeginTime = randomBeginTime
         
-        let duration = path.length / 2200.0
+        let duration = min(5.0, max(2.0, path.length / 2200.0))
         
         let outlineAnimation = CAKeyframeAnimation(keyPath: "emitterPosition")
         outlineAnimation.path = path.path.cgPath
         outlineAnimation.duration = duration
         outlineAnimation.repeatCount = .infinity
-        outlineAnimation.calculationMode = .cubicPaced
+        outlineAnimation.calculationMode = .paced
         outlineAnimation.beginTime = Double(randomBeginTime)
         self.outlineLayer.add(outlineAnimation, forKey: "emitterPosition")
         
@@ -85,7 +85,7 @@ final class StickerCutoutOutlineView: UIView {
         lineEmitterCell.color = UIColor.white.cgColor
         lineEmitterCell.contents = UIImage(named: "Media Editor/ParticleDot")?.cgImage
         lineEmitterCell.lifetime = 2.2
-        lineEmitterCell.birthRate = 1000
+        lineEmitterCell.birthRate = 120
         lineEmitterCell.scale = 0.14
         lineEmitterCell.alphaSpeed = -0.4
         
@@ -147,8 +147,11 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
     let minSide = min(size.width, size.height)
     let scaledImageSize = image.extent.size.aspectFilled(CGSize(width: minSide, height: minSide))
 
-    
     var contour = findContours(pixelBuffer: pixelBuffer)
+    guard !contour.isEmpty else {
+        return nil
+    }
+    
     contour = simplify(contour, tolerance: 1.4)
     let path = BezierPath(points: contour, smooth: false)
     

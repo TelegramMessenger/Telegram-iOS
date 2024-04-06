@@ -204,6 +204,7 @@ final class VideoFinishPass: RenderPass {
         texture: MTLTexture,
         textureRotation: TextureRotation,
         maskTexture: MTLTexture?,
+        hasTransparency: Bool,
         position: VideoPosition,
         roundness: Float,
         alpha: Float,
@@ -238,8 +239,7 @@ final class VideoFinishPass: RenderPass {
             dimensions: simd_float2(Float(size.width), Float(size.height)),
             roundness: roundness,
             alpha: alpha,
-            isOpaque: maskTexture == nil ? 1.0 : 0.0,
-            empty: 0
+            isOpaque: maskTexture == nil ? 1.0 : 0.0
         )
         encoder.setFragmentBytes(&parameters, length: MemoryLayout<VideoEncodeParameters>.size, index: 0)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
@@ -494,6 +494,7 @@ final class VideoFinishPass: RenderPass {
     func process(
         input: MTLTexture,
         inputMask: MTLTexture?,
+        hasTransparency: Bool,
         secondInput: MTLTexture?,
         timestamp: CMTime,
         device: MTLDevice,
@@ -574,6 +575,7 @@ final class VideoFinishPass: RenderPass {
                 texture: transitionVideoState.texture,
                 textureRotation: transitionVideoState.textureRotation,
                 maskTexture: nil,
+                hasTransparency: false,
                 position: transitionVideoState.position,
                 roundness: transitionVideoState.roundness,
                 alpha: transitionVideoState.alpha,
@@ -588,6 +590,7 @@ final class VideoFinishPass: RenderPass {
             texture: mainVideoState.texture,
             textureRotation: mainVideoState.textureRotation,
             maskTexture: inputMask,
+            hasTransparency: hasTransparency,
             position: mainVideoState.position,
             roundness: mainVideoState.roundness,
             alpha: mainVideoState.alpha,
@@ -602,6 +605,7 @@ final class VideoFinishPass: RenderPass {
                 texture: additionalVideoState.texture,
                 textureRotation: additionalVideoState.textureRotation,
                 maskTexture: nil,
+                hasTransparency: false,
                 position: additionalVideoState.position,
                 roundness: additionalVideoState.roundness,
                 alpha: additionalVideoState.alpha,

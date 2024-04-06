@@ -283,6 +283,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, ASScrollViewDe
         }, openPasswordSetup: {
         }, openPremiumIntro: {
         }, openPremiumGift: { _ in
+        }, openPremiumManagement: {
         }, openActiveSessions: {
         }, openBirthdaySetup: {
         }, performActiveSessionAction: { _, _ in

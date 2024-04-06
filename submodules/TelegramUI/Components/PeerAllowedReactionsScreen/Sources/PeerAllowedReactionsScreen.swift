@@ -242,7 +242,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             } else {
                 allowedReactions = .empty
             }
-            let applyDisposable = (component.context.engine.peers.updatePeerAllowedReactions(peerId: component.peerId, allowedReactions: allowedReactions)
+            let applyDisposable = (component.context.engine.peers.updatePeerAllowedReactions(peerId: component.peerId, allowedReactions: allowedReactions, reactionsLimit: nil)
             |> deliverOnMainQueue).start(error: { [weak self] error in
                 guard let self, let component = self.component else {
                     return

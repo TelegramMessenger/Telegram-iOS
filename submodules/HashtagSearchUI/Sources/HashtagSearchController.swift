@@ -96,8 +96,9 @@ public final class HashtagSearchController: TelegramBaseController {
         }, openPasswordSetup: {
         }, openPremiumIntro: {
         }, openPremiumGift: { _ in
+        }, openPremiumManagement: {   
         }, openActiveSessions: {
-        }, openBirthdaySetup: {  
+        }, openBirthdaySetup: {
         }, performActiveSessionAction: { _, _ in
         }, openChatFolderUpdates: {
         }, hideChatFolderUpdates: {

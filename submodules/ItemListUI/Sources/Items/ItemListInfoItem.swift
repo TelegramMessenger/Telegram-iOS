@@ -24,15 +24,17 @@ public class InfoListItem: ListViewItem {
     let text: InfoListItemText
     let style: ItemListStyle
     let hasDecorations: Bool
+    let isWarning: Bool
     let linkAction: ((InfoListItemLinkAction) -> Void)?
     let closeAction: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, title: String, text: InfoListItemText, style: ItemListStyle, hasDecorations: Bool = true, linkAction: ((InfoListItemLinkAction) -> Void)? = nil, closeAction: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, title: String, text: InfoListItemText, style: ItemListStyle, hasDecorations: Bool = true, isWarning: Bool = false, linkAction: ((InfoListItemLinkAction) -> Void)? = nil, closeAction: (() -> Void)?) {
         self.presentationData = presentationData
         self.title = title
         self.text = text
         self.style = style
         self.hasDecorations = hasDecorations
+        self.isWarning = isWarning
         self.linkAction = linkAction
         self.closeAction = closeAction
     }
@@ -210,16 +212,18 @@ public class InfoItemNode: ListViewItemNode {
             let rightInset: CGFloat = 16.0 + params.rightInset
             
             let titleFont = Font.medium(item.presentationData.fontSize.itemListBaseFontSize)
+            let smallerTextFont = Font.regular(item.presentationData.fontSize.itemListBaseLabelFontSize / 14.0 * 15.0)
             let textFont = Font.regular(item.presentationData.fontSize.itemListBaseLabelFontSize / 14.0 * 16.0)
             let textBoldFont = Font.semibold(item.presentationData.fontSize.itemListBaseLabelFontSize / 14.0 * 16.0)
             let badgeFont = Font.regular(15.0)
+            let largeBadgeFont = Font.regular(24.0)
     
             var updatedTheme: PresentationTheme?
             var updatedBadgeImage: UIImage?
             
             var updatedCloseIcon: UIImage?
             
-            let badgeDiameter: CGFloat = 22.0
+            let badgeDiameter: CGFloat = item.isWarning ? 30.0 : 22.0
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
                 updatedBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: item.presentationData.theme.list.itemDestructiveColor)
@@ -251,12 +255,12 @@ public class InfoItemNode: ListViewItemNode {
             case let .plain(text):
                 attributedText = NSAttributedString(string: text, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             case let .markdown(text):
-                attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), bold: MarkdownAttributeSet(font: textBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
+                attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: item.isWarning ? smallerTextFont : textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), bold: MarkdownAttributeSet(font: textBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), link: MarkdownAttributeSet(font: textFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
                     return (TelegramTextAttributes.URL, contents)
                 }))
             }
             
-            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "!", font: badgeFont, textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: badgeDiameter, height: badgeDiameter), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.isWarning ? "⚠️" : "!", font: item.isWarning ? largeBadgeFont : badgeFont, textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - badgeDiameter - 8.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -324,6 +328,7 @@ public class InfoItemNode: ListViewItemNode {
                         }
                     }
                     
+                    strongSelf.badgeNode.isHidden = item.isWarning
                     strongSelf.closeButton.isHidden = item.closeAction == nil
                     
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
@@ -344,7 +349,7 @@ public class InfoItemNode: ListViewItemNode {
                         strongSelf.closeButton.setImage(updatedCloseIcon, for: [])
                     }
                     
-                    strongSelf.badgeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 15.0), size: CGSize(width: badgeDiameter, height: badgeDiameter))
+                    strongSelf.badgeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 15.0 + (item.isWarning ? 4.0 : 0.0)), size: CGSize(width: badgeDiameter, height: badgeDiameter))
                     
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: strongSelf.badgeNode.frame.midX - labelLayout.size.width / 2.0, y: strongSelf.badgeNode.frame.minY + 2.0 + UIScreenPixel), size: labelLayout.size)
                     

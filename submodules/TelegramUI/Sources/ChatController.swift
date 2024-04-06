@@ -15906,13 +15906,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let images = imageItems as! [UIImage]
             
             strongSelf.chatDisplayNode.updateDropInteraction(isActive: false)
-            if images.count == 1, let image = images.first, let cgImage = image.cgImage {
+            if images.count == 1, let image = images.first {
                 let maxSide = max(image.size.width, image.size.height)
                 if maxSide.isZero {
                     return
                 }
                 let aspectRatio = min(image.size.width, image.size.height) / maxSide
-                if (imageHasTransparency(cgImage) && aspectRatio > 0.2) {
+                if (imageHasTransparency(image) && aspectRatio > 0.2) {
                     strongSelf.enqueueStickerImage(image, isMemoji: false)
                     return
                 }

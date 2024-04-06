@@ -122,7 +122,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
     func ready() -> Signal<Bool, NoError> {
         return self._ready.get()
     }
-    
+
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let boundingSize = CGSize(width: 180.0, height: 180.0).fitted(size)
         let imageFrame = CGRect(origin: CGPoint(), size: boundingSize)

@@ -57,6 +57,7 @@ swift_library(
         "//submodules/StickerPeekUI",
         "//submodules/TelegramUI/Components/Stickers/StickerPackEditTitleController",
         "//submodules/TelegramUI/Components/StickerPickerScreen",
+        "//submodules/UIKitRuntimeUtils",
     ],
     visibility = [
         "//visibility:public",

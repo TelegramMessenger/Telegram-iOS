@@ -1542,7 +1542,11 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                     })
                 }
             }
-            self.isCollapsing = false
+            if self.isCollapsing {
+                Queue.mainQueue().justDispatch {
+                    self.isCollapsing = false
+                }
+            }
         }
         
         transition.updateFrame(node: self.backgroundNode, frame: visualBackgroundFrame, beginWithCurrentState: true)
@@ -2711,7 +2715,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         case .ended:
             let point = recognizer.location(in: self.view)
             
-            if self.isExpanded {
+            if self.isExpanded || self.isCollapsing {
                 return
             }
             if let expandItemView = self.expandItemView, expandItemView.bounds.contains(self.view.convert(point, to: self.expandItemView)) {

@@ -52,7 +52,7 @@
 
 - (void)updateZoomScale:(CGFloat)scale;
 
-- (void)setupWithDrawingData:(NSData * _Nullable)drawingData;
+- (void)setupWithDrawingData:(NSData * _Nullable)drawingData storeAsClear:(BOOL)storeAsClear;
 
 @end
 

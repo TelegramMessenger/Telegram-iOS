@@ -1,5 +1,6 @@
 #include <metal_stdlib>
 #include "EditorCommon.h"
+#include "EditorUtils.h"
 
 using namespace metal;
 
@@ -17,11 +18,6 @@ typedef struct {
     float4 localPos;
 } VertexData;
 
-
-float sdfRoundedRectangle(float2 uv, float2 position, float2 size, float radius) {
-    float2 q = abs(uv - position) - size + radius;
-    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
-}
 
 fragment half4 dualFragmentShader(RasterizerData in [[stage_in]],
                                     texture2d<half, access::sample> texture [[texture(0)]],
