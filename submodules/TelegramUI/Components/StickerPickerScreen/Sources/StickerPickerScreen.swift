@@ -147,7 +147,7 @@ private final class StickerSelectionComponent: Component {
                                 c.dismiss(animated: true)
                             }
                         })
-                        if controller.completion(.file(file.media, .sticker)) {
+                        if controller.completion(.file(file, .sticker)) {
                             controller.dismiss(animated: true)
                         }
                     }
@@ -884,7 +884,7 @@ public class StickerPickerScreen: ViewController {
                             })
                         })
                     } else if let file = item.itemFile {
-                        if controller.completion(.file(file, .sticker)) {
+                        if controller.completion(.file(.standalone(media: file), .sticker)) {
                             controller.dismiss(animated: true)
                         }
                     } else if case let .staticEmoji(emoji) = item.content {
@@ -1299,7 +1299,7 @@ public class StickerPickerScreen: ViewController {
                                             guard let self, let controller = self.controller else {
                                                 return false
                                             }
-                                            if controller.completion(.file(fileReference.media, .sticker)) {
+                                            if controller.completion(.file(fileReference, .sticker)) {
                                                 controller.dismiss(animated: true)
                                             }
                                             return true
@@ -1311,7 +1311,15 @@ public class StickerPickerScreen: ViewController {
                             }
                         })
                     } else {
-                        let _ = controller.completion(.file(file, .sticker))
+                        let reference: FileMediaReference
+                        if groupId == AnyHashable("saved") {
+                            reference = .savedSticker(media: file)
+                        } else if groupId == AnyHashable("recent") {
+                            reference = .recentSticker(media: file)
+                        } else {
+                            reference = .standalone(media: file)
+                        }
+                        let _ = controller.completion(.file(reference, .sticker))
                         controller.dismiss(animated: true)
                     }
                 },

@@ -25,6 +25,8 @@ import Pasteboard
 import StickerPackEditTitleController
 import EntityKeyboard
 
+private let maxStickersCount = 120
+
 private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
     case sticker(index: Int, stableId: Int, stickerItem: StickerPackItem?, isEmpty: Bool, isPremium: Bool, isLocked: Bool, isEditing: Bool, isAdd: Bool)
     case add
@@ -1251,7 +1253,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     completion: { file, emoji, commit in
                         dismissImpl?()
                         let sticker = ImportSticker(
-                            resource: file.resource,
+                            resource: .standalone(resource: file.resource),
                             emojis: emoji,
                             dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
                             mimeType: file.mimeType,
@@ -1292,18 +1294,18 @@ private final class StickerPackContainer: ASDisplayNode {
         let context = self.context
         let controller = self.context.sharedContext.makeStickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData, completion: { file in
             var emoji = "🫥"
-            for attribute in file.attributes {
-                if case let .Sticker(displayText, _, _) = attribute {
+            for attribute in file.media.attributes {
+                if case let .Sticker(displayText, _, _) = attribute, !displayText.isEmpty {
                     emoji = displayText
                     break
                 }
             }
             
             let sticker = ImportSticker(
-                resource: file.resource,
+                resource: file.resourceReference(file.media.resource),
                 emojis: [emoji],
-                dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
-                mimeType: file.mimeType,
+                dimensions: file.media.dimensions ?? PixelDimensions(width: 512, height: 512),
+                mimeType: file.media.mimeType,
                 keywords: ""
             )
             let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
@@ -1313,7 +1315,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
                 
                 Queue.mainQueue().after(0.1) {
-                    packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: "Sticker added to **\(info.title)** sticker set.", undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file.media, loop: true, title: nil, text: "Sticker added to **\(info.title)** sticker set.", undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
             })
         })
@@ -1342,7 +1344,7 @@ private final class StickerPackContainer: ASDisplayNode {
             transitionArguments: nil,
             completion: { file, emoji, commit in
                 let sticker = ImportSticker(
-                    resource: file.resource,
+                    resource: .standalone(resource: file.resource),
                     emojis: emoji,
                     dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
                     mimeType: file.mimeType,
@@ -1787,7 +1789,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     self.updateButton(count: count)
                 }
                 
-                if GlobalExperimentalSettings.enableWIPStickers && info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
+                if GlobalExperimentalSettings.enableWIPStickers && info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) && entries.count < maxStickersCount {
                     entries.append(.add)
                 }
             }
@@ -1883,7 +1885,9 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         }
 
-        entries.append(.add)
+        if entries.count < maxStickersCount {
+            entries.append(.add)
+        }
         
         self.currentEntries = entries
         

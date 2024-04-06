@@ -625,9 +625,9 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, ASScroll
                 if let localResource = item.stickerItem.resource {
                     self.context.account.postbox.mediaBox.copyResourceData(from: localResource._asResource().id, to: resource._asResource().id)
                 }
-                stickers.append(ImportSticker(resource: resource._asResource(), emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType, keywords: item.stickerItem.keywords))
+                stickers.append(ImportSticker(resource: .standalone(resource: resource._asResource()), emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType, keywords: item.stickerItem.keywords))
             } else if let resource = item.stickerItem.resource {
-                stickers.append(ImportSticker(resource: resource._asResource(), emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType, keywords: item.stickerItem.keywords))
+                stickers.append(ImportSticker(resource: .standalone(resource: resource._asResource()), emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType, keywords: item.stickerItem.keywords))
             }
         }
         var thumbnailSticker: ImportSticker?
@@ -638,7 +638,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, ASScroll
             }
             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnail.data)
-            thumbnailSticker = ImportSticker(resource: resource, emojis: [], dimensions: dimensions, mimeType: thumbnail.mimeType, keywords: thumbnail.keywords)
+            thumbnailSticker = ImportSticker(resource: .standalone(resource: resource), emojis: [], dimensions: dimensions, mimeType: thumbnail.mimeType, keywords: thumbnail.keywords)
         }
         
         let firstStickerItem = thumbnailSticker ?? stickers.first

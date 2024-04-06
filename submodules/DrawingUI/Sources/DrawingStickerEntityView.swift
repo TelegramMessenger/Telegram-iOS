@@ -118,7 +118,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
     
     private var file: TelegramMediaFile? {
         if case let .file(file, _) = self.stickerEntity.content {
-            return file
+            return file.media
         } else {
             return nil
         }
@@ -158,7 +158,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
     private var dimensions: CGSize {
         switch self.stickerEntity.content {
         case let .file(file, _):
-            return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+            return file.media.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case let .image(image, _):
             return image.size
         case let .animatedImage(_, thumbnailImage):
@@ -174,7 +174,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
     
     private func updateAnimationColor() {
         let color: UIColor?
-        if case let .file(file, type) = self.stickerEntity.content, file.isCustomTemplateEmoji {
+        if case let .file(file, type) = self.stickerEntity.content, file.media.isCustomTemplateEmoji {
             if case let .reaction(_, style) = type {
                 if case .white = style {
                     color = UIColor(rgb: 0x000000)

@@ -102,7 +102,8 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
         self.animated = entity.isAnimated
 
         switch entity.content {
-        case let .file(file, _):
+        case let .file(fileReference, _):
+            let file = fileReference.media
             self.file = file
             if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
                 self.source = AnimatedStickerResourceSource(postbox: postbox, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")

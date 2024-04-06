@@ -2421,7 +2421,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return stickerMediaPickerController(context: context, getSourceRect: getSourceRect, completion: completion, dismissed: dismissed)
     }
     
-    public func makeStickerPickerScreen(context: AccountContext, inputData: Promise<StickerPickerInput>, completion: @escaping (TelegramMediaFile) -> Void) -> ViewController {
+    public func makeStickerPickerScreen(context: AccountContext, inputData: Promise<StickerPickerInput>, completion: @escaping (FileMediaReference) -> Void) -> ViewController {
         let controller = StickerPickerScreen(context: context, inputData: inputData.get(), expanded: true, hasGifs: false, hasInteractiveStickers: false)
         controller.completion = { content in
             if let content, case let .file(file, _) = content {

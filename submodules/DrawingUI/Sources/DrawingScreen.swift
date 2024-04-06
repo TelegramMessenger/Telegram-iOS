@@ -2893,13 +2893,13 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         for entity in self.entitiesView.entities {
             if let sticker = entity as? DrawingStickerEntity, case let .file(file, _) = sticker.content {
                 let coder = PostboxEncoder()
-                coder.encodeRootObject(file)
+                coder.encodeRootObject(file.media)
                 stickers.append(coder.makeData())
             } else if let text = entity as? DrawingTextEntity, let subEntities = text.renderSubEntities {
                 for sticker in subEntities {
                     if let sticker = sticker as? DrawingStickerEntity, case let .file(file, _) = sticker.content {
                         let coder = PostboxEncoder()
-                        coder.encodeRootObject(file)
+                        coder.encodeRootObject(file.media)
                         stickers.append(coder.makeData())
                     }
                 }

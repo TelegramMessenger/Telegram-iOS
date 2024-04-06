@@ -1195,7 +1195,16 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         if let id = groupId.base as? ItemCollectionId, context.sharedContext.currentStickerSettings.with({ $0 }).dynamicPackOrder {
                             bubbleUpEmojiOrStickersets.append(id)
                         }
-                        let _ = interaction.sendSticker(.standalone(media: file), false, false, nil, false, view, rect, layer, bubbleUpEmojiOrStickersets)
+                        
+                        let reference: FileMediaReference
+                        if groupId == AnyHashable("saved") {
+                            reference = .savedSticker(media: file)
+                        } else if groupId == AnyHashable("recent") {
+                            reference = .recentSticker(media: file)
+                        } else {
+                            reference = .standalone(media: file)
+                        }
+                        let _ = interaction.sendSticker(reference, false, false, nil, false, view, rect, layer, bubbleUpEmojiOrStickersets)
                     }
                 })
             },

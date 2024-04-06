@@ -32,7 +32,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             case sticker
             case reaction(MessageReaction.Reaction, ReactionStyle)
         }
-        case file(TelegramMediaFile, FileType)
+        case file(FileMediaReference, FileType)
         case image(UIImage, ImageType)
         case animatedImage(Data, UIImage)
         case video(TelegramMediaFile)
@@ -43,7 +43,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             switch lhs {
             case let .file(lhsFile, lhsFileType):
                 if case let .file(rhsFile, rhsFileType) = rhs {
-                    return lhsFile.fileId == rhsFile.fileId && lhsFileType == rhsFileType
+                    return lhsFile.media.fileId == rhsFile.media.fileId && lhsFileType == rhsFileType
                 } else {
                     return false
                 }
@@ -152,7 +152,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             if case .reaction = type {
                 dimensions = CGSize(width: 512.0, height: 512.0)
             } else {
-                dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+                dimensions = file.media.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
             }
         case let .video(file):
             dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
@@ -176,7 +176,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 case .reaction:
                     return false
                 default:
-                    return file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm"
+                    return file.media.isAnimatedSticker || file.media.isVideoSticker || file.media.mimeType == "video/webm"
                 }
             }
         case .image:
@@ -248,7 +248,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             } else {
                 fileType = .sticker
             }
-            self.content = .file(file, fileType)
+            self.content = .file(.standalone(media: file), fileType)
         } else if let imagePath = try container.decodeIfPresent(String.self, forKey: .imagePath), let image = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
             let isRectangle = try container.decodeIfPresent(Bool.self, forKey: .isRectangle) ?? false
             let isDualPhoto = try container.decodeIfPresent(Bool.self, forKey: .isDualPhoto) ?? false
@@ -290,7 +290,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         try container.encode(self.uuid, forKey: .uuid)
         switch self.content {
         case let .file(file, fileType):
-            try container.encode(file, forKey: .file)
+            try container.encode(file.media, forKey: .file)
             switch fileType {
             case let .reaction(reaction, reactionStyle):
                 try container.encode(reaction, forKey: .reaction)

@@ -3051,7 +3051,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 })
             } else if case let .sticker(sticker, emoji) = effectiveSubject {
                 controller.stickerSelectedEmoji = emoji
-                let stickerEntity = DrawingStickerEntity(content: .file(sticker, .sticker))
+                let stickerEntity = DrawingStickerEntity(content: .file(.standalone(media: sticker), .sticker))
                 stickerEntity.referenceDrawingSize = storyDimensions
                 stickerEntity.scale = 4.0
                 stickerEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
@@ -4382,7 +4382,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if let reaction = self.availableReactions.first(where: { reaction in
                 return reaction.reaction.rawValue == .builtin(heart)
             }) {
-                let stickerEntity = DrawingStickerEntity(content: .file(reaction.stillAnimation, .reaction(.builtin(heart), .white)))
+                let stickerEntity = DrawingStickerEntity(content: .file(.standalone(media: reaction.stillAnimation), .reaction(.builtin(heart), .white)))
                 self.interaction?.insertEntity(stickerEntity, scale: 1.175)
             }
             
@@ -4530,11 +4530,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         if let self {
                                             if let content {
                                                 if case let .file(file, _) = content {
-                                                    if file.isCustomEmoji {
-                                                        self.defaultToEmoji = true
-                                                    } else {
-                                                        self.defaultToEmoji = false
-                                                    }
+                                                    self.defaultToEmoji = file.media.isCustomEmoji
                                                 }
                                                                                                 
                                                 let stickerEntity = DrawingStickerEntity(content: content)
@@ -5823,7 +5819,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
             for entity in entities {
                 if let stickerEntity = entity as? DrawingStickerEntity, case let .file(file, type) = stickerEntity.content, case let .reaction(reaction, _) = type, case .custom = reaction {
-                    self.presentUnavailableReactionPremiumSuggestion(file: file)
+                    self.presentUnavailableReactionPremiumSuggestion(file: file.media)
                     return false
                 }
             }
@@ -5879,13 +5875,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             switch entity {
             case let .sticker(stickerEntity):
                 if case let .file(file, fileType) = stickerEntity.content, case .sticker = fileType {
-                    stickers.append(file)
+                    stickers.append(file.media)
                 }
             case let .text(textEntity):
                 if let subEntities = textEntity.renderSubEntities {
                     for entity in subEntities {
                         if let stickerEntity = entity as? DrawingStickerEntity, case let .file(file, fileType) = stickerEntity.content, case .sticker = fileType {
-                            stickers.append(file)
+                            stickers.append(file.media)
                         }
                     }
                 }
@@ -6467,7 +6463,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 shortName: "",
                 stickers: [
                     ImportSticker(
-                        resource: file.resource,
+                        resource: .standalone(resource: file.resource),
                         emojis: self.effectiveStickerEmoji(),
                         dimensions: PixelDimensions(width: 512, height: 512),
                         mimeType: "image/webp",
@@ -6602,7 +6598,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     }
                                 case let .createStickerPack(title):
                                     let sticker = ImportSticker(
-                                        resource: resource,
+                                        resource: .standalone(resource: resource),
                                         emojis: self.effectiveStickerEmoji(),
                                         dimensions: dimensions,
                                         mimeType: mimeType,
@@ -6621,7 +6617,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     }
                                 case let .addToStickerPack(pack, _):
                                     let sticker = ImportSticker(
-                                        resource: resource,
+                                        resource: .standalone(resource: resource),
                                         emojis: self.effectiveStickerEmoji(),
                                         dimensions: dimensions,
                                         mimeType: mimeType,

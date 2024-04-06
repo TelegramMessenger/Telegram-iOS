@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import TelegramApi
-
+import MtProtoKit
 
 public enum UploadStickerStatus {
     case progress(Float)
@@ -77,13 +77,13 @@ public enum CreateStickerSetError {
 }
 
 public struct ImportSticker {
-    public let resource: MediaResource
+    public let resource: MediaResourceReference
     let emojis: [String]
     public let dimensions: PixelDimensions
     public let mimeType: String
     public let keywords: String
     
-    public init(resource: MediaResource, emojis: [String], dimensions: PixelDimensions, mimeType: String, keywords: String) {
+    public init(resource: MediaResourceReference, emojis: [String], dimensions: PixelDimensions, mimeType: String, keywords: String) {
         self.resource = resource
         self.emojis = emojis
         self.dimensions = dimensions
@@ -94,7 +94,7 @@ public struct ImportSticker {
 
 public extension ImportSticker {
     var stickerPackItem: StickerPackItem? {
-        guard let resource = self.resource as? TelegramMediaResource else {
+        guard let resource = self.resource.resource as? TelegramMediaResource else {
             return nil
         }
         var fileAttributes: [TelegramMediaFileAttribute] = []
@@ -150,10 +150,10 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
             stickers.append(thumbnail)
         }
         for sticker in stickers {
-            if let resource = sticker.resource as? CloudDocumentMediaResource {
+            if let resource = sticker.resource.resource as? CloudDocumentMediaResource {
                 uploadStickers.append(.single(.complete(resource, sticker.mimeType)))
             } else {
-                uploadStickers.append(_internal_uploadSticker(account: account, peer: peer, resource: sticker.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, mimeType: sticker.mimeType)
+                uploadStickers.append(_internal_uploadSticker(account: account, peer: peer, resource: sticker.resource.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, mimeType: sticker.mimeType)
                 |> mapError { _ -> CreateStickerSetError in
                     return .generic
                 })
@@ -294,13 +294,13 @@ public enum AddStickerToSetError {
 
 func _internal_addStickerToStickerSet(account: Account, packReference: StickerPackReference, sticker: ImportSticker) -> Signal<Bool, AddStickerToSetError> {
     let uploadSticker: Signal<UploadStickerStatus, AddStickerToSetError>
-    if let resource = sticker.resource as? CloudDocumentMediaResource {
+    if let resource = sticker.resource.resource as? CloudDocumentMediaResource {
         uploadSticker = .single(.complete(resource, sticker.mimeType))
     } else {
         uploadSticker = account.postbox.loadedPeerWithId(account.peerId)
         |> castError(AddStickerToSetError.self)
         |> mapToSignal { peer in
-            return _internal_uploadSticker(account: account, peer: peer, resource: sticker.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, mimeType: sticker.mimeType)
+            return _internal_uploadSticker(account: account, peer: peer, resource: sticker.resource.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, mimeType: sticker.mimeType)
             |> mapError { _ -> AddStickerToSetError in
                 return .generic
             }
@@ -317,8 +317,27 @@ func _internal_addStickerToStickerSet(account: Account, packReference: StickerPa
             flags |= (1 << 1)
         }
         let inputSticker: Api.InputStickerSetItem = .inputStickerSetItem(flags: flags, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.joined(), maskCoords: nil, keywords: sticker.keywords)
-       
+        
         return account.network.request(Api.functions.stickers.addStickerToSet(stickerset: packReference.apiInputStickerSet, sticker: inputSticker))
+        |> `catch` { error -> Signal<Api.messages.StickerSet, MTRpcError> in
+            if error.errorDescription == "FILE_REFERENCE_EXPIRED" {
+                return revalidateMediaResourceReference(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, revalidationContext: account.mediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: sticker.resource, preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: sticker.resource.resource)
+                |> mapError { _ -> MTRpcError in
+                    return MTRpcError(errorCode: 500, errorDescription: "Internal")
+                }
+                |> mapToSignal { result -> Signal<Api.messages.StickerSet, MTRpcError> in
+                    guard let resource = result.updatedResource as? CloudDocumentMediaResource else {
+                        return .fail(MTRpcError(errorCode: 500, errorDescription: "Internal"))
+                    }
+                    
+                    let inputSticker: Api.InputStickerSetItem = .inputStickerSetItem(flags: flags, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), emoji: sticker.emojis.joined(), maskCoords: nil, keywords: sticker.keywords)
+                    
+                    return account.network.request(Api.functions.stickers.addStickerToSet(stickerset: packReference.apiInputStickerSet, sticker: inputSticker))
+                }
+            } else {
+                return .fail(error)
+            }
+        }
         |> mapError { error -> AddStickerToSetError in
             return .generic
         }
@@ -403,13 +422,13 @@ func _internal_replaceSticker(account: Account, previousSticker: FileMediaRefere
     }
     
     let uploadSticker: Signal<UploadStickerStatus, ReplaceStickerError>
-    if let resource = sticker.resource as? CloudDocumentMediaResource {
+    if let resource = sticker.resource.resource as? CloudDocumentMediaResource {
         uploadSticker = .single(.complete(resource, sticker.mimeType))
     } else {
         uploadSticker = account.postbox.loadedPeerWithId(account.peerId)
         |> castError(ReplaceStickerError.self)
         |> mapToSignal { peer in
-            return _internal_uploadSticker(account: account, peer: peer, resource: sticker.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, mimeType: sticker.mimeType)
+            return _internal_uploadSticker(account: account, peer: peer, resource: sticker.resource.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, mimeType: sticker.mimeType)
             |> mapError { _ -> ReplaceStickerError in
                 return .generic
             }
