@@ -86,6 +86,16 @@ public class DrawingStickerEntityView: DrawingEntityView {
     var currentSize: CGSize?
     public var updated: () -> Void = {}
     
+    public var duration: Double? {
+        if let animationNode = self.animationNode, animationNode.currentFrameCount > 1 {
+            return Double(animationNode.currentFrameCount) / Double(animationNode.currentFrameRate)
+        } else if let videoNode = self.videoNode {
+            return videoNode.duration
+        } else {
+            return nil
+        }
+    }
+    
     init(context: AccountContext, entity: DrawingStickerEntity) {
         self.imageNode = TransformImageNode()
         

@@ -103,6 +103,10 @@ public final class UniversalVideoNode: ASDisplayNode {
     public private(set) var ownsContentNode: Bool = false
     public var ownsContentNodeUpdated: ((Bool) -> Void)?
     
+    public var duration: Double {
+        return self.content.duration
+    }
+    
     private let _status = Promise<MediaPlayerStatus?>()
     public var status: Signal<MediaPlayerStatus?, NoError> {
         return self._status.get()

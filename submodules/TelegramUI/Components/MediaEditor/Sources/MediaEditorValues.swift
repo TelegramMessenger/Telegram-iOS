@@ -1637,6 +1637,7 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
         videoSettings: videoSettings,
         audioSettings: audioSettings,
         values: values,
-        frameRate: frameRate
+        frameRate: frameRate,
+        preferredDuration: isSticker ? duration: nil
     )
 }

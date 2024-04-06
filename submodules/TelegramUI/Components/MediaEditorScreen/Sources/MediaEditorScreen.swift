@@ -6847,6 +6847,20 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if case let .video(video, _) = exportSubject {
                     duration = video.duration.seconds
                 }
+                if isSticker {
+                    duration = 3.0
+                    var stickerDurations: [Double] = []
+                    self.node.entitiesView.eachView { entityView in
+                        if let stickerEntityView = entityView as? DrawingStickerEntityView {
+                            if let duration = stickerEntityView.duration, duration > 0.0 {
+                                stickerDurations.append(duration)
+                            }
+                        }
+                    }
+                    if !stickerDurations.isEmpty {
+                        duration = stickerDurations.max() ?? 3.0
+                    }
+                }
                 let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values, duration: duration, forceFullHd: true, frameRate: 60.0, isSticker: isSticker)
                 let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).\(fileExtension)"
                 let videoExport = MediaEditorVideoExport(postbox: self.context.account.postbox, subject: exportSubject, configuration: configuration, outputPath: outputPath, textScale: 2.0)
