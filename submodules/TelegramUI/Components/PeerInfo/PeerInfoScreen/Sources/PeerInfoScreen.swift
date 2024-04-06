@@ -107,6 +107,7 @@ import PeerInfoChatListPaneNode
 import GroupStickerPackSetupController
 import PeerNameColorItem
 import PeerSelectionScreen
+import UIKitRuntimeUtils
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -1037,9 +1038,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     let ItemBirthdayHelp = 12
     let ItemPeerPersonalChannel = 13
     
-    if !isMyProfile {
-        items[.help]!.append(PeerInfoScreenCommentItem(id: ItemNameHelp, text: presentationData.strings.EditProfile_NameAndPhotoOrVideoHelp))
-    }
+    items[.help]!.append(PeerInfoScreenCommentItem(id: ItemNameHelp, text: presentationData.strings.EditProfile_NameAndPhotoOrVideoHelp))
     
     if let cachedData = data.cachedData as? CachedUserData {
         items[.bio]!.append(PeerInfoScreenMultilineInputItem(id: ItemBio, text: state.updatingBio ?? (cachedData.about ?? ""), placeholder: presentationData.strings.UserInfo_About_Placeholder, textUpdated: { updatedText in
@@ -1067,30 +1066,28 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         birthDateString = presentationData.strings.Settings_Birthday_Add
     }
     
-    if !isMyProfile {
-        let isEditingBirthDate = state.isEditingBirthDate
-        items[.birthday]!.append(PeerInfoScreenDisclosureItem(id: ItemBirthday, label: .coloredText(birthDateString, isEditingBirthDate ? .accent : .generic), text: presentationData.strings.Settings_Birthday, icon: nil, hasArrow: false, action: {
-            interaction.updateIsEditingBirthdate(!isEditingBirthDate)
+    let isEditingBirthDate = state.isEditingBirthDate
+    items[.birthday]!.append(PeerInfoScreenDisclosureItem(id: ItemBirthday, label: .coloredText(birthDateString, isEditingBirthDate ? .accent : .generic), text: presentationData.strings.Settings_Birthday, icon: nil, hasArrow: false, action: {
+        interaction.updateIsEditingBirthdate(!isEditingBirthDate)
+    }))
+    if isEditingBirthDate, let birthday {
+        items[.birthday]!.append(PeerInfoScreenBirthdatePickerItem(id: ItemBirthdayPicker, value: birthday, valueUpdated: { value in
+            interaction.updateBirthdate(value)
         }))
-        if isEditingBirthDate, let birthday {
-            items[.birthday]!.append(PeerInfoScreenBirthdatePickerItem(id: ItemBirthdayPicker, value: birthday, valueUpdated: { value in
-                interaction.updateBirthdate(value)
-            }))
-            items[.birthday]!.append(PeerInfoScreenActionItem(id: ItemBirthdayRemove, text: presentationData.strings.Settings_Birthday_Remove, alignment: .natural, action: {
-                interaction.updateBirthdate(.some(nil))
-                interaction.updateIsEditingBirthdate(false)
-            }))
-        }
-        
-        
-        var birthdayIsForContactsOnly = false
-        if let birthdayPrivacy = data.globalSettings?.privacySettings?.birthday, case .enableContacts = birthdayPrivacy {
-            birthdayIsForContactsOnly = true
-        }
-        items[.birthday]!.append(PeerInfoScreenCommentItem(id: ItemBirthdayHelp, text: birthdayIsForContactsOnly ? presentationData.strings.Settings_Birthday_ContactsHelp : presentationData.strings.Settings_Birthday_Help, linkAction: { _ in
-            interaction.openBirthdatePrivacy()
+        items[.birthday]!.append(PeerInfoScreenActionItem(id: ItemBirthdayRemove, text: presentationData.strings.Settings_Birthday_Remove, alignment: .natural, action: {
+            interaction.updateBirthdate(.some(nil))
+            interaction.updateIsEditingBirthdate(false)
         }))
     }
+    
+    
+    var birthdayIsForContactsOnly = false
+    if let birthdayPrivacy = data.globalSettings?.privacySettings?.birthday, case .enableContacts = birthdayPrivacy {
+        birthdayIsForContactsOnly = true
+    }
+    items[.birthday]!.append(PeerInfoScreenCommentItem(id: ItemBirthdayHelp, text: birthdayIsForContactsOnly ? presentationData.strings.Settings_Birthday_ContactsHelp : presentationData.strings.Settings_Birthday_Help, linkAction: { _ in
+        interaction.openBirthdatePrivacy()
+    }))
     
     if let user = data.peer as? TelegramUser {
         items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPhoneNumber, label: .text(user.phone.flatMap({ formatPhoneNumber(context: context, number: $0) }) ?? ""), text: presentationData.strings.Settings_PhoneNumber, action: {
@@ -1105,7 +1102,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
           interaction.openSettings(.username)
     }))
     
-    if !isMyProfile, let peer = data.peer as? TelegramUser {
+    if let peer = data.peer as? TelegramUser {
         var colors: [PeerNameColors.Colors] = []
         if let nameColor = peer.nameColor.flatMap({ context.peerNameColors.get($0, dark: presentationData.theme.overallDarkAppearance) }) {
             colors.append(nameColor)
@@ -1137,11 +1134,9 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         }
     }
     
-    if !isMyProfile {
-        items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
-            interaction.openSettings(.addAccount)
-        }))
-    }
+    items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
+        interaction.openSettings(.addAccount)
+    }))
     
     var hasPremiumAccounts = false
     if data.peer?.isPremium == true && !context.account.testingEnvironment {
@@ -1158,13 +1153,11 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         }
     }
     
-    if !isMyProfile {
-        items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: hasPremiumAccounts ? presentationData.strings.Settings_AddAnotherAccount_PremiumHelp : presentationData.strings.Settings_AddAnotherAccount_Help))
-        
-        items[.logout]!.append(PeerInfoScreenActionItem(id: ItemLogout, text: presentationData.strings.Settings_Logout, color: .destructive, alignment: .center, action: {
-            interaction.openSettings(.logout)
-        }))
-    }
+    items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: hasPremiumAccounts ? presentationData.strings.Settings_AddAnotherAccount_PremiumHelp : presentationData.strings.Settings_AddAnotherAccount_Help))
+    
+    items[.logout]!.append(PeerInfoScreenActionItem(id: ItemLogout, text: presentationData.strings.Settings_Logout, color: .destructive, alignment: .center, action: {
+        interaction.openSettings(.logout)
+    }))
     
     var result: [(AnyHashable, [PeerInfoScreenItem])] = []
     for section in Section.allCases {
@@ -1827,8 +1820,8 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 
                 if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                     let label: String
-                    if let cachedData = data.cachedData as? CachedChannelData, case let .known(allowedReactions) = cachedData.allowedReactions {
-                        switch allowedReactions {
+                    if let cachedData = data.cachedData as? CachedChannelData, case let .known(reactionSettings) = cachedData.reactionSettings {
+                        switch reactionSettings.allowedReactions {
                         case .all:
                             label = presentationData.strings.PeerInfo_LabelAllReactions
                         case .empty:
@@ -2036,8 +2029,8 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                         
                         if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                             let label: String
-                            if let cachedData = data.cachedData as? CachedChannelData, case let .known(allowedReactions) = cachedData.allowedReactions {
-                                switch allowedReactions {
+                            if let cachedData = data.cachedData as? CachedChannelData, case let .known(reactionSettings) = cachedData.reactionSettings {
+                                switch reactionSettings.allowedReactions {
                                 case .all:
                                     label = presentationData.strings.PeerInfo_LabelAllReactions
                                 case .empty:
@@ -2055,8 +2048,8 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     } else {
                         if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                             let label: String
-                            if let cachedData = data.cachedData as? CachedChannelData, case let .known(allowedReactions) = cachedData.allowedReactions {
-                                switch allowedReactions {
+                            if let cachedData = data.cachedData as? CachedChannelData, case let .known(reactionSettings) = cachedData.reactionSettings {
+                                switch reactionSettings.allowedReactions {
                                 case .all:
                                     label = presentationData.strings.PeerInfo_LabelAllReactions
                                 case .empty:
@@ -2282,8 +2275,8 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 }
                 
                 let label: String
-                if let cachedData = data.cachedData as? CachedGroupData, case let .known(allowedReactions) = cachedData.allowedReactions {
-                    switch allowedReactions {
+                if let cachedData = data.cachedData as? CachedGroupData, case let .known(reactionSettings) = cachedData.reactionSettings {
+                    switch reactionSettings.allowedReactions {
                     case .all:
                         label = presentationData.strings.PeerInfo_LabelAllReactions
                     case .empty:
@@ -2301,8 +2294,8 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 canViewAdminsAndBanned = true
             } else if case let .admin(rights, _) = group.role {
                 let label: String
-                if let cachedData = data.cachedData as? CachedGroupData, case let .known(allowedReactions) = cachedData.allowedReactions {
-                    switch allowedReactions {
+                if let cachedData = data.cachedData as? CachedGroupData, case let .known(reactionSettings) = cachedData.reactionSettings {
+                    switch reactionSettings.allowedReactions {
                     case .all:
                         label = presentationData.strings.PeerInfo_LabelAllReactions
                     case .empty:
@@ -2435,6 +2428,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private(set) var state = PeerInfoState(
         isEditing: false,
         selectedMessageIds: nil,
+        selectedStoryIds: nil,
         updatingAvatar: nil,
         updatingBio: nil,
         avatarUploadProgress: nil,
@@ -3709,7 +3703,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         return
                     }
                     if let peer = data.peer as? TelegramUser {
-                        if strongSelf.isSettings, let cachedData = data.cachedData as? CachedUserData {
+                        if strongSelf.isSettings || strongSelf.isMyProfile, let cachedData = data.cachedData as? CachedUserData {
                             let firstName = strongSelf.headerNode.editingContentNode.editingTextForKey(.firstName) ?? ""
                             let lastName = strongSelf.headerNode.editingContentNode.editingTextForKey(.lastName) ?? ""
                             let bio = strongSelf.state.updatingBio
@@ -4054,12 +4048,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.chatInterfaceInteraction.selectionState = strongSelf.state.selectedMessageIds.flatMap { ChatInterfaceSelectionState(selectedIds: $0) }
                 strongSelf.paneContainerNode.updateSelectedMessageIds(strongSelf.state.selectedMessageIds, animated: true)
             case .selectionDone:
-                strongSelf.state = strongSelf.state.withSelectedMessageIds(nil)
+                strongSelf.state = strongSelf.state.withSelectedMessageIds(nil).withSelectedStoryIds(nil)
                 if let (layout, navigationHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring), additive: false)
                 }
                 strongSelf.chatInterfaceInteraction.selectionState = strongSelf.state.selectedMessageIds.flatMap { ChatInterfaceSelectionState(selectedIds: $0) }
                 strongSelf.paneContainerNode.updateSelectedMessageIds(strongSelf.state.selectedMessageIds, animated: true)
+                strongSelf.paneContainerNode.updateSelectedStoryIds(strongSelf.state.selectedStoryIds, animated: true)
             case .search, .searchWithTags, .standaloneSearch:
                 strongSelf.activateSearch()
             case .more:
@@ -4658,6 +4653,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self.maybePlayBirthdayAnimation()
             }
         }
+        
+        if let peer = data.peer, peer.isCopyProtectionEnabled {
+            setLayerDisableScreenshots(self.layer, true)
+        } else {
+            setLayerDisableScreenshots(self.layer, false)
+        }
     }
     
     func scrollToTop() {
@@ -4682,7 +4683,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let contentOffset = self.scrollNode.view.contentOffset
             let paneAreaExpansionFinalPoint: CGFloat = self.paneContainerNode.frame.minY - navigationHeight
             if contentOffset.y < paneAreaExpansionFinalPoint - CGFloat.ulpOfOne {
-                self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: paneAreaExpansionFinalPoint), animated: animated)
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
+                
+                self.ignoreScrolling = true
+                transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: paneAreaExpansionFinalPoint), size: self.scrollNode.bounds.size))
+                self.ignoreScrolling = false
+                self.updateNavigation(transition: transition, additive: false, animateHeader: true)
+                if let (layout, navigationHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: true)
+                }
             }
         }
     }
@@ -6541,10 +6550,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                     let text: String
                     switch error {
-                        case .limitExceeded:
-                            text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
-                        default:
-                            text = strongSelf.presentationData.strings.Login_UnknownError
+                    case .limitExceeded:
+                        text = strongSelf.presentationData.strings.TwoStepAuth_FloodError
+                    case .premiumRequired:
+                        text = strongSelf.presentationData.strings.Conversation_SendMessageErrorNonPremiumForbidden(displayTitle).string
+                    default:
+                        text = strongSelf.presentationData.strings.Login_UnknownError
                     }
                     strongSelf.controller?.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }))
@@ -8460,7 +8471,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         let postbox = self.context.account.postbox
         let signal: Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError>
-        if self.isSettings {
+        if self.isSettings || self.isMyProfile {
             if case .fallback = mode {
                 signal = self.context.engine.accountData.updateFallbackPhoto(resource: resource, videoResource: nil, videoStartTimestamp: nil, markup: nil, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
@@ -8713,9 +8724,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         let peerId = self.peerId
         let isSettings = self.isSettings
+        let isMyProfile = self.isMyProfile
         self.updateAvatarDisposable.set((videoResource
         |> mapToSignal { videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
-            if isSettings {
+            if isSettings || isMyProfile {
                 if case .fallback = mode {
                     return context.engine.accountData.updateFallbackPhoto(resource: photoResource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, markup: markup, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
@@ -8871,14 +8883,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let keyboardInputData = Promise<AvatarKeyboardInputData>()
             keyboardInputData.set(AvatarEditorScreen.inputData(context: strongSelf.context, isGroup: peer.id.namespace != Namespaces.Peer.CloudUser))
             
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasDeleteButton, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: isForum, title: title, isSuggesting: [.custom, .suggest].contains(mode))!
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasDeleteButton, hasViewButton: false, personalPhoto: strongSelf.isSettings || strongSelf.isMyProfile, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: isForum, title: title, isSuggesting: [.custom, .suggest].contains(mode))!
             mixin.stickersContext = LegacyPaintStickersContext(context: strongSelf.context)
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { [weak self] assetsController in
                 guard let strongSelf = self else {
                     return
                 }
-                let controller = WebSearchController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData,  peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: strongSelf.isSettings ? nil : peer.compactDisplayTitle, completion: { [weak self] result in
+                let controller = WebSearchController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData,  peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: (strongSelf.isSettings || strongSelf.isMyProfile) ? nil : peer.compactDisplayTitle, completion: { [weak self] result in
                     assetsController?.dismiss()
                     self?.updateProfilePhoto(result, mode: mode)
                 }))
@@ -9064,7 +9076,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         
         var temporary = false
-        if self.isSettings && self.data?.globalSettings?.privacySettings?.phoneDiscoveryEnabled == false && (self.data?.peer?.addressName ?? "").isEmpty {
+        if (self.isSettings || self.isMyProfile) && self.data?.globalSettings?.privacySettings?.phoneDiscoveryEnabled == false && (self.data?.peer?.addressName ?? "").isEmpty {
             temporary = true
         }
         controller.present(self.context.sharedContext.makeChatQrCodeScreen(context: self.context, peer: peer, threadId: threadId, temporary: temporary), in: .window(.root))
@@ -10425,7 +10437,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         self.headerNode.customNavigationContentNode = self.paneContainerNode.currentPane?.node.navigationContentNode
         
-        let isScrollEnabled = !self.isMediaOnly && self.headerNode.customNavigationContentNode == nil
+        var isScrollEnabled = !self.isMediaOnly && self.headerNode.customNavigationContentNode == nil
+        if self.state.selectedStoryIds != nil {
+            isScrollEnabled = false
+        }
         if self.scrollNode.view.isScrollEnabled != isScrollEnabled {
             self.scrollNode.view.isScrollEnabled = isScrollEnabled
         }
@@ -10480,7 +10495,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let items = self.isSettings ? settingsItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isExpanded: self.headerNode.isAvatarExpanded) : infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeerDistance: self.nearbyPeerDistance, reactionSourceMessageId: self.reactionSourceMessageId, callMessages: self.callMessages, chatLocation: self.chatLocation, isOpenedFromChat: self.isOpenedFromChat)
             
             contentHeight += headerHeight
-            if !(self.isSettings && self.state.isEditing) {
+            if !((self.isSettings || self.isMyProfile) && self.state.isEditing) {
                 contentHeight += sectionSpacing + 12.0
             }
               
@@ -10501,7 +10516,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     wasAdded = true
                 }
                 
-                if wasAdded && transition.isAnimated && self.isSettings && !self.state.isEditing {
+                if wasAdded && transition.isAnimated && (self.isSettings || self.isMyProfile) && !self.state.isEditing {
                     sectionNode.alpha = 0.0
                     transition.updateAlpha(node: sectionNode, alpha: 1.0, delay: 0.1)
                 }
@@ -10520,7 +10535,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     transition.updateFrame(node: sectionNode, frame: sectionFrame)
                 }
                 
-                if wasAdded && transition.isAnimated && self.isSettings && !self.state.isEditing {
+                if wasAdded && transition.isAnimated && (self.isSettings || self.isMyProfile) && !self.state.isEditing {
                 } else {
                     transition.updateAlpha(node: sectionNode, alpha: self.state.isEditing ? 0.0 : 1.0)
                 }
@@ -10856,9 +10871,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             if let selectionPanelNode = self.paneContainerNode.selectionPanelNode {
                 bottomInset = max(bottomInset, selectionPanelNode.bounds.height)
             }
+            
+            var disableTabSwitching = false
+            if self.state.selectedStoryIds != nil {
+                disableTabSwitching = true
+            }
                         
             let navigationBarHeight: CGFloat = !self.isSettings && layout.isModalOverlay ? 56.0 : 44.0
-            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, deviceMetrics: layout.deviceMetrics, visibleHeight: visibleHeight, expansionFraction: effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, areTabsHidden: self.headerNode.customNavigationContentNode != nil, navigationHeight: navigationHeight, transition: transition)
+            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, deviceMetrics: layout.deviceMetrics, visibleHeight: visibleHeight, expansionFraction: effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, areTabsHidden: self.headerNode.customNavigationContentNode != nil, disableTabSwitching: disableTabSwitching, navigationHeight: navigationHeight, transition: transition)
           
             transition.updateFrame(node: self.headerNode.navigationButtonContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight)))
             
@@ -10873,6 +10893,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     leftNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .qrCode, isForExpandedView: false))
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
+                } else if self.isMyProfile {
+                    rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 } else if peerInfoCanEdit(peer: self.data?.peer, chatLocation: self.chatLocation, threadData: self.data?.threadData, cachedData: self.data?.cachedData, isContact: self.data?.isContact) {
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 }
@@ -10882,7 +10904,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     rightNavigationButtons.insert(PeerInfoHeaderNavigationButtonSpec(key: .postStory, isForExpandedView: false), at: 0)
                 }
                 
-                if self.state.selectedMessageIds == nil {
+                if self.state.selectedMessageIds == nil && self.state.selectedStoryIds == nil {
                     if let currentPaneKey = self.paneContainerNode.currentPaneKey {
                         switch currentPaneKey {
                         case .files, .music, .links, .members:
@@ -11055,7 +11077,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             return
         }
         if self.state.isEditing {
-            if self.isSettings {
+            if self.isSettings || self.isMyProfile {
                 if targetContentOffset.pointee.y < navigationHeight {
                     if targetContentOffset.pointee.y < navigationHeight / 2.0 {
                         targetContentOffset.pointee.y = 0.0
@@ -11065,7 +11087,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             }
         } else {
-            let height: CGFloat = self.isSettings ? 140.0 : 140.0
+            let height: CGFloat = (self.isSettings || self.isMyProfile) ? 140.0 : 140.0
             if targetContentOffset.pointee.y < height {
                 if targetContentOffset.pointee.y < height / 2.0 {
                     targetContentOffset.pointee.y = 0.0
@@ -11079,7 +11101,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     self.previousVelocityM1 = 0.0
                 }
             }
-            if !self.isSettings {
+            if !self.isSettings && !self.isMyProfile {
                 let paneAreaExpansionDistance: CGFloat = 32.0
                 let paneAreaExpansionFinalPoint: CGFloat = self.paneContainerNode.frame.minY - navigationHeight
                 if targetContentOffset.pointee.y > paneAreaExpansionFinalPoint - paneAreaExpansionDistance && targetContentOffset.pointee.y < paneAreaExpansionFinalPoint {
@@ -11168,7 +11190,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private var didPlayBirthdayAnimation = false
     private weak var birthdayOverlayNode: PeerInfoBirthdayOverlay?
     func maybePlayBirthdayAnimation() {
-        guard !self.didPlayBirthdayAnimation, !self.isSettings && !self.isMediaOnly, let cachedData = self.data?.cachedData as? CachedUserData, let birthday = cachedData.birthday, let (layout, _) = self.validLayout else {
+        guard !self.didPlayBirthdayAnimation, !self.isSettings && !self.isMyProfile && !self.isMediaOnly, let cachedData = self.data?.cachedData as? CachedUserData, let birthday = cachedData.birthday, let (layout, _) = self.validLayout else {
             return
         }
         
@@ -11198,7 +11220,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     func refreshHasPersonalChannelsIfNeeded() {
-        if !self.isSettings {
+        if !self.isSettings && !self.isMyProfile {
             return
         }
         if self.personalChannelsDisposable != nil {
@@ -11220,6 +11242,31 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             }
         })
+    }
+    
+    func toggleStorySelection(ids: [Int32], isSelected: Bool) {
+        self.expandTabs(animated: true)
+        
+        if var selectedStoryIds = self.state.selectedStoryIds {
+            for id in ids {
+                if isSelected {
+                    selectedStoryIds.insert(id)
+                } else {
+                    selectedStoryIds.remove(id)
+                }
+            }
+            self.state = self.state.withSelectedStoryIds(selectedStoryIds)
+        } else {
+            self.state = self.state.withSelectedStoryIds(isSelected ? Set(ids) : Set())
+        }
+        if let (layout, navigationHeight) = self.validLayout {
+            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring), additive: false)
+        }
+        self.paneContainerNode.updateSelectedStoryIds(self.state.selectedStoryIds, animated: true)
+    }
+    
+    func cancelItemSelection() {
+        self.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
     }
 }
 
@@ -11332,7 +11379,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         
         self.navigationBar?.enableAutomaticBackButton = false
                 
-        if isSettings {
+        if isSettings || isMyProfile {
             let activeSessionsContextAndCountSignal = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError> in
                 let activeSessionsContext = context.engine.privacy.activeSessions()
                 let webSessionsContext = context.engine.privacy.webSessions()
@@ -12022,6 +12069,14 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     
     public static func preloadBirthdayAnimations(context: AccountContext, birthday: TelegramBirthday) {
         PeerInfoBirthdayOverlay.preloadBirthdayAnimations(context: context, birthday: birthday)
+    }
+    
+    public func toggleStorySelection(ids: [Int32], isSelected: Bool) {
+        self.controllerNode.toggleStorySelection(ids: ids, isSelected: isSelected)
+    }
+    
+    public func cancelItemSelection() {
+        self.controllerNode.cancelItemSelection()
     }
 }
 

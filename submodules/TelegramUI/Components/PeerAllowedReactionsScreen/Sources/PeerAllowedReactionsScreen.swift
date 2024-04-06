@@ -76,7 +76,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
         private var isEnabled: Bool = false
         private var availableReactions: AvailableReactions?
         private var enabledReactions: [EmojiComponentReactionItem]?
-        private var appliedAllowedReactions: PeerAllowedReactions?
+        private var allowedReactionCount: Int = 11
+        private var appliedReactionSettings: PeerReactionSettings?
         
         private var emojiContent: EmojiPagerContentComponent?
         private var emojiContentDisposable: Disposable?
@@ -84,8 +85,6 @@ final class PeerAllowedReactionsScreenComponent: Component {
         
         private var displayInput: Bool = false
         private var recenterOnCaret: Bool = false
-        
-        private var allowedReactionCount: Int = 11
         
         private var isApplyingSettings: Bool = false
         private var applyDisposable: Disposable?
@@ -153,7 +152,9 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 allowedReactions = .empty
             }
             
-            if self.appliedAllowedReactions != allowedReactions {
+            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: Int32(self.allowedReactionCount))
+            
+            if self.appliedReactionSettings != reactionSettings {
                 if case .empty = allowedReactions {
                     self.applySettings(standalone: true)
                 } else {
@@ -242,7 +243,9 @@ final class PeerAllowedReactionsScreenComponent: Component {
             } else {
                 allowedReactions = .empty
             }
-            let applyDisposable = (component.context.engine.peers.updatePeerAllowedReactions(peerId: component.peerId, allowedReactions: allowedReactions, reactionsLimit: nil)
+            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: Int32(self.allowedReactionCount))
+            
+            let applyDisposable = (component.context.engine.peers.updatePeerReactionSettings(peerId: component.peerId, reactionSettings: reactionSettings)
             |> deliverOnMainQueue).start(error: { [weak self] error in
                 guard let self, let component = self.component else {
                     return
@@ -263,7 +266,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 guard let self else {
                     return
                 }
-                self.appliedAllowedReactions = allowedReactions
+                self.appliedReactionSettings = reactionSettings
                 if !standalone {
                     self.environment?.controller()?.dismiss()
                 }
@@ -331,7 +334,6 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 self.isUpdating = false
             }
             
-            
             let environment = environment[EnvironmentType.self].value
             let themeUpdated = self.environment?.theme !== environment.theme
             self.environment = environment
@@ -352,7 +354,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 self.enabledReactions = enabledReactions
                 self.availableReactions = component.initialContent.availableReactions
                 self.isEnabled = component.initialContent.isEnabled
-                self.appliedAllowedReactions = component.initialContent.allowedReactions
+                self.appliedReactionSettings = component.initialContent.reactionSettings
+                self.allowedReactionCount = (component.initialContent.reactionSettings?.maxReactionCount).flatMap(Int.init) ?? 11
             }
             var caretPosition = self.caretPosition ?? enabledReactions.count
             caretPosition = max(0, min(enabledReactions.count, caretPosition))
@@ -1106,18 +1109,18 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
         public let isEnabled: Bool
         public let enabledReactions: [EmojiComponentReactionItem]
         public let availableReactions: AvailableReactions?
-        public let allowedReactions: PeerAllowedReactions?
+        public let reactionSettings: PeerReactionSettings?
         
         init(
             isEnabled: Bool,
             enabledReactions: [EmojiComponentReactionItem],
             availableReactions: AvailableReactions?,
-            allowedReactions: PeerAllowedReactions?
+            reactionSettings: PeerReactionSettings?
         ) {
             self.isEnabled = isEnabled
             self.enabledReactions = enabledReactions
             self.availableReactions = availableReactions
-            self.allowedReactions = allowedReactions
+            self.reactionSettings = reactionSettings
         }
         
         public static func ==(lhs: Content, rhs: Content) -> Bool {
@@ -1133,7 +1136,7 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
             if lhs.availableReactions != rhs.availableReactions {
                 return false
             }
-            if lhs.allowedReactions != rhs.allowedReactions {
+            if lhs.reactionSettings != rhs.reactionSettings {
                 return false
             }
             return true
@@ -1202,9 +1205,9 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
             var reactions: [MessageReaction.Reaction] = []
             var isEnabled = false
             
-            let allowedReactions = cachedData.allowedReactions.knownValue
-            if let allowedReactions {
-                switch allowedReactions {
+            let reactionSettings = cachedData.reactionSettings.knownValue
+            if let reactionSettings {
+                switch reactionSettings.allowedReactions {
                 case .all:
                     isEnabled = true
                     if let availableReactions {
@@ -1246,7 +1249,7 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
                     }
                 }
                 
-                return Content(isEnabled: isEnabled, enabledReactions: result, availableReactions: availableReactions, allowedReactions: allowedReactions)
+                return Content(isEnabled: isEnabled, enabledReactions: result, availableReactions: availableReactions, reactionSettings: reactionSettings)
             }
         }
         |> distinctUntilChanged

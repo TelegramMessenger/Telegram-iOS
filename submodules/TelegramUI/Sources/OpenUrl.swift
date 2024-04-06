@@ -988,7 +988,17 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             return
         }
         
+        var isInternetUrl = false
         if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
+            isInternetUrl = true
+        }
+        if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
+            if parsedUrl.scheme == "ipfs" || parsedUrl.scheme == "ipns" {
+                isInternetUrl = true
+            }
+        }
+        
+        if isInternetUrl {
             if parsedUrl.host == "t.me" || parsedUrl.host == "telegram.me" {
                 handleInternalUrl(parsedUrl.absoluteString)
             } else {
@@ -1019,7 +1029,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 let _ = (settings
                 |> deliverOnMainQueue).startStandalone(next: { settings in
                     if settings.defaultWebBrowser == nil {
-                        if !"".isEmpty && isCompact {
+                        if isCompact && context.sharedContext.immediateExperimentalUISettings.browserExperiment {
                             let controller = BrowserScreen(context: context, subject: .webPage(url: parsedUrl.absoluteString))
                             navigationController?.pushViewController(controller)
                         } else {

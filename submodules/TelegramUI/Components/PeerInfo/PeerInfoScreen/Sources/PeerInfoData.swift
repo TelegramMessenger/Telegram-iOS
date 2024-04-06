@@ -29,6 +29,7 @@ enum AvatarUploadProgress {
 final class PeerInfoState {
     let isEditing: Bool
     let selectedMessageIds: Set<MessageId>?
+    let selectedStoryIds: Set<Int32>?
     let updatingAvatar: PeerInfoUpdatingAvatar?
     let updatingBio: String?
     let avatarUploadProgress: AvatarUploadProgress?
@@ -40,6 +41,7 @@ final class PeerInfoState {
     init(
         isEditing: Bool,
         selectedMessageIds: Set<MessageId>?,
+        selectedStoryIds: Set<Int32>?,
         updatingAvatar: PeerInfoUpdatingAvatar?,
         updatingBio: String?,
         avatarUploadProgress: AvatarUploadProgress?,
@@ -50,6 +52,7 @@ final class PeerInfoState {
     ) {
         self.isEditing = isEditing
         self.selectedMessageIds = selectedMessageIds
+        self.selectedStoryIds = selectedStoryIds
         self.updatingAvatar = updatingAvatar
         self.updatingBio = updatingBio
         self.avatarUploadProgress = avatarUploadProgress
@@ -63,6 +66,7 @@ final class PeerInfoState {
         return PeerInfoState(
             isEditing: isEditing,
             selectedMessageIds: self.selectedMessageIds,
+            selectedStoryIds: self.selectedStoryIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -77,6 +81,22 @@ final class PeerInfoState {
         return PeerInfoState(
             isEditing: self.isEditing,
             selectedMessageIds: selectedMessageIds,
+            selectedStoryIds: self.selectedStoryIds,
+            updatingAvatar: self.updatingAvatar,
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress,
+            highlightedButton: self.highlightedButton,
+            isEditingBirthDate: self.isEditingBirthDate,
+            updatingBirthDate: self.updatingBirthDate,
+            personalChannels: self.personalChannels
+        )
+    }
+    
+    func withSelectedStoryIds(_ selectedStoryIds: Set<Int32>?) -> PeerInfoState {
+        return PeerInfoState(
+            isEditing: self.isEditing,
+            selectedMessageIds: self.selectedMessageIds,
+            selectedStoryIds: selectedStoryIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -91,6 +111,7 @@ final class PeerInfoState {
         return PeerInfoState(
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
+            selectedStoryIds: self.selectedStoryIds,
             updatingAvatar: updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -105,6 +126,7 @@ final class PeerInfoState {
         return PeerInfoState(
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
+            selectedStoryIds: self.selectedStoryIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -119,6 +141,7 @@ final class PeerInfoState {
         return PeerInfoState(
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
+            selectedStoryIds: self.selectedStoryIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: avatarUploadProgress,
@@ -133,6 +156,7 @@ final class PeerInfoState {
         return PeerInfoState(
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
+            selectedStoryIds: self.selectedStoryIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -147,6 +171,7 @@ final class PeerInfoState {
         return PeerInfoState(
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
+            selectedStoryIds: self.selectedStoryIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -161,6 +186,7 @@ final class PeerInfoState {
         return PeerInfoState(
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
+            selectedStoryIds: self.selectedStoryIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,
@@ -175,6 +201,7 @@ final class PeerInfoState {
         return PeerInfoState(
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
+            selectedStoryIds: self.selectedStoryIds,
             updatingAvatar: self.updatingAvatar,
             updatingBio: self.updatingBio,
             avatarUploadProgress: self.avatarUploadProgress,

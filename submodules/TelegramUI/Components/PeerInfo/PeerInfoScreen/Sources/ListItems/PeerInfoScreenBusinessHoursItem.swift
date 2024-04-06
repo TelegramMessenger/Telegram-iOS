@@ -399,8 +399,25 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
             containerSize: CGSize(width: width - sideInset - dayRightInset, height: 100.0)
         )
         
-        var timezoneSwitchButtonSize: CGSize?
+        var hasTimezoneDependentEntries = false
         if item.businessHours.timezoneId != self.currentTimezone.identifier {
+            var currentCalendar = Calendar(identifier: .gregorian)
+            currentCalendar.timeZone = TimeZone(identifier: item.businessHours.timezoneId) ?? TimeZone.current
+            
+            let timezoneOffsetMinutes = (self.currentTimezone.secondsFromGMT() - currentCalendar.timeZone.secondsFromGMT()) / 60
+            
+            for i in 0 ..< businessDays.count {
+                let businessHoursTextLocal = dayBusinessHoursText(presentationData: presentationData, day: businessDays[i], offsetMinutes: 0)
+                let businessHoursTextOffset = dayBusinessHoursText(presentationData: presentationData, day: businessDays[i], offsetMinutes: timezoneOffsetMinutes)
+                if businessHoursTextOffset != businessHoursTextLocal {
+                    hasTimezoneDependentEntries = true
+                    break
+                }
+            }
+        }
+        
+        var timezoneSwitchButtonSize: CGSize?
+        if hasTimezoneDependentEntries {
             let timezoneSwitchButton: ComponentView<Empty>
             if let current = self.timezoneSwitchButton {
                 timezoneSwitchButton = current

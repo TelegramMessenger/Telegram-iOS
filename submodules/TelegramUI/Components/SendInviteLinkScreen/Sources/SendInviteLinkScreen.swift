@@ -22,17 +22,20 @@ private final class SendInviteLinkScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let peer: EnginePeer
     let link: String?
     let peers: [TelegramForbiddenInvitePeer]
     let peerPresences: [EnginePeer.Id: EnginePeer.Presence]
     
     init(
         context: AccountContext,
+        peer: EnginePeer,
         link: String?,
         peers: [TelegramForbiddenInvitePeer],
         peerPresences: [EnginePeer.Id: EnginePeer.Presence]
     ) {
         self.context = context
+        self.peer = peer
         self.link = link
         self.peers = peers
         self.peerPresences = peerPresences
@@ -412,7 +415,11 @@ private final class SendInviteLinkScreenComponent: Component {
                 
                 let text: String
                 if premiumRestrictedUsers.count == 1 {
-                    text = environment.strings.SendInviteLink_TextContactsAndPremiumOneUser(premiumRestrictedUsers[0].peer.compactDisplayTitle).string
+                    if case let .channel(channel) = component.peer, case .broadcast = channel.info {
+                        text = environment.strings.SendInviteLink_ChannelTextContactsAndPremiumOneUser(premiumRestrictedUsers[0].peer.compactDisplayTitle).string
+                    } else {
+                        text = environment.strings.SendInviteLink_TextContactsAndPremiumOneUser(premiumRestrictedUsers[0].peer.compactDisplayTitle).string
+                    }
                 } else {
                     let extraCount = premiumRestrictedUsers.count - 3
                     
@@ -439,9 +446,17 @@ private final class SendInviteLinkScreenComponent: Component {
                     }
                     
                     if extraCount >= 1 {
-                        text = environment.strings.SendInviteLink_TextContactsAndPremiumMultipleUsers(Int32(extraCount)).replacingOccurrences(of: "{user_list}", with: peersText)
+                        if case let .channel(channel) = component.peer, case .broadcast = channel.info {
+                            text = environment.strings.SendInviteLink_ChannelTextContactsAndPremiumMultipleUsers(Int32(extraCount)).replacingOccurrences(of: "{user_list}", with: peersText)
+                        } else {
+                            text = environment.strings.SendInviteLink_TextContactsAndPremiumMultipleUsers(Int32(extraCount)).replacingOccurrences(of: "{user_list}", with: peersText)
+                        }
                     } else {
-                        text = environment.strings.SendInviteLink_TextContactsAndPremiumOneUser(peersText).string
+                        if case let .channel(channel) = component.peer, case .broadcast = channel.info {
+                            text = environment.strings.SendInviteLink_ChannelTextContactsAndPremiumOneUser(peersText).string
+                        } else {
+                            text = environment.strings.SendInviteLink_TextContactsAndPremiumOneUser(peersText).string
+                        }
                     }
                 }
                 
@@ -1066,7 +1081,7 @@ public class SendInviteLinkScreen: ViewControllerComponentContainer {
         self.link = link
         self.peers = peers
         
-        super.init(context: context, component: SendInviteLinkScreenComponent(context: context, link: link, peers: peers, peerPresences: [:]), navigationBarAppearance: .none)
+        super.init(context: context, component: SendInviteLinkScreenComponent(context: context, peer: peer, link: link, peers: peers, peerPresences: [:]), navigationBarAppearance: .none)
         
         self.statusBar.statusBarStyle = .Ignore
         self.navigationPresentation = .flatModal
@@ -1085,7 +1100,7 @@ public class SendInviteLinkScreen: ViewControllerComponentContainer {
                     parsedPresences[id] = presence
                 }
             }
-            self.updateComponent(component: AnyComponent(SendInviteLinkScreenComponent(context: context, link: link, peers: peers, peerPresences: parsedPresences)), transition: .immediate)
+            self.updateComponent(component: AnyComponent(SendInviteLinkScreenComponent(context: context, peer: peer, link: link, peers: peers, peerPresences: parsedPresences)), transition: .immediate)
         })
     }
     

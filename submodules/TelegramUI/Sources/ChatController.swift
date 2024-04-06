@@ -223,6 +223,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
     let currentChatListFilter: Int32?
     let chatNavigationStack: [ChatNavigationStackItem]
+    let customChatNavigationStack: [EnginePeer.Id]?
     
     public var peekActions: ChatControllerPeekActions = .standard
     var didSetup3dTouch: Bool = false
@@ -595,7 +596,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, botAppStart: ChatControllerInitialBotAppStart? = nil, mode: ChatControllerPresentationMode = .standard(.default), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = []) {
+    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, botAppStart: ChatControllerInitialBotAppStart? = nil, mode: ChatControllerPresentationMode = .standard(.default), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = [], customChatNavigationStack: [EnginePeer.Id]? = nil) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }
@@ -610,6 +611,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.peekData = peekData
         self.currentChatListFilter = chatListFilter
         self.chatNavigationStack = chatNavigationStack
+        self.customChatNavigationStack = customChatNavigationStack
 
         var useSharedAnimationPhase = false
         switch mode {
@@ -5672,7 +5674,45 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             } else {
                                 isRegularChat = true
                             }
-                            if isRegularChat, strongSelf.nextChannelToReadDisposable == nil {
+                            if strongSelf.nextChannelToReadDisposable == nil, let peerId = strongSelf.chatLocation.peerId, let customChatNavigationStack = strongSelf.customChatNavigationStack {
+                                if let index = customChatNavigationStack.firstIndex(of: peerId), index != customChatNavigationStack.count - 1 {
+                                    let nextPeerId = customChatNavigationStack[index + 1]
+                                    strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
+                                        strongSelf.context.engine.data.subscribe(
+                                            TelegramEngine.EngineData.Item.Peer.Peer(id: nextPeerId)
+                                        ),
+                                        ApplicationSpecificNotice.getNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager)
+                                    )
+                                    |> then(.complete() |> delay(1.0, queue: .mainQueue()))
+                                    |> restart).startStrict(next: { nextPeer, nextChatSuggestionTip in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+
+                                        strongSelf.offerNextChannelToRead = true
+                                        strongSelf.chatDisplayNode.historyNode.nextChannelToRead = nextPeer.flatMap { nextPeer -> (peer: EnginePeer, unreadCount: Int, location: TelegramEngine.NextUnreadChannelLocation) in
+                                            return (peer: nextPeer, unreadCount: 0, location: .same)
+                                        }
+                                        strongSelf.chatDisplayNode.historyNode.nextChannelToReadDisplayName = nextChatSuggestionTip >= 3
+
+                                        let nextPeerId = nextPeer?.id
+
+                                        if strongSelf.preloadNextChatPeerId != nextPeerId {
+                                            strongSelf.preloadNextChatPeerId = nextPeerId
+                                            if let nextPeerId = nextPeerId {
+                                                let combinedDisposable = DisposableSet()
+                                                strongSelf.preloadNextChatPeerIdDisposable.set(combinedDisposable)
+                                                combinedDisposable.add(strongSelf.context.account.viewTracker.polledChannel(peerId: nextPeerId).startStrict())
+                                                combinedDisposable.add(strongSelf.context.account.addAdditionalPreloadHistoryPeerId(peerId: nextPeerId))
+                                            } else {
+                                                strongSelf.preloadNextChatPeerIdDisposable.set(nil)
+                                            }
+                                        }
+                                        
+                                        strongSelf.updateNextChannelToReadVisibility()
+                                    })
+                                }
+                            } else if isRegularChat, strongSelf.nextChannelToReadDisposable == nil {
                                 //TODO:loc optimize
                                 let accountPeerId = strongSelf.context.account.peerId
                                 strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
@@ -7600,7 +7640,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })
                     if let editMessage = interfaceState.editMessage, let message = combinedInitialData.initialData?.associatedMessages[editMessage.messageId] {
-                        updated = updatedChatEditInterfaceMessageState(state: updated, message: message)
+                        let (updatedState, updatedPreviewQueryState) = updatedChatEditInterfaceMessageState(context: strongSelf.context, state: updated, message: message)
+                        updated = updatedState
+                        strongSelf.editingUrlPreviewQueryState = updatedPreviewQueryState
                     }
                     updated = updated.updatedSlowmodeState(slowmodeState)
                     return updated
@@ -8935,7 +8977,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return interfaceState.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: inputText), disableUrlPreviews: disableUrlPreviews, inputTextMaxLength: inputTextMaxLength))
                             }
                             
-                            updated = updatedChatEditInterfaceMessageState(state: updated, message: message)
+                            let (updatedState, updatedPreviewQueryState) = updatedChatEditInterfaceMessageState(context: strongSelf.context, state: updated, message: message)
+                            updated = updatedState
+                            strongSelf.editingUrlPreviewQueryState = updatedPreviewQueryState
+                            
                             updated = updated.updatedInputMode({ _ in
                                 return .text
                             })
@@ -11793,7 +11838,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), animated: false, chatListFilter: nextFolderId, chatNavigationStack: updatedChatNavigationStack, completion: { nextController in
                     (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
-                }))
+                }, customChatNavigationStack: strongSelf.customChatNavigationStack))
             }
         }
         

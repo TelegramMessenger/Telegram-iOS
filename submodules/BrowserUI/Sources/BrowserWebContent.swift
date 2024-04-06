@@ -10,6 +10,76 @@ import AccountContext
 import WebKit
 import AppBundle
 
+private final class IpfsSchemeHandler: NSObject, WKURLSchemeHandler {
+    private final class PendingTask {
+        let sourceTask: any WKURLSchemeTask
+        var urlSessionTask: URLSessionTask?
+        let isCompleted = Atomic<Bool>(value: false)
+        
+        init(sourceTask: any WKURLSchemeTask) {
+            self.sourceTask = sourceTask
+            
+            var cleanUrl = sourceTask.request.url!.absoluteString
+            if let range = cleanUrl.range(of: "/ipfs/") {
+                cleanUrl = "ipfs://" + String(cleanUrl[range.upperBound...])
+            } else if let range = cleanUrl.range(of: "/ipns/") {
+                cleanUrl = "ipns://" + String(cleanUrl[range.upperBound...])
+            }
+            print("Load: \(cleanUrl)")
+            cleanUrl = cleanUrl.replacingOccurrences(of: "ipns://", with: "ipns/")
+            cleanUrl = cleanUrl.replacingOccurrences(of: "ipfs://", with: "ipfs/")
+            let mappedUrl = "https://cloudflare-ipfs.com/\(cleanUrl)"
+            let isCompleted = self.isCompleted
+            self.urlSessionTask = URLSession.shared.dataTask(with: URLRequest(url: URL(string: mappedUrl)!), completionHandler: { data, response, error in
+                if isCompleted.swap(true) {
+                    return
+                }
+                
+                if let error {
+                    sourceTask.didFailWithError(error)
+                } else {
+                    if let response {
+                        sourceTask.didReceive(response)
+                    }
+                    if let data {
+                        sourceTask.didReceive(data)
+                    }
+                    sourceTask.didFinish()
+                }
+            })
+            self.urlSessionTask?.resume()
+        }
+        
+        func cancel() {
+            if let urlSessionTask = self.urlSessionTask {
+                self.urlSessionTask = nil
+                if !self.isCompleted.swap(true) {
+                    switch urlSessionTask.state {
+                    case .running, .suspended:
+                        urlSessionTask.cancel()
+                    default:
+                        break
+                    }
+                }
+            }
+        }
+    }
+    
+    private var pendingTasks: [PendingTask] = []
+    
+    func webView(_ webView: WKWebView, start urlSchemeTask: any WKURLSchemeTask) {
+        self.pendingTasks.append(PendingTask(sourceTask: urlSchemeTask))
+    }
+    
+    func webView(_ webView: WKWebView, stop urlSchemeTask: any WKURLSchemeTask) {
+        if let index = self.pendingTasks.firstIndex(where: { $0.sourceTask === urlSchemeTask }) {
+            let task = self.pendingTasks[index]
+            self.pendingTasks.remove(at: index)
+            task.cancel()
+        }
+    }
+}
+
 final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
     private let webView: WKWebView
     
@@ -22,8 +92,13 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
     
     var onScrollingUpdate: (ContentScrollingUpdate) -> Void = { _ in }
     
-    init(url: String) {
+    init(context: AccountContext, url: String) {
         let configuration = WKWebViewConfiguration()
+        
+        if context.sharedContext.immediateExperimentalUISettings.browserExperiment {
+            configuration.setURLSchemeHandler(IpfsSchemeHandler(), forURLScheme: "ipns")
+            configuration.setURLSchemeHandler(IpfsSchemeHandler(), forURLScheme: "ipfs")
+        }
         
         self.webView = WKWebView(frame: CGRect(), configuration: configuration)
         self.webView.allowsLinkPreview = false

@@ -78,44 +78,48 @@ private final class ItemNode: ASDisplayNode {
         
         let color = presentationData.theme.list.itemSecondaryTextColor
         switch type {
-            case .chats:
-                title = presentationData.strings.ChatList_Search_FilterChats
-                icon = nil
-            case .topics:
-                title = presentationData.strings.ChatList_Search_FilterChats
-                icon = nil
-            case .media:
-                title = presentationData.strings.ChatList_Search_FilterMedia
-                icon = nil
-            case .downloads:
-                title = presentationData.strings.ChatList_Search_FilterDownloads
-                icon = nil
-            case .links:
-                title = presentationData.strings.ChatList_Search_FilterLinks
-                icon = nil
-            case .files:
-                title = presentationData.strings.ChatList_Search_FilterFiles
-                icon = nil
-            case .music:
-                title = presentationData.strings.ChatList_Search_FilterMusic
-                icon = nil
-            case .voice:
-                title = presentationData.strings.ChatList_Search_FilterVoice
-                icon = nil
-            case let .peer(peerId, isGroup, displayTitle, _):
-                title = displayTitle
-                let image: UIImage?
-                if isGroup {
-                    image = UIImage(bundleImageName: "Chat List/Search/Group")
-                } else if peerId.namespace == Namespaces.Peer.CloudChannel {
-                    image = UIImage(bundleImageName: "Chat List/Search/Channel")
-                } else {
-                    image = UIImage(bundleImageName: "Chat List/Search/User")
-                }
-                icon = generateTintedImage(image: image, color: color)
-            case let .date(_, _, displayTitle):
-                title = displayTitle
-                icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Calendar"), color: color)
+        case .chats:
+            title = presentationData.strings.ChatList_Search_FilterChats
+            icon = nil
+        case .topics:
+            title = presentationData.strings.ChatList_Search_FilterChats
+            icon = nil
+        case .channels:
+            //TODO:localize
+            title = "Channels"
+            icon = nil
+        case .media:
+            title = presentationData.strings.ChatList_Search_FilterMedia
+            icon = nil
+        case .downloads:
+            title = presentationData.strings.ChatList_Search_FilterDownloads
+            icon = nil
+        case .links:
+            title = presentationData.strings.ChatList_Search_FilterLinks
+            icon = nil
+        case .files:
+            title = presentationData.strings.ChatList_Search_FilterFiles
+            icon = nil
+        case .music:
+            title = presentationData.strings.ChatList_Search_FilterMusic
+            icon = nil
+        case .voice:
+            title = presentationData.strings.ChatList_Search_FilterVoice
+            icon = nil
+        case let .peer(peerId, isGroup, displayTitle, _):
+            title = displayTitle
+            let image: UIImage?
+            if isGroup {
+                image = UIImage(bundleImageName: "Chat List/Search/Group")
+            } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                image = UIImage(bundleImageName: "Chat List/Search/Channel")
+            } else {
+                image = UIImage(bundleImageName: "Chat List/Search/User")
+            }
+            icon = generateTintedImage(image: image, color: color)
+        case let .date(_, _, displayTitle):
+            title = displayTitle
+            icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Calendar"), color: color)
         }
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: color)

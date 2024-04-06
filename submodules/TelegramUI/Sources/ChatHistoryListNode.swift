@@ -2234,8 +2234,13 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 let releaseText: (String, [(Int, NSRange)])
                 switch nextChannelToRead.location {
                 case .same:
-                    swipeText = (self.currentPresentationData.strings.Chat_NextChannelSameLocationSwipeProgress, [])
-                    releaseText = (self.currentPresentationData.strings.Chat_NextChannelSameLocationSwipeAction, [])
+                    if let controllerNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode, let chatController = controllerNode.interfaceInteraction?.chatController() as? ChatControllerImpl, chatController.customChatNavigationStack != nil {
+                        swipeText = ("Pull up to go to the next channel", [])
+                        releaseText = ("Release to go to the next channel", [])
+                    } else {
+                        swipeText = (self.currentPresentationData.strings.Chat_NextChannelSameLocationSwipeProgress, [])
+                        releaseText = (self.currentPresentationData.strings.Chat_NextChannelSameLocationSwipeAction, [])
+                    }
                 case .archived:
                     swipeText = (self.currentPresentationData.strings.Chat_NextChannelArchivedSwipeProgress, [])
                     releaseText = (self.currentPresentationData.strings.Chat_NextChannelArchivedSwipeAction, [])

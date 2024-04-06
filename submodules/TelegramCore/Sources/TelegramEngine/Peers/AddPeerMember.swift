@@ -53,18 +53,18 @@ func _internal_addGroupMember(account: Account, peerId: PeerId, memberId: PeerId
         if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
             if let group = peer as? TelegramGroup {
                 return account.network.request(Api.functions.messages.addChatUser(chatId: group.id.id._internalGetInt64Value(), userId: inputUser, fwdLimit: 100))
-                |> mapError { error -> AddGroupMemberError in
+                |> `catch` { error -> Signal<Api.messages.InvitedUsers, AddGroupMemberError> in
                     switch error.errorDescription {
                     case "USERS_TOO_MUCH":
-                        return .groupFull
+                        return .fail(.groupFull)
                     case "USER_PRIVACY_RESTRICTED":
-                        return .privacy(nil)
+                        return .fail(.privacy(nil))
                     case "USER_CHANNELS_TOO_MUCH":
-                        return .tooManyChannels
+                        return .fail(.tooManyChannels)
                     case "USER_NOT_MUTUAL_CONTACT":
-                        return .notMutualContact
+                        return .fail(.privacy(nil))
                     default:
-                        return .generic
+                        return .fail(.generic)
                     }
                 }
                 |> mapToSignal { result -> Signal<Void, AddGroupMemberError> in

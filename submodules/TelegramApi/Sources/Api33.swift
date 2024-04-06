@@ -856,20 +856,26 @@ public extension Api.stories {
 }
 public extension Api.stories {
     enum Stories: TypeConstructorDescription {
-        case stories(count: Int32, stories: [Api.StoryItem], chats: [Api.Chat], users: [Api.User])
+        case stories(flags: Int32, count: Int32, stories: [Api.StoryItem], pinnedToTop: [Int32]?, chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .stories(let count, let stories, let chats, let users):
+                case .stories(let flags, let count, let stories, let pinnedToTop, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(1574486984)
+                        buffer.appendInt32(1673780490)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(stories.count))
                     for item in stories {
                         item.serialize(buffer, true)
                     }
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(pinnedToTop!.count))
+                    for item in pinnedToTop! {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(chats.count))
                     for item in chats {
@@ -886,32 +892,40 @@ public extension Api.stories {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .stories(let count, let stories, let chats, let users):
-                return ("stories", [("count", count as Any), ("stories", stories as Any), ("chats", chats as Any), ("users", users as Any)])
+                case .stories(let flags, let count, let stories, let pinnedToTop, let chats, let users):
+                return ("stories", [("flags", flags as Any), ("count", count as Any), ("stories", stories as Any), ("pinnedToTop", pinnedToTop as Any), ("chats", chats as Any), ("users", users as Any)])
     }
     }
     
         public static func parse_stories(_ reader: BufferReader) -> Stories? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: [Api.StoryItem]?
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.StoryItem]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StoryItem.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StoryItem.self)
             }
-            var _3: [Api.Chat]?
+            var _4: [Int32]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            } }
+            var _5: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _4: [Api.User]?
+            var _6: [Api.User]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.stories.Stories.stories(count: _1!, stories: _2!, chats: _3!, users: _4!)
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.stories.Stories.stories(flags: _1!, count: _2!, stories: _3!, pinnedToTop: _4, chats: _5!, users: _6!)
             }
             else {
                 return nil

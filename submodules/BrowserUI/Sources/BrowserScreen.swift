@@ -282,7 +282,7 @@ public class BrowserScreen: ViewController {
             let content: BrowserContent
             switch controller.subject {
             case let .webPage(url):
-                content = BrowserWebContent(url: url)
+                content = BrowserWebContent(context: controller.context, url: url)
             }
             
             self.content = content

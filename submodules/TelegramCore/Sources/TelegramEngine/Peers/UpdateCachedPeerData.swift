@@ -500,8 +500,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                     } else {
                                         mappedAllowedReactions = .empty
                                     }
-                                    
-                                    let _ = reactionsLimit
+                                    let mappedReactionSettings = PeerReactionSettings(allowedReactions: mappedAllowedReactions, maxReactionCount: reactionsLimit)
                                     
                                     return previous.withUpdatedParticipants(participants)
                                         .withUpdatedExportedInvitation(exportedInvitation)
@@ -517,7 +516,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         .withUpdatedThemeEmoticon(chatFullThemeEmoticon)
                                         .withUpdatedInviteRequestsPending(chatFullRequestsPending)
                                         .withUpdatedAutoremoveTimeout(autoremoveTimeout)
-                                        .withUpdatedAllowedReactions(.known(mappedAllowedReactions))
+                                        .withUpdatedReactionSettings(.known(mappedReactionSettings))
                                 })
                             case .channelFull:
                                 break
@@ -741,8 +740,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                 } else {
                                                     mappedAllowedReactions = .empty
                                                 }
-                                                
-                                                let _ = reactionsLimit
+                                                let mappedReactionSettings = PeerReactionSettings(allowedReactions: mappedAllowedReactions, maxReactionCount: reactionsLimit)
                                                 
                                                 let membersHidden = (flags2 & (1 << 2)) != 0
                                                 let forumViewAsMessages = (flags2 & (1 << 6)) != 0
@@ -774,14 +772,13 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     .withUpdatedThemeEmoticon(themeEmoticon)
                                                     .withUpdatedInviteRequestsPending(requestsPending)
                                                     .withUpdatedSendAsPeerId(sendAsPeerId)
-                                                    .withUpdatedAllowedReactions(.known(mappedAllowedReactions))
+                                                    .withUpdatedReactionSettings(.known(mappedReactionSettings))
                                                     .withUpdatedMembersHidden(.known(PeerMembersHidden(value: membersHidden)))
                                                     .withUpdatedViewForumAsMessages(.known(forumViewAsMessages))
                                                     .withUpdatedWallpaper(wallpaper)
                                                     .withUpdatedBoostsToUnrestrict(boostsUnrestrict)
                                                     .withUpdatedAppliedBoosts(appliedBoosts)
                                                     .withUpdatedEmojiPack(emojiPack)
-                                                    .withUpdatedReactionsLimit(reactionsLimit)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

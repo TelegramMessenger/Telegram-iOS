@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-
 public struct FoundPeer: Equatable {
     public let peer: Peer
     public let subscribers: Int32?
@@ -19,7 +18,12 @@ public struct FoundPeer: Equatable {
     }
 }
 
-public func _internal_searchPeers(accountPeerId: PeerId, postbox: Postbox, network: Network, query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
+public enum TelegramSearchPeersScope {
+    case everywhere
+    case channels
+}
+
+public func _internal_searchPeers(accountPeerId: PeerId, postbox: Postbox, network: Network, query: String, scope: TelegramSearchPeersScope) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
     let searchResult = network.request(Api.functions.contacts.search(q: query, limit: 20), automaticFloodWait: false)
     |> map(Optional.init)
     |> `catch` { _ in
@@ -69,6 +73,26 @@ public func _internal_searchPeers(accountPeerId: PeerId, postbox: Postbox, netwo
                                 continue
                             }
                             renderedPeers.append(FoundPeer(peer: peer, subscribers: subscribers[peerId]))
+                        }
+                    }
+                    
+                    switch scope {
+                    case .everywhere:
+                        break
+                    case .channels:
+                        renderedMyPeers = renderedMyPeers.filter { item in
+                            if let channel = item.peer as? TelegramChannel, case .broadcast = channel.info {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        renderedPeers = renderedPeers.filter { item in
+                            if let channel = item.peer as? TelegramChannel, case .broadcast = channel.info {
+                                return true
+                            } else {
+                                return false
+                            }
                         }
                     }
                     
