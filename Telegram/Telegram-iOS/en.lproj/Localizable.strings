@@ -11898,3 +11898,6 @@ Sorry for the inconvenience.";
 
 "ChatList.PremiumGraceTitle" = "⚠️ Don't lose access to Telegram Premium!";
 "ChatList.PremiumGraceText" = "Your exclusive benefits are about to expire.";
+
+"Stickers.RemoveFromRecent" = "Remove from Recents";
+"Conversation.StickerRemovedFromRecent" = "Sticker was removed from Recents.";

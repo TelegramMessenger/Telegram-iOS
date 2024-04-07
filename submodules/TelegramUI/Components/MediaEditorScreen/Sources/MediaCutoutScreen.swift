@@ -141,11 +141,7 @@ private final class MediaCutoutScreenComponent: Component {
             self.initialOutlineValue = mediaEditor.getToolValue(.stickerOutline) as? Float
             mediaEditor.setToolValue(.stickerOutline, value: nil)
             mediaEditor.isSegmentationMaskEnabled = false
-            mediaEditor.setOnNextDisplay { [weak controller] in
-                if let controller {
-                    controller.previewView.mask = controller.maskWrapperView
-                }
-            }
+            controller.previewView.mask = controller.maskWrapperView
             
             self.buttonsBackgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.label.view?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)

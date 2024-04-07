@@ -2866,8 +2866,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     self.stickerMaskWrapperView.frame = CGRect(origin: .zero, size: previewSize)
                     self.stickerMaskPreviewView.frame = CGRect(origin: .zero, size: previewSize)
                    
-                    let filledSize = maskDrawingSize.aspectFitted(previewSize)
-                    let maskScale = filledSize.width / maskDrawingSize.width
+//                    let filledSize = maskDrawingSize.aspectFitted(previewSize)
+                    let maskScale = previewSize.width / min(maskDrawingSize.width, maskDrawingSize.height)
                     initialMaskScale = maskScale
                     initialMaskPosition = CGPoint(x: previewSize.width / 2.0, y: previewSize.height / 2.0)
                     stickerMaskDrawingView.bounds = CGRect(origin: .zero, size: maskDrawingSize)

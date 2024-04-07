@@ -95,7 +95,8 @@ final class StickerOutlineRenderPass: RenderPass {
             return input
         }
         
-        let resultImage = outline.composited(over: image)
+        var resultImage = outline.composited(over: image)
+        resultImage = outline.composited(over: resultImage)
         
         if self.outputTexture == nil {
             let textureDescriptor = MTLTextureDescriptor()

@@ -46,6 +46,13 @@ func addRecentlyUsedSticker(transaction: Transaction, fileReference: FileMediaRe
     }
 }
 
+func _internal_removeRecentlyUsedSticker(transaction: Transaction, fileReference: FileMediaReference) {
+    if let resource = fileReference.media.resource as? CloudDocumentMediaResource {
+        transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, itemId: RecentMediaItemId(fileReference.media.fileId).rawValue)
+        addSynchronizeRecentlyUsedMediaOperation(transaction: transaction, category: .stickers, operation: .remove(id: resource.fileId, accessHash: resource.accessHash))
+    }
+}
+
 func _internal_clearRecentlyUsedStickers(transaction: Transaction) {
     transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, items: [])
     addSynchronizeRecentlyUsedMediaOperation(transaction: transaction, category: .stickers, operation: .clear)

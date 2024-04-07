@@ -1346,7 +1346,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         stickerPacks: [packReference],
                         loadedStickerPacks: [],
                         isEditing: true,
-                        expandIfNeeded: false,
+                        expandIfNeeded: true,
                         parentNavigationController: interaction.getNavigationController(),
                         sendSticker: { [weak interaction] fileReference, sourceView, sourceRect in
                             return interaction?.sendSticker(fileReference, false, false, nil, false, sourceView, sourceRect, nil, []) ?? false
@@ -2844,6 +2844,25 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                 default:
                                     break
                                 }
+                            }
+                            
+                            if groupId == AnyHashable("recent") {
+                                menuItems.append(
+                                    .action(ContextMenuActionItem(text: presentationData.strings.Stickers_RemoveFromRecent, textColor: .destructive, icon: { theme in
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                                    }, action: { _, f in
+                                        f(.default)
+                                        
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        
+                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                        interaction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.Conversation_StickerRemovedFromRecent, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                        
+                                        strongSelf.context.engine.stickers.removeRecentlyUsedSticker(fileReference: .recentSticker(media: file))
+                                    }))
+                                )
                             }
                         }
                         

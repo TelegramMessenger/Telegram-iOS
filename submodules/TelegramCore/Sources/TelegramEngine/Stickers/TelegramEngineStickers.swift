@@ -286,9 +286,15 @@ public extension TelegramEngine {
             }
         }
         
-        public func addRecentlyUsedSticker(file: TelegramMediaFile) {
+        public func addRecentlyUsedSticker(fileReference: FileMediaReference) {
             let _ = self.account.postbox.transaction({ transaction -> Void in
-                TelegramCore.addRecentlyUsedSticker(transaction: transaction, fileReference: .standalone(media: file))
+                TelegramCore.addRecentlyUsedSticker(transaction: transaction, fileReference: fileReference)
+            }).start()
+        }
+        
+        public func removeRecentlyUsedSticker(fileReference: FileMediaReference) {
+            let _ = self.account.postbox.transaction({ transaction -> Void in
+                _internal_removeRecentlyUsedSticker(transaction: transaction, fileReference: fileReference)
             }).start()
         }
     }

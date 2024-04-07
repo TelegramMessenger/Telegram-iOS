@@ -14362,7 +14362,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         Queue.mainQueue().after(3.0) {
             if let message = self.chatDisplayNode.historyNode.lastVisbleMesssage(), let file = message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile, file.isSticker {
-                self.context.engine.stickers.addRecentlyUsedSticker(file: file)
+                self.context.engine.stickers.addRecentlyUsedSticker(fileReference: .message(message: MessageReference(message), media: file))
             }
         }
     }
