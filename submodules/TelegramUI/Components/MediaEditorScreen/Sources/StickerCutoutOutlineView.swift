@@ -31,9 +31,7 @@ final class StickerCutoutOutlineView: UIView {
         self.strokeLayer.shadowRadius = 4.0
         
         self.layer.allowsGroupOpacity = true
-        
-//        self.imageLayer.contentsGravity = .resizeAspect
-        
+                
         self.layer.addSublayer(self.strokeLayer)
         self.layer.addSublayer(self.imageLayer)
     }
@@ -95,8 +93,8 @@ final class StickerCutoutOutlineView: UIView {
         lineEmitterCell.color = UIColor.white.cgColor
         lineEmitterCell.contents = UIImage(named: "Media Editor/ParticleDot")?.cgImage
         lineEmitterCell.lifetime = 2.2
-        lineEmitterCell.birthRate = 700
-        lineEmitterCell.scale = 0.17
+        lineEmitterCell.birthRate = 800
+        lineEmitterCell.scale = 0.18
         lineEmitterCell.alphaSpeed = -0.4
         
         self.outlineLayer.emitterCells = [lineEmitterCell]
@@ -193,6 +191,7 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
     }
     let minSide = min(size.width, size.height)
     let scaledImageSize = image.extent.size.aspectFilled(CGSize(width: minSide, height: minSide))
+    let contourImageSize = image.extent.size.aspectFilled(CGSize(width: 256.0, height: 256.0))
 
     var contour = findContours(pixelBuffer: pixelBuffer)
     guard !contour.isEmpty else {
@@ -202,10 +201,9 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
     contour = simplify(contour, tolerance: 1.0)
     let path = BezierPath(points: contour, smooth: true)
     
-    let firstScale = min(size.width, size.height) / 256.0
-    let secondScale = size.width / 1080.0
+    let contoursScale = min(size.width, size.height) / 256.0
+    let valuesScale = size.width / 1080.0
     
-    var transform = CGAffineTransform.identity
     let position = values.cropOffset
     let rotation = values.cropRotation
     let scale = values.cropScale
@@ -215,9 +213,15 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
         y: (size.height - scaledImageSize.height * scale) / 2.0
     )
     
-    transform = transform.translatedBy(x: positionOffset.x + position.x * secondScale, y: positionOffset.y + position.y * secondScale)
+    var transform = CGAffineTransform.identity
+    transform = transform.translatedBy(x: contourImageSize.width / 2.0, y: contourImageSize.height / 2.0)
     transform = transform.rotated(by: rotation)
-    transform = transform.scaledBy(x: scale * firstScale, y: scale * firstScale)
+    transform = transform.translatedBy(x: -contourImageSize.width / 2.0, y: -contourImageSize.height / 2.0)
+    path.apply(transform, scale: 1.0)
+    
+    transform = CGAffineTransform.identity
+    transform = transform.translatedBy(x: positionOffset.x + position.x * valuesScale, y: positionOffset.y + position.y * valuesScale)
+    transform = transform.scaledBy(x: scale * contoursScale, y: scale * contoursScale)
     
     if !path.path.isEmpty {
         path.apply(transform, scale: scale)

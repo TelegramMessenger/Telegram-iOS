@@ -34,9 +34,6 @@ public func classifyImage(_ image: UIImage) -> Signal<[(String, Float)], NoError
                 subscriber.putNext(filteredResult.map { ($0.identifier, $0.confidence) })
                 subscriber.putCompletion()
             }
-#if targetEnvironment(simulator)
-            request.usesCPUOnly = true
-#endif
             try? handler.perform([request])
             return ActionDisposable {
                 request.cancel()

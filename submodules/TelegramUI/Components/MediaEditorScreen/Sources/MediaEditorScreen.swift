@@ -3437,7 +3437,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 return
             }
             let currentTimestamp = CACurrentMediaTime()
-            if let previousPanTimestamp = self.previousPanTimestamp, currentTimestamp - previousPanTimestamp < 0.016 {
+            if let previousPanTimestamp = self.previousPanTimestamp, currentTimestamp - previousPanTimestamp < 0.016, case .changed = gestureRecognizer.state {
                 return
             }
             self.previousPanTimestamp = currentTimestamp
@@ -3449,7 +3449,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 return
             }
             let currentTimestamp = CACurrentMediaTime()
-            if let previousPinchTimestamp = self.previousPinchTimestamp, currentTimestamp - previousPinchTimestamp < 0.016 {
+            if let previousPinchTimestamp = self.previousPinchTimestamp, currentTimestamp - previousPinchTimestamp < 0.016, case .changed = gestureRecognizer.state {
                 return
             }
             self.previousPinchTimestamp = currentTimestamp
@@ -3461,7 +3461,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 return
             }
             let currentTimestamp = CACurrentMediaTime()
-            if let previousRotateTimestamp = self.previousRotateTimestamp, currentTimestamp - previousRotateTimestamp < 0.016 {
+            if let previousRotateTimestamp = self.previousRotateTimestamp, currentTimestamp - previousRotateTimestamp < 0.016, case .changed = gestureRecognizer.state {
                 return
             }
             self.entitiesView.handleRotate(gestureRecognizer)
