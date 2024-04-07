@@ -58,10 +58,10 @@ func _internal_getServerDismissedSuggestions(account: Account) -> Signal<[Server
         guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
             return []
         }
-        guard let data = appConfiguration.data, let listItems = data["hidden_suggestions"] as? [String] else {
-            return []
+        var listItems: [String] = []
+        if let data = appConfiguration.data, let listItemsValues = data["hidden_suggestions"] as? [String] {
+            listItems.append(contentsOf: listItemsValues)
         }
-
         var items = listItems.compactMap { item -> ServerProvidedSuggestion? in
             return ServerProvidedSuggestion(rawValue: item)
         }
