@@ -102,14 +102,15 @@ private final class MediaCutoutScreenComponent: Component {
         }
         
         @objc private func previewTap(_ gestureRecognizer: UITapGestureRecognizer) {
-            guard let component = self.component else {
+            guard let component = self.component, let controller = self.environment?.controller() as? MediaCutoutScreen else {
                 return
             }
-            let location = gestureRecognizer.location(in: gestureRecognizer.view)
+            
+            let location = gestureRecognizer.location(in: controller.drawingView)
             
             let point = CGPoint(
-                x: location.x / self.previewContainerView.frame.width,
-                y: location.y / self.previewContainerView.frame.height
+                x: location.x / controller.drawingView.bounds.width,
+                y: location.y / controller.drawingView.bounds.height
             )
             
             component.mediaEditor.processImage { [weak self] originalImage, _ in
@@ -118,7 +119,7 @@ private final class MediaCutoutScreenComponent: Component {
                         if let self, let _ = self.component, let result = results.first, let maskImage = result.maskImage, let controller = self.environment?.controller() as? MediaCutoutScreen {
                             if case let .image(mask, _) = maskImage {
                                 self.playDissolveAnimation()
-                                component.mediaEditor.setSegmentationMask(mask, updateCutout: true)
+                                component.mediaEditor.setSegmentationMask(mask)
                                 if let maskData = mask.pngData() {
                                     controller.drawingView.setup(withDrawing: maskData)
                                 }
@@ -189,7 +190,7 @@ private final class MediaCutoutScreenComponent: Component {
             
             let mediaEditor = controller.mediaEditor
             if let drawingImage = controller.drawingView.drawingImage {
-                mediaEditor.setSegmentationMask(drawingImage, andEnable: true, updateCutout: false)
+                mediaEditor.setSegmentationMask(drawingImage, andEnable: true)
             }
             let initialOutlineValue = self.initialOutlineValue
             mediaEditor.setOnNextDisplay { [weak controller, weak mediaEditor] in
@@ -197,6 +198,7 @@ private final class MediaCutoutScreenComponent: Component {
                 if let initialOutlineValue {
                     mediaEditor?.setToolValue(.stickerOutline, value: initialOutlineValue)
                 }
+                controller?.completed()
             }
             
             self.animatingOut = true
@@ -249,6 +251,7 @@ private final class MediaCutoutScreenComponent: Component {
 
             dustEffectLayer.addItem(frame: previewView.bounds, image: resultImage)
             
+            controller.completedWithCutout()
             controller.requestDismiss(animated: true)
         }
         
@@ -386,7 +389,19 @@ private final class MediaCutoutScreenComponent: Component {
                 if labelView.superview == nil {
                     self.buttonsContainerView.addSubview(labelView)
                 }
-                transition.setFrame(view: labelView, frame: labelFrame)
+                if labelView.bounds.width > 0.0 && labelFrame.width != labelView.bounds.width {
+                    if let snapshotView = labelView.snapshotView(afterScreenUpdates: false) {
+                        snapshotView.center = labelView.center
+                        self.buttonsContainerView.addSubview(snapshotView)
+                        
+                        labelView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                            snapshotView.removeFromSuperview()
+                        })
+                    }
+                }
+                labelView.bounds = CGRect(origin: .zero, size: labelFrame.size)
+                transition.setPosition(view: labelView, position: labelFrame.center)
             }
                         
             transition.setFrame(view: self.buttonsContainerView, frame: buttonsContainerFrame)
@@ -402,7 +417,6 @@ private final class MediaCutoutScreenComponent: Component {
                 let frameWidth = floorToScreenPixels(previewContainerFrame.width * 0.97)
                 self.fadeView.frame = CGRect(x: floorToScreenPixels((previewContainerFrame.width - frameWidth) / 2.0), y: previewContainerFrame.minY + floorToScreenPixels((previewContainerFrame.height - frameWidth) / 2.0), width: frameWidth, height: frameWidth)
                 self.fadeView.layer.cornerRadius = frameWidth / 8.0
-                
                 
                 if isFirstTime {
                     let values = component.mediaEditor.values
@@ -598,6 +612,8 @@ final class MediaCutoutScreen: ViewController {
     fileprivate let overlayView: UIView
     fileprivate let backgroundView: UIView
     
+    var completed: () -> Void = {}
+    var completedWithCutout: () -> Void = {}
     var dismissed: () -> Void = {}
     
     private var initialValues: MediaEditorValues

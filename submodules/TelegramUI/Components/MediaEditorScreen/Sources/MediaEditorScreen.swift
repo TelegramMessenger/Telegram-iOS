@@ -1132,10 +1132,14 @@ final class MediaEditorScreenComponent: Component {
                 } else {
                     if let cutoutButtonView = self.cutoutButton.view, cutoutButtonView.superview != nil {
                         cutoutButtonView.alpha = 0.0
-                        cutoutButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, completion: { _ in
+                        if transition.animation.isImmediate {
                             cutoutButtonView.removeFromSuperview()
-                        })
-                        cutoutButtonView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, delay: 0.0)
+                        } else {
+                            cutoutButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, completion: { _ in
+                                cutoutButtonView.removeFromSuperview()
+                            })
+                            cutoutButtonView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, delay: 0.0)
+                        }
                     }
                 }
                 
@@ -2926,13 +2930,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self.canCutout = canCutout
                 self.hasTransparency = hasTransparency
                 self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
-            }
-            mediaEditor.isCutoutUpdated = { [weak self] isCutout in
-                guard let self else {
-                    return
-                }
-                self.isCutout = isCutout
-                self.requestLayout(forceUpdate: true, transition: .immediate)
             }
             mediaEditor.maskUpdated = { [weak self] mask in
                 guard let self else {
@@ -4736,6 +4733,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         overlayView: self.stickerMaskPreviewView,
                                         backgroundView: stickerBackgroundView
                                     )
+                                    cutoutController.completedWithCutout = { [weak self] in
+                                        if let self {
+                                            self.isCutout = true
+                                            self.requestLayout(forceUpdate: true, transition: .immediate)
+                                        }
+                                    }
+                                    cutoutController.completed = { [weak self] in
+                                        if let self {
+                                            self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
+                                        }
+                                    }
                                     cutoutController.dismissed = { [weak self] in
                                         if let self {
                                             self.animateInFromTool(inPlace: true)
@@ -4802,6 +4810,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         })
                                         mediaEditor.removeSegmentationMask()
                                         self.stickerMaskDrawingView?.clearWithEmptyColor()
+                                        
+                                        self.isCutout = false
+                                        self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
                                     }
                                     
                                     if let value = mediaEditor.getToolValue(.stickerOutline) as? Float, value > 0.0 {

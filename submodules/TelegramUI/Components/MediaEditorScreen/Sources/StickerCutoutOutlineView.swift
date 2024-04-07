@@ -169,6 +169,21 @@ final class StickerCutoutOutlineView: UIView {
         self.outline2Layer.animateAlpha(from: 0.0, to: CGFloat(self.outline2Layer.opacity), duration: 0.4, delay: 0.0)
         self.glowLayer.animateAlpha(from: 0.0, to: CGFloat(self.glowLayer.opacity), duration: 0.4, delay: 0.0)
         
+        
+        self.animateBump(path: path)
+    }
+    
+    private func animateBump(path: BezierPath) {
+        let boundingBox = path.path.cgPath.boundingBox
+        let pathCenter = CGPoint(x: boundingBox.midX, y: boundingBox.midY)
+        
+//        let originalPosition = self.imageLayer.position
+//        let originalAnchorPoint = self.imageLayer.anchorPoint
+        
+        let layerPathCenter = self.imageLayer.convert(pathCenter, from: self.imageLayer.superlayer)
+        self.imageLayer.anchorPoint = CGPoint(x: layerPathCenter.x / layer.bounds.width, y: layerPathCenter.y / layer.bounds.height)
+        self.imageLayer.position = layerPathCenter
+        
         let values = [1.0, 1.07, 1.0]
         let keyTimes = [0.0, 0.67, 1.0]
         self.imageLayer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.4, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)

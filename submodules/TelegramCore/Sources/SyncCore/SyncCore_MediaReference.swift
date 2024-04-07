@@ -444,6 +444,33 @@ public enum AnyMediaReference: Equatable {
         }
     }
     
+    public func withUpdatedMedia(_ media: Media) -> AnyMediaReference {
+        switch self {
+            case .standalone:
+                return .standalone(media: media)
+            case let .message(message, _):
+                return .message(message: message, media: media)
+            case let .webPage(webPage, _):
+                return .webPage(webPage: webPage, media: media)
+            case let .stickerPack(stickerPack, _):
+                return .stickerPack(stickerPack: stickerPack, media: media)
+            case .savedGif:
+                return .savedGif(media: media)
+            case .savedSticker:
+                return .savedSticker(media: media)
+            case .recentSticker:
+                return .recentSticker(media: media)
+            case let .avatarList(peer, _):
+                return .avatarList(peer: peer, media: media)
+            case let .attachBot(peer, _):
+                return .attachBot(peer: peer, media: media)
+            case .customEmoji:
+                return .customEmoji(media: media)
+            case let .story(peer, id, _):
+                return .story(peer: peer, id: id, media: media)
+        }
+    }
+    
     public func resourceReference(_ resource: MediaResource) -> MediaResourceReference {
         return .media(media: self, resource: resource)
     }

@@ -194,7 +194,6 @@ public final class MediaEditor {
     
     public private(set) var canCutout: Bool = false
     public var canCutoutUpdated: (Bool, Bool) -> Void = { _, _ in }
-    public var isCutoutUpdated: (Bool) -> Void = { _ in }
     public var maskUpdated: (UIImage) -> Void = { _ in }
     
     public var classificationUpdated: ([(String, Float)]) -> Void = { _ in }
@@ -1721,9 +1720,7 @@ public final class MediaEditor {
     }
     
     private var mainInputMask: MTLTexture?
-    public func removeSegmentationMask() {
-        self.isCutoutUpdated(false)
-        
+    public func removeSegmentationMask() {        
         self.mainInputMask = nil
         self.renderer.currentMainInputMask = nil
         if !self.skipRendering {
@@ -1731,13 +1728,9 @@ public final class MediaEditor {
         }
     }
     
-    public func setSegmentationMask(_ image: UIImage, andEnable enable: Bool = false, updateCutout: Bool = false) {
+    public func setSegmentationMask(_ image: UIImage, andEnable enable: Bool = false) {
         guard let renderTarget = self.previewView, let device = renderTarget.mtlDevice else {
             return
-        }
-        
-        if updateCutout {
-            self.isCutoutUpdated(true)
         }
         
         //TODO:replace with pixelbuffer?
