@@ -3428,10 +3428,19 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
+        private var previousPanTimestamp: Double?
+        private var previousPinchTimestamp: Double?
+        private var previousRotateTimestamp: Double?
+        
         @objc func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
             if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, case .message = subject, !self.entitiesView.hasSelection {
                 return
             }
+            let currentTimestamp = CACurrentMediaTime()
+            if let previousPanTimestamp = self.previousPanTimestamp, currentTimestamp - previousPanTimestamp < 0.016 {
+                return
+            }
+            self.previousPanTimestamp = currentTimestamp
             self.entitiesView.handlePan(gestureRecognizer)
         }
         
@@ -3439,11 +3448,20 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, case .message = subject, !self.entitiesView.hasSelection {
                 return
             }
+            let currentTimestamp = CACurrentMediaTime()
+            if let previousPinchTimestamp = self.previousPinchTimestamp, currentTimestamp - previousPinchTimestamp < 0.016 {
+                return
+            }
+            self.previousPinchTimestamp = currentTimestamp
             self.entitiesView.handlePinch(gestureRecognizer)
         }
         
         @objc func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer) {
             if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, case .message = subject, !self.entitiesView.hasSelection {
+                return
+            }
+            let currentTimestamp = CACurrentMediaTime()
+            if let previousRotateTimestamp = self.previousRotateTimestamp, currentTimestamp - previousRotateTimestamp < 0.016 {
                 return
             }
             self.entitiesView.handleRotate(gestureRecognizer)
