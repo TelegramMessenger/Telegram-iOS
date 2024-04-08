@@ -467,7 +467,14 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         case "telegram_group_boost":
                             actionTitle = item.presentationData.strings.Conversation_BoostChannel
                         case "telegram_stickerset":
-                            actionTitle = item.presentationData.strings.Conversation_ViewStickers
+                            var isEmoji = false
+                            for attribute in webpage.attributes {
+                                if case let .stickerPack(stickerPack) = attribute {
+                                    isEmoji = stickerPack.flags.contains(.isEmoji)
+                                    break
+                                }
+                            }
+                            actionTitle = isEmoji ? item.presentationData.strings.Conversation_ViewEmojis : item.presentationData.strings.Conversation_ViewStickers
                         default:
                             break
                     }

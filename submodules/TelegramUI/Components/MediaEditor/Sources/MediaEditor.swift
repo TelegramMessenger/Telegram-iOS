@@ -441,6 +441,7 @@ public final class MediaEditor {
                 additionalVideoVolume: nil,
                 nightTheme: false,
                 drawing: nil,
+                maskDrawing: nil,
                 entities: [],
                 toolValues: [:],
                 audioTrack: nil,

@@ -6887,14 +6887,16 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 guard let self else {
                     return
                 }
+                var values = mediaEditor.values
                 var duration: Double = 0.0
                 if case let .video(video, _) = exportSubject {
                     duration = video.duration.seconds
                 }
                 if isSticker {
                     duration = self.preferredStickerDuration()
+                    values = values.withUpdatedMaskDrawing(maskDrawing: self.node.stickerMaskDrawingView?.drawingImage)
                 }
-                let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values, duration: duration, forceFullHd: true, frameRate: 60.0, isSticker: isSticker)
+                let configuration = recommendedVideoExportConfiguration(values: values, duration: duration, forceFullHd: true, frameRate: 60.0, isSticker: isSticker)
                 let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).\(fileExtension)"
                 let videoExport = MediaEditorVideoExport(postbox: self.context.account.postbox, subject: exportSubject, configuration: configuration, outputPath: outputPath, textScale: 2.0)
                 self.videoExport = videoExport
