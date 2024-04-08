@@ -316,7 +316,7 @@ public class ItemListAddressItemNode: ListViewItemNode {
                             var hasBottomCorners = false
                             switch neighbors.top {
                                 case .sameSection(false):
-                                    strongSelf.topStripeNode.isHidden = true
+                                    strongSelf.topStripeNode.isHidden = !item.displayDecorations
                                 default:
                                     hasTopCorners = true
                                     strongSelf.topStripeNode.isHidden = hasCorners || !item.displayDecorations
@@ -327,12 +327,12 @@ public class ItemListAddressItemNode: ListViewItemNode {
                                 case .sameSection(false):
                                     bottomStripeInset = 16.0 + params.leftInset
                                     bottomStripeOffset = -separatorHeight
-                                    strongSelf.bottomStripeNode.isHidden = false
+                                    strongSelf.bottomStripeNode.isHidden = !item.displayDecorations
                                 default:
                                     bottomStripeInset = 0.0
                                     bottomStripeOffset = 0.0
                                     hasBottomCorners = true
-                                    strongSelf.bottomStripeNode.isHidden = hasCorners
+                                    strongSelf.bottomStripeNode.isHidden = hasCorners || !item.displayDecorations
                             }
                         
                             strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil

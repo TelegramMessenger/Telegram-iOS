@@ -15,7 +15,7 @@ public enum AuthorizationCodeRequestError {
     case appOutdated
 }
 
-func switchToAuthorizedAccount(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, account: UnauthorizedAccount) {
+func switchToAuthorizedAccount(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, account: UnauthorizedAccount, isSupportUser: Bool) {
     let nextSortOrder = (transaction.getRecords().map({ record -> Int32 in
         for attribute in record.attributes {
             if case let .sortOrder(sortOrder) = attribute {
@@ -25,10 +25,14 @@ func switchToAuthorizedAccount(transaction: AccountManagerModifier<TelegramAccou
         return 0
     }).max() ?? 0) + 1
     transaction.updateRecord(account.id, { _ in
-        return AccountRecord(id: account.id, attributes: [
+        var attributes: [TelegramAccountManagerTypes.Attribute] = [
             .environment(AccountEnvironmentAttribute(environment: account.testingEnvironment ? .test : .production)),
             .sortOrder(AccountSortOrderAttribute(order: nextSortOrder))
-        ], temporarySessionId: nil)
+        ]
+        if isSupportUser {
+            attributes.append(.supportUserInfo(AccountSupportUserInfo()))
+        }
+        return AccountRecord(id: account.id, attributes: attributes, temporarySessionId: nil)
     })
     transaction.setCurrentId(account.id)
     transaction.removeAuth()
@@ -323,6 +327,10 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                             }
                             
                             let user = TelegramUser(user: user)
+                            var isSupportUser = false
+                            if let phone = user.phone, phone.hasPrefix("42") {
+                                isSupportUser = true
+                            }
                             let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil, invalidatedChannels: [])
                             initializedAppSettingsAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion, syncContacts: syncContacts)
                             transaction.setState(state)
@@ -330,7 +338,7 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                                 transaction.setNoticeEntry(key: value.0, value: value.1)
                             }
                             return accountManager.transaction { transaction -> SendAuthorizationCodeResult in
-                                switchToAuthorizedAccount(transaction: transaction, account: account)
+                                switchToAuthorizedAccount(transaction: transaction, account: account, isSupportUser: isSupportUser)
                                 return .loggedIn
                             }
                             |> castError(AuthorizationCodeRequestError.self)
@@ -951,6 +959,10 @@ public func authorizeWithCode(accountManager: AccountManager<TelegramAccountMana
                                         }
                                         
                                         let user = TelegramUser(user: user)
+                                        var isSupportUser = false
+                                        if let phone = user.phone, phone.hasPrefix("42") {
+                                            isSupportUser = true
+                                        }
                                         let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil, invalidatedChannels: [])
                                         initializedAppSettingsAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion, syncContacts: syncContacts)
                                         transaction.setState(state)
@@ -958,7 +970,7 @@ public func authorizeWithCode(accountManager: AccountManager<TelegramAccountMana
                                             transaction.setNoticeEntry(key: value.0, value: value.1)
                                         }
                                         return accountManager.transaction { transaction -> AuthorizeWithCodeResult in
-                                            switchToAuthorizedAccount(transaction: transaction, account: account)
+                                            switchToAuthorizedAccount(transaction: transaction, account: account, isSupportUser: isSupportUser)
                                             return .loggedIn
                                         }
                                     case let .authorizationSignUpRequired(_, termsOfService):
@@ -1019,11 +1031,15 @@ public func authorizeWithPassword(accountManager: AccountManager<TelegramAccount
                 /*transaction.updatePeersInternal([user], update: { current, peer -> Peer? in
                  return peer
                  })*/
+                var isSupportUser = false
+                if let phone = user.phone, phone.hasPrefix("42") {
+                    isSupportUser = true
+                }
                 initializedAppSettingsAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion, syncContacts: syncContacts)
                 transaction.setState(state)
                 
                 return accountManager.transaction { transaction -> Void in
-                    switchToAuthorizedAccount(transaction: transaction, account: account)
+                    switchToAuthorizedAccount(transaction: transaction, account: account, isSupportUser: isSupportUser)
                 }
             case .authorizationSignUpRequired:
                 return .complete()
@@ -1085,12 +1101,16 @@ public func loginWithRecoveredAccountData(accountManager: AccountManager<Telegra
             }
             
             let user = TelegramUser(user: user)
+            var isSupportUser = false
+            if let phone = user.phone, phone.hasPrefix("42") {
+                isSupportUser = true
+            }
             let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil, invalidatedChannels: [])
 
             initializedAppSettingsAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion, syncContacts: syncContacts)
             transaction.setState(state)
             return accountManager.transaction { transaction -> Void in
-                switchToAuthorizedAccount(transaction: transaction, account: account)
+                switchToAuthorizedAccount(transaction: transaction, account: account, isSupportUser: isSupportUser)
             }
         case .authorizationSignUpRequired:
             return .complete()
@@ -1237,6 +1257,10 @@ public func signUpWithName(accountManager: AccountManager<TelegramAccountManager
                     }
                     
                     let user = TelegramUser(user: user)
+                    var isSupportUser = false
+                    if let phone = user.phone, phone.hasPrefix("42") {
+                        isSupportUser = true
+                    }
                     let appliedState = account.postbox.transaction { transaction -> Void in
                         let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil, invalidatedChannels: [])
                         if let hole = account.postbox.seedConfiguration.initializeChatListWithHole.topLevel {
@@ -1251,7 +1275,7 @@ public func signUpWithName(accountManager: AccountManager<TelegramAccountManager
                     |> castError(SignUpError.self)
                     
                     let switchedAccounts = accountManager.transaction { transaction -> Void in
-                        switchToAuthorizedAccount(transaction: transaction, account: account)
+                        switchToAuthorizedAccount(transaction: transaction, account: account, isSupportUser: isSupportUser)
                     }
                     |> castError(SignUpError.self)
                     

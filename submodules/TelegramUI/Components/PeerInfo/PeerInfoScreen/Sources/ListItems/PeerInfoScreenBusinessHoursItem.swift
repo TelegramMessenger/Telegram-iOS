@@ -13,6 +13,54 @@ import MultilineTextComponent
 import BundleIconComponent
 import PlainButtonComponent
 
+func businessHoursTextToCopy(businessHours: TelegramBusinessHours, presentationData: PresentationData, displayLocalTimezone: Bool) -> String {
+    var text = ""
+    
+    let cachedDays = businessHours.splitIntoWeekDays()
+    
+    var timezoneOffsetMinutes: Int = 0
+    if displayLocalTimezone {
+        var currentCalendar = Calendar(identifier: .gregorian)
+        currentCalendar.timeZone = TimeZone(identifier: businessHours.timezoneId) ?? TimeZone.current
+        
+        let currentTimezone = TimeZone.current
+        timezoneOffsetMinutes = (currentTimezone.secondsFromGMT() - currentCalendar.timeZone.secondsFromGMT()) / 60
+    }
+    
+    let businessDays: [TelegramBusinessHours.WeekDay] = cachedDays
+    
+    for i in 0 ..< businessDays.count {
+        let dayTitleValue: String
+        switch i {
+        case 0:
+            dayTitleValue = presentationData.strings.Weekday_Monday
+        case 1:
+            dayTitleValue = presentationData.strings.Weekday_Tuesday
+        case 2:
+            dayTitleValue = presentationData.strings.Weekday_Wednesday
+        case 3:
+            dayTitleValue = presentationData.strings.Weekday_Thursday
+        case 4:
+            dayTitleValue = presentationData.strings.Weekday_Friday
+        case 5:
+            dayTitleValue = presentationData.strings.Weekday_Saturday
+        case 6:
+            dayTitleValue = presentationData.strings.Weekday_Sunday
+        default:
+            dayTitleValue = " "
+        }
+        
+        let businessHoursText = dayBusinessHoursText(presentationData: presentationData, day: businessDays[i], offsetMinutes: timezoneOffsetMinutes, formatAsPlainText: true)
+        
+        if !text.isEmpty {
+            text.append("\n")
+        }
+        text.append("\(dayTitleValue): \(businessHoursText)")
+    }
+    
+    return text
+}
+
 private func dayBusinessHoursText(presentationData: PresentationData, day: TelegramBusinessHours.WeekDay, offsetMinutes: Int, formatAsPlainText: Bool = false) -> String {
     var businessHoursText: String = ""
     switch day {
@@ -59,20 +107,23 @@ final class PeerInfoScreenBusinessHoursItem: PeerInfoScreenItem {
     let label: String
     let businessHours: TelegramBusinessHours
     let requestLayout: (Bool) -> Void
-    let longTapAction: (ASDisplayNode, String) -> Void
+    let longTapAction: ((ASDisplayNode, String) -> Void)?
+    let contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     
     init(
         id: AnyHashable,
         label: String,
         businessHours: TelegramBusinessHours,
         requestLayout: @escaping (Bool) -> Void,
-        longTapAction: @escaping (ASDisplayNode, String) -> Void
+        longTapAction: ((ASDisplayNode, String) -> Void)? = nil,
+        contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil
     ) {
         self.id = id
         self.label = label
         self.businessHours = businessHours
         self.requestLayout = requestLayout
         self.longTapAction = longTapAction
+        self.contextAction = contextAction
     }
     
     func node() -> PeerInfoScreenItemNode {
@@ -154,6 +205,14 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         
         self.containerNode.isGestureEnabled = false
         
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self, let item = strongSelf.item, let contextAction = item.contextAction else {
+                gesture.cancel()
+                return
+            }
+            contextAction(strongSelf.contextSourceNode, gesture, nil)
+        }
+        
         self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
             guard let strongSelf = self, let theme = strongSelf.theme else {
                 return
@@ -180,7 +239,14 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.tapActionAtPoint = { _ in
+        recognizer.tapActionAtPoint = { [weak self] _ in
+            guard let self, let item = self.item else {
+                return .keepWithSingleTap
+            }
+            
+            if item.longTapAction != nil {
+                return .waitForSingleTap
+            }
             return .waitForSingleTap
         }
         recognizer.highlight = { [weak self] point in
@@ -202,48 +268,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                     self.item?.requestLayout(true)
                 case .longTap:
                     if let item = self.item, let presentationData = self.presentationData {
-                        var text = ""
-                        
-                        var timezoneOffsetMinutes: Int = 0
-                        if self.displayLocalTimezone {
-                            var currentCalendar = Calendar(identifier: .gregorian)
-                            currentCalendar.timeZone = TimeZone(identifier: item.businessHours.timezoneId) ?? TimeZone.current
-                            
-                            timezoneOffsetMinutes = (self.currentTimezone.secondsFromGMT() - currentCalendar.timeZone.secondsFromGMT()) / 60
-                        }
-                        
-                        let businessDays: [TelegramBusinessHours.WeekDay] = self.cachedDays
-                        
-                        for i in 0 ..< businessDays.count {
-                            let dayTitleValue: String
-                            switch i {
-                            case 0:
-                                dayTitleValue = presentationData.strings.Weekday_Monday
-                            case 1:
-                                dayTitleValue = presentationData.strings.Weekday_Tuesday
-                            case 2:
-                                dayTitleValue = presentationData.strings.Weekday_Wednesday
-                            case 3:
-                                dayTitleValue = presentationData.strings.Weekday_Thursday
-                            case 4:
-                                dayTitleValue = presentationData.strings.Weekday_Friday
-                            case 5:
-                                dayTitleValue = presentationData.strings.Weekday_Saturday
-                            case 6:
-                                dayTitleValue = presentationData.strings.Weekday_Sunday
-                            default:
-                                dayTitleValue = " "
-                            }
-                            
-                            let businessHoursText = dayBusinessHoursText(presentationData: presentationData, day: businessDays[i], offsetMinutes: timezoneOffsetMinutes, formatAsPlainText: true)
-                            
-                            if !text.isEmpty {
-                                text.append("\n")
-                            }
-                            text.append("\(dayTitleValue): \(businessHoursText)")
-                        }
-                        
-                        item.longTapAction(self, text)
+                        item.longTapAction?(self, businessHoursTextToCopy(businessHours: item.businessHours, presentationData: presentationData, displayLocalTimezone: self.displayLocalTimezone))
                     }
                 default:
                     break
@@ -271,6 +296,8 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         self.item = item
         self.presentationData = presentationData
         self.theme = presentationData.theme
+        
+        self.containerNode.isGestureEnabled = item.contextAction != nil
                 
         let sideInset: CGFloat = 16.0 + safeInsets.left
         
@@ -618,7 +645,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         let hasBottomCorners = hasCorners && bottomItem == nil
         
         self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
-        self.maskNode.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
+        transition.updateFrame(node: self.maskNode, frame: CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height)))
         self.bottomSeparatorNode.isHidden = hasBottomCorners
         
         self.activateArea.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: height))
