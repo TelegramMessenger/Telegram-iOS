@@ -598,6 +598,7 @@ private final class PeerInfoInteraction {
     let openBioContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let openWorkingHoursContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let openBusinessLocationContextMenu: (ASDisplayNode, ContextGesture?) -> Void
+    let openBirthdayContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let getController: () -> ViewController?
     
     init(
@@ -664,6 +665,7 @@ private final class PeerInfoInteraction {
         openBioContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         openWorkingHoursContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         openBusinessLocationContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
+        openBirthdayContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         getController: @escaping () -> ViewController?
     ) {
         self.openUsername = openUsername
@@ -729,6 +731,7 @@ private final class PeerInfoInteraction {
         self.openBioContextMenu = openBioContextMenu
         self.openWorkingHoursContextMenu = openWorkingHoursContextMenu
         self.openBusinessLocationContextMenu = openBusinessLocationContextMenu
+        self.openBirthdayContextMenu = openBirthdayContextMenu
         self.getController = getController
     }
 }
@@ -1188,7 +1191,7 @@ private enum InfoSection: Int, CaseIterable {
     case peerMembers
 }
 
-private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], chatLocation: ChatLocation, isOpenedFromChat: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
+private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], chatLocation: ChatLocation, isOpenedFromChat: Bool, isMyProfile: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
     guard let data = data else {
         return []
     }
@@ -1209,6 +1212,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     }
     let businessLocationContextAction: (ASDisplayNode, ContextGesture?, CGPoint?) -> Void = { node, gesture, _ in
         interaction.openBusinessLocationContextMenu(node, gesture)
+    }
+    let birthdayContextAction: (ASDisplayNode, ContextGesture?, CGPoint?) -> Void = { node, gesture, _ in
+        interaction.openBirthdayContextMenu(node, gesture)
     }
     
     if let user = data.peer as? TelegramUser {
@@ -1293,13 +1299,21 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 if today.day == Int(birthday.day) && today.month == Int(birthday.month) {
                     hasBirthdayToday = true
                 }
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 400, context: context, label: hasBirthdayToday ? presentationData.strings.UserInfo_BirthdayToday : presentationData.strings.UserInfo_Birthday, text: stringForCompactBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, leftIcon: hasBirthdayToday ? .birthday : nil, icon: hasBirthdayToday ? .premiumGift : nil, action: hasBirthdayToday ? { _, _ in
+                
+                var birthdayAction: ((ASDisplayNode, Promise<Bool>?) -> Void)?
+                if isMyProfile {
+                    birthdayAction = { node, _ in
+                        birthdayContextAction(node, nil, nil)
+                    }
+                } else if hasBirthdayToday {
+                    birthdayAction = { _, _ in
+                        interaction.openPremiumGift()
+                    }
+                }
+                
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 400, context: context, label: hasBirthdayToday ? presentationData.strings.UserInfo_BirthdayToday : presentationData.strings.UserInfo_Birthday, text: stringForCompactBirthday(birthday, strings: presentationData.strings, showAge: true), textColor: .primary, leftIcon: hasBirthdayToday ? .birthday : nil, icon: hasBirthdayToday ? .premiumGift : nil, action: birthdayAction, longTapAction: nil, iconAction: {
                     interaction.openPremiumGift()
-                } : nil, longTapAction: { sourceNode in
-                    interaction.openPeerInfoContextMenu(.birthday, sourceNode, nil)
-                }, iconAction: {
-                    interaction.openPremiumGift()
-                }, contextAction: nil, requestLayout: {
+                }, contextAction: birthdayContextAction, requestLayout: {
                 }))
             }
             
@@ -1312,7 +1326,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     interaction.requestLayout(false)
                 }))
             } else if let about = cachedData.about, !about.isEmpty {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: isMyProfile ? { node, _ in
+                    bioContextAction(node, nil, nil)
+                } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
                     interaction.requestLayout(false)
                 }))
             }
@@ -1546,7 +1562,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     if case .group = channel.info {
                         enabledEntities = enabledPrivateBioEntities
                     }
-                    items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledEntities), action: nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
+                    items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledEntities), action: isMyProfile ? { node, _ in
+                        bioContextAction(node, nil, nil)
+                    } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
                         interaction.requestLayout(true)
                     }))
                 }
@@ -1596,7 +1614,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }
             
             if let aboutText = aboutText {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPrivateBioEntities), action: nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPrivateBioEntities), action: isMyProfile ? { node, _ in
+                    bioContextAction(node, nil, nil)
+                } : nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
                     interaction.requestLayout(true)
                 }))
             }
@@ -2780,6 +2800,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 self.openBusinessLocationContextMenu(node: node, gesture: gesture)
+            }, openBirthdayContextMenu: { [weak self] node, gesture in
+                guard let self else {
+                    return
+                }
+                self.openBirthdayContextMenu(node: node, gesture: gesture)
             },
             getController: { [weak self] in
                 return self?.controller
@@ -7160,6 +7185,65 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.controller?.present(contextController, in: .window(.root))
     }
     
+    private func openBirthdayContextMenu(node: ASDisplayNode, gesture: ContextGesture?) {
+        guard let sourceNode = node as? ContextExtractedContentContainingNode else {
+            return
+        }
+        guard let cachedData = self.data?.cachedData else {
+            return
+        }
+        
+        var birthday: TelegramBirthday?
+        if let cachedData = cachedData as? CachedUserData {
+            birthday = cachedData.birthday
+        }
+        
+        guard let birthday else {
+            return
+        }
+        
+        let copyAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            let presentationData = self.presentationData
+            let text = stringForCompactBirthday(birthday, strings: presentationData.strings)
+            
+            UIPasteboard.general.string = text
+            
+            //TODO:localize
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Birthday copied."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+        }
+        
+        var items: [ContextMenuItem] = []
+        
+        if self.isMyProfile {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Edit Birthday", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                c.dismiss {
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.state = self.state.withIsEditingBirthDate(true)
+                    self.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
+                }
+            })))
+        }
+        
+        //TODO:localize
+        items.append(.action(ContextMenuActionItem(text: "Copy", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+            c.dismiss {
+                copyAction()
+            }
+        })))
+        
+        let actions = ContextController.Items(content: .list(items))
+        
+        let contextController = ContextController(presentationData: self.presentationData, source: .extracted(PeerInfoContextExtractedContentSource(sourceNode: sourceNode)), items: .single(actions), gesture: gesture)
+        self.controller?.present(contextController, in: .window(.root))
+    }
+    
     private func openPhone(value: String, node: ASDisplayNode, gesture: ContextGesture?, progress: Promise<Bool>?) {
         guard let sourceNode = node as? ContextExtractedContentContainingNode else {
             return
@@ -10826,7 +10910,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             insets.left += sectionInset
             insets.right += sectionInset
             
-            let items = self.isSettings ? settingsItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isExpanded: self.headerNode.isAvatarExpanded) : infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeerDistance: self.nearbyPeerDistance, reactionSourceMessageId: self.reactionSourceMessageId, callMessages: self.callMessages, chatLocation: self.chatLocation, isOpenedFromChat: self.isOpenedFromChat)
+            let items = self.isSettings ? settingsItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isExpanded: self.headerNode.isAvatarExpanded) : infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeerDistance: self.nearbyPeerDistance, reactionSourceMessageId: self.reactionSourceMessageId, callMessages: self.callMessages, chatLocation: self.chatLocation, isOpenedFromChat: self.isOpenedFromChat, isMyProfile: self.isMyProfile)
             
             contentHeight += headerHeight
             if !((self.isSettings || self.isMyProfile) && self.state.isEditing) {
