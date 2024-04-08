@@ -11904,3 +11904,5 @@ Sorry for the inconvenience.";
 
 "Conversation.ViewStickers" = "VIEW STICKERS";
 "Conversation.ViewEmojis" = "VIEW EMOJIS";
+
+"MediaEditor.StickersTooMuch" = "Sorry, you've reached the maximum number of stickers in this set. Try a different one.";

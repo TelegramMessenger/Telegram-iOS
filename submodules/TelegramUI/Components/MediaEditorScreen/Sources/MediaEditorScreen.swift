@@ -2418,7 +2418,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
     }
     
-    final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
+    final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate, UIScrollViewDelegate {
         private weak var controller: MediaEditorScreen?
         private let context: AccountContext
         fileprivate var interaction: DrawingToolsInteraction?
@@ -2438,6 +2438,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         fileprivate let toolValue: ComponentView<Empty>
         
         fileprivate let previewContainerView: UIView
+        fileprivate let previewScrollView: UIScrollView
         fileprivate let previewContentContainerView: PortalSourceView
         private var transitionInView: UIImageView?
         
@@ -2514,7 +2515,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.componentHost = ComponentView<ViewControllerComponentContainer.Environment>()
             self.storyPreview = ComponentView<Empty>()
             self.toolValue = ComponentView<Empty>()
-            
+                        
             self.previewContainerView = UIView()
             self.previewContainerView.alpha = 0.0
             self.previewContainerView.clipsToBounds = true
@@ -2522,6 +2523,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if #available(iOS 13.0, *) {
                 self.previewContainerView.layer.cornerCurve = .continuous
             }
+            
+            self.previewScrollView = UIScrollView()
+            self.previewScrollView.contentInsetAdjustmentBehavior = .never
+            self.previewScrollView.contentInset = .zero
+            self.previewScrollView.showsHorizontalScrollIndicator = false
+            self.previewScrollView.showsVerticalScrollIndicator = false
+            self.previewScrollView.panGestureRecognizer.minimumNumberOfTouches = 2
+            self.previewScrollView.isScrollEnabled = false
             
             self.previewContentContainerView = PortalSourceView()
             
@@ -2568,6 +2577,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             self.view.addSubview(self.backgroundDimView)
             self.view.addSubview(self.containerView)
+            
+            self.previewScrollView.delegate = self
+            
             self.containerView.addSubview(self.previewContainerView)
             
             if case .stickerEditor = controller.mode {
@@ -2597,7 +2609,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self.previewContainerView.addSubview(self.gradientView)
             }
             
-            self.previewContainerView.addSubview(self.previewContentContainerView)
+            self.previewContainerView.addSubview(self.previewScrollView)
+            self.previewScrollView.addSubview(self.previewContentContainerView)
             
             self.previewContentContainerView.addSubview(self.previewView)
             self.previewContentContainerView.addSubview(self.entitiesContainerView)
@@ -3050,7 +3063,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 controller.stickerSelectedEmoji = emoji
                 let stickerEntity = DrawingStickerEntity(content: .file(.standalone(media: sticker), .sticker))
                 stickerEntity.referenceDrawingSize = storyDimensions
-                stickerEntity.scale = 4.0
+                stickerEntity.scale = 4.0 * 0.97
                 stickerEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
                 self.entitiesView.add(stickerEntity, announce: false)
             }
@@ -3262,6 +3275,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             )
+            
+            Queue.mainQueue().after(0.1) {
+                self.previewScrollView.pinchGestureRecognizer?.isEnabled = false
+            }
         }
         
         @objc func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -4436,6 +4453,53 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
+        private func adjustPreviewZoom(updating: Bool = false) {
+            let minScale: CGFloat = 0.05
+            let maxScale: CGFloat = 3.0
+            
+            if self.previewScrollView.minimumZoomScale != minScale {
+                self.previewScrollView.minimumZoomScale = minScale
+            }
+            if self.previewScrollView.maximumZoomScale != maxScale {
+                self.previewScrollView.maximumZoomScale = maxScale
+            }
+            
+            let boundsSize = self.previewScrollView.frame.size
+            var contentFrame = self.previewContentContainerView.frame
+            if boundsSize.width > contentFrame.size.width {
+                contentFrame.origin.x = (boundsSize.width - contentFrame.size.width) / 2.0
+            } else {
+                contentFrame.origin.x = 0.0
+            }
+            
+            if boundsSize.height > contentFrame.size.height {
+                contentFrame.origin.y = (boundsSize.height - contentFrame.size.height) / 2.0
+            } else {
+                contentFrame.origin.y = 0.0
+            }
+            self.previewContentContainerView.frame = contentFrame
+            
+            if !updating {
+                self.stickerMaskDrawingView?.updateZoomScale(self.previewScrollView.zoomScale)
+            }
+        }
+        
+        func scrollViewDidZoom(_ scrollView: UIScrollView) {
+            self.adjustPreviewZoom()
+        }
+        
+        func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+            self.adjustPreviewZoom()
+            
+            if scrollView.zoomScale < 1.0 {
+                scrollView.setZoomScale(1.0, animated: true)
+            }
+        }
+        
+        func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+            return self.previewContentContainerView
+        }
+        
         fileprivate var drawingScreen: DrawingScreen?
         fileprivate var stickerScreen: StickerPickerScreen?
         fileprivate weak var cutoutScreen: MediaCutoutScreen?
@@ -4723,6 +4787,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     guard let mediaEditor = self.mediaEditor, let stickerMaskDrawingView = self.stickerMaskDrawingView, let stickerBackgroundView = self.stickerBackgroundView else {
                                         return
                                     }
+                                    
+                                    if [.cutoutErase, .cutoutRestore].contains(mode) {
+                                        self.previewScrollView.isScrollEnabled = true
+                                        self.previewScrollView.pinchGestureRecognizer?.isEnabled = true
+                                    }
+                                    
                                     let cutoutController = MediaCutoutScreen(
                                         context: self.context,
                                         mode: cutoutMode,
@@ -4746,6 +4816,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     }
                                     cutoutController.dismissed = { [weak self] in
                                         if let self {
+                                            self.previewScrollView.setZoomScale(1.0, animated: true)
+                                            self.previewScrollView.isScrollEnabled = false
+                                            self.previewScrollView.pinchGestureRecognizer?.isEnabled = false
                                             self.animateInFromTool(inPlace: true)
                                         }
                                     }
@@ -4911,8 +4984,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             let previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSize.width) / 2.0), y: topInset - bottomInputOffset + self.dismissOffset), size: previewSize)
             transition.setFrame(view: self.previewContainerView, frame: previewFrame)
+            transition.setFrame(view: self.previewScrollView, frame: CGRect(origin: .zero, size: previewSize))
             
-            transition.setFrame(view: self.previewContentContainerView, frame: CGRect(origin: .zero, size: previewSize))
+            if self.previewScrollView.contentSize == .zero {
+                self.previewScrollView.zoomScale = 1.0
+                self.previewScrollView.contentSize = previewSize
+            }
+            
+            if abs(self.previewContentContainerView.bounds.width - previewSize.width) > 1.0 {
+                transition.setFrame(view: self.previewContentContainerView, frame: CGRect(origin: .zero, size: previewSize))
+            }
+            
+            self.adjustPreviewZoom(updating: true)
             transition.setFrame(view: self.previewView, frame: CGRect(origin: .zero, size: previewSize))
             
             let entitiesViewScale = previewSize.width / storyDimensions.width
@@ -5125,6 +5208,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     public var completion: (MediaEditorScreen.Result, @escaping (@escaping () -> Void) -> Void) -> Void = { _, _ in }
     public var dismissed: () -> Void = { }
     public var willDismiss: () -> Void = { }
+    public var sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
     
     private var adminedChannels = Promise<[EnginePeer]>()
     private var closeFriends = Promise<[EnginePeer]>()
@@ -6367,9 +6451,25 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                               
                     contextItems.append(.custom(StickerPackListContextItem(context: self.context, packs: self.myStickerPacks, packSelected: { [weak self] pack in
                         guard let self else {
-                            return
+                            return true
                         }
-                        self.uploadSticker(file, action: .addToStickerPack(pack: .id(id: pack.id.id, accessHash: pack.accessHash), title: pack.title))
+                        if pack.count >= 120 {
+                            let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.MediaEditor_StickersTooMuch, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak self] action in
+                                if case .info = action, let self {
+                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: {
+                                        
+                                    })
+                                    self.push(controller)
+                                }
+                                return false
+                            })
+                            self.hapticFeedback.error()
+                            self.present(controller, in: .window(.root))
+                            return false
+                        } else {
+                            self.uploadSticker(file, action: .addToStickerPack(pack: .id(id: pack.id.id, accessHash: pack.accessHash), title: pack.title))
+                            return true
+                        }
                     }), false))
 
                     let items = ContextController.Items(
@@ -6552,7 +6652,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         self.present(controller, in: .window(.root))
     }
-    
+        
     private let stickerUploadDisposable = MetaDisposable()
     private func uploadSticker(_ file: TelegramMediaFile, action: StickerAction) {
         let context = self.context

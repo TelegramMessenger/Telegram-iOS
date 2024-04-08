@@ -1250,6 +1250,7 @@ private final class StickerPackContainer: ASDisplayNode {
         let presentationData = self.presentationData
         let updatedPresentationData = self.controller?.updatedPresentationData
         let navigationController = self.controller?.parentNavigationController as? NavigationController
+        let sendSticker = self.controller?.sendSticker
         
         var dismissImpl: (() -> Void)?
         let mainController = context.sharedContext.makeStickerMediaPickerScreen(
@@ -1275,7 +1276,7 @@ private final class StickerPackContainer: ASDisplayNode {
                         |> deliverOnMainQueue).start(completed: {
                             commit()
                             
-                            let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
+                            let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: sendSticker, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
                             (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
                             
                             Queue.mainQueue().after(0.1) {
@@ -1301,6 +1302,7 @@ private final class StickerPackContainer: ASDisplayNode {
         let presentationData = self.presentationData
         let updatedPresentationData = self.controller?.updatedPresentationData
         let navigationController = self.controller?.parentNavigationController as? NavigationController
+        let sendSticker = self.controller?.sendSticker
         
         let context = self.context
         let controller = self.context.sharedContext.makeStickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData, completion: { file in
@@ -1323,7 +1325,7 @@ private final class StickerPackContainer: ASDisplayNode {
             let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
             let _ = (context.engine.stickers.addStickerToStickerSet(packReference: packReference, sticker: sticker)
             |> deliverOnMainQueue).start(completed: {
-                let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
+                let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: sendSticker, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
                 (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
                 
                 Queue.mainQueue().after(0.1) {
@@ -1345,8 +1347,10 @@ private final class StickerPackContainer: ASDisplayNode {
         }
         
         let context = self.context
+        let presentationData = self.presentationData
         let updatedPresentationData = self.controller?.updatedPresentationData
         let navigationController = self.controller?.parentNavigationController as? NavigationController
+        let sendSticker = self.controller?.sendSticker
         
         self.controller?.dismiss()
         
@@ -1369,8 +1373,12 @@ private final class StickerPackContainer: ASDisplayNode {
                 |> deliverOnMainQueue).start(completed: {
                     commit()
                     
-                    let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: nil, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
+                    let packController = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: sendSticker, sendEmoji: nil, actionPerformed: nil, dismissed: nil, getSourceRect: nil)
                     (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
+                    
+                    Queue.mainQueue().after(0.1) {
+                        packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: "Sticker updated.", undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    }
                 })
             }
         )
@@ -2645,7 +2653,7 @@ public final class StickerPackScreenImpl: ViewController, StickerPackScreen {
     
     private let initialSelectedStickerPackIndex: Int
     fileprivate weak var parentNavigationController: NavigationController?
-    private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    fileprivate let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
     private let sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?
     
     fileprivate var controllerNode: StickerPackScreenNode {

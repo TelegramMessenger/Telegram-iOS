@@ -52,7 +52,7 @@ public final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContent
             var title: String?
             var subtitle: NSAttributedString? = nil
             var text: String?
-            var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
+            var mediaAndFlags: ([Media], ChatMessageAttachedContentNodeMediaFlags)?
             
             var automaticDownloadSettings = item.controllerInteraction.automaticMediaDownloadSettings
             if let invoice = invoice {
@@ -61,7 +61,7 @@ public final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContent
                 
                 if let image = invoice.photo {
                     automaticDownloadSettings = MediaAutoDownloadSettings.defaultSettings
-                    mediaAndFlags = (image, [.preferMediaBeforeText])
+                    mediaAndFlags = ([image], [.preferMediaBeforeText])
                 } else {
                     let invoiceLabel = item.presentationData.strings.Message_InvoiceLabel
                     var invoiceText = "\(formatCurrencyAmount(invoice.totalAmount, currency: invoice.currency)) "
