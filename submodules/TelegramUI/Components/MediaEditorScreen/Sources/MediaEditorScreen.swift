@@ -88,7 +88,6 @@ final class MediaEditorScreenComponent: Component {
     let selectedEntity: DrawingEntity?
     let entityViewForEntity: (DrawingEntity) -> DrawingEntityView?
     let openDrawing: (DrawingScreenType) -> Void
-    let openTools: () -> Void
     let cutoutUndo: () -> Void
     
     init(
@@ -105,7 +104,6 @@ final class MediaEditorScreenComponent: Component {
         selectedEntity: DrawingEntity?,
         entityViewForEntity: @escaping (DrawingEntity) -> DrawingEntityView?,
         openDrawing: @escaping (DrawingScreenType) -> Void,
-        openTools: @escaping () -> Void,
         cutoutUndo: @escaping () -> Void
     ) {
         self.context = context
@@ -121,7 +119,6 @@ final class MediaEditorScreenComponent: Component {
         self.selectedEntity = selectedEntity
         self.entityViewForEntity = entityViewForEntity
         self.openDrawing = openDrawing
-        self.openTools = openTools
         self.cutoutUndo = cutoutUndo
     }
     
@@ -726,7 +723,6 @@ final class MediaEditorScreenComponent: Component {
             let isTablet = environment.metrics.isTablet
             
             let openDrawing = component.openDrawing
-            let openTools = component.openTools
             let cutoutUndo = component.cutoutUndo
             
             let buttonSideInset: CGFloat
@@ -766,8 +762,8 @@ final class MediaEditorScreenComponent: Component {
                             size: CGSize(width: 33.0, height: 33.0)
                         )
                     ),
-                    action: { [weak self] in
-                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                    action: { [weak controller] in
+                        guard let controller else {
                             return
                         }
                         guard !controller.node.recording.isActive else {
@@ -811,8 +807,8 @@ final class MediaEditorScreenComponent: Component {
                         icon: doneButtonIcon,
                         title: doneButtonTitle)),
                     effectAlignment: .center,
-                    action: { [weak self] in
-                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                    action: { [weak controller] in
+                        guard let controller else {
                             return
                         }
                         switch controller.mode {
@@ -870,8 +866,8 @@ final class MediaEditorScreenComponent: Component {
                         image: state.image(.draw),
                         size: CGSize(width: 30.0, height: 30.0)
                     )),
-                    action: { [weak self] in
-                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                    action: { [weak controller] in
+                        guard let controller else {
                             return
                         }
                         guard !controller.node.recording.isActive else {
@@ -906,8 +902,8 @@ final class MediaEditorScreenComponent: Component {
                         image: state.image(.text),
                         size: CGSize(width: 30.0, height: 30.0)
                     )),
-                    action: { [weak self] in
-                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                    action: { [weak controller] in
+                        guard let controller else {
                             return
                         }
                         guard !controller.node.recording.isActive else {
@@ -943,8 +939,8 @@ final class MediaEditorScreenComponent: Component {
                     )),
                     tag: stickerButtonTag,
                     minSize: CGSize(width: 30.0, height: 30.0),
-                    action: { [weak self] view, gesture in
-                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                    action: { [weak controller] view, gesture in
+                        guard let controller else {
                             return
                         }
                         guard !controller.node.recording.isActive else {
@@ -982,14 +978,14 @@ final class MediaEditorScreenComponent: Component {
                         image: state.image(.tools),
                         size: CGSize(width: 30.0, height: 30.0)
                     )),
-                    action: { [weak self] in
-                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                    action: { [weak controller] in
+                        guard let controller else {
                             return
                         }
                         guard !controller.node.recording.isActive else {
                             return
                         }
-                        openTools()
+                        openDrawing(.tools)
                     }
                 )),
                 environment: {},
@@ -1830,8 +1826,8 @@ final class MediaEditorScreenComponent: Component {
                                     mediaEditor.setAdditionalVideoOffset(offset, apply: apply)
                                 }
                             },
-                            trackLongPressed: { [weak self] trackId, sourceView in
-                                guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
+                            trackLongPressed: { [weak controller] trackId, sourceView in
+                                guard let controller else {
                                     return
                                 }
                                 controller.node.presentTrackOptions(trackId: trackId, sourceView: sourceView)
@@ -1912,14 +1908,14 @@ final class MediaEditorScreenComponent: Component {
                     transition: transition,
                     component: AnyComponent(CameraButton(
                         content: saveContentComponent,
-                        action: { [weak self] in
-                            guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                        action: { [weak self, weak controller] in
+                            guard let self, let controller else {
                                 return
                             }
                             guard !controller.node.recording.isActive else {
                                 return
                             }
-                            if let view = self?.saveButton.findTaggedView(tag: saveButtonTag) as? LottieAnimationComponent.View {
+                            if let view = self.saveButton.findTaggedView(tag: saveButtonTag) as? LottieAnimationComponent.View {
                                 view.playOnce()
                             }
                             controller.requestSave()
@@ -1983,16 +1979,15 @@ final class MediaEditorScreenComponent: Component {
                         transition: transition,
                         component: AnyComponent(CameraButton(
                             content: dayNightContentComponent,
-                            action: { [weak self, weak state, weak mediaEditor] in
-                                guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                            action: { [weak controller, weak state, weak mediaEditor] in
+                                guard let controller, let state else {
                                     return
                                 }
                                 guard !controller.node.recording.isActive else {
                                     return
                                 }
-                                
                                 if let mediaEditor {
-                                    state?.dayNightDidChange = true
+                                    state.dayNightDidChange = true
                                     
                                     if let snapshotView = controller.node.previewContainerView.snapshotView(afterScreenUpdates: false) {
                                         controller.node.previewContainerView.addSubview(snapshotView)
@@ -2079,8 +2074,8 @@ final class MediaEditorScreenComponent: Component {
                         transition: transition,
                         component: AnyComponent(CameraButton(
                             content: muteContentComponent,
-                            action: { [weak self, weak state, weak mediaEditor] in
-                                guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                            action: { [weak state, weak controller] in
+                                guard let controller else {
                                     return
                                 }
                                 guard !controller.node.recording.isActive else {
@@ -2161,8 +2156,8 @@ final class MediaEditorScreenComponent: Component {
                         transition: transition,
                         component: AnyComponent(CameraButton(
                             content: playbackContentComponent,
-                            action: { [weak self, weak mediaEditor, weak state] in
-                                guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                            action: { [weak controller, weak mediaEditor, weak state] in
+                                guard let controller else {
                                     return
                                 }
                                 guard !controller.node.recording.isActive else {
@@ -2211,8 +2206,8 @@ final class MediaEditorScreenComponent: Component {
                         content: AnyComponent(
                             FlipButtonContentComponent(tag: switchCameraButtonTag)
                         ),
-                        action: { [weak self] in
-                            if let self, let environment = self.environment, let controller = environment.controller() as? MediaEditorScreen {
+                        action: { [weak self, weak controller] in
+                            if let self, let controller {
                                 controller.node.recording.togglePosition()
                                 
                                 if let view = self.switchCameraButton.findTaggedView(tag: switchCameraButtonTag) as? FlipButtonContentComponent.View {
@@ -2246,8 +2241,8 @@ final class MediaEditorScreenComponent: Component {
                     content: AnyComponent(
                         Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: .white)
                     ),
-                    action: { [weak self] in
-                        if let self, let environment = self.environment, let controller = environment.controller() as? MediaEditorScreen {
+                    action: { [weak controller] in
+                        if let controller {
                             controller.node.interaction?.endTextEditing(reset: true)
                         }
                     }
@@ -2275,8 +2270,8 @@ final class MediaEditorScreenComponent: Component {
                     content: AnyComponent(
                         Text(text: environment.strings.Common_Done, font: Font.regular(17.0), color: .white)
                     ),
-                    action: { [weak self] in
-                        if let self, let environment = self.environment, let controller = environment.controller() as? MediaEditorScreen {
+                    action: { [weak controller] in
+                        if let controller {
                             controller.node.interaction?.endTextEditing(reset: false)
                         }
                     }
@@ -2303,8 +2298,8 @@ final class MediaEditorScreenComponent: Component {
                 component: AnyComponent(TextSizeSliderComponent(
                     value: sizeValue ?? 0.5,
                     tag: nil,
-                    updated: { [weak self] size in
-                        if let self, let environment = self.environment, let controller = environment.controller() as? MediaEditorScreen, let component = self.component {
+                    updated: { [weak self, weak controller] size in
+                        if let self, let controller, let component = self.component {
                             if let _ = component.selectedEntity {
                                 controller.node.interaction?.updateEntitySize(size)
                             } else if [.cutoutErase, .cutoutRestore].contains(component.isDisplayingTool), let stickerMaskDrawingView = controller.node.stickerMaskDrawingView {
@@ -2832,51 +2827,61 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             } else {
                 initialValues = nil
             }
+            
+            var isStickerEditor = false
+            if case .stickerEditor = controller.mode {
+                isStickerEditor = true
+            }
                
             if let mediaEntityView = self.entitiesView.add(mediaEntity, announce: false) as? DrawingMediaEntityView {
-                let mediaEntitySize = mediaEntityView.bounds.size
-                let scaledDimensions = subject.dimensions.cgSize.aspectFittedOrSmaller(CGSize(width: 1920, height: 1920))
-                let maskDrawingSize = scaledDimensions.aspectFilled(mediaEntitySize)
-                
-                let stickerMaskDrawingView = DrawingView(size: scaledDimensions, gestureView: self.previewContainerView)
-                stickerMaskDrawingView.stateUpdated = { [weak self] _ in
-                    if let self {
-                        self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
+                var updateStickerMaskDrawing: (CGPoint, CGFloat, CGFloat) -> Void = { _, _, _ in }
+                if isStickerEditor {
+                    let mediaEntitySize = mediaEntityView.bounds.size
+                    let scaledDimensions = subject.dimensions.cgSize.aspectFittedOrSmaller(CGSize(width: 1920, height: 1920))
+                    let maskDrawingSize = scaledDimensions.aspectFilled(mediaEntitySize)
+                    
+                    let stickerMaskDrawingView = DrawingView(size: scaledDimensions, gestureView: self.previewContainerView)
+                    stickerMaskDrawingView.stateUpdated = { [weak self] _ in
+                        if let self {
+                            self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
+                        }
                     }
-                }
-                stickerMaskDrawingView.emptyColor = .white
-                stickerMaskDrawingView.updateToolState(.pen(DrawingToolState.BrushState(color: DrawingColor(color: .black), size: 0.5)))
-                stickerMaskDrawingView.isUserInteractionEnabled = false
-                stickerMaskDrawingView.animationsEnabled = false
-                stickerMaskDrawingView.clearWithEmptyColor()
-                if let filter = makeLuminanceToAlphaFilter() {
-                    self.stickerMaskWrapperView.layer.filters = [filter]
-                }
-                self.stickerMaskWrapperView.addSubview(stickerMaskDrawingView)
-                self.stickerMaskWrapperView.addSubview(self.stickerMaskPreviewView)
-                self.stickerMaskDrawingView = stickerMaskDrawingView
-                
-                var initialMaskPosition = CGPoint()
-                var initialMaskScale: CGFloat = 1.0
-                
-                func updateStickerMaskDrawing(position: CGPoint, scale: CGFloat, rotation: CGFloat) {
-                    let maskScale = initialMaskPosition.x * 2.0 / 1080.0
-                    stickerMaskDrawingView.center = initialMaskPosition.offsetBy(dx: position.x * maskScale, dy: position.y * maskScale)
-                    stickerMaskDrawingView.transform = CGAffineTransform(scaleX: initialMaskScale * scale, y: initialMaskScale * scale).rotated(by: rotation)
-                }
-                
-                Queue.mainQueue().after(0.1) {
-                    let previewSize = self.previewView.bounds.size
-                    self.stickerMaskWrapperView.frame = CGRect(origin: .zero, size: previewSize)
-                    self.stickerMaskPreviewView.frame = CGRect(origin: .zero, size: previewSize)
-                   
-//                    let filledSize = maskDrawingSize.aspectFitted(previewSize)
-                    let maskScale = previewSize.width / min(maskDrawingSize.width, maskDrawingSize.height)
-                    initialMaskScale = maskScale
-                    initialMaskPosition = CGPoint(x: previewSize.width / 2.0, y: previewSize.height / 2.0)
-                    stickerMaskDrawingView.bounds = CGRect(origin: .zero, size: maskDrawingSize)
-                  
-                    updateStickerMaskDrawing(position: .zero, scale: 1.0, rotation: 0.0)
+                    stickerMaskDrawingView.emptyColor = .white
+                    stickerMaskDrawingView.updateToolState(.pen(DrawingToolState.BrushState(color: DrawingColor(color: .black), size: 0.5)))
+                    stickerMaskDrawingView.isUserInteractionEnabled = false
+                    stickerMaskDrawingView.animationsEnabled = false
+                    stickerMaskDrawingView.clearWithEmptyColor()
+                    if let filter = makeLuminanceToAlphaFilter() {
+                        self.stickerMaskWrapperView.layer.filters = [filter]
+                    }
+                    self.stickerMaskWrapperView.addSubview(stickerMaskDrawingView)
+                    self.stickerMaskWrapperView.addSubview(self.stickerMaskPreviewView)
+                    self.stickerMaskDrawingView = stickerMaskDrawingView
+                    
+                    var initialMaskPosition = CGPoint()
+                    var initialMaskScale: CGFloat = 1.0
+                    
+                    updateStickerMaskDrawing = { [weak stickerMaskDrawingView] position, scale, rotation in
+                        guard let stickerMaskDrawingView else {
+                            return
+                        }
+                        let maskScale = initialMaskPosition.x * 2.0 / 1080.0
+                        stickerMaskDrawingView.center = initialMaskPosition.offsetBy(dx: position.x * maskScale, dy: position.y * maskScale)
+                        stickerMaskDrawingView.transform = CGAffineTransform(scaleX: initialMaskScale * scale, y: initialMaskScale * scale).rotated(by: rotation)
+                    }
+                    
+                    Queue.mainQueue().after(0.1) {
+                        let previewSize = self.previewView.bounds.size
+                        self.stickerMaskWrapperView.frame = CGRect(origin: .zero, size: previewSize)
+                        self.stickerMaskPreviewView.frame = CGRect(origin: .zero, size: previewSize)
+                        
+                        let maskScale = previewSize.width / min(maskDrawingSize.width, maskDrawingSize.height)
+                        initialMaskScale = maskScale
+                        initialMaskPosition = CGPoint(x: previewSize.width / 2.0, y: previewSize.height / 2.0)
+                        stickerMaskDrawingView.bounds = CGRect(origin: .zero, size: maskDrawingSize)
+                        
+                        updateStickerMaskDrawing(.zero, 1.0, 0.0)
+                    }
                 }
                                 
                 self.entitiesView.sendSubviewToBack(mediaEntityView)
@@ -2887,7 +2892,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         let scaleDelta = mediaEntity.scale / initialScale
                         self.mediaEditor?.setCrop(offset: positionDelta, scale: scaleDelta, rotation: rotationDelta, mirroring: false)
                         
-                        updateStickerMaskDrawing(position: positionDelta, scale: scaleDelta, rotation: rotationDelta)
+                        updateStickerMaskDrawing(positionDelta, scaleDelta, rotationDelta)
                     }
                 }
                 
@@ -2897,12 +2902,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     mediaEntity.scale = mediaEntity.scale * initialValues.cropScale
                 }
             }
-            
-            var isStickerEditor = false
-            if case .stickerEditor = controller.mode {
-                isStickerEditor = true
-            }
-            
+                        
             let mediaEditor = MediaEditor(context: self.context, mode: isStickerEditor ? .sticker : .default, subject: effectiveSubject.editorSubject, values: initialValues, hasHistogram: true)
             if let initialVideoPosition = controller.initialVideoPosition {
                 mediaEditor.seek(initialVideoPosition, andPlay: true)
@@ -2979,7 +2979,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     mediaEditor.setAdditionalVideo(additionalVideoPath, isDual: true, positionChanges: changes.map { VideoPositionChange(additional: $0.0, timestamp: $0.1) })
                     mediaEditor.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
                     if let entityView = self.entitiesView.getView(for: videoEntity.uuid) as? DrawingStickerEntityView {
-                        entityView.updated = { [weak videoEntity, weak self] in
+                        entityView.updated = { [weak self, weak videoEntity] in
                             if let self, let videoEntity {
                                 self.mediaEditor?.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
                             }
@@ -4528,13 +4528,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             }
                         },
                         openDrawing: { [weak self] mode in
-                            if let self {
+                            if let self, let mediaEditor = self.mediaEditor {
                                 if self.entitiesView.hasSelection {
                                     self.entitiesView.selectEntity(nil)
                                 }
                                 switch mode {
                                 case .sticker:
-                                    self.mediaEditor?.maybePauseVideo()
+                                    mediaEditor.maybePauseVideo()
 
                                     var hasInteractiveStickers = true
                                     if let controller = self.controller, case .stickerEditor = controller.mode {
@@ -4608,7 +4608,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     self.stickerScreen = controller
                                     self.controller?.present(controller, in: .current)
                                 case .text:
-                                    self.mediaEditor?.maybePauseVideo()
+                                    mediaEditor.maybePauseVideo()
                                     self.insertTextEntity()
                                     
                                     self.hasAnyChanges = true
@@ -4749,37 +4749,32 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                             self.animateInFromTool(inPlace: true)
                                         }
                                     }
-                                    controller.present(cutoutController, in: .window(.root))
+                                    self.controller?.present(cutoutController, in: .window(.root))
                                     self.cutoutScreen = cutoutController
                                     self.animateOutToTool(tool: mode, inPlace: true)
                                     
-                                    controller.hapticFeedback.impact(.medium)
+                                    self.controller?.hapticFeedback.impact(.medium)
                                 case .tools:
-                                    break
-                                }
-                            }
-                        },
-                        openTools: { [weak self] in
-                            if let self, let mediaEditor = self.mediaEditor {
-                                if self.entitiesView.hasSelection {
-                                    self.entitiesView.selectEntity(nil)
-                                }
-                                var hiddenTools: [EditorToolKey] = []
-                                if !self.canEnhance {
-                                    hiddenTools.append(.enhance)
-                                }
-                                if let controller = self.controller, case .stickerEditor = controller.mode {
-                                    hiddenTools.append(.grain)
-                                    hiddenTools.append(.vignette)
-                                }
-                                let controller = MediaToolsScreen(context: self.context, mediaEditor: mediaEditor, hiddenTools: hiddenTools)
-                                controller.dismissed = { [weak self] in
-                                    if let self {
-                                        self.animateInFromTool()
+                                    if self.entitiesView.hasSelection {
+                                        self.entitiesView.selectEntity(nil)
                                     }
+                                    var hiddenTools: [EditorToolKey] = []
+                                    if !self.canEnhance {
+                                        hiddenTools.append(.enhance)
+                                    }
+                                    if let controller = self.controller, case .stickerEditor = controller.mode {
+                                        hiddenTools.append(.grain)
+                                        hiddenTools.append(.vignette)
+                                    }
+                                    let controller = MediaToolsScreen(context: self.context, mediaEditor: mediaEditor, hiddenTools: hiddenTools)
+                                    controller.dismissed = { [weak self] in
+                                        if let self {
+                                            self.animateInFromTool()
+                                        }
+                                    }
+                                    self.controller?.present(controller, in: .window(.root))
+                                    self.animateOutToTool(tool: .tools)
                                 }
-                                self.controller?.present(controller, in: .window(.root))
-                                self.animateOutToTool(tool: .tools)
                             }
                         },
                         cutoutUndo: { [weak self, weak controller] in
@@ -4800,7 +4795,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
                                     }
                                 } else if controller.node.isCutout {
-                                    let action = {
+                                    let action = { [weak self, weak mediaEditor] in
+                                        guard let self, let mediaEditor else {
+                                            return
+                                        }
                                         let snapshotView = self.previewView.snapshotView(afterScreenUpdates: false)
                                         if let snapshotView {
                                             self.previewView.superview?.insertSubview(snapshotView, aboveSubview: self.previewView)
