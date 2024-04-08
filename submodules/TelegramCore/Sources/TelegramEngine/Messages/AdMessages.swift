@@ -12,6 +12,8 @@ private class AdMessagesHistoryContextImpl {
             case text
             case textEntities
             case media
+            case color
+            case backgroundEmojiId
             case url
             case buttonText
             case sponsorInfo
@@ -30,6 +32,8 @@ private class AdMessagesHistoryContextImpl {
         public let text: String
         public let textEntities: [MessageTextEntity]
         public let media: [Media]
+        public let color: PeerNameColor?
+        public let backgroundEmojiId: Int64?
         public let url: String
         public let buttonText: String
         public let sponsorInfo: String?
@@ -43,6 +47,8 @@ private class AdMessagesHistoryContextImpl {
             text: String,
             textEntities: [MessageTextEntity],
             media: [Media],
+            color: PeerNameColor?,
+            backgroundEmojiId: Int64?,
             url: String,
             buttonText: String,
             sponsorInfo: String?,
@@ -55,6 +61,8 @@ private class AdMessagesHistoryContextImpl {
             self.text = text
             self.textEntities = textEntities
             self.media = media
+            self.color = color
+            self.backgroundEmojiId = backgroundEmojiId
             self.url = url
             self.buttonText = buttonText
             self.sponsorInfo = sponsorInfo
@@ -81,6 +89,8 @@ private class AdMessagesHistoryContextImpl {
             self.media = mediaData.compactMap { data -> Media? in
                 return PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? Media
             }
+            self.color = try container.decodeIfPresent(Int32.self, forKey: .color).flatMap { PeerNameColor(rawValue: $0) }
+            self.backgroundEmojiId = try container.decodeIfPresent(Int64.self, forKey: .backgroundEmojiId)
 
             self.url = try container.decode(String.self, forKey: .url)
             self.buttonText = try container.decode(String.self, forKey: .buttonText)
@@ -107,6 +117,9 @@ private class AdMessagesHistoryContextImpl {
             }
             try container.encode(mediaData, forKey: .media)
 
+            try container.encodeIfPresent(self.color?.rawValue, forKey: .color)
+            try container.encodeIfPresent(self.backgroundEmojiId, forKey: .backgroundEmojiId)
+            
             try container.encode(self.url, forKey: .url)
             try container.encode(self.buttonText, forKey: .buttonText)
             
@@ -197,8 +210,8 @@ private class AdMessagesHistoryContextImpl {
                 defaultBannedRights: nil,
                 usernames: [],
                 storiesHidden: nil,
-                nameColor: .blue,
-                backgroundEmojiId: nil,
+                nameColor: self.color ?? .blue,
+                backgroundEmojiId: self.backgroundEmojiId,
                 profileColor: nil,
                 profileBackgroundEmojiId: nil,
                 emojiStatus: nil,
@@ -408,7 +421,7 @@ private class AdMessagesHistoryContextImpl {
 
                         for message in messages {
                             switch message {
-                            case let .sponsoredMessage(flags, randomId, url, title, message, entities, photo, buttonText, sponsorInfo, additionalInfo):
+                            case let .sponsoredMessage(flags, randomId, url, title, message, entities, photo, color, buttonText, sponsorInfo, additionalInfo):
                                 var parsedEntities: [MessageTextEntity] = []
                                 if let entities = entities {
                                     parsedEntities = messageTextEntitiesFromApiEntities(entities)
@@ -417,8 +430,17 @@ private class AdMessagesHistoryContextImpl {
                                 let isRecommended = (flags & (1 << 5)) != 0
                                 let canReport = (flags & (1 << 12)) != 0
                                 
+                                var nameColorIndex: Int32?
+                                var backgroundEmojiId: Int64?
+                                if let color = color {
+                                    switch color {
+                                    case let .peerColor(_, color, backgroundEmojiIdValue):
+                                        nameColorIndex = color
+                                        backgroundEmojiId = backgroundEmojiIdValue
+                                    }
+                                }
+                                
                                 let photo = photo.flatMap { telegramMediaImageFromApiPhoto($0) }
-
                                 parsedMessages.append(CachedMessage(
                                     opaqueId: randomId.makeData(),
                                     messageType: isRecommended ? .recommended : .sponsored,
@@ -426,6 +448,8 @@ private class AdMessagesHistoryContextImpl {
                                     text: message,
                                     textEntities: parsedEntities,
                                     media: photo.flatMap { [$0] } ?? [],
+                                    color: nameColorIndex.flatMap { PeerNameColor(rawValue: $0) },
+                                    backgroundEmojiId: backgroundEmojiId,
                                     url: url,
                                     buttonText: buttonText,
                                     sponsorInfo: sponsorInfo,

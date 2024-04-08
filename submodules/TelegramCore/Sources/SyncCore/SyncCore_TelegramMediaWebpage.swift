@@ -3,16 +3,20 @@ import Postbox
 private enum TelegramMediaWebpageAttributeTypes: Int32 {
     case unsupported
     case theme
+    case stickerPack
 }
 
 public enum TelegramMediaWebpageAttribute: PostboxCoding, Equatable {
     case unsupported
     case theme(TelegraMediaWebpageThemeAttribute)
+    case stickerPack(TelegramMediaWebpageStickerPackAttribute)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case TelegramMediaWebpageAttributeTypes.theme.rawValue:
                 self = .theme(decoder.decodeObjectForKey("a", decoder: { TelegraMediaWebpageThemeAttribute(decoder: $0) }) as! TelegraMediaWebpageThemeAttribute)
+            case TelegramMediaWebpageAttributeTypes.stickerPack.rawValue:
+                self = .stickerPack(decoder.decodeObjectForKey("a", decoder: { TelegramMediaWebpageStickerPackAttribute(decoder: $0) }) as! TelegramMediaWebpageStickerPackAttribute)
             default:
                 self = .unsupported
         }
@@ -24,6 +28,9 @@ public enum TelegramMediaWebpageAttribute: PostboxCoding, Equatable {
                 encoder.encodeInt32(TelegramMediaWebpageAttributeTypes.unsupported.rawValue, forKey: "r")
             case let .theme(attribute):
                 encoder.encodeInt32(TelegramMediaWebpageAttributeTypes.theme.rawValue, forKey: "r")
+                encoder.encodeObject(attribute, forKey: "a")
+            case let .stickerPack(attribute):
+                encoder.encodeInt32(TelegramMediaWebpageAttributeTypes.stickerPack.rawValue, forKey: "r")
                 encoder.encodeObject(attribute, forKey: "a")
         }
     }
@@ -66,6 +73,57 @@ public final class TelegraMediaWebpageThemeAttribute: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "settings")
         }
+    }
+}
+
+public final class TelegramMediaWebpageStickerPackAttribute: PostboxCoding, Equatable {
+    public struct Flags: OptionSet {
+        public var rawValue: Int32
+        
+        public init() {
+            self.rawValue = 0
+        }
+        
+        public init(rawValue: Int32) {
+            self.rawValue = rawValue
+        }
+        
+        public static let isEmoji = Flags(rawValue: 1 << 0)
+        public static let isTemplate = Flags(rawValue: 1 << 1)
+    }
+    
+    public static func == (lhs: TelegramMediaWebpageStickerPackAttribute, rhs: TelegramMediaWebpageStickerPackAttribute) -> Bool {
+        if lhs.flags != rhs.flags {
+            return false
+        }
+        if lhs.files.count != rhs.files.count {
+            return false
+        } else {
+            for i in 0 ..< lhs.files.count {
+                if !lhs.files[i].isEqual(to: rhs.files[i]) {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    
+    public let flags: Flags
+    public let files: [TelegramMediaFile]
+    
+    public init(flags: Flags, files: [TelegramMediaFile]) {
+        self.flags = flags
+        self.files = files
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.flags = Flags(rawValue: decoder.decodeInt32ForKey("flags", orElse: 0))
+        self.files = decoder.decodeObjectArrayForKey("files")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.flags.rawValue, forKey: "flags")
+        encoder.encodeObjectArray(self.files, forKey: "files")
     }
 }
 

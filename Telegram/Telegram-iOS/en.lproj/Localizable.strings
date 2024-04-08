@@ -11901,3 +11901,5 @@ Sorry for the inconvenience.";
 
 "Stickers.RemoveFromRecent" = "Remove from Recents";
 "Conversation.StickerRemovedFromRecent" = "Sticker was removed from Recents.";
+
+"Conversation.ViewStickers" = "VIEW STICKERS";
