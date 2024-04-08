@@ -270,7 +270,9 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
             )
         }
         
-        return GlobalNotificationSettingsSet(privateChats: userSettings, groupChats: chatsSettings, channels: channelSettings, contactsJoined: contactsJoinedMuted == .boolFalse)
+        let reactionSettings: PeerReactionNotificationSettings = .default
+        
+        return GlobalNotificationSettingsSet(privateChats: userSettings, groupChats: chatsSettings, channels: channelSettings, reactionSettings: reactionSettings, contactsJoined: contactsJoinedMuted == .boolFalse)
     }
 }
 

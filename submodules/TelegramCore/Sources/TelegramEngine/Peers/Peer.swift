@@ -225,20 +225,37 @@ public struct EngineGlobalNotificationSettings: Equatable {
         }
     }
     
+    public struct ReactionSettings: Equatable {
+        public var messages: PeerReactionNotificationSettings.Sources
+        public var stories: PeerReactionNotificationSettings.Sources
+        public var hideSender: PeerReactionNotificationSettings.HideSender
+        public var sound: EnginePeer.NotificationSettings.MessageSound
+        
+        public init(messages: PeerReactionNotificationSettings.Sources, stories: PeerReactionNotificationSettings.Sources, hideSender: PeerReactionNotificationSettings.HideSender, sound: EnginePeer.NotificationSettings.MessageSound) {
+            self.messages = messages
+            self.stories = stories
+            self.hideSender = hideSender
+            self.sound = sound
+        }
+    }
+    
     public var privateChats: CategorySettings
     public var groupChats: CategorySettings
     public var channels: CategorySettings
+    public var reactionSettings: ReactionSettings
     public var contactsJoined: Bool
     
     public init(
         privateChats: CategorySettings,
         groupChats: CategorySettings,
         channels: CategorySettings,
+        reactionSettings: ReactionSettings,
         contactsJoined: Bool
     ) {
         self.privateChats = privateChats
         self.groupChats = groupChats
         self.channels = channels
+        self.reactionSettings = reactionSettings
         self.contactsJoined = contactsJoined
     }
 }
@@ -632,12 +649,33 @@ public extension EngineGlobalNotificationSettings.CategorySettings {
     }
 }
 
+public extension EngineGlobalNotificationSettings.ReactionSettings {
+    init(_ reactionSettings: PeerReactionNotificationSettings) {
+        self.init(
+            messages: reactionSettings.messages,
+            stories: reactionSettings.stories,
+            hideSender: reactionSettings.hideSender,
+            sound: EnginePeer.NotificationSettings.MessageSound(reactionSettings.sound)
+        )
+    }
+    
+    func _asReactionSettings() -> PeerReactionNotificationSettings {
+        return PeerReactionNotificationSettings(
+            messages: self.messages,
+            stories: self.stories,
+            hideSender: self.hideSender,
+            sound: self.sound._asMessageSound()
+        )
+    }
+}
+
 public extension EngineGlobalNotificationSettings {
     init(_ globalNotificationSettings: GlobalNotificationSettingsSet) {
         self.init(
             privateChats: CategorySettings(globalNotificationSettings.privateChats),
             groupChats: CategorySettings(globalNotificationSettings.groupChats),
             channels: CategorySettings(globalNotificationSettings.channels),
+            reactionSettings: ReactionSettings(globalNotificationSettings.reactionSettings),
             contactsJoined: globalNotificationSettings.contactsJoined
         )
     }
@@ -647,6 +685,7 @@ public extension EngineGlobalNotificationSettings {
             privateChats: self.privateChats._asMessageNotificationSettings(),
             groupChats: self.groupChats._asMessageNotificationSettings(),
             channels: self.channels._asMessageNotificationSettings(),
+            reactionSettings: self.reactionSettings._asReactionSettings(),
             contactsJoined: self.contactsJoined
         )
     }

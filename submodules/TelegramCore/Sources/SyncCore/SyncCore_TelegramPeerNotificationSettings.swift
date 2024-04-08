@@ -454,6 +454,93 @@ public struct PeerStoryNotificationSettings: Codable, Equatable {
     }
 }
 
+public struct PeerReactionNotificationSettings: Codable, Equatable {
+    public enum CodingError: Error {
+        case generic
+    }
+    
+    public static var `default`: PeerReactionNotificationSettings {
+        return PeerReactionNotificationSettings(
+            messages: .contacts,
+            stories: .contacts,
+            hideSender: .show,
+            sound: .default
+        )
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case messages
+        case stories
+        case hideSender
+        case sound
+    }
+    
+    public enum Sources: Int32, Codable {
+        case nobody = 0
+        case contacts = 1
+        case everyone = 2
+    }
+    
+    public enum Mute: Int32, Codable {
+        case `default` = 0
+        case unmuted = 1
+        case muted = 2
+    }
+    
+    public enum HideSender: Int32, Codable {
+        case `default` = 0
+        case hide = 1
+        case show = 2
+    }
+    
+    public var messages: Sources
+    public var stories: Sources
+    public var hideSender: HideSender
+    public var sound: PeerMessageSound
+    
+    public init(
+        messages: Sources,
+        stories: Sources,
+        hideSender: HideSender,
+        sound: PeerMessageSound
+    ) {
+        self.messages = messages
+        self.stories = stories
+        self.hideSender = hideSender
+        self.sound = sound
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        if let messages = Sources(rawValue: try container.decode(Int32.self, forKey: .messages)) {
+            self.messages = messages
+        } else {
+            throw CodingError.generic
+        }
+        if let stories = Sources(rawValue: try container.decode(Int32.self, forKey: .stories)) {
+            self.stories = stories
+        } else {
+            throw CodingError.generic
+        }
+        if let hideSender = HideSender(rawValue: try container.decode(Int32.self, forKey: .hideSender)) {
+            self.hideSender = hideSender
+        } else {
+            throw CodingError.generic
+        }
+        self.sound = try container.decode(PeerMessageSound.self, forKey: .sound)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.messages.rawValue, forKey: .messages)
+        try container.encode(self.stories.rawValue, forKey: .stories)
+        try container.encode(self.hideSender.rawValue, forKey: .hideSender)
+        try container.encode(self.sound, forKey: .sound)
+    }
+}
+
 public final class TelegramPeerNotificationSettings: PeerNotificationSettings, Codable, Equatable {
     public let muteState: PeerMuteState
     public let messageSound: PeerMessageSound
