@@ -2780,6 +2780,10 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         self.view.endEditing(true)
         self.longPressRecognizer?.isEnabled = false
         
+        guard self.isExpanded else {
+            return
+        }
+        
         self.animateFromExtensionDistance = 0.0
         self.extensionDistance = 0.0
         self.visibleExtensionDistance = 0.0
