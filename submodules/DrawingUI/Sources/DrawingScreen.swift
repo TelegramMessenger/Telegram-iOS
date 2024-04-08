@@ -32,7 +32,7 @@ public struct DrawingResultData {
     public let entities: [CodableDrawingEntity]
 }
 
-enum DrawingToolState: Equatable, Codable {
+public enum DrawingToolState: Equatable, Codable {
     private enum CodingKeys: String, CodingKey {
         case type
         case brushState
@@ -48,27 +48,27 @@ enum DrawingToolState: Equatable, Codable {
         case eraser = 5
     }
     
-    struct BrushState: Equatable, Codable {
+    public struct BrushState: Equatable, Codable {
         private enum CodingKeys: String, CodingKey {
             case color
             case size
         }
         
-        let color: DrawingColor
-        let size: CGFloat
+        public let color: DrawingColor
+        public let size: CGFloat
         
-        init(color: DrawingColor, size: CGFloat) {
+        public init(color: DrawingColor, size: CGFloat) {
             self.color = color
             self.size = size
         }
         
-        init(from decoder: Decoder) throws {
+        public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.color = try container.decode(DrawingColor.self, forKey: .color)
             self.size = try container.decode(CGFloat.self, forKey: .size)
         }
 
-        func encode(to encoder: Encoder) throws {
+        public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(self.color, forKey: .color)
             try container.encode(self.size, forKey: .size)
@@ -83,23 +83,23 @@ enum DrawingToolState: Equatable, Codable {
         }
     }
     
-    struct EraserState: Equatable, Codable {
+    public struct EraserState: Equatable, Codable {
         private enum CodingKeys: String, CodingKey {
             case size
         }
         
-        let size: CGFloat
+        public let size: CGFloat
         
-        init(size: CGFloat) {
+        public init(size: CGFloat) {
             self.size = size
         }
         
-        init(from decoder: Decoder) throws {
+        public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.size = try container.decode(CGFloat.self, forKey: .size)
         }
 
-        func encode(to encoder: Encoder) throws {
+        public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(self.size, forKey: .size)
         }
@@ -116,7 +116,7 @@ enum DrawingToolState: Equatable, Codable {
     case blur(EraserState)
     case eraser(EraserState)
     
-    func withUpdatedColor(_ color: DrawingColor) -> DrawingToolState {
+    public func withUpdatedColor(_ color: DrawingColor) -> DrawingToolState {
         switch self {
         case let .pen(state):
             return .pen(state.withUpdatedColor(color))
@@ -131,7 +131,7 @@ enum DrawingToolState: Equatable, Codable {
         }
     }
     
-    func withUpdatedSize(_ size: CGFloat) -> DrawingToolState {
+    public func withUpdatedSize(_ size: CGFloat) -> DrawingToolState {
         switch self {
         case let .pen(state):
             return .pen(state.withUpdatedSize(size))
@@ -148,7 +148,7 @@ enum DrawingToolState: Equatable, Codable {
         }
     }
     
-    var color: DrawingColor? {
+    public var color: DrawingColor? {
         switch self {
         case let .pen(state), let .arrow(state), let .marker(state), let .neon(state):
             return state.color
@@ -157,7 +157,7 @@ enum DrawingToolState: Equatable, Codable {
         }
     }
     
-    var size: CGFloat? {
+    public var size: CGFloat? {
         switch self {
         case let .pen(state), let .arrow(state), let .marker(state), let .neon(state):
             return state.size
@@ -183,7 +183,7 @@ enum DrawingToolState: Equatable, Codable {
         }
     }
     
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let typeValue = try container.decode(Int32.self, forKey: .type)
         if let type = DrawingToolState.Key(rawValue: typeValue) {
@@ -206,7 +206,7 @@ enum DrawingToolState: Equatable, Codable {
         }
     }
 
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
         case let .pen(state):
@@ -2893,13 +2893,13 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         for entity in self.entitiesView.entities {
             if let sticker = entity as? DrawingStickerEntity, case let .file(file, _) = sticker.content {
                 let coder = PostboxEncoder()
-                coder.encodeRootObject(file)
+                coder.encodeRootObject(file.media)
                 stickers.append(coder.makeData())
             } else if let text = entity as? DrawingTextEntity, let subEntities = text.renderSubEntities {
                 for sticker in subEntities {
                     if let sticker = sticker as? DrawingStickerEntity, case let .file(file, _) = sticker.content {
                         let coder = PostboxEncoder()
-                        coder.encodeRootObject(file)
+                        coder.encodeRootObject(file.media)
                         stickers.append(coder.makeData())
                     }
                 }

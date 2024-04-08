@@ -217,6 +217,7 @@ final class TelegramGlobalSettings {
     let suggestPhoneNumberConfirmation: Bool
     let suggestPasswordConfirmation: Bool
     let suggestPasswordSetup: Bool
+    let premiumGracePeriod: Bool
     let accountsAndPeers: [(AccountContext, EnginePeer, Int32)]
     let activeSessionsContext: ActiveSessionsContext?
     let webSessionsContext: WebSessionsContext?
@@ -239,6 +240,7 @@ final class TelegramGlobalSettings {
         suggestPhoneNumberConfirmation: Bool,
         suggestPasswordConfirmation: Bool,
         suggestPasswordSetup: Bool,
+        premiumGracePeriod: Bool,
         accountsAndPeers: [(AccountContext, EnginePeer, Int32)],
         activeSessionsContext: ActiveSessionsContext?,
         webSessionsContext: WebSessionsContext?,
@@ -260,6 +262,7 @@ final class TelegramGlobalSettings {
         self.suggestPhoneNumberConfirmation = suggestPhoneNumberConfirmation
         self.suggestPasswordConfirmation = suggestPasswordConfirmation
         self.suggestPasswordSetup = suggestPasswordSetup
+        self.premiumGracePeriod = premiumGracePeriod
         self.accountsAndPeers = accountsAndPeers
         self.activeSessionsContext = activeSessionsContext
         self.webSessionsContext = webSessionsContext
@@ -844,6 +847,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             suggestPhoneNumberConfirmation: suggestions.contains(.validatePhoneNumber),
             suggestPasswordConfirmation: suggestions.contains(.validatePassword),
             suggestPasswordSetup: suggestPasswordSetup,
+            premiumGracePeriod: suggestions.contains(.gracePremium),
             accountsAndPeers: accountsAndPeers,
             activeSessionsContext: accountSessions?.0,
             webSessionsContext: accountSessions?.2,

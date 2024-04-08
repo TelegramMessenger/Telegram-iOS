@@ -203,6 +203,8 @@ final class QuickReplySetupScreenComponent: Component {
                     },
                     openPremiumGift: { _ in
                     },
+                    openPremiumManagement: {
+                    },
                     openActiveSessions: {
                     },
                     openBirthdaySetup: {

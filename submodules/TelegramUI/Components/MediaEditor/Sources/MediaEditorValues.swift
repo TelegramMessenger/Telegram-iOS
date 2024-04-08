@@ -21,6 +21,7 @@ public enum EditorToolKey: Int32, CaseIterable {
     case highlightsTint
     case blur
     case curves
+    case stickerOutline
     
     static let adjustmentToolsKeys: [EditorToolKey] = [
         .enhance,
@@ -1636,6 +1637,7 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
         videoSettings: videoSettings,
         audioSettings: audioSettings,
         values: values,
-        frameRate: frameRate
+        frameRate: frameRate,
+        preferredDuration: isSticker ? duration: nil
     )
 }

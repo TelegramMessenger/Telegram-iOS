@@ -1195,7 +1195,16 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         if let id = groupId.base as? ItemCollectionId, context.sharedContext.currentStickerSettings.with({ $0 }).dynamicPackOrder {
                             bubbleUpEmojiOrStickersets.append(id)
                         }
-                        let _ = interaction.sendSticker(.standalone(media: file), false, false, nil, false, view, rect, layer, bubbleUpEmojiOrStickersets)
+                        
+                        let reference: FileMediaReference
+                        if groupId == AnyHashable("saved") {
+                            reference = .savedSticker(media: file)
+                        } else if groupId == AnyHashable("recent") {
+                            reference = .recentSticker(media: file)
+                        } else {
+                            reference = .standalone(media: file)
+                        }
+                        let _ = interaction.sendSticker(reference, false, false, nil, false, view, rect, layer, bubbleUpEmojiOrStickersets)
                     }
                 })
             },
@@ -1337,7 +1346,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         stickerPacks: [packReference],
                         loadedStickerPacks: [],
                         isEditing: true,
-                        expandIfNeeded: false,
+                        expandIfNeeded: true,
                         parentNavigationController: interaction.getNavigationController(),
                         sendSticker: { [weak interaction] fileReference, sourceView, sourceRect in
                             return interaction?.sendSticker(fileReference, false, false, nil, false, sourceView, sourceRect, nil, []) ?? false
@@ -2782,7 +2791,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                     
                                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                     let _ = (context.engine.stickers.toggleStickerSaved(file: file, saved: !isStarred)
-                                             |> deliverOnMainQueue).start(next: { result in
+                                    |> deliverOnMainQueue).start(next: { result in
                                         switch result {
                                         case .generic:
                                             interaction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: !isStarred ? presentationData.strings.Conversation_StickerAddedToFavorites : presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
@@ -2835,6 +2844,25 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                 default:
                                     break
                                 }
+                            }
+                            
+                            if groupId == AnyHashable("recent") {
+                                menuItems.append(
+                                    .action(ContextMenuActionItem(text: presentationData.strings.Stickers_RemoveFromRecent, textColor: .destructive, icon: { theme in
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                                    }, action: { _, f in
+                                        f(.default)
+                                        
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        
+                                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                        interaction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.Conversation_StickerRemovedFromRecent, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                        
+                                        strongSelf.context.engine.stickers.removeRecentlyUsedSticker(fileReference: .recentSticker(media: file))
+                                    }))
+                                )
                             }
                         }
                         

@@ -622,6 +622,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         },
                         openPremiumGift: { _ in
                         },
+                        openPremiumManagement: {
+                        }, 
                         openActiveSessions: {
                         },
                         openBirthdaySetup: {

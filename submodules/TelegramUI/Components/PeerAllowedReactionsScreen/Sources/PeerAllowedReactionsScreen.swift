@@ -243,7 +243,6 @@ final class PeerAllowedReactionsScreenComponent: Component {
             } else {
                 allowedReactions = .empty
             }
-            
             let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: Int32(self.allowedReactionCount))
             
             let applyDisposable = (component.context.engine.peers.updatePeerReactionSettings(peerId: component.peerId, reactionSettings: reactionSettings)

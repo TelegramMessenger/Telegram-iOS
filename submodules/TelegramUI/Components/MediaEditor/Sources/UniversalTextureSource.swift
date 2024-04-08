@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import Metal
 import MetalKit
+import ImageTransparency
 
 final class UniversalTextureSource: TextureSource {
     enum Input {
@@ -152,6 +153,7 @@ private protocol InputContext {
 private class ImageInputContext: InputContext {
     fileprivate var input: Input
     private var texture: MTLTexture?
+    private var hasTransparency = false
     
     init(input: Input, renderTarget: RenderTarget, queue: DispatchQueue) {
         guard case let .image(image) = input else {
@@ -161,10 +163,11 @@ private class ImageInputContext: InputContext {
         if let device = renderTarget.mtlDevice {
             self.texture = loadTexture(image: image, device: device)
         }
+        self.hasTransparency = imageHasTransparency(image)
     }
     
     func output(time: Double) -> Output? {
-        return self.texture.flatMap { .texture($0, .zero) }
+        return self.texture.flatMap { .texture($0, .zero, self.hasTransparency) }
     }
     
     func invalidate() {

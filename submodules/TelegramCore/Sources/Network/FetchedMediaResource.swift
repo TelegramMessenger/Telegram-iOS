@@ -299,6 +299,8 @@ private enum MediaReferenceRevalidationKey: Hashable {
     case webPage(webPage: WebpageReference)
     case stickerPack(stickerPack: StickerPackReference)
     case savedGifs
+    case savedStickers
+    case recentStickers
     case peer(peer: PeerReference)
     case wallpaper(wallpaper: WallpaperReference)
     case wallpapers
@@ -530,6 +532,66 @@ final class MediaReferenceRevalidationContext {
                 return .complete()
             }
             |> then(loadRecentGifs)
+            |> castError(RevalidateMediaReferenceError.self)).start(next: { value in
+                next(value)
+            }, error: { _ in
+                error(.generic)
+            })
+        }) |> mapToSignal { next -> Signal<[TelegramMediaFile], RevalidateMediaReferenceError> in
+            if let next = next as? [TelegramMediaFile] {
+                return .single(next)
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
+    
+    func savedStickers(postbox: Postbox, network: Network, background: Bool) -> Signal<[TelegramMediaFile], RevalidateMediaReferenceError> {
+        return self.genericItem(key: .savedStickers, background: background, request: { next, error in
+            let loadSavedStickers: Signal<[TelegramMediaFile], NoError> = postbox.transaction { transaction -> [TelegramMediaFile] in
+                return transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudSavedStickers).compactMap({ item -> TelegramMediaFile? in
+                    if let contents = item.contents.get(RecentMediaItem.self) {
+                        let file = contents.media
+                        return file
+                    }
+                    return nil
+                })
+            }
+            return (managedSavedStickers(postbox: postbox, network: network, forceFetch: true)
+            |> mapToSignal { _ -> Signal<[TelegramMediaFile], NoError> in
+                return .complete()
+            }
+            |> then(loadSavedStickers)
+            |> castError(RevalidateMediaReferenceError.self)).start(next: { value in
+                next(value)
+            }, error: { _ in
+                error(.generic)
+            })
+        }) |> mapToSignal { next -> Signal<[TelegramMediaFile], RevalidateMediaReferenceError> in
+            if let next = next as? [TelegramMediaFile] {
+                return .single(next)
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
+    
+    func recentStickers(postbox: Postbox, network: Network, background: Bool) -> Signal<[TelegramMediaFile], RevalidateMediaReferenceError> {
+        return self.genericItem(key: .recentStickers, background: background, request: { next, error in
+            let loadRecentStickers: Signal<[TelegramMediaFile], NoError> = postbox.transaction { transaction -> [TelegramMediaFile] in
+                return transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudRecentStickers).compactMap({ item -> TelegramMediaFile? in
+                    if let contents = item.contents.get(RecentMediaItem.self) {
+                        let file = contents.media
+                        return file
+                    }
+                    return nil
+                })
+            }
+            return (managedRecentStickers(postbox: postbox, network: network, forceFetch: true)
+            |> mapToSignal { _ -> Signal<[TelegramMediaFile], NoError> in
+                return .complete()
+            }
+            |> then(loadRecentStickers)
             |> castError(RevalidateMediaReferenceError.self)).start(next: { value in
                 next(value)
             }, error: { _ in
@@ -801,6 +863,30 @@ func revalidateMediaResourceReference(accountPeerId: PeerId, postbox: Postbox, n
                     }
                 case let .savedGif(media):
                     return revalidationContext.savedGifs(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
+                    |> mapToSignal { result -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
+                        for file in result {
+                            if media.id != nil && file.id == media.id {
+                                if let updatedResource = findUpdatedMediaResource(media: file, previousMedia: media, resource: resource) {
+                                    return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
+                                }
+                            }
+                        }
+                        return .fail(.generic)
+                    }
+                case let .savedSticker(media):
+                    return revalidationContext.savedStickers(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
+                    |> mapToSignal { result -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
+                        for file in result {
+                            if media.id != nil && file.id == media.id {
+                                if let updatedResource = findUpdatedMediaResource(media: file, previousMedia: media, resource: resource) {
+                                    return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
+                                }
+                            }
+                        }
+                        return .fail(.generic)
+                    }
+                case let .recentSticker(media):
+                    return revalidationContext.recentStickers(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
                     |> mapToSignal { result -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
                         for file in result {
                             if media.id != nil && file.id == media.id {

@@ -1542,7 +1542,11 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                     })
                 }
             }
-            self.isCollapsing = false
+            if self.isCollapsing {
+                Queue.mainQueue().justDispatch {
+                    self.isCollapsing = false
+                }
+            }
         }
         
         transition.updateFrame(node: self.backgroundNode, frame: visualBackgroundFrame, beginWithCurrentState: true)
@@ -2711,7 +2715,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         case .ended:
             let point = recognizer.location(in: self.view)
             
-            if self.isExpanded {
+            if self.isExpanded || self.isCollapsing {
                 return
             }
             if let expandItemView = self.expandItemView, expandItemView.bounds.contains(self.view.convert(point, to: self.expandItemView)) {
@@ -2775,6 +2779,10 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         
         self.view.endEditing(true)
         self.longPressRecognizer?.isEnabled = false
+        
+        guard self.isExpanded else {
+            return
+        }
         
         self.animateFromExtensionDistance = 0.0
         self.extensionDistance = 0.0

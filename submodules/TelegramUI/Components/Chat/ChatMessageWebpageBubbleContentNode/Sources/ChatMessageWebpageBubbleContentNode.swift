@@ -466,6 +466,8 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                             actionTitle = item.presentationData.strings.Conversation_BoostChannel
                         case "telegram_group_boost":
                             actionTitle = item.presentationData.strings.Conversation_BoostChannel
+                        case "telegram_stickerset":
+                            actionTitle = item.presentationData.strings.Conversation_ViewStickers
                         default:
                             break
                     }

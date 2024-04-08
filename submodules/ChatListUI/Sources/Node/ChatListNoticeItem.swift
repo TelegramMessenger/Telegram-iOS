@@ -224,6 +224,9 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
             case .xmasPremiumGift:
                 titleString = parseMarkdownIntoAttributedString(item.strings.ChatList_PremiumXmasGiftTitle, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.accentTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), linkAttribute: { _ in return nil }))
                 textString = NSAttributedString(string: item.strings.ChatList_PremiumXmasGiftText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case .premiumGrace:
+                titleString = parseMarkdownIntoAttributedString(item.strings.ChatList_PremiumGraceTitle, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.accentTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), linkAttribute: { _ in return nil }))
+                textString = NSAttributedString(string: item.strings.ChatList_PremiumGraceText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             case .setupBirthday:
                 titleString = NSAttributedString(string: item.strings.ChatList_AddBirthdayTitle, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
                 textString = NSAttributedString(string: item.strings.ChatList_AddBirthdayText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
@@ -332,6 +335,8 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                     } else if case .setupBirthday = item.notice {
                         hasCloseButton = true
                     } else if case .birthdayPremiumGift = item.notice {
+                        hasCloseButton = true
+                    } else if case .premiumGrace = item.notice {
                         hasCloseButton = true
                     }
                                         

@@ -102,6 +102,7 @@ public final class ChatListNodeInteraction {
     let openPasswordSetup: () -> Void
     let openPremiumIntro: () -> Void
     let openPremiumGift: ([EnginePeer.Id: TelegramBirthday]?) -> Void
+    let openPremiumManagement: () -> Void
     let openActiveSessions: () -> Void
     let openBirthdaySetup: () -> Void
     let performActiveSessionAction: (NewSessionReview, Bool) -> Void
@@ -156,6 +157,7 @@ public final class ChatListNodeInteraction {
         openPasswordSetup: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void,
         openPremiumGift: @escaping ([EnginePeer.Id: TelegramBirthday]?) -> Void,
+        openPremiumManagement: @escaping () -> Void,
         openActiveSessions: @escaping () -> Void,
         openBirthdaySetup: @escaping () -> Void,
         performActiveSessionAction: @escaping (NewSessionReview, Bool) -> Void,
@@ -197,6 +199,7 @@ public final class ChatListNodeInteraction {
         self.openPasswordSetup = openPasswordSetup
         self.openPremiumIntro = openPremiumIntro
         self.openPremiumGift = openPremiumGift
+        self.openPremiumManagement = openPremiumManagement
         self.openActiveSessions = openActiveSessions
         self.openBirthdaySetup = openBirthdaySetup
         self.performActiveSessionAction = performActiveSessionAction
@@ -736,6 +739,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPremiumIntro()
                         case .xmasPremiumGift:
                             nodeInteraction?.openPremiumGift(nil)
+                        case .premiumGrace:
+                            nodeInteraction?.openPremiumManagement()
                         case .setupBirthday:
                             nodeInteraction?.openBirthdaySetup()
                         case let .birthdayPremiumGift(_, birthdays):
@@ -1072,6 +1077,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPremiumIntro()
                         case .xmasPremiumGift:
                             nodeInteraction?.openPremiumGift(nil)
+                        case .premiumGrace:
+                            nodeInteraction?.openPremiumManagement()
                         case .setupBirthday:
                             nodeInteraction?.openBirthdaySetup()
                         case let .birthdayPremiumGift(_, birthdays):
@@ -1196,6 +1203,7 @@ public final class ChatListNode: ListView {
     public var activateChatPreview: ((ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     public var openStories: ((ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void)?
     public var openBirthdaySetup: (() -> Void)?
+    public var openPremiumManagement: (() -> Void)?
     
     private var theme: PresentationTheme
     
@@ -1701,6 +1709,11 @@ public final class ChatListNode: ListView {
             let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(birthdays), completion: nil)
             controller.navigationPresentation = .modal
             self.push?(controller)
+        }, openPremiumManagement: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.openPremiumManagement?()
         }, openActiveSessions: { [weak self] in
             guard let self else {
                 return
@@ -1813,6 +1826,11 @@ public final class ChatListNode: ListView {
                 self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_PremiumGiftInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
                     return true
                 }))
+            case .premiumGrace:
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .gracePremium).startStandalone()
+//                self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_BirthdayInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
+//                    return true
+//                }))
             default:
                 break
             }
@@ -1946,7 +1964,9 @@ public final class ChatListNode: ListView {
                     todayBirthdayPeerIds = []
                 }
                 
-                if suggestions.contains(.setupBirthday) && birthday == nil {
+                if suggestions.contains(.gracePremium) {
+                    return .single(.premiumGrace)
+                } else if suggestions.contains(.setupBirthday) && birthday == nil {
                     return .single(.setupBirthday)
                 } else if suggestions.contains(.xmasPremiumGift) {
                     return .single(.xmasPremiumGift)

@@ -18,6 +18,7 @@ final class StickerCutoutOutlineView: UIView {
     let strokeLayer = SimpleShapeLayer()
     let imageLayer = SimpleLayer()
     var outlineLayer = CAEmitterLayer()
+    var outline2Layer = CAEmitterLayer()
     var glowLayer = CAEmitterLayer()
 
     override init(frame: CGRect) {
@@ -30,9 +31,7 @@ final class StickerCutoutOutlineView: UIView {
         self.strokeLayer.shadowRadius = 4.0
         
         self.layer.allowsGroupOpacity = true
-        
-//        self.imageLayer.contentsGravity = .resizeAspect
-        
+                
         self.layer.addSublayer(self.strokeLayer)
         self.layer.addSublayer(self.imageLayer)
     }
@@ -56,23 +55,32 @@ final class StickerCutoutOutlineView: UIView {
     }
         
     private func setupAnimation(path: BezierPath) {
+        self.outlineLayer.removeFromSuperlayer()
+        self.outline2Layer.removeFromSuperlayer()
+        self.glowLayer.removeFromSuperlayer()
+        
         self.outlineLayer = CAEmitterLayer()
-        self.outlineLayer.opacity = 0.7
+        self.outlineLayer.opacity = 0.77
+        self.outline2Layer = CAEmitterLayer()
+        self.outline2Layer.opacity = 0.7
+        
         self.glowLayer = CAEmitterLayer()
         
         self.layer.addSublayer(self.outlineLayer)
+//        self.layer.addSublayer(self.outline2Layer)
         self.layer.addSublayer(self.glowLayer)
         
         let randomBeginTime = (previousBeginTime + 4) % 6
         previousBeginTime = randomBeginTime
         
-        let duration = path.length / 2200.0
+        let duration = min(6.0, max(2.5, path.length / 2200.0))
         
         let outlineAnimation = CAKeyframeAnimation(keyPath: "emitterPosition")
         outlineAnimation.path = path.path.cgPath
         outlineAnimation.duration = duration
         outlineAnimation.repeatCount = .infinity
-        outlineAnimation.calculationMode = .cubicPaced
+        outlineAnimation.calculationMode = .paced
+        outlineAnimation.fillMode = .forwards
         outlineAnimation.beginTime = Double(randomBeginTime)
         self.outlineLayer.add(outlineAnimation, forKey: "emitterPosition")
         
@@ -85,14 +93,49 @@ final class StickerCutoutOutlineView: UIView {
         lineEmitterCell.color = UIColor.white.cgColor
         lineEmitterCell.contents = UIImage(named: "Media Editor/ParticleDot")?.cgImage
         lineEmitterCell.lifetime = 2.2
-        lineEmitterCell.birthRate = 1000
-        lineEmitterCell.scale = 0.14
+        lineEmitterCell.birthRate = 800
+        lineEmitterCell.scale = 0.18
         lineEmitterCell.alphaSpeed = -0.4
         
         self.outlineLayer.emitterCells = [lineEmitterCell]
         self.outlineLayer.emitterMode = .points
-        self.outlineLayer.emitterSize = CGSize(width: 1.0, height: 1.0)
-        self.outlineLayer.emitterShape = .point
+        self.outlineLayer.emitterSize = CGSize(width: 1.33, height: 1.33)
+        self.outlineLayer.emitterShape = .rectangle
+        
+        
+        
+        
+        
+        let outline2Animation = CAKeyframeAnimation(keyPath: "emitterPosition")
+        outline2Animation.path = path.path.cgPath
+        outline2Animation.duration = duration
+        outline2Animation.repeatCount = .infinity
+        outline2Animation.calculationMode = .paced
+        outline2Animation.fillMode = .forwards
+        outline2Animation.beginTime = Double(randomBeginTime) + 0.02
+        self.outline2Layer.add(outline2Animation, forKey: "emitterPosition")
+        
+        let line2EmitterCell = CAEmitterCell()
+        line2EmitterCell.beginTime = CACurrentMediaTime()
+        let line2AlphaBehavior = createEmitterBehavior(type: "valueOverLife")
+        line2AlphaBehavior.setValue("color.alpha", forKey: "keyPath")
+        line2AlphaBehavior.setValue([0.0, 0.5, 0.8, 0.5, 0.0], forKey: "values")
+        line2EmitterCell.setValue([line2AlphaBehavior], forKey: "emitterBehaviors")
+        line2EmitterCell.color = UIColor.white.cgColor
+        line2EmitterCell.contents = UIImage(named: "Media Editor/ParticleDot")?.cgImage
+        line2EmitterCell.lifetime = 2.2
+        line2EmitterCell.birthRate = 500
+        line2EmitterCell.scale = 0.14
+        line2EmitterCell.alphaSpeed = -0.4
+        
+        self.outline2Layer.emitterCells = [line2EmitterCell]
+        self.outline2Layer.emitterMode = .points
+        self.outline2Layer.emitterSize = CGSize(width: 1.5, height: 1.5)
+        self.outline2Layer.emitterShape = .circle
+        
+        
+        
+        
         
         let glowAnimation = CAKeyframeAnimation(keyPath: "emitterPosition")
         glowAnimation.path = path.path.cgPath
@@ -123,7 +166,23 @@ final class StickerCutoutOutlineView: UIView {
         self.strokeLayer.animateAlpha(from: 0.0, to: CGFloat(self.strokeLayer.opacity), duration: 0.4)
         
         self.outlineLayer.animateAlpha(from: 0.0, to: CGFloat(self.outlineLayer.opacity), duration: 0.4, delay: 0.0)
+        self.outline2Layer.animateAlpha(from: 0.0, to: CGFloat(self.outline2Layer.opacity), duration: 0.4, delay: 0.0)
         self.glowLayer.animateAlpha(from: 0.0, to: CGFloat(self.glowLayer.opacity), duration: 0.4, delay: 0.0)
+        
+        
+        self.animateBump(path: path)
+    }
+    
+    private func animateBump(path: BezierPath) {
+        let boundingBox = path.path.cgPath.boundingBox
+        let pathCenter = CGPoint(x: boundingBox.midX, y: boundingBox.midY)
+        
+//        let originalPosition = self.imageLayer.position
+//        let originalAnchorPoint = self.imageLayer.anchorPoint
+        
+        let layerPathCenter = self.imageLayer.convert(pathCenter, from: self.imageLayer.superlayer)
+        self.imageLayer.anchorPoint = CGPoint(x: layerPathCenter.x / layer.bounds.width, y: layerPathCenter.y / layer.bounds.height)
+        self.imageLayer.position = layerPathCenter
         
         let values = [1.0, 1.07, 1.0]
         let keyTimes = [0.0, 0.67, 1.0]
@@ -133,6 +192,7 @@ final class StickerCutoutOutlineView: UIView {
     override func layoutSubviews() {
         self.strokeLayer.frame = self.bounds.offsetBy(dx: 0.0, dy: 1.0)
         self.outlineLayer.frame = self.bounds
+        self.outline2Layer.frame = self.bounds
         self.imageLayer.frame = self.bounds
         self.glowLayer.frame = self.bounds
     }
@@ -146,16 +206,19 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
     }
     let minSide = min(size.width, size.height)
     let scaledImageSize = image.extent.size.aspectFilled(CGSize(width: minSide, height: minSide))
+    let contourImageSize = image.extent.size.aspectFilled(CGSize(width: 256.0, height: 256.0))
 
-    
     var contour = findContours(pixelBuffer: pixelBuffer)
-    contour = simplify(contour, tolerance: 1.4)
-    let path = BezierPath(points: contour, smooth: false)
+    guard !contour.isEmpty else {
+        return nil
+    }
     
-    let firstScale = min(size.width, size.height) / 256.0
-    let secondScale = size.width / 1080.0
+    contour = simplify(contour, tolerance: 1.0)
+    let path = BezierPath(points: contour, smooth: true)
     
-    var transform = CGAffineTransform.identity
+    let contoursScale = min(size.width, size.height) / 256.0
+    let valuesScale = size.width / 1080.0
+    
     let position = values.cropOffset
     let rotation = values.cropRotation
     let scale = values.cropScale
@@ -165,9 +228,15 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
         y: (size.height - scaledImageSize.height * scale) / 2.0
     )
     
-    transform = transform.translatedBy(x: positionOffset.x + position.x * secondScale, y: positionOffset.y + position.y * secondScale)
+    var transform = CGAffineTransform.identity
+    transform = transform.translatedBy(x: contourImageSize.width / 2.0, y: contourImageSize.height / 2.0)
     transform = transform.rotated(by: rotation)
-    transform = transform.scaledBy(x: scale * firstScale, y: scale * firstScale)
+    transform = transform.translatedBy(x: -contourImageSize.width / 2.0, y: -contourImageSize.height / 2.0)
+    path.apply(transform, scale: 1.0)
+    
+    transform = CGAffineTransform.identity
+    transform = transform.translatedBy(x: positionOffset.x + position.x * valuesScale, y: positionOffset.y + position.y * valuesScale)
+    transform = transform.scaledBy(x: scale * contoursScale, y: scale * contoursScale)
     
     if !path.path.isEmpty {
         path.apply(transform, scale: scale)
@@ -491,8 +560,59 @@ private class BezierPath {
     
     init(points: [CGPoint], smooth: Bool) {
         self.path = UIBezierPath()
-        
+    
         if smooth {
+            if points.count < 3 {
+                self.path.move(to: points.first ?? CGPoint.zero)
+                self.path.addLine(to: points[1])
+                self.length = points[1].distanceFrom(points[0])
+                return
+            } else {
+                self.path.move(to: points.first!)
+                
+                let n = points.count - 1
+                let tension = 0.5
+                
+                for i in 0 ..< n {
+                    let currentPoint = points[i]
+                    var nextIndex = (i + 1) % points.count
+                    var prevIndex = i == 0 ? points.count - 1 : i - 1
+                    var nextNextIndex = (nextIndex + 1) % points.count
+                    let prevPoint = points[prevIndex]
+                    let nextPoint = points[nextIndex]
+                    let nextNextPoint = points[nextNextIndex]
+                    
+                    let d1 = sqrt(pow(currentPoint.x - prevPoint.x, 2) + pow(currentPoint.y - prevPoint.y, 2))
+                    let d2 = sqrt(pow(nextPoint.x - currentPoint.x, 2) + pow(nextPoint.y - currentPoint.y, 2))
+                    let d3 = sqrt(pow(nextNextPoint.x - nextPoint.x, 2) + pow(nextNextPoint.y - nextPoint.y, 2))
+                    
+                    var controlPoint1: CGPoint
+                    if d1 < 0.0001 {
+                        controlPoint1 = currentPoint
+                    } else {
+                        controlPoint1 = CGPoint(x: currentPoint.x + (tension * d2 / (d2 + d3)) * (nextPoint.x - prevPoint.x),
+                                                y: currentPoint.y + (tension * d2 / (d2 + d3)) * (nextPoint.y - prevPoint.y))
+                    }
+                    
+                    prevIndex = i
+                    nextIndex = (i + 1) % points.count
+                    nextNextIndex = (nextIndex + 1) % points.count
+                    
+                    let controlPoint2: CGPoint
+                    if d3 < 0.0001 {
+                        controlPoint2 = nextPoint
+                    } else {
+                        controlPoint2 = CGPoint(x: nextPoint.x - (tension * d2 / (d1 + d2)) * (nextNextPoint.x - currentPoint.x),
+                                                y: nextPoint.y - (tension * d2 / (d1 + d2)) * (nextNextPoint.y - currentPoint.y))
+                    }
+                    
+                    self.path.addCurve(to: nextPoint, controlPoint1: controlPoint1, controlPoint2: controlPoint2)
+                    self.length += nextPoint.distanceFrom(currentPoint)
+                }
+                
+                self.path.close()
+            }
+        } else if smooth {
             let K: CGFloat = 0.2
             var c1 = [Int: CGPoint]()
             var c2 = [Int: CGPoint]()

@@ -12,6 +12,17 @@ func telegramMediaWebpageAttributeFromApiWebpageAttribute(_ attribute: Api.WebPa
             files = documents.compactMap { telegramMediaFileFromApiDocument($0) }
         }
         return .theme(TelegraMediaWebpageThemeAttribute(files: files, settings: settings.flatMap { TelegramThemeSettings(apiThemeSettings: $0) }))
+    case let .webPageAttributeStickerSet(apiFlags, stickers):
+        var flags = TelegramMediaWebpageStickerPackAttribute.Flags()
+        if (apiFlags & (1 << 0)) != 0 {
+            flags.insert(.isEmoji)
+        }
+        if (apiFlags & (1 << 1)) != 0 {
+            flags.insert(.isTemplate)
+        }
+        var files: [TelegramMediaFile] = []
+        files = stickers.compactMap { telegramMediaFileFromApiDocument($0) }
+        return .stickerPack(TelegramMediaWebpageStickerPackAttribute(flags: flags, files: files))
     case .webPageAttributeStory:
         return nil
     }

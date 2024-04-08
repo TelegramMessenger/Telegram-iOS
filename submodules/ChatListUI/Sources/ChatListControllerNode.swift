@@ -345,6 +345,9 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
         itemNode.listNode.openBirthdaySetup = { [weak self] in
             self?.openBirthdaySetup?()
         }
+        itemNode.listNode.openPremiumManagement = { [weak self] in
+            self?.openPremiumManagement?()
+        }
         
         self.currentItemStateValue.set(itemNode.listNode.state |> map { state in
             let filterId: Int32?
@@ -408,6 +411,7 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
     var shouldStopScrolling: ((ListView, CGFloat) -> Bool)?
     var activateChatPreview: ((ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     var openBirthdaySetup: (() -> Void)?
+    var openPremiumManagement: (() -> Void)?
     var openStories: ((ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?

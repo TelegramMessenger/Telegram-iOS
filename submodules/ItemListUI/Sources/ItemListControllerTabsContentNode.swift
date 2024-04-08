@@ -34,6 +34,14 @@ final class ItemListControllerTabsContentNode: NavigationBarContentNode {
             }
         }
     }
+    
+    var transitionFraction: CGFloat? {
+        didSet {
+            if self.transitionFraction != oldValue {
+                self.update(transition: self.transitionFraction == nil ? .animated(duration: 0.35, curve: .spring) : .immediate)
+            }
+        }
+    }
         
     var indexUpdated: ((Int) -> Void)?
     
@@ -88,7 +96,8 @@ final class ItemListControllerTabsContentNode: NavigationBarContentNode {
                         return
                     }
                     self.indexUpdated?(index)
-                }
+                },
+                transitionFraction: self.transitionFraction
             )),
             environment: {},
             containerSize: CGSize(width: size.width, height: 44.0)

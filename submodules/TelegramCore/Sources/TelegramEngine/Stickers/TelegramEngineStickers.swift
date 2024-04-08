@@ -78,8 +78,8 @@ public extension TelegramEngine {
             return _internal_stickerPacksAttachedToMedia(account: self.account, media: media)
         }
         
-        public func uploadSticker(peer: Peer, resource: MediaResource, alt: String, dimensions: PixelDimensions, mimeType: String) -> Signal<UploadStickerStatus, UploadStickerError> {
-            return _internal_uploadSticker(account: self.account, peer: peer, resource: resource, alt: alt, dimensions: dimensions, mimeType: mimeType)
+        public func uploadSticker(peer: Peer, resource: MediaResource, alt: String, dimensions: PixelDimensions, duration: Double?, mimeType: String) -> Signal<UploadStickerStatus, UploadStickerError> {
+            return _internal_uploadSticker(account: self.account, peer: peer, resource: resource, alt: alt, dimensions: dimensions, duration: duration, mimeType: mimeType)
         }
         
         public func createStickerSet(title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, type: CreateStickerSetType, software: String?) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
@@ -286,9 +286,15 @@ public extension TelegramEngine {
             }
         }
         
-        public func addRecentlyUsedSticker(file: TelegramMediaFile) {
+        public func addRecentlyUsedSticker(fileReference: FileMediaReference) {
             let _ = self.account.postbox.transaction({ transaction -> Void in
-                TelegramCore.addRecentlyUsedSticker(transaction: transaction, fileReference: .standalone(media: file))
+                TelegramCore.addRecentlyUsedSticker(transaction: transaction, fileReference: fileReference)
+            }).start()
+        }
+        
+        public func removeRecentlyUsedSticker(fileReference: FileMediaReference) {
+            let _ = self.account.postbox.transaction({ transaction -> Void in
+                _internal_removeRecentlyUsedSticker(transaction: transaction, fileReference: fileReference)
             }).start()
         }
     }

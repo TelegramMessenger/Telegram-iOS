@@ -69,7 +69,7 @@ func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, enti
             let content: MediaEditorComposerStickerEntity.Content
             switch entity.content {
             case let .file(file, _):
-                content = .file(file)
+                content = .file(file.media)
             case let .image(image, _):
                 content = .image(image)
             case let .animatedImage(data, _):

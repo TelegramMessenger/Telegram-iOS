@@ -145,7 +145,11 @@ func mediaContentToUpload(accountPeerId: PeerId, network: Network, postbox: Post
                     if let mediaReference = mediaReference {
                         finalMediaReference = mediaReference
                     } else if file.isSticker {
-                        finalMediaReference = .standalone(media: file)
+                        if let partialReference = file.partialReference {
+                            finalMediaReference = partialReference.mediaReference(file)
+                        } else {
+                            finalMediaReference = .standalone(media: file)
+                        }
                     } else {
                         finalMediaReference = .savedGif(media: file)
                     }

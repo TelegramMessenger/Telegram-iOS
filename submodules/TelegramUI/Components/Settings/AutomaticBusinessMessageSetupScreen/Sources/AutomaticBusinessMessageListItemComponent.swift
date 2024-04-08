@@ -188,6 +188,8 @@ final class GreetingMessageListItemComponent: Component {
                     },
                     openPremiumGift: { _ in
                     },
+                    openPremiumManagement: {
+                    },
                     openActiveSessions: {
                     },
                     openBirthdaySetup: {

@@ -1,10 +1,22 @@
 public extension Api {
     indirect enum WebPageAttribute: TypeConstructorDescription {
+        case webPageAttributeStickerSet(flags: Int32, stickers: [Api.Document])
         case webPageAttributeStory(flags: Int32, peer: Api.Peer, id: Int32, story: Api.StoryItem?)
         case webPageAttributeTheme(flags: Int32, documents: [Api.Document]?, settings: Api.ThemeSettings?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .webPageAttributeStickerSet(let flags, let stickers):
+                    if boxed {
+                        buffer.appendInt32(1355547603)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(stickers.count))
+                    for item in stickers {
+                        item.serialize(buffer, true)
+                    }
+                    break
                 case .webPageAttributeStory(let flags, let peer, let id, let story):
                     if boxed {
                         buffer.appendInt32(781501415)
@@ -31,6 +43,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .webPageAttributeStickerSet(let flags, let stickers):
+                return ("webPageAttributeStickerSet", [("flags", flags as Any), ("stickers", stickers as Any)])
                 case .webPageAttributeStory(let flags, let peer, let id, let story):
                 return ("webPageAttributeStory", [("flags", flags as Any), ("peer", peer as Any), ("id", id as Any), ("story", story as Any)])
                 case .webPageAttributeTheme(let flags, let documents, let settings):
@@ -38,6 +52,22 @@ public extension Api {
     }
     }
     
+        public static func parse_webPageAttributeStickerSet(_ reader: BufferReader) -> WebPageAttribute? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.Document]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.WebPageAttribute.webPageAttributeStickerSet(flags: _1!, stickers: _2!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_webPageAttributeStory(_ reader: BufferReader) -> WebPageAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -1326,46 +1356,6 @@ public extension Api.account {
         }
         public static func parse_themesNotModified(_ reader: BufferReader) -> Themes? {
             return Api.account.Themes.themesNotModified
-        }
-    
-    }
-}
-public extension Api.account {
-    enum TmpPassword: TypeConstructorDescription {
-        case tmpPassword(tmpPassword: Buffer, validUntil: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .tmpPassword(let tmpPassword, let validUntil):
-                    if boxed {
-                        buffer.appendInt32(-614138572)
-                    }
-                    serializeBytes(tmpPassword, buffer: buffer, boxed: false)
-                    serializeInt32(validUntil, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .tmpPassword(let tmpPassword, let validUntil):
-                return ("tmpPassword", [("tmpPassword", tmpPassword as Any), ("validUntil", validUntil as Any)])
-    }
-    }
-    
-        public static func parse_tmpPassword(_ reader: BufferReader) -> TmpPassword? {
-            var _1: Buffer?
-            _1 = parseBytes(reader)
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.TmpPassword.tmpPassword(tmpPassword: _1!, validUntil: _2!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

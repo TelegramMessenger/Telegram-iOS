@@ -39,15 +39,15 @@ private enum DrawingOperation {
 public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInteractionDelegate, TGPhotoDrawingView {
     public var zoomOut: () -> Void = {}
     
-    struct NavigationState {
-        let canUndo: Bool
-        let canRedo: Bool
-        let canClear: Bool
-        let canZoomOut: Bool
-        let isDrawing: Bool
+    public struct NavigationState {
+        public let canUndo: Bool
+        public let canRedo: Bool
+        public let canClear: Bool
+        public let canZoomOut: Bool
+        public let isDrawing: Bool
     }
     
-    enum Action {
+    public enum Action {
         case undo
         case redo
         case clear
@@ -67,7 +67,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     var toolColor: DrawingColor = DrawingColor(color: .white)
     var toolBrushSize: CGFloat = 0.25
     
-    var stateUpdated: (NavigationState) -> Void = { _ in }
+    public var stateUpdated: (NavigationState) -> Void = { _ in }
 
     var shouldBegin: (CGPoint) -> Bool = { _ in return true }
     var getFullImage: () -> UIImage? = { return nil }
@@ -80,7 +80,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     private var redoStack: [DrawingOperation] = []
     fileprivate var uncommitedElement: DrawingElement?
     
-    private(set) var drawingImage: UIImage?
+    public private(set) var drawingImage: UIImage?
     private let renderer: UIGraphicsImageRenderer
         
     private var currentDrawingViewContainer: UIImageView
@@ -104,7 +104,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     private var isDrawing = false
     private var drawingGestureStartTimestamp: Double?
     
-    var animationsEnabled = true
+    public var animationsEnabled = true
     
     private func loadTemplates() {
         func load(_ name: String) {
@@ -138,7 +138,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     
     private let pencilInteraction: UIInteraction?
         
-    public init(size: CGSize) {
+    public init(size: CGSize, gestureView: UIView? = nil) {
         self.imageSize = size
         self.screenSize = size
         
@@ -189,7 +189,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     
         self.layer.addSublayer(self.brushSizePreviewLayer)
         
-        let drawingGesturePipeline = DrawingGesturePipeline(view: self)
+        let drawingGesturePipeline = DrawingGesturePipeline(drawingView: self, gestureView: gestureView ?? self)
         drawingGesturePipeline.gestureRecognizer?.shouldBegin = { [weak self] point in
             if let strongSelf = self {
                 if !strongSelf.shouldBegin(point) {
@@ -381,6 +381,16 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
         self.longPressGestureRecognizer = longPressGestureRecognizer
     }
     
+    public override var isUserInteractionEnabled: Bool {
+        get {
+            return super.isUserInteractionEnabled
+        }
+        set {
+            super.isUserInteractionEnabled = newValue
+            self.drawingGesturePipeline?.enabled = newValue
+        }
+    }
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -390,12 +400,11 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
         self.strokeRecognitionTimer?.invalidate()
     }
     
-    public func setup(withDrawing drawingData: Data?) {
+    private var clearImage: UIImage?
+    public func setup(withDrawing drawingData: Data?, storeAsClear: Bool = false) {
         self.undoStack = []
         self.redoStack = []
         if let drawingData = drawingData, let image = UIImage(data: drawingData) {
-            self.hasOpaqueData = true
-            
             if let context = DrawingContext(size: image.size, scale: 1.0, opaque: false) {
                 context.withFlippedContext { context in
                     context.clear(CGRect(origin: .zero, size: image.size))
@@ -407,6 +416,11 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
             } else {
                 self.drawingImage = image
             }
+            if storeAsClear {
+                self.clearImage = self.drawingImage
+            } else {
+                self.hasOpaqueData = true
+            }
             self.layer.contents = image.cgImage
             self.updateInternalState()
         } else {
@@ -414,6 +428,27 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
             self.layer.contents = nil
             self.updateInternalState()
         }
+    }
+    
+    public var emptyColor: UIColor?
+    public func clearWithEmptyColor() {
+        if let clearImage = self.clearImage {
+            self.drawingImage = clearImage
+        } else {
+            if let context = DrawingContext(size: self.imageSize, scale: 1.0, opaque: false) {
+                context.withFlippedContext { context in
+                    if let emptyColor = self.emptyColor {
+                        context.setFillColor(emptyColor.cgColor)
+                        context.fill(CGRect(origin: .zero, size: self.imageSize))
+                    } else {
+                        context.clear(CGRect(origin: .zero, size: self.imageSize))
+                    }
+                }
+                self.drawingImage = context.generateImage() ?? nil
+            }
+        }
+        self.layer.contents = self.drawingImage?.cgImage
+        self.updateInternalState()
     }
     
     var hasOpaqueData = false
@@ -736,8 +771,12 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
                 self.redoStack.append(.slice(slice))
             }
             UIView.transition(with: self, duration: 0.2, options: .transitionCrossDissolve) {
-                self.drawingImage = nil
-                self.layer.contents = nil
+                if let _ = self.emptyColor {
+                    self.clearWithEmptyColor()
+                } else {
+                    self.drawingImage = nil
+                    self.layer.contents = nil
+                }
             }
             self.updateBlurredImage()
         case let .slice(slice):
@@ -822,7 +861,24 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
     
     private var preparedBlurredImage: UIImage?
     
-    func updateToolState(_ state: DrawingToolState) {
+    public var appliedToolState: DrawingToolState? {
+        switch self.tool {
+        case .pen:
+            return .pen(DrawingToolState.BrushState(color: self.toolColor, size: self.toolBrushSize))
+        case .arrow:
+            return .arrow(DrawingToolState.BrushState(color: self.toolColor, size: self.toolBrushSize))
+        case .marker:
+            return .marker(DrawingToolState.BrushState(color: self.toolColor, size: self.toolBrushSize))
+        case .neon:
+            return .neon(DrawingToolState.BrushState(color: self.toolColor, size: self.toolBrushSize))
+        case .blur:
+            return .blur(DrawingToolState.EraserState(size: self.toolBrushSize))
+        case .eraser:
+            return .eraser(DrawingToolState.EraserState(size: self.toolBrushSize))
+        }
+    }
+    
+    public func updateToolState(_ state: DrawingToolState) {
         let previousTool = self.tool
         switch state {
         case let .pen(brushState):
@@ -885,7 +941,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
         }
     }
     
-    func performAction(_ action: Action) {
+    public func performAction(_ action: Action) {
         switch action {
         case .undo:
             self.undo()
@@ -898,14 +954,18 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, UIPencilInt
         }
     }
 
-    private func updateInternalState() {
-        self.stateUpdated(NavigationState(
+    public var internalState: NavigationState {
+        return NavigationState(
             canUndo: !self.undoStack.isEmpty,
             canRedo: !self.redoStack.isEmpty,
             canClear: !self.undoStack.isEmpty || self.hasOpaqueData || (self.entitiesView?.hasEntities ?? false),
             canZoomOut: self.zoomScale > 1.0 + .ulpOfOne,
             isDrawing: self.isDrawing
-        ))
+        )
+    }
+    
+    private func updateInternalState() {
+        self.stateUpdated(self.internalState)
     }
     
     public func updateZoomScale(_ scale: CGFloat) {

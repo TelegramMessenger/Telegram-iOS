@@ -16,6 +16,7 @@ import Photos
 import LottieAnimationComponent
 import MessageInputPanelComponent
 import DustEffect
+import PlainButtonComponent
 
 private final class MediaCutoutScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -37,6 +38,30 @@ private final class MediaCutoutScreenComponent: Component {
         }
         return true
     }
+    
+    final class State: ComponentState {
+        enum ImageKey: Hashable {
+            case done
+        }
+        private var cachedImages: [ImageKey: UIImage] = [:]
+        func image(_ key: ImageKey) -> UIImage {
+            if let image = self.cachedImages[key] {
+                return image
+            } else {
+                var image: UIImage
+                switch key {
+                case .done:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Done"), color: .white)!
+                }
+                cachedImages[key] = image
+                return image
+            }
+        }
+    }
+    
+    func makeState() -> State {
+        return State()
+    }
 
     public final class View: UIView {
         private let buttonsContainerView = UIView()
@@ -45,7 +70,7 @@ private final class MediaCutoutScreenComponent: Component {
         private let cancelButton = ComponentView<Empty>()
         private let label = ComponentView<Empty>()
         private let doneButton = ComponentView<Empty>()
-        
+    
         private let fadeView = UIView()
         private var outlineViews: [StickerCutoutOutlineView] = []
                         
@@ -77,23 +102,27 @@ private final class MediaCutoutScreenComponent: Component {
         }
         
         @objc private func previewTap(_ gestureRecognizer: UITapGestureRecognizer) {
-            guard let component = self.component else {
+            guard let component = self.component, let controller = self.environment?.controller() as? MediaCutoutScreen else {
                 return
             }
-            let location = gestureRecognizer.location(in: gestureRecognizer.view)
+            
+            let location = gestureRecognizer.location(in: controller.drawingView)
             
             let point = CGPoint(
-                x: location.x / self.previewContainerView.frame.width,
-                y: location.y / self.previewContainerView.frame.height
+                x: location.x / controller.drawingView.bounds.width,
+                y: location.y / controller.drawingView.bounds.height
             )
             
             component.mediaEditor.processImage { [weak self] originalImage, _ in
                 cutoutImage(from: originalImage, values: nil, target: .point(point), includeExtracted: false, completion: { [weak self] results in
                     Queue.mainQueue().async {
-                        if let self, let component = self.component, let result = results.first, let maskImage = result.maskImage {
+                        if let self, let _ = self.component, let result = results.first, let maskImage = result.maskImage, let controller = self.environment?.controller() as? MediaCutoutScreen {
                             if case let .image(mask, _) = maskImage {
                                 self.playDissolveAnimation()
                                 component.mediaEditor.setSegmentationMask(mask)
+                                if let maskData = mask.pngData() {
+                                    controller.drawingView.setup(withDrawing: maskData)
+                                }
                             }
                         }
                     }
@@ -103,13 +132,75 @@ private final class MediaCutoutScreenComponent: Component {
             HapticFeedback().impact(.medium)
         }
         
+        var initialOutlineValue: Float?
         func animateInFromEditor() {
+            guard let controller = self.environment?.controller() as? MediaCutoutScreen else {
+                return
+            }
+            
+            let mediaEditor = controller.mediaEditor
+            self.initialOutlineValue = mediaEditor.getToolValue(.stickerOutline) as? Float
+            mediaEditor.setToolValue(.stickerOutline, value: nil)
+            mediaEditor.isSegmentationMaskEnabled = false
+            controller.previewView.mask = controller.maskWrapperView
+            
             self.buttonsBackgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.label.view?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            
+            if let view = self.doneButton.view {
+                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+            }
+                        
+            guard [.erase, .restore].contains(controller.mode) else {
+                return
+            }
+            controller.drawingView.isUserInteractionEnabled = true
+           
+            self.updateBackgroundViews()
+        }
+        
+        func updateBackgroundViews() {
+            guard let controller = self.environment?.controller() as? MediaCutoutScreen else {
+                return
+            }
+            let overlayView = controller.overlayView
+            let backgroundView = controller.backgroundView
+            
+            let overlayAlpha: CGFloat
+            let backgroundAlpha: CGFloat
+            switch controller.mode {
+            case .restore:
+                overlayAlpha = 1.0
+                backgroundAlpha = 0.0
+            default:
+                overlayAlpha = 0.0
+                backgroundAlpha = 1.0
+            }
+            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+            transition.setAlpha(view: overlayView, alpha: overlayAlpha)
+            transition.setAlpha(view: backgroundView, alpha: backgroundAlpha)
         }
         
         private var animatingOut = false
         func animateOutToEditor(completion: @escaping () -> Void) {
+            guard let controller = self.environment?.controller() as? MediaCutoutScreen else {
+                return
+            }
+            
+            let mediaEditor = controller.mediaEditor
+            if let drawingImage = controller.drawingView.drawingImage {
+                mediaEditor.setSegmentationMask(drawingImage, andEnable: true)
+            }
+            let initialOutlineValue = self.initialOutlineValue
+            mediaEditor.setOnNextDisplay { [weak controller, weak mediaEditor] in
+                controller?.previewView.mask = nil
+                if let initialOutlineValue {
+                    mediaEditor?.setToolValue(.stickerOutline, value: initialOutlineValue)
+                }
+                controller?.completed()
+            }
+            
             self.animatingOut = true
             
             self.cancelButton.view?.isHidden = true
@@ -123,7 +214,23 @@ private final class MediaCutoutScreenComponent: Component {
             })
             self.label.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
             
+            if let view = self.doneButton.view {
+                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
+            }
+                        
             self.state?.updated()
+            
+            guard [.erase, .restore].contains(controller.mode) else {
+                return
+            }
+            controller.drawingView.isUserInteractionEnabled = false
+            
+            let overlayView = controller.overlayView
+            let backgroundView = controller.backgroundView
+            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+            transition.setAlpha(view: overlayView, alpha: 0.0)
+            transition.setAlpha(view: backgroundView, alpha: 1.0)
         }
         
         public func playDissolveAnimation() {
@@ -144,12 +251,25 @@ private final class MediaCutoutScreenComponent: Component {
 
             dustEffectLayer.addItem(frame: previewView.bounds, image: resultImage)
             
+            controller.completedWithCutout()
             controller.requestDismiss(animated: true)
+        }
+        
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            let result = super.hitTest(point, with: event)
+            if let controller = self.environment?.controller() as? MediaCutoutScreen, [.erase, .restore].contains(controller.mode), result == self.previewContainerView {
+                return nil//controller.previewView.superview
+            }
+            return result
         }
         
         func update(component: MediaCutoutScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
+            
+            guard let controller = environment.controller() as? MediaCutoutScreen else {
+                return .zero
+            }
             
             let isFirstTime = self.component == nil
             self.component = component
@@ -199,11 +319,8 @@ private final class MediaCutoutScreenComponent: Component {
                             size: CGSize(width: 33.0, height: 33.0)
                         )
                     ),
-                    action: {
-                        guard let controller = environment.controller() as? MediaCutoutScreen else {
-                            return
-                        }
-                        controller.requestDismiss(animated: true)
+                    action: { [weak controller] in
+                        controller?.requestDismiss(animated: true)
                     }
                 )),
                 environment: {},
@@ -220,9 +337,47 @@ private final class MediaCutoutScreenComponent: Component {
                 transition.setFrame(view: cancelButtonView, frame: cancelButtonFrame)
             }
             
+            if case .cutout = controller.mode {
+            } else {
+                let doneButtonSize = self.doneButton.update(
+                    transition: transition,
+                    component: AnyComponent(Button(
+                        content: AnyComponent(Image(
+                            image: state.image(.done),
+                            size: CGSize(width: 33.0, height: 33.0)
+                        )),
+                        action: { [weak controller] in
+                            controller?.requestDismiss(animated: true)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 44.0, height: 44.0)
+                )
+                let doneButtonFrame = CGRect(
+                    origin: CGPoint(x: availableSize.width - buttonSideInset - doneButtonSize.width, y: buttonBottomInset),
+                    size: doneButtonSize
+                )
+                if let doneButtonView = self.doneButton.view {
+                    if doneButtonView.superview == nil {
+                        self.buttonsContainerView.addSubview(doneButtonView)
+                    }
+                    transition.setFrame(view: doneButtonView, frame: doneButtonFrame)
+                }
+            }
+            
+            let helpText: String
+            switch controller.mode {
+            case .cutout:
+                helpText = "Tap on an object to cut it out"
+            case .erase:
+                helpText = "Erase parts of this sticker"
+            case .restore:
+                helpText = "Restore parts of this sticker"
+            }
+            
             let labelSize = self.label.update(
                 transition: transition,
-                component: AnyComponent(Text(text: "Tap on an object to cut it out", font: Font.regular(17.0), color: .white)),
+                component: AnyComponent(Text(text: helpText, font: Font.regular(17.0), color: UIColor(rgb: 0x8d8d93))),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - 88.0, height: 44.0)
             )
@@ -234,45 +389,59 @@ private final class MediaCutoutScreenComponent: Component {
                 if labelView.superview == nil {
                     self.buttonsContainerView.addSubview(labelView)
                 }
-                transition.setFrame(view: labelView, frame: labelFrame)
+                if labelView.bounds.width > 0.0 && labelFrame.width != labelView.bounds.width {
+                    if let snapshotView = labelView.snapshotView(afterScreenUpdates: false) {
+                        snapshotView.center = labelView.center
+                        self.buttonsContainerView.addSubview(snapshotView)
+                        
+                        labelView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                            snapshotView.removeFromSuperview()
+                        })
+                    }
+                }
+                labelView.bounds = CGRect(origin: .zero, size: labelFrame.size)
+                transition.setPosition(view: labelView, position: labelFrame.center)
             }
                         
             transition.setFrame(view: self.buttonsContainerView, frame: buttonsContainerFrame)
             transition.setFrame(view: self.buttonsBackgroundView, frame: CGRect(origin: .zero, size: buttonsContainerFrame.size))
             
             transition.setFrame(view: self.previewContainerView, frame: previewContainerFrame)
-            for view in self.outlineViews {
-                transition.setFrame(view: view, frame: previewContainerFrame)
-            }
-            
-            let frameWidth = floorToScreenPixels(previewContainerFrame.width * 0.97)
-            
-            self.fadeView.frame = CGRect(x: floorToScreenPixels((previewContainerFrame.width - frameWidth) / 2.0), y: previewContainerFrame.minY + floorToScreenPixels((previewContainerFrame.height - frameWidth) / 2.0), width: frameWidth, height: frameWidth)
-            self.fadeView.layer.cornerRadius = frameWidth / 8.0
-            
-            if isFirstTime {
-                let values = component.mediaEditor.values
-                component.mediaEditor.processImage { originalImage, editedImage in
-                    cutoutImage(from: originalImage, editedImage: editedImage, values: values, target: .all, completion: { results in
-                        Queue.mainQueue().async {
-                            if !results.isEmpty {
-                                for result in results {
-                                    if let extractedImage = result.extractedImage, let maskImage = result.maskImage {
-                                        if case let .image(image, _) = extractedImage, case let .image(_, mask) = maskImage {
-                                            let outlineView = StickerCutoutOutlineView(frame: self.previewContainerView.frame)
-                                            outlineView.update(image: image, maskImage: mask, size: self.previewContainerView.bounds.size, values: values)
-                                            self.insertSubview(outlineView, belowSubview: self.previewContainerView)
-                                            self.outlineViews.append(outlineView)
+
+            if case .cutout = controller.mode {
+                for view in self.outlineViews {
+                    transition.setFrame(view: view, frame: previewContainerFrame)
+                }
+                
+                let frameWidth = floorToScreenPixels(previewContainerFrame.width * 0.97)
+                self.fadeView.frame = CGRect(x: floorToScreenPixels((previewContainerFrame.width - frameWidth) / 2.0), y: previewContainerFrame.minY + floorToScreenPixels((previewContainerFrame.height - frameWidth) / 2.0), width: frameWidth, height: frameWidth)
+                self.fadeView.layer.cornerRadius = frameWidth / 8.0
+                
+                if isFirstTime {
+                    let values = component.mediaEditor.values
+                    component.mediaEditor.processImage { originalImage, editedImage in
+                        cutoutImage(from: originalImage, editedImage: editedImage, values: values, target: .all, completion: { results in
+                            Queue.mainQueue().async {
+                                if !results.isEmpty {
+                                    for result in results {
+                                        if let extractedImage = result.extractedImage, let maskImage = result.maskImage {
+                                            if case let .image(image, _) = extractedImage, case let .image(_, mask) = maskImage {
+                                                let outlineView = StickerCutoutOutlineView(frame: self.previewContainerView.frame)
+                                                outlineView.update(image: image, maskImage: mask, size: self.previewContainerView.bounds.size, values: values)
+                                                self.insertSubview(outlineView, belowSubview: self.previewContainerView)
+                                                self.outlineViews.append(outlineView)
+                                            }
                                         }
                                     }
+                                    self.state?.updated(transition: .easeInOut(duration: 0.4))
                                 }
-                                self.state?.updated(transition: .easeInOut(duration: 0.4))
                             }
-                        }
-                    })
+                        })
+                    }
+                } else {
+                    transition.setAlpha(view: self.fadeView, alpha: !self.outlineViews.isEmpty ? 1.0 : 0.0)
                 }
-            } else {
-                transition.setAlpha(view: self.fadeView, alpha: !self.outlineViews.isEmpty ? 1.0 : 0.0)
             }
             return availableSize
         }
@@ -282,12 +451,12 @@ private final class MediaCutoutScreenComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
 
-public final class MediaCutoutScreen: ViewController {
+final class MediaCutoutScreen: ViewController {
     fileprivate final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
         private weak var controller: MediaCutoutScreen?
         private let context: AccountContext
@@ -333,6 +502,24 @@ public final class MediaCutoutScreen: ViewController {
             }
             if let view = self.componentHost.view as? MediaCutoutScreenComponent.View {
                 view.animateOutToEditor(completion: completion)
+            }
+        }
+        
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            let result = super.hitTest(point, with: event)
+            if result === self.view {
+                return nil
+            }
+            return result
+        }
+        
+        func requestLayout(transition: Transition) {
+            if let layout = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, forceUpdate: true, transition: transition)
+                
+                if let view = self.componentHost.view as? MediaCutoutScreenComponent.View {
+                    view.updateBackgroundViews()
+                }
             }
         }
         
@@ -412,17 +599,49 @@ public final class MediaCutoutScreen: ViewController {
     }
     
     fileprivate let context: AccountContext
+    public var mode: Mode {
+        didSet {
+            self.updateDrawingState()
+            self.node.requestLayout(transition: .easeInOut(duration: 0.2))
+        }
+    }
     fileprivate let mediaEditor: MediaEditor
+    fileprivate let maskWrapperView: UIView
     fileprivate let previewView: MediaEditorPreviewView
+    fileprivate let drawingView: DrawingView
+    fileprivate let overlayView: UIView
+    fileprivate let backgroundView: UIView
     
-    public var dismissed: () -> Void = {}
+    var completed: () -> Void = {}
+    var completedWithCutout: () -> Void = {}
+    var dismissed: () -> Void = {}
     
     private var initialValues: MediaEditorValues
         
-    public init(context: AccountContext, mediaEditor: MediaEditor, previewView: MediaEditorPreviewView) {
+    enum Mode {
+        case cutout
+        case erase
+        case restore
+    }
+    
+    init(
+        context: AccountContext,
+        mode: Mode,
+        mediaEditor: MediaEditor,
+        previewView: MediaEditorPreviewView,
+        maskWrapperView: UIView,
+        drawingView: DrawingView,
+        overlayView: UIView,
+        backgroundView: UIView
+    ) {
         self.context = context
+        self.mode = mode
         self.mediaEditor = mediaEditor
         self.previewView = previewView
+        self.maskWrapperView = maskWrapperView
+        self.drawingView = drawingView
+        self.overlayView = overlayView
+        self.backgroundView = backgroundView
         self.initialValues = mediaEditor.values.makeCopy()
         
         super.init(navigationBarPresentationData: nil)
@@ -431,16 +650,28 @@ public final class MediaCutoutScreen: ViewController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.statusBar.statusBarStyle = .White
+        
+        self.updateDrawingState()
     }
     
-    required public init(coder aDecoder: NSCoder) {
+    required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override public func loadDisplayNode() {
+    override func loadDisplayNode() {
         self.displayNode = Node(controller: self)
 
         super.displayNodeDidLoad()
+    }
+    
+    private func updateDrawingState() {
+        if let toolState = self.drawingView.appliedToolState {
+            if case .erase = mode {
+                self.drawingView.updateToolState(toolState.withUpdatedColor(DrawingColor(color: .black)))
+            } else if case .restore = mode {
+                self.drawingView.updateToolState(toolState.withUpdatedColor(DrawingColor(color: .white)))
+            }
+        }
     }
             
     func requestDismiss(animated: Bool) {
@@ -451,7 +682,7 @@ public final class MediaCutoutScreen: ViewController {
         })
     }
     
-    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 
         (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: Transition(transition))

@@ -794,7 +794,7 @@ public func stickerPackEditTitleController(context: AccountContext, forceDark: B
     })
     contentNode.actionNodes.last?.actionEnabled = false
     contentNode.inputFieldNode.textChanged = { [weak contentNode] title in
-        contentNode?.actionNodes.last?.actionEnabled = !title.trimmingTrailingSpaces().isEmpty
+        contentNode?.actionNodes.last?.actionEnabled = title.trimmingTrailingSpaces().count >= 3
     }
     controller.willDismiss = { [weak contentNode] in
         contentNode?.inputFieldNode.deactivateInput()

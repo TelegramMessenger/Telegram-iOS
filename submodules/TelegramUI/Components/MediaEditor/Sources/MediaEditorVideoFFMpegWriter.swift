@@ -3,6 +3,7 @@ import UIKit
 import CoreMedia
 import FFMpegBinding
 import ImageDCT
+import Accelerate
 
 final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
     public static let registerFFMpegGlobals: Void = {
@@ -12,6 +13,15 @@ final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
     
     let ffmpegWriter = FFMpegVideoWriter()
     var pool: CVPixelBufferPool?
+    
+    let conversionInfo: vImage_ARGBToYpCbCr
+    
+    init() {
+        var pixelRange = vImage_YpCbCrPixelRange( Yp_bias: 16, CbCr_bias: 128, YpRangeMax: 235, CbCrRangeMax: 240, YpMax: 235, YpMin: 16, CbCrMax: 240, CbCrMin: 16)
+        var conversionInfo = vImage_ARGBToYpCbCr()
+        let _ = vImageConvert_ARGBToYpCbCr_GenerateConversion(kvImage_ARGBToYpCbCrMatrix_ITU_R_709_2, &pixelRange, &conversionInfo, kvImageARGB8888, kvImage420Yp8_Cb8_Cr8, vImage_Flags(kvImageNoFlags))
+        self.conversionInfo = conversionInfo
+    }
         
     func setup(configuration: MediaEditorVideoExport.Configuration, outputPath: String) {
         let _ = MediaEditorVideoFFMpegWriter.registerFFMpegGlobals
@@ -91,28 +101,27 @@ final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
     }
     
     func appendPixelBuffer(_ buffer: CVPixelBuffer, at time: CMTime) -> Bool {
-        let width = Int32(CVPixelBufferGetWidth(buffer))
-        let height = Int32(CVPixelBufferGetHeight(buffer))
-        let bytesPerRow = Int32(CVPixelBufferGetBytesPerRow(buffer))
+        let width = CVPixelBufferGetWidth(buffer)
+        let height = CVPixelBufferGetHeight(buffer)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(buffer)
         
-        let frame = FFMpegAVFrame(pixelFormat: .YUVA, width: width, height: height)
+        let frame = FFMpegAVFrame(pixelFormat: .YUVA, width: Int32(width), height: Int32(height))
         
         CVPixelBufferLockBaseAddress(buffer, CVPixelBufferLockFlags.readOnly)
         let src = CVPixelBufferGetBaseAddress(buffer)
         
-        splitRGBAIntoYUVAPlanes(
-            src,
-            frame.data[0],
-            frame.data[1],
-            frame.data[2],
-            frame.data[3],
-            width,
-            height,
-            bytesPerRow,
-            true,
-            true
-        )
+        
+        var srcBuffer = vImage_Buffer(data: src, height: vImagePixelCount(height), width: vImagePixelCount(width), rowBytes: bytesPerRow)
 
+        var yBuffer = vImage_Buffer(data: frame.data[0], height: vImagePixelCount(height), width: vImagePixelCount(width), rowBytes: width)
+        var uBuffer = vImage_Buffer(data: frame.data[1], height: vImagePixelCount(height / 2), width: vImagePixelCount(width / 2), rowBytes: width / 2)
+        var vBuffer = vImage_Buffer(data: frame.data[2], height: vImagePixelCount(height / 2), width: vImagePixelCount(width / 2), rowBytes: width / 2)
+        var aBuffer = vImage_Buffer(data: frame.data[3], height: vImagePixelCount(height), width: vImagePixelCount(width), rowBytes: width)
+        
+        var outInfo = self.conversionInfo
+        let _ = vImageConvert_ARGB8888To420Yp8_Cb8_Cr8(&srcBuffer, &yBuffer, &uBuffer, &vBuffer, &outInfo, [ 3, 2, 1, 0 ], vImage_Flags(kvImageDoNotTile))
+        vImageExtractChannel_ARGB8888(&srcBuffer, &aBuffer, 3, vImage_Flags(kvImageDoNotTile))
+        
         CVPixelBufferUnlockBaseAddress(buffer, CVPixelBufferLockFlags.readOnly)
         
         return self.ffmpegWriter.encode(frame)

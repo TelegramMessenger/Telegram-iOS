@@ -33,7 +33,7 @@ struct DrawingPoint {
     }
 }
 
-class DrawingGesturePipeline: NSObject, UIGestureRecognizerDelegate {
+final class DrawingGesturePipeline: NSObject, UIGestureRecognizerDelegate {
     enum DrawingGestureState {
         case began
         case changed
@@ -46,13 +46,23 @@ class DrawingGesturePipeline: NSObject, UIGestureRecognizerDelegate {
     var gestureRecognizer: DrawingGestureRecognizer?
     var transform: CGAffineTransform = .identity
         
-    init(view: DrawingView) {
-        super.init()
+    var enabled: Bool = true
+    
+    weak var drawingView: DrawingView?
+    
+    init(drawingView: DrawingView, gestureView: UIView) {
+        self.drawingView = drawingView
         
+        super.init()
+    
         let gestureRecognizer = DrawingGestureRecognizer(target: self, action: #selector(self.handleGesture(_:)))
         gestureRecognizer.delegate = self
         self.gestureRecognizer = gestureRecognizer
-        view.addGestureRecognizer(gestureRecognizer)
+        gestureView.addGestureRecognizer(gestureRecognizer)
+    }
+    
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        return self.enabled
     }
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -82,9 +92,9 @@ class DrawingGesturePipeline: NSObject, UIGestureRecognizerDelegate {
             state = .cancelled
         }
         
-        let originalLocation = gestureRecognizer.location(in: gestureRecognizer.view)
+        let originalLocation = gestureRecognizer.location(in: self.drawingView)
         let location = originalLocation.applying(self.transform)
-        let velocity = gestureRecognizer.velocity(in: gestureRecognizer.view).applying(self.transform)
+        let velocity = gestureRecognizer.velocity(in: self.drawingView).applying(self.transform)
         let velocityValue = velocity.length
         
         let point = DrawingPoint(location: location, velocity: velocityValue)

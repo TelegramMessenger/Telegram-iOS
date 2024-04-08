@@ -627,5 +627,9 @@ private func getAverageColor(image: UIImage) -> UIColor? {
     sumA /= UInt64(blurredWidth * blurredHeight)
     sumA = 255
     
-    return UIColor(red: CGFloat(sumR) / 255.0, green: CGFloat(sumG) / 255.0, blue: CGFloat(sumB) / 255.0, alpha: CGFloat(sumA) / 255.0)
+    var color = UIColor(red: CGFloat(sumR) / 255.0, green: CGFloat(sumG) / 255.0, blue: CGFloat(sumB) / 255.0, alpha: CGFloat(sumA) / 255.0)
+    if color.lightness > 0.8 {
+        color = color.withMultipliedBrightnessBy(0.8)
+    }
+    return color
 }

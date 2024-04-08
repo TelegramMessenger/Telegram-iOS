@@ -25,6 +25,8 @@ import Pasteboard
 import StickerPackEditTitleController
 import EntityKeyboard
 
+private let maxStickersCount = 120
+
 private enum StickerPackPreviewGridEntry: Comparable, Identifiable {
     case sticker(index: Int, stableId: Int, stickerItem: StickerPackItem?, isEmpty: Bool, isPremium: Bool, isLocked: Bool, isEditing: Bool, isAdd: Bool)
     case add
@@ -540,8 +542,11 @@ private final class StickerPackContainer: ASDisplayNode {
                                     f(.default)
                                     
                                     if let strongSelf = self {
-                                        let _ = strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred).start(next: { _ in
-                                            
+                                        let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
+                                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                                            if let self, let contorller = self.controller {
+                                                contorller.present(UndoOverlayController(presentationData: self.presentationData, content: .sticker(context: context, file: item.file, loop: true, title: nil, text: !isStarred ? self.presentationData.strings.Conversation_StickerAddedToFavorites : self.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
+                                            }
                                         })
                                     }
                                 })))
@@ -712,6 +717,16 @@ private final class StickerPackContainer: ASDisplayNode {
                 
                 if let reorderPosition = self.reorderPosition, let file = itemNode.stickerPackItem?.file {
                     let _ = self.context.engine.stickers.reorderSticker(sticker: .standalone(media: file), position: reorderPosition).startStandalone()
+                    
+                    if let (info, items, isInstalled) = self.currentStickerPack {
+                        var updatedItems = items
+                        if let index = items.firstIndex(where: { $0.file.fileId == file.fileId }) {
+                            let item = items[index]
+                            updatedItems.remove(at: index)
+                            updatedItems.insert(item, at: reorderPosition)
+                        }
+                        self.currentStickerPack = (info, updatedItems, isInstalled)
+                    }
                 }
             } else {
                 reorderNode.removeFromSupernode()
@@ -967,7 +982,9 @@ private final class StickerPackContainer: ASDisplayNode {
             let buttonColor: UIColor
             var buttonFont: UIFont = Font.semibold(17.0)
             
-            if let controller = self.controller, let _ = controller.mainActionTitle {
+            if self.isEditing {
+                buttonColor = self.presentationData.theme.list.itemCheckColors.foregroundColor
+            } else if let controller = self.controller, let _ = controller.mainActionTitle {
                 buttonColor = self.presentationData.theme.list.itemCheckColors.foregroundColor
             } else {
                 switch currentContents {
@@ -1036,6 +1053,10 @@ private final class StickerPackContainer: ASDisplayNode {
         self.reorderingGestureRecognizer?.isEnabled = isEditing
         if let (layout, _, _, _) = self.validLayout {
             self.updateLayout(layout: layout, transition: .animated(duration: 0.3, curve: .easeInOut))
+        }
+        
+        if isEditing {
+            self.expandIfNeeded(force: true)
         }
     }
     
@@ -1242,9 +1263,10 @@ private final class StickerPackContainer: ASDisplayNode {
                     completion: { file, emoji, commit in
                         dismissImpl?()
                         let sticker = ImportSticker(
-                            resource: file.resource,
+                            resource: .standalone(resource: file.resource),
                             emojis: emoji,
                             dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
+                            duration: file.duration,
                             mimeType: file.mimeType,
                             keywords: ""
                         )
@@ -1283,18 +1305,19 @@ private final class StickerPackContainer: ASDisplayNode {
         let context = self.context
         let controller = self.context.sharedContext.makeStickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData, completion: { file in
             var emoji = "🫥"
-            for attribute in file.attributes {
-                if case let .Sticker(displayText, _, _) = attribute {
+            for attribute in file.media.attributes {
+                if case let .Sticker(displayText, _, _) = attribute, !displayText.isEmpty {
                     emoji = displayText
                     break
                 }
             }
             
             let sticker = ImportSticker(
-                resource: file.resource,
+                resource: file.resourceReference(file.media.resource),
                 emojis: [emoji],
-                dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
-                mimeType: file.mimeType,
+                dimensions: file.media.dimensions ?? PixelDimensions(width: 512, height: 512),
+                duration: file.media.duration,
+                mimeType: file.media.mimeType,
                 keywords: ""
             )
             let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
@@ -1304,7 +1327,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
                 
                 Queue.mainQueue().after(0.1) {
-                    packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: "Sticker added to **\(info.title)** sticker set.", undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file.media, loop: true, title: nil, text: "Sticker added to **\(info.title)** sticker set.", undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
             })
         })
@@ -1333,9 +1356,10 @@ private final class StickerPackContainer: ASDisplayNode {
             transitionArguments: nil,
             completion: { file, emoji, commit in
                 let sticker = ImportSticker(
-                    resource: file.resource,
+                    resource: .standalone(resource: file.resource),
                     emojis: emoji,
                     dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
+                    duration: file.duration,
                     mimeType: file.mimeType,
                     keywords: ""
                 )
@@ -1778,7 +1802,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     self.updateButton(count: count)
                 }
                 
-                if GlobalExperimentalSettings.enableWIPStickers && info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
+                if GlobalExperimentalSettings.enableWIPStickers && info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) && entries.count < maxStickersCount {
                     entries.append(.add)
                 }
             }
@@ -1845,12 +1869,14 @@ private final class StickerPackContainer: ASDisplayNode {
             entries.append(.sticker(index: entries.count, stableId: resolvedStableId, stickerItem: item, isEmpty: false, isPremium: isPremium, isLocked: isLocked, isEditing: false, isAdd: false))
         }
 
+        var addedReorderItem = false
         var currentIndex: Int = 0
         for item in generalItems {
-            if self.isReordering, let reorderNode = self.reorderNode, let reorderItem = reorderNode.itemNode?.stickerPackItem, let reorderPosition = self.reorderPosition {
+            if self.isReordering, let reorderItem = self.reorderNode?.itemNode?.stickerPackItem, let reorderPosition = self.reorderPosition {
                 if currentIndex == reorderPosition {
                     addItem(reorderItem, false, false)
                     currentIndex += 1
+                    addedReorderItem = true
                 }
                     
                 if item.file.fileId == reorderItem.file.fileId {
@@ -1864,6 +1890,11 @@ private final class StickerPackContainer: ASDisplayNode {
                 currentIndex += 1
             }
         }
+        if !addedReorderItem, let reorderItem = self.reorderNode?.itemNode?.stickerPackItem, let reorderPosition = self.reorderPosition, currentIndex == reorderPosition {
+            addItem(reorderItem, false, false)
+            currentIndex += 1
+            addedReorderItem = true
+        }
         
         if !premiumConfiguration.isPremiumDisabled {
             if !premiumItems.isEmpty {
@@ -1874,7 +1905,9 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         }
 
-        entries.append(.add)
+        if entries.count < maxStickersCount {
+            entries.append(.add)
+        }
         
         self.currentEntries = entries
         
@@ -2122,12 +2155,16 @@ private final class StickerPackContainer: ASDisplayNode {
                 return
             }
             
-            if self.currentEntries.count >= 15, self.controller?.expandIfNeeded == true, !self.didAutomaticExpansion {
-                self.didAutomaticExpansion = true
-                self.gridNode.autoscroll(toOffset: CGPoint(x: 0.0, y: max(0.0, self.gridNode.scrollView.contentSize.height - self.gridNode.scrollView.contentInset.top - self.gridNode.scrollView.bounds.height)), duration: 0.4)
-                self.skipNextGridLayoutUpdate = true
-            }
+            self.expandIfNeeded()
         })
+    }
+    
+    private func expandIfNeeded(force: Bool = false) {
+        if self.currentEntries.count >= 15, force || (self.controller?.expandIfNeeded == true && !self.didAutomaticExpansion) {
+            self.didAutomaticExpansion = true
+            self.gridNode.autoscroll(toOffset: CGPoint(x: 0.0, y: max(0.0, self.gridNode.scrollView.contentSize.height - self.gridNode.scrollView.contentInset.top - self.gridNode.scrollView.bounds.height)), duration: 0.4)
+            self.skipNextGridLayoutUpdate = true
+        }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

@@ -133,13 +133,13 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             return false
         }
         
-        if isPNG && images.count == 1, let image = images.first, let cgImage = image.cgImage {
+        if isPNG && images.count == 1, let image = images.first {
             let maxSide = max(image.size.width, image.size.height)
             if maxSide.isZero {
                 return false
             }
             let aspectRatio = min(image.size.width, image.size.height) / maxSide
-            if isMemoji || (imageHasTransparency(cgImage) && aspectRatio > 0.2) {
+            if isMemoji || (imageHasTransparency(image) && aspectRatio > 0.2) {
                 self.endEditing(reset: true)
                 self.replaceWithImage(image, true)
                 return false
@@ -725,7 +725,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             let itemSize: CGFloat = floor(24.0 * fontSize * 0.78 / 17.0)
             let emojiTextPosition = emojiRect.center.offsetBy(dx: -textSize.width / 2.0, dy: -textSize.height / 2.0)
                         
-            let entity = DrawingStickerEntity(content: .file(file, .sticker))
+            let entity = DrawingStickerEntity(content: .file(.standalone(media: file), .sticker))
             entity.referenceDrawingSize = CGSize(width: itemSize * 4.0, height: itemSize * 4.0)
             entity.scale = scale
             entity.position = textPosition.offsetBy(

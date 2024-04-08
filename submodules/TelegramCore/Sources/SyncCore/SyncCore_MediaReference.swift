@@ -262,6 +262,8 @@ public enum AnyMediaReference: Equatable {
     case webPage(webPage: WebpageReference, media: Media)
     case stickerPack(stickerPack: StickerPackReference, media: Media)
     case savedGif(media: Media)
+    case savedSticker(media: Media)
+    case recentSticker(media: Media)
     case avatarList(peer: PeerReference, media: Media)
     case attachBot(peer: PeerReference, media: Media)
     case customEmoji(media: Media)
@@ -295,6 +297,18 @@ public enum AnyMediaReference: Equatable {
                 }
             case let .savedGif(lhsMedia):
                 if case let .savedGif(rhsMedia) = rhs, lhsMedia.isEqual(to: rhsMedia) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .savedSticker(lhsMedia):
+                if case let .savedSticker(rhsMedia) = rhs, lhsMedia.isEqual(to: rhsMedia) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .recentSticker(lhsMedia):
+                if case let .recentSticker(rhsMedia) = rhs, lhsMedia.isEqual(to: rhsMedia) {
                     return true
                 } else {
                     return false
@@ -338,6 +352,10 @@ public enum AnyMediaReference: Equatable {
                 return .stickerPack(stickerPack: stickerPack)
             case .savedGif:
                 return .savedGif
+            case .savedSticker:
+                return .savedSticker
+            case .recentSticker:
+                return .recentSticker
             case .avatarList:
                 return nil
             case .attachBot:
@@ -371,6 +389,14 @@ public enum AnyMediaReference: Equatable {
                 if let media = media as? T {
                     return .savedGif(media: media)
                 }
+            case let .savedSticker(media):
+                if let media = media as? T {
+                    return .savedSticker(media: media)
+                }
+            case let .recentSticker(media):
+                if let media = media as? T {
+                    return .recentSticker(media: media)
+                }
             case let .avatarList(peer, media):
                 if let media = media as? T {
                     return .avatarList(peer: peer, media: media)
@@ -403,6 +429,10 @@ public enum AnyMediaReference: Equatable {
                 return media
             case let .savedGif(media):
                 return media
+            case let .savedSticker(media):
+                return media
+            case let .recentSticker(media):
+                return media
             case let .avatarList(_, media):
                 return media
             case let .attachBot(_, media):
@@ -411,6 +441,33 @@ public enum AnyMediaReference: Equatable {
                 return media
             case let .story(_, _, media):
                 return media
+        }
+    }
+    
+    public func withUpdatedMedia(_ media: Media) -> AnyMediaReference {
+        switch self {
+            case .standalone:
+                return .standalone(media: media)
+            case let .message(message, _):
+                return .message(message: message, media: media)
+            case let .webPage(webPage, _):
+                return .webPage(webPage: webPage, media: media)
+            case let .stickerPack(stickerPack, _):
+                return .stickerPack(stickerPack: stickerPack, media: media)
+            case .savedGif:
+                return .savedGif(media: media)
+            case .savedSticker:
+                return .savedSticker(media: media)
+            case .recentSticker:
+                return .recentSticker(media: media)
+            case let .avatarList(peer, _):
+                return .avatarList(peer: peer, media: media)
+            case let .attachBot(peer, _):
+                return .attachBot(peer: peer, media: media)
+            case .customEmoji:
+                return .customEmoji(media: media)
+            case let .story(peer, id, _):
+                return .story(peer: peer, id: id, media: media)
         }
     }
     
@@ -425,12 +482,16 @@ public enum PartialMediaReference: Equatable {
         case webPage
         case stickerPack
         case savedGif
+        case savedSticker
+        case recentSticker
     }
     
     case message(message: MessageReference)
     case webPage(webPage: WebpageReference)
     case stickerPack(stickerPack: StickerPackReference)
     case savedGif
+    case savedSticker
+    case recentSticker
     
     public init?(decoder: PostboxDecoder) {
         guard let caseIdValue = decoder.decodeOptionalInt32ForKey("_r"), let caseId = CodingCase(rawValue: caseIdValue) else {
@@ -448,6 +509,10 @@ public enum PartialMediaReference: Equatable {
                 self = .stickerPack(stickerPack: stickerPack)
             case .savedGif:
                 self = .savedGif
+            case .savedSticker:
+                self = .savedSticker
+            case .recentSticker:
+                self = .recentSticker
         }
     }
     
@@ -464,6 +529,10 @@ public enum PartialMediaReference: Equatable {
                 encoder.encodeObject(stickerPack, forKey: "spk")
             case .savedGif:
                 encoder.encodeInt32(CodingCase.savedGif.rawValue, forKey: "_r")
+            case .savedSticker:
+                encoder.encodeInt32(CodingCase.savedSticker.rawValue, forKey: "_r")
+            case .recentSticker:
+                encoder.encodeInt32(CodingCase.recentSticker.rawValue, forKey: "_r")
         }
     }
     
@@ -477,6 +546,10 @@ public enum PartialMediaReference: Equatable {
                 return .stickerPack(stickerPack: stickerPack, media: media)
             case .savedGif:
                 return .savedGif(media: media)
+            case .savedSticker:
+                return .savedSticker(media: media)
+            case .recentSticker:
+                return .recentSticker(media: media)
         }
     }
 }
@@ -488,6 +561,8 @@ public enum MediaReference<T: Media> {
         case webPage
         case stickerPack
         case savedGif
+        case savedSticker
+        case recentSticker
         case avatarList
         case attachBot
         case customEmoji
@@ -499,6 +574,8 @@ public enum MediaReference<T: Media> {
     case webPage(webPage: WebpageReference, media: T)
     case stickerPack(stickerPack: StickerPackReference, media: T)
     case savedGif(media: T)
+    case savedSticker(media: T)
+    case recentSticker(media: T)
     case avatarList(peer: PeerReference, media: T)
     case attachBot(peer: PeerReference, media: T)
     case customEmoji(media: T)
@@ -537,6 +614,16 @@ public enum MediaReference<T: Media> {
                     return nil
                 }
                 self = .savedGif(media: media)
+            case .savedSticker:
+                guard let media = decoder.decodeObjectForKey("m") as? T else {
+                    return nil
+                }
+                self = .savedSticker(media: media)
+            case .recentSticker:
+                guard let media = decoder.decodeObjectForKey("m") as? T else {
+                    return nil
+                }
+                self = .recentSticker(media: media)
             case .avatarList:
                 let peer = decoder.decodeObjectForKey("pr", decoder: { PeerReference(decoder: $0) }) as! PeerReference
                 guard let media = decoder.decodeObjectForKey("m") as? T else {
@@ -584,6 +671,12 @@ public enum MediaReference<T: Media> {
             case let .savedGif(media):
                 encoder.encodeInt32(CodingCase.savedGif.rawValue, forKey: "_r")
                 encoder.encodeObject(media, forKey: "m")
+            case let .savedSticker(media):
+                encoder.encodeInt32(CodingCase.savedSticker.rawValue, forKey: "_r")
+                encoder.encodeObject(media, forKey: "m")
+            case let .recentSticker(media):
+                encoder.encodeInt32(CodingCase.recentSticker.rawValue, forKey: "_r")
+                encoder.encodeObject(media, forKey: "m")
             case let .avatarList(peer, media):
                 encoder.encodeInt32(CodingCase.avatarList.rawValue, forKey: "_r")
                 encoder.encodeObject(peer, forKey: "pr")
@@ -615,6 +708,10 @@ public enum MediaReference<T: Media> {
                 return .stickerPack(stickerPack: stickerPack, media: media)
             case let .savedGif(media):
                 return .savedGif(media: media)
+            case let .savedSticker(media):
+                return .savedSticker(media: media)
+            case let .recentSticker(media):
+                return .recentSticker(media: media)
             case let .avatarList(peer, media):
                 return .avatarList(peer: peer, media: media)
             case let .attachBot(peer, media):
@@ -641,6 +738,10 @@ public enum MediaReference<T: Media> {
             case let .stickerPack(_, media):
                 return media
             case let .savedGif(media):
+                return media
+            case let .savedSticker(media):
+                return media
+            case let .recentSticker(media):
                 return media
             case let .avatarList(_, media):
                 return media

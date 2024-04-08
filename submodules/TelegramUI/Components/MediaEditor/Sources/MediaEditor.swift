@@ -13,7 +13,7 @@ import FastBlur
 import AccountContext
 import ImageTransparency
 
-public struct MediaEditorPlayerState {
+public struct MediaEditorPlayerState: Equatable {
     public struct Track: Equatable {
         public enum Content: Equatable {
             case video(frames: [UIImage], framesUpdateTimestamp: Double)
@@ -193,8 +193,8 @@ public final class MediaEditor {
     }
     
     public private(set) var canCutout: Bool = false
-    public var canCutoutUpdated: (Bool) -> Void = { _ in }
-    public var isCutoutUpdated: (Bool) -> Void = { _ in }
+    public var canCutoutUpdated: (Bool, Bool) -> Void = { _, _ in }
+    public var maskUpdated: (UIImage) -> Void = { _ in }
     
     public var classificationUpdated: ([(String, Float)]) -> Void = { _ in }
     
@@ -486,7 +486,8 @@ public final class MediaEditor {
         if mirror {
             self.renderer.videoFinishPass.additionalTextureRotation = .rotate0DegreesMirrored
         }
-        self.renderer.consume(main: .texture(texture, time), additional: additionalTexture.flatMap { .texture($0, time) }, render: true, displayEnabled: false)
+        let hasTransparency = imageHasTransparency(image)
+        self.renderer.consume(main: .texture(texture, time, hasTransparency), additional: additionalTexture.flatMap { .texture($0, time, false) }, render: true, displayEnabled: false)
     }
     
     private func setupSource() {
@@ -699,16 +700,24 @@ public final class MediaEditor {
                         textureSource.setMainInput(.image(image))
                     }
                     
-                    if case .sticker = self.mode, let cgImage = image.cgImage {
-                        if !imageHasTransparency(cgImage) {
+                    if case .sticker = self.mode {
+                        if !imageHasTransparency(image) {
                             let _ = (cutoutStickerImage(from: image, onlyCheck: true)
                             |> deliverOnMainQueue).start(next: { [weak self] result in
-                                guard let self, result != nil else {
+                                guard let self else {
                                     return
                                 }
-                                self.canCutout = true
-                                self.canCutoutUpdated(true)
+                                let canCutout = result != nil
+                                self.canCutout = canCutout
+                                self.canCutoutUpdated(canCutout, false)
                             })
+                        } else {
+                            self.canCutout = false
+                            self.canCutoutUpdated(false, true)
+                            
+                            if let maskImage = generateTintedImage(image: image, color: .white, backgroundColor: .black) {
+                                self.maskUpdated(maskImage)
+                            }
                         }
                         let _ = (classifyImage(image)
                         |> deliverOnMainQueue).start(next: { [weak self] classes in
@@ -789,6 +798,10 @@ public final class MediaEditor {
                 }
             }
         })
+    }
+    
+    public func setOnNextDisplay(_ f: @escaping () -> Void) {
+        self.renderer.onNextRender = f
     }
     
     public func setOnNextAdditionalDisplay(_ f: @escaping () -> Void) {
@@ -916,7 +929,7 @@ public final class MediaEditor {
         self.updateRenderChain()
     }
     
-    public func setToolValue(_ key: EditorToolKey, value: Any) {
+    public func setToolValue(_ key: EditorToolKey, value: Any?) {
         self.updateValues { values in
             var updatedToolValues = values.toolValues
             updatedToolValues[key] = value
@@ -1706,28 +1719,40 @@ public final class MediaEditor {
         self.renderer.renderFrame()
     }
     
-    public func removeSegmentationMask() {
-        self.isCutoutUpdated(false)
-        
+    private var mainInputMask: MTLTexture?
+    public func removeSegmentationMask() {        
+        self.mainInputMask = nil
         self.renderer.currentMainInputMask = nil
         if !self.skipRendering {
             self.updateRenderChain()
         }
     }
     
-    public func setSegmentationMask(_ image: UIImage) {
+    public func setSegmentationMask(_ image: UIImage, andEnable enable: Bool = false) {
         guard let renderTarget = self.previewView, let device = renderTarget.mtlDevice else {
             return
         }
         
-        self.isCutoutUpdated(true)
-        
-        //TODO:replace with pixelbuffer
-        self.renderer.currentMainInputMask = loadTexture(image: image, device: device)
+        //TODO:replace with pixelbuffer?
+        self.mainInputMask = loadTexture(image: image, device: device)
+        if enable {
+            self.isSegmentationMaskEnabled = true
+        }
+        self.renderer.currentMainInputMask = self.isSegmentationMaskEnabled ? self.mainInputMask : nil
         if !self.skipRendering {
             self.updateRenderChain()
         }
     }
+    
+    public var isSegmentationMaskEnabled: Bool = true {
+        didSet {
+            self.renderer.currentMainInputMask = self.isSegmentationMaskEnabled ? self.mainInputMask : nil
+            if !self.skipRendering {
+                self.updateRenderChain()
+            }
+        }
+    }
+    
     
     public func processImage(with f: @escaping (UIImage, UIImage?) -> Void) {
         guard let textureSource = self.renderer.textureSource as? UniversalTextureSource, let image = textureSource.mainImage else {

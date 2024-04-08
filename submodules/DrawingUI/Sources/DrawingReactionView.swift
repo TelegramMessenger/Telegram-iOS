@@ -189,7 +189,7 @@ public class DrawingReactionEntityView: DrawingStickerEntityView {
                 }
                 
                 if case let .file(_, type) = self.stickerEntity.content, case let .reaction(_, style) = type {
-                    self.stickerEntity.content = .file(animation, .reaction(updateReaction.reaction, style))
+                    self.stickerEntity.content = .file(.standalone(media: animation), .reaction(updateReaction.reaction, style))
                 }
                 
                 var nodeToTransitionOut: ASDisplayNode?

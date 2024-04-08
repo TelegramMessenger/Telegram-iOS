@@ -158,6 +158,8 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                     },
                     openPremiumGift: { _ in
                     },
+                    openPremiumManagement: {
+                    },
                     openActiveSessions: {
                     },
                     openBirthdaySetup: {

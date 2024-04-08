@@ -56,8 +56,8 @@ private func generateHistogram(cgImage: CGImage) -> ([[vImagePixelCount]], Int)?
     return ([histogramBinZero, histogramBinOne, histogramBinTwo, histogramBinThree], alphaBinIndex)
 }
 
-public func imageHasTransparency(_ cgImage: CGImage) -> Bool {
-    guard cgImage.bitsPerComponent == 8, cgImage.bitsPerPixel == 32 else {
+public func imageHasTransparency(_ image: UIImage) -> Bool {
+    guard let cgImage = image.cgImage, cgImage.bitsPerComponent == 8, cgImage.bitsPerPixel == 32 else {
         return false
     }
     guard [.first, .last, .premultipliedFirst, .premultipliedLast].contains(cgImage.alphaInfo) else {

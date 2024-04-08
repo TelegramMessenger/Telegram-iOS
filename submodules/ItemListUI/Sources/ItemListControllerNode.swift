@@ -232,7 +232,7 @@ public final class ItemListControllerNodeView: UITracingLayerView {
     weak var controller: ItemListController?
 }
 
-open class ItemListControllerNode: ASDisplayNode {
+open class ItemListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private weak var controller: ItemListController?
     
     private var _ready = ValuePromise<Bool>()
@@ -243,6 +243,7 @@ open class ItemListControllerNode: ASDisplayNode {
     
     private let navigationBar: NavigationBar
     
+    private let listNodeContainer: ASDisplayNode
     public let listNode: ListView
     private let leftOverlayNode: ASDisplayNode
     private let rightOverlayNode: ASDisplayNode
@@ -273,6 +274,8 @@ open class ItemListControllerNode: ASDisplayNode {
     private var appliedFocusItemTag: ItemListItemTag?
     private var appliedEnsureVisibleItemTag: ItemListItemTag?
     
+    private(set) var panRecognizer: InteractiveTransitionGestureRecognizer?
+    
     private var afterLayoutActions: [() -> Void] = []
 
     public var dismiss: (() -> Void)?
@@ -301,6 +304,7 @@ open class ItemListControllerNode: ASDisplayNode {
         self.controller = controller
         self.navigationBar = navigationBar
         
+        self.listNodeContainer = ASDisplayNode()
         self.listNode = ListView()
         self.leftOverlayNode = ASDisplayNode()
         self.leftOverlayNode.isUserInteractionEnabled = false
@@ -316,7 +320,8 @@ open class ItemListControllerNode: ASDisplayNode {
         self.backgroundColor = nil
         self.isOpaque = false
         
-        self.addSubnode(self.listNode)
+        self.addSubnode(self.listNodeContainer)
+        self.listNodeContainer.addSubnode(self.listNode)
         
         self.listNode.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
             if let strongSelf = self, let visibleEntriesUpdated = strongSelf.visibleEntriesUpdated, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState)?.mergedEntries {
@@ -483,6 +488,130 @@ open class ItemListControllerNode: ASDisplayNode {
         (self.view as? ItemListControllerNodeView)?.hitTestImpl = { [weak self] point, event in
             return self?.hitTest(point, with: event)
         }
+        
+        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] _ in
+            guard let self, let directions = self.panGestureAllowedDirections?() else {
+                return []
+            }
+            return directions
+        }, edgeWidth: .widthMultiplier(factor: 1.0 / 6.0, min: 22.0, max: 80.0))
+        panRecognizer.delegate = self
+        panRecognizer.delaysTouchesBegan = false
+        panRecognizer.cancelsTouchesInView = true
+        self.panRecognizer = panRecognizer
+        self.view.addGestureRecognizer(panRecognizer)
+    }
+    
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let _ = otherGestureRecognizer as? InteractiveTransitionGestureRecognizer {
+            return false
+        }
+        if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
+            return true
+        }
+        return false
+    }
+    
+    var panGestureAllowedDirections: (() -> InteractiveTransitionGestureRecognizerDirections)?
+    var panTransitionFractionChanged: ((CGFloat?) -> Void)?
+    
+    private var panSnapshotView: UIView?
+    private var panTransitionFraction: CGFloat = 0.0
+    private var panCurrentAllowedDirections: InteractiveTransitionGestureRecognizerDirections = [.leftCenter, .rightCenter]
+    
+    @objc private func panGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
+        let translation = gestureRecognizer.translation(in: self.view).x
+        let velocity = gestureRecognizer.velocity(in: self.view).x
+        
+        switch gestureRecognizer.state {
+        case .began, .changed:
+            if case .began = gestureRecognizer.state {
+                self.panCurrentAllowedDirections = self.panGestureAllowedDirections?() ?? [.leftCenter, .rightCenter]
+            }
+            
+            if self.panSnapshotView == nil, let panSnapshotView = self.listNodeContainer.view.snapshotView(afterScreenUpdates: false) {
+                self.panSnapshotView = panSnapshotView
+                self.listNodeContainer.view.superview?.insertSubview(panSnapshotView, aboveSubview: self.listNodeContainer.view)
+            }
+            self.panTransitionFraction = -translation / self.view.bounds.width
+            if !self.panCurrentAllowedDirections.contains(.leftCenter) {
+                self.panTransitionFraction = min(0.0, self.panTransitionFraction)
+            }
+            if !self.panCurrentAllowedDirections.contains(.rightCenter) {
+                self.panTransitionFraction = max(0.0, self.panTransitionFraction)
+            }
+            
+            if let panSnapshotView = self.panSnapshotView {
+                panSnapshotView.frame = panSnapshotView.bounds.offsetBy(dx: -self.panTransitionFraction * self.view.bounds.width, dy: 0.0)
+            }
+            
+            var initialOffset: CGFloat = 0.0
+            if self.panTransitionFraction > 0.0 {
+                initialOffset = self.view.bounds.width
+            } else {
+                initialOffset = -self.view.bounds.width
+            }
+            
+            self.listNodeContainer.frame = CGRect(origin: CGPoint(x: initialOffset - self.view.bounds.width * self.panTransitionFraction, y: 0.0), size: self.listNodeContainer.frame.size)
+            
+            self.panTransitionFractionChanged?(self.panTransitionFraction)
+        case .ended, .cancelled:
+            if let panSnapshotView = self.panSnapshotView {
+                self.panSnapshotView = nil
+                
+                var directionIsToRight: Bool?
+                if abs(velocity) > 10.0 {
+                    if translation > 0.0 {
+                        if velocity <= 0.0 {
+                            directionIsToRight = nil
+                        } else {
+                            directionIsToRight = true
+                        }
+                    } else {
+                        if velocity >= 0.0 {
+                            directionIsToRight = nil
+                        } else {
+                            directionIsToRight = false
+                        }
+                    }
+                } else {
+                    if abs(translation) > self.view.bounds.width / 2.0 {
+                        directionIsToRight = translation > self.view.bounds.width / 2.0
+                    }
+                }
+                if !self.panCurrentAllowedDirections.contains(.rightCenter) && directionIsToRight == true {
+                    directionIsToRight = nil
+                }
+                if !self.panCurrentAllowedDirections.contains(.leftCenter) && directionIsToRight == false {
+                    directionIsToRight = nil
+                }
+                
+                let center = CGPoint(x: self.view.bounds.width / 2.0, y: self.view.bounds.height / 2.0)
+                let previousPosition = self.listNodeContainer.position
+                self.listNodeContainer.position = center
+                if let directionIsToRight {
+                    let targetPosition: CGFloat
+                    if directionIsToRight {
+                        targetPosition = self.view.bounds.width + self.view.bounds.width / 2.0
+                    } else {
+                        targetPosition = -self.view.bounds.width + self.view.bounds.width / 2.0
+                    }
+                    panSnapshotView.layer.animatePosition(from: panSnapshotView.center, to: CGPoint(x: targetPosition, y: self.view.bounds.height / 2.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+                        panSnapshotView.removeFromSuperview()
+                    })
+                    self.listNodeContainer.layer.animatePosition(from: previousPosition, to: center, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                } else {
+                    let direction = center.x - panSnapshotView.center.x
+                    panSnapshotView.layer.animatePosition(from: panSnapshotView.center, to: center, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+                        panSnapshotView.removeFromSuperview()
+                    })
+                    self.listNodeContainer.layer.animatePosition(from: previousPosition, to: CGPoint(x: direction > 0.0 ? self.view.bounds.width + self.view.bounds.width / 2.0 : -self.view.bounds.width + self.view.bounds.width / 2.0, y: self.view.bounds.height / 2.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                }
+            }
+            self.panTransitionFractionChanged?(nil)
+        default:
+            break
+        }
     }
     
     open func animateIn(completion: (() -> Void)? = nil) {
@@ -526,10 +655,10 @@ open class ItemListControllerNode: ASDisplayNode {
         }
         
         if self.rightOverlayNode.supernode == nil {
-            self.insertSubnode(self.rightOverlayNode, aboveSubnode: self.listNode)
+            self.listNodeContainer.insertSubnode(self.rightOverlayNode, aboveSubnode: self.listNode)
         }
         if self.leftOverlayNode.supernode == nil {
-            self.insertSubnode(self.leftOverlayNode, aboveSubnode: self.listNode)
+            self.listNodeContainer.insertSubnode(self.leftOverlayNode, aboveSubnode: self.listNode)
         }
 
         if let toolbarItem = self.toolbarItem {
@@ -603,6 +732,7 @@ open class ItemListControllerNode: ASDisplayNode {
             insets.bottom = max(footerHeight, insets.bottom)
         }
         
+        self.listNodeContainer.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
         

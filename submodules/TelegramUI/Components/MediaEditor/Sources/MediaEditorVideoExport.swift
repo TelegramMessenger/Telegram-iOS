@@ -4,6 +4,7 @@ import MetalKit
 import SwiftSignalKit
 import TelegramCore
 import Postbox
+import ImageTransparency
 
 enum ExportWriterStatus {
     case unknown
@@ -55,17 +56,20 @@ public final class MediaEditorVideoExport {
         public var audioSettings: [String: Any]
         public var values: MediaEditorValues
         public var frameRate: Float
+        public var preferredDuration: Double?
         
         public init(
             videoSettings: [String: Any],
             audioSettings: [String: Any],
             values: MediaEditorValues,
-            frameRate: Float
+            frameRate: Float,
+            preferredDuration: Double? = nil
         ) {
             self.videoSettings = videoSettings
             self.audioSettings = audioSettings
             self.values = values
             self.frameRate = frameRate
+            self.preferredDuration = preferredDuration
         }
         
         var isSticker: Bool {
@@ -283,7 +287,7 @@ public final class MediaEditorVideoExport {
         
         let duration: CMTime
         if self.configuration.isSticker {
-            duration = CMTime(seconds: 3.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+            duration = CMTime(seconds: self.configuration.preferredDuration ?? 3.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         } else if let mainAsset {
             if let trimmedDuration = self.configuration.timeRange?.duration {
                 duration = trimmedDuration
@@ -629,7 +633,7 @@ public final class MediaEditorVideoExport {
                 }
             }
             if case let .image(image) = self.subject, let texture = self.composer?.textureForImage(image) {
-                mainInput = .texture(texture, self.imageArguments?.position ?? .zero)
+                mainInput = .texture(texture, self.imageArguments?.position ?? .zero, imageHasTransparency(image))
                 
                 if !updatedProgress, let imageArguments = self.imageArguments, let duration = self.durationValue {
                     let progress = imageArguments.position.seconds / duration.seconds
