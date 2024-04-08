@@ -325,13 +325,17 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                 strongSelf.navigationItem.titleView = nil
                                 strongSelf.segmentedTitleView = nil
                                 strongSelf.navigationBar?.setContentNode(nil, animated: false)
-                                strongSelf.controllerNode.panRecognizer?.isEnabled = false
+                                if strongSelf.isNodeLoaded {
+                                    strongSelf.controllerNode.panRecognizer?.isEnabled = false
+                                }
                             case let .textWithSubtitle(title, subtitle):
                                 strongSelf.title = ""
-                                strongSelf.controllerNode.panRecognizer?.isEnabled = false
                                 strongSelf.navigationItem.titleView = ItemListTextWithSubtitleTitleView(theme: controllerState.presentationData.theme, title: title, subtitle: subtitle)
                                 strongSelf.segmentedTitleView = nil
                                 strongSelf.navigationBar?.setContentNode(nil, animated: false)
+                                if strongSelf.isNodeLoaded {
+                                    strongSelf.controllerNode.panRecognizer?.isEnabled = false
+                                }
                             case let .sectionControl(sections, index):
                                 strongSelf.title = ""
                                 if let segmentedTitleView = strongSelf.segmentedTitleView, segmentedTitleView.segments == sections {
@@ -347,7 +351,9 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                     }
                                 }
                                 strongSelf.navigationBar?.setContentNode(nil, animated: false)
-                                strongSelf.controllerNode.panRecognizer?.isEnabled = false
+                                if strongSelf.isNodeLoaded {
+                                    strongSelf.controllerNode.panRecognizer?.isEnabled = false
+                                }
                             case let .textWithTabs(title, sections, index):
                                 strongSelf.title = title
                                 if let tabsNavigationContentNode = strongSelf.tabsNavigationContentNode, tabsNavigationContentNode.segments == sections {
@@ -366,21 +372,23 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                     }
                                     strongSelf.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
                                 }
-                                strongSelf.controllerNode.panTransitionFractionChanged = { [weak self] transitionFraction in
-                                    if let strongSelf = self {
-                                        strongSelf.tabsNavigationContentNode?.transitionFraction = transitionFraction
+                                if strongSelf.isNodeLoaded {
+                                    strongSelf.controllerNode.panTransitionFractionChanged = { [weak self] transitionFraction in
+                                        if let strongSelf = self {
+                                            strongSelf.tabsNavigationContentNode?.transitionFraction = transitionFraction
+                                        }
                                     }
-                                }
-                                strongSelf.controllerNode.panGestureAllowedDirections = {
-                                    if index == 0 {
-                                        return [.leftCenter]
-                                    } else if index == sections.count - 1 {
-                                        return [.rightCenter]
-                                    } else {
-                                        return [.leftCenter, .rightCenter]
+                                    strongSelf.controllerNode.panGestureAllowedDirections = {
+                                        if index == 0 {
+                                            return [.leftCenter]
+                                        } else if index == sections.count - 1 {
+                                            return [.rightCenter]
+                                        } else {
+                                            return [.leftCenter, .rightCenter]
+                                        }
                                     }
+                                    strongSelf.controllerNode.panRecognizer?.isEnabled = true
                                 }
-                                strongSelf.controllerNode.panRecognizer?.isEnabled = true
                         }
                     }
                     strongSelf.navigationButtonActions = (left: controllerState.leftNavigationButton?.action, right: controllerState.rightNavigationButton?.action, secondaryRight: controllerState.secondaryRightNavigationButton?.action)
