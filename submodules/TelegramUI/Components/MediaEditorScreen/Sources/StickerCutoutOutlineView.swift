@@ -60,14 +60,14 @@ final class StickerCutoutOutlineView: UIView {
         self.glowLayer.removeFromSuperlayer()
         
         self.outlineLayer = CAEmitterLayer()
-        self.outlineLayer.opacity = 0.77
+        self.outlineLayer.opacity = 0.65
         self.outline2Layer = CAEmitterLayer()
-        self.outline2Layer.opacity = 0.7
+        self.outline2Layer.opacity = 0.65
         
         self.glowLayer = CAEmitterLayer()
         
         self.layer.addSublayer(self.outlineLayer)
-//        self.layer.addSublayer(self.outline2Layer)
+        self.layer.addSublayer(self.outline2Layer)
         self.layer.addSublayer(self.glowLayer)
         
         let randomBeginTime = (previousBeginTime + 4) % 6
@@ -93,8 +93,8 @@ final class StickerCutoutOutlineView: UIView {
         lineEmitterCell.color = UIColor.white.cgColor
         lineEmitterCell.contents = UIImage(named: "Media Editor/ParticleDot")?.cgImage
         lineEmitterCell.lifetime = 2.2
-        lineEmitterCell.birthRate = 800
-        lineEmitterCell.scale = 0.18
+        lineEmitterCell.birthRate = 1000
+        lineEmitterCell.scale = 0.15
         lineEmitterCell.alphaSpeed = -0.4
         
         self.outlineLayer.emitterCells = [lineEmitterCell]
@@ -112,7 +112,7 @@ final class StickerCutoutOutlineView: UIView {
         outline2Animation.repeatCount = .infinity
         outline2Animation.calculationMode = .paced
         outline2Animation.fillMode = .forwards
-        outline2Animation.beginTime = Double(randomBeginTime) + 0.02
+        outline2Animation.beginTime = Double(randomBeginTime)
         self.outline2Layer.add(outline2Animation, forKey: "emitterPosition")
         
         let line2EmitterCell = CAEmitterCell()
@@ -124,14 +124,14 @@ final class StickerCutoutOutlineView: UIView {
         line2EmitterCell.color = UIColor.white.cgColor
         line2EmitterCell.contents = UIImage(named: "Media Editor/ParticleDot")?.cgImage
         line2EmitterCell.lifetime = 2.2
-        line2EmitterCell.birthRate = 500
-        line2EmitterCell.scale = 0.14
+        line2EmitterCell.birthRate = 1000
+        line2EmitterCell.scale = 0.15
         line2EmitterCell.alphaSpeed = -0.4
         
         self.outline2Layer.emitterCells = [line2EmitterCell]
         self.outline2Layer.emitterMode = .points
-        self.outline2Layer.emitterSize = CGSize(width: 1.5, height: 1.5)
-        self.outline2Layer.emitterShape = .circle
+        self.outline2Layer.emitterSize = CGSize(width: 1.33, height: 1.33)
+        self.outline2Layer.emitterShape = .rectangle
         
         
         

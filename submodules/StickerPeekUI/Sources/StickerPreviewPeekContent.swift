@@ -417,11 +417,11 @@ final class PremiumStickerPackAccessoryNode: SparseNode, PeekControllerAccessory
 
 private func topItems(selectedEmoji: [String] = [], recommendedEmoji: [String], count: Int) -> [String] {
     var defaultItems: [String] = [
-        "👍", "👎", "❤", "🔥", "🥰", "👏", "😁"
+        "👍", "👎", "❤", "🔥", "🥰", "👏", "😁", "😎"
     ]
     if !recommendedEmoji.isEmpty, let firstEmoji = recommendedEmoji.first {
-        defaultItems.removeLast()
-        defaultItems.append(firstEmoji)
+        defaultItems.remove(at: defaultItems.count - 2)
+        defaultItems.insert(firstEmoji, at: defaultItems.count - 1)
     }
     var result = selectedEmoji.filter { !defaultItems.contains($0) }
     result.append(contentsOf: defaultItems)
@@ -468,7 +468,7 @@ final class EmojiStickerAccessoryNode: SparseNode, PeekControllerAccessoryNode {
                         subject: .stickerAlt,
                         hasTrending: false,
                         topReactionItems: [],
-                        topEmojiItems: topItems(selectedEmoji: selectedItems, recommendedEmoji: recommendedEmoji, count: 7),
+                        topEmojiItems: topItems(selectedEmoji: selectedItems, recommendedEmoji: recommendedEmoji, count: 8),
                         areUnicodeEmojiEnabled: true,
                         areCustomEmojiEnabled: false,
                         chatPeerId: context.account.peerId,
