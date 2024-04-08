@@ -15,6 +15,7 @@ final class PeerInfoScreenAddressItem: PeerInfoScreenItem {
     let action: (() -> Void)?
     let longTapAction: ((ASDisplayNode, String) -> Void)?
     let linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)?
+    let contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     
     init(
         id: AnyHashable,
@@ -23,7 +24,8 @@ final class PeerInfoScreenAddressItem: PeerInfoScreenItem {
         imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?,
         action: (() -> Void)?,
         longTapAction: ((ASDisplayNode, String) -> Void)? = nil,
-        linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil
+        linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil,
+        contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil
     ) {
         self.id = id
         self.label = label
@@ -32,6 +34,7 @@ final class PeerInfoScreenAddressItem: PeerInfoScreenItem {
         self.action = action
         self.longTapAction = longTapAction
         self.linkItemAction = linkItemAction
+        self.contextAction = contextAction
     }
     
     func node() -> PeerInfoScreenItemNode {
@@ -40,41 +43,130 @@ final class PeerInfoScreenAddressItem: PeerInfoScreenItem {
 }
 
 private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
-    private let selectionNode: PeerInfoScreenSelectableBackgroundNode
-    private let bottomSeparatorNode: ASDisplayNode
+    private let containerNode: ContextControllerSourceNode
+    private let contextSourceNode: ContextExtractedContentContainingNode
+    
+    private let extractedBackgroundImageNode: ASImageNode
+    
+    private var extractedRect: CGRect?
+    private var nonExtractedRect: CGRect?
+    
     private let maskNode: ASImageNode
+    private let bottomSeparatorNode: ASDisplayNode
+    private let activateArea: AccessibilityAreaNode
     
     private var item: PeerInfoScreenAddressItem?
     private var itemNode: ItemListAddressItemNode?
     
+    private var presentationData: PresentationData?
+    
     override init() {
-        var bringToFrontForHighlightImpl: (() -> Void)?
-        self.selectionNode = PeerInfoScreenSelectableBackgroundNode(bringToFrontForHighlight: { bringToFrontForHighlightImpl?() })
+        self.contextSourceNode = ContextExtractedContentContainingNode()
+        self.containerNode = ContextControllerSourceNode()
         
-        self.bottomSeparatorNode = ASDisplayNode()
-        self.bottomSeparatorNode.isLayerBacked = true
+        self.extractedBackgroundImageNode = ASImageNode()
+        self.extractedBackgroundImageNode.displaysAsynchronously = false
+        self.extractedBackgroundImageNode.alpha = 0.0
         
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
         
+        self.bottomSeparatorNode = ASDisplayNode()
+        self.bottomSeparatorNode.isLayerBacked = true
+        
+        self.activateArea = AccessibilityAreaNode()
+        
         super.init()
         
-        bringToFrontForHighlightImpl = { [weak self] in
-            self?.bringToFrontForHighlight?()
-        }
-        
         self.addSubnode(self.bottomSeparatorNode)
-        self.addSubnode(self.selectionNode)
+        
+        self.containerNode.addSubnode(self.contextSourceNode)
+        self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
+        self.addSubnode(self.containerNode)
+        
         self.addSubnode(self.maskNode)
         
-        self.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
+        self.contextSourceNode.contentNode.clipsToBounds = true
+        
+        self.contextSourceNode.contentNode.addSubnode(self.extractedBackgroundImageNode)
+        
+        self.addSubnode(self.activateArea)
+        
+        self.containerNode.isGestureEnabled = false
+        
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self, let item = strongSelf.item, let contextAction = item.contextAction else {
+                gesture.cancel()
+                return
+            }
+            contextAction(strongSelf.contextSourceNode, gesture, nil)
+        }
+        
+        self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
+            guard let strongSelf = self, let presentationData = strongSelf.presentationData else {
+                return
+            }
+            let theme = presentationData.theme
+            
+            if isExtracted {
+                strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: theme.list.plainBackgroundColor)
+            }
+            
+            if let extractedRect = strongSelf.extractedRect, let nonExtractedRect = strongSelf.nonExtractedRect {
+                let rect = isExtracted ? extractedRect : nonExtractedRect
+                transition.updateFrame(node: strongSelf.extractedBackgroundImageNode, frame: rect)
+            }
+            
+            transition.updateAlpha(node: strongSelf.extractedBackgroundImageNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
+                if !isExtracted {
+                    self?.extractedBackgroundImageNode.image = nil
+                }
+            })
+        }
     }
     
-    @objc private func longPressGesture(_ recognizer: UILongPressGestureRecognizer) {
-        if case .began = recognizer.state {
-            if let item = self.item {
-                item.longTapAction?(self, item.text)
+    override func didLoad() {
+        super.didLoad()
+        
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { [weak self] _ in
+            guard let self, let item = self.item else {
+                return .keepWithSingleTap
             }
+            
+            if item.longTapAction != nil {
+                return .waitForSingleTap
+            }
+            return .waitForSingleTap
+        }
+        recognizer.highlight = { [weak self] point in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.updateTouchesAtPoint(point)
+        }
+        self.view.addGestureRecognizer(recognizer)
+    }
+    
+    @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+        case .ended:
+            if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                case .tap:
+                    if let item = self.item {
+                        item.action?()
+                    }
+                case .longTap:
+                    if let item = self.item {
+                        item.longTapAction?(self, item.text)
+                    }
+                default:
+                    break
+                }
+            }
+        default:
+            break
         }
     }
     
@@ -84,9 +176,10 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         }
         
         self.item = item
+        self.presentationData = presentationData
         
-        self.selectionNode.pressed = item.action
-        
+        self.containerNode.isGestureEnabled = item.contextAction != nil
+                
         let sideInset: CGFloat = 16.0 + safeInsets.left
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
@@ -100,7 +193,7 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
             itemNode = current
             addressItem.updateNode(async: { $0() }, node: {
                 return itemNode
-            }, params: params, previousItem: topItem != nil ? addressItem : nil, nextItem: bottomItem != nil ? addressItem : nil, animation: .None, completion: { (layout, apply) in
+            }, params: params, previousItem: addressItem, nextItem: addressItem, animation: .None, completion: { (layout, apply) in
                 let nodeFrame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: layout.size.height))
                 
                 itemNode.contentSize = layout.contentSize
@@ -118,28 +211,45 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
             itemNode = itemNodeValue as! ItemListAddressItemNode
             itemNode.isUserInteractionEnabled = false
             self.itemNode = itemNode
-            self.addSubnode(itemNode)
+            self.contextSourceNode.contentNode.addSubnode(itemNode)
         }
         
         let height = itemNode.contentSize.height
+        
+        transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: sideInset, y: height - UIScreenPixel), size: CGSize(width: width - sideInset, height: UIScreenPixel)))
+        transition.updateAlpha(node: self.bottomSeparatorNode, alpha: bottomItem == nil ? 0.0 : 1.0)
         
         let hasCorners = hasCorners && (topItem == nil || bottomItem == nil)
         let hasTopCorners = hasCorners && topItem == nil
         let hasBottomCorners = hasCorners && bottomItem == nil
         
         self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
-        self.maskNode.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
-        self.bottomSeparatorNode.isHidden = hasBottomCorners || bottomItem != nil
+        transition.updateFrame(node: self.maskNode, frame: CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height)))
+        self.bottomSeparatorNode.isHidden = hasBottomCorners
         
-        transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(), size: itemNode.bounds.size))
+        self.activateArea.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: height))
+        self.activateArea.accessibilityLabel = item.label
         
-        let highlightNodeOffset: CGFloat = topItem == nil ? 0.0 : UIScreenPixel
-        self.selectionNode.update(size: CGSize(width: width, height: height + highlightNodeOffset), theme: presentationData.theme, transition: transition)
-        transition.updateFrame(node: self.selectionNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -highlightNodeOffset), size: CGSize(width: width, height: height + highlightNodeOffset)))
+        let contentSize = CGSize(width: width, height: height)
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
+        self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: contentSize)
+        transition.updateFrame(node: self.contextSourceNode.contentNode, frame: CGRect(origin: CGPoint(), size: contentSize))
         
-        transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: sideInset, y: height - UIScreenPixel), size: CGSize(width: width - sideInset, height: UIScreenPixel)))
-        transition.updateAlpha(node: self.bottomSeparatorNode, alpha: bottomItem == nil ? 0.0 : 1.0)
+        let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: contentSize.width, height: contentSize.height))
+        let extractedRect = nonExtractedRect
+        self.extractedRect = extractedRect
+        self.nonExtractedRect = nonExtractedRect
+        
+        if self.contextSourceNode.isExtractedToContextPreview {
+            self.extractedBackgroundImageNode.frame = extractedRect
+        } else {
+            self.extractedBackgroundImageNode.frame = nonExtractedRect
+        }
+        self.contextSourceNode.contentRect = extractedRect
         
         return height
+    }
+    
+    private func updateTouchesAtPoint(_ point: CGPoint?) {
     }
 }

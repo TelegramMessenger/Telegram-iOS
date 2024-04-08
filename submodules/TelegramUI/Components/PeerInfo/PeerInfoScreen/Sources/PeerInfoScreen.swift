@@ -594,6 +594,10 @@ private final class PeerInfoInteraction {
     let openBirthdatePrivacy: () -> Void
     let openPremiumGift: () -> Void
     let editingOpenPersonalChannel: () -> Void
+    let openUsernameContextMenu: (ASDisplayNode, ContextGesture?) -> Void
+    let openBioContextMenu: (ASDisplayNode, ContextGesture?) -> Void
+    let openWorkingHoursContextMenu: (ASDisplayNode, ContextGesture?) -> Void
+    let openBusinessLocationContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let getController: () -> ViewController?
     
     init(
@@ -656,6 +660,10 @@ private final class PeerInfoInteraction {
         openBirthdatePrivacy: @escaping () -> Void,
         openPremiumGift: @escaping () -> Void,
         editingOpenPersonalChannel: @escaping () -> Void,
+        openUsernameContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
+        openBioContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
+        openWorkingHoursContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
+        openBusinessLocationContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         getController: @escaping () -> ViewController?
     ) {
         self.openUsername = openUsername
@@ -717,6 +725,10 @@ private final class PeerInfoInteraction {
         self.openBirthdatePrivacy = openBirthdatePrivacy
         self.openPremiumGift = openPremiumGift
         self.editingOpenPersonalChannel = editingOpenPersonalChannel
+        self.openUsernameContextMenu = openUsernameContextMenu
+        self.openBioContextMenu = openBioContextMenu
+        self.openWorkingHoursContextMenu = openWorkingHoursContextMenu
+        self.openBusinessLocationContextMenu = openBusinessLocationContextMenu
         self.getController = getController
     }
 }
@@ -1024,7 +1036,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     }
     
     let ItemNameHelp = 0
-    let ItemBio = 1
+    let ItemBio: AnyHashable = AnyHashable("bio_edit")
     let ItemBioHelp = 2
     let ItemPhoneNumber = 3
     let ItemUsername = 4
@@ -1186,11 +1198,17 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         items[section] = []
     }
     
-    let bioContextAction: (ASDisplayNode) -> Void = { sourceNode in
-        interaction.openPeerInfoContextMenu(.bio, sourceNode, nil)
+    let bioContextAction: (ASDisplayNode, ContextGesture?, CGPoint?) -> Void = { node, gesture, _ in
+        interaction.openBioContextMenu(node, gesture)
     }
     let bioLinkAction: (TextLinkItemActionType, TextLinkItem, ASDisplayNode, CGRect?, Promise<Bool>?) -> Void = { action, item, _, _, _ in
         interaction.performBioLinkAction(action, item)
+    }
+    let workingHoursContextAction: (ASDisplayNode, ContextGesture?, CGPoint?) -> Void = { node, gesture, _ in
+        interaction.openWorkingHoursContextMenu(node, gesture)
+    }
+    let businessLocationContextAction: (ASDisplayNode, ContextGesture?, CGPoint?) -> Void = { node, gesture, _ in
+        interaction.openBusinessLocationContextMenu(node, gesture)
     }
     
     if let user = data.peer as? TelegramUser {
@@ -1251,8 +1269,6 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     icon: .qrCode,
                     action: { _, progress in
                         interaction.openUsername(mainUsername, true, progress)
-                    }, longTapAction: { sourceNode in
-                        interaction.openPeerInfoContextMenu(.link(customLink: nil), sourceNode, nil)
                     }, linkItemAction: { type, item, _, _, progress in
                         if case .tap = type {
                             if case let .mention(username) = item {
@@ -1261,6 +1277,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         }
                     }, iconAction: {
                         interaction.openQrCode()
+                    }, contextAction: { node, gesture, _ in
+                        interaction.openUsernameContextMenu(node, gesture)
                     }, requestLayout: {
                         interaction.requestLayout(false)
                     }
@@ -1294,7 +1312,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     interaction.requestLayout(false)
                 }))
             } else if let about = cachedData.about, !about.isEmpty {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
                     interaction.requestLayout(false)
                 }))
             }
@@ -1302,11 +1320,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             if let businessHours = cachedData.businessHours {
                 items[.peerInfo]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: presentationData.strings.PeerInfo_BusinessHours_Label, businessHours: businessHours, requestLayout: { animated in
                     interaction.requestLayout(animated)
-                }, longTapAction: { sourceNode, text in
-                    if !text.isEmpty {
-                        interaction.openPeerInfoContextMenu(.businessHours(text), sourceNode, nil)
-                    }
-                }))
+                }, longTapAction: nil, contextAction: workingHoursContextAction))
             }
             
             if let businessLocation = cachedData.businessLocation {
@@ -1320,11 +1334,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         action: {
                             interaction.openLocation()
                         },
-                        longTapAction: { sourceNode, text in
-                            if !text.isEmpty {
-                                interaction.openPeerInfoContextMenu(.businessLocation(text), sourceNode, nil)
-                            }
-                        }
+                        contextAction: businessLocationContextAction
                     ))
                 } else {
                     items[.peerInfo]!.append(PeerInfoScreenAddressItem(
@@ -1333,11 +1343,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         text: businessLocation.address,
                         imageSignal: nil,
                         action: nil,
-                        longTapAction: { sourceNode, text in
-                            if !text.isEmpty {
-                                interaction.openPeerInfoContextMenu(.businessLocation(text), sourceNode, nil)
-                            }
-                        }
+                        contextAction: businessLocationContextAction
                     ))
                 }
             }
@@ -1540,7 +1546,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     if case .group = channel.info {
                         enabledEntities = enabledPrivateBioEntities
                     }
-                    items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
+                    items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledEntities), action: nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
                         interaction.requestLayout(true)
                     }))
                 }
@@ -1590,7 +1596,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }
             
             if let aboutText = aboutText {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPrivateBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPrivateBioEntities), action: nil, linkItemAction: bioLinkAction, contextAction: bioContextAction, requestLayout: {
                     interaction.requestLayout(true)
                 }))
             }
@@ -2754,6 +2760,26 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 self.editingOpenPersonalChannel()
+            }, openUsernameContextMenu: { [weak self] node, gesture in
+                guard let self else {
+                    return
+                }
+                self.openUsernameContextMenu(node: node, gesture: gesture)
+            }, openBioContextMenu: { [weak self] node, gesture in
+                guard let self else {
+                    return
+                }
+                self.openBioContextMenu(node: node, gesture: gesture)
+            }, openWorkingHoursContextMenu: { [weak self] node, gesture in
+                guard let self else {
+                    return
+                }
+                self.openWorkingHoursContextMenu(node: node, gesture: gesture)
+            }, openBusinessLocationContextMenu: { [weak self] node, gesture in
+                guard let self else {
+                    return
+                }
+                self.openBusinessLocationContextMenu(node: node, gesture: gesture)
             },
             getController: { [weak self] in
                 return self?.controller
@@ -4591,6 +4617,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             var previousIsBlocked: Bool?
             var currentIsBlocked: Bool?
             
+            var previousBusinessHours: TelegramBusinessHours?
+            var currentBusinessHours: TelegramBusinessHours?
+            
+            var previousBusinessLocation: TelegramBusinessLocation?
+            var currentBusinessLocation: TelegramBusinessLocation?
+            
             var previousPhotoIsPersonal: Bool?
             var currentPhotoIsPersonal: Bool?
             if let previousUser = previousData?.peer as? TelegramUser {
@@ -4619,6 +4651,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 currentAbout = cachedData.about
                 previousIsBlocked = previousCachedData.isBlocked
                 currentIsBlocked = cachedData.isBlocked
+                previousBusinessHours = previousCachedData.businessHours
+                currentBusinessHours = cachedData.businessHours
+                previousBusinessLocation = previousCachedData.businessLocation
+                currentBusinessLocation = cachedData.businessLocation
             }
             
             if self.isSettings {
@@ -4647,6 +4683,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             if let previousIsBlocked, let currentIsBlocked, previousIsBlocked != currentIsBlocked {
                 infoUpdated = true
             }
+            
+            if previousData != nil {
+                if (previousBusinessHours == nil) != (currentBusinessHours != nil) {
+                    infoUpdated = true
+                }
+                if (previousBusinessLocation == nil) != (currentBusinessLocation != nil) {
+                    infoUpdated = true
+                }
+            }
+            
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: self.didSetReady && (membersUpdated || infoUpdated) ? .animated(duration: 0.3, curve: .spring) : .immediate)
             
             if let cachedData = data.cachedData as? CachedUserData, let _ = cachedData.birthday {
@@ -6852,6 +6898,268 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
+    private func openUsernameContextMenu(node: ASDisplayNode, gesture: ContextGesture?) {
+        guard let sourceNode = node as? ContextExtractedContentContainingNode else {
+            return
+        }
+        guard let peer = self.data?.peer else {
+            return
+        }
+        guard let username = peer.addressName else {
+            return
+        }
+        
+        let copyAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            UIPasteboard.general.string = "@\(username)"
+            
+            //TODO:localize
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Username copied"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+        }
+        
+        var items: [ContextMenuItem] = []
+        
+        if self.isMyProfile {
+            items.append(.action(ContextMenuActionItem(text: "Edit Username", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                c.dismiss {
+                    guard let self else {
+                        return
+                    }
+                    self.openSettings(section: .username)
+                }
+            })))
+        }
+        
+        //TODO:localize
+        items.append(.action(ContextMenuActionItem(text: "Copy Username", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+            c.dismiss {
+                copyAction()
+            }
+        })))
+        
+        let actions = ContextController.Items(content: .list(items))
+        
+        let contextController = ContextController(presentationData: self.presentationData, source: .extracted(PeerInfoContextExtractedContentSource(sourceNode: sourceNode)), items: .single(actions), gesture: gesture)
+        self.controller?.present(contextController, in: .window(.root))
+    }
+    
+    private func openBioContextMenu(node: ASDisplayNode, gesture: ContextGesture?) {
+        guard let sourceNode = node as? ContextExtractedContentContainingNode else {
+            return
+        }
+        guard let cachedData = self.data?.cachedData else {
+            return
+        }
+        
+        var bioText: String?
+        if let cachedData = cachedData as? CachedUserData {
+            bioText = cachedData.about
+        } else if let cachedData = cachedData as? CachedChannelData {
+            bioText = cachedData.about
+        } else if let cachedData = cachedData as? CachedGroupData {
+            bioText = cachedData.about
+        }
+        
+        guard let bioText, !bioText.isEmpty else {
+            return
+        }
+        
+        let copyAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            UIPasteboard.general.string = bioText
+            
+            //TODO:localize
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Bio copied"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+        }
+        
+        var items: [ContextMenuItem] = []
+        
+        if self.isMyProfile {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Edit Bio", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                c.dismiss {
+                    guard let self else {
+                        return
+                    }
+                    self.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
+                    
+                    for (_, section) in self.editingSections {
+                        for (id, itemNode) in section.itemNodes {
+                            if id == AnyHashable("bio_edit") {
+                                if let itemNode = itemNode as? PeerInfoScreenMultilineInputItemNode {
+                                    itemNode.focus()
+                                }
+                                break
+                            }
+                        }
+                    }
+                }
+            })))
+        }
+        
+        //TODO:localize
+        items.append(.action(ContextMenuActionItem(text: "Copy Bio", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+            c.dismiss {
+                copyAction()
+            }
+        })))
+        
+        let actions = ContextController.Items(content: .list(items))
+        
+        let contextController = ContextController(presentationData: self.presentationData, source: .extracted(PeerInfoContextExtractedContentSource(sourceNode: sourceNode)), items: .single(actions), gesture: gesture)
+        self.controller?.present(contextController, in: .window(.root))
+    }
+    
+    private func openWorkingHoursContextMenu(node: ASDisplayNode, gesture: ContextGesture?) {
+        guard let sourceNode = node as? ContextExtractedContentContainingNode else {
+            return
+        }
+        guard let cachedData = self.data?.cachedData else {
+            return
+        }
+        
+        var businessHours: TelegramBusinessHours?
+        if let cachedData = cachedData as? CachedUserData {
+            businessHours = cachedData.businessHours
+        }
+        
+        guard let businessHours else {
+            return
+        }
+        
+        let copyAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            UIPasteboard.general.string = businessHoursTextToCopy(businessHours: businessHours, presentationData: self.presentationData, displayLocalTimezone: false)
+            
+            //TODO:localize
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Working hours copied."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+        }
+        
+        var items: [ContextMenuItem] = []
+        
+        if self.isMyProfile {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Edit Hours", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                c.dismiss {
+                    guard let self else {
+                        return
+                    }
+                    let businessHoursSetupScreen = self.context.sharedContext.makeBusinessHoursSetupScreen(context: self.context, initialValue: businessHours, completion: { _ in })
+                    self.controller?.push(businessHoursSetupScreen)
+                }
+            })))
+        }
+        
+        //TODO:localize
+        items.append(.action(ContextMenuActionItem(text: "Copy Hours", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+            c.dismiss {
+                copyAction()
+            }
+        })))
+        
+        if self.isMyProfile {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
+                c.dismiss {
+                    guard let self else {
+                        return
+                    }
+                    let _ = self.context.engine.accountData.updateAccountBusinessHours(businessHours: nil).startStandalone()
+                }
+            })))
+        }
+        
+        let actions = ContextController.Items(content: .list(items))
+        
+        let contextController = ContextController(presentationData: self.presentationData, source: .extracted(PeerInfoContextExtractedContentSource(sourceNode: sourceNode)), items: .single(actions), gesture: gesture)
+        self.controller?.present(contextController, in: .window(.root))
+    }
+    
+    private func openBusinessLocationContextMenu(node: ASDisplayNode, gesture: ContextGesture?) {
+        guard let sourceNode = node as? ContextExtractedContentContainingNode else {
+            return
+        }
+        guard let cachedData = self.data?.cachedData else {
+            return
+        }
+        
+        var businessLocation: TelegramBusinessLocation?
+        if let cachedData = cachedData as? CachedUserData {
+            businessLocation = cachedData.businessLocation
+        }
+        
+        guard let businessLocation else {
+            return
+        }
+        
+        let copyAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            UIPasteboard.general.string = businessLocation.address
+            
+            //TODO:localize
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Working hours copied."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+        }
+        
+        var items: [ContextMenuItem] = []
+        
+        if businessLocation.coordinates != nil {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Open in Maps", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LocationSmall"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                c.dismiss(completion: {
+                    guard let self else {
+                        return
+                    }
+                    self.interaction.openLocation()
+                })
+            })))
+        }
+        
+        if !businessLocation.address.isEmpty {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Copy Address", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                c.dismiss {
+                    copyAction()
+                }
+            })))
+        }
+        
+        if self.isMyProfile {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Edit Location", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                c.dismiss {
+                    guard let self else {
+                        return
+                    }
+                    let businessLocationSetupScreen = self.context.sharedContext.makeBusinessLocationSetupScreen(context: self.context, initialValue: businessLocation, completion: { _ in })
+                    self.controller?.push(businessLocationSetupScreen)
+                }
+            })))
+            
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
+                c.dismiss {
+                    guard let self else {
+                        return
+                    }
+                    let _ = self.context.engine.accountData.updateAccountBusinessLocation(businessLocation: nil).startStandalone()
+                }
+            })))
+        }
+        
+        let actions = ContextController.Items(content: .list(items))
+        
+        let contextController = ContextController(presentationData: self.presentationData, source: .extracted(PeerInfoContextExtractedContentSource(sourceNode: sourceNode)), items: .single(actions), gesture: gesture)
+        self.controller?.present(contextController, in: .window(.root))
+    }
+    
     private func openPhone(value: String, node: ASDisplayNode, gesture: ContextGesture?, progress: Promise<Bool>?) {
         guard let sourceNode = node as? ContextExtractedContentContainingNode else {
             return
@@ -6925,45 +7233,66 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             
             var isAnonymousNumber = false
             var items: [ContextMenuItem] = []
+            
+            if strongSelf.isMyProfile {
+                //TODO:localize
+                items.append(.action(ContextMenuActionItem(text: "Change Number", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                    c.dismiss {
+                        guard let self else {
+                            return
+                        }
+                        self.openSettings(section: .phoneNumber)
+                    }
+                })))
+            }
+            
             if case let .user(peer) = peer, let peerPhoneNumber = peer.phone, formattedPhoneNumber == formatPhoneNumber(context: strongSelf.context, number: peerPhoneNumber) {
-                items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_TelegramCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Call"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
-                    c.dismiss {
-                        telegramCallAction(false)
-                    }
-                })))
-                items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_TelegramVideoCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VideoCall"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
-                    c.dismiss {
-                        telegramCallAction(true)
-                    }
-                })))
-                if !formattedPhoneNumber.hasPrefix("+888") {
-                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_PhoneCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PhoneCall"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                if !strongSelf.isMyProfile {
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_TelegramCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Call"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                         c.dismiss {
-                            phoneCallAction()
+                            telegramCallAction(false)
                         }
                     })))
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_TelegramVideoCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VideoCall"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                        c.dismiss {
+                            telegramCallAction(true)
+                        }
+                    })))
+                }
+                if !formattedPhoneNumber.hasPrefix("+888") {
+                    if !strongSelf.isMyProfile {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_PhoneCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PhoneCall"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                            c.dismiss {
+                                phoneCallAction()
+                            }
+                        })))
+                    }
                 } else {
                     isAnonymousNumber = true
                 }
-                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                //TODO:localize
+                items.append(.action(ContextMenuActionItem(text: "Copy Number", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                     c.dismiss {
                         copyAction()
                     }
                 })))
             } else {
                 if !formattedPhoneNumber.hasPrefix("+888") {
-                    items.append(
-                        .action(ContextMenuActionItem(text: presentationData.strings.UserInfo_PhoneCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PhoneCall"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
-                            c.dismiss {
-                                phoneCallAction()
-                            }
-                        }))
-                    )
+                    if !strongSelf.isMyProfile {
+                        items.append(
+                            .action(ContextMenuActionItem(text: presentationData.strings.UserInfo_PhoneCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PhoneCall"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                                c.dismiss {
+                                    phoneCallAction()
+                                }
+                            }))
+                        )
+                    }
                 } else {
                     isAnonymousNumber = true
                 }
+                //TODO:localize
                 items.append(
-                    .action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    .action(ContextMenuActionItem(text: "Copy Number", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                         c.dismiss {
                             copyAction()
                         }
@@ -9202,21 +9531,26 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             guard let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController else {
                 return
             }
-            var updatedControllers = navigationController.viewControllers
-            for controller in navigationController.viewControllers.reversed() {
-                if controller !== strongSelf && !(controller is TabBarController) {
-                    updatedControllers.removeLast()
-                } else {
-                    break
-                }
-            }
-            updatedControllers.append(c)
             
-            var animated = true
-            if let validLayout = strongSelf.validLayout?.0, case .regular = validLayout.metrics.widthClass {
-                animated = false
+            if strongSelf.isMyProfile {
+                navigationController.pushViewController(c)
+            } else {
+                var updatedControllers = navigationController.viewControllers
+                for controller in navigationController.viewControllers.reversed() {
+                    if controller !== strongSelf && !(controller is TabBarController) {
+                        updatedControllers.removeLast()
+                    } else {
+                        break
+                    }
+                }
+                updatedControllers.append(c)
+                
+                var animated = true
+                if let validLayout = strongSelf.validLayout?.0, case .regular = validLayout.metrics.widthClass {
+                    animated = false
+                }
+                navigationController.setViewControllers(updatedControllers, animated: animated)
             }
-            navigationController.setViewControllers(updatedControllers, animated: animated)
         }
         switch section {
         case .avatar:

@@ -431,6 +431,22 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
 }
 
 func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)], disableAutoremove: Bool = false, transformGroupingKeysWithPeerId: Bool = false) -> [MessageId?] {
+    /**
+     * If it is a support account, mark messages as read here as they are
+     * not marked as read when chat is opened.
+     **/
+    if account.isSupportUser {
+        let namespace: MessageId.Namespace
+        if peerId.namespace == Namespaces.Peer.SecretChat {
+            namespace = Namespaces.Message.SecretIncoming
+        } else {
+            namespace = Namespaces.Message.Cloud
+        }
+        if let index = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: namespace) {
+            let _ = transaction.applyInteractiveReadMaxIndex(index)
+        }
+    }
+    
     var forwardedMessageIds = Set<MessageId>()
     for (_, message) in messages {
         if case let .forward(sourceId, _, _, _, _) = message {

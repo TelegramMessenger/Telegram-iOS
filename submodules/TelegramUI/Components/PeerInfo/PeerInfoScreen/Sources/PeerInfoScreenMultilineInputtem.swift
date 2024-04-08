@@ -36,7 +36,7 @@ final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode {
     private let bottomSeparatorNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private var item: PeerInfoScreenMultilineInputItem?
+    private(set) var item: PeerInfoScreenMultilineInputItem?
     private var itemNode: ItemListMultilineInputItemNode?
     
     override init() {
@@ -126,5 +126,9 @@ final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode {
     
     func animateErrorIfNeeded() {
         self.itemNode?.animateErrorIfNeeded()
+    }
+    
+    func focus() {
+        self.itemNode?.focus()
     }
 }
