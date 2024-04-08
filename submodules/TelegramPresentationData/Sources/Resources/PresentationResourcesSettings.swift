@@ -26,7 +26,7 @@ private func addRoundedRectPath(context: CGContext, rect: CGRect, radius: CGFloa
     context.restoreGState()
 }
 
-private func renderIcon(name: String, backgroundColors: [UIColor]? = nil) -> UIImage? {
+private func renderIcon(name: String, scaleFactor: CGFloat = 1.0, backgroundColors: [UIColor]? = nil) -> UIImage? {
     return generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
@@ -44,12 +44,14 @@ private func renderIcon(name: String, backgroundColors: [UIColor]? = nil) -> UII
             context.drawLinearGradient(gradient, start: CGPoint(x: size.width, y: size.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
             
             context.resetClip()
-            if let image = generateTintedImage(image: UIImage(bundleImageName: name), color: .white)?.cgImage {
-                context.draw(image, in: bounds)
+            if let image = generateTintedImage(image: UIImage(bundleImageName: name), color: .white), let cgImage = image.cgImage {
+                let imageSize = CGSize(width: image.size.width * scaleFactor, height: image.size.height * scaleFactor)
+                context.draw(cgImage, in: CGRect(origin: CGPoint(x: (bounds.width - imageSize.width) * 0.5, y: (bounds.height - imageSize.height) * 0.5), size: imageSize))
             }
         } else {
-            if let image = UIImage(bundleImageName: name)?.cgImage {
-                context.draw(image, in: bounds)
+            if let image = UIImage(bundleImageName: name), let cgImage = image.cgImage {
+                let imageSize = CGSize(width: image.size.width * scaleFactor, height: image.size.height * scaleFactor)
+                context.draw(cgImage, in: CGRect(origin: CGPoint(x: (bounds.width - imageSize.width) * 0.5, y: (bounds.height - imageSize.height) * 0.5), size: imageSize))
             }
         }
     })
@@ -70,10 +72,11 @@ public struct PresentationResourcesSettings {
     public static let language = renderIcon(name: "Settings/Menu/Language")
     public static let deleteAccount = renderIcon(name: "Chat/Info/GroupRemovedIcon")
     public static let powerSaving = renderIcon(name: "Settings/Menu/PowerSaving")
-    public static let stories = renderIcon(name: "Settings/Menu/Stories")
+    public static let stories = renderIcon(name: "Premium/Perk/Stories", scaleFactor: 0.97, backgroundColors: [UIColor(rgb: 0x5856D6)])
     public static let premiumGift = renderIcon(name: "Settings/Menu/Gift")
     public static let business = renderIcon(name: "Settings/Menu/Business", backgroundColors: [UIColor(rgb: 0xA95CE3), UIColor(rgb: 0xF16B80)])
     public static let myProfile = renderIcon(name: "Settings/Menu/Profile")
+    public static let reactions = renderIcon(name: "Settings/Menu/Reactions")
     
     public static let premium = generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)

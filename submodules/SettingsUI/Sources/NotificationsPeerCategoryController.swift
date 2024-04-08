@@ -92,6 +92,7 @@ public enum NotificationsPeerCategoryEntryTag: ItemListItemTag {
 
 private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
     enum StableId: Hashable {
+        case enableHeader
         case enable
         case enableImportant
         case importantInfo
@@ -104,6 +105,7 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
         case removeAllExceptions
     }
     
+    case enableHeader(String)
     case enable(PresentationTheme, String, Bool)
     case enableImportant(PresentationTheme, String, Bool)
     case importantInfo(PresentationTheme, String)
@@ -118,7 +120,7 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .enable, .enableImportant, .importantInfo:
+            case .enableHeader, .enable, .enableImportant, .importantInfo:
                 return NotificationsPeerCategorySection.enable.rawValue
             case .optionsHeader, .previews, .sound:
                 return NotificationsPeerCategorySection.options.rawValue
@@ -129,6 +131,8 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
     
     var stableId: StableId {
         switch self {
+        case .enableHeader:
+            return .enableHeader
         case .enable:
             return .enable
         case .enableImportant:
@@ -154,6 +158,8 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
     
     var sortIndex: Int32 {
         switch self {
+        case .enableHeader:
+            return -1
         case .enable:
             return 0
         case .enableImportant:
@@ -192,6 +198,12 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
     
     static func ==(lhs: NotificationsPeerCategoryEntry, rhs: NotificationsPeerCategoryEntry) -> Bool {
         switch lhs {
+            case let .enableHeader(text):
+                if case .enableHeader(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .enable(lhsTheme, lhsText, lhsValue):
                 if case let .enable(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
@@ -263,6 +275,8 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! NotificationsPeerCategoryControllerArguments
         switch self {
+            case let .enableHeader(text):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .enable(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateEnabled(updatedValue)
@@ -330,6 +344,9 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
     }
 
     if case .stories = category {
+        //TODO:localize
+        entries.append(.enableHeader("NOTIFY ME ABOUT..."))
+        
         var allEnabled = false
         var importantEnabled = false
         
@@ -345,16 +362,16 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
             importantEnabled = true
         }
         
-        entries.append(.enable(presentationData.theme, presentationData.strings.NotificationSettings_Stories_ShowAll, allEnabled))
+        entries.append(.enable(presentationData.theme, "New Stories", allEnabled))
         if !allEnabled {
-            entries.append(.enableImportant(presentationData.theme, presentationData.strings.NotificationSettings_Stories_ShowImportant, importantEnabled))
+            entries.append(.enableImportant(presentationData.theme, "Important Stories", importantEnabled))
             entries.append(.importantInfo(presentationData.theme, presentationData.strings.NotificationSettings_Stories_ShowImportantFooter))
         }
         
         if notificationSettings.enabled || !notificationExceptions.isEmpty {
             entries.append(.optionsHeader(presentationData.theme, presentationData.strings.Notifications_Options.uppercased()))
             
-            entries.append(.previews(presentationData.theme, presentationData.strings.NotificationSettings_Stories_DisplayAuthorName, notificationSettings.storySettings.hideSender != .hide))
+            entries.append(.previews(presentationData.theme, "Show Sender's Name", notificationSettings.storySettings.hideSender != .hide))
             entries.append(.sound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: filteredGlobalSound(notificationSettings.storySettings.sound)), filteredGlobalSound(notificationSettings.storySettings.sound)))
         }
     } else {

@@ -232,7 +232,7 @@ public final class ItemListControllerNodeView: UITracingLayerView {
     weak var controller: ItemListController?
 }
 
-open class ItemListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
+open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private weak var controller: ItemListController?
     
     private var _ready = ValuePromise<Bool>()
@@ -495,7 +495,7 @@ open class ItemListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             }
             return directions
         }, edgeWidth: .widthMultiplier(factor: 1.0 / 6.0, min: 22.0, max: 80.0))
-        panRecognizer.delegate = self
+        panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
         self.panRecognizer = panRecognizer
