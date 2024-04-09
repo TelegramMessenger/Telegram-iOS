@@ -1411,7 +1411,7 @@ public extension TelegramEngine {
             return _internal_reportAdMessage(account: self.account, peerId: peerId, opaqueId: opaqueId, option: option)
         }
         
-        public func getAllLocalChannels() -> Signal<[EnginePeer.Id], NoError> {
+        public func getAllLocalChannels(count: Int) -> Signal<[EnginePeer.Id], NoError> {
             return self.account.postbox.transaction { transaction -> [EnginePeer.Id] in
                 var result: [EnginePeer.Id] = []
                 
@@ -1444,7 +1444,7 @@ public extension TelegramEngine {
                     }
                     filteredResult.append(id)
                     
-                    if filteredResult.count >= 5 {
+                    if filteredResult.count >= count {
                         break
                     }
                 }

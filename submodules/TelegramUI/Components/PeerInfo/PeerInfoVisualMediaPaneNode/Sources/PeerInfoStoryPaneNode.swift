@@ -1185,6 +1185,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     private let isSaved: Bool
     private let isArchive: Bool
     private let isProfileEmbedded: Bool
+    private let canManageStories: Bool
     public private(set) var contentType: ContentType
     private var contentTypePromise: ValuePromise<ContentType>
     
@@ -1298,7 +1299,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     private weak var contextControllerToDismissOnSelection: ContextControllerProtocol?
     private weak var tempContextContentItemNode: TempExtractedItemNode?
         
-    public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, isProfileEmbedded: Bool, navigationController: @escaping () -> NavigationController?, listContext: PeerStoryListContext?) {
+    public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, isProfileEmbedded: Bool, canManageStories: Bool, navigationController: @escaping () -> NavigationController?, listContext: PeerStoryListContext?) {
         self.context = context
         self.peerId = peerId
         self.chatLocation = chatLocation
@@ -1308,6 +1309,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         self.isSaved = isSaved
         self.isArchive = isArchive
         self.isProfileEmbedded = isProfileEmbedded
+        self.canManageStories = canManageStories
         
         self.isSelectionModeActive = !isProfileEmbedded && isArchive
 
@@ -1657,9 +1659,22 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             guard let item = strongSelf.itemGrid.item(at: point) else {
                 return false
             }
+            guard let layer = item.layer as? ItemLayer else {
+                return false
+            }
+            guard let storyItem = layer.item else {
+                return false
+            }
 
             if let result = strongSelf.view.hitTest(point, with: nil) {
                 if result.asyncdisplaykit_node is SparseItemGridScrollingArea {
+                    return false
+                }
+            }
+            
+            if !strongSelf.canManageStories {
+                if !storyItem.story.isForwardingDisabled, case .everyone = storyItem.story.privacy?.base {
+                } else {
                     return false
                 }
             }
@@ -1768,167 +1783,190 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     }
     
     private func openContextMenu(item: EngineStoryItem, itemLayer: ItemLayer, rect: CGRect, gesture: ContextGesture?) {
-        guard let parentController = self.parentController else {
-            return
-        }
-        
-        var items: [ContextMenuItem] = []
-        
-        //TODO:localize
-        
-        items.append(.action(ContextMenuActionItem(text: !self.isArchive ? "Archive" : "Unarchive", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: self.isArchive ? "Chat/Context Menu/Archive" : "Chat/Context Menu/Unarchive"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+        let _ = (self.context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
             guard let self else {
-                f(.default)
+                return
+            }
+            guard let parentController = self.parentController else {
                 return
             }
             
-            if self.isArchive {
-                f(.default)
-            } else {
-                f(.dismissWithoutContent)
-            }
+            let canManage = self.canManageStories
             
-            let _ = self.context.engine.messages.updateStoriesArePinned(peerId: self.peerId, ids: [item.id: item], isPinned: self.isArchive ? true : false).startStandalone()
-        })))
-        
-        if !self.isArchive {
-            let isPinned = self.pinnedIds.contains(item.id)
-            items.append(.action(ContextMenuActionItem(text: isPinned ? "Unpin" : "Pin", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { [weak self, weak itemLayer] _, f in
-                itemLayer?.isHidden = false
-                guard let self else {
-                    f(.default)
-                    return
-                }
-                
-                if !isPinned && self.pinnedIds.count >= 3 {
-                    f(.default)
-                    
-                    let presentationData = self.presentationData
-                    self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can't pin more than 3 posts.", timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-                    
-                    return
-                }
-                
-                f(.dismissWithoutContent)
-                
-                var updatedPinnedIds = self.pinnedIds
-                if isPinned {
-                    updatedPinnedIds.remove(item.id)
-                } else {
-                    updatedPinnedIds.insert(item.id)
-                }
-                let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: self.peerId, ids: Array(updatedPinnedIds)).startStandalone()
-                
-                //TODO:localize
-                let presentationData = self.presentationData
-                self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: isPinned ? nil : "Story Pinned", text: isPinned ? "Story Unpinned." : "Now it will always be shown on the top.", cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-            })))
-        }
-        
-        /*items.append(.action(ContextMenuActionItem(text: "Edit", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-            c.dismiss(completion: {
-                guard let self else {
-                    return
-                }
-                let _ = self
-                
-                
-            })
-        })))*/
-        
-        if !item.isForwardingDisabled {
-            items.append(.action(ContextMenuActionItem(text: "Forward", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                c.dismiss(completion: {
+            var items: [ContextMenuItem] = []
+            
+            //TODO:localize
+            
+            if canManage {
+                items.append(.action(ContextMenuActionItem(text: !self.isArchive ? "Archive" : "Unarchive", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: self.isArchive ? "Chat/Context Menu/Archive" : "Chat/Context Menu/Unarchive"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                     guard let self else {
+                        f(.default)
                         return
                     }
                     
-                    let _ = (self.context.engine.data.get(
-                        TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)
-                    )
-                             |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                    if self.isArchive {
+                        f(.default)
+                    } else {
+                        f(.dismissWithoutContent)
+                    }
+                    
+                    let _ = self.context.engine.messages.updateStoriesArePinned(peerId: self.peerId, ids: [item.id: item], isPinned: self.isArchive ? true : false).startStandalone()
+                    self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: self.isArchive ? "Story unarchived." : "Story archived.", cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                })))
+                
+                if !self.isArchive {
+                    let isPinned = self.pinnedIds.contains(item.id)
+                    items.append(.action(ContextMenuActionItem(text: isPinned ? "Unpin" : "Pin", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { [weak self, weak itemLayer] _, f in
+                        itemLayer?.isHidden = false
                         guard let self else {
-                            return
-                        }
-                        guard let peer, let peerReference = PeerReference(peer._asPeer()) else {
+                            f(.default)
                             return
                         }
                         
-                        let shareController = ShareController(
-                            context: self.context,
-                            subject: .media(.story(peer: peerReference, id: item.id, media: TelegramMediaStory(storyId: StoryId(peerId: self.peerId, id: item.id), isMention: false))),
-                            presetText: nil,
-                            preferredAction: .default,
-                            showInChat: nil,
-                            fromForeignApp: false,
-                            segmentedValues: nil,
-                            externalShare: false,
-                            immediateExternalShare: false,
-                            switchableAccounts: [],
-                            immediatePeerId: nil,
-                            updatedPresentationData: nil,
-                            forceTheme: nil,
-                            forcedActionTitle: nil,
-                            shareAsLink: false,
-                            collectibleItemInfo: nil
-                        )
-                        self.parentController?.present(shareController, in: .window(.root))
-                    })
-                })
-            })))
-        }
-        
-        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
-            c.dismiss(completion: {
-                guard let self else {
-                    return
+                        if !isPinned && self.pinnedIds.count >= 3 {
+                            f(.default)
+                            
+                            let presentationData = self.presentationData
+                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can't pin more than 3 posts.", timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            
+                            return
+                        }
+                        
+                        f(.dismissWithoutContent)
+                        
+                        var updatedPinnedIds = self.pinnedIds
+                        if isPinned {
+                            updatedPinnedIds.remove(item.id)
+                        } else {
+                            updatedPinnedIds.insert(item.id)
+                        }
+                        let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: self.peerId, ids: Array(updatedPinnedIds)).startStandalone()
+                        
+                        //TODO:localize
+                        let presentationData = self.presentationData
+                        self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: isPinned ? nil : "Story Pinned", text: isPinned ? "Story Unpinned." : "Now it will always be shown on the top.", cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                    })))
                 }
                 
-                self.presentDeleteConfirmation(ids: Set([item.id]))
-            })
-        })))
-        
-        items.append(.separator)
-        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.actionSheet.primaryTextColor)
-        }, action: { [weak self] c, f in
-            guard let self, let parentController = self.parentController as? PeerInfoScreen else {
-                f(.default)
+                /*items.append(.action(ContextMenuActionItem(text: "Edit", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                 c.dismiss(completion: {
+                 guard let self else {
+                 return
+                 }
+                 let _ = self
+                 
+                 
+                 })
+                 })))*/
+            }
+            
+            if !item.isForwardingDisabled, case .everyone = item.privacy?.base {
+                items.append(.action(ContextMenuActionItem(text: "Forward", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                    c.dismiss(completion: {
+                        guard let self else {
+                            return
+                        }
+                        
+                        let _ = (self.context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)
+                        )
+                                 |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                            guard let self else {
+                                return
+                            }
+                            guard let peer, let peerReference = PeerReference(peer._asPeer()) else {
+                                return
+                            }
+                            
+                            let shareController = ShareController(
+                                context: self.context,
+                                subject: .media(.story(peer: peerReference, id: item.id, media: TelegramMediaStory(storyId: StoryId(peerId: self.peerId, id: item.id), isMention: false))),
+                                presetText: nil,
+                                preferredAction: .default,
+                                showInChat: nil,
+                                fromForeignApp: false,
+                                segmentedValues: nil,
+                                externalShare: false,
+                                immediateExternalShare: false,
+                                switchableAccounts: [],
+                                immediatePeerId: nil,
+                                updatedPresentationData: nil,
+                                forceTheme: nil,
+                                forcedActionTitle: nil,
+                                shareAsLink: false,
+                                collectibleItemInfo: nil
+                            )
+                            self.parentController?.present(shareController, in: .window(.root))
+                        })
+                    })
+                })))
+            }
+            
+            if canManage {
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
+                    c.dismiss(completion: {
+                        guard let self else {
+                            return
+                        }
+                        
+                        self.presentDeleteConfirmation(ids: Set([item.id]))
+                    })
+                })))
+            }
+            
+            if self.canManageStories {
+                if !items.isEmpty {
+                    items.append(.separator)
+                }
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.actionSheet.primaryTextColor)
+                }, action: { [weak self] c, f in
+                    guard let self, let parentController = self.parentController as? PeerInfoScreen else {
+                        f(.default)
+                        return
+                    }
+                    
+                    self.contextControllerToDismissOnSelection = c
+                    parentController.toggleStorySelection(ids: [item.id], isSelected: true)
+                    
+                    DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.5, execute: { [weak self] in
+                        guard let self, let contextControllerToDismissOnSelection = self.contextControllerToDismissOnSelection else {
+                            return
+                        }
+                        if let contextControllerToDismissOnSelection = contextControllerToDismissOnSelection as? ContextController {
+                            contextControllerToDismissOnSelection.dismissWithCustomTransition(transition: .animated(duration: 0.4, curve: .spring), completion: nil)
+                        }
+                    })
+                })))
+            }
+            
+            if items.isEmpty {
                 return
             }
             
-            self.contextControllerToDismissOnSelection = c
-            parentController.toggleStorySelection(ids: [item.id], isSelected: true)
+            let tempSourceNode = TempExtractedItemNode(
+                item: item,
+                itemLayer: itemLayer
+            )
+            tempSourceNode.frame = rect
+            tempSourceNode.update(size: rect.size)
             
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.5, execute: { [weak self] in
-                guard let self, let contextControllerToDismissOnSelection = self.contextControllerToDismissOnSelection else {
-                    return
-                }
-                if let contextControllerToDismissOnSelection = contextControllerToDismissOnSelection as? ContextController {
-                    contextControllerToDismissOnSelection.dismissWithCustomTransition(transition: .animated(duration: 0.4, curve: .spring), completion: nil)
-                }
-            })
-        })))
-        
-        let tempSourceNode = TempExtractedItemNode(
-            item: item,
-            itemLayer: itemLayer
-        )
-        tempSourceNode.frame = rect
-        tempSourceNode.update(size: rect.size)
-        
-        let scaleSide = itemLayer.bounds.width
-        let minScale: CGFloat = max(0.7, (scaleSide - 15.0) / scaleSide)
-        let currentScale = minScale
-        
-        ContainedViewLayoutTransition.immediate.updateSublayerTransformScale(node: tempSourceNode.contextSourceNode.contentNode, scale: currentScale)
-        ContainedViewLayoutTransition.immediate.updateTransformScale(layer: itemLayer, scale: 1.0)
-        
-        self.tempContextContentItemNode = tempSourceNode
-        self.addSubnode(tempSourceNode)
-        
-        let contextController = ContextController(presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: parentController, sourceNode: tempSourceNode.contextSourceNode, keepInPlace: false, blurBackground: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-        parentController.presentInGlobalOverlay(contextController)
+            let scaleSide = itemLayer.bounds.width
+            let minScale: CGFloat = max(0.7, (scaleSide - 15.0) / scaleSide)
+            let currentScale = minScale
+            
+            ContainedViewLayoutTransition.immediate.updateSublayerTransformScale(node: tempSourceNode.contextSourceNode.contentNode, scale: currentScale)
+            ContainedViewLayoutTransition.immediate.updateTransformScale(layer: itemLayer, scale: 1.0)
+            
+            self.tempContextContentItemNode = tempSourceNode
+            self.addSubnode(tempSourceNode)
+            
+            let contextController = ContextController(presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: parentController, sourceNode: tempSourceNode.contextSourceNode, keepInPlace: false, blurBackground: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            parentController.presentInGlobalOverlay(contextController)
+        })
     }
 
     public func updateContentType(contentType: ContentType) {
@@ -2400,7 +2438,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         self.currentParams = (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData)
         
         var bottomInset = bottomInset
-        if let selectedIds = self.itemInteraction.selectedIds {
+        if self.isProfileEmbedded, let selectedIds = self.itemInteraction.selectedIds, self.canManageStories {
             let selectionPanel: ComponentView<Empty>
             var selectionPanelTransition = Transition(transition)
             if let current = self.selectionPanel {
@@ -2484,6 +2522,22 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     }
                     
                     let _ = self.context.engine.messages.updateStoriesArePinned(peerId: self.peerId, ids: items, isPinned: self.isArchive ? true : false).startStandalone()
+                    
+                    let text: String
+                    if self.isArchive {
+                        if items.count == 1 {
+                            text = "Story unarchived."
+                        } else {
+                            text = "Stories unarchived."
+                        }
+                    } else {
+                        if items.count == 1 {
+                            text = "Story archived."
+                        } else {
+                            text = "Stories archived."
+                        }
+                    }
+                    self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: text, cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                 }
             ))
             selectionItems.append(BottomActionsPanelComponent.Item(
