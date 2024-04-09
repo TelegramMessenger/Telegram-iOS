@@ -2404,6 +2404,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         case camera
         case gallery(GalleryTransitionIn)
+        case noAnimation
     }
     
     public final class TransitionOut {
@@ -3603,6 +3604,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             if let transitionIn = self.controller?.transitionIn {
                 switch transitionIn {
+                case .noAnimation:
+                    self.layer.allowsGroupOpacity = true
+                    self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    completion()
                 case .camera:
                     if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                         view.animateIn(from: .camera, completion: completion)

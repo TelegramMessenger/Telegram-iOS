@@ -1847,7 +1847,17 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         
                         //TODO:localize
                         let presentationData = self.presentationData
-                        self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: isPinned ? nil : "Story Pinned", text: isPinned ? "Story Unpinned." : "Now it will always be shown on the top.", cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        
+                        let toastTitle: String?
+                        let toastText: String
+                        if isPinned {
+                            toastTitle = nil
+                            toastText = "Story unpinned."
+                        } else {
+                            toastTitle = "Story pinned"
+                            toastText = "Now it will always be shown on the top."
+                        }
+                        self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: isPinned ? "anim_toastunpin" : "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     })))
                 }
                 
@@ -2468,17 +2478,25 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         }
                         if updatedPinnedIds.count > 3 {
                             let presentationData = self.presentationData
-                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can't pin more than 3 posts.", timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            let animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
+                            let toastText = "You can't pin more than 3 posts."
+                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_infotip", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: nil, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         } else {
                             let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: self.peerId, ids: Array(updatedPinnedIds)).startStandalone()
                             
                             //TODO:localize
                             let presentationData = self.presentationData
+                            
+                            let toastTitle: String
+                            let toastText: String
                             if selectedIds.count == 1 {
-                                self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: "Story Pinned", text: "Now it will always be shown on the top.", cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                toastTitle = "Story Pinned"
+                                toastText = "Now it will always be shown on the top."
                             } else {
-                                self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: "Stories Pinned", text: "Now they will always be shown on the top.", cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                toastTitle = "Stories Pinned"
+                                toastText = "Now they will always be shown on the top."
                             }
+                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                             
                             if let parentController = self.parentController as? PeerInfoScreen {
                                 parentController.cancelItemSelection()
@@ -2493,11 +2511,17 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         
                         //TODO:localize
                         let presentationData = self.presentationData
+                        
+                        let toastTitle: String?
+                        let toastText: String
                         if selectedIds.count == 1 {
-                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: "Story unpinned.", cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            toastTitle = nil
+                            toastText = "Story unpinned."
                         } else {
-                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: "Stories unpinned.", cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            toastTitle = nil
+                            toastText = "Stories unpinned."
                         }
+                        self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_toastunpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         
                         if let parentController = self.parentController as? PeerInfoScreen {
                             parentController.cancelItemSelection()

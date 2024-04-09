@@ -5430,7 +5430,7 @@ public final class StoryItemSetContainerComponent: Component {
                 initialPrivacy: initialPrivacy,
                 initialMediaAreas: initialMediaAreas,
                 initialVideoPosition: videoPlaybackPosition,
-                transitionIn: nil,
+                transitionIn: .noAnimation,
                 transitionOut: { finished, isNew in
                     if repost && finished {
                         if let transitionOut = externalState.transitionOut?(externalState.storyTarget, externalState.isPeerArchived), let destinationView = transitionOut.destinationView {
@@ -5627,6 +5627,7 @@ public final class StoryItemSetContainerComponent: Component {
                 self?.updateIsProgressPaused()
                 self?.state?.updated(transition: .easeInOut(duration: 0.2))
             }
+            controller.navigationPresentation = .flatModal
             self.component?.controller()?.push(controller)
             updateProgressImpl = { [weak controller, weak self] progress in
                 controller?.updateEditProgress(progress, cancel: { [weak self] in
