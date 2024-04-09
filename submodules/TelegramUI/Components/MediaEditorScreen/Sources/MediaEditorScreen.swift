@@ -2474,7 +2474,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         fileprivate let entitiesContainerView: UIView
         let entitiesView: DrawingEntitiesView
         fileprivate let selectionContainerView: DrawingSelectionContainerView
-        fileprivate let drawingView: DrawingView
+        let drawingView: DrawingView
         fileprivate let previewView: MediaEditorPreviewView
         
         fileprivate var stickerMaskWrapperView: UIView
@@ -4063,6 +4063,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     })
                     
                     self?.interaction?.insertEntity(entity, scale: 2.5)
+                    
+                    self?.hasAnyChanges = true
+                    self?.controller?.isSavingAvailable = true
+                    self?.controller?.requestLayout(transition: .immediate)
                 }
                 
                 if let asset = result as? PHAsset {

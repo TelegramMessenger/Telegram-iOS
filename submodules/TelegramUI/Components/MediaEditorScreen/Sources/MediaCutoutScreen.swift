@@ -425,7 +425,7 @@ private final class MediaCutoutScreenComponent: Component {
                             Queue.mainQueue().async {
                                 if !results.isEmpty {
                                     for result in results {
-                                        if let extractedImage = result.extractedImage, let maskImage = result.maskImage {
+                                        if let extractedImage = result.extractedImage, let maskImage = result.edgesMaskImage {
                                             if case let .image(image, _) = extractedImage, case let .image(_, mask) = maskImage {
                                                 let outlineView = StickerCutoutOutlineView(frame: self.previewContainerView.frame)
                                                 outlineView.update(image: image, maskImage: mask, size: self.previewContainerView.bounds.size, values: values)
