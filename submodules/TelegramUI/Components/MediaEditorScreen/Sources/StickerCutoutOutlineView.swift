@@ -68,7 +68,7 @@ final class StickerCutoutOutlineView: UIView {
         let randomBeginTime = (previousBeginTime + 4) % 6
         previousBeginTime = randomBeginTime
         
-        let duration = min(6.5, max(3.0, path.length / 100.0))
+        let duration = min(8.0, max(3.0, path.length / 135.0))
         
         let outlineAnimation = CAKeyframeAnimation(keyPath: "emitterPosition")
         outlineAnimation.path = path.path.cgPath
@@ -157,16 +157,18 @@ final class StickerCutoutOutlineView: UIView {
 }
 
 private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaEditorValues) -> BezierPath? {
-    let edges = image.applyingFilter("CILineOverlay", parameters: ["inputEdgeIntensity": 0.1])
+//    let edges = image.applyingFilter("CILineOverlay", parameters: ["inputEdgeIntensity": 0.1])
             
-    guard let pixelBuffer = getEdgesBitmap(edges) else {
+    guard let pixelBuffer = getEdgesBitmap(image) else {
         return nil
     }
     let minSide = min(size.width, size.height)
     let scaledImageSize = image.extent.size.aspectFilled(CGSize(width: minSide, height: minSide))
     let contourImageSize = image.extent.size.aspectFilled(CGSize(width: 256.0, height: 256.0))
 
-    var contour = findContours(pixelBuffer: pixelBuffer)
+//    var contour = findContours(pixelBuffer: pixelBuffer)
+    
+    var contour = findEdgePoints(in: pixelBuffer)
     guard !contour.isEmpty else {
         return nil
     }
@@ -201,6 +203,86 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
         return path
     }
     return nil
+}
+
+func findEdgePoints(in pixelBuffer: CVPixelBuffer) -> [CGPoint] {
+    struct Point: Hashable {
+        let x: Int
+        let y: Int
+        
+        var cgPoint: CGPoint {
+            return CGPoint(x: x, y: y)
+        }
+    }
+    
+    let width = CVPixelBufferGetWidth(pixelBuffer)
+    let height = CVPixelBufferGetHeight(pixelBuffer)
+    var edgePoints: Set<Point> = []
+    var edgePath: [Point] = []
+    
+    CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+    let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer)
+    let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
+    
+    func isPixelWhiteAt(x: Int, y: Int) -> Bool {
+        let pixelOffset = y * bytesPerRow + x
+        let pixelPtr = baseAddress?.advanced(by: pixelOffset)
+        let pixel = pixelPtr?.load(as: UInt8.self) ?? 0
+        return pixel >= 235
+    }
+    
+    let directions = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+    var lastDirectionIndex = 0
+    
+    var startPoint: Point? = nil
+outerLoop: for y in 0..<height {
+        for x in 0..<width {
+            if isPixelWhiteAt(x: x, y: y) {
+                startPoint = Point(x: x, y: y)
+                break outerLoop
+            }
+        }
+    }
+    
+    guard let startingPoint = startPoint else { return [] }
+    edgePoints.insert(startingPoint)
+    edgePath.append(startingPoint)
+    var currentPoint = startingPoint
+    
+    let tolerance: Int = 1
+    func isCloseEnough(_ point: Point, to startPoint: Point) -> Bool {
+        return abs(point.x - startPoint.x) <= tolerance && abs(point.y - startPoint.y) <= tolerance
+    }
+    
+    repeat {
+        var foundNextPoint = false
+        for i in 0..<directions.count {
+            let directionIndex = (lastDirectionIndex + i) % directions.count
+            let dir = directions[directionIndex]
+            let nextX = Int(currentPoint.x) + dir.0
+            let nextY = Int(currentPoint.y) + dir.1
+            
+            if nextX >= 0, nextX < width, nextY >= 0, nextY < height, isPixelWhiteAt(x: nextX, y: nextY) {
+                let nextPoint = Point(x: nextX, y: nextY)
+                if !edgePoints.contains(nextPoint) {
+                    edgePoints.insert(nextPoint)
+                    edgePath.append(nextPoint)
+                    currentPoint = nextPoint
+                    lastDirectionIndex = (directionIndex + 6) % directions.count
+                    foundNextPoint = true
+                    break
+                }
+            }
+        }
+        
+        if !foundNextPoint || (edgePath.count > 3 && isCloseEnough(currentPoint, to: startingPoint)) {
+            break
+        }
+    } while true
+    
+    CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
+    
+    return Array(edgePath.map { $0.cgPoint })
 }
 
 private func findContours(pixelBuffer: CVPixelBuffer) -> [CGPoint] {
