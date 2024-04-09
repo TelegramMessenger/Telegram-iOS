@@ -7091,12 +7091,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         if self.isMyProfile {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
-                c.dismiss {
-                    guard let self else {
-                        return
+                var subItems: [ContextMenuItem] = []
+                let noAction: ((ContextMenuActionItem.Action) -> Void)? = nil
+                subItems.append(.action(ContextMenuActionItem(
+                    text: "Are you sure you want to remove business hours?",
+                    textLayout: .multiline,
+                    textFont: .small,
+                    icon: { _ in nil },
+                    action: noAction
+                )))
+                subItems.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { _ in nil }, action: { [weak self] c, _ in
+                    c.dismiss {
+                        guard let self else {
+                            return
+                        }
+                        let _ = self.context.engine.accountData.updateAccountBusinessHours(businessHours: nil).startStandalone()
                     }
-                    let _ = self.context.engine.accountData.updateAccountBusinessHours(businessHours: nil).startStandalone()
-                }
+                })))
+                c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
             })))
         }
         
@@ -7170,12 +7182,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
-                c.dismiss {
-                    guard let self else {
-                        return
+                var subItems: [ContextMenuItem] = []
+                let noAction: ((ContextMenuActionItem.Action) -> Void)? = nil
+                subItems.append(.action(ContextMenuActionItem(
+                    text: "Are you sure you want to remove location?",
+                    textLayout: .multiline,
+                    textFont: .small,
+                    icon: { _ in nil },
+                    action: noAction
+                )))
+                subItems.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { _ in nil }, action: { [weak self] c, _ in
+                    c.dismiss {
+                        guard let self else {
+                            return
+                        }
+                        let _ = self.context.engine.accountData.updateAccountBusinessLocation(businessLocation: nil).startStandalone()
                     }
-                    let _ = self.context.engine.accountData.updateAccountBusinessLocation(businessLocation: nil).startStandalone()
-                }
+                })))
+                c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
             })))
         }
         

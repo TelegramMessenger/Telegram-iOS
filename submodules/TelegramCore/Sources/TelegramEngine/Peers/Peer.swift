@@ -435,6 +435,10 @@ public extension EnginePeer.IndexName {
     func matchesByTokens(_ other: String) -> Bool {
         return self._asIndexName().matchesByTokens(other)
     }
+    
+    func matchesByTokens(_ other: [ValueBoxKey]) -> Bool {
+        return self._asIndexName().matchesByTokens(other)
+    }
 
     func stringRepresentation(lastNameFirst: Bool) -> String {
         switch self {

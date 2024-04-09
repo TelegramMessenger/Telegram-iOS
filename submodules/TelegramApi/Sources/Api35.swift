@@ -680,6 +680,21 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
+                static func getReactionsNotifySettings() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ReactionsNotifySettings>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(115172684)
+                    
+                    return (FunctionDescription(name: "account.getReactionsNotifySettings", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ReactionsNotifySettings? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.ReactionsNotifySettings?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.ReactionsNotifySettings
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
                 static func getRecentEmojiStatuses(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.EmojiStatuses>) {
                     let buffer = Buffer()
                     buffer.appendInt32(257392901)
@@ -1340,6 +1355,21 @@ public extension Api.functions.account {
                         var result: Api.account.PrivacyRules?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.account.PrivacyRules
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
+                static func setReactionsNotifySettings(settings: Api.ReactionsNotifySettings) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ReactionsNotifySettings>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(829220168)
+                    settings.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.setReactionsNotifySettings", parameters: [("settings", String(describing: settings))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ReactionsNotifySettings? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.ReactionsNotifySettings?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.ReactionsNotifySettings
                         }
                         return result
                     })
@@ -10265,15 +10295,16 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func togglePinnedToTop(id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func togglePinnedToTop(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1634169010)
+                    buffer.appendInt32(187268763)
+                    peer.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(id.count))
                     for item in id {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }
-                    return (FunctionDescription(name: "stories.togglePinnedToTop", parameters: [("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "stories.togglePinnedToTop", parameters: [("peer", String(describing: peer)), ("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

@@ -750,6 +750,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[455247544] = { return Api.Reaction.parse_reactionEmoji($0) }
     dict[2046153753] = { return Api.Reaction.parse_reactionEmpty($0) }
     dict[-1546531968] = { return Api.ReactionCount.parse_reactionCount($0) }
+    dict[1268654752] = { return Api.ReactionNotificationsFrom.parse_reactionNotificationsFromAll($0) }
+    dict[-1161583078] = { return Api.ReactionNotificationsFrom.parse_reactionNotificationsFromContacts($0) }
+    dict[1457736048] = { return Api.ReactionsNotifySettings.parse_reactionsNotifySettings($0) }
     dict[1246753138] = { return Api.ReadParticipantDate.parse_readParticipantDate($0) }
     dict[-1551583367] = { return Api.ReceivedNotifyMessage.parse_receivedNotifyMessage($0) }
     dict[-1294306862] = { return Api.RecentMeUrl.parse_recentMeUrlChat($0) }
@@ -984,6 +987,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-180508905] = { return Api.Update.parse_updateNewQuickReply($0) }
     dict[967122427] = { return Api.Update.parse_updateNewScheduledMessage($0) }
     dict[1753886890] = { return Api.Update.parse_updateNewStickerSet($0) }
+    dict[405070859] = { return Api.Update.parse_updateNewStoryReaction($0) }
     dict[-1094555409] = { return Api.Update.parse_updateNotifySettings($0) }
     dict[-337610926] = { return Api.Update.parse_updatePeerBlocked($0) }
     dict[-1147422299] = { return Api.Update.parse_updatePeerHistoryTTL($0) }
@@ -1352,7 +1356,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
@@ -1867,6 +1871,10 @@ public extension Api {
             case let _1 as Api.Reaction:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ReactionCount:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.ReactionNotificationsFrom:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.ReactionsNotifySettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ReadParticipantDate:
                 _1.serialize(buffer, boxed)

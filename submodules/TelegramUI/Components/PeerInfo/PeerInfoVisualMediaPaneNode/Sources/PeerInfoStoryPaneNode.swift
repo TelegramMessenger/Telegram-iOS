@@ -2892,6 +2892,7 @@ private final class ExtractedContentSourceImpl: ContextExtractedContentSource {
     var keepInPlace: Bool
     let ignoreContentTouches: Bool = true
     let blurBackground: Bool
+    let adjustContentForSideInset: Bool = true
     
     private let controller: ViewController
     private let sourceNode: ContextExtractedContentContainingNode

@@ -1632,19 +1632,32 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     return (peers: peers, unread: unread, recentlySearchedPeerIds: recentlySearchedPeerIds)
                 }
             } else if let query = query, key == .channels {
-                foundLocalPeers = context.engine.contacts.searchLocalPeers(query: query.lowercased(), scope: .channels)
-                |> mapToSignal { local -> Signal<([EnginePeer.Id: Optional<EnginePeer.NotificationSettings>], [EnginePeer.Id: Int], [EngineRenderedPeer], EngineGlobalNotificationSettings), NoError> in
-                    var peerIds = Set<EnginePeer.Id>()
-                    var peers: [EngineRenderedPeer] = []
+                foundLocalPeers = combineLatest(
+                    context.engine.contacts.searchLocalPeers(query: query.lowercased(), scope: .channels),
+                    context.engine.peers.recommendedChannelPeerIds(peerId: nil)
+                )
+                |> mapToSignal { local, recommended -> Signal<(peers: [EngineRenderedPeer], unread: [EnginePeer.Id: (Int32, Bool)], recentlySearchedPeerIds: Set<EnginePeer.Id>), NoError> in
+                    var peerIds: [EnginePeer.Id] = []
                     
                     for peer in local {
                         if !peerIds.contains(peer.peerId) {
-                            peerIds.insert(peer.peerId)
-                            peers.append(peer)
+                            peerIds.append(peer.peerId)
+                        }
+                    }
+                    if let recommended {
+                        for id in recommended {
+                            if !peerIds.contains(id) {
+                                peerIds.append(id)
+                            }
                         }
                     }
                     
                     return context.engine.data.subscribe(
+                        EngineDataMap(
+                            peerIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.Peer in
+                                return TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                            }
+                        ),
                         EngineDataMap(
                             peerIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.NotificationSettings in
                                 return TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId)
@@ -1657,19 +1670,42 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         ),
                         TelegramEngine.EngineData.Item.NotificationSettings.Global()
                     )
-                    |> map { notificationSettings, unreadCounts, globalNotificationSettings in
-                        return (notificationSettings, unreadCounts, peers, globalNotificationSettings)
-                    }
-                }
-                |> map { notificationSettings, unreadCounts, peers, globalNotificationSettings -> (peers: [EngineRenderedPeer], unread: [EnginePeer.Id: (Int32, Bool)], recentlySearchedPeerIds: Set<EnginePeer.Id>) in
-                    var unread: [EnginePeer.Id: (Int32, Bool)] = [:]
-                    for peer in peers {
-                        var isMuted = false
-                        if let peerNotificationSettings = notificationSettings[peer.peerId], let peerNotificationSettings {
-                            if case let .muted(until) = peerNotificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-                                isMuted = true
-                            } else if case .default = peerNotificationSettings.muteState {
-                                if let peer = peer.peer {
+                    |> map { peers, notificationSettings, unreadCounts, globalNotificationSettings -> (peers: [EngineRenderedPeer], unread: [EnginePeer.Id: (Int32, Bool)], recentlySearchedPeerIds: Set<EnginePeer.Id>) in
+                        var resultPeers: [EngineRenderedPeer] = []
+                        var unread: [EnginePeer.Id: (Int32, Bool)] = [:]
+                        
+                        var matchingIds: [EnginePeer.Id] = []
+                        for peer in local {
+                            if !matchingIds.contains(peer.peerId) {
+                                matchingIds.append(peer.peerId)
+                            }
+                        }
+                        
+                        let queryTokens = stringIndexTokens(query.lowercased(), transliteration: .combined)
+                        if let recommended {
+                            for id in recommended {
+                                guard let maybePeer = peers[id], let peer = maybePeer else {
+                                    continue
+                                }
+                                
+                                if peer.indexName.matchesByTokens(queryTokens) {
+                                    if !matchingIds.contains(id) {
+                                        matchingIds.append(id)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        for id in matchingIds {
+                            guard let maybePeer = peers[id], let peer = maybePeer else {
+                                continue
+                            }
+                            resultPeers.append(EngineRenderedPeer(peer: peer))
+                            var isMuted = false
+                            if let peerNotificationSettings = notificationSettings[peer.id] {
+                                if case let .muted(until) = peerNotificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                                    isMuted = true
+                                } else if case .default = peerNotificationSettings.muteState {
                                     if case .user = peer {
                                         isMuted = !globalNotificationSettings.privateChats.enabled
                                     } else if case .legacyGroup = peer {
@@ -1684,13 +1720,13 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                     }
                                 }
                             }
+                            let unreadCount = unreadCounts[peer.id]
+                            if let unreadCount = unreadCount, unreadCount > 0 {
+                                unread[peer.id] = (Int32(unreadCount), isMuted)
+                            }
                         }
-                        let unreadCount = unreadCounts[peer.peerId]
-                        if let unreadCount = unreadCount, unreadCount > 0 {
-                            unread[peer.peerId] = (Int32(unreadCount), isMuted)
-                        }
+                        return (peers: resultPeers, unread: unread, recentlySearchedPeerIds: Set())
                     }
-                    return (peers: peers, unread: unread, recentlySearchedPeerIds: Set())
                 }
             } else {
                 foundLocalPeers = .single((peers: [], unread: [:], recentlySearchedPeerIds: Set()))
@@ -2807,6 +2843,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let toggleChannelsTabExpanded: () -> Void = {
             let _ = (isChannelsTabExpandedValue.get() |> take(1)).startStandalone(next: { value in
                 isChannelsTabExpandedValue.set(!value)
+                
+                Queue.mainQueue().async {
+                    interaction.dismissInput()
+                }
             })
         }
         

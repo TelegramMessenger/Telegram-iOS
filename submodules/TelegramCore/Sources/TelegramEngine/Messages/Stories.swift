@@ -1693,8 +1693,11 @@ func _internal_updatePinnedToTopStories(account: Account, peerId: PeerId, ids: [
         
         return inputPeer
     }
-    |> mapToSignal { _ -> Signal<Never, NoError> in
-        return account.network.request(Api.functions.stories.togglePinnedToTop(id: ids))
+    |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+        guard let inputPeer else {
+            return .complete()
+        }
+        return account.network.request(Api.functions.stories.togglePinnedToTop(peer: inputPeer, id: ids))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }

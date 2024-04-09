@@ -73,7 +73,7 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
         }
     }
     
-    private var textNode: TextNode?
+    public private(set) var textNode: TextNode?
     private var credibilityIconNode: ASImageNode?
     private var infoNode: InfoButtonNode?
     private var expiredStoryIconView: UIImageView?

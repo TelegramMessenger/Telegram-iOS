@@ -110,10 +110,11 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
     let users = network.request(Api.functions.account.getNotifySettings(peer: Api.InputNotifyPeer.inputNotifyUsers))
     let channels = network.request(Api.functions.account.getNotifySettings(peer: Api.InputNotifyPeer.inputNotifyBroadcasts))
     let contactsJoinedMuted = network.request(Api.functions.account.getContactSignUpNotification())
+    let reactions = network.request(Api.functions.account.getReactionsNotifySettings())
     
-    return combineLatest(chats, users, channels, contactsJoinedMuted)
+    return combineLatest(chats, users, channels, contactsJoinedMuted, reactions)
     |> retryRequest
-    |> map { chats, users, channels, contactsJoinedMuted in
+    |> map { chats, users, channels, contactsJoinedMuted, reactions in
         let chatsSettings: MessageNotificationSettings
         switch chats {
         case let .peerNotifySettings(_, showPreviews, _, muteUntil, iosSound, _, desktopSound, storiesMuted, storiesHideSender, storiesIosSound, _, storiesDesktopSound):
@@ -270,7 +271,40 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
             )
         }
         
-        let reactionSettings: PeerReactionNotificationSettings = .default
+        let reactionSettings: PeerReactionNotificationSettings
+        switch reactions {
+        case let .reactionsNotifySettings(_, messagesNotifyFrom, storiesNotifyFrom, sound, showPreviews):
+            let mappedMessages: PeerReactionNotificationSettings.Sources
+            if let messagesNotifyFrom {
+                switch messagesNotifyFrom {
+                case .reactionNotificationsFromAll:
+                    mappedMessages = .everyone
+                case .reactionNotificationsFromContacts:
+                    mappedMessages = .contacts
+                }
+            } else {
+                mappedMessages = .nobody
+            }
+            
+            let mappedStories: PeerReactionNotificationSettings.Sources
+            if let storiesNotifyFrom {
+                switch storiesNotifyFrom {
+                case .reactionNotificationsFromAll:
+                    mappedStories = .everyone
+                case .reactionNotificationsFromContacts:
+                    mappedStories = .contacts
+                }
+            } else {
+                mappedStories = .nobody
+            }
+            
+            reactionSettings = PeerReactionNotificationSettings(
+                messages: mappedMessages,
+                stories: mappedStories,
+                hideSender: showPreviews == .boolFalse ? .hide : .show,
+                sound: PeerMessageSound(apiSound: sound)
+            )
+        }
         
         return GlobalNotificationSettingsSet(privateChats: userSettings, groupChats: chatsSettings, channels: channelSettings, reactionSettings: reactionSettings, contactsJoined: contactsJoinedMuted == .boolFalse)
     }
@@ -348,6 +382,47 @@ private func pushedNotificationSettings(network: Network, settings: GlobalNotifi
         return .single(.boolFalse)
     }
     
-    return combineLatest(pushedChats, pushedUsers, pushedChannels, pushedContactsJoined)
+    var reactionFlags: Int32 = 0
+    
+    var reactionsMessages: Api.ReactionNotificationsFrom?
+    switch settings.reactionSettings.messages {
+    case .nobody:
+        break
+    case .everyone:
+        reactionsMessages = .reactionNotificationsFromAll
+    case .contacts:
+        reactionsMessages = .reactionNotificationsFromContacts
+    }
+    if reactionsMessages != nil {
+        reactionFlags |= 1 << 0
+    }
+    
+    var reactionsStories: Api.ReactionNotificationsFrom?
+    switch settings.reactionSettings.stories {
+    case .nobody:
+        break
+    case .everyone:
+        reactionsStories = .reactionNotificationsFromAll
+    case .contacts:
+        reactionsStories = .reactionNotificationsFromContacts
+    }
+    if reactionsStories != nil {
+        reactionFlags |= 1 << 1
+    }
+    
+    let inputReactionSettings: Api.ReactionsNotifySettings = .reactionsNotifySettings(
+        flags: reactionFlags,
+        messagesNotifyFrom: reactionsMessages,
+        storiesNotifyFrom: reactionsStories,
+        sound: settings.reactionSettings.sound.apiSound,
+        showPreviews: settings.reactionSettings.hideSender == .hide ? .boolFalse : .boolTrue
+    )
+    let pushedReactions = network.request(Api.functions.account.setReactionsNotifySettings(settings: inputReactionSettings))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.ReactionsNotifySettings?, NoError> in
+        return .single(nil)
+    }
+    
+    return combineLatest(pushedChats, pushedUsers, pushedChannels, pushedContactsJoined, pushedReactions)
     |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
 }
