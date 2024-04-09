@@ -89,7 +89,7 @@ public final class ImportStickerPackController: ViewController, StandalonePresen
                     var signals: [Signal<(UUID, StickerVerificationStatus, EngineMediaResource?), NoError>] = []
                     for sticker in strongSelf.stickerPack.stickers {
                         if let resource = strongSelf.controllerNode.stickerResources[sticker.uuid] {
-                            signals.append(strongSelf.context.engine.stickers.uploadSticker(peer: peer, resource: resource._asResource(), alt: sticker.emojis.first ?? "", dimensions: PixelDimensions(width: 512, height: 512), duration: nil, mimeType: sticker.mimeType)
+                            signals.append(strongSelf.context.engine.stickers.uploadSticker(peer: peer, resource: resource._asResource(), thumbnail: nil, alt: sticker.emojis.first ?? "", dimensions: PixelDimensions(width: 512, height: 512), duration: nil, mimeType: sticker.mimeType)
                             |> map { result -> (UUID, StickerVerificationStatus, EngineMediaResource?) in
                                 switch result {
                                     case .progress:

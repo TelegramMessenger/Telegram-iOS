@@ -580,10 +580,16 @@ private final class StickerPackContainer: ASDisplayNode {
                                                     
                                                     if let self, let (info, items, installed) = self.currentStickerPack {
                                                         let updatedItems = items.filter { $0.file.fileId != item.file.fileId }
-                                                        self.currentStickerPack = (info, updatedItems, installed)
-                                                        self.reorderAndUpdateEntries()
-                                                        
-                                                        let _ = self.context.engine.stickers.deleteStickerFromStickerSet(sticker: .stickerPack(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), media: item.file)).startStandalone()
+                                                        if updatedItems.isEmpty {
+                                                            let _ = (self.context.engine.stickers.deleteStickerSet(packReference: .id(id: info.id.id, accessHash: info.accessHash))
+                                                            |> deliverOnMainQueue).startStandalone()
+                                                            
+                                                            self.controller?.controllerNode.dismiss()
+                                                        } else {
+                                                            self.currentStickerPack = (info, updatedItems, installed)
+                                                            self.reorderAndUpdateEntries()
+                                                            let _ = self.context.engine.stickers.deleteStickerFromStickerSet(sticker: .stickerPack(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), media: item.file)).startStandalone()
+                                                        }
                                                     }
                                                 }))
                                             ]
@@ -2170,7 +2176,7 @@ private final class StickerPackContainer: ASDisplayNode {
     private func expandIfNeeded(force: Bool = false) {
         if self.currentEntries.count >= 15, force || (self.controller?.expandIfNeeded == true && !self.didAutomaticExpansion) {
             self.didAutomaticExpansion = true
-            self.gridNode.autoscroll(toOffset: CGPoint(x: 0.0, y: max(0.0, self.gridNode.scrollView.contentSize.height - self.gridNode.scrollView.contentInset.top - self.gridNode.scrollView.bounds.height)), duration: 0.4)
+            self.gridNode.autoscroll(toOffset: CGPoint(x: 0.0, y: max(0.0, self.gridNode.scrollView.contentSize.height + self.gridNode.scrollView.contentInset.bottom - self.gridNode.scrollView.bounds.height)), duration: 0.4)
             self.skipNextGridLayoutUpdate = true
         }
     }

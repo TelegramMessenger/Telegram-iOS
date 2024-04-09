@@ -2186,6 +2186,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     }
     
     @objc private func searchOrMorePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
+        guard self.moreButtonNode.iconNode.alpha > 0.0 else {
+            return
+        }
         let strings = self.presentationData.strings
         if case let .assets(_, mode) = self.subject, [.createSticker].contains(mode) {
             var items: [ContextMenuItem] = []

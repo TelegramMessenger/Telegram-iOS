@@ -52,6 +52,8 @@ private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
 private let saveButtonTag = GenericComponentViewTag()
 private let switchCameraButtonTag = GenericComponentViewTag()
+private let drawButtonTag = GenericComponentViewTag()
+private let textButtonTag = GenericComponentViewTag()
 private let stickerButtonTag = GenericComponentViewTag()
 private let dayNightButtonTag = GenericComponentViewTag()
 
@@ -861,12 +863,14 @@ final class MediaEditorScreenComponent: Component {
             
             let drawButtonSize = self.drawButton.update(
                 transition: transition,
-                component: AnyComponent(Button(
+                component: AnyComponent(ContextReferenceButtonComponent(
                     content: AnyComponent(Image(
                         image: state.image(.draw),
                         size: CGSize(width: 30.0, height: 30.0)
                     )),
-                    action: { [weak controller] in
+                    tag: drawButtonTag,
+                    minSize: CGSize(width: 30.0, height: 30.0),
+                    action: { [weak controller] _, _ in
                         guard let controller else {
                             return
                         }
@@ -879,30 +883,21 @@ final class MediaEditorScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
-            let drawButtonFrame = CGRect(
+            var drawButtonFrame = CGRect(
                 origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 - drawButtonSize.width / 2.0 - 3.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 1.0),
                 size: drawButtonSize
             )         
-            if let drawButtonView = self.drawButton.view {
-                if drawButtonView.superview == nil {
-                    self.addSubview(drawButtonView)
-                }
-                transition.setPosition(view: drawButtonView, position: drawButtonFrame.center)
-                transition.setBounds(view: drawButtonView, bounds: CGRect(origin: .zero, size: drawButtonFrame.size))
-                if !self.animatingButtons {
-                    transition.setAlpha(view: drawButtonView, alpha: buttonsAreHidden ? 0.0 : bottomButtonsAlpha)
-                }
-            }
-            
 
             let textButtonSize = self.textButton.update(
                 transition: transition,
-                component: AnyComponent(Button(
+                component: AnyComponent(ContextReferenceButtonComponent(
                     content: AnyComponent(Image(
                         image: state.image(.text),
                         size: CGSize(width: 30.0, height: 30.0)
                     )),
-                    action: { [weak controller] in
+                    tag: textButtonTag,
+                    minSize: CGSize(width: 30.0, height: 30.0),
+                    action: { [weak controller] _, _ in
                         guard let controller else {
                             return
                         }
@@ -915,20 +910,10 @@ final class MediaEditorScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
-            let textButtonFrame = CGRect(
+            var textButtonFrame = CGRect(
                 origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 * 2.0 - textButtonSize.width / 2.0 - 1.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
                 size: textButtonSize
             )
-            if let textButtonView = self.textButton.view {
-                if textButtonView.superview == nil {
-                    self.addSubview(textButtonView)
-                }
-                transition.setPosition(view: textButtonView, position: textButtonFrame.center)
-                transition.setBounds(view: textButtonView, bounds: CGRect(origin: .zero, size: textButtonFrame.size))
-                if !self.animatingButtons {
-                    transition.setAlpha(view: textButtonView, alpha: buttonsAreHidden ? 0.0 : bottomButtonsAlpha)
-                }
-            }
             
             let stickerButtonSize = self.stickerButton.update(
                 transition: transition,
@@ -956,10 +941,41 @@ final class MediaEditorScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 40.0, height: 40.0)
             )
-            let stickerButtonFrame = CGRect(
+            var stickerButtonFrame = CGRect(
                 origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 * 3.0 - stickerButtonSize.width / 2.0 + 1.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
                 size: stickerButtonSize
             )
+            
+            if let subject = controller.node.subject, case .empty = subject {
+                let distance = floor((stickerButtonFrame.minX - textButtonFrame.minX) * 1.2)
+                textButtonFrame.origin.x = availableSize.width / 2.0 - textButtonFrame.width / 2.0
+                drawButtonFrame.origin.x = textButtonFrame.origin.x - distance
+                stickerButtonFrame.origin.x = textButtonFrame.origin.x + distance
+            }
+            
+            
+            if let drawButtonView = self.drawButton.view {
+                if drawButtonView.superview == nil {
+                    self.addSubview(drawButtonView)
+                }
+                transition.setPosition(view: drawButtonView, position: drawButtonFrame.center)
+                transition.setBounds(view: drawButtonView, bounds: CGRect(origin: .zero, size: drawButtonFrame.size))
+                if !self.animatingButtons {
+                    transition.setAlpha(view: drawButtonView, alpha: buttonsAreHidden ? 0.0 : bottomButtonsAlpha)
+                }
+            }
+            
+            if let textButtonView = self.textButton.view {
+                if textButtonView.superview == nil {
+                    self.addSubview(textButtonView)
+                }
+                transition.setPosition(view: textButtonView, position: textButtonFrame.center)
+                transition.setBounds(view: textButtonView, bounds: CGRect(origin: .zero, size: textButtonFrame.size))
+                if !self.animatingButtons {
+                    transition.setAlpha(view: textButtonView, alpha: buttonsAreHidden ? 0.0 : bottomButtonsAlpha)
+                }
+            }
+            
             if let stickerButtonView = self.stickerButton.view {
                 if stickerButtonView.superview == nil {
                     self.addSubview(stickerButtonView)
@@ -971,38 +987,44 @@ final class MediaEditorScreenComponent: Component {
                 }
             }
             
-            let toolsButtonSize = self.toolsButton.update(
-                transition: transition,
-                component: AnyComponent(Button(
-                    content: AnyComponent(Image(
-                        image: state.image(.tools),
-                        size: CGSize(width: 30.0, height: 30.0)
-                    )),
-                    action: { [weak controller] in
-                        guard let controller else {
-                            return
-                        }
-                        guard !controller.node.recording.isActive else {
-                            return
-                        }
-                        openDrawing(.tools)
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: 40.0, height: 40.0)
-            )
-            let toolsButtonFrame = CGRect(
-                origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 * 4.0 - toolsButtonSize.width / 2.0 + 3.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 1.0),
-                size: toolsButtonSize
-            )
-            if let toolsButtonView = self.toolsButton.view {
-                if toolsButtonView.superview == nil {
-                    self.addSubview(toolsButtonView)
+            if let subject = controller.node.subject, case .empty = subject {
+                if let toolsButtonView = self.toolsButton.view, toolsButtonView.superview != nil {
+                    toolsButtonView.removeFromSuperview()
                 }
-                transition.setPosition(view: toolsButtonView, position: toolsButtonFrame.center)
-                transition.setBounds(view: toolsButtonView, bounds: CGRect(origin: .zero, size: toolsButtonFrame.size))
-                if !self.animatingButtons {
-                    transition.setAlpha(view: toolsButtonView, alpha: buttonsAreHidden ? 0.0 : bottomButtonsAlpha)
+            } else {
+                let toolsButtonSize = self.toolsButton.update(
+                    transition: transition,
+                    component: AnyComponent(Button(
+                        content: AnyComponent(Image(
+                            image: state.image(.tools),
+                            size: CGSize(width: 30.0, height: 30.0)
+                        )),
+                        action: { [weak controller] in
+                            guard let controller else {
+                                return
+                            }
+                            guard !controller.node.recording.isActive else {
+                                return
+                            }
+                            openDrawing(.tools)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 40.0, height: 40.0)
+                )
+                let toolsButtonFrame = CGRect(
+                    origin: CGPoint(x: buttonsLeftOffset + floorToScreenPixels(buttonsAvailableWidth / 5.0 * 4.0 - toolsButtonSize.width / 2.0 + 3.0), y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 1.0),
+                    size: toolsButtonSize
+                )
+                if let toolsButtonView = self.toolsButton.view {
+                    if toolsButtonView.superview == nil {
+                        self.addSubview(toolsButtonView)
+                    }
+                    transition.setPosition(view: toolsButtonView, position: toolsButtonFrame.center)
+                    transition.setBounds(view: toolsButtonView, bounds: CGRect(origin: .zero, size: toolsButtonFrame.size))
+                    if !self.animatingButtons {
+                        transition.setAlpha(view: toolsButtonView, alpha: buttonsAreHidden ? 0.0 : bottomButtonsAlpha)
+                    }
                 }
             }
             
@@ -2957,6 +2979,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     return
                 }
                 self.controller?.stickerRecommendedEmoji = emojiForClasses(classes.map { $0.0 })
+            }
+            
+            if case .empty = effectiveSubject {
+                self.stickerMaskDrawingView?.emptyColor = .black
+                self.stickerMaskDrawingView?.clearWithEmptyColor()
             }
             
             if case .message = effectiveSubject {
@@ -6320,6 +6347,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return
         }
                 
+        if let subject = self.node.subject, case .empty = subject {
+            if !self.node.hasAnyChanges && !self.node.drawingView.internalState.canUndo {
+                self.hapticFeedback.error()
+                
+                self.node.componentHost.findTaggedView(tag: drawButtonTag)?.layer.addShakeAnimation()
+                self.node.componentHost.findTaggedView(tag: stickerButtonTag)?.layer.addShakeAnimation()
+                self.node.componentHost.findTaggedView(tag: textButtonTag)?.layer.addShakeAnimation()
+                
+                return
+            }
+        }
+        
         self.dismissAllTooltips()
         
         if let navigationController = self.navigationController as? NavigationController {
@@ -6382,8 +6421,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             isVideo = true
         }
         Queue.concurrentDefaultQueue().async {
-            if let data = try? WebP.convert(toWebP: image, quality: 97.0) {
+            if !isVideo, let data = try? WebP.convert(toWebP: image, quality: 97.0) {
                 self.context.account.postbox.mediaBox.storeResourceData(isVideo ? thumbnailResource.id : resource.id, data: data)
+            }
+            if let thumbnailImage = generateScaledImage(image: image, size: CGSize(width: 320.0, height: 320.0), opaque: false, scale: 1.0), let data = try? WebP.convert(toWebP: thumbnailImage, quality: 90.0) {
+                self.context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: data)
             }
         }
         var file = stickerFile(resource: resource, thumbnailResource: thumbnailResource, size: Int64(0), dimensions: PixelDimensions(image.size), duration: self.preferredStickerDuration(), isVideo: isVideo)
@@ -6499,7 +6541,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     f(.default)
                     
                     var action: StickerAction = .upload
-                    if !self.node.hasAnyChanges, case let .sticker(sticker, _) = self.node.subject {
+                    if !self.node.hasAnyChanges && !self.node.drawingView.internalState.canUndo, case let .sticker(sticker, _) = self.node.subject {
                         file = sticker
                         action = .update
                     }
@@ -6608,6 +6650,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 stickers: [
                     ImportSticker(
                         resource: .standalone(resource: file.resource),
+                        thumbnailResource: file.previewRepresentations.first.flatMap { .standalone(resource: $0.resource) },
                         emojis: self.effectiveStickerEmoji(),
                         dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
                         duration: file.duration,
@@ -6724,7 +6767,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let resource = resource as? CloudDocumentMediaResource {
                         return .single(.progress(1.0)) |> then(.single(.complete(resource, mimeType)))
                     } else {
-                        return context.engine.stickers.uploadSticker(peer: peer._asPeer(), resource: resource, alt: "", dimensions: dimensions, duration: duration, mimeType: mimeType)
+                        return context.engine.stickers.uploadSticker(peer: peer._asPeer(), resource: resource, thumbnail: file.previewRepresentations.first?.resource, alt: "", dimensions: dimensions, duration: duration, mimeType: mimeType)
                         |> mapToSignal { status -> Signal<UploadStickerStatus, UploadStickerError> in
                             switch status {
                             case let .progress(progress):
