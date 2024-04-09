@@ -18,7 +18,6 @@ final class StickerCutoutOutlineView: UIView {
     let strokeLayer = SimpleShapeLayer()
     let imageLayer = SimpleLayer()
     var outlineLayer = CAEmitterLayer()
-    var outline2Layer = CAEmitterLayer()
     var glowLayer = CAEmitterLayer()
 
     override init(frame: CGRect) {
@@ -56,24 +55,20 @@ final class StickerCutoutOutlineView: UIView {
         
     private func setupAnimation(path: BezierPath) {
         self.outlineLayer.removeFromSuperlayer()
-        self.outline2Layer.removeFromSuperlayer()
         self.glowLayer.removeFromSuperlayer()
         
         self.outlineLayer = CAEmitterLayer()
-        self.outlineLayer.opacity = 0.65
-        self.outline2Layer = CAEmitterLayer()
-        self.outline2Layer.opacity = 0.65
+        self.outlineLayer.opacity = 0.75
         
         self.glowLayer = CAEmitterLayer()
         
         self.layer.addSublayer(self.outlineLayer)
-        self.layer.addSublayer(self.outline2Layer)
         self.layer.addSublayer(self.glowLayer)
         
         let randomBeginTime = (previousBeginTime + 4) % 6
         previousBeginTime = randomBeginTime
         
-        let duration = min(6.0, max(2.5, path.length / 2200.0))
+        let duration = min(6.5, max(3.0, path.length / 100.0))
         
         let outlineAnimation = CAKeyframeAnimation(keyPath: "emitterPosition")
         outlineAnimation.path = path.path.cgPath
@@ -93,49 +88,14 @@ final class StickerCutoutOutlineView: UIView {
         lineEmitterCell.color = UIColor.white.cgColor
         lineEmitterCell.contents = UIImage(named: "Media Editor/ParticleDot")?.cgImage
         lineEmitterCell.lifetime = 2.2
-        lineEmitterCell.birthRate = 1000
-        lineEmitterCell.scale = 0.15
+        lineEmitterCell.birthRate = 1700
+        lineEmitterCell.scale = 0.18
         lineEmitterCell.alphaSpeed = -0.4
         
         self.outlineLayer.emitterCells = [lineEmitterCell]
-        self.outlineLayer.emitterMode = .points
-        self.outlineLayer.emitterSize = CGSize(width: 1.33, height: 1.33)
-        self.outlineLayer.emitterShape = .rectangle
-        
-        
-        
-        
-        
-        let outline2Animation = CAKeyframeAnimation(keyPath: "emitterPosition")
-        outline2Animation.path = path.path.cgPath
-        outline2Animation.duration = duration
-        outline2Animation.repeatCount = .infinity
-        outline2Animation.calculationMode = .paced
-        outline2Animation.fillMode = .forwards
-        outline2Animation.beginTime = Double(randomBeginTime)
-        self.outline2Layer.add(outline2Animation, forKey: "emitterPosition")
-        
-        let line2EmitterCell = CAEmitterCell()
-        line2EmitterCell.beginTime = CACurrentMediaTime()
-        let line2AlphaBehavior = createEmitterBehavior(type: "valueOverLife")
-        line2AlphaBehavior.setValue("color.alpha", forKey: "keyPath")
-        line2AlphaBehavior.setValue([0.0, 0.5, 0.8, 0.5, 0.0], forKey: "values")
-        line2EmitterCell.setValue([line2AlphaBehavior], forKey: "emitterBehaviors")
-        line2EmitterCell.color = UIColor.white.cgColor
-        line2EmitterCell.contents = UIImage(named: "Media Editor/ParticleDot")?.cgImage
-        line2EmitterCell.lifetime = 2.2
-        line2EmitterCell.birthRate = 1000
-        line2EmitterCell.scale = 0.15
-        line2EmitterCell.alphaSpeed = -0.4
-        
-        self.outline2Layer.emitterCells = [line2EmitterCell]
-        self.outline2Layer.emitterMode = .points
-        self.outline2Layer.emitterSize = CGSize(width: 1.33, height: 1.33)
-        self.outline2Layer.emitterShape = .rectangle
-        
-        
-        
-        
+        self.outlineLayer.emitterMode = .outline
+        self.outlineLayer.emitterSize = CGSize(width: 2.0, height: 2.0)
+        self.outlineLayer.emitterShape = .line
         
         let glowAnimation = CAKeyframeAnimation(keyPath: "emitterPosition")
         glowAnimation.path = path.path.cgPath
@@ -166,7 +126,6 @@ final class StickerCutoutOutlineView: UIView {
         self.strokeLayer.animateAlpha(from: 0.0, to: CGFloat(self.strokeLayer.opacity), duration: 0.4)
         
         self.outlineLayer.animateAlpha(from: 0.0, to: CGFloat(self.outlineLayer.opacity), duration: 0.4, delay: 0.0)
-        self.outline2Layer.animateAlpha(from: 0.0, to: CGFloat(self.outline2Layer.opacity), duration: 0.4, delay: 0.0)
         self.glowLayer.animateAlpha(from: 0.0, to: CGFloat(self.glowLayer.opacity), duration: 0.4, delay: 0.0)
         
         
@@ -192,7 +151,6 @@ final class StickerCutoutOutlineView: UIView {
     override func layoutSubviews() {
         self.strokeLayer.frame = self.bounds.offsetBy(dx: 0.0, dy: 1.0)
         self.outlineLayer.frame = self.bounds
-        self.outline2Layer.frame = self.bounds
         self.imageLayer.frame = self.bounds
         self.glowLayer.frame = self.bounds
     }
@@ -214,7 +172,7 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
     }
     
     contour = simplify(contour, tolerance: 1.0)
-    let path = BezierPath(points: contour, smooth: true)
+    let path = BezierPath(points: contour, smooth: false)
     
     let contoursScale = min(size.width, size.height) / 256.0
     let valuesScale = size.width / 1080.0
@@ -279,7 +237,7 @@ private func findContours(pixelBuffer: CVPixelBuffer) -> [CGPoint] {
     func isBlackPixel(_ point: Point) -> Bool {
         if point.x >= 0 && point.x < width && point.y >= 0 && point.y < height {
             let value = getPixelIntensity(point)
-            return value < 220
+            return value < 225
         } else {
             return false
         }
@@ -296,18 +254,20 @@ private func findContours(pixelBuffer: CVPixelBuffer) -> [CGPoint] {
         repeat {
             var found = false
             for i in 0 ..< 8 {
-                let direction = (previousDirection + i) % 8
-                let newX = currentPoint.x + dx[direction]
-                let newY = currentPoint.y + dy[direction]
-                let newPoint = Point(x: newX, y: newY)
-                
-                if isBlackPixel(newPoint) && !(visited[newPoint] == true) {
-                    contour.append(newPoint)
-                    previousDirection = (direction + 5) % 8
-                    currentPoint = newPoint
-                    found = true
-                    markVisited(newPoint)
-                    break
+                for j in 1 ..< 2 {
+                    let direction = (previousDirection + i) % 8
+                    let newX = currentPoint.x + dx[direction] * j
+                    let newY = currentPoint.y + dy[direction] * j
+                    let newPoint = Point(x: newX, y: newY)
+                    
+                    if isBlackPixel(newPoint) && !(visited[newPoint] == true) {
+                        contour.append(newPoint)
+                        previousDirection = (direction + 5) % 8
+                        currentPoint = newPoint
+                        found = true
+                        markVisited(newPoint)
+                        break
+                    }
                 }
             }
             if !found {
@@ -509,7 +469,7 @@ private extension CGPoint {
     func distanceFrom(_ otherPoint: CGPoint) -> CGFloat {
         let dx = self.x - otherPoint.x
         let dy = self.y - otherPoint.y
-        return (dx * dx) + (dy * dy)
+        return sqrt((dx * dx) + (dy * dy))
     }
     
     func distanceToSegment(_ p1: CGPoint, _ p2: CGPoint) -> CGFloat {

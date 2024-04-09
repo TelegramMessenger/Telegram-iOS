@@ -64,6 +64,7 @@ public struct CutoutResult {
     
     public let index: Int
     public let extractedImage: Image?
+    public let edgesMaskImage: Image?
     public let maskImage: Image?
     public let backgroundImage: Image?
 }
@@ -72,6 +73,25 @@ public enum CutoutTarget {
     case point(CGPoint?)
     case index(Int)
     case all
+}
+
+
+func refineEdges(_ maskImage: CIImage) -> CIImage? {
+    let maskImage = maskImage.clampedToExtent()
+        
+    let blurFilter = CIFilter(name: "CIGaussianBlur")!
+    blurFilter.setValue(maskImage, forKey: kCIInputImageKey)
+    blurFilter.setValue(11.4, forKey: kCIInputRadiusKey)
+        
+    let controlsFilter = CIFilter(name: "CIColorControls")!
+    controlsFilter.setValue(blurFilter.outputImage, forKey: kCIInputImageKey)
+    controlsFilter.setValue(6.61, forKey: kCIInputContrastKey)
+    
+    let sharpenFilter = CIFilter(name: "CISharpenLuminance")!
+    sharpenFilter.setValue(controlsFilter.outputImage, forKey: kCIInputImageKey)
+    sharpenFilter.setValue(250.0, forKey: kCIInputSharpnessKey)
+    
+    return sharpenFilter.outputImage?.cropped(to: maskImage.extent)
 }
 
 public func cutoutImage(
@@ -153,19 +173,31 @@ public func cutoutImage(
                             extractedImage = nil
                         }
                         
+                        let whiteImage = CIImage(color: .white)
+                        let blackImage = CIImage(color: .black)
+                        
                         let maskFilter = CIFilter.blendWithMask()
-                        maskFilter.inputImage = CIImage(color: .white)
-                        maskFilter.backgroundImage = CIImage(color: .black)
+                        maskFilter.inputImage = whiteImage
+                        maskFilter.backgroundImage = blackImage
                         maskFilter.maskImage = CIImage(cvPixelBuffer: mask)
+                        
+                        let refinedMaskFilter = CIFilter.blendWithMask()
+                        refinedMaskFilter.inputImage = whiteImage
+                        refinedMaskFilter.backgroundImage = blackImage
+                        refinedMaskFilter.maskImage = refineEdges(CIImage(cvPixelBuffer: mask))
+                        
+                        let edgesMaskImage: CutoutResult.Image?
                         let maskImage: CutoutResult.Image?
-                        if let maskOutput = maskFilter.outputImage?.cropped(to: inputImage.extent), let maskCgImage = ciContext.createCGImage(maskOutput, from: inputImage.extent) {
-                            maskImage = .image(UIImage(cgImage: maskCgImage), maskOutput)
+                        if let maskOutput = maskFilter.outputImage?.cropped(to: inputImage.extent), let maskCgImage = ciContext.createCGImage(maskOutput, from: inputImage.extent), let refinedMaskOutput = refinedMaskFilter.outputImage?.cropped(to: inputImage.extent), let refinedMaskCgImage = ciContext.createCGImage(refinedMaskOutput, from: inputImage.extent) {
+                            edgesMaskImage = .image(UIImage(cgImage: maskCgImage), maskOutput)
+                            maskImage = .image(UIImage(cgImage: refinedMaskCgImage), refinedMaskOutput)
                         } else {
+                            edgesMaskImage = nil
                             maskImage = nil
                         }
                         
                         if extractedImage != nil || maskImage != nil {
-                            results.append(CutoutResult(index: instance, extractedImage: extractedImage, maskImage: maskImage, backgroundImage: nil))
+                            results.append(CutoutResult(index: instance, extractedImage: extractedImage, edgesMaskImage: edgesMaskImage, maskImage: maskImage, backgroundImage: nil))
                         }
                     }
                 }

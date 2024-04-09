@@ -39,6 +39,8 @@ extension MediaEditorScreen {
                 return false
             } else if case .message = subject, !filteredValues.hasChanges && filteredEntities.isEmpty && caption.string.isEmpty {
                 return false
+            } else if case .empty = subject, !self.node.hasAnyChanges && !self.node.drawingView.internalState.canUndo {
+                return false
             }
         }
         return true
