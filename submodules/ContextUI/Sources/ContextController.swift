@@ -2150,6 +2150,7 @@ public protocol ContextExtractedContentSource: AnyObject {
     var initialAppearanceOffset: CGPoint { get }
     var centerVertically: Bool { get }
     var keepInPlace: Bool { get }
+    var adjustContentForSideInset: Bool { get }
     var ignoreContentTouches: Bool { get }
     var blurBackground: Bool { get }
     var shouldBeDismissed: Signal<Bool, NoError> { get }
@@ -2166,6 +2167,10 @@ public extension ContextExtractedContentSource {
     }
     
     var centerVertically: Bool {
+        return false
+    }
+    
+    var adjustContentForSideInset: Bool {
         return false
     }
     
