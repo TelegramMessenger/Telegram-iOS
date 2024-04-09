@@ -324,6 +324,7 @@ private final class CameraScreenComponent: CombinedComponent {
             
             self.volumeButtonsListener = VolumeButtonsListener(
                 sharedContext: self.context.sharedContext,
+                isCameraSpecific: true,
                 shouldBeActive: self.volumeButtonsListenerShouldBeActive.get(),
                 upPressed: { [weak self] in
                     if let self {

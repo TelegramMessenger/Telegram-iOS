@@ -35,12 +35,14 @@ private final class LegacyHandlerImpl: VolumeButtonHandlerImpl {
 
 @available(iOS 17.2, *)
 private final class AVCaptureEventHandlerImpl: VolumeButtonHandlerImpl {
+    private weak var context: SharedAccountContext?
     private let interaction: AVCaptureEventInteraction
     
     init(
         context: SharedAccountContext,
         performAction: @escaping (VolumeButtonsListener.Action) -> Void
     ) {
+        self.context = context
         self.interaction = AVCaptureEventInteraction(
             primary: { event in
                 switch event.phase {
@@ -73,6 +75,7 @@ private final class AVCaptureEventHandlerImpl: VolumeButtonHandlerImpl {
     
     deinit {
         self.interaction.isEnabled = false
+        self.context?.mainWindow?.viewController?.view.removeInteraction(self.interaction)
     }
 }
 
@@ -96,6 +99,8 @@ public class VolumeButtonsListener {
         
     private final class SharedContext: NSObject {
         private var handler: VolumeButtonHandlerImpl?
+        private var cameraSpecificHandler: VolumeButtonHandlerImpl?
+        
         private weak var sharedAccountContext: SharedAccountContext?
         
         private var nextListenerId: Int = 0
@@ -128,9 +133,9 @@ public class VolumeButtonsListener {
             }
         }
         
-        private func performAction(_ action: Action) {
+        private func performAction(_ action: Action, isCameraSpecific: Bool) {
             for i in (0 ..< self.listeners.count).reversed() {
-                if let listener = self.listeners[i].listener, listener.isActive {
+                if let listener = self.listeners[i].listener, listener.isActive, listener.isCameraSpecific == isCameraSpecific {
                     switch action {
                     case .up:
                         listener.upPressed()
@@ -146,29 +151,33 @@ public class VolumeButtonsListener {
         }
         
         private func updateListeners() {
-            var isActive = false
+            var isGeneralActive = false
+            var isCameraSpecificActive = false
             
             for i in (0 ..< self.listeners.count).reversed() {
                 if let listener = self.listeners[i].listener {
                     if listener.isActive {
-                        isActive = true
+                        if #available(iOS 17.2, *) {
+                            if listener.isCameraSpecific {
+                                isCameraSpecificActive = true
+                            } else {
+                                isGeneralActive = true
+                            }
+                        } else {
+                            isGeneralActive = true
+                        }
                     }
                 } else {
                     self.listeners.remove(at: i)
                 }
             }
             
-            if isActive {
-                if let sharedAccountContext = self.sharedAccountContext {
-                    let performAction: (VolumeButtonsListener.Action) -> Void = { [weak self] action in
-                        self?.performAction(action)
-                    }
-                    if #available(iOS 17.2, *) {
-                        self.handler = AVCaptureEventHandlerImpl(
-                            context: sharedAccountContext,
-                            performAction: performAction
-                        )
-                    } else {
+            if isGeneralActive {
+                if self.handler == nil {
+                    if let sharedAccountContext = self.sharedAccountContext {
+                        let performAction: (VolumeButtonsListener.Action) -> Void = { [weak self] action in
+                            self?.performAction(action, isCameraSpecific: false)
+                        }
                         self.handler = LegacyHandlerImpl(
                             context: sharedAccountContext,
                             performAction: performAction
@@ -178,10 +187,31 @@ public class VolumeButtonsListener {
             } else {
                 self.handler = nil
             }
+            
+            if isCameraSpecificActive {
+                if self.cameraSpecificHandler == nil {
+                    if let sharedAccountContext = self.sharedAccountContext {
+                        let performAction: (VolumeButtonsListener.Action) -> Void = { [weak self] action in
+                            self?.performAction(action, isCameraSpecific: true)
+                        }
+                        if #available(iOS 17.2, *) {
+                            self.cameraSpecificHandler = AVCaptureEventHandlerImpl(
+                                context: sharedAccountContext,
+                                performAction: performAction
+                            )
+                        } else {
+                            self.cameraSpecificHandler = nil
+                        }
+                    }
+                }
+            } else {
+                self.cameraSpecificHandler = nil
+            }
         }
     }
     
     fileprivate let sharedAccountContext: SharedAccountContext
+    fileprivate let isCameraSpecific: Bool
     
     private static var sharedContext: SharedContext = {
         return SharedContext()
@@ -199,6 +229,7 @@ public class VolumeButtonsListener {
     
     public init(
         sharedContext: SharedAccountContext,
+        isCameraSpecific: Bool,
         shouldBeActive: Signal<Bool, NoError>,
         upPressed: @escaping () -> Void,
         upReleased: @escaping () -> Void = {},
@@ -206,6 +237,7 @@ public class VolumeButtonsListener {
         downReleased: @escaping () -> Void = {}
     ) {
         self.sharedAccountContext = sharedContext
+        self.isCameraSpecific = isCameraSpecific
         self.upPressed = upPressed
         self.upReleased = upReleased
         self.downPressed = downPressed

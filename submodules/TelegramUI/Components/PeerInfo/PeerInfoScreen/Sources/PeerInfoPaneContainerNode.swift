@@ -419,7 +419,18 @@ private final class PeerInfoPendingPane {
         let paneNode: PeerInfoPaneNode
         switch key {
         case .stories, .storyArchive:
-            let visualPaneNode = PeerInfoStoryPaneNode(context: context, peerId: peerId, chatLocation: chatLocation, contentType: .photoOrVideo, captureProtected: captureProtected, isSaved: false, isArchive: key == .storyArchive, isProfileEmbedded: true, navigationController: chatControllerInteraction.navigationController, listContext: key == .storyArchive ? data.storyArchiveListContext : data.storyListContext)
+            var canManage = false
+            if let peer = data.peer {
+                if peer.id == context.account.peerId {
+                    canManage = true
+                } else if let channel = peer as? TelegramChannel {
+                    if channel.hasPermission(.editStories) {
+                        canManage = true
+                    }
+                }
+            }
+            
+            let visualPaneNode = PeerInfoStoryPaneNode(context: context, peerId: peerId, chatLocation: chatLocation, contentType: .photoOrVideo, captureProtected: captureProtected, isSaved: false, isArchive: key == .storyArchive, isProfileEmbedded: true, canManageStories: canManage, navigationController: chatControllerInteraction.navigationController, listContext: key == .storyArchive ? data.storyArchiveListContext : data.storyListContext)
             paneNode = visualPaneNode
             visualPaneNode.openCurrentDate = {
                 openMediaCalendar()

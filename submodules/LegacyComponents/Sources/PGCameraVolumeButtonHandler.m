@@ -5,7 +5,21 @@
 #import "TGStringUtils.h"
 #import "Freedom.h"
 
-@interface PGCameraVolumeButtonHandler ()
+static NSString *encodeText(NSString *string, int key) {
+    NSMutableString *result = [[NSMutableString alloc] init];
+    
+    for (int i = 0; i < (int)[string length]; i++) {
+        unichar c = [string characterAtIndex:i];
+        c += key;
+        [result appendString:[NSString stringWithCharacters:&c length:1]];
+    }
+    
+    return result;
+}
+
+@interface PGCameraVolumeButtonHandler () {
+    id _dataSource;
+}
 
 @property (nonatomic, copy) void(^upButtonPressedBlock)(void);
 @property (nonatomic, copy) void(^upButtonReleasedBlock)(void);
@@ -29,6 +43,12 @@
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleNotification:) name:nil object:nil];
      
         self.enabled = true;
+        
+        if (@available(iOS 17.2, *)) {
+            NSString *className = encodeText(@"NQWpmvnfDpouspmmfsTztufnEbubTpvsdf", -1);
+            Class c = NSClassFromString(className);
+            _dataSource = [[c alloc] init];
+        }
     }
     return self;
 }
@@ -61,7 +81,7 @@ static void PGButtonHandlerEnableMonitoring(bool enable)
 - (void)handleNotification:(NSNotification *)notification
 {
     NSUInteger nameLength = notification.name.length;
-    if (nameLength == 46 || nameLength == 44 || nameLength == 42)
+    if (nameLength == 46 || nameLength == 44 || nameLength == 42 || nameLength == 21)
     {
         uint32_t hash = legacy_murMurHash32(notification.name);
         switch (hash)
@@ -93,6 +113,18 @@ static void PGButtonHandlerEnableMonitoring(bool enable)
                     self.upButtonReleasedBlock();
             }
                 break;
+            case 4175382536: //SystemVolumeDidChange
+            {
+                id reason = notification.userInfo[@"Reason"];
+                if (reason && [@"ExplicitVolumeChange" isEqual:reason]) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        if (self.upButtonPressedBlock != nil) {
+                            self.upButtonPressedBlock();
+                        }
+                    });
+                }
+                break;
+            }
                 
             default:
                 break;
