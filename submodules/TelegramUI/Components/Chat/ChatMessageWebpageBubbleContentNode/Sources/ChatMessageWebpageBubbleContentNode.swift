@@ -481,7 +481,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 }
                 for attribute in webpage.attributes {
                     if case let .stickerPack(stickerPack) = attribute, !stickerPack.files.isEmpty {
-                        mediaAndFlags = (stickerPack.files, .preferMediaInline)
+                        mediaAndFlags = (stickerPack.files, [.preferMediaInline, .stickerPack])
                         break
                     }
                 }

@@ -254,20 +254,18 @@ private func findContours(pixelBuffer: CVPixelBuffer) -> [CGPoint] {
         repeat {
             var found = false
             for i in 0 ..< 8 {
-                for j in 1 ..< 2 {
-                    let direction = (previousDirection + i) % 8
-                    let newX = currentPoint.x + dx[direction] * j
-                    let newY = currentPoint.y + dy[direction] * j
-                    let newPoint = Point(x: newX, y: newY)
-                    
-                    if isBlackPixel(newPoint) && !(visited[newPoint] == true) {
-                        contour.append(newPoint)
-                        previousDirection = (direction + 5) % 8
-                        currentPoint = newPoint
-                        found = true
-                        markVisited(newPoint)
-                        break
-                    }
+                let direction = (previousDirection + i) % 8
+                let newX = currentPoint.x + dx[direction]
+                let newY = currentPoint.y + dy[direction]
+                let newPoint = Point(x: newX, y: newY)
+                
+                if isBlackPixel(newPoint) && !(visited[newPoint] == true) {
+                    contour.append(newPoint)
+                    previousDirection = (direction + 5) % 8
+                    currentPoint = newPoint
+                    found = true
+                    markVisited(newPoint)
+                    break
                 }
             }
             if !found {
