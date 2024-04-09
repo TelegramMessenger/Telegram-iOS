@@ -11805,6 +11805,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         self.volumeButtonsListener = VolumeButtonsListener(
             sharedContext: self.context.sharedContext,
+            isCameraSpecific: false,
             shouldBeActive: shouldBeActive,
             upPressed: buttonAction,
             downPressed: buttonAction

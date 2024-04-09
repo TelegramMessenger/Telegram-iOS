@@ -1537,7 +1537,9 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                                 
                                 if isBufferingUpdated && !self.isUpdatingComponent {
-                                    self.state?.updated(transition: .immediate)
+                                    if !self.isUpdatingComponent {
+                                        self.state?.updated(transition: .immediate)
+                                    }
                                 }
                                 
                                 if progress >= 1.0 && canSwitch && !visibleItem.requestedNext {

@@ -1161,6 +1161,7 @@ private final class StoryContainerScreenComponent: Component {
             }
             self.volumeButtonsListener = VolumeButtonsListener(
                 sharedContext: component.context.sharedContext,
+                isCameraSpecific: false,
                 shouldBeActive: self.volumeButtonsListenerShouldBeActive.get(),
                 upPressed: buttonAction,
                 downPressed: buttonAction
