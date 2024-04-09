@@ -145,6 +145,17 @@ public struct RecommendedChannels: Equatable {
     public let isHidden: Bool
 }
 
+func _internal_recommendedChannelPeerIds(account: Account, peerId: EnginePeer.Id?) -> Signal<[EnginePeer.Id]?, NoError> {
+    let key = PostboxViewKey.cachedItem(entryId(peerId: peerId))
+    return account.postbox.combinedView(keys: [key])
+    |> mapToSignal { views -> Signal<[EnginePeer.Id]?, NoError> in
+        guard let cachedChannels = (views.views[key] as? CachedItemView)?.value?.get(CachedRecommendedChannels.self), !cachedChannels.peerIds.isEmpty else {
+            return .single(nil)
+        }
+        return .single(cachedChannels.peerIds)
+    }
+}
+
 func _internal_recommendedChannels(account: Account, peerId: EnginePeer.Id?) -> Signal<RecommendedChannels?, NoError> {
     let key = PostboxViewKey.cachedItem(entryId(peerId: peerId))
     return account.postbox.combinedView(keys: [key])

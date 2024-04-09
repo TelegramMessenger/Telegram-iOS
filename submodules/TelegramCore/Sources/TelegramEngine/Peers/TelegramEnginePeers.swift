@@ -1373,6 +1373,10 @@ public extension TelegramEngine {
             return _internal_recommendedChannels(account: self.account, peerId: peerId)
         }
         
+        public func recommendedChannelPeerIds(peerId: EnginePeer.Id?) -> Signal<[EnginePeer.Id]?, NoError> {
+            return _internal_recommendedChannelPeerIds(account: self.account, peerId: peerId)
+        }
+        
         public func toggleRecommendedChannelsHidden(peerId: EnginePeer.Id, hidden: Bool) -> Signal<Never, NoError> {
             return _internal_toggleRecommendedChannelsHidden(account: self.account, peerId: peerId, hidden: hidden)
         }

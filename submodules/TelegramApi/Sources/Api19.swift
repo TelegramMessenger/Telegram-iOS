@@ -423,6 +423,106 @@ public extension Api {
     }
 }
 public extension Api {
+    enum ReactionNotificationsFrom: TypeConstructorDescription {
+        case reactionNotificationsFromAll
+        case reactionNotificationsFromContacts
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .reactionNotificationsFromAll:
+                    if boxed {
+                        buffer.appendInt32(1268654752)
+                    }
+                    
+                    break
+                case .reactionNotificationsFromContacts:
+                    if boxed {
+                        buffer.appendInt32(-1161583078)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .reactionNotificationsFromAll:
+                return ("reactionNotificationsFromAll", [])
+                case .reactionNotificationsFromContacts:
+                return ("reactionNotificationsFromContacts", [])
+    }
+    }
+    
+        public static func parse_reactionNotificationsFromAll(_ reader: BufferReader) -> ReactionNotificationsFrom? {
+            return Api.ReactionNotificationsFrom.reactionNotificationsFromAll
+        }
+        public static func parse_reactionNotificationsFromContacts(_ reader: BufferReader) -> ReactionNotificationsFrom? {
+            return Api.ReactionNotificationsFrom.reactionNotificationsFromContacts
+        }
+    
+    }
+}
+public extension Api {
+    enum ReactionsNotifySettings: TypeConstructorDescription {
+        case reactionsNotifySettings(flags: Int32, messagesNotifyFrom: Api.ReactionNotificationsFrom?, storiesNotifyFrom: Api.ReactionNotificationsFrom?, sound: Api.NotificationSound, showPreviews: Api.Bool)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .reactionsNotifySettings(let flags, let messagesNotifyFrom, let storiesNotifyFrom, let sound, let showPreviews):
+                    if boxed {
+                        buffer.appendInt32(1457736048)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {messagesNotifyFrom!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {storiesNotifyFrom!.serialize(buffer, true)}
+                    sound.serialize(buffer, true)
+                    showPreviews.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .reactionsNotifySettings(let flags, let messagesNotifyFrom, let storiesNotifyFrom, let sound, let showPreviews):
+                return ("reactionsNotifySettings", [("flags", flags as Any), ("messagesNotifyFrom", messagesNotifyFrom as Any), ("storiesNotifyFrom", storiesNotifyFrom as Any), ("sound", sound as Any), ("showPreviews", showPreviews as Any)])
+    }
+    }
+    
+        public static func parse_reactionsNotifySettings(_ reader: BufferReader) -> ReactionsNotifySettings? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.ReactionNotificationsFrom?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ReactionNotificationsFrom
+            } }
+            var _3: Api.ReactionNotificationsFrom?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.ReactionNotificationsFrom
+            } }
+            var _4: Api.NotificationSound?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.NotificationSound
+            }
+            var _5: Api.Bool?
+            if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.ReactionsNotifySettings.reactionsNotifySettings(flags: _1!, messagesNotifyFrom: _2, storiesNotifyFrom: _3, sound: _4!, showPreviews: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum ReadParticipantDate: TypeConstructorDescription {
         case readParticipantDate(userId: Int64, date: Int32)
     

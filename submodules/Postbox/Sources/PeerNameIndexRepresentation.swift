@@ -70,6 +70,25 @@ extension PeerIndexNameRepresentation {
         return foundAtLeastOne
     }
     
+    public func matchesByTokens(_ other: [ValueBoxKey]) -> Bool {
+        var foundAtLeastOne = false
+        for searchToken in other {
+            var found = false
+            for token in self.indexTokens {
+                if searchToken.isPrefix(to: token) {
+                    found = true
+                    break
+                }
+            }
+            if !found {
+                return false
+            }
+            foundAtLeastOne = true
+            break
+        }
+        return foundAtLeastOne
+    }
+    
     public var indexTokens: [ValueBoxKey] {
         switch self {
             case let .title(title, addressNames):

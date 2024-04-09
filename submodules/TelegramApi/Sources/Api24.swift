@@ -134,6 +134,7 @@ public extension Api {
         case updateNewQuickReply(quickReply: Api.QuickReply)
         case updateNewScheduledMessage(message: Api.Message)
         case updateNewStickerSet(stickerset: Api.messages.StickerSet)
+        case updateNewStoryReaction(storyId: Int32, peer: Api.Peer, reaction: Api.Reaction)
         case updateNotifySettings(peer: Api.NotifyPeer, notifySettings: Api.PeerNotifySettings)
         case updatePeerBlocked(flags: Int32, peerId: Api.Peer)
         case updatePeerHistoryTTL(flags: Int32, peer: Api.Peer, ttlPeriod: Int32?)
@@ -919,6 +920,14 @@ public extension Api {
                     }
                     stickerset.serialize(buffer, true)
                     break
+                case .updateNewStoryReaction(let storyId, let peer, let reaction):
+                    if boxed {
+                        buffer.appendInt32(405070859)
+                    }
+                    serializeInt32(storyId, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    reaction.serialize(buffer, true)
+                    break
                 case .updateNotifySettings(let peer, let notifySettings):
                     if boxed {
                         buffer.appendInt32(-1094555409)
@@ -1521,6 +1530,8 @@ public extension Api {
                 return ("updateNewScheduledMessage", [("message", message as Any)])
                 case .updateNewStickerSet(let stickerset):
                 return ("updateNewStickerSet", [("stickerset", stickerset as Any)])
+                case .updateNewStoryReaction(let storyId, let peer, let reaction):
+                return ("updateNewStoryReaction", [("storyId", storyId as Any), ("peer", peer as Any), ("reaction", reaction as Any)])
                 case .updateNotifySettings(let peer, let notifySettings):
                 return ("updateNotifySettings", [("peer", peer as Any), ("notifySettings", notifySettings as Any)])
                 case .updatePeerBlocked(let flags, let peerId):
@@ -3161,6 +3172,27 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.Update.updateNewStickerSet(stickerset: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateNewStoryReaction(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _3: Api.Reaction?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Reaction
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateNewStoryReaction(storyId: _1!, peer: _2!, reaction: _3!)
             }
             else {
                 return nil
