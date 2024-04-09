@@ -1686,9 +1686,7 @@ func _internal_updatePinnedToTopStories(account: Account, peerId: PeerId, ids: [
         }
         
         DispatchQueue.main.async {
-            account.stateManager.injectStoryUpdates(updates: ids.map { id in
-                return .updatePinnedToTopList(peerId: peerId, ids: ids)
-            })
+            account.stateManager.injectStoryUpdates(updates: [.updatePinnedToTopList(peerId: peerId, ids: ids)])
         }
         
         return inputPeer

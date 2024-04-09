@@ -5430,7 +5430,7 @@ public final class StoryItemSetContainerComponent: Component {
                 initialPrivacy: initialPrivacy,
                 initialMediaAreas: initialMediaAreas,
                 initialVideoPosition: videoPlaybackPosition,
-                transitionIn: nil,
+                transitionIn: .noAnimation,
                 transitionOut: { finished, isNew in
                     if repost && finished {
                         if let transitionOut = externalState.transitionOut?(externalState.storyTarget, externalState.isPeerArchived), let destinationView = transitionOut.destinationView {
