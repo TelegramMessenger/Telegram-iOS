@@ -314,7 +314,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                 if stickerItem.file.isAnimatedSticker || stickerItem.file.isVideoSticker {
                     let dimensions = stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     if stickerItem.file.isVideoSticker {
-                        self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: stickerItem.file, small: true))
+                        self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: stickerItem.file, small: true, fetched: true))
                     } else {
                         self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .other, file: stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))))
                     }

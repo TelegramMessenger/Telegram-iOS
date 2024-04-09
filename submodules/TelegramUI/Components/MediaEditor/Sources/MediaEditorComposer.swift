@@ -121,7 +121,7 @@ final class MediaEditorComposer {
         } else {
             self.drawingImage = nil
         }
-        
+                
         var entities: [MediaEditorComposerEntity] = []
         for entity in values.entities {
             entities.append(contentsOf: composerEntitiesForDrawingEntity(postbox: postbox, textScale: textScale, entity: entity.entity, colorSpace: colorSpace))
@@ -135,6 +135,10 @@ final class MediaEditorComposer {
             CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, device, nil, &self.textureCache)
         } else {
             self.ciContext = nil
+        }
+        
+        if let maskDrawing = values.maskDrawing, let device = self.device, let maskTexture = loadTexture(image: maskDrawing, device: device) {
+            self.renderer.currentMainInputMask = maskTexture
         }
                 
         self.renderer.setupForComposer(composer: self)

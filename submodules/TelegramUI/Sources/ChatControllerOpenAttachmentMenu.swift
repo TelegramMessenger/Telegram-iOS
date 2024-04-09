@@ -1772,6 +1772,9 @@ extension ChatControllerImpl {
                         }
                     } as (MediaEditorScreen.Result, @escaping (@escaping () -> Void) -> Void) -> Void
                 )
+                editorController.sendSticker = { [weak self] file, sourceView, sourceRect in
+                    return self?.interfaceInteraction?.sendSticker(file, true, sourceView, sourceRect, nil, []) ?? false
+                }
                 self.push(editorController)
             },
             dismissed: {}

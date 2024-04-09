@@ -258,7 +258,7 @@ private final class MediaCutoutScreenComponent: Component {
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
             if let controller = self.environment?.controller() as? MediaCutoutScreen, [.erase, .restore].contains(controller.mode), result == self.previewContainerView {
-                return nil//controller.previewView.superview
+                return nil
             }
             return result
         }

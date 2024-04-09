@@ -7642,6 +7642,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let editMessage = interfaceState.editMessage, let message = combinedInitialData.initialData?.associatedMessages[editMessage.messageId] {
                         let (updatedState, updatedPreviewQueryState) = updatedChatEditInterfaceMessageState(context: strongSelf.context, state: updated, message: message)
                         updated = updatedState
+                        strongSelf.editingUrlPreviewQueryState?.1.dispose()
                         strongSelf.editingUrlPreviewQueryState = updatedPreviewQueryState
                     }
                     updated = updated.updatedSlowmodeState(slowmodeState)
@@ -8979,6 +8980,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             let (updatedState, updatedPreviewQueryState) = updatedChatEditInterfaceMessageState(context: strongSelf.context, state: updated, message: message)
                             updated = updatedState
+                            strongSelf.editingUrlPreviewQueryState?.1.dispose()
                             strongSelf.editingUrlPreviewQueryState = updatedPreviewQueryState
                             
                             updated = updated.updatedInputMode({ _ in

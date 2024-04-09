@@ -33,13 +33,23 @@ private func uploadedSticker(postbox: Postbox, network: Network, resource: Media
     }
 }
 
-func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResource, alt: String, dimensions: PixelDimensions, duration: Double?, mimeType: String) -> Signal<UploadStickerStatus, UploadStickerError> {
+func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResource, thumbnail: MediaResource? = nil, alt: String, dimensions: PixelDimensions, duration: Double?, mimeType: String) -> Signal<UploadStickerStatus, UploadStickerError> {
     guard let inputPeer = apiInputPeer(peer) else {
         return .fail(.generic)
     }
-    return uploadedSticker(postbox: account.postbox, network: account.network, resource: resource)
+    
+    let uploadSticker = uploadedSticker(postbox: account.postbox, network: account.network, resource: resource)
+    let uploadThumbnail: Signal<UploadedStickerData?, NoError>
+    if let thumbnail {
+        uploadThumbnail = uploadedSticker(postbox: account.postbox, network: account.network, resource: thumbnail)
+        |> map(Optional.init)
+    } else {
+        uploadThumbnail = .single(nil)
+    }
+    
+    return combineLatest(uploadSticker, uploadThumbnail)
     |> mapError { _ -> UploadStickerError in }
-    |> mapToSignal { result -> Signal<UploadStickerStatus, UploadStickerError> in
+    |> mapToSignal { result, thumbnailResult -> Signal<UploadStickerStatus, UploadStickerError> in
         switch result.content {
             case .error:
                 return .fail(.generic)
@@ -48,25 +58,47 @@ func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResour
                     case let .progress(progress):
                         return .single(.progress(progress))
                     case let .inputFile(file):
-                        let flags: Int32 = 0
-                        var attributes: [Api.DocumentAttribute] = []
-                        attributes.append(.documentAttributeSticker(flags: 0, alt: alt, stickerset: .inputStickerSetEmpty, maskCoords: nil))
-                        if let duration {
-                            attributes.append(.documentAttributeVideo(flags: 0, duration: duration, w: dimensions.width, h: dimensions.height, preloadPrefixSize: nil))
+                        var ready = false
+                        var thumbnailFile: Api.InputFile?
+                        if thumbnailResult == nil {
+                            ready = true
+                        } else if let thumbnailResult = thumbnailResult {
+                            if case let .result(thumbnailResultData) = thumbnailResult.content {
+                                if case let .inputFile(file) = thumbnailResultData {
+                                    ready = true
+                                    thumbnailFile = file
+                                }
+                            } else {
+                                ready = true
+                            }
                         }
-                        attributes.append(.documentAttributeImageSize(w: dimensions.width, h: dimensions.height))
-                        return account.network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: file, thumb: nil, mimeType: mimeType, attributes: attributes, stickers: nil, ttlSeconds: nil)))
-                        |> mapError { _ -> UploadStickerError in return .generic }
-                        |> mapToSignal { media -> Signal<UploadStickerStatus, UploadStickerError> in
-                            switch media {
+                        if ready {
+                            var flags: Int32 = 0
+                            if let _ = thumbnailFile {
+                                flags |= (1 << 2)
+                            }
+                            var attributes: [Api.DocumentAttribute] = []
+                            attributes.append(.documentAttributeSticker(flags: 0, alt: alt, stickerset: .inputStickerSetEmpty, maskCoords: nil))
+                            if let duration {
+                                attributes.append(.documentAttributeVideo(flags: 0, duration: duration, w: dimensions.width, h: dimensions.height, preloadPrefixSize: nil))
+                            }
+                            attributes.append(.documentAttributeImageSize(w: dimensions.width, h: dimensions.height))
+                            return account.network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: file, thumb: thumbnailFile, mimeType: mimeType, attributes: attributes, stickers: nil, ttlSeconds: nil)))
+                            |> mapError { _ -> UploadStickerError in return .generic }
+                            |> mapToSignal { media -> Signal<UploadStickerStatus, UploadStickerError> in
+                                switch media {
                                 case let .messageMediaDocument(_, document, _, _):
-                                    if let document = document, let file = telegramMediaFileFromApiDocument(document), let resource = file.resource as? CloudDocumentMediaResource {
-                                        return .single(.complete(resource, file.mimeType))
+                                    if let document = document, let file = telegramMediaFileFromApiDocument(document), let uploadedResource = file.resource as? CloudDocumentMediaResource {
+                                        account.postbox.mediaBox.copyResourceData(from: resource.id, to: uploadedResource.id, synchronous: true)
+                                        return .single(.complete(uploadedResource, file.mimeType))
                                     }
                                 default:
                                     break
+                                }
+                                return .fail(.generic)
                             }
-                            return .fail(.generic)
+                        } else {
+                            return .single(.progress(1.0))
                         }
                     default:
                         return .fail(.generic)
@@ -81,14 +113,16 @@ public enum CreateStickerSetError {
 
 public struct ImportSticker {
     public let resource: MediaResourceReference
+    public let thumbnailResource: MediaResourceReference?
     let emojis: [String]
     public let dimensions: PixelDimensions
     public let duration: Double?
     public let mimeType: String
     public let keywords: String
     
-    public init(resource: MediaResourceReference, emojis: [String], dimensions: PixelDimensions, duration: Double?, mimeType: String, keywords: String) {
+    public init(resource: MediaResourceReference, thumbnailResource: MediaResourceReference? = nil, emojis: [String], dimensions: PixelDimensions, duration: Double?, mimeType: String, keywords: String) {
         self.resource = resource
+        self.thumbnailResource = thumbnailResource
         self.emojis = emojis
         self.dimensions = dimensions
         self.duration = duration
@@ -116,7 +150,13 @@ public extension ImportSticker {
             fileAttributes.append(.FileName(fileName: "sticker.webp"))
         }
         fileAttributes.append(.ImageSize(size: self.dimensions))
-        return StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: EngineMedia.Id(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: self.mimeType, size: nil, attributes: fileAttributes), indexKeys: [])
+        
+        var previewRepresentations: [TelegramMediaImageRepresentation] = []
+        if let thumbnailResource = self.thumbnailResource?.resource as? TelegramMediaResource {
+            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil))
+        }
+        
+        return StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: EngineMedia.Id(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: self.mimeType, size: nil, attributes: fileAttributes), indexKeys: [])
     }
 }
 
@@ -159,7 +199,7 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
             if let resource = sticker.resource.resource as? CloudDocumentMediaResource {
                 uploadStickers.append(.single(.complete(resource, sticker.mimeType)))
             } else {
-                uploadStickers.append(_internal_uploadSticker(account: account, peer: peer, resource: sticker.resource.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, duration: sticker.duration, mimeType: sticker.mimeType)
+                uploadStickers.append(_internal_uploadSticker(account: account, peer: peer, resource: sticker.resource.resource, thumbnail: sticker.thumbnailResource?.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, duration: sticker.duration, mimeType: sticker.mimeType)
                 |> mapError { _ -> CreateStickerSetError in
                     return .generic
                 })
@@ -306,7 +346,7 @@ func _internal_addStickerToStickerSet(account: Account, packReference: StickerPa
         uploadSticker = account.postbox.loadedPeerWithId(account.peerId)
         |> castError(AddStickerToSetError.self)
         |> mapToSignal { peer in
-            return _internal_uploadSticker(account: account, peer: peer, resource: sticker.resource.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, duration: sticker.duration, mimeType: sticker.mimeType)
+            return _internal_uploadSticker(account: account, peer: peer, resource: sticker.resource.resource, thumbnail: sticker.thumbnailResource?.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, duration: sticker.duration, mimeType: sticker.mimeType)
             |> mapError { _ -> AddStickerToSetError in
                 return .generic
             }
@@ -434,7 +474,7 @@ func _internal_replaceSticker(account: Account, previousSticker: FileMediaRefere
         uploadSticker = account.postbox.loadedPeerWithId(account.peerId)
         |> castError(ReplaceStickerError.self)
         |> mapToSignal { peer in
-            return _internal_uploadSticker(account: account, peer: peer, resource: sticker.resource.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, duration: sticker.duration, mimeType: sticker.mimeType)
+            return _internal_uploadSticker(account: account, peer: peer, resource: sticker.resource.resource, thumbnail: sticker.thumbnailResource?.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, duration: sticker.duration, mimeType: sticker.mimeType)
             |> mapError { _ -> ReplaceStickerError in
                 return .generic
             }

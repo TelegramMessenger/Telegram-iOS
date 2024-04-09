@@ -13,9 +13,9 @@ import ContextUI
 final class StickerPackListContextItem: ContextMenuCustomItem {
     let context: AccountContext
     let packs: [(StickerPackCollectionInfo, StickerPackItem?)]
-    let packSelected: (StickerPackCollectionInfo) -> Void
+    let packSelected: (StickerPackCollectionInfo) -> Bool
     
-    init(context: AccountContext, packs: [(StickerPackCollectionInfo, StickerPackItem?)], packSelected: @escaping (StickerPackCollectionInfo) -> Void) {
+    init(context: AccountContext, packs: [(StickerPackCollectionInfo, StickerPackItem?)], packSelected: @escaping (StickerPackCollectionInfo) -> Bool) {
         self.context = context
         self.packs = packs
         self.packSelected = packSelected
@@ -75,9 +75,9 @@ private final class StickerPackListContextItemNode: ASDisplayNode, ContextMenuCu
             }
 
             let action = ContextMenuActionItem(text: pack.title, textLayout: .singleLine, icon: { _ in nil }, iconSource: thumbnailIconSource, iconPosition: .left, action: { _, f in
-                f(.dismissWithoutContent)
-
-                item.packSelected(pack)
+                if item.packSelected(pack) {
+                    f(.dismissWithoutContent)
+                }
             })
             let actionNode = ContextControllerActionsListActionItemNode(getController: getController, requestDismiss: actionSelected, requestUpdateAction: { _, _ in }, item: action)
             actionNodes.append(actionNode)

@@ -162,7 +162,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
         self.activateBadgeAction?()
     }
     
-    public typealias AsyncLayout = (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: MediaAutoDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ context: AccountContext, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ chatLocation: ChatLocation, _ title: String?, _ titleBadge: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ mediaBadge: String?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ constrainedSize: CGSize, _ animationCache: AnimationCache, _ animationRenderer: MultiAnimationRenderer) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void)))
+    public typealias AsyncLayout = (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: MediaAutoDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ context: AccountContext, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ chatLocation: ChatLocation, _ title: String?, _ titleBadge: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: ([Media], ChatMessageAttachedContentNodeMediaFlags)?, _ mediaBadge: String?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ constrainedSize: CGSize, _ animationCache: AnimationCache, _ animationRenderer: MultiAnimationRenderer) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void)))
     
     public func makeProgress() -> Promise<Bool> {
         let progress = Promise<Bool>()
@@ -302,7 +302,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             
             var mediaAndFlags = mediaAndFlags
             if let mediaAndFlagsValue = mediaAndFlags {
-                if mediaAndFlagsValue.0 is TelegramMediaStory || mediaAndFlagsValue.0 is WallpaperPreviewMedia {
+                if mediaAndFlagsValue.0.first is TelegramMediaStory || mediaAndFlagsValue.0.first is WallpaperPreviewMedia {
                     var flags = mediaAndFlagsValue.1
                     flags.remove(.preferMediaInline)
                     mediaAndFlags = (mediaAndFlagsValue.0, flags)
@@ -315,50 +315,52 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             var contentMediaInline = false
                         
-            if let (media, flags) = mediaAndFlags {
+            if let (mediaArray, flags) = mediaAndFlags {
                 contentMediaInline = flags.contains(.preferMediaInline)
                 
-                if let file = media as? TelegramMediaFile {
-                    if file.mimeType == "application/x-tgtheme-ios", let size = file.size, size < 16 * 1024 {
-                        contentMediaValue = file
-                    } else if file.isInstantVideo {
-                        contentMediaValue = file
-                    } else if file.isVideo {
-                        contentMediaValue = file
-                    } else if file.isSticker || file.isAnimatedSticker {
-                        contentMediaValue = file
-                    } else {
-                        contentFileValue = file
-                    }
-                    
-                    if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: file) {
-                        contentMediaAutomaticDownload = .full
-                    } else if shouldPredownloadMedia(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, media: file) {
-                        contentMediaAutomaticDownload = .prefetch
-                    }
-                    
-                    if file.isAnimated {
-                        contentMediaAutomaticPlayback = context.sharedContext.energyUsageSettings.autoplayGif
-                    } else if file.isVideo && context.sharedContext.energyUsageSettings.autoplayVideo {
-                        var willDownloadOrLocal = false
-                        if case .full = contentMediaAutomaticDownload {
-                            willDownloadOrLocal = true
+                if let media = mediaArray.first {
+                    if let file = media as? TelegramMediaFile {
+                        if file.mimeType == "application/x-tgtheme-ios", let size = file.size, size < 16 * 1024 {
+                            contentMediaValue = file
+                        } else if file.isInstantVideo {
+                            contentMediaValue = file
+                        } else if file.isVideo {
+                            contentMediaValue = file
+                        } else if file.isSticker || file.isAnimatedSticker {
+                            contentMediaValue = file
                         } else {
-                            willDownloadOrLocal = context.account.postbox.mediaBox.completedResourcePath(file.resource) != nil
+                            contentFileValue = file
                         }
-                        if willDownloadOrLocal {
-                            contentMediaAutomaticPlayback = true
-                            contentMediaAspectFilled = true
+                        
+                        if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: file) {
+                            contentMediaAutomaticDownload = .full
+                        } else if shouldPredownloadMedia(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, media: file) {
+                            contentMediaAutomaticDownload = .prefetch
                         }
+                        
+                        if file.isAnimated {
+                            contentMediaAutomaticPlayback = context.sharedContext.energyUsageSettings.autoplayGif
+                        } else if file.isVideo && context.sharedContext.energyUsageSettings.autoplayVideo {
+                            var willDownloadOrLocal = false
+                            if case .full = contentMediaAutomaticDownload {
+                                willDownloadOrLocal = true
+                            } else {
+                                willDownloadOrLocal = context.account.postbox.mediaBox.completedResourcePath(file.resource) != nil
+                            }
+                            if willDownloadOrLocal {
+                                contentMediaAutomaticPlayback = true
+                                contentMediaAspectFilled = true
+                            }
+                        }
+                    } else if let _ = media as? TelegramMediaImage {
+                        contentMediaValue = media
+                    } else if let _ = media as? TelegramMediaWebFile {
+                        contentMediaValue = media
+                    } else if let _ = media as? WallpaperPreviewMedia {
+                        contentMediaValue = media
+                    } else if let _ = media as? TelegramMediaStory {
+                        contentMediaValue = media
                     }
-                } else if let _ = media as? TelegramMediaImage {
-                    contentMediaValue = media
-                } else if let _ = media as? TelegramMediaWebFile {
-                    contentMediaValue = media
-                } else if let _ = media as? WallpaperPreviewMedia {
-                    contentMediaValue = media
-                } else if let _ = media as? TelegramMediaStory {
-                    contentMediaValue = media
                 }
             }
             
@@ -939,7 +941,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         
                         self.context = context
                         self.message = message
-                        self.media = mediaAndFlags?.0
+                        self.media = mediaAndFlags?.0.first
                         self.theme = presentationData.theme
                         self.mainColor = mainColor
                         

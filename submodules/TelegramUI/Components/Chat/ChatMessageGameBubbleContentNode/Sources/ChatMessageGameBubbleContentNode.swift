@@ -67,16 +67,16 @@ public final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNod
             
             var title: String?
             var text: String?
-            var mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)?
+            var mediaAndFlags: ([Media], ChatMessageAttachedContentNodeMediaFlags)?
             
             if let game = game {
                 title = game.title
                 text = game.description
                 
                 if let file = game.file {
-                    mediaAndFlags = (file, [.preferMediaBeforeText])
+                    mediaAndFlags = ([file], [.preferMediaBeforeText])
                 } else if let image = game.image {
-                    mediaAndFlags = (image, [.preferMediaBeforeText])
+                    mediaAndFlags = ([image], [.preferMediaBeforeText])
                 }
             }
             

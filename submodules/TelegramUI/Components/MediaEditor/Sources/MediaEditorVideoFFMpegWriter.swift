@@ -110,7 +110,6 @@ final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
         CVPixelBufferLockBaseAddress(buffer, CVPixelBufferLockFlags.readOnly)
         let src = CVPixelBufferGetBaseAddress(buffer)
         
-        
         var srcBuffer = vImage_Buffer(data: src, height: vImagePixelCount(height), width: vImagePixelCount(width), rowBytes: bytesPerRow)
 
         var yBuffer = vImage_Buffer(data: frame.data[0], height: vImagePixelCount(height), width: vImagePixelCount(width), rowBytes: width)
