@@ -2028,8 +2028,8 @@ final class MediaEditorScreenComponent: Component {
                         }
                         positionTransition.setPosition(view: undoButtonView, position: undoButtonFrame.center)
                         undoButtonView.bounds = CGRect(origin: .zero, size: undoButtonFrame.size)
-                        transition.setAlpha(view: undoButtonView, alpha: displayTopButtons && !component.isDismissing ? stickerButtonsAlpha : 0.0)
-                        transition.setScale(view: undoButtonView, scale: displayTopButtons ? 1.0 : 0.01)
+                        transition.setAlpha(view: undoButtonView, alpha: !isEditingTextEntity && !component.isDismissing ? stickerButtonsAlpha : 0.0)
+                        transition.setScale(view: undoButtonView, scale: !isEditingTextEntity ? 1.0 : 0.01)
                     }
                 } else {
                     if let undoButtonView = self.undoButton.view, undoButtonView.superview != nil {
@@ -6690,7 +6690,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             if let navigationController {
                                 Queue.mainQueue().after(0.2) {
                                     let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-                                    let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [.result(info: info, items: items, installed: true)], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: nil)
+                                    let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [.result(info: info, items: items, installed: true)], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker)
                                     (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                 }
                             }
@@ -6886,7 +6886,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 let navigationController = self.navigationController as? NavigationController
                                 if let navigationController {
                                     Queue.mainQueue().after(0.2) {
-                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: nil)
+                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker)
                                         (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                         
                                         Queue.mainQueue().after(0.1) {
