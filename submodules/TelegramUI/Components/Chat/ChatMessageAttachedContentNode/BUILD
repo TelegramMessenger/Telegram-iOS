@@ -43,6 +43,7 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/Components/BundleIconComponent",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
     ],
     visibility = [
         "//visibility:public",

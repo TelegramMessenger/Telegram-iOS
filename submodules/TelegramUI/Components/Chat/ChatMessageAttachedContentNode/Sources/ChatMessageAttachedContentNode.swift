@@ -32,6 +32,7 @@ import MessageInlineBlockBackgroundView
 import ComponentFlow
 import PlainButtonComponent
 import AvatarNode
+import EmojiTextAttachmentView
 
 public enum ChatMessageAttachedContentActionIcon {
     case instant
@@ -53,6 +54,7 @@ public struct ChatMessageAttachedContentNodeMediaFlags: OptionSet {
     public static let preferMediaBeforeText = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 1)
     public static let preferMediaAspectFilled = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 2)
     public static let titleBeforeMedia = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 3)
+    public static let stickerPack = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 3)
 }
 
 public final class ChatMessageAttachedContentNode: ASDisplayNode {
@@ -98,6 +100,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var closeButton: ComponentView<Empty>?
     private var closeButtonImage: UIImage?
     
+    private var inlineStickerLayers: [InlineStickerItemLayer] = []
+    
     private var inlineMediaValue: InlineMedia?
     
     //private var additionalImageBadgeNode: ChatMessageInteractiveMediaBadge?
@@ -128,6 +132,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             if oldValue != self.visibility {
                 self.contentMedia?.visibility = self.visibility != .none
                 self.contentInstantVideo?.visibility = self.visibility != .none
+                
+                self.inlineStickerLayers.forEach({ $0.isVisibleForAnimations = self.visibility != .none })
                 
                 switch self.visibility {
                 case .none:
@@ -296,6 +302,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             
             var contentMediaValue: Media?
             var contentFileValue: TelegramMediaFile?
+            var contentAnimatedFilesValue: [TelegramMediaFile] = []
             
             var contentMediaAutomaticPlayback: Bool = false
             var contentMediaAutomaticDownload: InteractiveMediaNodeAutodownloadMode = .none
@@ -317,8 +324,11 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         
             if let (mediaArray, flags) = mediaAndFlags {
                 contentMediaInline = flags.contains(.preferMediaInline)
-                
-                if let media = mediaArray.first {
+
+                if flags.contains(.stickerPack), let files = mediaArray as? [TelegramMediaFile], let file = files.first {
+                    contentMediaValue = file
+                    contentAnimatedFilesValue = files
+                } else if let media = mediaArray.first {
                     if let file = media as? TelegramMediaFile {
                         if file.mimeType == "application/x-tgtheme-ios", let size = file.size, size < 16 * 1024 {
                             contentMediaValue = file
@@ -950,7 +960,52 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top), size: CGSize(width: actualSize.width - backgroundInsets.left - backgroundInsets.right, height: actualSize.height - backgroundInsets.top - backgroundInsets.bottom))
                         var patternTopRightPosition = CGPoint()
                         
-                        if let (inlineMediaValue, inlineMediaSize) = inlineMediaAndSize {
+                        if !contentAnimatedFilesValue.isEmpty, let (_, inlineMediaSize) = inlineMediaAndSize {
+                            var inlineMediaFrame = CGRect(origin: CGPoint(x: actualSize.width - insets.right - inlineMediaSize.width, y: backgroundInsets.top + inlineMediaEdgeInset), size: inlineMediaSize)
+                            if contentLayoutOrder.isEmpty {
+                                inlineMediaFrame.origin.x = insets.left
+                            }
+                            
+                            patternTopRightPosition.x = insets.right + inlineMediaSize.width - 6.0
+                            
+                            if !contentAnimatedFilesValue.isEmpty {
+                                if contentAnimatedFilesValue.count < 4, let file = contentAnimatedFilesValue.first {
+                                    let stickerLayer: InlineStickerItemLayer
+                                    if self.inlineStickerLayers.count == 1, let current = self.inlineStickerLayers.first, current.file?.isEqual(to: file) == true {
+                                        stickerLayer = current
+                                    } else {
+                                        self.inlineStickerLayers.forEach({ $0.removeFromSuperlayer() })
+                                        stickerLayer = InlineStickerItemLayer(context: context, userLocation: .other, attemptSynchronousLoad: true, emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file, custom: nil), file: file, cache: controllerInteraction.presentationContext.animationCache, renderer: controllerInteraction.presentationContext.animationRenderer, placeholderColor: mainColor.withMultipliedAlpha(0.1), pointSize: CGSize(width: 64.0, height: 64.0), dynamicColor: nil)
+                                        self.transformContainer.layer.addSublayer(stickerLayer)
+                                        
+                                        self.inlineStickerLayers = [stickerLayer]
+                                    }
+                                    stickerLayer.isVisibleForAnimations = self.visibility != .none
+                                    stickerLayer.frame = inlineMediaFrame
+                                } else if contentAnimatedFilesValue.count == 4 {
+                                    var stickerLayers: [InlineStickerItemLayer] = []
+                                    if self.inlineStickerLayers.count == contentAnimatedFilesValue.count {
+                                        stickerLayers = self.inlineStickerLayers
+                                    } else {
+                                        for file in contentAnimatedFilesValue {
+                                            let stickerLayer = InlineStickerItemLayer(context: context, userLocation: .other, attemptSynchronousLoad: true, emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file, custom: nil), file: file, cache: controllerInteraction.presentationContext.animationCache, renderer: controllerInteraction.presentationContext.animationRenderer, placeholderColor: mainColor.withMultipliedAlpha(0.1), pointSize: CGSize(width: 64.0, height: 64.0), dynamicColor: nil)
+                                            self.transformContainer.layer.addSublayer(stickerLayer)
+                                            stickerLayers.append(stickerLayer)
+                                        }
+                                        self.inlineStickerLayers = stickerLayers
+                                    }
+                                    var frames: [CGRect] = []
+                                    let smallSize = CGSize(width: inlineMediaFrame.width / 2.0, height: inlineMediaFrame.width / 2.0)
+                                    frames.append(CGRect(origin: inlineMediaFrame.origin, size: smallSize))
+                                    frames.append(CGRect(origin: inlineMediaFrame.origin.offsetBy(dx: smallSize.width, dy: 0.0), size: smallSize))
+                                    frames.append(CGRect(origin: inlineMediaFrame.origin.offsetBy(dx: 0.0, dy: smallSize.height), size: smallSize))
+                                    frames.append(CGRect(origin: inlineMediaFrame.origin.offsetBy(dx: smallSize.width, dy: smallSize.height), size: smallSize))
+                                    for i in 0 ..< stickerLayers.count {
+                                        stickerLayers[i].frame = frames[i]
+                                    }
+                                }
+                            }
+                        } else if let (inlineMediaValue, inlineMediaSize) = inlineMediaAndSize {
                             var inlineMediaFrame = CGRect(origin: CGPoint(x: actualSize.width - insets.right - inlineMediaSize.width, y: backgroundInsets.top + inlineMediaEdgeInset), size: inlineMediaSize)
                             if contentLayoutOrder.isEmpty {
                                 inlineMediaFrame.origin.x = insets.left
