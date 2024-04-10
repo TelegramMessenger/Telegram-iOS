@@ -141,27 +141,39 @@ func mediaContentToUpload(accountPeerId: PeerId, network: Network, postbox: Post
                 return uploadedMediaFileContent(network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, forceReupload: true, isGrouped: isGrouped, passFetchProgress: false, forceNoBigParts: false, peerId: peerId, messageId: messageId, text: text, attributes: attributes, autoremoveMessageAttribute: autoremoveMessageAttribute, autoclearMessageAttribute: autoclearMessageAttribute, file: file)
             } else {
                 if forceReupload {
-                    let finalMediaReference: AnyMediaReference
+                    let finalMediaReference: Signal<AnyMediaReference, NoError>
                     if let mediaReference = mediaReference {
-                        finalMediaReference = mediaReference
-                    } else if file.isSticker {
+                        finalMediaReference = .single(mediaReference)
+                    } else if file.isSticker || file.isCustomEmoji {
                         if let partialReference = file.partialReference {
-                            finalMediaReference = partialReference.mediaReference(file)
+                            finalMediaReference = .single(partialReference.mediaReference(file))
                         } else {
-                            finalMediaReference = .standalone(media: file)
+                            finalMediaReference = postbox.transaction { transaction -> AnyMediaReference in
+                                if transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, itemId: RecentMediaItemId(file.fileId).rawValue) != nil {
+                                    return .recentSticker(media: file)
+                                } else if transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: RecentMediaItemId(file.fileId).rawValue) != nil {
+                                    return .savedSticker(media: file)
+                                }
+                                
+                                return .standalone(media: file)
+                            }
                         }
                     } else {
-                        finalMediaReference = .savedGif(media: file)
+                        finalMediaReference = .single(.savedGif(media: file))
                     }
-                    return revalidateMediaResourceReference(accountPeerId: accountPeerId, postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: finalMediaReference.resourceReference(file.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: resource)
-                    |> mapError { _ -> PendingMessageUploadError in
-                        return .generic
-                    }
-                    |> mapToSignal { validatedResource -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
-                        if let validatedResource = validatedResource.updatedResource as? TelegramCloudMediaResourceWithFileReference, let reference = validatedResource.fileReference {
-                            return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(Api.InputMedia.inputMediaDocument(flags: 0, id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: reference)), ttlSeconds: nil, query: nil), text), reuploadInfo: nil, cacheReferenceKey: nil)))
-                        } else {
-                            return .fail(.generic)
+                    return finalMediaReference
+                    |> castError(PendingMessageUploadError.self)
+                    |> mapToSignal { finalMediaReference in
+                        return revalidateMediaResourceReference(accountPeerId: accountPeerId, postbox: postbox, network: network, revalidationContext: revalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: finalMediaReference.resourceReference(file.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: resource)
+                        |> mapError { _ -> PendingMessageUploadError in
+                            return .generic
+                        }
+                        |> mapToSignal { validatedResource -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
+                            if let validatedResource = validatedResource.updatedResource as? TelegramCloudMediaResourceWithFileReference, let reference = validatedResource.fileReference {
+                                return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(Api.InputMedia.inputMediaDocument(flags: 0, id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: reference)), ttlSeconds: nil, query: nil), text), reuploadInfo: nil, cacheReferenceKey: nil)))
+                            } else {
+                                return .fail(.generic)
+                            }
                         }
                     }
                 }
