@@ -3041,13 +3041,18 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         }
                     ),
                     EngineDataMap(
+                        allChannelIds.map { peerId -> TelegramEngine.EngineData.Item.Messages.PeerReadCounters in
+                            return TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: peerId)
+                        }
+                    ),
+                    EngineDataMap(
                         allChannelIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.ParticipantCount in
                             return TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: peerId)
                         }
                     ),
                     TelegramEngine.EngineData.Item.NotificationSettings.Global()
                 )
-                |> map { peers, notificationSettings, unreadCounts, storyStats, participantCounts, globalNotificationSettings -> RecentItems in
+                |> map { peers, notificationSettings, unreadCounts, storyStats, readCounters, participantCounts, globalNotificationSettings -> RecentItems in
                     /*#if DEBUG
                     var localChannels = localChannels
                     localChannels.peerIds = []
@@ -3078,13 +3083,17 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         if let value = storyStats[peer.id] {
                             peerStoryStats = value
                         }
+                        var unreadCount: Int32 = 0
+                        if let value = readCounters[peer.id] {
+                            unreadCount = value.count
+                        }
                         result.append(.peer(
                             index: result.count,
                             peer: RecentlySearchedPeer(
                                 peer: RenderedPeer(peer: peer._asPeer()),
                                 presence: nil,
                                 notificationSettings: peerNotificationSettings.flatMap({ $0._asNotificationSettings() }),
-                                unreadCount: 0,
+                                unreadCount: unreadCount,
                                 subpeerSummary: subpeerSummary
                             ),
                             .local,
