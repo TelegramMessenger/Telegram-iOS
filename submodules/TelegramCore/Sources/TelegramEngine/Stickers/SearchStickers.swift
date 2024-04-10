@@ -160,14 +160,7 @@ func _internal_searchStickers(account: Account, query: [String], scope: SearchSt
                         if !currentItems.contains(item.file.fileId) {
                             currentItems.insert(item.file.fileId)
                             
-                            var stringRepresentations: [String] = []
-                            for key in item.indexKeys {
-                                key.withDataNoCopy { data in
-                                    if let string = String(data: data, encoding: .utf8) {
-                                        stringRepresentations.append(string)
-                                    }
-                                }
-                            }
+                            let stringRepresentations = item.getStringRepresentationsOfIndexKeys()
                             if !recentItemsIds.contains(item.file.fileId) {
                                 if item.file.isPremiumSticker {
                                     installedPremiumItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
@@ -178,6 +171,11 @@ func _internal_searchStickers(account: Account, query: [String], scope: SearchSt
                                 }
                             } else {
                                 matchingRecentItemsIds.insert(item.file.fileId)
+                                if item.file.isAnimatedSticker || item.file.isVideoSticker {
+                                    recentAnimatedItems.append(item.file)
+                                } else {
+                                    recentItems.append(item.file)
+                                }
                             }
                         }
                     }
@@ -202,6 +200,7 @@ func _internal_searchStickers(account: Account, query: [String], scope: SearchSt
                 }
             }
             
+            result.append(contentsOf: installedPremiumItems)
             result.append(contentsOf: installedAnimatedItems)
             result.append(contentsOf: installedItems)
         }
@@ -413,14 +412,7 @@ func _internal_searchEmoji(account: Account, query: [String], scope: SearchStick
                             if !currentItems.contains(file.fileId) {
                                 currentItems.insert(file.fileId)
                                 
-                                var stringRepresentations: [String] = []
-                                for key in item.indexKeys {
-                                    key.withDataNoCopy { data in
-                                        if let string = String(data: data, encoding: .utf8) {
-                                            stringRepresentations.append(string)
-                                        }
-                                    }
-                                }
+                                let stringRepresentations = item.getStringRepresentationsOfIndexKeys()
                                 for stringRepresentation in stringRepresentations {
                                     if querySet.contains(stringRepresentation) {
                                         installedItems.append(FoundStickerItem(file: file, stringRepresentations: stringRepresentations))
