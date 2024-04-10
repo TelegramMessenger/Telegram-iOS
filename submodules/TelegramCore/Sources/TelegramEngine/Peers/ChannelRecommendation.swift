@@ -136,13 +136,24 @@ func _internal_requestRecommendedChannels(account: Account, peerId: EnginePeer.I
 
 public struct RecommendedChannels: Equatable {
     public struct Channel: Equatable {
-        public let peer: EnginePeer
-        public let subscribers: Int32
+        public var peer: EnginePeer
+        public var subscribers: Int32
+        
+        public init(peer: EnginePeer, subscribers: Int32) {
+            self.peer = peer
+            self.subscribers = subscribers
+        }
     }
     
-    public let channels: [Channel]
-    public let count: Int32
-    public let isHidden: Bool
+    public var channels: [Channel]
+    public var count: Int32
+    public var isHidden: Bool
+    
+    public init(channels: [Channel], count: Int32, isHidden: Bool) {
+        self.channels = channels
+        self.count = count
+        self.isHidden = isHidden
+    }
 }
 
 func _internal_recommendedChannelPeerIds(account: Account, peerId: EnginePeer.Id?) -> Signal<[EnginePeer.Id]?, NoError> {
