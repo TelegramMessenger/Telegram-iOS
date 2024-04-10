@@ -4393,15 +4393,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            var replaceImpl: ((ViewController) -> Void)?
-            let controller = PremiumDemoScreen(context: self.context, subject: .noAds, action: {
-                let controller = PremiumIntroScreen(context: self.context, source: .ads)
-                replaceImpl?(controller)
-            })
-            replaceImpl = { [weak controller] c in
-                controller?.replace(with: c)
+            if self.context.isPremium {
+                self.present(UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: nil, text: self.presentationData.strings.ReportAd_Hidden, cancel: nil, destructive: false), elevatedLayout: false, action: { _ in
+                    return true
+                }), in: .current)
+                
+                var adOpaqueId: Data?
+                self.chatDisplayNode.historyNode.forEachVisibleMessageItemNode { itemView in
+                    if let adAttribute = itemView.item?.message.adAttribute {
+                        adOpaqueId = adAttribute.opaqueId
+                    }
+                }
+                let _ = self.context.engine.accountData.updateAdMessagesEnabled(enabled: false).start()
+                if let adOpaqueId {
+                    self.removeAd(opaqueId: adOpaqueId)
+                }
+            } else {
+                var replaceImpl: ((ViewController) -> Void)?
+                let controller = PremiumDemoScreen(context: self.context, subject: .noAds, action: {
+                    let controller = PremiumIntroScreen(context: self.context, source: .ads)
+                    replaceImpl?(controller)
+                })
+                replaceImpl = { [weak controller] c in
+                    controller?.replace(with: c)
+                }
+                self.push(controller)
             }
-            self.push(controller)
         }, openAdsInfo: { [weak self] in
             guard let self else {
                 return

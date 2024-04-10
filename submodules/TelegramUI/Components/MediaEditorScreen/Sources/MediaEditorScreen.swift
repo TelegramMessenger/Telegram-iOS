@@ -1028,306 +1028,6 @@ final class MediaEditorScreenComponent: Component {
                 }
             }
             
-            let mediaEditor = controller.node.mediaEditor
-            var isOutlineActive = false
-            if let value = mediaEditor?.values.toolValues[.stickerOutline] as? Float, value > 0.0 {
-                isOutlineActive = true
-            }
-            
-            if case .stickerEditor = controller.mode {
-                var stickerButtonsHidden = buttonsAreHidden
-                if let displayingTool = component.isDisplayingTool, [.cutoutErase, .cutoutRestore].contains(displayingTool) {
-                    stickerButtonsHidden = false
-                }
-                let stickerButtonsAlpha = stickerButtonsHidden ? 0.0 : bottomButtonsAlpha
-                
-                let stickerFrameWidth = floorToScreenPixels(previewSize.width * 0.97)
-                let stickerFrameRect = CGRect(origin: CGPoint(x: previewFrame.minX + floorToScreenPixels((previewSize.width - stickerFrameWidth) / 2.0), y: previewFrame.minY + floorToScreenPixels((previewSize.height - stickerFrameWidth) / 2.0)), size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth))
-                                
-                var hasCutoutButton = false
-                var hasUndoButton = false
-                var hasEraseButton = false
-                var hasRestoreButton = false
-                var hasOutlineButton = false
-                                                
-                if let canCutout = controller.node.canCutout {
-                    if controller.node.isCutout || controller.node.stickerMaskDrawingView?.internalState.canUndo == true {
-                        hasUndoButton = true
-                    }
-                    if canCutout && !controller.node.isCutout {
-                        hasCutoutButton = true
-                    } else {
-                        hasEraseButton = true
-                        if hasUndoButton {
-                            hasRestoreButton = true
-                        }
-                    }
-                    if hasUndoButton || controller.node.hasTransparency {
-                        hasOutlineButton = true
-                    }
-                }
-
-                if hasUndoButton {
-                    let undoButtonSize = self.undoButton.update(
-                        transition: transition,
-                        component: AnyComponent(PlainButtonComponent(
-                            content: AnyComponent(CutoutButtonContentComponent(
-                                backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
-                                icon: state.image(.undo),
-                                title: "Undo"
-                            )),
-                            effectAlignment: .center,
-                            action: {
-                                cutoutUndo()
-                            }
-                        )),
-                        environment: {},
-                        containerSize: CGSize(width: availableSize.width, height: 44.0)
-                    )
-                    let undoButtonFrame = CGRect(
-                        origin: CGPoint(x: floorToScreenPixels((availableSize.width - undoButtonSize.width) / 2.0), y: stickerFrameRect.minY - 35.0 - undoButtonSize.height),
-                        size: undoButtonSize
-                    )
-                    if let undoButtonView = self.undoButton.view {
-                        var positionTransition = transition
-                        if undoButtonView.superview == nil {
-                            self.addSubview(undoButtonView)
-                            
-                            undoButtonView.alpha = stickerButtonsAlpha
-                            undoButtonView.layer.animateAlpha(from: 0.0, to: stickerButtonsAlpha, duration: 0.2, delay: 0.0)
-                            undoButtonView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
-                            positionTransition = .immediate
-                        }
-                        positionTransition.setPosition(view: undoButtonView, position: undoButtonFrame.center)
-                        undoButtonView.bounds = CGRect(origin: .zero, size: undoButtonFrame.size)
-                        transition.setAlpha(view: undoButtonView, alpha: stickerButtonsAlpha)
-                    }
-                } else {
-                    if let undoButtonView = self.undoButton.view, undoButtonView.superview != nil {
-                        undoButtonView.alpha = 0.0
-                        undoButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, completion: { _ in
-                            undoButtonView.removeFromSuperview()
-                        })
-                        undoButtonView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, delay: 0.0)
-                    }
-                }
-                
-                if hasCutoutButton {
-                    let cutoutButtonSize = self.cutoutButton.update(
-                        transition: transition,
-                        component: AnyComponent(PlainButtonComponent(
-                            content: AnyComponent(CutoutButtonContentComponent(
-                                backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
-                                icon: state.image(.cutout),
-                                title: "Cut Out an Object"
-                            )),
-                            effectAlignment: .center,
-                            action: {
-                                openDrawing(.cutout)
-                            }
-                        )),
-                        environment: {},
-                        containerSize: CGSize(width: availableSize.width, height: 44.0)
-                    )
-                    let cutoutButtonFrame = CGRect(
-                        origin: CGPoint(x: floorToScreenPixels((availableSize.width - cutoutButtonSize.width) / 2.0), y: stickerFrameRect.maxY + 35.0),
-                        size: cutoutButtonSize
-                    )
-                    if let cutoutButtonView = self.cutoutButton.view {
-                        var positionTransition = transition
-                        if cutoutButtonView.superview == nil {
-                            self.addSubview(cutoutButtonView)
-                            
-                            cutoutButtonView.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                            cutoutButtonView.layer.animateAlpha(from: 0.0, to: stickerButtonsAlpha, duration: 0.2, delay: 0.0)
-                            cutoutButtonView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
-                            positionTransition = .immediate
-                        }
-                        positionTransition.setPosition(view: cutoutButtonView, position: cutoutButtonFrame.center)
-                        cutoutButtonView.bounds = CGRect(origin: .zero, size: cutoutButtonFrame.size)
-                        transition.setAlpha(view: cutoutButtonView, alpha: stickerButtonsAlpha)
-                    }
-                } else {
-                    if let cutoutButtonView = self.cutoutButton.view, cutoutButtonView.superview != nil {
-                        cutoutButtonView.alpha = 0.0
-                        if transition.animation.isImmediate {
-                            cutoutButtonView.removeFromSuperview()
-                        } else {
-                            cutoutButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, completion: { _ in
-                                cutoutButtonView.removeFromSuperview()
-                            })
-                            cutoutButtonView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, delay: 0.0)
-                        }
-                    }
-                }
-                
-                if hasEraseButton {
-                    let buttonSpacing: CGFloat = hasRestoreButton ? 10.0 : 0.0
-                    var totalButtonsWidth = buttonSpacing
-                    
-                    let eraseButtonSize = self.eraseButton.update(
-                        transition: transition,
-                        component: AnyComponent(PlainButtonComponent(
-                            content: AnyComponent(CutoutButtonContentComponent(
-                                backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
-                                icon: state.image(.erase),
-                                title: "Erase",
-                                minWidth: 160.0,
-                                selected: component.isDisplayingTool == .cutoutErase
-                            )),
-                            effectAlignment: .center,
-                            action: {
-                                openDrawing(.cutoutErase)
-                            }
-                        )),
-                        environment: {},
-                        containerSize: CGSize(width: availableSize.width, height: 44.0)
-                    )
-                    totalButtonsWidth += eraseButtonSize.width
-                    
-                    var buttonOriginX = floorToScreenPixels((availableSize.width - totalButtonsWidth) / 2.0)
-                       
-                    if hasRestoreButton {
-                        let restoreButtonSize = self.restoreButton.update(
-                            transition: transition,
-                            component: AnyComponent(PlainButtonComponent(
-                                content: AnyComponent(CutoutButtonContentComponent(
-                                    backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
-                                    icon: state.image(.restore),
-                                    title: "Restore",
-                                    minWidth: 160.0,
-                                    selected: component.isDisplayingTool == .cutoutRestore
-                                )),
-                                effectAlignment: .center,
-                                action: {
-                                    openDrawing(.cutoutRestore)
-                                }
-                            )),
-                            environment: {},
-                            containerSize: CGSize(width: availableSize.width, height: 44.0)
-                        )
-                        totalButtonsWidth += restoreButtonSize.width
-                        
-                        buttonOriginX = floorToScreenPixels((availableSize.width - totalButtonsWidth) / 2.0)
-                        let restoreButtonFrame = CGRect(
-                            origin: CGPoint(x: buttonOriginX + eraseButtonSize.width + buttonSpacing, y: stickerFrameRect.maxY + 35.0),
-                            size: restoreButtonSize
-                        )
-                        if let restoreButtonView = self.restoreButton.view {
-                            var positionTransition = transition
-                            if restoreButtonView.superview == nil {
-                                self.addSubview(restoreButtonView)
-                                
-                                restoreButtonView.alpha = stickerButtonsAlpha
-                                restoreButtonView.layer.animateAlpha(from: 0.0, to: stickerButtonsAlpha, duration: 0.2, delay: 0.0)
-                                restoreButtonView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
-                                restoreButtonView.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                                positionTransition = .immediate
-                            }
-                            positionTransition.setPosition(view: restoreButtonView, position: restoreButtonFrame.center)
-                            restoreButtonView.bounds = CGRect(origin: .zero, size: restoreButtonFrame.size)
-                            transition.setAlpha(view: restoreButtonView, alpha: stickerButtonsAlpha)
-                        }
-                    }
-                    
-                    let eraseButtonFrame = CGRect(
-                        origin: CGPoint(x: buttonOriginX, y: stickerFrameRect.maxY + 35.0),
-                        size: eraseButtonSize
-                    )
-                    if let eraseButtonView = self.eraseButton.view {
-                        var positionTransition = transition
-                        if eraseButtonView.superview == nil {
-                            self.addSubview(eraseButtonView)
-                            
-                            eraseButtonView.alpha = stickerButtonsAlpha
-                            eraseButtonView.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                            eraseButtonView.layer.animateAlpha(from: 0.0, to: stickerButtonsAlpha, duration: 0.2, delay: 0.0)
-                            eraseButtonView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
-                            positionTransition = .immediate
-                        }
-                        positionTransition.setPosition(view: eraseButtonView, position: eraseButtonFrame.center)
-                        eraseButtonView.bounds = CGRect(origin: .zero, size: eraseButtonFrame.size)
-                        transition.setAlpha(view: eraseButtonView, alpha: stickerButtonsAlpha)
-                    }
-                } else {
-                    if let eraseButtonView = self.eraseButton.view, eraseButtonView.superview != nil {
-                        eraseButtonView.alpha = 0.0
-                        eraseButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, completion: { _ in
-                            eraseButtonView.removeFromSuperview()
-                        })
-                        eraseButtonView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, delay: 0.0)
-                    }
-                }
-                if !hasRestoreButton {
-                    if let restoreButtonView = self.restoreButton.view, restoreButtonView.superview != nil {
-                        restoreButtonView.alpha = 0.0
-                        restoreButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, completion: { _ in
-                            restoreButtonView.removeFromSuperview()
-                        })
-                        restoreButtonView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, delay: 0.0)
-                    }
-                }
-                
-                if hasOutlineButton {
-                    let outlineButtonSize = self.outlineButton.update(
-                        transition: transition,
-                        component: AnyComponent(PlainButtonComponent(
-                            content: AnyComponent(CutoutButtonContentComponent(
-                                backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
-                                icon: state.image(.outline),
-                                title: "Add Outline",
-                                minWidth: 160.0,
-                                selected: isOutlineActive
-                            )),
-                            effectAlignment: .center,
-                            action: { [weak self, weak controller] in
-                                guard let self, let mediaEditor = controller?.node.mediaEditor else {
-                                    return
-                                }
-                                if let value = mediaEditor.values.toolValues[.stickerOutline] as? Float, value > 0.0 {
-                                    mediaEditor.setToolValue(.stickerOutline, value: Float(0.0))
-                                } else {
-                                    mediaEditor.setToolValue(.stickerOutline, value: Float(0.5))
-                                }
-                                self.state?.updated(transition: .easeInOut(duration: 0.25))
-                            }
-                        )),
-                        environment: {},
-                        containerSize: CGSize(width: availableSize.width, height: 44.0)
-                    )
-                    
-                    let outlineButtonFrame = CGRect(
-                        origin: CGPoint(x: floorToScreenPixels((availableSize.width - outlineButtonSize.width) / 2.0), y: stickerFrameRect.maxY + 35.0 + 40.0 + 16.0),
-                        size: outlineButtonSize
-                    )
-                    if let outlineButtonView = self.outlineButton.view {
-                        let outlineButtonAlpha = buttonsAreHidden ? 0.0 : bottomButtonsAlpha
-                        var positionTransition = transition
-                        if outlineButtonView.superview == nil {
-                            self.addSubview(outlineButtonView)
-                            
-                            outlineButtonView.alpha = outlineButtonAlpha
-                            outlineButtonView.layer.animateAlpha(from: 0.0, to: outlineButtonAlpha, duration: 0.2, delay: 0.0)
-                            outlineButtonView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
-                            outlineButtonView.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                            
-                            positionTransition = .immediate
-                        }
-                        positionTransition.setPosition(view: outlineButtonView, position: outlineButtonFrame.center)
-                        outlineButtonView.bounds = CGRect(origin: .zero, size: outlineButtonFrame.size)
-                        transition.setAlpha(view: outlineButtonView, alpha: outlineButtonAlpha)
-                    }
-                } else {
-                    if let outlineButtonView = self.outlineButton.view, outlineButtonView.superview != nil {
-                        outlineButtonView.alpha = 0.0
-                        outlineButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, completion: { _ in
-                            outlineButtonView.removeFromSuperview()
-                        })
-                        outlineButtonView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, delay: 0.0)
-                    }
-                }
-            }
-                               
             var timeoutValue: String
             switch component.privacy.timeout {
             case 21600:
@@ -1460,6 +1160,12 @@ final class MediaEditorScreenComponent: Component {
                 )
             }
             
+            let mediaEditor = controller.node.mediaEditor
+            var isOutlineActive = false
+            if let value = mediaEditor?.values.toolValues[.stickerOutline] as? Float, value > 0.0 {
+                isOutlineActive = true
+            }
+            
             var isEditingTextEntity = false
             var sizeSliderVisible = false
             var sizeValue: CGFloat?
@@ -1478,6 +1184,8 @@ final class MediaEditorScreenComponent: Component {
                     sizeValue = 0.5
                 }
             }
+            
+            let displayTopButtons = !(self.inputPanelExternalState.isEditing || isEditingTextEntity || component.isDisplayingTool != nil)
             
             if case .storyEditor = controller.mode {
                 let nextInputMode: MessageInputPanelComponent.InputMode
@@ -1895,9 +1603,7 @@ final class MediaEditorScreenComponent: Component {
                         }
                     }
                 }
-                
-                let displayTopButtons = !(self.inputPanelExternalState.isEditing || isEditingTextEntity || component.isDisplayingTool != nil)
-                    
+                                  
                 let saveContentComponent: AnyComponentWithIdentity<Empty>
                 if component.hasAppeared {
                     saveContentComponent = AnyComponentWithIdentity(
@@ -2255,6 +1961,300 @@ final class MediaEditorScreenComponent: Component {
                     transition.setAlpha(view: switchCameraButtonView, alpha: isRecordingAdditionalVideo ? 1.0 : 0.0)
                 }
                 
+            }
+            if case .stickerEditor = controller.mode {
+                var stickerButtonsHidden = buttonsAreHidden
+                if let displayingTool = component.isDisplayingTool, [.cutoutErase, .cutoutRestore].contains(displayingTool) {
+                    stickerButtonsHidden = false
+                }
+                let stickerButtonsAlpha = stickerButtonsHidden ? 0.0 : bottomButtonsAlpha
+                
+                let stickerFrameWidth = floorToScreenPixels(previewSize.width * 0.97)
+                let stickerFrameRect = CGRect(origin: CGPoint(x: previewFrame.minX + floorToScreenPixels((previewSize.width - stickerFrameWidth) / 2.0), y: previewFrame.minY + floorToScreenPixels((previewSize.height - stickerFrameWidth) / 2.0)), size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth))
+                                
+                var hasCutoutButton = false
+                var hasUndoButton = false
+                var hasEraseButton = false
+                var hasRestoreButton = false
+                var hasOutlineButton = false
+                                                
+                if let canCutout = controller.node.canCutout {
+                    if controller.node.isCutout || controller.node.stickerMaskDrawingView?.internalState.canUndo == true {
+                        hasUndoButton = true
+                    }
+                    if canCutout && !controller.node.isCutout {
+                        hasCutoutButton = true
+                    } else {
+                        hasEraseButton = true
+                        if hasUndoButton {
+                            hasRestoreButton = true
+                        }
+                    }
+                    if hasUndoButton || controller.node.hasTransparency {
+                        hasOutlineButton = true
+                    }
+                }
+
+                if hasUndoButton {
+                    let undoButtonSize = self.undoButton.update(
+                        transition: transition,
+                        component: AnyComponent(PlainButtonComponent(
+                            content: AnyComponent(CutoutButtonContentComponent(
+                                backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
+                                icon: state.image(.undo),
+                                title: "Undo"
+                            )),
+                            effectAlignment: .center,
+                            action: {
+                                cutoutUndo()
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width, height: 44.0)
+                    )
+                    let undoButtonFrame = CGRect(
+                        origin: CGPoint(x: floorToScreenPixels((availableSize.width - undoButtonSize.width) / 2.0), y: stickerFrameRect.minY - 35.0 - undoButtonSize.height),
+                        size: undoButtonSize
+                    )
+                    if let undoButtonView = self.undoButton.view {
+                        var positionTransition = transition
+                        if undoButtonView.superview == nil {
+                            self.addSubview(undoButtonView)
+                            
+                            undoButtonView.alpha = stickerButtonsAlpha
+                            undoButtonView.layer.animateAlpha(from: 0.0, to: stickerButtonsAlpha, duration: 0.2, delay: 0.0)
+                            undoButtonView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
+                            positionTransition = .immediate
+                        }
+                        positionTransition.setPosition(view: undoButtonView, position: undoButtonFrame.center)
+                        undoButtonView.bounds = CGRect(origin: .zero, size: undoButtonFrame.size)
+                        transition.setAlpha(view: undoButtonView, alpha: !isEditingTextEntity && !component.isDismissing ? stickerButtonsAlpha : 0.0)
+                        transition.setScale(view: undoButtonView, scale: !isEditingTextEntity ? 1.0 : 0.01)
+                    }
+                } else {
+                    if let undoButtonView = self.undoButton.view, undoButtonView.superview != nil {
+                        undoButtonView.alpha = 0.0
+                        undoButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, completion: { _ in
+                            undoButtonView.removeFromSuperview()
+                        })
+                        undoButtonView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, delay: 0.0)
+                    }
+                }
+                
+                if hasCutoutButton {
+                    let cutoutButtonSize = self.cutoutButton.update(
+                        transition: transition,
+                        component: AnyComponent(PlainButtonComponent(
+                            content: AnyComponent(CutoutButtonContentComponent(
+                                backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
+                                icon: state.image(.cutout),
+                                title: "Cut Out an Object"
+                            )),
+                            effectAlignment: .center,
+                            action: {
+                                openDrawing(.cutout)
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width, height: 44.0)
+                    )
+                    let cutoutButtonFrame = CGRect(
+                        origin: CGPoint(x: floorToScreenPixels((availableSize.width - cutoutButtonSize.width) / 2.0), y: stickerFrameRect.maxY + 35.0),
+                        size: cutoutButtonSize
+                    )
+                    if let cutoutButtonView = self.cutoutButton.view {
+                        var positionTransition = transition
+                        if cutoutButtonView.superview == nil {
+                            self.addSubview(cutoutButtonView)
+                            
+                            cutoutButtonView.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            cutoutButtonView.layer.animateAlpha(from: 0.0, to: stickerButtonsAlpha, duration: 0.2, delay: 0.0)
+                            cutoutButtonView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
+                            positionTransition = .immediate
+                        }
+                        positionTransition.setPosition(view: cutoutButtonView, position: cutoutButtonFrame.center)
+                        cutoutButtonView.bounds = CGRect(origin: .zero, size: cutoutButtonFrame.size)
+                        transition.setAlpha(view: cutoutButtonView, alpha: stickerButtonsAlpha)
+                    }
+                } else {
+                    if let cutoutButtonView = self.cutoutButton.view, cutoutButtonView.superview != nil {
+                        cutoutButtonView.alpha = 0.0
+                        if transition.animation.isImmediate {
+                            cutoutButtonView.removeFromSuperview()
+                        } else {
+                            cutoutButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, completion: { _ in
+                                cutoutButtonView.removeFromSuperview()
+                            })
+                            cutoutButtonView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, delay: 0.0)
+                        }
+                    }
+                }
+                
+                if hasEraseButton {
+                    let buttonSpacing: CGFloat = hasRestoreButton ? 10.0 : 0.0
+                    var totalButtonsWidth = buttonSpacing
+                    
+                    let eraseButtonSize = self.eraseButton.update(
+                        transition: transition,
+                        component: AnyComponent(PlainButtonComponent(
+                            content: AnyComponent(CutoutButtonContentComponent(
+                                backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
+                                icon: state.image(.erase),
+                                title: "Erase",
+                                minWidth: 160.0,
+                                selected: component.isDisplayingTool == .cutoutErase
+                            )),
+                            effectAlignment: .center,
+                            action: {
+                                openDrawing(.cutoutErase)
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width, height: 44.0)
+                    )
+                    totalButtonsWidth += eraseButtonSize.width
+                    
+                    var buttonOriginX = floorToScreenPixels((availableSize.width - totalButtonsWidth) / 2.0)
+                       
+                    if hasRestoreButton {
+                        let restoreButtonSize = self.restoreButton.update(
+                            transition: transition,
+                            component: AnyComponent(PlainButtonComponent(
+                                content: AnyComponent(CutoutButtonContentComponent(
+                                    backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
+                                    icon: state.image(.restore),
+                                    title: "Restore",
+                                    minWidth: 160.0,
+                                    selected: component.isDisplayingTool == .cutoutRestore
+                                )),
+                                effectAlignment: .center,
+                                action: {
+                                    openDrawing(.cutoutRestore)
+                                }
+                            )),
+                            environment: {},
+                            containerSize: CGSize(width: availableSize.width, height: 44.0)
+                        )
+                        totalButtonsWidth += restoreButtonSize.width
+                        
+                        buttonOriginX = floorToScreenPixels((availableSize.width - totalButtonsWidth) / 2.0)
+                        let restoreButtonFrame = CGRect(
+                            origin: CGPoint(x: buttonOriginX + eraseButtonSize.width + buttonSpacing, y: stickerFrameRect.maxY + 35.0),
+                            size: restoreButtonSize
+                        )
+                        if let restoreButtonView = self.restoreButton.view {
+                            var positionTransition = transition
+                            if restoreButtonView.superview == nil {
+                                self.addSubview(restoreButtonView)
+                                
+                                restoreButtonView.alpha = stickerButtonsAlpha
+                                restoreButtonView.layer.animateAlpha(from: 0.0, to: stickerButtonsAlpha, duration: 0.2, delay: 0.0)
+                                restoreButtonView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
+                                restoreButtonView.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                                positionTransition = .immediate
+                            }
+                            positionTransition.setPosition(view: restoreButtonView, position: restoreButtonFrame.center)
+                            restoreButtonView.bounds = CGRect(origin: .zero, size: restoreButtonFrame.size)
+                            transition.setAlpha(view: restoreButtonView, alpha: stickerButtonsAlpha)
+                        }
+                    }
+                    
+                    let eraseButtonFrame = CGRect(
+                        origin: CGPoint(x: buttonOriginX, y: stickerFrameRect.maxY + 35.0),
+                        size: eraseButtonSize
+                    )
+                    if let eraseButtonView = self.eraseButton.view {
+                        var positionTransition = transition
+                        if eraseButtonView.superview == nil {
+                            self.addSubview(eraseButtonView)
+                            
+                            eraseButtonView.alpha = stickerButtonsAlpha
+                            eraseButtonView.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            eraseButtonView.layer.animateAlpha(from: 0.0, to: stickerButtonsAlpha, duration: 0.2, delay: 0.0)
+                            eraseButtonView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
+                            positionTransition = .immediate
+                        }
+                        positionTransition.setPosition(view: eraseButtonView, position: eraseButtonFrame.center)
+                        eraseButtonView.bounds = CGRect(origin: .zero, size: eraseButtonFrame.size)
+                        transition.setAlpha(view: eraseButtonView, alpha: stickerButtonsAlpha)
+                    }
+                } else {
+                    if let eraseButtonView = self.eraseButton.view, eraseButtonView.superview != nil {
+                        eraseButtonView.alpha = 0.0
+                        eraseButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, completion: { _ in
+                            eraseButtonView.removeFromSuperview()
+                        })
+                        eraseButtonView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, delay: 0.0)
+                    }
+                }
+                if !hasRestoreButton {
+                    if let restoreButtonView = self.restoreButton.view, restoreButtonView.superview != nil {
+                        restoreButtonView.alpha = 0.0
+                        restoreButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, completion: { _ in
+                            restoreButtonView.removeFromSuperview()
+                        })
+                        restoreButtonView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, delay: 0.0)
+                    }
+                }
+                
+                if hasOutlineButton {
+                    let outlineButtonSize = self.outlineButton.update(
+                        transition: transition,
+                        component: AnyComponent(PlainButtonComponent(
+                            content: AnyComponent(CutoutButtonContentComponent(
+                                backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
+                                icon: state.image(.outline),
+                                title: "Add Outline",
+                                minWidth: 160.0,
+                                selected: isOutlineActive
+                            )),
+                            effectAlignment: .center,
+                            action: { [weak self, weak controller] in
+                                guard let self, let mediaEditor = controller?.node.mediaEditor else {
+                                    return
+                                }
+                                if let value = mediaEditor.values.toolValues[.stickerOutline] as? Float, value > 0.0 {
+                                    mediaEditor.setToolValue(.stickerOutline, value: Float(0.0))
+                                } else {
+                                    mediaEditor.setToolValue(.stickerOutline, value: Float(0.5))
+                                }
+                                self.state?.updated(transition: .easeInOut(duration: 0.25))
+                            }
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width, height: 44.0)
+                    )
+                    
+                    let outlineButtonFrame = CGRect(
+                        origin: CGPoint(x: floorToScreenPixels((availableSize.width - outlineButtonSize.width) / 2.0), y: stickerFrameRect.maxY + 35.0 + 40.0 + 16.0),
+                        size: outlineButtonSize
+                    )
+                    if let outlineButtonView = self.outlineButton.view {
+                        let outlineButtonAlpha = buttonsAreHidden ? 0.0 : bottomButtonsAlpha
+                        var positionTransition = transition
+                        if outlineButtonView.superview == nil {
+                            self.addSubview(outlineButtonView)
+                            
+                            outlineButtonView.alpha = outlineButtonAlpha
+                            outlineButtonView.layer.animateAlpha(from: 0.0, to: outlineButtonAlpha, duration: 0.2, delay: 0.0)
+                            outlineButtonView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, delay: 0.0)
+                            outlineButtonView.layer.animatePosition(from: CGPoint(x: 0.0, y: 64.0), to: .zero, duration: 0.3, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            
+                            positionTransition = .immediate
+                        }
+                        positionTransition.setPosition(view: outlineButtonView, position: outlineButtonFrame.center)
+                        outlineButtonView.bounds = CGRect(origin: .zero, size: outlineButtonFrame.size)
+                        transition.setAlpha(view: outlineButtonView, alpha: outlineButtonAlpha)
+                    }
+                } else {
+                    if let outlineButtonView = self.outlineButton.view, outlineButtonView.superview != nil {
+                        outlineButtonView.alpha = 0.0
+                        outlineButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, completion: { _ in
+                            outlineButtonView.removeFromSuperview()
+                        })
+                        outlineButtonView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, delay: 0.0)
+                    }
+                }
             }
             
             let textCancelButtonSize = self.textCancelButton.update(
@@ -6690,7 +6690,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             if let navigationController {
                                 Queue.mainQueue().after(0.2) {
                                     let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-                                    let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [.result(info: info, items: items, installed: true)], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: nil)
+                                    let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [.result(info: info, items: items, installed: true)], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker)
                                     (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                 }
                             }
@@ -6886,7 +6886,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 let navigationController = self.navigationController as? NavigationController
                                 if let navigationController {
                                     Queue.mainQueue().after(0.2) {
-                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: nil)
+                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker)
                                         (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                         
                                         Queue.mainQueue().after(0.1) {
