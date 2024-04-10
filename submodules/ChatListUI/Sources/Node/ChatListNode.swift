@@ -2030,6 +2030,11 @@ public final class ChatListNode: ListView {
             |> distinctUntilChanged
             
             self.suggestedChatListNotice.set(suggestedChatListNoticeSignal)
+            
+            /*#if DEBUG
+            let testNotice: Signal<ChatListNotice?, NoError> = Signal<ChatListNotice?, NoError>.single(.setupPassword) |> then(Signal<ChatListNotice?, NoError>.complete() |> delay(1.0, queue: .mainQueue())) |> then(Signal<ChatListNotice?, NoError>.single(.xmasPremiumGift)) |> then(Signal<ChatListNotice?, NoError>.complete() |> delay(1.0, queue: .mainQueue())) |> restart
+            self.suggestedChatListNotice.set(testNotice)
+            #endif*/
         }).strict()
         
         let storageInfo: Signal<Double?, NoError>

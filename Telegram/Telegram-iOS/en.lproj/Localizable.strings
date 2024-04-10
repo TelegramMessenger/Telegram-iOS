@@ -267,7 +267,11 @@
 "PUSH_MESSAGE_STORY" = "%1$@|shared a story with you";
 "PUSH_MESSAGE_STORY_MENTION" = "%1$@|mentioned you in a story";
 "PUSH_CHANNEL_MESSAGE_STORY" = "%1$@|shared a story";
-"PUSH_CHAT_MESSAGE_STORY" = "%2$@|%1$@ shared a story to the group";
+
+"PUSH_REACT_HIDDEN" = "New reaction to your message";
+"PUSH_REACT_STORY" = "%1$@|%2$@ to your story";
+"PUSH_REACT_STORY_HIDDEN" = "New reaction to your story";
+"PUSH_CHAT_REACT_STORY" = "%2$@|%1$@ %3$@ to your story";
 
 "LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";
 "LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";

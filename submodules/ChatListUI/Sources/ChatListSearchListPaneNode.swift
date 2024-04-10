@@ -938,6 +938,7 @@ private struct ChatListSearchContainerRecentTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
+    let isEmpty: Bool
 }
 
 public struct ChatListSearchContainerTransition {
@@ -979,7 +980,8 @@ private func chatListSearchContainerPreparedRecentTransition(
     animationRenderer: MultiAnimationRenderer,
     openStories: @escaping (EnginePeer.Id, AvatarNode) -> Void,
     isChannelsTabExpanded: Bool,
-    toggleChannelsTabExpanded: @escaping () -> Void
+    toggleChannelsTabExpanded: @escaping () -> Void,
+    isEmpty: Bool
 ) -> ChatListSearchContainerRecentTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, allUpdated: forceUpdateAll)
     
@@ -987,7 +989,7 @@ private func chatListSearchContainerPreparedRecentTransition(
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, filter: filter, key: key, peerSelected: peerSelected, disabledPeerSelected: disabledPeerSelected, peerContextAction: peerContextAction, clearRecentlySearchedPeers: clearRecentlySearchedPeers, deletePeer: deletePeer, animationCache: animationCache, animationRenderer: animationRenderer, openStories: openStories, isChannelsTabExpanded: isChannelsTabExpanded, toggleChannelsTabExpanded: toggleChannelsTabExpanded), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, filter: filter, key: key, peerSelected: peerSelected, disabledPeerSelected: disabledPeerSelected, peerContextAction: peerContextAction, clearRecentlySearchedPeers: clearRecentlySearchedPeers, deletePeer: deletePeer, animationCache: animationCache, animationRenderer: animationRenderer, openStories: openStories, isChannelsTabExpanded: isChannelsTabExpanded, toggleChannelsTabExpanded: toggleChannelsTabExpanded), directionHint: nil) }
     
-    return ChatListSearchContainerRecentTransition(deletions: deletions, insertions: insertions, updates: updates)
+    return ChatListSearchContainerRecentTransition(deletions: deletions, insertions: insertions, updates: updates, isEmpty: isEmpty)
 }
 
 public func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, isEmpty: Bool, isLoading: Bool, animated: Bool, context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, location: ChatListControllerLocation, key: ChatListSearchPaneKey, tagMask: EngineMessage.Tags?, interaction: ChatListNodeInteraction, listInteraction: ListMessageItemInteraction, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, toggleExpandLocalResults: @escaping () -> Void, toggleExpandGlobalResults: @escaping () -> Void, searchPeer: @escaping (EnginePeer) -> Void, searchQuery: String?, searchOptions: ChatListSearchOptions?, messageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int64, isFirstInList: Bool)?) -> Void)?, openClearRecentlyDownloaded: @escaping () -> Void, toggleAllPaused: @escaping () -> Void, openStories: @escaping (EnginePeer.Id, AvatarNode) -> Void) -> ChatListSearchContainerTransition {
@@ -1148,6 +1150,12 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let emptyResultsAnimationNode: AnimatedStickerNode
     private var emptyResultsAnimationSize = CGSize()
     
+    private var recentEmptyNode: ASDisplayNode?
+    private var emptyRecentTitleNode: ImmediateTextNode?
+    private var emptyRecentTextNode: ImmediateTextNode?
+    private var emptyRecentAnimationNode: AnimatedStickerNode?
+    private var emptyRecentAnimationSize = CGSize()
+    
     private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData)?
     
     private let ready = Promise<Bool>()
@@ -1264,12 +1272,53 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.emptyResultsAnimationNode = DefaultAnimatedStickerNodeImpl()
         self.emptyResultsAnimationNode.isHidden = true
         
+        if key == .channels {
+            //TODO:localize
+            let emptyRecentTitleNode = ImmediateTextNode()
+            emptyRecentTitleNode.displaysAsynchronously = false
+            emptyRecentTitleNode.attributedText = NSAttributedString(string: "No Channels Yet...", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.freeTextColor)
+            emptyRecentTitleNode.textAlignment = .center
+            emptyRecentTitleNode.isHidden = true
+            self.emptyRecentTitleNode = emptyRecentTitleNode
+            
+            let emptyRecentTextNode = ImmediateTextNode()
+            emptyResultsTextNode.displaysAsynchronously = false
+            emptyRecentTextNode.maximumNumberOfLines = 0
+            emptyRecentTextNode.textAlignment = .center
+            emptyRecentTextNode.isHidden = true
+            emptyRecentTextNode.attributedText = NSAttributedString(string: "You are not currently subscribed to any channel.", font: Font.regular(15.0), textColor: presentationData.theme.list.freeTextColor)
+            self.emptyRecentTextNode = emptyRecentTextNode
+                 
+            let emptyRecentAnimationNode = DefaultAnimatedStickerNodeImpl()
+            emptyRecentAnimationNode.isHidden = true
+            self.emptyRecentAnimationNode = emptyRecentAnimationNode
+                    
+            emptyRecentAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ChatListNoResults"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            self.emptyRecentAnimationSize = CGSize(width: 148.0, height: 148.0)
+            
+            let recentEmptyNode = ASDisplayNode()
+            
+            recentEmptyNode.addSubnode(emptyRecentTitleNode)
+            recentEmptyNode.addSubnode(emptyRecentTextNode)
+            recentEmptyNode.addSubnode(emptyRecentAnimationNode)
+            
+            recentEmptyNode.isUserInteractionEnabled = false
+            recentEmptyNode.isHidden = true
+            
+            self.recentEmptyNode = recentEmptyNode
+        }
+        
         super.init()
                 
         self.emptyResultsAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ChatListNoResults"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.emptyResultsAnimationSize = CGSize(width: 148.0, height: 148.0)
         
         self.addSubnode(self.recentListNode)
+        
+        if let recentEmptyNode = self.recentEmptyNode {
+            self.addSubnode(recentEmptyNode)
+        }
+        
         self.addSubnode(self.listNode)
         self.addSubnode(self.mediaNode)
         
@@ -2837,6 +2886,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             var entries: [ChatListRecentEntry]
             var isChannelsTabExpanded: Bool
             var recommendedChannelOrder: [EnginePeer.Id]
+            var isEmpty: Bool
         }
         
         let isChannelsTabExpandedValue = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -2923,14 +2973,14 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }
             }
            
-            return .single(RecentItems(entries: entries, isChannelsTabExpanded: false, recommendedChannelOrder: []))
+            return .single(RecentItems(entries: entries, isChannelsTabExpanded: false, recommendedChannelOrder: [], isEmpty: false))
         }
         
         if peersFilter.contains(.excludeRecent) {
-            recentItems = .single(RecentItems(entries: [], isChannelsTabExpanded: false, recommendedChannelOrder: []))
+            recentItems = .single(RecentItems(entries: [], isChannelsTabExpanded: false, recommendedChannelOrder: [], isEmpty: false))
         }
         if case .savedMessagesChats = location {
-            recentItems = .single(RecentItems(entries: [], isChannelsTabExpanded: false, recommendedChannelOrder: []))
+            recentItems = .single(RecentItems(entries: [], isChannelsTabExpanded: false, recommendedChannelOrder: [], isEmpty: false))
         }
         if case .channels = key {
             struct LocalChannels {
@@ -2991,13 +3041,26 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         }
                     ),
                     EngineDataMap(
+                        allChannelIds.map { peerId -> TelegramEngine.EngineData.Item.Messages.PeerReadCounters in
+                            return TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: peerId)
+                        }
+                    ),
+                    EngineDataMap(
                         allChannelIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.ParticipantCount in
                             return TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: peerId)
                         }
                     ),
                     TelegramEngine.EngineData.Item.NotificationSettings.Global()
                 )
-                |> map { peers, notificationSettings, unreadCounts, storyStats, participantCounts, globalNotificationSettings -> RecentItems in
+                |> map { peers, notificationSettings, unreadCounts, storyStats, readCounters, participantCounts, globalNotificationSettings -> RecentItems in
+                    /*#if DEBUG
+                    var localChannels = localChannels
+                    localChannels.peerIds = []
+                    
+                    var remoteChannels = remoteChannels
+                    remoteChannels?.channels = []
+                    #endif*/
+                    
                     var result: [ChatListRecentEntry] = []
                     var existingIds = Set<PeerId>()
                     
@@ -3020,13 +3083,17 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         if let value = storyStats[peer.id] {
                             peerStoryStats = value
                         }
+                        var unreadCount: Int32 = 0
+                        if let value = readCounters[peer.id] {
+                            unreadCount = value.count
+                        }
                         result.append(.peer(
                             index: result.count,
                             peer: RecentlySearchedPeer(
                                 peer: RenderedPeer(peer: peer._asPeer()),
                                 presence: nil,
                                 notificationSettings: peerNotificationSettings.flatMap({ $0._asNotificationSettings() }),
-                                unreadCount: 0,
+                                unreadCount: unreadCount,
                                 subpeerSummary: subpeerSummary
                             ),
                             .local,
@@ -3082,7 +3149,12 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         }
                     }
                     
-                    return RecentItems(entries: result, isChannelsTabExpanded: isChannelsTabExpanded, recommendedChannelOrder: recommendedChannelOrder)
+                    var isEmpty = false
+                    if localChannels.peerIds.isEmpty, let remoteChannels, remoteChannels.channels.isEmpty {
+                        isEmpty = true
+                    }
+                    
+                    return RecentItems(entries: result, isChannelsTabExpanded: isChannelsTabExpanded, recommendedChannelOrder: recommendedChannelOrder, isEmpty: isEmpty)
                 }
             }
         }
@@ -3168,7 +3240,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 isChannelsTabExpanded: recentItems.isChannelsTabExpanded,
                 toggleChannelsTabExpanded: {
                     toggleChannelsTabExpanded()
-                })
+                }, isEmpty: recentItems.isEmpty)
                 strongSelf.enqueueRecentTransition(transition, firstTime: firstTime)
             }
         }))
@@ -3656,27 +3728,47 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.recentListNode.frame = CGRect(origin: CGPoint(), size: size)
         self.recentListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
+        if let emptyRecentTitleNode = self.emptyRecentTitleNode, let emptyRecentTextNode = self.emptyRecentTextNode, let emptyRecentAnimationNode = self.emptyRecentAnimationNode {
+            let padding: CGFloat = 16.0
+            let emptyTitleSize = emptyRecentTitleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            let emptyTextSize = emptyRecentTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            
+            let emptyAnimationHeight = emptyRecentAnimationSize.height
+            let emptyAnimationSpacing: CGFloat = 8.0
+            let emptyTextSpacing: CGFloat = 8.0
+            let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSize.height + emptyTextSpacing
+            let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
+            
+            let textTransition = ContainedViewLayoutTransition.immediate
+            textTransition.updateFrame(node: emptyRecentAnimationNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyRecentAnimationSize.width) / 2.0, y: emptyAnimationY), size: emptyRecentAnimationSize))
+            textTransition.updateFrame(node: emptyRecentTitleNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTitleSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing), size: emptyTitleSize))
+            textTransition.updateFrame(node: emptyRecentTextNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTextSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
+            emptyRecentAnimationNode.updateLayout(size: emptyRecentAnimationSize)
+        }
+        
         self.listNode.frame = CGRect(origin: CGPoint(), size: size)
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         self.mediaNode.frame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: size.width, height: size.height))
         self.mediaNode.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: false, expandProgress: 1.0, presentationData: self.presentationData, synchronous: true, transition: transition)
         
-        let padding: CGFloat = 16.0
-        let emptyTitleSize = self.emptyResultsTitleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        
-        let emptyAnimationHeight = self.emptyResultsAnimationSize.height
-        let emptyAnimationSpacing: CGFloat = 8.0
-        let emptyTextSpacing: CGFloat = 8.0
-        let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSize.height + emptyTextSpacing
-        let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
-        
-        let textTransition = ContainedViewLayoutTransition.immediate
-        textTransition.updateFrame(node: self.emptyResultsAnimationNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - self.emptyResultsAnimationSize.width) / 2.0, y: emptyAnimationY), size: self.emptyResultsAnimationSize))
-        textTransition.updateFrame(node: self.emptyResultsTitleNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTitleSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing), size: emptyTitleSize))
-        textTransition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTextSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
-        self.emptyResultsAnimationNode.updateLayout(size: self.emptyResultsAnimationSize)
+        do {
+            let padding: CGFloat = 16.0
+            let emptyTitleSize = self.emptyResultsTitleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            
+            let emptyAnimationHeight = self.emptyResultsAnimationSize.height
+            let emptyAnimationSpacing: CGFloat = 8.0
+            let emptyTextSpacing: CGFloat = 8.0
+            let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSize.height + emptyTextSpacing
+            let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
+            
+            let textTransition = ContainedViewLayoutTransition.immediate
+            textTransition.updateFrame(node: self.emptyResultsAnimationNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - self.emptyResultsAnimationSize.width) / 2.0, y: emptyAnimationY), size: self.emptyResultsAnimationSize))
+            textTransition.updateFrame(node: self.emptyResultsTitleNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTitleSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing), size: emptyTitleSize))
+            textTransition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTextSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
+            self.emptyResultsAnimationNode.updateLayout(size: self.emptyResultsAnimationSize)
+        }
         
         if !hadValidLayout {
             while !self.enqueuedRecentTransitions.isEmpty {
@@ -3762,6 +3854,11 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         strongSelf.ready.set(.single(true))
                     }
                     strongSelf.didSetReady = true
+                    
+                    strongSelf.emptyRecentAnimationNode?.isHidden = !transition.isEmpty
+                    strongSelf.emptyRecentTitleNode?.isHidden = !transition.isEmpty
+                    strongSelf.emptyRecentTextNode?.isHidden = !transition.isEmpty
+                    strongSelf.emptyRecentAnimationNode?.visibility = transition.isEmpty
                 }
             })
         }
@@ -3867,6 +3964,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
            
                     strongSelf.recentListNode.isHidden = displayingResults || strongSelf.peersFilter.contains(.excludeRecent)
+                    strongSelf.recentEmptyNode?.isHidden = strongSelf.recentListNode.isHidden
                     strongSelf.backgroundColor = !displayingResults && strongSelf.peersFilter.contains(.excludeRecent) ? nil : strongSelf.presentationData.theme.chatList.backgroundColor
                     
                     if !strongSelf.didSetReady && strongSelf.recentListNode.isHidden {
