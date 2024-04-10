@@ -35,7 +35,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
             return result
             |> mapToSignal { data -> Signal<AnyMediaReference?, NoError> in
                 if data.complete {
-                    if file.mimeType.hasPrefix("image/") {
+                    if file.mimeType.hasPrefix("image/") && !file.mimeType.hasSuffix("/webp") {
                         return Signal { subscriber in
                             if let fullSizeData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                                 let options = NSMutableDictionary()
@@ -88,7 +88,7 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                             
                             return EmptyDisposable
                         } |> runOn(opportunistic ? Queue.mainQueue() : Queue.concurrentDefaultQueue())
-                    } else if file.mimeType.hasPrefix("video/") {
+                    } else if file.mimeType.hasPrefix("video/") && !file.mimeType.hasSuffix("/webm") {
                         return Signal { subscriber in
                             if let scaledImage = generateVideoFirstFrame(data.path, maxDimensions: CGSize(width: 320.0, height: 320.0)), let thumbnailData = scaledImage.jpegData(compressionQuality: 0.6) {
                                 let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))

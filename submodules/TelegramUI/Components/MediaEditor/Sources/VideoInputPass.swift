@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import Metal
 import MetalKit
+import CoreImage
 
 final class VideoInputPass: DefaultRenderPass {
     private var cachedTexture: MTLTexture?
@@ -82,5 +83,46 @@ final class VideoInputPass: DefaultRenderPass {
         renderCommandEncoder.endEncoding()
         
         return self.cachedTexture
+    }
+}
+
+final class CIInputPass: RenderPass {
+    private var context: CIContext?
+    
+    func setup(device: MTLDevice, library: MTLLibrary) {
+        self.context = CIContext(mtlDevice: device, options: [.workingColorSpace : CGColorSpaceCreateDeviceRGB()])
+    }
+    
+    func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        return nil
+    }
+    
+    private var outputTexture: MTLTexture?
+    
+    func processCIImage(_ ciImage: CIImage, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        if self.outputTexture == nil {
+            let textureDescriptor = MTLTextureDescriptor()
+            textureDescriptor.textureType = .type2D
+            textureDescriptor.width = Int(ciImage.extent.width)
+            textureDescriptor.height = Int(ciImage.extent.height)
+            textureDescriptor.pixelFormat = .bgra8Unorm
+            textureDescriptor.storageMode = .private
+            textureDescriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
+            guard let texture = device.makeTexture(descriptor: textureDescriptor) else {
+                return nil
+            }
+            self.outputTexture = texture
+            texture.label = "outlineOutputTexture"
+        }
+        
+        guard let outputTexture = self.outputTexture, let context = self.context else {
+            return nil
+        }
+        
+        let transformedImage = ciImage.transformed(by: CGAffineTransformMakeScale(1.0, -1.0).translatedBy(x: 0.0, y: -ciImage.extent.height))
+        let renderDestination = CIRenderDestination(mtlTexture: outputTexture, commandBuffer: commandBuffer)
+        _ = try? context.startTask(toRender: transformedImage, to: renderDestination)
+        
+        return outputTexture
     }
 }

@@ -257,18 +257,13 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, cha
                 var result: [(String, TelegramMediaFile?, String)] = []
                 
                 for entry in view.entries {
-                    guard let item = entry.item as? StickerPackItem else {
+                    guard let item = entry.item as? StickerPackItem, !item.file.isPremiumEmoji || hasPremium else {
                         continue
                     }
-                    for attribute in item.file.attributes {
-                        switch attribute {
-                        case let .CustomEmoji(_, _, alt, _):
-                            if alt == query {
-                                if !item.file.isPremiumEmoji || hasPremium {
-                                    result.append((alt, item.file, alt))
-                                }
-                            }
-                        default:
+                    let stringRepresentations = item.getStringRepresentationsOfIndexKeys()
+                    for stringRepresentation in stringRepresentations {
+                        if stringRepresentation == query {
+                            result.append((stringRepresentation, item.file, stringRepresentation))
                             break
                         }
                     }
@@ -312,18 +307,13 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, cha
                     }
                     
                     for entry in view.entries {
-                        guard let item = entry.item as? StickerPackItem else {
+                        guard let item = entry.item as? StickerPackItem, !item.file.isPremiumEmoji || hasPremium else {
                             continue
                         }
-                        for attribute in item.file.attributes {
-                            switch attribute {
-                            case let .CustomEmoji(_, _, alt, _):
-                                if !alt.isEmpty, let keyword = allEmoticons[alt] {
-                                    if !item.file.isPremiumEmoji || hasPremium {
-                                        result.append((alt, item.file, keyword))
-                                    }
-                                }
-                            default:
+                        let stringRepresentations = item.getStringRepresentationsOfIndexKeys()
+                        for stringRepresentation in stringRepresentations {
+                            if let keyword = allEmoticons[stringRepresentation] {
+                                result.append((stringRepresentation, item.file, keyword))
                                 break
                             }
                         }

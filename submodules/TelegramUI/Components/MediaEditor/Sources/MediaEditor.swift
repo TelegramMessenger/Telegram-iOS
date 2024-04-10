@@ -130,11 +130,9 @@ public final class MediaEditor {
     
     private let clock = CMClockGetHostTimeClock()
         
-    private var player: AVPlayer? {
-        didSet {
-            
-        }
-    }
+    private var stickerEntity: MediaEditorComposerStickerEntity?
+    
+    private var player: AVPlayer?
     private var playerAudioMix: AVMutableAudioMix?
     
     private var additionalPlayer: AVPlayer?
@@ -194,7 +192,7 @@ public final class MediaEditor {
     
     public private(set) var canCutout: Bool = false
     public var canCutoutUpdated: (Bool, Bool) -> Void = { _, _ in }
-    public var maskUpdated: (UIImage) -> Void = { _ in }
+    public var maskUpdated: (UIImage, Bool) -> Void = { _, _ in }
     
     public var classificationUpdated: ([(String, Float)]) -> Void = { _ in }
     
@@ -209,6 +207,9 @@ public final class MediaEditor {
     }
     
     public var resultIsVideo: Bool {
+        if case let .sticker(file) = self.subject {
+            return file.isAnimatedSticker || file.isVideoSticker
+        }
         return self.player != nil || self.audioPlayer != nil || self.additionalPlayer != nil || self.values.entities.contains(where: { $0.entity.isAnimated })
     }
     
@@ -262,7 +263,9 @@ public final class MediaEditor {
     }
    
     public var duration: Double? {
-        if let _ = self.player {
+        if let stickerEntity = self.stickerEntity {
+            return stickerEntity.totalDuration
+        } else if let _ = self.player {
             if let trimRange = self.values.videoTrimRange {
                 return trimRange.upperBound - trimRange.lowerBound
             } else {
@@ -506,13 +509,22 @@ public final class MediaEditor {
             let image: UIImage?
             let nightImage: UIImage?
             let player: AVPlayer?
+            let stickerEntity: MediaEditorComposerStickerEntity?
             let playerIsReference: Bool
             let gradientColors: GradientColors
             
-            init(image: UIImage? = nil, nightImage: UIImage? = nil, player: AVPlayer? = nil, playerIsReference: Bool = false, gradientColors: GradientColors) {
+            init(
+                image: UIImage? = nil,
+                nightImage: UIImage? = nil,
+                player: AVPlayer? = nil,
+                stickerEntity: MediaEditorComposerStickerEntity? = nil,
+                playerIsReference: Bool = false,
+                gradientColors: GradientColors
+            ) {
                 self.image = image
                 self.nightImage = nightImage
                 self.player = player
+                self.stickerEntity = stickerEntity
                 self.playerIsReference = playerIsReference
                 self.gradientColors = gradientColors
             }
@@ -661,16 +673,23 @@ public final class MediaEditor {
                     )
                 }
             }
-        case .sticker:
-            let image = generateImage(CGSize(width: 1080, height: 1920), contextGenerator: { size, context in
-                context.clear(CGRect(origin: .zero, size: size))
-            }, opaque: false, scale: 1.0)
+        case let .sticker(file):
+            let entity = MediaEditorComposerStickerEntity(
+                postbox: self.context.account.postbox,
+                content: .file(file),
+                position: .zero,
+                scale: 1.0,
+                rotation: 0.0,
+                baseSize: CGSize(width: 512.0, height: 512.0),
+                mirrored: false,
+                colorSpace: CGColorSpaceCreateDeviceRGB(),
+                tintColor: nil,
+                isStatic: false,
+                highRes: true
+            )
             textureSource = .single(
                 TextureSourceResult(
-                    image: image,
-                    nightImage: nil,
-                    player: nil,
-                    playerIsReference: false,
+                    stickerEntity: entity,
                     gradientColors: GradientColors(top: .clear, bottom: .clear)
                 )
             )
@@ -693,7 +712,7 @@ public final class MediaEditor {
             
                 self.player = textureSourceResult.player
                 self.playerPromise.set(.single(player))
-            
+                            
                 if let image = textureSourceResult.image {
                     if self.values.nightTheme, let nightImage = textureSourceResult.nightImage {
                         textureSource.setMainInput(.image(nightImage))
@@ -712,12 +731,13 @@ public final class MediaEditor {
                                 self.canCutout = canCutout
                                 self.canCutoutUpdated(canCutout, false)
                             })
+                            self.maskUpdated(image, false)
                         } else {
                             self.canCutout = false
                             self.canCutoutUpdated(false, true)
                             
                             if let maskImage = generateTintedImage(image: image, color: .white, backgroundColor: .black) {
-                                self.maskUpdated(maskImage)
+                                self.maskUpdated(maskImage, true)
                             }
                         }
                         let _ = (classifyImage(image)
@@ -732,6 +752,11 @@ public final class MediaEditor {
                 if let additionalPlayer, let playerItem = additionalPlayer.currentItem {
                     textureSource.setAdditionalInput(.video(playerItem))
                 }
+                if let entity = textureSourceResult.stickerEntity {
+                    textureSource.setMainInput(.entity(entity))
+                }
+                self.stickerEntity = textureSourceResult.stickerEntity
+                
                 self.renderer.textureSource = textureSource
                 
                 switch self.mode {

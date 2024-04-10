@@ -89,7 +89,7 @@ final class StickerCutoutOutlineView: UIView {
         lineEmitterCell.contents = UIImage(named: "Media Editor/ParticleDot")?.cgImage
         lineEmitterCell.lifetime = 2.2
         lineEmitterCell.birthRate = 1700
-        lineEmitterCell.scale = 0.18
+        lineEmitterCell.scale = 0.185
         lineEmitterCell.alphaSpeed = -0.4
         
         self.outlineLayer.emitterCells = [lineEmitterCell]
@@ -157,16 +157,13 @@ final class StickerCutoutOutlineView: UIView {
 }
 
 private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaEditorValues) -> BezierPath? {
-//    let edges = image.applyingFilter("CILineOverlay", parameters: ["inputEdgeIntensity": 0.1])
-            
-    guard let pixelBuffer = getEdgesBitmap(image) else {
+    let extendedImage = image.applyingFilter("CIMorphologyMaximum", parameters: ["inputRadius": 3.0])
+    guard let pixelBuffer = getEdgesBitmap(extendedImage) else {
         return nil
     }
     let minSide = min(size.width, size.height)
     let scaledImageSize = image.extent.size.aspectFilled(CGSize(width: minSide, height: minSide))
     let contourImageSize = image.extent.size.aspectFilled(CGSize(width: 256.0, height: 256.0))
-
-//    var contour = findContours(pixelBuffer: pixelBuffer)
     
     var contour = findEdgePoints(in: pixelBuffer)
     guard !contour.isEmpty else {
@@ -283,97 +280,6 @@ outerLoop: for y in 0..<height {
     CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
     
     return Array(edgePath.map { $0.cgPoint })
-}
-
-private func findContours(pixelBuffer: CVPixelBuffer) -> [CGPoint] {
-    struct Point: Hashable {
-        let x: Int
-        let y: Int
-        
-        var cgPoint: CGPoint {
-            return CGPoint(x: x, y: y)
-        }
-    }
-    
-    var contours = [[Point]]()
-    
-    CVPixelBufferLockBaseAddress(pixelBuffer, [])
-    defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, []) }
-    
-    let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer)
-    let width = CVPixelBufferGetWidth(pixelBuffer)
-    let height = CVPixelBufferGetHeight(pixelBuffer)
-    let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
-    
-    var visited: [Point: Bool] = [:]
-    func markVisited(_ point: Point) {
-        visited[point] = true
-    }
-    
-    func getPixelIntensity(_ point: Point) -> UInt8 {
-        let pixelOffset = point.y * bytesPerRow + point.x
-        let pixelPtr = baseAddress?.advanced(by: pixelOffset)
-        return pixelPtr?.load(as: UInt8.self) ?? 0
-    }
-    
-    func isBlackPixel(_ point: Point) -> Bool {
-        if point.x >= 0 && point.x < width && point.y >= 0 && point.y < height {
-            let value = getPixelIntensity(point)
-            return value < 225
-        } else {
-            return false
-        }
-    }
-    
-    func traceContour(startPoint: Point) -> [Point] {
-        var contour = [startPoint]
-        var currentPoint = startPoint
-        var previousDirection = 7
-        
-        let dx = [1, 1, 0, -1, -1, -1, 0, 1]
-        let dy = [0, 1, 1, 1, 0, -1, -1, -1]
-        
-        repeat {
-            var found = false
-            for i in 0 ..< 8 {
-                let direction = (previousDirection + i) % 8
-                let newX = currentPoint.x + dx[direction]
-                let newY = currentPoint.y + dy[direction]
-                let newPoint = Point(x: newX, y: newY)
-                
-                if isBlackPixel(newPoint) && !(visited[newPoint] == true) {
-                    contour.append(newPoint)
-                    previousDirection = (direction + 5) % 8
-                    currentPoint = newPoint
-                    found = true
-                    markVisited(newPoint)
-                    break
-                }
-            }
-            if !found {
-                break
-            }
-        } while currentPoint != startPoint
-        
-        return contour
-    }
-    
-    for y in 0 ..< height {
-        for x in 0 ..< width {
-            let point = Point(x: x, y: y)
-            if visited[point] == true {
-                continue
-            }
-            if isBlackPixel(point) {
-                let contour = traceContour(startPoint: point)
-                if contour.count > 25 {
-                    contours.append(contour)
-                }
-            }
-        }
-    }
-    
-    return (contours.sorted(by: { lhs, rhs in lhs.count > rhs.count }).first ?? []).map { $0.cgPoint }
 }
 
 private func getEdgesBitmap(_ ciImage: CIImage) -> CVPixelBuffer? {

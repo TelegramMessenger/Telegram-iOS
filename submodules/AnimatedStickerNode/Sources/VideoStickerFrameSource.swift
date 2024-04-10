@@ -287,6 +287,7 @@ public final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
     private let bytesPerRow: Int
     public var frameCount: Int
     public let frameRate: Int
+    public var duration: Double
     fileprivate var currentFrame: Int
     
     private let source: SoftwareVideoSource?
@@ -316,17 +317,24 @@ public final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
             self.image = nil
             self.frameRate = Int(cache.frameRate)
             self.frameCount = Int(cache.frameCount)
+            if self.frameRate > 0 {
+                self.duration = Double(self.frameCount) / Double(self.frameRate)
+            } else {
+                self.duration = 0.0
+            }
         } else if let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let image = WebP.convert(fromWebP: data) {
             self.source = nil
             self.image = image
             self.frameRate = 1
             self.frameCount = 1
+            self.duration = 0.0
         } else {
             let source = SoftwareVideoSource(path: path, hintVP9: true, unpremultiplyAlpha: unpremultiplyAlpha)
             self.source = source
             self.image = nil
             self.frameRate = min(30, source.getFramerate())
             self.frameCount = 0
+            self.duration = source.reportedDuration.seconds
         }
     }
     

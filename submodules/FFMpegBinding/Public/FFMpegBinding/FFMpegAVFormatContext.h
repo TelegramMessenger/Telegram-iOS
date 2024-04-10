@@ -43,6 +43,7 @@ extern int FFMpegCodecIdVP9;
 - (NSArray<NSNumber *> *)streamIndicesForType:(FFMpegAVFormatStreamType)type;
 - (bool)isAttachedPicAtStreamIndex:(int32_t)streamIndex;
 - (int)codecIdAtStreamIndex:(int32_t)streamIndex;
+- (double)duration;
 - (int64_t)durationAtStreamIndex:(int32_t)streamIndex;
 - (bool)codecParamsAtStreamIndex:(int32_t)streamIndex toContext:(FFMpegAVCodecContext *)context;
 - (FFMpegFpsAndTimebase)fpsAndTimebaseForStreamIndex:(int32_t)streamIndex defaultTimeBase:(CMTime)defaultTimeBase;

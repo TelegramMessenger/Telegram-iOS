@@ -2870,65 +2870,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
                
             if let mediaEntityView = self.entitiesView.add(mediaEntity, announce: false) as? DrawingMediaEntityView {
-                var updateStickerMaskDrawing: (CGPoint, CGFloat, CGFloat) -> Void = { _, _, _ in }
-                if isStickerEditor {
-                    let mediaEntitySize = mediaEntityView.bounds.size
-                    let scaledDimensions = subject.dimensions.cgSize.aspectFittedOrSmaller(CGSize(width: 1920, height: 1920))
-                    let maskDrawingSize = scaledDimensions.aspectFilled(mediaEntitySize)
-                    
-                    let stickerMaskDrawingView = DrawingView(size: scaledDimensions, gestureView: self.previewContainerView)
-                    stickerMaskDrawingView.stateUpdated = { [weak self] _ in
-                        if let self {
-                            self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
-                        }
-                    }
-                    stickerMaskDrawingView.emptyColor = .white
-                    stickerMaskDrawingView.updateToolState(.pen(DrawingToolState.BrushState(color: DrawingColor(color: .black), size: 0.5)))
-                    stickerMaskDrawingView.isUserInteractionEnabled = false
-                    stickerMaskDrawingView.animationsEnabled = false
-                    stickerMaskDrawingView.clearWithEmptyColor()
-                    if let filter = makeLuminanceToAlphaFilter() {
-                        self.stickerMaskWrapperView.layer.filters = [filter]
-                    }
-                    self.stickerMaskWrapperView.addSubview(stickerMaskDrawingView)
-                    self.stickerMaskWrapperView.addSubview(self.stickerMaskPreviewView)
-                    self.stickerMaskDrawingView = stickerMaskDrawingView
-                    
-                    var initialMaskPosition = CGPoint()
-                    var initialMaskScale: CGFloat = 1.0
-                    
-                    updateStickerMaskDrawing = { [weak stickerMaskDrawingView] position, scale, rotation in
-                        guard let stickerMaskDrawingView else {
-                            return
-                        }
-                        let maskScale = initialMaskPosition.x * 2.0 / 1080.0
-                        stickerMaskDrawingView.center = initialMaskPosition.offsetBy(dx: position.x * maskScale, dy: position.y * maskScale)
-                        stickerMaskDrawingView.transform = CGAffineTransform(scaleX: initialMaskScale * scale, y: initialMaskScale * scale).rotated(by: rotation)
-                    }
-                    
-                    Queue.mainQueue().after(0.1) {
-                        let previewSize = self.previewView.bounds.size
-                        self.stickerMaskWrapperView.frame = CGRect(origin: .zero, size: previewSize)
-                        self.stickerMaskPreviewView.frame = CGRect(origin: .zero, size: previewSize)
-                        
-                        let maskScale = previewSize.width / min(maskDrawingSize.width, maskDrawingSize.height)
-                        initialMaskScale = maskScale
-                        initialMaskPosition = CGPoint(x: previewSize.width / 2.0, y: previewSize.height / 2.0)
-                        stickerMaskDrawingView.bounds = CGRect(origin: .zero, size: maskDrawingSize)
-                        
-                        updateStickerMaskDrawing(.zero, 1.0, 0.0)
-                    }
-                }
-                                
                 self.entitiesView.sendSubviewToBack(mediaEntityView)
                 mediaEntityView.updated = { [weak self, weak mediaEntity] in
                     if let self, let mediaEntity {
-                        let rotationDelta = mediaEntity.rotation - initialRotation
-                        let positionDelta = CGPoint(x: mediaEntity.position.x - initialPosition.x, y: mediaEntity.position.y - initialPosition.y)
-                        let scaleDelta = mediaEntity.scale / initialScale
-                        self.mediaEditor?.setCrop(offset: positionDelta, scale: scaleDelta, rotation: rotationDelta, mirroring: false)
+                        let rotation = mediaEntity.rotation - initialRotation
+                        let position = CGPoint(x: mediaEntity.position.x - initialPosition.x, y: mediaEntity.position.y - initialPosition.y)
+                        let scale = mediaEntity.scale / initialScale
+                        self.mediaEditor?.setCrop(offset: position, scale: scale, rotation: rotation, mirroring: false)
                         
-                        updateStickerMaskDrawing(positionDelta, scaleDelta, rotationDelta)
+                        self.updateMaskDrawingView(position: position, scale: scale, rotation: rotation)
                     }
                 }
                 
@@ -2936,6 +2886,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     mediaEntity.position = mediaEntity.position.offsetBy(dx: initialValues.cropOffset.x, dy: initialValues.cropOffset.y)
                     mediaEntity.rotation = mediaEntity.rotation + initialValues.cropRotation
                     mediaEntity.scale = mediaEntity.scale * initialValues.cropScale
+                } else if case .sticker = subject {
+                    mediaEntity.scale = mediaEntity.scale * 0.97
                 }
             }
                         
@@ -2967,11 +2919,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self.hasTransparency = hasTransparency
                 self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
             }
-            mediaEditor.maskUpdated = { [weak self] mask in
+            mediaEditor.maskUpdated = { [weak self] mask, apply in
                 guard let self else {
                     return
                 }
-                if let maskData = mask.pngData() {
+                if self.stickerMaskDrawingView == nil {
+                    self.setupMaskDrawingView(size: mask.size)
+                }
+                if apply, let maskData = mask.pngData() {
                     self.stickerMaskDrawingView?.setup(withDrawing: maskData, storeAsClear: true)
                 }
             }
@@ -3087,13 +3042,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.readyValue.set(.single(true))
                     })
                 })
-            } else if case let .sticker(sticker, emoji) = effectiveSubject {
+            } else if case let .sticker(_, emoji) = effectiveSubject {
                 controller.stickerSelectedEmoji = emoji
-                let stickerEntity = DrawingStickerEntity(content: .file(.standalone(media: sticker), .sticker))
-                stickerEntity.referenceDrawingSize = storyDimensions
-                stickerEntity.scale = 4.0 * 0.97
-                stickerEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
-                self.entitiesView.add(stickerEntity, announce: false)
             }
             
             self.gradientColorsDisposable = mediaEditor.gradientColors.start(next: { [weak self] colors in
@@ -3153,6 +3103,55 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             }
+        }
+        
+        private var initialMaskScale: CGFloat = .zero
+        private var initialMaskPosition: CGPoint = .zero
+        private func setupMaskDrawingView(size: CGSize) {
+            guard let mediaEntityView = self.entitiesView.getView(where: { $0 is DrawingMediaEntityView }) as? DrawingMediaEntityView else {
+                return
+            }
+            let mediaEntitySize = mediaEntityView.bounds.size
+            let scaledDimensions = size
+            let maskDrawingSize = scaledDimensions.aspectFilled(mediaEntitySize)
+            
+            let stickerMaskDrawingView = DrawingView(size: scaledDimensions, gestureView: self.previewContainerView)
+            stickerMaskDrawingView.stateUpdated = { [weak self] _ in
+                if let self {
+                    self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
+                }
+            }
+            stickerMaskDrawingView.emptyColor = .white
+            stickerMaskDrawingView.updateToolState(.pen(DrawingToolState.BrushState(color: DrawingColor(color: .black), size: 0.5)))
+            stickerMaskDrawingView.isUserInteractionEnabled = false
+            stickerMaskDrawingView.animationsEnabled = false
+            stickerMaskDrawingView.clearWithEmptyColor()
+            if let filter = makeLuminanceToAlphaFilter() {
+                self.stickerMaskWrapperView.layer.filters = [filter]
+            }
+            self.stickerMaskWrapperView.addSubview(stickerMaskDrawingView)
+            self.stickerMaskWrapperView.addSubview(self.stickerMaskPreviewView)
+            self.stickerMaskDrawingView = stickerMaskDrawingView
+            
+            let previewSize = self.previewView.bounds.size
+            self.stickerMaskWrapperView.frame = CGRect(origin: .zero, size: previewSize)
+            self.stickerMaskPreviewView.frame = CGRect(origin: .zero, size: previewSize)
+            
+            let maskScale = previewSize.width / min(maskDrawingSize.width, maskDrawingSize.height)
+            self.initialMaskScale = maskScale
+            self.initialMaskPosition = CGPoint(x: previewSize.width / 2.0, y: previewSize.height / 2.0)
+            stickerMaskDrawingView.bounds = CGRect(origin: .zero, size: maskDrawingSize)
+            
+            self.updateMaskDrawingView(position: .zero, scale: 1.0, rotation: 0.0)
+        }
+        
+        private func updateMaskDrawingView(position: CGPoint, scale: CGFloat, rotation: CGFloat) {
+            guard let stickerMaskDrawingView = self.stickerMaskDrawingView else {
+                return
+            }
+            let maskScale = self.initialMaskPosition.x * 2.0 / 1080.0
+            stickerMaskDrawingView.center = self.initialMaskPosition.offsetBy(dx: position.x * maskScale, dy: position.y * maskScale)
+            stickerMaskDrawingView.transform = CGAffineTransform(scaleX: self.initialMaskScale * scale, y: self.initialMaskScale * scale).rotated(by: rotation)
         }
        
         override func didLoad() {
@@ -4931,10 +4930,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         action()
                                     }
                                     
-                                    if self.isDisplayingTool == .cutoutRestore {
-                                        self.cutoutScreen?.mode = .erase
-                                        self.isDisplayingTool = .cutoutErase
-                                        self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
+                                    if let cutoutScreen = self.cutoutScreen {
+                                        cutoutScreen.requestDismiss(animated: true)
                                     }
                                 }
                             }
@@ -6394,12 +6391,25 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     private func effectiveStickerEmoji() -> [String] {
         let filtered = self.stickerSelectedEmoji.filter { !$0.isEmpty }
         guard !filtered.isEmpty else {
+            for entity in self.node.entitiesView.entities {
+                if let stickerEntity = entity as? DrawingStickerEntity, case let .file(file, _) = stickerEntity.content {
+                    for attribute in file.media.attributes {
+                        if case let .Sticker(displayText, _, _) = attribute {
+                            return [displayText]
+                        }
+                    }
+                    break
+                }
+            }
             return ["🫥"]
         }
         return filtered
     }
     
     private func preferredStickerDuration() -> Double {
+        if let duration = self.node.mediaEditor?.duration, duration > 0.0 {
+            return min(3.0, duration)
+        }
         var duration: Double = 3.0
         var stickerDurations: [Double] = []
         self.node.entitiesView.eachView { entityView in
@@ -6412,7 +6422,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         if !stickerDurations.isEmpty {
             duration = stickerDurations.max() ?? 3.0
         }
-        return duration
+        return min(3.0, duration)
     }
     
     private weak var stickerResultController: PeekController?
@@ -6429,13 +6439,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         if mediaEditor.resultIsVideo {
             isVideo = true
         }
+        let imagesReady = ValuePromise<Bool>(false, ignoreRepeated: true)
         Queue.concurrentDefaultQueue().async {
             if !isVideo, let data = try? WebP.convert(toWebP: image, quality: 97.0) {
-                self.context.account.postbox.mediaBox.storeResourceData(isVideo ? thumbnailResource.id : resource.id, data: data)
+                self.context.account.postbox.mediaBox.storeResourceData(isVideo ? thumbnailResource.id : resource.id, data: data, synchronous: true)
             }
             if let thumbnailImage = generateScaledImage(image: image, size: CGSize(width: 320.0, height: 320.0), opaque: false, scale: 1.0), let data = try? WebP.convert(toWebP: thumbnailImage, quality: 90.0) {
-                self.context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: data)
+                self.context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: data, synchronous: true)
             }
+            imagesReady.set(true)
         }
         var file = stickerFile(resource: resource, thumbnailResource: thumbnailResource, size: Int64(0), dimensions: PixelDimensions(image.size), duration: self.preferredStickerDuration(), isVideo: isVideo)
         
@@ -6448,26 +6460,34 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         return
                     }
                     
-                    if isVideo {
-                        self.uploadSticker(file, action: .send)
-                    } else {
-                        self.stickerResultController?.disappeared = nil
-                        self.completion(MediaEditorScreen.Result(
-                            media: .sticker(file: file, emoji: self.effectiveStickerEmoji()),
-                            mediaAreas: [],
-                            caption: NSAttributedString(),
-                            options: MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false),
-                            stickers: [],
-                            randomId: 0
-                        ), { [weak self] finished in
-                            self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
-                                self?.dismiss()
-                                Queue.mainQueue().justDispatch {
-                                    finished()
-                                }
+                    let _ = (imagesReady.get()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        if isVideo {
+                            self.uploadSticker(file, action: .send)
+                        } else {
+                            self.stickerResultController?.disappeared = nil
+                            self.completion(MediaEditorScreen.Result(
+                                media: .sticker(file: file, emoji: self.effectiveStickerEmoji()),
+                                mediaAreas: [],
+                                caption: NSAttributedString(),
+                                options: MediaEditorResultPrivacy(sendAsPeerId: nil, privacy: EngineStoryPrivacy(base: .everyone, additionallyIncludePeers: []), timeout: 0, isForwardingDisabled: false, pin: false),
+                                stickers: [],
+                                randomId: 0
+                            ), { [weak self] finished in
+                                self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
+                                    self?.dismiss()
+                                    Queue.mainQueue().justDispatch {
+                                        finished()
+                                    }
+                                })
                             })
-                        })
-                    }
+                        }
+                    })
                     
                     f(.default)
                 })))
@@ -6476,7 +6496,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     guard let self else {
                         return
                     }
-                    self.uploadSticker(file, action: .addToFavorites)
+                    let _ = (imagesReady.get()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.uploadSticker(file, action: .addToFavorites)
+                    })
                 })))
                 menuItems.append(.action(ContextMenuActionItem(text: "Add to Sticker Set", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddSticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
                     guard let self else {
@@ -6518,7 +6546,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             self.present(controller, in: .window(.root))
                             return false
                         } else {
-                            self.uploadSticker(file, action: .addToStickerPack(pack: .id(id: pack.id.id, accessHash: pack.accessHash), title: pack.title))
+                            let _ = (imagesReady.get()
+                            |> filter { $0 }
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                                guard let self else {
+                                    return
+                                }
+                                self.uploadSticker(file, action: .addToStickerPack(pack: .id(id: pack.id.id, accessHash: pack.accessHash), title: pack.title))
+                            })
                             return true
                         }
                     }), false))
@@ -6554,8 +6590,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         file = sticker
                         action = .update
                     }
-                    
-                    self.uploadSticker(file, action: action)
+                    let _ = (imagesReady.get()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.uploadSticker(file, action: action)
+                    })
                 })))
             case .addingToPack:
                 menuItems.append(.action(ContextMenuActionItem(text: "Add to Sticker Set", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddSticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
@@ -6563,7 +6606,16 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         return
                     }
                     f(.default)
-                    self.uploadSticker(file, action: .upload)
+                    
+                    let _ = (imagesReady.get()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.uploadSticker(file, action: .upload)
+                    })
                 })))
             }
         }
@@ -7028,11 +7080,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         return image.flatMap({ .single(.image(image: $0)) }) ?? .complete()
                     }
                 }
-            case .sticker:
-                let image = generateImage(CGSize(width: 1080, height: 1920), contextGenerator: { size, context in
-                    context.clear(CGRect(origin: .zero, size: size))
-                }, opaque: false, scale: 1.0)!
-                exportSubject = .single(.image(image: image))
+            case let .sticker(file, _):
+                exportSubject = .single(.sticker(file: file))
             }
             
             let _ = exportSubject.start(next: { [weak self] exportSubject in
@@ -7046,7 +7095,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 if isSticker {
                     duration = self.preferredStickerDuration()
-                    values = values.withUpdatedMaskDrawing(maskDrawing: self.node.stickerMaskDrawingView?.drawingImage)
+                    if case .sticker = subject {
+                    } else {
+                        values = values.withUpdatedMaskDrawing(maskDrawing: self.node.stickerMaskDrawingView?.drawingImage)
+                    }
                 }
                 let configuration = recommendedVideoExportConfiguration(values: values, duration: duration, forceFullHd: true, frameRate: 60.0, isSticker: isSticker)
                 let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).\(fileExtension)"

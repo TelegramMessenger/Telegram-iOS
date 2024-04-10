@@ -11742,7 +11742,7 @@ Sorry for the inconvenience.";
 "ReportAd.Help" = "Learn more about [Telegram Ad Policies and Guidelines]().";
 "ReportAd.Help_URL" = "https://ads.telegram.org/guidelines";
 "ReportAd.Reported" = "We will review this ad to ensure it matches our [Ad Policies and Guidelines]().";
-"ReportAd.Hidden" = "Ads are hidden now.";
+"ReportAd.Hidden" = "You will no longer see ads from Telegram.";
 
 "AdsInfo.Title" = "About These Ads";
 "AdsInfo.Info" = "Telegram Ads are very different from ads on other platforms. Ads such as this one:";

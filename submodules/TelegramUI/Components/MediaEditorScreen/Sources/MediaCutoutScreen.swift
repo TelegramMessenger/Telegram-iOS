@@ -226,11 +226,8 @@ private final class MediaCutoutScreenComponent: Component {
             }
             controller.drawingView.isUserInteractionEnabled = false
             
-            let overlayView = controller.overlayView
-            let backgroundView = controller.backgroundView
-            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
-            transition.setAlpha(view: overlayView, alpha: 0.0)
-            transition.setAlpha(view: backgroundView, alpha: 1.0)
+            controller.overlayView.alpha = 0.0
+            controller.backgroundView.alpha = 1.0
         }
         
         public func playDissolveAnimation() {
