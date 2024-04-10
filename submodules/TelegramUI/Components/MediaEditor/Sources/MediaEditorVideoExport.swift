@@ -48,6 +48,7 @@ public final class MediaEditorVideoExport {
     public enum Subject {
         case image(image: UIImage)
         case video(asset: AVAsset, isStory: Bool)
+        case sticker(file: TelegramMediaFile)
     }
     
     public struct Configuration {
@@ -198,7 +199,10 @@ public final class MediaEditorVideoExport {
     private var mainComposeFramerate: Float?
     
     private var audioOutput: AVAssetReaderOutput?
-            
+    
+    private var stickerEntity: MediaEditorComposerStickerEntity?
+    private let stickerSemaphore = DispatchSemaphore(value: 0)
+    
     private var writer: MediaEditorVideoExportWriter?
     private var composer: MediaEditorComposer?
     
@@ -218,7 +222,7 @@ public final class MediaEditorVideoExport {
     
     private var startTimestamp = CACurrentMediaTime()
     
-    private let semaphore = DispatchSemaphore(value: 0)
+    private let composerSemaphore = DispatchSemaphore(value: 0)
     
     public init(postbox: Postbox, subject: Subject, configuration: Configuration, outputPath: String, textScale: CGFloat = 1.0) {
         self.postbox = postbox
@@ -249,6 +253,7 @@ public final class MediaEditorVideoExport {
     enum Input {
         case image(UIImage)
         case video(AVAsset)
+        case sticker(TelegramMediaFile)
         
         var isVideo: Bool {
             if case .video = self {
@@ -283,6 +288,8 @@ public final class MediaEditorVideoExport {
             isStory = isStoryValue
         case let .image(image):
             mainInput = .image(image)
+        case let .sticker(file):
+            mainInput = .sticker(file)
         }
         
         let duration: CMTime
@@ -464,7 +471,7 @@ public final class MediaEditorVideoExport {
                 self.reader?.timeRange = readerRange
             }
         }
-        
+                
         if self.configuration.isSticker {
             self.writer = MediaEditorVideoFFMpegWriter()
         } else {
@@ -476,6 +483,10 @@ public final class MediaEditorVideoExport {
         }
         writer.setup(configuration: self.configuration, outputPath: self.outputPath)
         self.setupComposer()
+        
+        if case let .sticker(file) = main, let composer = self.composer {
+            self.stickerEntity = MediaEditorComposerStickerEntity(postbox: self.postbox, content: .file(file), position: .zero, scale: 1.0, rotation: 0.0, baseSize: CGSize(width: 512.0, height: 512.0), mirrored: false, colorSpace: composer.colorSpace, tintColor: nil, isStatic: false, highRes: true)
+        }
                 
         if let reader {
             let colorProperties: [String: Any] = [
@@ -657,6 +668,24 @@ public final class MediaEditorVideoExport {
                     writer.markVideoAsFinished()
                     return false
                 }
+                
+                if let stickerEntity = self.stickerEntity, let ciContext = composer.ciContext {
+                    let imageArguments = self.imageArguments
+                    stickerEntity.image(for: timestamp, frameRate: Float(imageArguments?.frameRate ?? 30.0), context: ciContext, completion: { image in
+                        if let image {
+                            mainInput = .ciImage(image, imageArguments?.position ?? .zero)
+                        }
+                        self.stickerSemaphore.signal()
+                    })
+                    self.stickerSemaphore.wait()
+                    
+                    if !updatedProgress, let imageArguments = self.imageArguments, let duration = self.durationValue {
+                        let progress = imageArguments.position.seconds / duration.seconds
+                        self.statusValue = .progress(Float(progress))
+                        updatedProgress = true
+                    }
+                }
+                
                 composer.process(
                     main: mainInput!,
                     additional: additionalInput,
@@ -671,10 +700,10 @@ public final class MediaEditorVideoExport {
                         } else {
                             appendFailed = true
                         }
-                        self.semaphore.signal()
+                        self.composerSemaphore.signal()
                     }
                 )
-                self.semaphore.wait()
+                self.composerSemaphore.wait()
                 
                 if let imageArguments = self.imageArguments, let duration = self.durationValue {
                     let position = imageArguments.position + CMTime(value: 1, timescale: Int32(imageArguments.frameRate))
@@ -736,8 +765,13 @@ public final class MediaEditorVideoExport {
             return
         }
         
-        if case .image = self.subject, self.additionalVideoOutput == nil {
-            self.imageArguments = (Double(self.configuration.frameRate), CMTime(value: 0, timescale: Int32(self.configuration.frameRate)))
+        if self.additionalVideoOutput == nil {
+            switch self.subject {
+            case .image, .sticker:
+                self.imageArguments = (Double(self.configuration.frameRate), CMTime(value: 0, timescale: Int32(self.configuration.frameRate)))
+            default:
+                break
+            }
         }
         
         self.internalStatus = .exporting

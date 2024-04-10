@@ -99,6 +99,10 @@ int FFMpegCodecIdVP9 = AV_CODEC_ID_VP9;
     return _impl->streams[streamIndex]->codecpar->codec_id;
 }
 
+- (double)duration {
+    return (double)_impl->duration / AV_TIME_BASE;
+}
+
 - (int64_t)durationAtStreamIndex:(int32_t)streamIndex {
     return _impl->streams[streamIndex]->duration;
 }

@@ -69,6 +69,8 @@ public final class SoftwareVideoSource {
     private var enqueuedFrames: [(MediaTrackFrame, CGFloat, CGFloat, Bool)] = []
     private var hasReadToEnd: Bool = false
     
+    public private(set) var reportedDuration: CMTime = .invalid
+    
     public init(path: String, hintVP9: Bool, unpremultiplyAlpha: Bool) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
         
@@ -141,6 +143,8 @@ public final class SoftwareVideoSource {
                 }
             }
         }
+        
+        self.reportedDuration = CMTime(seconds: avFormatContext.duration(), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         
         self.videoStream = videoStream
         

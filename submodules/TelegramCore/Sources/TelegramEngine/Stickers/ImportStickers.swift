@@ -90,6 +90,9 @@ func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResour
                                 case let .messageMediaDocument(_, document, _, _):
                                     if let document = document, let file = telegramMediaFileFromApiDocument(document), let uploadedResource = file.resource as? CloudDocumentMediaResource {
                                         account.postbox.mediaBox.copyResourceData(from: resource.id, to: uploadedResource.id, synchronous: true)
+                                        if let thumbnail, let previewRepresentation = file.previewRepresentations.first(where: { $0.dimensions == PixelDimensions(width: 320, height: 320) }) {
+                                            account.postbox.mediaBox.copyResourceData(from: thumbnail.id, to: previewRepresentation.resource.id, synchronous: true)
+                                        }
                                         return .single(.complete(uploadedResource, file.mimeType))
                                     }
                                 default:
@@ -338,6 +341,29 @@ public enum AddStickerToSetError {
     case generic
 }
 
+private func revalidatedSticker<T>(account: Account, sticker: FileMediaReference, signal: @escaping (CloudDocumentMediaResource) -> Signal<T, MTRpcError>) -> Signal<T, MTRpcError> {
+    guard let resource = sticker.media.resource as? CloudDocumentMediaResource else {
+        return .fail(MTRpcError(errorCode: 500, errorDescription: "Internal"))
+    }
+    return signal(resource)
+    |> `catch` { error -> Signal<T, MTRpcError> in
+        if error.errorDescription == "FILE_REFERENCE_EXPIRED" {
+            return revalidateMediaResourceReference(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, revalidationContext: account.mediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: sticker.resourceReference(resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: resource)
+            |> mapError { _ -> MTRpcError in
+                return MTRpcError(errorCode: 500, errorDescription: "Internal")
+            }
+            |> mapToSignal { result -> Signal<T, MTRpcError> in
+                guard let resource = result.updatedResource as? CloudDocumentMediaResource else {
+                    return .fail(MTRpcError(errorCode: 500, errorDescription: "Internal"))
+                }
+                return signal(resource)
+            }
+        } else {
+            return .fail(error)
+        }
+    }
+}
+
 func _internal_addStickerToStickerSet(account: Account, packReference: StickerPackReference, sticker: ImportSticker) -> Signal<Bool, AddStickerToSetError> {
     let uploadSticker: Signal<UploadStickerStatus, AddStickerToSetError>
     if let resource = sticker.resource.resource as? CloudDocumentMediaResource {
@@ -363,7 +389,6 @@ func _internal_addStickerToStickerSet(account: Account, packReference: StickerPa
             flags |= (1 << 1)
         }
         let inputSticker: Api.InputStickerSetItem = .inputStickerSetItem(flags: flags, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.joined(), maskCoords: nil, keywords: sticker.keywords)
-        
         return account.network.request(Api.functions.stickers.addStickerToSet(stickerset: packReference.apiInputStickerSet, sticker: inputSticker))
         |> `catch` { error -> Signal<Api.messages.StickerSet, MTRpcError> in
             if error.errorDescription == "FILE_REFERENCE_EXPIRED" {
@@ -408,10 +433,9 @@ public enum ReorderStickerError {
 }
 
 func _internal_reorderSticker(account: Account, sticker: FileMediaReference, position: Int) -> Signal<Never, ReorderStickerError> {
-    guard let resource = sticker.media.resource as? CloudDocumentMediaResource else {
-        return .fail(.generic)
-    }
-    return account.network.request(Api.functions.stickers.changeStickerPosition(sticker: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), position: Int32(position)))
+    return revalidatedSticker(account: account, sticker: sticker, signal: { resource in
+        return account.network.request(Api.functions.stickers.changeStickerPosition(sticker: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), position: Int32(position)))
+    })
     |> mapError { error -> ReorderStickerError in
         return .generic
     }
@@ -436,10 +460,9 @@ public enum DeleteStickerError {
 }
 
 func _internal_deleteStickerFromStickerSet(account: Account, sticker: FileMediaReference) -> Signal<Never, DeleteStickerError> {
-    guard let resource = sticker.media.resource as? CloudDocumentMediaResource else {
-        return .fail(.generic)
-    }
-    return account.network.request(Api.functions.stickers.removeStickerFromSet(sticker: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))))
+    return revalidatedSticker(account: account, sticker: sticker, signal: { resource in
+        return account.network.request(Api.functions.stickers.removeStickerFromSet(sticker: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))))
+    })
     |> mapError { error -> DeleteStickerError in
         return .generic
     }
@@ -463,10 +486,6 @@ public enum ReplaceStickerError {
 }
 
 func _internal_replaceSticker(account: Account, previousSticker: FileMediaReference, sticker: ImportSticker) -> Signal<Never, ReplaceStickerError> {
-    guard let previousResource = previousSticker.media.resource as? CloudDocumentMediaResource else {
-        return .fail(.generic)
-    }
-    
     let uploadSticker: Signal<UploadStickerStatus, ReplaceStickerError>
     if let resource = sticker.resource.resource as? CloudDocumentMediaResource {
         uploadSticker = .single(.complete(resource, sticker.mimeType))
@@ -485,14 +504,14 @@ func _internal_replaceSticker(account: Account, previousSticker: FileMediaRefere
         guard case let .complete(resource, _) = uploadedSticker else {
             return .complete()
         }
-        
         var flags: Int32 = 0
         if sticker.keywords.count > 0 {
             flags |= (1 << 1)
         }
         let inputSticker: Api.InputStickerSetItem = .inputStickerSetItem(flags: flags, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference ?? Data())), emoji: sticker.emojis.joined(), maskCoords: nil, keywords: sticker.keywords)
-       
-        return account.network.request(Api.functions.stickers.replaceSticker(sticker: .inputDocument(id: previousResource.fileId, accessHash: previousResource.accessHash, fileReference: Buffer(data: previousResource.fileReference ?? Data())), newSticker: inputSticker))
+        return revalidatedSticker(account: account, sticker: previousSticker, signal: { previousResource in
+            return account.network.request(Api.functions.stickers.replaceSticker(sticker: .inputDocument(id: previousResource.fileId, accessHash: previousResource.accessHash, fileReference: Buffer(data: previousResource.fileReference)), newSticker: inputSticker))
+        })
         |> mapError { error -> ReplaceStickerError in
             return .generic
         }

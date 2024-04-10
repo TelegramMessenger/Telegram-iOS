@@ -61,6 +61,7 @@ final class MediaEditorRenderer {
     enum Input {
         case texture(MTLTexture, CMTime, Bool)
         case videoBuffer(VideoPixelBuffer)
+        case ciImage(CIImage, CMTime)
         
         var timestamp: CMTime {
             switch self {
@@ -68,6 +69,8 @@ final class MediaEditorRenderer {
                 return timestamp
             case let .videoBuffer(videoBuffer):
                 return videoBuffer.timestamp
+            case let .ciImage(_, timestamp):
+                return timestamp
             }
         }
     }
@@ -80,6 +83,7 @@ final class MediaEditorRenderer {
     
     private var renderPasses: [RenderPass] = []
     
+    private let ciInputPass = CIInputPass()
     private let mainVideoInputPass = VideoInputPass()
     private let additionalVideoInputPass = VideoInputPass()
     let videoFinishPass = VideoFinishPass()
@@ -150,6 +154,7 @@ final class MediaEditorRenderer {
         
         self.commandQueue = device.makeCommandQueue()
         self.commandQueue?.label = "Media Editor Command Queue"
+        self.ciInputPass.setup(device: device, library: library)
         self.mainVideoInputPass.setup(device: device, library: library)
         self.additionalVideoInputPass.setup(device: device, library: library)
         self.videoFinishPass.setup(device: device, library: library)
@@ -190,8 +195,14 @@ final class MediaEditorRenderer {
             case let .texture(texture, _, hasTransparency):
                 return (texture, hasTransparency)
             case let .videoBuffer(videoBuffer):
-                if let buffer = videoInputPass.processPixelBuffer(videoBuffer, textureCache: textureCache, device: device, commandBuffer: commandBuffer) {
-                    return (buffer, false)
+                if let texture = videoInputPass.processPixelBuffer(videoBuffer, textureCache: textureCache, device: device, commandBuffer: commandBuffer) {
+                    return (texture, false)
+                } else {
+                    return nil
+                }
+            case let .ciImage(image, _):
+                if let texture = self.ciInputPass.processCIImage(image, device: device, commandBuffer: commandBuffer) {
+                    return (texture, true)
                 } else {
                     return nil
                 }

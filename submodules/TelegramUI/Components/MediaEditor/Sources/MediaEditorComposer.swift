@@ -54,6 +54,7 @@ final class MediaEditorComposer {
     enum Input {
         case texture(MTLTexture, CMTime, Bool)
         case videoBuffer(VideoPixelBuffer)
+        case ciImage(CIImage, CMTime)
         
         var timestamp: CMTime {
             switch self {
@@ -61,29 +62,32 @@ final class MediaEditorComposer {
                 return timestamp
             case let .videoBuffer(videoBuffer):
                 return videoBuffer.timestamp
+            case let .ciImage(_, timestamp):
+                return timestamp
             }
         }
         
         var rendererInput: MediaEditorRenderer.Input {
             switch self {
-            case let .texture(texture, time, hasTransparency):
-                return .texture(texture, time, hasTransparency)
+            case let .texture(texture, timestamp, hasTransparency):
+                return .texture(texture, timestamp, hasTransparency)
             case let .videoBuffer(videoBuffer):
                 return .videoBuffer(videoBuffer)
+            case let .ciImage(image, timestamp):
+                return .ciImage(image, timestamp)
             }
         }
     }
     
     let device: MTLDevice?
-    private let colorSpace: CGColorSpace
+    let colorSpace: CGColorSpace
+    let ciContext: CIContext?
+    private var textureCache: CVMetalTextureCache?
     
     private let values: MediaEditorValues
     private let dimensions: CGSize
     private let outputDimensions: CGSize
     private let textScale: CGFloat
-    
-    private let ciContext: CIContext?
-    private var textureCache: CVMetalTextureCache?
     
     private let renderer = MediaEditorRenderer()
     private let renderChain = MediaEditorRenderChain()

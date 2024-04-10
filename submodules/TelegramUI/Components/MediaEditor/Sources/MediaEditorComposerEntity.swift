@@ -153,7 +153,7 @@ private class MediaEditorComposerStaticEntity: MediaEditorComposerEntity {
     }
 }
 
-private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
+final class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     public enum Content {
         case file(TelegramMediaFile)
         case video(TelegramMediaFile)
@@ -203,7 +203,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
     var imagePixelBuffer: CVPixelBuffer?
     let imagePromise = Promise<UIImage>()
     
-    init(postbox: Postbox, content: Content, position: CGPoint, scale: CGFloat, rotation: CGFloat, baseSize: CGSize, mirrored: Bool, colorSpace: CGColorSpace, tintColor: UIColor?, isStatic: Bool) {
+    init(postbox: Postbox, content: Content, position: CGPoint, scale: CGFloat, rotation: CGFloat, baseSize: CGSize, mirrored: Bool, colorSpace: CGColorSpace, tintColor: UIColor?, isStatic: Bool, highRes: Bool = false) {
         self.postbox = postbox
         self.content = content
         self.position = position
@@ -226,7 +226,9 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                 let pathPrefix = postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
                 if let source = self.source {
                     let fitToSize: CGSize
-                    if self.isStatic {
+                    if highRes {
+                        fitToSize = CGSize(width: 512, height: 512)
+                    } else if self.isStatic {
                         fitToSize = CGSize(width: 768, height: 768)
                     } else {
                         fitToSize = CGSize(width: 384, height: 384)
@@ -245,8 +247,13 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                                     frameSource.syncWith { frameSource in
                                         strongSelf.frameCount = frameSource.frameCount
                                         strongSelf.frameRate = frameSource.frameRate
-                                        
-                                        let duration = Double(frameSource.frameCount) / Double(frameSource.frameRate)
+                                            
+                                        let duration: Double
+                                        if frameSource.frameCount > 0 {
+                                            duration = Double(frameSource.frameCount) / Double(frameSource.frameRate)
+                                        } else {
+                                            duration = frameSource.duration
+                                        }
                                         strongSelf.totalDuration = duration
                                         strongSelf.durationPromise.set(.single(duration))
                                     }
@@ -489,7 +496,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
                         }
                         completion(strongSelf.image)
                     } else {
-                        completion(nil)
+                        completion(strongSelf.image)
                     }
                 }
             }
@@ -594,7 +601,6 @@ extension CIImage {
 private func render(context: CIContext, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, pixelBuffer: CVPixelBuffer, tintColor: UIColor?) -> CIImage? {
     let calculatedBytesPerRow = (4 * Int(width) + 31) & (~31)
     //assert(bytesPerRow == calculatedBytesPerRow)
-    
     
     CVPixelBufferLockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
     let dest = CVPixelBufferGetBaseAddress(pixelBuffer)
