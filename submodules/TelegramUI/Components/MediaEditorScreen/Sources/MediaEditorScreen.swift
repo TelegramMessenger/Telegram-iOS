@@ -2870,65 +2870,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
                
             if let mediaEntityView = self.entitiesView.add(mediaEntity, announce: false) as? DrawingMediaEntityView {
-                var updateStickerMaskDrawing: (CGPoint, CGFloat, CGFloat) -> Void = { _, _, _ in }
-                if isStickerEditor {
-                    let mediaEntitySize = mediaEntityView.bounds.size
-                    let scaledDimensions = subject.dimensions.cgSize.aspectFittedOrSmaller(CGSize(width: 1920, height: 1920))
-                    let maskDrawingSize = scaledDimensions.aspectFilled(mediaEntitySize)
-                    
-                    let stickerMaskDrawingView = DrawingView(size: scaledDimensions, gestureView: self.previewContainerView)
-                    stickerMaskDrawingView.stateUpdated = { [weak self] _ in
-                        if let self {
-                            self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
-                        }
-                    }
-                    stickerMaskDrawingView.emptyColor = .white
-                    stickerMaskDrawingView.updateToolState(.pen(DrawingToolState.BrushState(color: DrawingColor(color: .black), size: 0.5)))
-                    stickerMaskDrawingView.isUserInteractionEnabled = false
-                    stickerMaskDrawingView.animationsEnabled = false
-                    stickerMaskDrawingView.clearWithEmptyColor()
-                    if let filter = makeLuminanceToAlphaFilter() {
-                        self.stickerMaskWrapperView.layer.filters = [filter]
-                    }
-                    self.stickerMaskWrapperView.addSubview(stickerMaskDrawingView)
-                    self.stickerMaskWrapperView.addSubview(self.stickerMaskPreviewView)
-                    self.stickerMaskDrawingView = stickerMaskDrawingView
-                    
-                    var initialMaskPosition = CGPoint()
-                    var initialMaskScale: CGFloat = 1.0
-                    
-                    updateStickerMaskDrawing = { [weak stickerMaskDrawingView] position, scale, rotation in
-                        guard let stickerMaskDrawingView else {
-                            return
-                        }
-                        let maskScale = initialMaskPosition.x * 2.0 / 1080.0
-                        stickerMaskDrawingView.center = initialMaskPosition.offsetBy(dx: position.x * maskScale, dy: position.y * maskScale)
-                        stickerMaskDrawingView.transform = CGAffineTransform(scaleX: initialMaskScale * scale, y: initialMaskScale * scale).rotated(by: rotation)
-                    }
-                    
-                    Queue.mainQueue().after(0.1) {
-                        let previewSize = self.previewView.bounds.size
-                        self.stickerMaskWrapperView.frame = CGRect(origin: .zero, size: previewSize)
-                        self.stickerMaskPreviewView.frame = CGRect(origin: .zero, size: previewSize)
-                        
-                        let maskScale = previewSize.width / min(maskDrawingSize.width, maskDrawingSize.height)
-                        initialMaskScale = maskScale
-                        initialMaskPosition = CGPoint(x: previewSize.width / 2.0, y: previewSize.height / 2.0)
-                        stickerMaskDrawingView.bounds = CGRect(origin: .zero, size: maskDrawingSize)
-                        
-                        updateStickerMaskDrawing(.zero, 1.0, 0.0)
-                    }
-                }
-                                
                 self.entitiesView.sendSubviewToBack(mediaEntityView)
                 mediaEntityView.updated = { [weak self, weak mediaEntity] in
                     if let self, let mediaEntity {
-                        let rotationDelta = mediaEntity.rotation - initialRotation
-                        let positionDelta = CGPoint(x: mediaEntity.position.x - initialPosition.x, y: mediaEntity.position.y - initialPosition.y)
-                        let scaleDelta = mediaEntity.scale / initialScale
-                        self.mediaEditor?.setCrop(offset: positionDelta, scale: scaleDelta, rotation: rotationDelta, mirroring: false)
+                        let rotation = mediaEntity.rotation - initialRotation
+                        let position = CGPoint(x: mediaEntity.position.x - initialPosition.x, y: mediaEntity.position.y - initialPosition.y)
+                        let scale = mediaEntity.scale / initialScale
+                        self.mediaEditor?.setCrop(offset: position, scale: scale, rotation: rotation, mirroring: false)
                         
-                        updateStickerMaskDrawing(positionDelta, scaleDelta, rotationDelta)
+                        self.updateMaskDrawingView(position: position, scale: scale, rotation: rotation)
                     }
                 }
                 
@@ -2969,11 +2919,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self.hasTransparency = hasTransparency
                 self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
             }
-            mediaEditor.maskUpdated = { [weak self] mask in
+            mediaEditor.maskUpdated = { [weak self] mask, apply in
                 guard let self else {
                     return
                 }
-                if let maskData = mask.pngData() {
+                if self.stickerMaskDrawingView == nil {
+                    self.setupMaskDrawingView(size: mask.size)
+                }
+                if apply, let maskData = mask.pngData() {
                     self.stickerMaskDrawingView?.setup(withDrawing: maskData, storeAsClear: true)
                 }
             }
@@ -3150,6 +3103,55 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             }
+        }
+        
+        private var initialMaskScale: CGFloat = .zero
+        private var initialMaskPosition: CGPoint = .zero
+        private func setupMaskDrawingView(size: CGSize) {
+            guard let mediaEntityView = self.entitiesView.getView(where: { $0 is DrawingMediaEntityView }) as? DrawingMediaEntityView else {
+                return
+            }
+            let mediaEntitySize = mediaEntityView.bounds.size
+            let scaledDimensions = size
+            let maskDrawingSize = scaledDimensions.aspectFilled(mediaEntitySize)
+            
+            let stickerMaskDrawingView = DrawingView(size: scaledDimensions, gestureView: self.previewContainerView)
+            stickerMaskDrawingView.stateUpdated = { [weak self] _ in
+                if let self {
+                    self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
+                }
+            }
+            stickerMaskDrawingView.emptyColor = .white
+            stickerMaskDrawingView.updateToolState(.pen(DrawingToolState.BrushState(color: DrawingColor(color: .black), size: 0.5)))
+            stickerMaskDrawingView.isUserInteractionEnabled = false
+            stickerMaskDrawingView.animationsEnabled = false
+            stickerMaskDrawingView.clearWithEmptyColor()
+            if let filter = makeLuminanceToAlphaFilter() {
+                self.stickerMaskWrapperView.layer.filters = [filter]
+            }
+            self.stickerMaskWrapperView.addSubview(stickerMaskDrawingView)
+            self.stickerMaskWrapperView.addSubview(self.stickerMaskPreviewView)
+            self.stickerMaskDrawingView = stickerMaskDrawingView
+            
+            let previewSize = self.previewView.bounds.size
+            self.stickerMaskWrapperView.frame = CGRect(origin: .zero, size: previewSize)
+            self.stickerMaskPreviewView.frame = CGRect(origin: .zero, size: previewSize)
+            
+            let maskScale = previewSize.width / min(maskDrawingSize.width, maskDrawingSize.height)
+            self.initialMaskScale = maskScale
+            self.initialMaskPosition = CGPoint(x: previewSize.width / 2.0, y: previewSize.height / 2.0)
+            stickerMaskDrawingView.bounds = CGRect(origin: .zero, size: maskDrawingSize)
+            
+            self.updateMaskDrawingView(position: .zero, scale: 1.0, rotation: 0.0)
+        }
+        
+        private func updateMaskDrawingView(position: CGPoint, scale: CGFloat, rotation: CGFloat) {
+            guard let stickerMaskDrawingView = self.stickerMaskDrawingView else {
+                return
+            }
+            let maskScale = self.initialMaskPosition.x * 2.0 / 1080.0
+            stickerMaskDrawingView.center = self.initialMaskPosition.offsetBy(dx: position.x * maskScale, dy: position.y * maskScale)
+            stickerMaskDrawingView.transform = CGAffineTransform(scaleX: self.initialMaskScale * scale, y: self.initialMaskScale * scale).rotated(by: rotation)
         }
        
         override func didLoad() {
@@ -4928,10 +4930,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         action()
                                     }
                                     
-                                    if self.isDisplayingTool == .cutoutRestore {
-                                        self.cutoutScreen?.mode = .erase
-                                        self.isDisplayingTool = .cutoutErase
-                                        self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
+                                    if let cutoutScreen = self.cutoutScreen {
+                                        cutoutScreen.requestDismiss(animated: true)
                                     }
                                 }
                             }

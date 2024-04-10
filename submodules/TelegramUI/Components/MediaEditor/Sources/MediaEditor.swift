@@ -192,7 +192,7 @@ public final class MediaEditor {
     
     public private(set) var canCutout: Bool = false
     public var canCutoutUpdated: (Bool, Bool) -> Void = { _, _ in }
-    public var maskUpdated: (UIImage) -> Void = { _ in }
+    public var maskUpdated: (UIImage, Bool) -> Void = { _, _ in }
     
     public var classificationUpdated: ([(String, Float)]) -> Void = { _ in }
     
@@ -731,12 +731,13 @@ public final class MediaEditor {
                                 self.canCutout = canCutout
                                 self.canCutoutUpdated(canCutout, false)
                             })
+                            self.maskUpdated(image, false)
                         } else {
                             self.canCutout = false
                             self.canCutoutUpdated(false, true)
                             
                             if let maskImage = generateTintedImage(image: image, color: .white, backgroundColor: .black) {
-                                self.maskUpdated(maskImage)
+                                self.maskUpdated(maskImage, true)
                             }
                         }
                         let _ = (classifyImage(image)
