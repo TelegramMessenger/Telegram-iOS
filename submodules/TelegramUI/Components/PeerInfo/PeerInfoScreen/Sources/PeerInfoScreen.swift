@@ -4122,7 +4122,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             case .qrCode:
                 strongSelf.openQrCode()
             case .postStory:
-                strongSelf.openPostStory()
+                var sourceFrame: CGRect?
+                if let source {
+                    sourceFrame = source.view.convert(source.bounds, to: strongSelf.view)
+                }
+                strongSelf.openPostStory(sourceFrame: sourceFrame)
             case .editPhoto, .editVideo, .moreToSearch:
                 break
             }
@@ -9542,12 +9546,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.controller?.push(controller)
     }
     
-    private func openPostStory() {
+    private func openPostStory(sourceFrame: CGRect?) {
         self.postingAvailabilityDisposable?.dispose()
         
         let canPostStatus: Signal<StoriesUploadAvailability, NoError>
         #if DEBUG && false
-        canPostStatus = .single(.available)
+        canPostStatus = .single(StoriesUploadAvailability.premiumRequired)
         #else
         canPostStatus = self.context.engine.messages.checkStoriesUploadAvailability(target: .peer(self.peerId))
         #endif
@@ -9599,6 +9603,34 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     
                     self.hapticFeedback.impact(.light)
                 }).strict()
+            case .premiumRequired, .monthlyLimit, .weeklyLimit, .expiringLimit:
+                if let sourceFrame {
+                    let context = self.context
+                    let location = CGRect(origin: CGPoint(x: sourceFrame.midX, y: sourceFrame.maxY), size: CGSize())
+                    
+                    let text: String
+                    text = self.presentationData.strings.StoryFeed_TooltipPremiumPostingLimited
+                    
+                    let tooltipController = TooltipScreen(
+                        context: context,
+                        account: context.account,
+                        sharedContext: context.sharedContext,
+                        text: .markdown(text: text),
+                        style: .customBlur(UIColor(rgb: 0x2a2a2a), 2.0),
+                        icon: .none,
+                        location: .point(location, .top),
+                        shouldDismissOnTouch: { [weak self] point, containerFrame in
+                            if containerFrame.contains(point) {
+                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: false, dismissed: nil)
+                                self?.controller?.push(controller)
+                                return .dismiss(consume: true)
+                            } else {
+                                return .dismiss(consume: false)
+                            }
+                        }
+                    )
+                    self.controller?.present(tooltipController, in: .current)
+                }
             default:
                 break
             }
