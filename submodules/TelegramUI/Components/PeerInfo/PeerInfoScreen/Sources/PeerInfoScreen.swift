@@ -1290,7 +1290,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 )
             )
         }
-    
+        
         if let cachedData = data.cachedData as? CachedUserData {
             if let birthday = cachedData.birthday {
                 var hasBirthdayToday = false
@@ -1363,70 +1363,72 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 }
             }
         }
-        if let reactionSourceMessageId = reactionSourceMessageId, !data.isContact {
-            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
-                interaction.openChat(nil)
-            }))
-            
-            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_ReportReaction, color: .destructive, action: {
-                interaction.openReport(.reaction(reactionSourceMessageId))
-            }))
-        } else if let _ = nearbyPeerDistance {
-            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
-                interaction.openChat(nil)
-            }))
-            
-            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_Report, color: .destructive, action: {
-                interaction.openReport(.user)
-            }))
-        } else {
-            if !data.isContact {
-                if user.botInfo == nil {
-                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.PeerInfo_AddToContacts, action: {
-                        interaction.openAddContact()
-                    }))
-                }
-            }
-            
-            var isBlocked = false
-            if let cachedData = data.cachedData as? CachedUserData, cachedData.isBlocked {
-                isBlocked = true
-            }
-            
-            if isBlocked {
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
-                    interaction.updateBlocked(false)
+        
+        if !isMyProfile {
+            if let reactionSourceMessageId = reactionSourceMessageId, !data.isContact {
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
+                    interaction.openChat(nil)
+                }))
+                
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_ReportReaction, color: .destructive, action: {
+                    interaction.openReport(.reaction(reactionSourceMessageId))
+                }))
+            } else if let _ = nearbyPeerDistance {
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.UserInfo_SendMessage, action: {
+                    interaction.openChat(nil)
+                }))
+                
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_Report, color: .destructive, action: {
+                    interaction.openReport(.user)
                 }))
             } else {
-                if user.flags.contains(.isSupport) || data.isContact {
-                } else {
+                if !data.isContact {
                     if user.botInfo == nil {
-                        items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
-                            interaction.updateBlocked(true)
+                        items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 3, text: presentationData.strings.PeerInfo_AddToContacts, action: {
+                            interaction.openAddContact()
                         }))
                     }
                 }
+                
+                var isBlocked = false
+                if let cachedData = data.cachedData as? CachedUserData, cachedData.isBlocked {
+                    isBlocked = true
+                }
+                
+                if isBlocked {
+                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
+                        interaction.updateBlocked(false)
+                    }))
+                } else {
+                    if user.flags.contains(.isSupport) || data.isContact {
+                    } else {
+                        if user.botInfo == nil {
+                            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
+                                interaction.updateBlocked(true)
+                            }))
+                        }
+                    }
+                }
+                
+                if let encryptionKeyFingerprint = data.encryptionKeyFingerprint {
+                    items[.peerInfo]!.append(PeerInfoScreenDisclosureEncryptionKeyItem(id: 5, text: presentationData.strings.Profile_EncryptionKey, fingerprint: encryptionKeyFingerprint, action: {
+                        interaction.openEncryptionKey()
+                    }))
+                }
+                
+                if user.botInfo != nil {
+                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 6, text: presentationData.strings.ReportPeer_Report, action: {
+                        interaction.openReport(.default)
+                    }))
+                }
+                
+                if let botInfo = user.botInfo, botInfo.flags.contains(.worksWithGroups) {
+                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 7, text: presentationData.strings.Bot_AddToChat, color: .accent, action: {
+                        interaction.openAddBotToGroup()
+                    }))
+                    items[.peerInfo]!.append(PeerInfoScreenCommentItem(id: 8, text: presentationData.strings.Bot_AddToChatInfo))
+                }
             }
-            
-            if let encryptionKeyFingerprint = data.encryptionKeyFingerprint {
-                items[.peerInfo]!.append(PeerInfoScreenDisclosureEncryptionKeyItem(id: 5, text: presentationData.strings.Profile_EncryptionKey, fingerprint: encryptionKeyFingerprint, action: {
-                    interaction.openEncryptionKey()
-                }))
-            }
-            
-            if user.botInfo != nil {
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 6, text: presentationData.strings.ReportPeer_Report, action: {
-                    interaction.openReport(.default)
-                }))
-            }
-            
-            if let botInfo = user.botInfo, botInfo.flags.contains(.worksWithGroups) {
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 7, text: presentationData.strings.Bot_AddToChat, color: .accent, action: {
-                    interaction.openAddBotToGroup()
-                }))
-                items[.peerInfo]!.append(PeerInfoScreenCommentItem(id: 8, text: presentationData.strings.Bot_AddToChatInfo))
-            }
-            
         }
     } else if let channel = data.peer as? TelegramChannel {
         let ItemUsername = 1
