@@ -110,7 +110,6 @@ public final class DrawingLocationEntityView: DrawingEntityView, UITextViewDeleg
     
     private var textSize: CGSize = .zero
     public override func sizeThatFits(_ size: CGSize) -> CGSize {
-        self.textView.setNeedsLayersUpdate()
         var result = self.textView.sizeThatFits(CGSize(width: self.locationEntity.width, height: .greatestFiniteMagnitude))
         self.textSize = result
         

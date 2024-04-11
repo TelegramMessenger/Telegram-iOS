@@ -1726,6 +1726,8 @@ extension ChatControllerImpl {
     }
     
     func openStickerEditor() {
+        self.chatDisplayNode.dismissInput()
+        
         var dismissImpl: (() -> Void)?
         let mainController = self.context.sharedContext.makeStickerMediaPickerScreen(
             context: self.context,

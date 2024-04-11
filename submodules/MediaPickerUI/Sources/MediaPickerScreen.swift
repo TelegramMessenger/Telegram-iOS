@@ -2225,6 +2225,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
         }
         
+        if let camera = self.controllerNode.modernCamera {
+            if let cameraView = self.controllerNode.modernCameraView {
+                cameraView.isEnabled = false
+            }
+            camera.stopCapture(invalidate: true)
+        }
+        
         super.dismiss(completion: completion)
     }
     

@@ -27,7 +27,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         return self.entity as! DrawingTextEntity
     }
     
-    let blurredBackgroundView: BlurredBackgroundView
+//    let blurredBackgroundView: BlurredBackgroundView
     let textView: DrawingTextView
     var customEmojiContainerView: CustomEmojiContainerView?
     var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
@@ -37,9 +37,9 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     var replaceWithAnimatedImage: (Data, UIImage) -> Void = { _, _ in }
     
     init(context: AccountContext, entity: DrawingTextEntity) {
-        self.blurredBackgroundView = BlurredBackgroundView(color: UIColor(white: 0.0, alpha: 0.25), enableBlur: true)
-        self.blurredBackgroundView.clipsToBounds = true
-        self.blurredBackgroundView.isHidden = true
+//        self.blurredBackgroundView = BlurredBackgroundView(color: UIColor(white: 0.0, alpha: 0.25), enableBlur: true)
+//        self.blurredBackgroundView.clipsToBounds = true
+//        self.blurredBackgroundView.isHidden = true
         
         self.textView = DrawingTextView(frame: .zero)
         self.textView.clipsToBounds = false
@@ -62,7 +62,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         super.init(context: context, entity: entity)
         
         self.textView.delegate = self
-        self.addSubview(self.blurredBackgroundView)
+//        self.addSubview(self.blurredBackgroundView)
         self.addSubview(self.textView)
         
         self.emojiViewProvider = { emoji in
@@ -420,7 +420,6 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     }
     
     public override func sizeThatFits(_ size: CGSize) -> CGSize {
-        self.textView.setNeedsLayersUpdate()
         var result = self.textView.sizeThatFits(CGSize(width: self.textEntity.width, height: .greatestFiniteMagnitude))
         result.width = max(224.0, ceil(result.width) + 20.0)
         result.height = ceil(result.height);
@@ -458,7 +457,6 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         let range = NSMakeRange(0, text.length)
         let fontSize = self.displayFontSize
     
-        self.textView.hasTextLayers = [.typing, .wiggle].contains(self.textEntity.animation)
         self.textView.drawingLayoutManager.textContainers.first?.lineFragmentPadding = floor(fontSize * 0.24)
     
         if let (font, name) = availableFonts[text.string.lowercased()] {
@@ -498,11 +496,8 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         guard let visualText = text.mutableCopy() as? NSMutableAttributedString else {
             return
         }
-        if self.textView.hasTextLayers {
-            text.addAttribute(.foregroundColor, value: UIColor.clear, range: range)
-        } else {
-            text.addAttribute(.foregroundColor, value: textColor, range: range)
-        }
+        text.addAttribute(.foregroundColor, value: textColor, range: range)
+        
         visualText.addAttribute(.foregroundColor, value: textColor, range: range)
         
         text.enumerateAttributes(in: range) { attributes, subrange, _ in
@@ -522,67 +517,8 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         if keepSelectedRange {
             self.textView.selectedRange = previousRange
         }
-        
-        if self.textView.hasTextLayers {
-            self.textView.onLayersUpdate = { [weak self] in
-                self?.updateTextAnimations()
-            }
-        } else {
-            self.updateTextAnimations()
-        }
     }
 
-    func updateTextAnimations() {
-        for layer in self.textView.characterLayers {
-            layer.removeAllAnimations()
-        }
-        self.textView.layer.removeAllAnimations()
-        
-        guard self.textView.characterLayers.count > 0 || self.textEntity.animation == .zoomIn else {
-            return
-        }
-        
-        switch self.textEntity.animation {
-        case .typing:
-            let delta: CGFloat = 1.0 / CGFloat(self.textView.characterLayers.count + 3)
-            let duration = Double(self.textView.characterLayers.count + 3) * 0.28
-            var offset = delta
-            for layer in self.textView.characterLayers {
-                let animation = CAKeyframeAnimation(keyPath: "opacity")
-                animation.calculationMode = .discrete
-                animation.values = [0.0, 1.0]
-                animation.keyTimes = [0.0, offset as NSNumber, 1.0]
-                animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                animation.duration = duration
-                animation.repeatCount = .infinity
-                layer.add(animation, forKey: "opacity")
-                offset += delta
-            }
-        case .wiggle:
-            for layer in self.textView.characterLayers {
-                let animation = CABasicAnimation(keyPath: "transform.rotation.z")
-                animation.fromValue = (-.pi / 10.0) as NSNumber
-                animation.toValue = (.pi / 10.0) as NSNumber
-                animation.autoreverses = true
-                animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                animation.duration = 0.6
-                animation.repeatCount = .infinity
-                layer.add(animation, forKey: "transform.rotation.z")
-            }
-        case .zoomIn:
-            let animation = CABasicAnimation(keyPath: "transform.scale")
-            animation.fromValue = 0.001 as NSNumber
-            animation.toValue = 1.0 as NSNumber
-            animation.autoreverses = true
-            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            animation.duration = 0.8
-            animation.repeatCount = .infinity
-            self.textView.layer.add(animation, forKey: "transform.scale")
-        default:
-            break
-        }
-    }
-    
     public override func update(animated: Bool = false) {
         self.update(animated: animated, keepSelectedRange: false, updateEditingPosition: true)
     }
@@ -682,30 +618,6 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         let rect = self.bounds
         UIGraphicsBeginImageContextWithOptions(rect.size, false, 2.0)
         self.textView.drawHierarchy(in: rect, afterScreenUpdates: true)
-        let image = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        return image
-    }
-    
-    func getPresentationRenderImage() -> UIImage? {
-        let rect = self.bounds
-        UIGraphicsBeginImageContextWithOptions(rect.size, false, 1.0)
-        if let context = UIGraphicsGetCurrentContext() {
-            for layer in self.textView.characterLayers {
-                if let presentation = layer.presentation() {
-                    context.saveGState()
-                    context.translateBy(x: presentation.position.x - presentation.bounds.width / 2.0, y: 0.0)
-                    if let rotation = (presentation.value(forKeyPath: "transform.rotation.z") as? NSNumber)?.floatValue {
-                        context.translateBy(x: presentation.bounds.width / 2.0, y: presentation.bounds.height)
-                        context.rotate(by: CGFloat(rotation))
-                        context.translateBy(x: -presentation.bounds.width / 2.0, y: -presentation.bounds.height)
-                    }
-                    presentation.render(in: context)
-                    context.restoreGState()
-                }
-            }
-        }
-        //self.textView.drawHierarchy(in: rect, afterScreenUpdates: true)
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
         return image
@@ -1236,8 +1148,6 @@ final class SimpleTextLayer: CATextLayer {
 }
 
 final class DrawingTextView: UITextView, NSLayoutManagerDelegate {
-    var characterLayers: [CALayer] = []
-    
     var drawingLayoutManager: DrawingTextLayoutManager {
         return self.layoutManager as! DrawingTextLayoutManager
     }
@@ -1307,7 +1217,6 @@ final class DrawingTextView: UITextView, NSLayoutManagerDelegate {
         }
     }
     
-    var hasTextLayers = false
     var visualText: NSAttributedString?
         
     init(frame: CGRect) {
@@ -1357,57 +1266,14 @@ final class DrawingTextView: UITextView, NSLayoutManagerDelegate {
     }
 
     var onLayoutUpdate: (() -> Void)?
-    var onLayersUpdate: (() -> Void)?
-    
-    private var needsLayersUpdate = false
-    func setNeedsLayersUpdate() {
-        self.needsLayersUpdate = true
-    }
-    
+        
     func layoutManager(_ layoutManager: NSLayoutManager, didCompleteLayoutFor textContainer: NSTextContainer?, atEnd layoutFinishedFlag: Bool) {
-        self.updateCharLayers()
         if layoutFinishedFlag {
             if let onLayoutUpdate = self.onLayoutUpdate {
                 self.onLayoutUpdate = nil
                 onLayoutUpdate()
             }
         }
-    }
-    
-    func updateCharLayers() {
-        for layer in self.characterLayers {
-            layer.removeFromSuperlayer()
-        }
-        self.characterLayers = []
-        
-        guard let attributedString = self.visualText, self.hasTextLayers else {
-            return
-        }
-        
-        let wordRange = NSMakeRange(0, attributedString.length)
-        
-        var index = wordRange.location
-        while index < wordRange.location + wordRange.length {
-            let glyphRange = NSMakeRange(index, 1)
-            let characterRange = self.layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange:nil)
-            var glyphRect = self.layoutManager.boundingRect(forGlyphRange: glyphRange, in: self.textContainer)
-            //let location = self.layoutManager.location(forGlyphAt: index)
-            
-            glyphRect.origin.y += glyphRect.height / 2.0 //location.y - (glyphRect.height / 2.0);
-            let textLayer = SimpleTextLayer()
-            textLayer.contentsScale = 1.0
-            textLayer.frame = glyphRect
-            textLayer.string = attributedString.attributedSubstring(from: characterRange)
-            textLayer.anchorPoint = CGPoint(x: 0.5, y: 1.0)
-            
-            self.layer.addSublayer(textLayer)
-            self.characterLayers.append(textLayer)
-            
-            let stepGlyphRange = self.layoutManager.glyphRange(forCharacterRange: characterRange, actualCharacterRange:nil)
-            index += stepGlyphRange.length
-        }
-        
-        self.onLayersUpdate?()
     }
     
     var onPaste: () -> Bool = { return true }

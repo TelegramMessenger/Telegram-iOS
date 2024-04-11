@@ -156,6 +156,12 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.eachView { entityView in
+            entityView.reset()
+        }
+    }
+    
     public override func layoutSubviews() {
         super.layoutSubviews()
     
@@ -501,6 +507,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 self.hasSelectionChanged(false)
                 view.selectionView?.removeFromSuperview()
             }
+            view.reset()
             if animated {
                 view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak view] _ in
                     view?.removeFromSuperview()
@@ -539,6 +546,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 if view.entity.isMedia {
                     continue
                 }
+                view.reset()
                 if let selectionView = view.selectionView {
                     selectionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak selectionView] _ in
                         selectionView?.removeFromSuperview()
@@ -557,6 +565,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 if view.entity.isMedia {
                     continue
                 }
+                view.reset()
                 view.selectionView?.removeFromSuperview()
                 view.removeFromSuperview()
             }
@@ -944,6 +953,12 @@ public class DrawingEntityView: UIView {
     
     var selectionBounds: CGRect {
         return self.bounds
+    }
+    
+    func reset() {
+        self.onSnapUpdated = { _, _ in }
+        self.onPositionUpdated = { _ in }
+        self.onInteractionUpdated = { _ in }
     }
     
     func animateInsertion() {
