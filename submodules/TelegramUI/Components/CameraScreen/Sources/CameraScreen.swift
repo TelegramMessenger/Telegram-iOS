@@ -1924,24 +1924,59 @@ public class CameraScreen: ViewController {
             case .changed:
                 if case .none = self.cameraState.recording {
                     if case .compact = layout.metrics.widthClass {
-                        if (translation.x < -10.0 || self.isDismissing) && self.hasAppeared {
-                            self.isDismissing = true
-                            let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
-                            controller.updateTransitionProgress(transitionFraction, transition: .immediate)
-                        } else if translation.y < -10.0 && abs(translation.y) > abs(translation.x) {
-                            controller.presentGallery(fromGesture: true)
-                            gestureRecognizer.isEnabled = false
-                            gestureRecognizer.isEnabled = true
+                        switch controller.mode {
+                        case .story:
+                            if (translation.x < -10.0 || self.isDismissing) && self.hasAppeared {
+                                self.isDismissing = true
+                                let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
+                                controller.updateTransitionProgress(transitionFraction, transition: .immediate)
+                            } else if translation.y < -10.0 && abs(translation.y) > abs(translation.x) {
+                                controller.presentGallery(fromGesture: true)
+                                gestureRecognizer.isEnabled = false
+                                gestureRecognizer.isEnabled = true
+                            }
+                        case .sticker:
+                            if (abs(translation.y) > 10.0 || self.isDismissing) && self.hasAppeared {
+                                self.containerView.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, translation.y, 0.0)
+                                if !self.isDismissing {
+                                    controller.statusBar.updateStatusBarStyle(.Ignore, animated: true)
+                                    self.isDismissing = true
+                                    ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut).updateAlpha(layer: self.backgroundView.layer, alpha: 0.0)
+                                }
+                            }
                         }
                     }
                 }
             case .ended, .cancelled:
                 if self.isDismissing {
-                    let velocity = gestureRecognizer.velocity(in: self.view)
-                    let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
-                    controller.completeWithTransitionProgress(transitionFraction, velocity: abs(velocity.x), dismissing: true)
-                    
-                    self.isDismissing = false
+                    switch controller.mode {
+                    case .story:
+                        let velocity = gestureRecognizer.velocity(in: self.view)
+                        let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
+                        controller.completeWithTransitionProgress(transitionFraction, velocity: abs(velocity.x), dismissing: true)
+                        
+                        self.isDismissing = false
+                    case .sticker:
+                        let velocity = gestureRecognizer.velocity(in: self.view)
+                        let transitionFraction = translation.y / self.frame.height
+                        if abs(transitionFraction) > 0.3 || abs(velocity.y) > 1000.0 {
+                            self.containerView.layer.sublayerTransform = CATransform3DIdentity
+                            self.mainPreviewView.center = self.previewContainerView.center.offsetBy(dx: 0.0, dy: translation.y)
+                            
+                            if let view = self.componentHost.view {
+                                view.center = view.center.offsetBy(dx: 0.0, dy: translation.y)
+                            }
+                            
+                            controller.requestDismiss(animated: true, interactive: true)
+                        } else {
+                            ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut).updateAlpha(layer: self.backgroundView.layer, alpha: 1.0)
+                            controller.statusBar.updateStatusBarStyle(.White, animated: true)
+                            
+                            ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring).updateSublayerTransformOffset(layer: self.containerView.layer, offset: .zero)
+                        }
+                        
+                        self.isDismissing = false
+                    }
                 }
             default:
                 break
@@ -2095,7 +2130,12 @@ public class CameraScreen: ViewController {
                         self.requestUpdateLayout(hasAppeared: true, transition: .immediate)
                     })
                     
-                    self.mainPreviewView.layer.animateBounds(from: self.mainPreviewView.bounds, to: CGRect(origin: .zero, size: self.previewContainerView.frame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    var sourceBounds = self.mainPreviewView.bounds
+                    if let holder = controller.holder {
+                        sourceBounds = CGRect(origin: .zero, size: holder.parentView.frame.size.aspectFitted(sourceBounds.size))
+                    }
+                    
+                    self.mainPreviewView.layer.animateBounds(from: sourceBounds, to: CGRect(origin: .zero, size: self.previewContainerView.frame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                     
                     let sourceScale = self.mainPreviewView.layer.value(forKeyPath: "transform.scale.x") as? CGFloat ?? 1.0
                     self.mainPreviewView.transform = CGAffineTransform.identity
@@ -2154,7 +2194,7 @@ public class CameraScreen: ViewController {
                     self.mainPreviewView.layer.animateBounds(from: self.mainPreviewView.bounds, to: CGRect(origin: .zero, size: self.previewContainerView.frame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                     
                     let targetScale = destinationInnerFrame.width / self.previewContainerView.frame.width
-//                    self.mainPreviewView.transform = CGAffineTransform.identity
+                    self.mainPreviewView.transform = CGAffineTransform(scaleX: targetScale, y: targetScale)
                     self.mainPreviewView.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 }
                 
@@ -3006,8 +3046,10 @@ public class CameraScreen: ViewController {
                 })
             } else {
                 if !interactive {
-                    if let navigationController = self.navigationController as? NavigationController {
-                        navigationController.updateRootContainerTransitionOffset(self.node.frame.width, transition: .immediate)
+                    if case .story = self.mode {
+                        if let navigationController = self.navigationController as? NavigationController {
+                            navigationController.updateRootContainerTransitionOffset(self.node.frame.width, transition: .immediate)
+                        }
                     }
                 }
                 self.updateTransitionProgress(0.0, transition: .animated(duration: 0.4, curve: .spring), completion: { [weak self] in
@@ -3060,9 +3102,11 @@ public class CameraScreen: ViewController {
             return true
         })
                 
-        if let navigationController = self.navigationController as? NavigationController {
-            let offsetX = floorToScreenPixels(transitionFraction * self.node.frame.width)
-            navigationController.updateRootContainerTransitionOffset(offsetX, transition: transition)
+        if case .story = self.mode {
+            if let navigationController = self.navigationController as? NavigationController {
+                let offsetX = floorToScreenPixels(transitionFraction * self.node.frame.width)
+                navigationController.updateRootContainerTransitionOffset(offsetX, transition: transition)
+            }
         }
     }
     
@@ -3103,7 +3147,9 @@ public class CameraScreen: ViewController {
                 self.ignoreStatusBar = false
                 self.updateTransitionProgress(1.0, transition: .animated(duration: 0.4, curve: .spring), completion: { [weak self] in
                     if let self, let navigationController = self.navigationController as? NavigationController {
-                        navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
+                        if case .story = self.mode {
+                            navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
+                        }
                     }
                 })
             }
@@ -3113,7 +3159,9 @@ public class CameraScreen: ViewController {
                 self.updateStatusBarAppearance()
                 self.updateTransitionProgress(1.0, transition: .animated(duration: 0.4, curve: .spring), completion: { [weak self] in
                     if let self, let navigationController = self.navigationController as? NavigationController {
-                        navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
+                        if case .story = self.mode {
+                            navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
+                        }
                         self.node.requestUpdateLayout(hasAppeared: true, transition: .immediate)
                         self.transitionedIn()
                     }

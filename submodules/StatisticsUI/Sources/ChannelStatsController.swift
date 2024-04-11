@@ -1540,6 +1540,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let dataPromise = Promise<ChannelStats?>(nil)
     let messagesPromise = Promise<MessageHistoryView?>(nil)
     
+    let withdrawalDisposable = MetaDisposable()
+    actionsDisposable.add(withdrawalDisposable)
+    
     let storiesPromise = Promise<PeerStoryListContext.State?>()
             
     let statsContext = ChannelStatsContext(postbox: context.account.postbox, network: context.account.network, peerId: peerId)
@@ -2120,15 +2123,18 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         }
     }
     requestWithdrawImpl = {
-        let controller = revenueWithdrawalController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, present: { c, _ in
-            presentImpl?(c)
-        }, completion: { [weak revenueContext] url in
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
-            
-            revenueContext?.reload()
-        })
-        presentImpl?(controller)
+        withdrawalDisposable.set((context.engine.peers.checkChannelRevenueWithdrawalAvailability()
+        |> deliverOnMainQueue).start(error: { error in
+            let controller = revenueWithdrawalController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, initialError: error, present: { c, _ in
+                presentImpl?(c)
+            }, completion: { [weak revenueContext] url in
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                
+                revenueContext?.reload()
+            })
+            presentImpl?(controller)
+        }))
     }
     openTransactionImpl = { transaction in
         let _ = (peer.get()
