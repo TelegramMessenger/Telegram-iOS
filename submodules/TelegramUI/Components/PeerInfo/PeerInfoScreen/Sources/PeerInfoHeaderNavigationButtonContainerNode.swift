@@ -198,10 +198,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 }
                 let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: size.height)
                 var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
-                var buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin - buttonSize.width, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
-                if case .postStory = spec.key {
-                    buttonFrame.origin.x -= 12.0
-                }
+                let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin - buttonSize.width, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
                 nextButtonOrigin -= buttonSize.width + 15.0
                 if spec.isForExpandedView {
                     nextExpandedButtonOrigin = nextButtonOrigin
@@ -263,10 +260,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 if let buttonNode = self.rightButtonNodes[key] {
                     let buttonSize = buttonNode.bounds.size
                     var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
-                    var buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin - buttonSize.width, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
-                    if case .postStory = spec.key {
-                        buttonFrame.origin.x -= 12.0
-                    }
+                    let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin - buttonSize.width, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
                     nextButtonOrigin -= buttonSize.width + 15.0
                     if spec.isForExpandedView {
                         nextExpandedButtonOrigin = nextButtonOrigin

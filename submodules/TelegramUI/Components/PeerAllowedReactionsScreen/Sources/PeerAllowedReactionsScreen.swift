@@ -152,7 +152,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 allowedReactions = .empty
             }
             
-            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: Int32(self.allowedReactionCount))
+            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: self.allowedReactionCount >= 11 ? nil : Int32(self.allowedReactionCount))
             
             if self.appliedReactionSettings != reactionSettings {
                 if case .empty = allowedReactions {
@@ -243,7 +243,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             } else {
                 allowedReactions = .empty
             }
-            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: Int32(self.allowedReactionCount))
+            let reactionSettings = PeerReactionSettings(allowedReactions: allowedReactions, maxReactionCount: self.allowedReactionCount == 11 ? nil : Int32(self.allowedReactionCount))
             
             let applyDisposable = (component.context.engine.peers.updatePeerReactionSettings(peerId: component.peerId, reactionSettings: reactionSettings)
             |> deliverOnMainQueue).start(error: { [weak self] error in
@@ -354,7 +354,12 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 self.enabledReactions = enabledReactions
                 self.availableReactions = component.initialContent.availableReactions
                 self.isEnabled = component.initialContent.isEnabled
-                self.appliedReactionSettings = component.initialContent.reactionSettings
+                self.appliedReactionSettings = component.initialContent.reactionSettings.flatMap { reactionSettings in
+                    return PeerReactionSettings(
+                        allowedReactions: reactionSettings.allowedReactions,
+                        maxReactionCount: reactionSettings.maxReactionCount == 11 ? nil : reactionSettings.maxReactionCount
+                    )
+                }
                 self.allowedReactionCount = (component.initialContent.reactionSettings?.maxReactionCount).flatMap(Int.init) ?? 11
             }
             var caretPosition = self.caretPosition ?? enabledReactions.count
@@ -857,6 +862,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     }
                 }
                 contentHeight += reactionCountSectionSize.height
+                contentHeight += 12.0
             } else {
                 if let reactionsTitleText = self.reactionsTitleText {
                     self.reactionsTitleText = nil
@@ -1005,7 +1011,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: min(340.0, max(50.0, availableSize.height - 200.0)))
+                    containerSize: CGSize(width: availableSize.width, height: availableSize.height)
                 )
                 let reactionSelectionControlFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - reactionSelectionControlSize.height), size: reactionSelectionControlSize)
                 if let reactionSelectionControlView = reactionSelectionControl.view {
