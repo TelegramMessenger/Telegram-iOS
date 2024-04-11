@@ -579,7 +579,6 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
     
     entries.append(.stories(presentationData.theme, presentationData.strings.Notifications_Stories, !exceptions.stories.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.stories.peerIds.count)) : "", storiesValue))
     
-    //TODO:localize
     var reactionsValue: String = ""
     var hasReactionNotifications = false
     switch globalSettings.reactionSettings.messages {
@@ -590,7 +589,7 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
             reactionsValue.append(", ")
         }
         hasReactionNotifications = true
-        reactionsValue.append("Messages")
+        reactionsValue.append(presentationData.strings.Notifications_Reactions_SubtitleMessages)
     }
     switch globalSettings.reactionSettings.stories {
     case .nobody:
@@ -600,9 +599,9 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
             reactionsValue.append(", ")
         }
         hasReactionNotifications = true
-        reactionsValue.append("Stories")
+        reactionsValue.append(presentationData.strings.Notifications_Reactions_SubtitleStories)
     }
-    entries.append(.reactions(presentationData.theme, "Reactions", reactionsValue, hasReactionNotifications ? "On" : "Off"))
+    entries.append(.reactions(presentationData.theme, presentationData.strings.Notifications_Reactions, reactionsValue, hasReactionNotifications ? presentationData.strings.Notifications_On : presentationData.strings.Notifications_Off))
     
     entries.append(.inAppHeader(presentationData.theme, presentationData.strings.Notifications_InAppNotifications.uppercased()))
     entries.append(.inAppSounds(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsSounds, inAppSettings.playSounds))

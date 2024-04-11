@@ -874,8 +874,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             }))
         }
         
-        //TODO:localize
-        items[.myProfile]!.append(PeerInfoScreenDisclosureItem(id: 0, text: "My Profile", icon: PresentationResourcesSettings.myProfile, action: {
+        items[.myProfile]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_MyProfile, icon: PresentationResourcesSettings.myProfile, action: {
             interaction.openSettings(.profile)
         }))
         
@@ -6940,14 +6939,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             UIPasteboard.general.string = "@\(username)"
             
-            //TODO:localize
-            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Username copied"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: self.presentationData.strings.Conversation_UsernameCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
         }
         
         var items: [ContextMenuItem] = []
         
         if self.isMyProfile {
-            items.append(.action(ContextMenuActionItem(text: "Edit Username", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_UsernameActionEdit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c.dismiss {
                     guard let self else {
                         return
@@ -6957,8 +6955,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             })))
         }
         
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Copy Username", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_UsernameActionCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
             c.dismiss {
                 copyAction()
             }
@@ -6997,15 +6994,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             UIPasteboard.general.string = bioText
             
-            //TODO:localize
-            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Bio copied"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: self.presentationData.strings.MyProfile_ToastBioCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
         }
         
         var items: [ContextMenuItem] = []
         
         if self.isMyProfile {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Edit Bio", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_BioActionEdit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c.dismiss {
                     guard let self else {
                         return
@@ -7026,8 +7021,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             })))
         }
         
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Copy Bio", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_BioActionCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
             c.dismiss {
                 copyAction()
             }
@@ -7062,15 +7056,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             UIPasteboard.general.string = businessHoursTextToCopy(businessHours: businessHours, presentationData: self.presentationData, displayLocalTimezone: false)
             
-            //TODO:localize
-            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Working hours copied."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: self.presentationData.strings.MyProfile_ToastHoursCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
         }
         
         var items: [ContextMenuItem] = []
         
         if self.isMyProfile {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Edit Hours", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_HoursActionEdit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c.dismiss {
                     guard let self else {
                         return
@@ -7081,26 +7073,29 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             })))
         }
         
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Copy Hours", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_HoursActionCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
             c.dismiss {
                 copyAction()
             }
         })))
         
         if self.isMyProfile {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_HoursActionRemove, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _
+                in
+                guard let self else {
+                    return
+                }
+                
                 var subItems: [ContextMenuItem] = []
                 let noAction: ((ContextMenuActionItem.Action) -> Void)? = nil
                 subItems.append(.action(ContextMenuActionItem(
-                    text: "Are you sure you want to remove business hours?",
+                    text: self.presentationData.strings.MyProfile_HoursRemoveConfirmation_Title,
                     textLayout: .multiline,
                     textFont: .small,
                     icon: { _ in nil },
                     action: noAction
                 )))
-                subItems.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { _ in nil }, action: { [weak self] c, _ in
+                subItems.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_HoursRemoveConfirmation_Action, textColor: .destructive, icon: { _ in nil }, action: { [weak self] c, _ in
                     c.dismiss {
                         guard let self else {
                             return
@@ -7141,15 +7136,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             UIPasteboard.general.string = businessLocation.address
             
-            //TODO:localize
-            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Working hours copied."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: self.presentationData.strings.MyProfile_ToastLocationCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
         }
         
         var items: [ContextMenuItem] = []
         
         if businessLocation.coordinates != nil {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Open in Maps", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LocationSmall"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_LocationActionOpen, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LocationSmall"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c.dismiss(completion: {
                     guard let self else {
                         return
@@ -7160,8 +7153,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         
         if !businessLocation.address.isEmpty {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Copy Address", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_LocationActionCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                 c.dismiss {
                     copyAction()
                 }
@@ -7169,8 +7161,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         
         if self.isMyProfile {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Edit Location", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_LocationActionEdit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c.dismiss {
                     guard let self else {
                         return
@@ -7180,18 +7171,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             })))
             
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_LocationActionRemove, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
+                guard let self else {
+                    return
+                }
+                
                 var subItems: [ContextMenuItem] = []
                 let noAction: ((ContextMenuActionItem.Action) -> Void)? = nil
                 subItems.append(.action(ContextMenuActionItem(
-                    text: "Are you sure you want to remove location?",
+                    text: self.presentationData.strings.MyProfile_LocationRemoveConfirmation_Title,
                     textLayout: .multiline,
                     textFont: .small,
                     icon: { _ in nil },
                     action: noAction
                 )))
-                subItems.append(.action(ContextMenuActionItem(text: "Remove", textColor: .destructive, icon: { _ in nil }, action: { [weak self] c, _ in
+                subItems.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_LocationRemoveConfirmation_Action, textColor: .destructive, icon: { _ in nil }, action: { [weak self] c, _ in
                     c.dismiss {
                         guard let self else {
                             return
@@ -7235,15 +7229,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             
             UIPasteboard.general.string = text
             
-            //TODO:localize
-            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: "Birthday copied."), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: self.presentationData.strings.MyProfile_ToastBirthdayCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
         }
         
         var items: [ContextMenuItem] = []
         
         if self.isMyProfile {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Edit Birthday", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_BirthdayActionEdit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c.dismiss {
                     guard let self else {
                         return
@@ -7255,8 +7247,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             })))
         }
         
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Copy", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_BirthdayActionCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
             c.dismiss {
                 copyAction()
             }
@@ -7343,8 +7334,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             var items: [ContextMenuItem] = []
             
             if strongSelf.isMyProfile {
-                //TODO:localize
-                items.append(.action(ContextMenuActionItem(text: "Change Number", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.MyProfile_PhoneActionEdit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                     c.dismiss {
                         guard let self else {
                             return
@@ -7378,8 +7368,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 } else {
                     isAnonymousNumber = true
                 }
-                //TODO:localize
-                items.append(.action(ContextMenuActionItem(text: "Copy Number", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.MyProfile_PhoneActionCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                     c.dismiss {
                         copyAction()
                     }
@@ -7398,9 +7387,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 } else {
                     isAnonymousNumber = true
                 }
-                //TODO:localize
                 items.append(
-                    .action(ContextMenuActionItem(text: "Copy Number", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.MyProfile_PhoneActionCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                         c.dismiss {
                             copyAction()
                         }

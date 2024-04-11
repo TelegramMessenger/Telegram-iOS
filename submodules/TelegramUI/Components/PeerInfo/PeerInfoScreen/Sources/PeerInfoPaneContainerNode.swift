@@ -58,17 +58,6 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
         self.addSubnode(self.buttonNode)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
-        /*self.buttonNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted && !strongSelf.isSelected {
-                    strongSelf.titleNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.titleNode.alpha = 0.4
-                } else {
-                    strongSelf.titleNode.alpha = 1.0
-                    strongSelf.titleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                }
-            }
-        }*/
     }
     
     @objc private func buttonPressed() {
@@ -1033,7 +1022,6 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                         if let availablePanes = data?.availablePanes, let currentPaneKey = strongSelf.currentPaneKey, let currentIndex = availablePanes.firstIndex(of: currentPaneKey), let paneIndex = availablePanes.firstIndex(of: key), abs(paneIndex - currentIndex) <= 1 {
                         } else {
                             if let pane = strongSelf.currentPanes.removeValue(forKey: key) {
-                                //print("remove \(key)")
                                 pane.node.removeFromSupernode()
                             }
                         }
@@ -1097,8 +1085,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
             case .stories:
                 title = presentationData.strings.PeerInfo_PaneStories
             case .storyArchive:
-                //TODO:localize
-                title = "Archived Posts"
+                title = presentationData.strings.PeerInfo_PaneArchivedStories
             case .media:
                 title = presentationData.strings.PeerInfo_PaneMedia
             case .files:

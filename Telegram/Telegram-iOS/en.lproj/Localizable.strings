@@ -267,11 +267,11 @@
 "PUSH_MESSAGE_STORY" = "%1$@|shared a story with you";
 "PUSH_MESSAGE_STORY_MENTION" = "%1$@|mentioned you in a story";
 "PUSH_CHANNEL_MESSAGE_STORY" = "%1$@|shared a story";
+"PUSH_CHAT_MESSAGE_STORY" = "%2$@|%1$@ shared a story to the group";
 
 "PUSH_REACT_HIDDEN" = "New reaction to your message";
 "PUSH_REACT_STORY" = "%1$@|%2$@ to your story";
 "PUSH_REACT_STORY_HIDDEN" = "New reaction to your story";
-"PUSH_CHAT_REACT_STORY" = "%2$@|%1$@ %3$@ to your story";
 
 "LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";
 "LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";
@@ -11910,3 +11910,94 @@ Sorry for the inconvenience.";
 "Conversation.ViewEmojis" = "VIEW EMOJIS";
 
 "MediaEditor.StickersTooMuch" = "Sorry, you've reached the maximum number of stickers in this set. Try a different one.";
+
+"ChatList.ChannelsSection" = "Channels";
+"ChatList.Search.FilterChannels" = "Channels";
+"ChatList.Search.SectionRecommendedChannels" = "RECOMMENDED CHANNELS";
+"ChatList.Search.SectionLocalChannels" = "CHANNELS YOU JOINED";
+"ChatList.Search.SectionActionShowLess" = "Show Less";
+"ChatList.Search.SectionActionShowMore" = "Show More";
+"ChatList.Search.RecommendedChannelsEmpty.Title" = "No Channels Yet...";
+"ChatList.Search.RecommendedChannelsEmpty.Text" = "You are not currently subscribed to any channel.";
+
+"Notifications.Reactions" = "Reactions";
+"Notifications.Reactions.SubtitleStories" = "Stories";
+"Notifications.Reactions.SubtitleMessages" = "Messages";
+
+"Notifications.Stories.SettingsHeader" = "NOTIFY ME ABOUT...";
+"Notifications.Stories.GlobalSetting" = "New Stories";
+"Notifications.Stories.Important" = "Important Stories";
+"Notifications.Stories.DisplayName" = "Show Sender's Name";
+
+"Notifications.Reactions.Title" = "Reactions";
+"Notifications.Reactions.SettingsHeader" = "NOTIFY ME ABOUT...";
+"Notifications.Reactions.SubtitleContacts" = "From My Contacts";
+"Notifications.Reactions.SubtitleEveryone" = "From Everyone";
+"Notifications.Reactions.ItemMessages" = "Reactions to my Messages";
+"Notifications.Reactions.ItemStories" = "Reactions to my Stories";
+"Notifications.Reactions.SheetTitleMessages" = "Notify about reactions to my messages from";
+"Notifications.Reactions.SheetTitleStories" = "Notify about reactions to my stories from";
+"Notifications.Reactions.SheetValueEveryone" = "Everyone";
+"Notifications.Reactions.SheetValueContacts" = "My Contacts";
+
+"PeerInfo.AllowedReactions.MaxCountSectionTitle" = "MAXIMUM REACTIONS PER POST";
+"PeerInfo.AllowedReactions.MaxCountSectionFooter" = "Limit the number of different reactions that can be added to a post, including already published posts.";
+"PeerInfo.AllowedReactions.MaxCountValue_1" = "1 reaction";
+"PeerInfo.AllowedReactions.MaxCountValue_any" = "%d reactions";
+
+"PeerInfo.PaneArchivedStories" = "Archived Posts";
+
+"StoryList.ItemAction.Archive" = "Archive";
+"StoryList.ItemAction.Unarchive" = "Unarchive";
+"StoryList.ItemAction.Pin" = "Pin";
+"StoryList.ItemAction.Unpin" = "Unpin";
+"StoryList.ItemAction.Forward" = "Forward";
+"StoryList.ItemAction.Edit" = "Edit";
+"StoryList.ItemAction.Delete" = "Delete";
+"StoryList.ToastUnarchived.Text_1" = "Story unarchived.";
+"StoryList.ToastUnarchived.Text_any" = "%d stories unarchived.";
+"StoryList.ToastArchived.Text_1" = "Story archived.";
+"StoryList.ToastArchived.Text_any" = "%d stories archived.";
+"StoryList.ToastPinLimit.Text_1" = "You can't pin more than 1 post.";
+"StoryList.ToastPinLimit.Text_any" = "You can't pin more than %d posts.";
+"StoryList.ToastUnpinned.Text_1" = "Story unpinned.";
+"StoryList.ToastUnpinned.Text_any" = "%d stories unpinned.";
+"StoryList.ToastPinned.Title_1" = "Story pinned";
+"StoryList.ToastPinned.Title_any" = "%d stories pinned";
+"StoryList.ToastPinned.Text_1" = "Now it will always be shown on the top.";
+"StoryList.ToastPinned.Text_any" = "Now they will always be shown on the top.";
+"StoryList.DeleteConfirmation.Title_1" = "Delete 1 story?";
+"StoryList.DeleteConfirmation.Title_any" = "Delete %d stories?";
+"StoryList.DeleteConfirmation.Action" = "Delete";
+"StoryList.ActionPanel.Pin" = "Pin";
+"StoryList.ActionPanel.Unpin" = "Unpin";
+"StoryList.ActionPanel.Archive" = "Archive";
+"StoryList.ActionPanel.Unarchive" = "Unarchive";
+"StoryList.ActionPanel.Delete" = "Delete";
+
+"Settings.MyProfile" = "My Profile";
+
+"MyProfile.UsernameActionEdit" = "Edit Username";
+"MyProfile.UsernameActionCopy" = "Copy Username";
+"MyProfile.BioActionEdit" = "Edit Bio";
+"MyProfile.BioActionCopy" = "Copy Bio";
+"MyProfile.ToastBioCopied" = "Bio copied to clipboard.";
+"MyProfile.HoursActionEdit" = "Edit Hours";
+"MyProfile.HoursActionCopy" = "Copy Hours";
+"MyProfile.HoursActionRemove" = "Remove";
+"MyProfile.HoursRemoveConfirmation.Title" = "Are you sure you want to remove business hours?";
+"MyProfile.HoursRemoveConfirmation.Action" = "Remove";
+"MyProfile.ToastHoursCopied" = "Hours copied to clipboard.";
+"MyProfile.LocationActionOpen" = "Open in Maps";
+"MyProfile.LocationActionEdit" = "Edit Location";
+"MyProfile.LocationActionCopy" = "Copy Address";
+"MyProfile.LocationActionRemove" = "Remove";
+"MyProfile.LocationRemoveConfirmation.Title" = "Are you sure you want to remove location?";
+"MyProfile.LocationRemoveConfirmation.Action" = "Remove";
+"MyProfile.ToastLocationCopied" = "Location copied to clipboard.";
+"MyProfile.BirthdayActionEdit" = "Edit Birthday";
+"MyProfile.BirthdayActionCopy" = "Copy";
+"MyProfile.ToastBirthdayCopied" = "Birthday copied to clipboard.";
+"MyProfile.PhoneActionEdit" = "Change Number";
+"MyProfile.PhoneActionCopy" = "Copy Number";
+"MyProfile.ToastPhoneCopied" = "Birthday copied to clipboard.";

@@ -1158,32 +1158,14 @@ private final class NotificationServiceHandler {
                                 }
 
                                 let _ = messageId
-
-                                /*if (peerId != 0 && messageId != 0 && parsedAttachment != nil && attachmentData != nil) {
-                                    userInfo[@"peerId"] = @(peerId);
-                                    userInfo[@"messageId.namespace"] = @(0);
-                                    userInfo[@"messageId.id"] = @(messageId);
-
-                                    userInfo[@"media"] = [attachmentData base64EncodedStringWithOptions:0];
-
-                                    if (isExpandableMedia) {
-                                        if ([categoryString isEqualToString:@"r"]) {
-                                            _bestAttemptContent.categoryIdentifier = @"withReplyMedia";
-                                        } else if ([categoryString isEqualToString:@"m"]) {
-                                            _bestAttemptContent.categoryIdentifier = @"withMuteMedia";
-                                        }
-                                    }
-                                }*/
                             }
 
-                            /*if (accountInfos.accounts.count > 1) {
-                                if (_bestAttemptContent.title.length != 0 && account.peerName.length != 0) {
-                                    _bestAttemptContent.title = [NSString stringWithFormat:@"%@ → %@", _bestAttemptContent.title, account.peerName];
-                                }
-                            }*/
-
                             if let storyId {
-                                content.category = "st"
+                                if content.category == "t" {
+                                    content.category = "str"
+                                } else {
+                                    content.category = "st"
+                                }
                                 action = .pollStories(peerId: peerId, content: content, storyId: storyId)
                             } else {
                                 action = .poll(peerId: peerId, content: content, messageId: messageIdValue)
