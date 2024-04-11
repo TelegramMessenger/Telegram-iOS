@@ -259,9 +259,6 @@ private final class StickerSelectionComponent: Component {
                 interaction: nil,
                 chatPeerId: nil,
                 present: { c, a in
-                    let _ = c
-                    let _ = a
-//                    controller?.presentInGlobalOverlay(c, with: a)
                 }
             )
             
@@ -309,7 +306,7 @@ private final class StickerSelectionComponent: Component {
                     switchToGifSubject: { _ in },
                     reorderItems: { _, _ in },
                     makeSearchContainerNode: { [weak self] content in
-                        guard let self, let interaction = self.interaction, let inputNodeInteraction = self.inputNodeInteraction else {
+                        guard let self, let interaction = self.interaction, let inputNodeInteraction = self.inputNodeInteraction, let component = self.component, let controller = component.getController() else {
                             return nil
                         }
 
@@ -322,7 +319,7 @@ private final class StickerSelectionComponent: Component {
                         }
                         
                         var presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        if controller?.forceDark == true {
+                        if controller.forceDark == true {
                             presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
                         }
                         let searchContainerNode = PaneSearchContainerNode(
@@ -440,7 +437,7 @@ public class StickerPickerScreen: ViewController {
         let containerView: UIView
         let hostView: ComponentHostView<Empty>
         
-        private var content: StickerPickerInputData?
+        fileprivate var content: StickerPickerInputData?
         private let contentDisposable = MetaDisposable()
         private var hasRecentGifsDisposable: Disposable?
         fileprivate let trendingGifsPromise = Promise<ChatMediaInputGifPaneTrendingState?>(nil)
@@ -534,18 +531,20 @@ public class StickerPickerScreen: ViewController {
             self.wrappingView.addSubview(self.containerView)
             self.containerView.addSubview(self.hostView)
             
-            self.storyStickersContentView = StoryStickersContentView(frame: .zero)
-            self.storyStickersContentView?.locationAction = { [weak self] in
-                self?.controller?.presentLocationPicker()
-            }
-            self.storyStickersContentView?.audioAction = { [weak self] in
-                self?.controller?.presentAudioPicker()
-            }
-            self.storyStickersContentView?.reactionAction = { [weak self] in
-                self?.controller?.addReaction()
-            }
-            self.storyStickersContentView?.cameraAction = { [weak self] in
-                self?.controller?.addCamera()
+            if controller.hasInteractiveStickers {
+                self.storyStickersContentView = StoryStickersContentView(frame: .zero)
+                self.storyStickersContentView?.locationAction = { [weak self] in
+                    self?.controller?.presentLocationPicker()
+                }
+                self.storyStickersContentView?.audioAction = { [weak self] in
+                    self?.controller?.presentAudioPicker()
+                }
+                self.storyStickersContentView?.reactionAction = { [weak self] in
+                    self?.controller?.addReaction()
+                }
+                self.storyStickersContentView?.cameraAction = { [weak self] in
+                    self?.controller?.addCamera()
+                }
             }
             
             let gifItems: Signal<EntityKeyboardGifContent?, NoError>
@@ -654,11 +653,11 @@ public class StickerPickerScreen: ViewController {
                         
             self.contentDisposable.set(data.start(next: { [weak self] inputData, gifData, stickerSearchState, emojiSearchState in
                 if let strongSelf = self {
-                    let presentationData = strongSelf.presentationData
                     guard var inputData = inputData as? StickerPickerInputData else {
                         return
                     }
                                         
+                    let presentationData = strongSelf.presentationData
                     inputData.gifs = gifData?.component
                     
                     if let emoji = inputData.emoji {
@@ -821,7 +820,7 @@ public class StickerPickerScreen: ViewController {
             guard let controller = self.controller else {
                 return
             }
-            
+                        
             content.emoji?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
                 performItemAction: { [weak self] groupId, item, _, _, _, _ in
                     guard let strongSelf = self, let controller = strongSelf.controller else {
@@ -1495,7 +1494,6 @@ public class StickerPickerScreen: ViewController {
                                 return
                             }
                             if group.items.isEmpty && !result.isFinalResult {
-                                //strongSelf.stickerSearchStateValue.isSearching = true
                                 strongSelf.stickerSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: [
                                     EmojiPagerContentComponent.ItemGroup(
                                         supergroupId: "search",
@@ -1535,7 +1533,7 @@ public class StickerPickerScreen: ViewController {
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
-                customContentView: controller.hasInteractiveStickers ? self.storyStickersContentView : nil,
+                customContentView: self.storyStickersContentView,
                 useOpaqueTheme: false,
                 hideBackground: true,
                 stateContext: nil,
@@ -2050,8 +2048,7 @@ public class StickerPickerScreen: ViewController {
         self.statusBar.statusBarStyle = .Ignore
         
         if expanded {
-            //TODO:localize
-            self.title = "Choose Sticker"
+            self.title = presentationData.strings.Stickers_ChooseSticker_Title
             self.navigationPresentation = .modal
         }
     }

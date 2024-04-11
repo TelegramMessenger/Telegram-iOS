@@ -25,22 +25,30 @@
 }
 
 - (bool)setupWithOutputPath:(NSString *)outputPath width:(int)width height:(int)height bitrate:(int64_t)bitrate framerate:(int32_t)framerate {
-    avformat_alloc_output_context2(&_formatContext, NULL, "matroska", [outputPath UTF8String]);
+    avformat_alloc_output_context2(&_formatContext, nil, "matroska", [outputPath UTF8String]);
     if (!_formatContext) {
         return false;
     }
     
     if (avio_open(&_formatContext->pb, [outputPath UTF8String], AVIO_FLAG_WRITE) < 0) {
+        avformat_free_context(_formatContext);
+        _formatContext = nil;
         return false;
     }
     
     const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_VP9);
     if (!codec) {
+        avio_closep(&_formatContext->pb);
+        avformat_free_context(_formatContext);
+        _formatContext = nil;
         return false;
     }
     
     _codecContext = avcodec_alloc_context3(codec);
     if (!_codecContext) {
+        avio_closep(&_formatContext->pb);
+        avformat_free_context(_formatContext);
+        _formatContext = nil;
         return false;
     }
     
@@ -61,11 +69,22 @@
     }
     
     if (avcodec_open2(_codecContext, codec, NULL) < 0) {
+        avcodec_free_context(&_codecContext);
+        _codecContext = nil;
+        avio_closep(&_formatContext->pb);
+        avformat_free_context(_formatContext);
+        _formatContext = nil;
         return false;
     }
     
     _stream = avformat_new_stream(_formatContext, codec);
     if (!_stream) {
+        avcodec_close(_codecContext);
+        avcodec_free_context(&_codecContext);
+        _codecContext = nil;
+        avio_closep(&_formatContext->pb);
+        avformat_free_context(_formatContext);
+        _formatContext = nil;
         return false;
     }
     
@@ -78,11 +97,23 @@
     
     int ret = avcodec_parameters_from_context(_stream->codecpar, _codecContext);
     if (ret < 0) {
+        avcodec_close(_codecContext);
+        avcodec_free_context(&_codecContext);
+        _codecContext = nil;
+        avio_closep(&_formatContext->pb);
+        avformat_free_context(_formatContext);
+        _formatContext = nil;
         return false;
     }
     
-    ret = avformat_write_header(_formatContext, NULL);
+    ret = avformat_write_header(_formatContext, nil);
     if (ret < 0) {
+        avcodec_close(_codecContext);
+        avcodec_free_context(&_codecContext);
+        _codecContext = nil;
+        avio_closep(&_formatContext->pb);
+        avformat_free_context(_formatContext);
+        _formatContext = nil;
         return false;
     }
     
@@ -110,7 +141,7 @@
     
     AVPacket pkt;
     av_init_packet(&pkt);
-    pkt.data = NULL;
+    pkt.data = nil;
     pkt.size = 0;
     
     while (sendRet >= 0) {
@@ -118,6 +149,7 @@
         if (recvRet == AVERROR(EAGAIN) || recvRet == AVERROR_EOF) {
             break;
         } else if (recvRet < 0) {
+            av_packet_unref(&pkt);
             break;
         }
         
@@ -135,11 +167,15 @@
 }
 
 - (bool)finalizeVideo {
+    if (!_codecContext) {
+        return false;
+    }
+    
     int sendRet = avcodec_send_frame(_codecContext, NULL);
     if (sendRet >= 0) {
         AVPacket pkt;
         av_init_packet(&pkt);
-        pkt.data = NULL;
+        pkt.data = nil;
         pkt.size = 0;
         
         while (avcodec_receive_packet(_codecContext, &pkt) == 0) {
@@ -151,14 +187,25 @@
         }
     }
     
-    av_write_trailer(_formatContext);
+    if (_formatContext) {
+        av_write_trailer(_formatContext);
+    }
     
-    avio_closep(&_formatContext->pb);
-   
-    avcodec_close(_codecContext);
+    if (_formatContext && _formatContext->pb) {
+        avio_closep(&_formatContext->pb);
+    }
     
-    avcodec_free_context(&_codecContext);
-    avformat_free_context(_formatContext);
+    if (_codecContext) {
+        avcodec_close(_codecContext);
+        avcodec_free_context(&_codecContext);
+        _codecContext = nil;
+    }
+    
+    if (_formatContext) {
+        avformat_free_context(_formatContext);
+        _formatContext = nil;
+    }
+    
     return true;
 }
 

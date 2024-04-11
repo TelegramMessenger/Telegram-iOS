@@ -1787,6 +1787,7 @@ public extension EmojiPagerContentComponent {
             }
             
             if let savedStickers = savedStickers {
+                let groupId = "saved"
                 for item in savedStickers.items {
                     guard let item = item.contents.get(SavedStickerItem.self) else {
                         continue
@@ -1800,7 +1801,7 @@ public extension EmojiPagerContentComponent {
                         tintMode = .primary
                     }
                     
-                    let animationData = EntityKeyboardAnimationData(file: item.file)
+                    let animationData = EntityKeyboardAnimationData(file: item.file, partialReference: .savedSticker)
                     let resultItem = EmojiPagerContentComponent.Item(
                         animationData: animationData,
                         content: .animation(animationData),
@@ -1810,7 +1811,6 @@ public extension EmojiPagerContentComponent {
                         tintMode: tintMode
                     )
                     
-                    let groupId = "saved"
                     if let groupIndex = itemGroupIndexById[groupId] {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
@@ -1836,7 +1836,7 @@ public extension EmojiPagerContentComponent {
                         tintMode = .primary
                     }
                     
-                    let animationData = EntityKeyboardAnimationData(file: item.media)
+                    let animationData = EntityKeyboardAnimationData(file: item.media, partialReference: .recentSticker)
                     let resultItem = EmojiPagerContentComponent.Item(
                         animationData: animationData,
                         content: .animation(animationData),

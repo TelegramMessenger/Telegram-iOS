@@ -215,7 +215,7 @@ public final class EntityKeyboardAnimationData: Equatable {
         self.isTemplate = isTemplate
     }
     
-    public convenience init(file: TelegramMediaFile, isReaction: Bool = false) {
+    public convenience init(file: TelegramMediaFile, isReaction: Bool = false, partialReference: PartialMediaReference? = nil) {
         let type: ItemType
         if file.isVideoSticker || file.isVideoEmoji {
             type = .video
@@ -225,7 +225,14 @@ public final class EntityKeyboardAnimationData: Equatable {
             type = .still
         }
         let isTemplate = file.isCustomTemplateEmoji
-        self.init(id: .file(file.fileId), type: type, resource: .standalone(resource: file.resource), dimensions: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), immediateThumbnailData: file.immediateThumbnailData, isReaction: isReaction, isTemplate: isTemplate)
+        
+        let resourceReference: MediaResourceReference
+        if let partialReference {
+            resourceReference = partialReference.mediaReference(file).resourceReference(file.resource)
+        } else {
+            resourceReference = .standalone(resource: file.resource)
+        }
+        self.init(id: .file(file.fileId), type: type, resource: resourceReference, dimensions: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), immediateThumbnailData: file.immediateThumbnailData, isReaction: isReaction, isTemplate: isTemplate)
     }
     
     public static func ==(lhs: EntityKeyboardAnimationData, rhs: EntityKeyboardAnimationData) -> Bool {

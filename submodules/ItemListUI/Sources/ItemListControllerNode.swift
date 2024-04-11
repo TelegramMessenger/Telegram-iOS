@@ -499,7 +499,7 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
         self.panRecognizer = panRecognizer
-        self.view.addGestureRecognizer(panRecognizer)
+//        self.view.addGestureRecognizer(panRecognizer)
     }
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {

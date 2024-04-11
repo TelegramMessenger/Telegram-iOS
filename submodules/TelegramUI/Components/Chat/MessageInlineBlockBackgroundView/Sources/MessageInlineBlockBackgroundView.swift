@@ -460,6 +460,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
         var backgroundColor: UIColor?
         var pattern: Pattern?
         var patternTopRightPosition: CGPoint?
+        var patternAlpha: CGFloat
         var displayProgress: Bool
         
         init(
@@ -471,6 +472,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
             backgroundColor: UIColor?,
             pattern: Pattern?,
             patternTopRightPosition: CGPoint?,
+            patternAlpha: CGFloat,
             displayProgress: Bool
         ) {
             self.size = size
@@ -481,6 +483,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
             self.backgroundColor = backgroundColor
             self.pattern = pattern
             self.patternTopRightPosition = patternTopRightPosition
+            self.patternAlpha = patternAlpha
             self.displayProgress = displayProgress
         }
     }
@@ -612,6 +615,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
         backgroundColor: UIColor?,
         pattern: Pattern?,
         patternTopRightPosition: CGPoint? = nil,
+        patternAlpha: CGFloat = 1.0,
         animation: ListViewItemUpdateAnimation
     ) {
         let params = Params(
@@ -623,6 +627,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
             backgroundColor: backgroundColor,
             pattern: pattern,
             patternTopRightPosition: patternTopRightPosition,
+            patternAlpha: patternAlpha,
             displayProgress: self.displayProgress
         )
         if self.params == params {
@@ -766,7 +771,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 patternContentLayer.frame = CGRect(origin: CGPoint(x: patternOrigin.x - placement.position.x / 3.0 - itemSize.width * 0.5, y: patternOrigin.y + placement.position.y / 3.0 - itemSize.height * 0.5), size: itemSize)
                 var alphaFraction = abs(placement.position.x / 3.0) / min(500.0, size.width)
                 alphaFraction = min(1.0, max(0.0, alphaFraction))
-                patternContentLayer.opacity = 0.3 * Float(1.0 - alphaFraction)
+                patternContentLayer.opacity = 0.3 * Float(1.0 - alphaFraction) * Float(patternAlpha)
                 
                 maxIndex += 1
             }

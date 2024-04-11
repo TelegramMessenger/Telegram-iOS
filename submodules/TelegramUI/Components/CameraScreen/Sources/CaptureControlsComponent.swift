@@ -459,6 +459,7 @@ final class CaptureControlsComponent: Component {
     }
     
     let isTablet: Bool
+    let isSticker: Bool
     let hasAppeared: Bool
     let hasAccess: Bool
     let tintColor: UIColor
@@ -478,6 +479,7 @@ final class CaptureControlsComponent: Component {
     
     init(
         isTablet: Bool,
+        isSticker: Bool,
         hasAppeared: Bool,
         hasAccess: Bool,
         tintColor: UIColor,
@@ -496,6 +498,7 @@ final class CaptureControlsComponent: Component {
         flipAnimationAction: ActionSlot<Void>
     ) {
         self.isTablet = isTablet
+        self.isSticker = isSticker
         self.hasAppeared = hasAppeared
         self.hasAccess = hasAccess
         self.tintColor = tintColor
@@ -516,6 +519,9 @@ final class CaptureControlsComponent: Component {
     
     static func ==(lhs: CaptureControlsComponent, rhs: CaptureControlsComponent) -> Bool {
         if lhs.isTablet != rhs.isTablet {
+            return false
+        }
+        if lhs.isSticker != rhs.isSticker {
             return false
         }
         if lhs.hasAppeared != rhs.hasAppeared {
@@ -911,66 +917,71 @@ final class CaptureControlsComponent: Component {
             } else if case .transition = component.shutterState {
                 isTransitioning = true
             }
-                     
-            let gallerySize: CGSize
-            let galleryCornerRadius: CGFloat
-            if component.isTablet {
-                gallerySize = CGSize(width: 72.0, height: 72.0)
-                galleryCornerRadius = 16.0
-            } else {
-                gallerySize = CGSize(width: 50.0, height: 50.0)
-                galleryCornerRadius = 10.0
-            }
-            let galleryButtonId: String
-            if let (identifier, _) = state.cachedAssetImage, identifier == "" {
-                galleryButtonId = "placeholder"
-            } else {
-                galleryButtonId = "gallery"
-            }
-            let galleryButtonSize = self.galleryButtonView.update(
-                transition: transition,
-                component: AnyComponent(
-                    CameraButton(
-                        content: AnyComponentWithIdentity(
-                            id: galleryButtonId,
-                            component: AnyComponent(
-                                Image(
-                                    image: state.cachedAssetImage?.1,
-                                    size: gallerySize,
-                                    contentMode: .scaleAspectFill
-                                )
-                            )
-                        ),
-                        tag: component.galleryButtonTag,
-                        action: {
-                            component.galleryTapped()
-                        }
-                    )
-                ),
-                environment: {},
-                containerSize: gallerySize
-            )
+                    
             let galleryButtonFrame: CGRect
-            if component.isTablet {
-                galleryButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - galleryButtonSize.width) / 2.0), y: size.height - galleryButtonSize.height - 56.0), size: galleryButtonSize)
-            } else {
-                galleryButtonFrame = CGRect(origin: CGPoint(x: buttonSideInset, y: floorToScreenPixels((size.height - galleryButtonSize.height) / 2.0)), size: galleryButtonSize)
-            }
-            if let galleryButtonView = self.galleryButtonView.view as? CameraButton.View {
-                galleryButtonView.contentView.clipsToBounds = true
-                galleryButtonView.contentView.layer.cornerRadius = galleryCornerRadius
-                if galleryButtonView.superview == nil {
-                    self.addSubview(galleryButtonView)
+            let gallerySize: CGSize
+            if !component.isSticker {
+                let galleryCornerRadius: CGFloat
+                if component.isTablet {
+                    gallerySize = CGSize(width: 72.0, height: 72.0)
+                    galleryCornerRadius = 16.0
+                } else {
+                    gallerySize = CGSize(width: 50.0, height: 50.0)
+                    galleryCornerRadius = 10.0
                 }
-                transition.setBounds(view: galleryButtonView, bounds: CGRect(origin: .zero, size: galleryButtonFrame.size))
-                transition.setPosition(view: galleryButtonView, position: galleryButtonFrame.center)
-                
-                let normalAlpha = component.tintColor.rgb == 0xffffff ? 1.0 : 0.6
-                
-                transition.setScale(view: galleryButtonView, scale: isRecording || isTransitioning ? 0.1 : 1.0)
-                transition.setAlpha(view: galleryButtonView, alpha: isRecording || isTransitioning ? 0.0 : normalAlpha)
+                let galleryButtonId: String
+                if let (identifier, _) = state.cachedAssetImage, identifier == "" {
+                    galleryButtonId = "placeholder"
+                } else {
+                    galleryButtonId = "gallery"
+                }
+                let galleryButtonSize = self.galleryButtonView.update(
+                    transition: transition,
+                    component: AnyComponent(
+                        CameraButton(
+                            content: AnyComponentWithIdentity(
+                                id: galleryButtonId,
+                                component: AnyComponent(
+                                    Image(
+                                        image: state.cachedAssetImage?.1,
+                                        size: gallerySize,
+                                        contentMode: .scaleAspectFill
+                                    )
+                                )
+                            ),
+                            tag: component.galleryButtonTag,
+                            action: {
+                                component.galleryTapped()
+                            }
+                        )
+                    ),
+                    environment: {},
+                    containerSize: gallerySize
+                )
+                if component.isTablet {
+                    galleryButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - galleryButtonSize.width) / 2.0), y: size.height - galleryButtonSize.height - 56.0), size: galleryButtonSize)
+                } else {
+                    galleryButtonFrame = CGRect(origin: CGPoint(x: buttonSideInset, y: floorToScreenPixels((size.height - galleryButtonSize.height) / 2.0)), size: galleryButtonSize)
+                }
+                if let galleryButtonView = self.galleryButtonView.view as? CameraButton.View {
+                    galleryButtonView.contentView.clipsToBounds = true
+                    galleryButtonView.contentView.layer.cornerRadius = galleryCornerRadius
+                    if galleryButtonView.superview == nil {
+                        self.addSubview(galleryButtonView)
+                    }
+                    transition.setBounds(view: galleryButtonView, bounds: CGRect(origin: .zero, size: galleryButtonFrame.size))
+                    transition.setPosition(view: galleryButtonView, position: galleryButtonFrame.center)
+                    
+                    let normalAlpha = component.tintColor.rgb == 0xffffff ? 1.0 : 0.6
+                    
+                    transition.setScale(view: galleryButtonView, scale: isRecording || isTransitioning ? 0.1 : 1.0)
+                    transition.setAlpha(view: galleryButtonView, alpha: isRecording || isTransitioning ? 0.0 : normalAlpha)
+                }
+            } else {
+                galleryButtonFrame = .zero
+                gallerySize = .zero
             }
-                        
+            
             if !component.isTablet && component.hasAccess {
                 let flipButtonOriginX = availableSize.width - 48.0 - buttonSideInset
                 let flipButtonMaskFrame: CGRect = CGRect(origin: CGPoint(x: availableSize.width / 2.0 - (flipButtonOriginX + 22.0) + 6.0 + self.shutterOffsetX, y: 8.0), size: CGSize(width: 32.0, height: 32.0))
@@ -1173,15 +1184,16 @@ final class CaptureControlsComponent: Component {
             
             if let shutterButtonView = self.shutterButtonView.view {
                 if shutterButtonView.superview == nil {
-                    let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-                    panGestureRecognizer.delegate = self
-                    shutterButtonView.addGestureRecognizer(panGestureRecognizer)
-                    
-                    let pressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePress(_:)))
-                    pressGestureRecognizer.minimumPressDuration = 0.3
-                    pressGestureRecognizer.delegate = self
-                    shutterButtonView.addGestureRecognizer(pressGestureRecognizer)
-                    
+                    if !component.isSticker {
+                        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
+                        panGestureRecognizer.delegate = self
+                        shutterButtonView.addGestureRecognizer(panGestureRecognizer)
+                        
+                        let pressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePress(_:)))
+                        pressGestureRecognizer.minimumPressDuration = 0.3
+                        pressGestureRecognizer.delegate = self
+                        shutterButtonView.addGestureRecognizer(pressGestureRecognizer)
+                    }
                     self.addSubview(shutterButtonView)
                 }
                 let alpha: CGFloat = component.hasAccess ? 1.0 : 0.3
