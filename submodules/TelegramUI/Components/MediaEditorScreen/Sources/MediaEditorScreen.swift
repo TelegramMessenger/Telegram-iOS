@@ -768,8 +768,10 @@ final class MediaEditorScreenComponent: Component {
                     controlsBottomInset = -50.0
                 }
             }
-            let previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0), y: topInset), size: previewSize)
-            
+            var previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0), y: topInset), size: previewSize)
+            if availableSize.height < 680.0, case .stickerEditor = controller.mode {
+                previewFrame = previewFrame.offsetBy(dx: 0.0, dy: -44.0)
+            }
             let topButtonsAlpha: CGFloat = isRecordingAdditionalVideo ? 0.3 : 1.0
             let bottomButtonsAlpha: CGFloat = isRecordingAdditionalVideo ? 0.3 : 1.0
             let buttonsAreHidden = component.isDisplayingTool != nil || component.isDismissing || component.isInteractingWithEntities
@@ -5048,7 +5050,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             transition.setPosition(view: self.containerView, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0))
             transition.setBounds(view: self.containerView, bounds: CGRect(origin: .zero, size: layout.size))
             
-            let previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSize.width) / 2.0), y: topInset - bottomInputOffset + self.dismissOffset), size: previewSize)
+            var previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSize.width) / 2.0), y: topInset - bottomInputOffset + self.dismissOffset), size: previewSize)
+            if layout.size.height < 680.0, case .stickerEditor = controller.mode {
+                previewFrame = previewFrame.offsetBy(dx: 0.0, dy: -44.0)
+            }
             transition.setFrame(view: self.previewContainerView, frame: previewFrame)
             transition.setFrame(view: self.previewScrollView, frame: CGRect(origin: .zero, size: previewSize))
             
