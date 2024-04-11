@@ -11718,6 +11718,11 @@ Sorry for the inconvenience.";
 "Monetization.Withdraw.EnterPassword.Text" = "Please enter your Two-Step Verification password to complete this action.";
 "Monetization.Withdraw.EnterPassword.Done" = "Proceed";
 
+"Monetization.Withdraw.SecurityCheck" = "Security Check";
+"Monetization.Withdraw.SecurityRequirements" = "Balance withdrawals are available if:\n\n• 2-Step verification was enabled for your account more than **7 days** ago.\n\n• You have logged in on this device more than **24 hours** ago.";
+"Monetization.Withdraw.ComeBackLater" = "\n\nPlease come back later.";
+"Monetization.Withdraw.SetupTwoStepAuth" = "Enable 2-Step Verification";
+
 "Monetization.TransactionInfo.Proceeds" = "Proceeds from Ads displayed in";
 "Monetization.TransactionInfo.Withdrawal" = "Balance Withdrawal via %@";
 "Monetization.TransactionInfo.Pending" = "Pending";

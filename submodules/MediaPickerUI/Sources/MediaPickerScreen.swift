@@ -298,6 +298,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.scrollingArea = SparseItemGridScrollingArea()
             
             self.cameraWrapperView = UIView()
+            self.cameraWrapperView.clipsToBounds = true
             
             self.cameraActivateAreaNode = AccessibilityAreaNode()
             self.cameraActivateAreaNode.accessibilityLabel = "Camera"
@@ -1554,14 +1555,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         transition.updateFrame(view: self.cameraWrapperView, frame: cameraRect)
                         
                         let screenWidth = min(layout.deviceMetrics.screenSize.width, layout.deviceMetrics.screenSize.height)
-                        let cameraFullSize = cameraRect.size.aspectFilled(CGSize(width: screenWidth, height: screenWidth))
-                        let cameraScale = cameraRect.width / cameraFullSize.width
+                        let cameraFullSize = CGSize(width: screenWidth, height: floorToScreenPixels(layout.size.width * 1.77778))
+                        let cameraScale = cameraRect.height / cameraFullSize.height
                         
                         cameraView.bounds = CGRect(origin: .zero, size: cameraFullSize)
                         cameraView.center = CGPoint(x: cameraRect.size.width / 2.0, y: cameraRect.size.height / 2.0)
                         cameraView.transform = CGAffineTransform(scaleX: cameraScale, y: cameraScale)
-                        
-                        transition.updateFrame(view: cameraView, frame: CGRect(origin: .zero, size: cameraRect.size))
+
                     } else {
                         transition.updateFrame(view: cameraView, frame: cameraRect)
                     }
