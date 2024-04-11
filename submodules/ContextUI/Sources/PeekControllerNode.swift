@@ -134,8 +134,9 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.addSubnode(self.darkDimNode)
         self.containerNode.addSubnode(self.contentNode)
         
-        self.addSubnode(self.containerNode)
         self.addSubnode(self.actionsStackNode)
+        self.addSubnode(self.containerNode)
+        
         
         if let fullScreenAccessoryNode = self.fullScreenAccessoryNode {
             self.fullScreenAccessoryNode?.dismiss = { [weak self] in

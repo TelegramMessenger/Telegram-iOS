@@ -2815,7 +2815,9 @@ public class CameraScreen: ViewController {
         
         self.requestAudioSession()
         
-        self.postingAvailabilityPromise.set(self.context.engine.messages.checkStoriesUploadAvailability(target: .myStories))
+        if case .story = mode {
+            self.postingAvailabilityPromise.set(self.context.engine.messages.checkStoriesUploadAvailability(target: .myStories))
+        }
     }
 
     required public init(coder: NSCoder) {

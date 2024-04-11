@@ -47,6 +47,7 @@ protocol ReactionItemNode: ASDisplayNode {
     
     var maskNode: ASDisplayNode? { get }
     
+    func willAppear(animated: Bool)
     func appear(animated: Bool)
     func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition)
 }
@@ -179,6 +180,10 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     
     var maskNode: ASDisplayNode? {
         return nil
+    }
+    
+    func willAppear(animated: Bool) {
+        
     }
     
     func appear(animated: Bool) {
@@ -556,6 +561,10 @@ final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
         self.starsNode = starsNode
     }
     
+    func willAppear(animated: Bool) {
+        
+    }
+    
     func appear(animated: Bool) {
         if animated {
             let delay: Double = 0.1
@@ -624,6 +633,13 @@ final class EmojiItemNode: ASDisplayNode, ReactionItemNode {
         self.addSubnode(self.imageNode)
     }
     
+    func willAppear(animated: Bool) {
+        if animated {
+            let initialScale: CGFloat = 0.25
+            self.imageNode.transform = CATransform3DMakeScale(initialScale, initialScale, 1.0)
+        }
+    }
+    
     func appear(animated: Bool) {
         if animated {
             let delay: Double = 0.1
@@ -631,6 +647,7 @@ final class EmojiItemNode: ASDisplayNode, ReactionItemNode {
             let damping: CGFloat = 60.0
             
             let initialScale: CGFloat = 0.25
+            self.imageNode.transform = CATransform3DIdentity
             self.imageNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, delay: delay, damping: damping)
             
             self.selectionView?.layer.animateAlpha(from: 0.0, to: self.selectionView?.alpha ?? 1.0, duration: 0.2)

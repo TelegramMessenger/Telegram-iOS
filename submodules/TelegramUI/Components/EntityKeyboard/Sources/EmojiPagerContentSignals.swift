@@ -1190,7 +1190,7 @@ public extension EmojiPagerContentComponent {
                 }
             }
             
-            let hasRecentEmoji = ![.reaction(onlyTop: true), .reaction(onlyTop: false), .quickReaction, .status, .profilePhoto, .groupPhoto, .topicIcon, .backgroundIcon, .reactionList, .messageTag].contains(subject)
+            let hasRecentEmoji = ![.reaction(onlyTop: true), .reaction(onlyTop: false), .quickReaction, .status, .profilePhoto, .groupPhoto, .topicIcon, .backgroundIcon, .reactionList, .messageTag, .stickerAlt].contains(subject)
             
             if let recentEmoji = recentEmoji, hasRecentEmoji {
                 for item in recentEmoji.items {

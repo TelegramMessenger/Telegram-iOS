@@ -3396,6 +3396,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 return true
             } else {
+                let location = gestureRecognizer.location(in: self.view)
+                if let reactionNode = self.view.subviews.last?.asyncdisplaykit_node as? ReactionContextNode {
+                    if let hitTestResult = self.view.hitTest(location, with: nil), hitTestResult.isDescendant(of: reactionNode.view) {
+                        return false
+                    }
+                }
                 return true
             }
         }

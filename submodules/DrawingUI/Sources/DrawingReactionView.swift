@@ -110,7 +110,7 @@ public class DrawingReactionEntityView: DrawingStickerEntityView {
     
     private weak var reactionContextNode: ReactionContextNode?
     fileprivate func presentReactionSelection() {
-        guard let containerView = self.containerView, let superview = containerView.superview?.superview?.superview?.superview, self.reactionContextNode == nil else {
+        guard let containerView = self.containerView, let superview = containerView.superview?.superview?.superview?.superview?.superview?.superview, self.reactionContextNode == nil else {
             return
         }
         
