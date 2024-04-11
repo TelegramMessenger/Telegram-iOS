@@ -446,14 +446,14 @@ final class EmojiStickerAccessoryNode: SparseNode, PeekControllerAccessoryNode {
         let items = topItems(selectedEmoji: selectedEmoji, recommendedEmoji: recommendedEmoji, count: 7)
         let selectedItems = ValuePromise<[String]>(selectedEmoji)
         
-        //TODO:localize
+        let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
         let reactionContextNode = ReactionContextNode(
             context: self.context,
             animationCache: self.context.animationCache,
-            presentationData: self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme),
+            presentationData: presentationData,
             items: items.map { .staticEmoji($0) },
             selectedItems: Set(selectedEmoji),
-            title: "Set emoji that corresponds to your sticker",
+            title: presentationData.strings.MediaEditor_SetStickerEmoji,
             reactionsLocked: false,
             alwaysAllowPremiumReactions: true,
             allPresetReactionsAreAvailable: true,

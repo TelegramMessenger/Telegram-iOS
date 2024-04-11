@@ -31,6 +31,7 @@ import PremiumGiftAttachmentScreen
 import TelegramCallsUI
 import AutomaticBusinessMessageSetupScreen
 import MediaEditorScreen
+import CameraScreen
 
 extension ChatControllerImpl {
     enum AttachMenuSubject {
@@ -1160,7 +1161,9 @@ extension ChatControllerImpl {
         }
         let mediaPickerContext = controller.mediaPickerContext
         controller.openCamera = { [weak self] cameraView in
-            self?.openCamera(cameraView: cameraView)
+            if let cameraView = cameraView as? TGAttachmentCameraView {
+                self?.openCamera(cameraView: cameraView)
+            }
         }
         controller.presentWebSearch = { [weak self, weak controller] mediaGroups, activateOnDisplay in
             self?.presentWebSearch(editingMessage: false, attachment: true, activateOnDisplay: activateOnDisplay, present: { [weak controller] c, a in
@@ -1726,8 +1729,8 @@ extension ChatControllerImpl {
         var dismissImpl: (() -> Void)?
         let mainController = self.context.sharedContext.makeStickerMediaPickerScreen(
             context: self.context,
-            getSourceRect: { return .zero },
-            completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
+            getSourceRect: { return nil },
+            completion: { [weak self] result, transitionView, transitionRect, transitionImage, fromCamera, transitionOut, cancelled in
                 guard let self else {
                     return
                 }
@@ -1736,6 +1739,18 @@ extension ChatControllerImpl {
                     subject = .single(.asset(asset))
                 } else if let image = result as? UIImage {
                     subject = .single(.image(image, PixelDimensions(image.size), nil, .bottomRight))
+                } else if let result = result as? Signal<CameraScreen.Result, NoError> {
+                    subject = result
+                    |> map { value -> MediaEditorScreen.Subject? in
+                        switch value {
+                        case .pendingImage:
+                            return nil
+                        case let .image(image):
+                            return .image(image.image, PixelDimensions(image.image.size), nil, .topLeft)
+                        default:
+                            return nil
+                        }
+                    }
                 } else {
                     subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
                 }
@@ -1744,7 +1759,7 @@ extension ChatControllerImpl {
                     context: self.context,
                     mode: .stickerEditor(mode: .generic),
                     subject: subject,
-                    transitionIn: transitionView.flatMap({ .gallery(
+                    transitionIn: fromCamera ? .camera : transitionView.flatMap({ .gallery(
                         MediaEditorScreen.TransitionIn.GalleryTransitionIn(
                             sourceView: $0,
                             sourceRect: transitionRect,
@@ -1772,6 +1787,9 @@ extension ChatControllerImpl {
                         }
                     } as (MediaEditorScreen.Result, @escaping (@escaping () -> Void) -> Void) -> Void
                 )
+                editorController.cancelled = { _ in
+                    cancelled()
+                }
                 editorController.sendSticker = { [weak self] file, sourceView, sourceRect in
                     return self?.interfaceInteraction?.sendSticker(file, true, sourceView, sourceRect, nil, []) ?? false
                 }
@@ -1780,7 +1798,13 @@ extension ChatControllerImpl {
             dismissed: {}
         )
         dismissImpl = { [weak mainController] in
-            mainController?.dismiss()
+            if let mainController, let navigationController = mainController.navigationController {
+                var viewControllers = navigationController.viewControllers
+                viewControllers = viewControllers.filter { c in
+                    return !(c is CameraScreen) && c !== mainController
+                }
+                navigationController.setViewControllers(viewControllers, animated: false)
+            }
         }
         mainController.navigationPresentation = .flatModal
         mainController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)

@@ -497,9 +497,6 @@ private final class StickerPackContainer: ASDisplayNode {
                     if let (info, _, _) = strongSelf.currentStickerPack, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                         canEdit = true
                     }
-                    if !GlobalExperimentalSettings.enableWIPStickers {
-                        canEdit = false
-                    }
                     
                     let accountPeerId = strongSelf.context.account.peerId
                     return combineLatest(
@@ -552,30 +549,30 @@ private final class StickerPackContainer: ASDisplayNode {
                                 })))
                                 
                                 if canEdit {
-                                    menuItems.append(.action(ContextMenuActionItem(text: "Edit Sticker", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Stickers_EditSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                         f(.default)
                                         if let self {
                                             self.openEditSticker(item.file)
                                         }
                                     })))
                                     if !strongSelf.isEditing {
-                                        menuItems.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                        menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Stickers_Reorder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                             f(.default)
                                             if let self {
                                                 self.updateIsEditing(true)
                                             }
                                         })))
                                     }
-                                    menuItems.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, f in
-                                        if let _ = self {
+                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Stickers_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, f in
+                                        if let self {
                                             let contextItems: [ContextMenuItem] = [
-                                                .action(ContextMenuActionItem(text: "Back", icon: { theme in
+                                                .action(ContextMenuActionItem(text: self.presentationData.strings.Common_Back, icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
                                                 }, iconPosition: .left, action: { c ,f in
                                                     c.popItems()
                                                 })),
                                                 .separator,
-                                                .action(ContextMenuActionItem(text: "Delete for Everyone", textColor: .destructive, icon: { _ in return nil }, action: { [weak self] _ ,f in
+                                                .action(ContextMenuActionItem(text: self.presentationData.strings.Stickers_Delete_ForEveryone, textColor: .destructive, icon: { _ in return nil }, action: { [weak self] _ ,f in
                                                     f(.default)
                                                     
                                                     if let self, let (info, items, installed) = self.currentStickerPack {
@@ -999,7 +996,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 case .none:
                     buttonColor = self.presentationData.theme.list.itemAccentColor
                 case let .result(info, _, installed):
-                    if GlobalExperimentalSettings.enableWIPStickers && info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
+                    if info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                         buttonColor = installed ? self.presentationData.theme.list.itemAccentColor : self.presentationData.theme.list.itemCheckColors.foregroundColor
                     } else {
                         buttonColor = installed ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemCheckColors.foregroundColor
@@ -1037,9 +1034,6 @@ private final class StickerPackContainer: ASDisplayNode {
         var isEditable = false
         if let info = self.currentStickerPack?.0, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
             isEditable = true
-        }
-        if !GlobalExperimentalSettings.enableWIPStickers {
-            isEditable = false
         }
         
         let transaction: StickerPackPreviewGridTransaction
@@ -1133,11 +1127,10 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         })))
         
-        if GlobalExperimentalSettings.enableWIPStickers, let (info, packItems, _) = self.currentStickerPack, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
-            //TODO:localize
+        if let (info, packItems, _) = self.currentStickerPack, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
             items.append(.separator)
             if packItems.count > 0 {
-                items.append(.action(ContextMenuActionItem(text: "Reorder", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StickerPack_Reorder, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, f in
                     f(.default)
@@ -1145,7 +1138,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 })))
             }
             
-            items.append(.action(ContextMenuActionItem(text: "Edit Name", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StickerPack_EditName, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
@@ -1153,18 +1146,18 @@ private final class StickerPackContainer: ASDisplayNode {
                 self?.presentEditPackTitle()
             })))
             
-            items.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StickerPack_Delete, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
             }, action: { [weak self] c, f in
                 if let self, let (_, _, isInstalled) = self.currentStickerPack {
                     if isInstalled {
                         let contextItems: [ContextMenuItem] = [
-                            .action(ContextMenuActionItem(text: "Delete for Everyone", textColor: .destructive, icon: { _ in return nil }, action: { [weak self] _ ,f in
+                            .action(ContextMenuActionItem(text: self.presentationData.strings.StickerPack_Delete_DeleteForEveyone, textColor: .destructive, icon: { _ in return nil }, action: { [weak self] _ ,f in
                                 f(.default)
                                 
                                 self?.presentDeletePack()
                             })),
-                            .action(ContextMenuActionItem(text: "Remove for Me", icon: { _ in return nil }, action: { [weak self] _ ,f in
+                            .action(ContextMenuActionItem(text: self.presentationData.strings.StickerPack_Delete_RemoveForMe, icon: { _ in return nil }, action: { [weak self] _ ,f in
                                 f(.default)
                                 
                                 self?.togglePackInstalled()
@@ -1180,7 +1173,7 @@ private final class StickerPackContainer: ASDisplayNode {
             
             items.append(.separator)
             
-            items.append(.action(ContextMenuActionItem(text: "Check [@stickers]() bot for more options.", textLayout: .multiline, textFont: .small, parseMarkdown: true, icon: { _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StickerPack_EditInfo, textLayout: .multiline, textFont: .small, parseMarkdown: true, icon: { _ in
                 return nil
             }, action: { [weak self] _, f in
                 f(.default)
@@ -1199,10 +1192,9 @@ private final class StickerPackContainer: ASDisplayNode {
     
     private let stickerPickerInputData = Promise<StickerPickerInput>()
     private func presentAddStickerOptions() {
-        //TODO:localize
         let actionSheet = ActionSheetController(presentationData: self.presentationData)
         var items: [ActionSheetItem] = []
-        items.append(ActionSheetButtonItem(title: "Create a New Sticker", color: .accent, action: { [weak actionSheet, weak self] in
+        items.append(ActionSheetButtonItem(title: self.presentationData.strings.StickerPack_CreateNew, color: .accent, action: { [weak actionSheet, weak self] in
            actionSheet?.dismissAnimated()
           
             guard let self, let controller = self.controller else {
@@ -1211,7 +1203,7 @@ private final class StickerPackContainer: ASDisplayNode {
             self.presentCreateSticker()
             controller.controllerNode.dismiss()
         }))
-        items.append(ActionSheetButtonItem(title: "Add an Existing Sticker", color: .accent, action: { [weak actionSheet, weak self] in
+        items.append(ActionSheetButtonItem(title: self.presentationData.strings.StickerPack_AddExisting, color: .accent, action: { [weak actionSheet, weak self] in
             actionSheet?.dismissAnimated()
             
             guard let self, let controller = self.controller else {
@@ -1262,7 +1254,7 @@ private final class StickerPackContainer: ASDisplayNode {
         let mainController = context.sharedContext.makeStickerMediaPickerScreen(
             context: context,
             getSourceRect: { return .zero },
-            completion: { result, transitionView, transitionRect, transitionImage, completion, dismissed in
+            completion: { result, transitionView, transitionRect, transitionImage, fromCamera, completion, cancelled in
                 let editorController = context.sharedContext.makeStickerEditorScreen(
                     context: context,
                     source: result,
@@ -1286,7 +1278,7 @@ private final class StickerPackContainer: ASDisplayNode {
                             (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
                             
                             Queue.mainQueue().after(0.1) {
-                                packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: "Sticker added to **\(info.title)** sticker set.", undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.StickerPack_StickerAdded(info.title).string, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                             }
                         })
                     }
@@ -1335,7 +1327,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
                 
                 Queue.mainQueue().after(0.1) {
-                    packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file.media, loop: true, title: nil, text: "Sticker added to **\(info.title)** sticker set.", undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file.media, loop: true, title: nil, text: presentationData.strings.StickerPack_StickerAdded(info.title).string, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
             })
         })
@@ -1383,7 +1375,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     (navigationController?.viewControllers.last as? ViewController)?.present(packController, in: .window(.root))
                     
                     Queue.mainQueue().after(0.1) {
-                        packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: "Sticker updated.", undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                        packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.StickerPack_StickerUpdated, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                     }
                 })
             }
@@ -1396,9 +1388,8 @@ private final class StickerPackContainer: ASDisplayNode {
             return
         }
         let context = self.context
-        //TODO:localize
         var dismissImpl: (() -> Void)?
-        let controller = stickerPackEditTitleController(context: context, title: "Edit Sticker Set Name", text: "Choose a new name for your set.", placeholder: self.presentationData.strings.ImportStickerPack_NamePlaceholder, actionTitle: presentationData.strings.Common_Done, value: self.updatedTitle ?? info.title, maxLength: 64, apply: { [weak self] title in
+        let controller = stickerPackEditTitleController(context: context, title: self.presentationData.strings.StickerPack_EditName_Title, text: self.presentationData.strings.StickerPack_EditName_Text, placeholder: self.presentationData.strings.ImportStickerPack_NamePlaceholder, actionTitle: presentationData.strings.Common_Done, value: self.updatedTitle ?? info.title, maxLength: 64, apply: { [weak self] title in
             guard let self, let title else {
                 return
             }
@@ -1421,7 +1412,7 @@ private final class StickerPackContainer: ASDisplayNode {
             return
         }
         let context = self.context
-        controller.present(textAlertController(context: context, updatedPresentationData: controller.updatedPresentationData, title: "Delete Sticker Set", text: "This will delete the sticker set for all users.", actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .destructiveAction, title: "Delete", action: { [weak self] in
+        controller.present(textAlertController(context: context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.StickerPack_Delete_Title, text: self.presentationData.strings.StickerPack_Delete_Text, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .destructiveAction, title: self.presentationData.strings.StickerPack_Delete_Delete, action: { [weak self] in
             let _ = (context.engine.stickers.deleteStickerSet(packReference: .id(id: info.id.id, accessHash: info.accessHash))
             |> deliverOnMainQueue).startStandalone()
             
@@ -1478,7 +1469,7 @@ private final class StickerPackContainer: ASDisplayNode {
             }
             self.requestDismiss()
         } else if let (info, _, installed) = self.currentStickerPack {
-            if GlobalExperimentalSettings.enableWIPStickers, installed, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
+            if installed, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                 self.updateIsEditing(!self.isEditing)
                 return
             }
@@ -1553,7 +1544,7 @@ private final class StickerPackContainer: ASDisplayNode {
         if let currentContents = self.currentContents, currentContents.count == 1, let content = currentContents.first, case let .result(info, _, installed) = content {
             if installed {
                 let text: String
-                if GlobalExperimentalSettings.enableWIPStickers, info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
+                if info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) {
                     if self.isEditing {
                         var updated = false
                         if let current = self.buttonNode.attributedTitle(for: .normal)?.string, !current.isEmpty && current != self.presentationData.strings.Common_Done {
@@ -1572,8 +1563,9 @@ private final class StickerPackContainer: ASDisplayNode {
                         self.buttonNode.setTitle(self.presentationData.strings.Common_Done, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemCheckColors.foregroundColor, for: .normal)
                         self.buttonNode.setBackgroundImage(generateStretchableFilledCircleImage(radius: 11, color: self.presentationData.theme.list.itemCheckColors.fillColor), for: [])
                     } else {
+                        let buttonTitle = self.presentationData.strings.StickerPack_EditStickers
                         var updated = false
-                        if let current = self.buttonNode.attributedTitle(for: .normal)?.string, !current.isEmpty && current != "Edit Stickers" {
+                        if let current = self.buttonNode.attributedTitle(for: .normal)?.string, !current.isEmpty && current != buttonTitle {
                             updated = true
                         }
                         
@@ -1586,8 +1578,7 @@ private final class StickerPackContainer: ASDisplayNode {
                             self.buttonNode.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         }
                         
-                        //TODO:localize
-                        text = "Edit Stickers"
+                        text = buttonTitle
                         self.buttonNode.setTitle(text, with: Font.regular(17.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)
                         self.buttonNode.setBackgroundImage(nil, for: [])
                     }
@@ -1732,7 +1723,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 self.controller?.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.StickerPack_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 self.controller?.dismiss(animated: true, completion: nil)
             case let .result(info, items, installed):
-                isEditable = GlobalExperimentalSettings.enableWIPStickers && info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)
+                isEditable = info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)
                 self.onReady()
                 if !items.isEmpty && self.currentStickerPack == nil {
                     if let _ = self.validLayout, abs(self.expandScrollProgress - 1.0) < .ulpOfOne {
@@ -1816,7 +1807,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     self.updateButton(count: count)
                 }
                 
-                if GlobalExperimentalSettings.enableWIPStickers && info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) && entries.count < maxStickersCount {
+                if info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji) && entries.count < maxStickersCount {
                     entries.append(.add)
                 }
             }
@@ -1926,7 +1917,7 @@ private final class StickerPackContainer: ASDisplayNode {
         self.currentEntries = entries
         
         if let controller = self.controller {
-            let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil, isEditable: GlobalExperimentalSettings.enableWIPStickers && info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji), isEditing: self.isEditing, invert: invert)
+            let transaction = StickerPackPreviewGridTransaction(previousList: previousEntries, list: entries, context: self.context, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, animationCache: controller.animationCache, animationRenderer: controller.animationRenderer, scrollToItem: nil, isEditable: info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji), isEditing: self.isEditing, invert: invert)
             self.enqueueTransaction(transaction)
         }
     }
@@ -1986,7 +1977,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     actionAreaBottomInset = 2.0
                 }
             }
-            if let (info, _, isInstalled) = self.currentStickerPack, isInstalled, !GlobalExperimentalSettings.enableWIPStickers || (!info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)) {
+            if let (info, _, isInstalled) = self.currentStickerPack, isInstalled, (!info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)) {
                 buttonHeight = 42.0
                 actionAreaTopInset = 1.0
                 actionAreaBottomInset = 2.0

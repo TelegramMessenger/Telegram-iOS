@@ -12001,3 +12001,47 @@ Sorry for the inconvenience.";
 "MyProfile.PhoneActionEdit" = "Change Number";
 "MyProfile.PhoneActionCopy" = "Copy Number";
 "MyProfile.ToastPhoneCopied" = "Birthday copied to clipboard.";
+
+"Stickers.ChooseSticker.Title" = "Choose Sticker";
+"Stickers.EditSticker" = "Edit Sticker";
+"Stickers.Reorder" = "Reorder";
+"Stickers.Delete" = "Delete";
+"Stickers.Delete.ForEveryone" = "Delete for Everyone";
+
+"StickerPack.EditStickers" = "Edit Stickers";
+"StickerPack.EditName" = "Edit Name";
+"StickerPack.Reorder" = "Reorder";
+"StickerPack.Delete" = "Delete";
+"StickerPack.Delete.DeleteForEveyone" = "Delete for Everyone";
+"StickerPack.Delete.RemoveForMe" = "Remove for Me";
+"StickerPack.EditInfo" = "Check [@stickers]() bot for more options.";
+"StickerPack.CreateNew" = "Create a New Sticker";
+"StickerPack.AddExisting" = "Add an Existing Sticker";
+
+"StickerPack.EditName.Title" = "Edit Sticker Set Name";
+"StickerPack.EditName.Text" = "Choose a new name for your set.";
+
+"StickerPack.Delete.Title" = "Delete Sticker Set";
+"StickerPack.Delete.Text" = "This will delete the sticker set for all users.";
+"StickerPack.Delete.Delete" = "Delete";
+
+"StickerPack.StickerAdded" = "Sticker added to **%@** sticker set.";
+"StickerPack.StickerUpdated" = "Sticker updated.";
+
+"MediaEditor.Undo" = "Undo";
+"MediaEditor.Erase" = "Erase";
+"MediaEditor.EraseInfo" = "Erase";
+"MediaEditor.Restore" = "Restore";
+"MediaEditor.RestoreInfo" = "Restore";
+"MediaEditor.Cutout" = "Cut Out an Object";
+"MediaEditor.CutoutInfo" = "Cut Out an Object";
+"MediaEditor.Outline" = "Add Outline";
+"MediaEditor.SetStickerEmoji" = "Set emoji that corresponds to your sticker";
+
+"MediaEditor.CreateNewPack" = "New Sticker Set";
+"MediaEditor.ReplaceSticker" = "Replace Sticker";
+"MediaEditor.AddToStickerPack" = "Add to Sticker Set";
+
+"MediaEditor.NewStickerPack.Title" = "New Sticker Set";
+"MediaEditor.NewStickerPack.Text" = "Choose a name for your sticker set.";
+

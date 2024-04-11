@@ -587,12 +587,6 @@ final class MediaEditorScreenComponent: Component {
                     view.layer.animateAlpha(from: view.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
                     view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
                 }
-                
-                if let view = self.scrubber?.view {
-                    view.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 44.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-                    view.layer.animateAlpha(from: view.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
-                    view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
-                }
             }
             
             if let view = self.saveButton.view {
@@ -614,6 +608,36 @@ final class MediaEditorScreenComponent: Component {
                 view.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 44.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
                 view.layer.animateAlpha(from: view.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
                 view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
+            }
+            
+            if let view = self.undoButton.view {
+                transition.setAlpha(view: view, alpha: 0.0)
+                transition.setScale(view: view, scale: 0.1)
+            }
+            
+            if let view = self.eraseButton.view {
+                transition.setAlpha(view: view, alpha: 0.0)
+                transition.setScale(view: view, scale: 0.1)
+            }
+            
+            if let view = self.restoreButton.view {
+                transition.setAlpha(view: view, alpha: 0.0)
+                transition.setScale(view: view, scale: 0.1)
+            }
+            
+            if let view = self.outlineButton.view {
+                transition.setAlpha(view: view, alpha: 0.0)
+                transition.setScale(view: view, scale: 0.1)
+            }
+            
+            if let view = self.cutoutButton.view {
+                transition.setAlpha(view: view, alpha: 0.0)
+                transition.setScale(view: view, scale: 0.1)
+            }
+            
+            if let view = self.textSize.view {
+                transition.setAlpha(view: view, alpha: 0.0)
+                transition.setScale(view: view, scale: 0.1)
             }
         }
         
@@ -1977,8 +2001,10 @@ final class MediaEditorScreenComponent: Component {
                 var hasEraseButton = false
                 var hasRestoreButton = false
                 var hasOutlineButton = false
-                                                
-                if let canCutout = controller.node.canCutout {
+                              
+                if let subject = controller.node.subject, case .empty = subject {
+                    
+                } else if let canCutout = controller.node.canCutout {
                     if controller.node.isCutout || controller.node.stickerMaskDrawingView?.internalState.canUndo == true {
                         hasUndoButton = true
                     }
@@ -2002,7 +2028,7 @@ final class MediaEditorScreenComponent: Component {
                             content: AnyComponent(CutoutButtonContentComponent(
                                 backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
                                 icon: state.image(.undo),
-                                title: "Undo"
+                                title: environment.strings.MediaEditor_Undo
                             )),
                             effectAlignment: .center,
                             action: {
@@ -2048,7 +2074,7 @@ final class MediaEditorScreenComponent: Component {
                             content: AnyComponent(CutoutButtonContentComponent(
                                 backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
                                 icon: state.image(.cutout),
-                                title: "Cut Out an Object"
+                                title: environment.strings.MediaEditor_Cutout
                             )),
                             effectAlignment: .center,
                             action: {
@@ -2100,7 +2126,7 @@ final class MediaEditorScreenComponent: Component {
                             content: AnyComponent(CutoutButtonContentComponent(
                                 backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
                                 icon: state.image(.erase),
-                                title: "Erase",
+                                title: environment.strings.MediaEditor_Erase,
                                 minWidth: 160.0,
                                 selected: component.isDisplayingTool == .cutoutErase
                             )),
@@ -2123,7 +2149,7 @@ final class MediaEditorScreenComponent: Component {
                                 content: AnyComponent(CutoutButtonContentComponent(
                                     backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
                                     icon: state.image(.restore),
-                                    title: "Restore",
+                                    title: environment.strings.MediaEditor_Restore,
                                     minWidth: 160.0,
                                     selected: component.isDisplayingTool == .cutoutRestore
                                 )),
@@ -2204,7 +2230,7 @@ final class MediaEditorScreenComponent: Component {
                             content: AnyComponent(CutoutButtonContentComponent(
                                 backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
                                 icon: state.image(.outline),
-                                title: "Add Outline",
+                                title: environment.strings.MediaEditor_Outline,
                                 minWidth: 160.0,
                                 selected: isOutlineActive
                             )),
@@ -2898,7 +2924,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if case .message = subject, self.context.sharedContext.currentPresentationData.with({$0}).autoNightModeTriggered {
                 mediaEditor.setNightTheme(true)
             }
-            mediaEditor.attachPreviewView(self.previewView)
             mediaEditor.valuesUpdated = { [weak self] values in
                 if let self, let controller = self.controller, values.gradientColors != nil, controller.previousSavedValues != values {
                     if !isSavingAvailable && controller.previousSavedValues == nil {
@@ -2936,6 +2961,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 self.controller?.stickerRecommendedEmoji = emojiForClasses(classes.map { $0.0 })
             }
+            mediaEditor.attachPreviewView(self.previewView)
             
             if case .empty = effectiveSubject {
                 self.stickerMaskDrawingView?.emptyColor = .black
@@ -4641,30 +4667,31 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     }
                                     let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), forceDark: true, defaultToEmoji: self.defaultToEmoji, hasGifs: true, hasInteractiveStickers: hasInteractiveStickers)
                                     controller.completion = { [weak self] content in
-                                        if let self {
-                                            if let content {
-                                                if case let .file(file, _) = content {
-                                                    self.defaultToEmoji = file.media.isCustomEmoji
-                                                }
-                                                                                                
-                                                let stickerEntity = DrawingStickerEntity(content: content)
-                                                let scale: CGFloat
-                                                if case .image = content {
-                                                    scale = 2.5
-                                                } else if case .video = content {
-                                                    scale = 2.5
-                                                } else {
-                                                    scale = 1.33
-                                                }
-                                                self.interaction?.insertEntity(stickerEntity, scale: scale)
-                                                
-                                                self.hasAnyChanges = true
-                                                self.controller?.isSavingAvailable = true
-                                                self.controller?.requestLayout(transition: .immediate)
-                                            }
-                                            self.stickerScreen = nil
-                                            self.mediaEditor?.maybeUnpauseVideo()
+                                        guard let self else {
+                                            return false
                                         }
+                                        if let content {
+                                            if case let .file(file, _) = content {
+                                                self.defaultToEmoji = file.media.isCustomEmoji
+                                            }
+                                                                                            
+                                            let stickerEntity = DrawingStickerEntity(content: content)
+                                            let scale: CGFloat
+                                            if case .image = content {
+                                                scale = 2.5
+                                            } else if case .video = content {
+                                                scale = 2.5
+                                            } else {
+                                                scale = 1.33
+                                            }
+                                            self.interaction?.insertEntity(stickerEntity, scale: scale)
+                                            
+                                            self.hasAnyChanges = true
+                                            self.controller?.isSavingAvailable = true
+                                            self.controller?.requestLayout(transition: .immediate)
+                                        }
+                                        self.stickerScreen = nil
+                                        self.mediaEditor?.maybeUnpauseVideo()
                                         return true
                                     }
                                     controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
@@ -6506,13 +6533,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.uploadSticker(file, action: .addToFavorites)
                     })
                 })))
-                menuItems.append(.action(ContextMenuActionItem(text: "Add to Sticker Set", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddSticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
+                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_AddToStickerPack, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddSticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
                     guard let self else {
                         return
                     }
                     
                     var contextItems: [ContextMenuItem] = []
-                    contextItems.append(.action(ContextMenuActionItem(text: "Back", icon: { theme in
+                    contextItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
                     }, iconPosition: .left, action: { c, _ in
                         c.popItems()
@@ -6520,7 +6547,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     
                     contextItems.append(.separator)
                     
-                    contextItems.append(.action(ContextMenuActionItem(text: "New Sticker Set", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddCircle"), color: theme.contextMenu.primaryColor) }, iconPosition: .left, action: { [weak self] _, f in
+                    contextItems.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_CreateNewPack, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddCircle"), color: theme.contextMenu.primaryColor) }, iconPosition: .left, action: { [weak self] _, f in
                         if let self {
                             self.presentCreateStickerPack(file: file, completion: {
                                 f(.default)
@@ -6579,7 +6606,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     c.pushItems(items: .single(items))
                 })))
             case .editing:
-                menuItems.append(.action(ContextMenuActionItem(text: "Replace Sticker", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_ReplaceSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                     guard let self else {
                         return
                     }
@@ -6601,7 +6628,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     })
                 })))
             case .addingToPack:
-                menuItems.append(.action(ContextMenuActionItem(text: "Add to Sticker Set", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddSticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
+                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_AddToStickerPack, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddSticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
                     guard let self else {
                         return
                     }
@@ -6691,11 +6718,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
     
     private func presentCreateStickerPack(file: TelegramMediaFile, completion: @escaping () -> Void) {
-        //TODO:localize
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
         
         var dismissImpl: (() -> Void)?
-        let controller = stickerPackEditTitleController(context: self.context, forceDark: true, title: "New Sticker Set", text: "Choose a name for your sticker set.", placeholder: presentationData.strings.ImportStickerPack_NamePlaceholder, actionTitle: presentationData.strings.Common_Done, value: nil, maxLength: 64, apply: { [weak self] title in
+        let controller = stickerPackEditTitleController(context: self.context, forceDark: true, title: presentationData.strings.MediaEditor_NewStickerPack_Title, text: presentationData.strings.MediaEditor_NewStickerPack_Text, placeholder: presentationData.strings.ImportStickerPack_NamePlaceholder, actionTitle: presentationData.strings.Common_Done, value: nil, maxLength: 64, apply: { [weak self] title in
             guard let self else {
                 return
             }
@@ -6942,7 +6968,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                         
                                         Queue.mainQueue().after(0.1) {
-                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: self.context, file: file, loop: true, title: nil, text: "Sticker added to **\(title)** sticker set.", undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: self.context, file: file, loop: true, title: nil, text: presentationData.strings.StickerPack_StickerAdded(title).string, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                                         }
                                     }
                                 }

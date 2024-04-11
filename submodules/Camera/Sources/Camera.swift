@@ -1066,15 +1066,28 @@ public final class Camera {
             return false
         }
     }
+    
+    public static var isIpad: Bool {
+        return DeviceModel.current.isIpad
+    }
 }
 
 public final class CameraHolder {
     public let camera: Camera
-    public let previewView: CameraPreviewView
+    public let previewView: CameraSimplePreviewView
+    public let parentView: UIView
+    public let restore: () -> Void
     
-    public init(camera: Camera, previewView: CameraPreviewView) {
+    public init(
+        camera: Camera,
+        previewView: CameraSimplePreviewView,
+        parentView: UIView,
+        restore: @escaping () -> Void
+    ) {
         self.camera = camera
         self.previewView = previewView
+        self.parentView = parentView
+        self.restore = restore
     }
 }
 
