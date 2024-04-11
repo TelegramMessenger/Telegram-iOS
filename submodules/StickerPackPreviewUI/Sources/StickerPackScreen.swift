@@ -24,6 +24,7 @@ import MultiAnimationRenderer
 import Pasteboard
 import StickerPackEditTitleController
 import EntityKeyboard
+import CameraScreen
 
 private let maxStickersCount = 120
 
@@ -1281,14 +1282,21 @@ private final class StickerPackContainer: ASDisplayNode {
                                 packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.StickerPack_StickerAdded(info.title).string, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                             }
                         })
-                    }
+                    },
+                    cancelled: cancelled
                 )
                 navigationController?.pushViewController(editorController)
             },
             dismissed: {}
         )
         dismissImpl = { [weak mainController] in
-            mainController?.dismiss()
+            if let mainController, let navigationController = mainController.navigationController {
+                var viewControllers = navigationController.viewControllers
+                viewControllers = viewControllers.filter { c in
+                    return !(c is CameraScreen) && c !== mainController
+                }
+                navigationController.setViewControllers(viewControllers, animated: false)
+            }
         }
         navigationController?.pushViewController(mainController)
     }
@@ -1378,7 +1386,8 @@ private final class StickerPackContainer: ASDisplayNode {
                         packController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.StickerPack_StickerUpdated, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                     }
                 })
-            }
+            },
+            cancelled: {}
         )
         navigationController?.pushViewController(controller)
     }
@@ -2015,7 +2024,11 @@ private final class StickerPackContainer: ASDisplayNode {
                 let layout = ItemLayout(width: fillingWidth, itemsCount: items.count)
                 contentHeight = layout.height
             } else {
-                let rowCount = items.count / itemsPerRow + ((items.count % itemsPerRow) == 0 ? 0 : 1)
+                var itemsCount = items.count
+                if info.flags.contains(.isCreator) && itemsCount < 120 {
+                    itemsCount += 1
+                }
+                let rowCount = itemsCount / itemsPerRow + ((itemsCount % itemsPerRow) == 0 ? 0 : 1)
                 contentHeight = itemWidth * CGFloat(rowCount)
             }
         } else {

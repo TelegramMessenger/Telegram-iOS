@@ -1417,6 +1417,7 @@ public class CameraScreen: ViewController {
         
         private let mainPreviewContainerView: UIView
         fileprivate var mainPreviewView: CameraSimplePreviewView
+        private let mainPreviewAnimationWrapperView: UIView
         
         private let additionalPreviewContainerView: UIView
         fileprivate var additionalPreviewView: CameraSimplePreviewView
@@ -1550,6 +1551,10 @@ public class CameraScreen: ViewController {
             self.mainPreviewContainerView.clipsToBounds = true
             self.mainPreviewView = CameraSimplePreviewView(frame: .zero, main: true)
             
+            self.mainPreviewAnimationWrapperView = UIView()
+            self.mainPreviewAnimationWrapperView.clipsToBounds = true
+            self.mainPreviewAnimationWrapperView.isUserInteractionEnabled = false
+            
             self.additionalPreviewContainerView = UIView()
             self.additionalPreviewContainerView.clipsToBounds = true
             self.additionalPreviewView = CameraSimplePreviewView(frame: .zero, main: false)
@@ -1604,6 +1609,7 @@ public class CameraScreen: ViewController {
             self.view.addSubview(self.transitionCornersView)
             
             self.mainPreviewContainerView.addSubview(self.mainPreviewView)
+            self.mainPreviewContainerView.addSubview(self.mainPreviewAnimationWrapperView)
             self.additionalPreviewContainerView.addSubview(self.additionalPreviewView)
                         
             self.completion.connect { [weak self] result in
@@ -1757,7 +1763,7 @@ public class CameraScreen: ViewController {
             if let cameraHolder = controller.holder {
                 camera = cameraHolder.camera
                 self.mainPreviewView = cameraHolder.previewView
-                self.mainPreviewContainerView.addSubview(self.mainPreviewView)
+                self.mainPreviewAnimationWrapperView.addSubview(self.mainPreviewView)
             } else {
                 camera = Camera(
                     configuration: Camera.Configuration(
@@ -1961,7 +1967,7 @@ public class CameraScreen: ViewController {
                         let transitionFraction = translation.y / self.frame.height
                         if abs(transitionFraction) > 0.3 || abs(velocity.y) > 1000.0 {
                             self.containerView.layer.sublayerTransform = CATransform3DIdentity
-                            self.mainPreviewView.center = self.previewContainerView.center.offsetBy(dx: 0.0, dy: translation.y)
+                            self.mainPreviewAnimationWrapperView.center = self.previewContainerView.center.offsetBy(dx: 0.0, dy: translation.y)
                             
                             if let view = self.componentHost.view {
                                 view.center = view.center.offsetBy(dx: 0.0, dy: translation.y)
@@ -2123,10 +2129,14 @@ public class CameraScreen: ViewController {
                         duration: 0.3
                     )
                 } else {
+                    self.mainPreviewAnimationWrapperView.bounds = self.mainPreviewView.bounds
+                    self.mainPreviewAnimationWrapperView.center = CGPoint(x: self.previewContainerView.frame.width / 2.0, y: self.previewContainerView.frame.height / 2.0)
+                    
+                    self.mainPreviewView.layer.position = CGPoint(x: self.previewContainerView.frame.width / 2.0, y: self.previewContainerView.frame.height / 2.0)
+                    
                     let sourceInnerFrame = sourceView.convert(transitionIn.sourceRect, to: self.previewContainerView)
                     let sourceCenter = sourceInnerFrame.center
-                    self.mainPreviewView.layer.position = CGPoint(x: self.previewContainerView.frame.width / 2.0, y: self.previewContainerView.frame.height / 2.0)
-                    self.mainPreviewView.layer.animatePosition(from: sourceCenter, to: self.mainPreviewView.layer.position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+                    self.mainPreviewAnimationWrapperView.layer.animatePosition(from: sourceCenter, to: self.mainPreviewAnimationWrapperView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
                         self.requestUpdateLayout(hasAppeared: true, transition: .immediate)
                     })
                     
@@ -2134,12 +2144,12 @@ public class CameraScreen: ViewController {
                     if let holder = controller.holder {
                         sourceBounds = CGRect(origin: .zero, size: holder.parentView.frame.size.aspectFitted(sourceBounds.size))
                     }
+                    self.mainPreviewAnimationWrapperView.layer.animateBounds(from: sourceBounds, to: self.mainPreviewView.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                     
-                    self.mainPreviewView.layer.animateBounds(from: sourceBounds, to: CGRect(origin: .zero, size: self.previewContainerView.frame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                    
-                    let sourceScale = self.mainPreviewView.layer.value(forKeyPath: "transform.scale.x") as? CGFloat ?? 1.0
+                    let sourceScale = sourceInnerFrame.height / self.previewContainerView.frame.height
                     self.mainPreviewView.transform = CGAffineTransform.identity
-                    self.mainPreviewView.layer.animateScale(from: sourceScale, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+                    self.mainPreviewAnimationWrapperView.layer.animateScale(from: sourceScale, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+                        self.mainPreviewContainerView.addSubview(self.mainPreviewView)
                         Queue.mainQueue().justDispatch {
                             self.animatedIn = true
                         }
@@ -2184,18 +2194,26 @@ public class CameraScreen: ViewController {
                         removeOnCompletion: false
                     )
                 } else {
+                    self.mainPreviewAnimationWrapperView.addSubview(self.mainPreviewView)
+                    self.animatedIn = false
+                    
                     let destinationInnerFrame = destinationView.convert(transitionOut.destinationRect, to: self.previewContainerView)
                     let initialCenter = self.mainPreviewView.layer.position
-                    self.mainPreviewView.layer.position = destinationInnerFrame.center
-                    self.mainPreviewView.layer.animatePosition(from: initialCenter, to: self.mainPreviewView.layer.position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+                   
+                    self.mainPreviewAnimationWrapperView.center = destinationInnerFrame.center
+                    self.mainPreviewAnimationWrapperView.layer.animatePosition(from: initialCenter, to: self.mainPreviewAnimationWrapperView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
                         completion()
                     })
                     
-                    self.mainPreviewView.layer.animateBounds(from: self.mainPreviewView.bounds, to: CGRect(origin: .zero, size: self.previewContainerView.frame.size), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    var targetBounds = self.mainPreviewView.bounds
+                    if let holder = controller.holder {
+                        targetBounds = CGRect(origin: .zero, size: holder.parentView.frame.size.aspectFitted(targetBounds.size))
+                    }
+                    self.mainPreviewView.center = self.mainPreviewView.center.offsetBy(dx: (targetBounds.width - self.mainPreviewView.bounds.width) / 2.0, dy: 0.0)
+                    self.mainPreviewAnimationWrapperView.layer.animateBounds(from: self.mainPreviewView.bounds, to: targetBounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                     
-                    let targetScale = destinationInnerFrame.width / self.previewContainerView.frame.width
-                    self.mainPreviewView.transform = CGAffineTransform(scaleX: targetScale, y: targetScale)
-                    self.mainPreviewView.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    let targetScale = destinationInnerFrame.height / self.previewContainerView.frame.height
+                    self.mainPreviewAnimationWrapperView.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 }
                 
                 if let view = self.componentHost.view {
@@ -2684,7 +2702,11 @@ public class CameraScreen: ViewController {
             let additionalPreviewInnerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((circleSide - additionalPreviewInnerSize.width) / 2.0), y: floorToScreenPixels((circleSide - additionalPreviewInnerSize.height) / 2.0)), size: additionalPreviewInnerSize)
             
             if mainPreviewView.superview != self.mainPreviewContainerView {
-                self.mainPreviewContainerView.insertSubview(mainPreviewView, at: 0)
+                if case .sticker = controller.mode, !self.animatedIn {
+                    
+                } else {
+                    self.mainPreviewContainerView.insertSubview(mainPreviewView, at: 0)
+                }
             }
             if additionalPreviewView.superview != self.additionalPreviewContainerView {
                 self.additionalPreviewContainerView.insertSubview(additionalPreviewView, at: 0)

@@ -12035,11 +12035,11 @@ Sorry for the inconvenience.";
 
 "MediaEditor.Undo" = "Undo";
 "MediaEditor.Erase" = "Erase";
-"MediaEditor.EraseInfo" = "Erase";
+"MediaEditor.EraseInfo" = "Erase parts of this sticker";
 "MediaEditor.Restore" = "Restore";
-"MediaEditor.RestoreInfo" = "Restore";
+"MediaEditor.RestoreInfo" = "Restore parts of this sticker";
 "MediaEditor.Cutout" = "Cut Out an Object";
-"MediaEditor.CutoutInfo" = "Cut Out an Object";
+"MediaEditor.CutoutInfo" = "Tap on an object to cut it out";
 "MediaEditor.Outline" = "Add Outline";
 "MediaEditor.SetStickerEmoji" = "Set emoji that corresponds to your sticker";
 

@@ -615,12 +615,16 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     previewView: previewView,
                     parentView: self.cameraWrapperView,
                     restore: { [weak self, weak previewView] in
-                        guard let self else{
+                        guard let self else {
                             return
                         }
                         self.modernCameraTapGestureRecognizer?.isEnabled = true
                         if let previewView {
                             self.cameraWrapperView.addSubview(previewView)
+                            if let (layout, navigationBarHeight) = self.validLayout {
+                                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                                previewView.layer.removeAllAnimations()
+                            }
                         }
                     }
                 )
@@ -1562,7 +1566,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         cameraView.center = CGPoint(x: cameraRect.size.width / 2.0, y: cameraRect.size.height / 2.0)
                         cameraView.transform = CGAffineTransform(scaleX: cameraScale, y: cameraScale)
 
-                    } else {
+                    } else if cameraView.superview == self.gridNode.scrollView {
                         transition.updateFrame(view: cameraView, frame: cameraRect)
                     }
                     self.cameraActivateAreaNode.frame = cameraRect

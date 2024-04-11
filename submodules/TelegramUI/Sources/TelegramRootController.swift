@@ -226,11 +226,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
-        
-//        Queue.mainQueue().after(0.3) {
-//            let controller = self.context.sharedContext.makeStickerEditorScreen(context: self.context, source: nil, transitionArguments: nil, completion: { _ , _ in })
-//            self.chatListController?.push(controller)
-//        }
     }
         
     public func updateRootControllers(showCallsTab: Bool) {

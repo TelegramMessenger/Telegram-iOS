@@ -41,6 +41,7 @@ swift_library(
         "//submodules/StickerPeekUI:StickerPeekUI",
         "//submodules/Pasteboard:Pasteboard",
         "//submodules/TelegramUI/Components/Stickers/StickerPackEditTitleController",
+        "//submodules/TelegramUI/Components/CameraScreen",
     ],
     visibility = [
         "//visibility:public",

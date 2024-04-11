@@ -365,11 +365,11 @@ private final class MediaCutoutScreenComponent: Component {
             let helpText: String
             switch controller.mode {
             case .cutout:
-                helpText = "Tap on an object to cut it out"
+                helpText = environment.strings.MediaEditor_CutoutInfo
             case .erase:
-                helpText = "Erase parts of this sticker"
+                helpText = environment.strings.MediaEditor_EraseInfo
             case .restore:
-                helpText = "Restore parts of this sticker"
+                helpText = environment.strings.MediaEditor_RestoreInfo
             }
             
             let labelSize = self.label.update(

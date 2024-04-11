@@ -62,6 +62,7 @@ import MediaEditorScreen
 import BusinessIntroSetupScreen
 import TelegramNotices
 import BotSettingsScreen
+import CameraScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2366,27 +2367,42 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, isEditing: isEditing, expandIfNeeded: expandIfNeeded, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
     }
     
-    public func makeStickerEditorScreen(context: AccountContext, source: Any?, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, [String], @escaping () -> Void) -> Void) -> ViewController {
-        let subject: MediaEditorScreen.Subject
+    public func makeStickerEditorScreen(context: AccountContext, source: Any?, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, [String], @escaping () -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController {
+        let subject: Signal<MediaEditorScreen.Subject?, NoError>
         let mode: MediaEditorScreen.Mode.StickerEditorMode
+        var fromCamera = false
         if let (file, emoji) = source as? (TelegramMediaFile, [String]) {
-            subject = .sticker(file, emoji)
+            subject = .single(.sticker(file, emoji))
             mode = .editing
         } else if let asset = source as? PHAsset {
-            subject = .asset(asset)
+            subject = .single(.asset(asset))
             mode = .addingToPack
         } else if let image = source as? UIImage {
-            subject = .image(image, PixelDimensions(image.size), nil, .bottomRight)
+            subject = .single(.image(image, PixelDimensions(image.size), nil, .bottomRight))
+            mode = .addingToPack
+        } else if let source = source as? Signal<CameraScreen.Result, NoError> {
+            subject = source
+            |> map { value -> MediaEditorScreen.Subject? in
+                switch value {
+                case .pendingImage:
+                    return nil
+                case let .image(image):
+                    return .image(image.image, PixelDimensions(image.image.size), nil, .topLeft)
+                default:
+                    return nil
+                }
+            }
+            fromCamera = true
             mode = .addingToPack
         } else {
-            subject = .empty(PixelDimensions(width: 1080, height: 1920))
+            subject = .single(.empty(PixelDimensions(width: 1080, height: 1920)))
             mode = .addingToPack
         }
-        let controller = MediaEditorScreen(
+        let editorController = MediaEditorScreen(
             context: context,
             mode: .stickerEditor(mode: mode),
-            subject: .single(subject),
-            transitionIn: transitionArguments.flatMap { .gallery(
+            subject: subject,
+            transitionIn: fromCamera ? .camera : transitionArguments.flatMap { .gallery(
                 MediaEditorScreen.TransitionIn.GalleryTransitionIn(
                     sourceView: $0.0,
                     sourceRect: $0.1,
@@ -2410,7 +2426,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             } as (MediaEditorScreen.Result, @escaping (@escaping () -> Void) -> Void) -> Void
         )
-        return controller
+        editorController.cancelled = { _ in
+            cancelled()
+        }
+        return editorController
     }
     
     public func makeMediaPickerScreen(context: AccountContext, hasSearch: Bool, completion: @escaping (Any) -> Void) -> ViewController {
