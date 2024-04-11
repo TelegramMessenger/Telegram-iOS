@@ -238,11 +238,9 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 let header: ChatListSearchItemHeader?
                 if case .channels = key {
                     if case .recommendedChannels = section {
-                        //TODO:localize
-                        header = ChatListSearchItemHeader(type: .text("RECOMMENDED CHANNELS", 1), theme: theme, strings: strings)
+                        header = ChatListSearchItemHeader(type: .text(presentationData.strings.ChatList_Search_SectionRecommendedChannels, 1), theme: theme, strings: strings)
                     } else {
-                        //TODO:localize
-                        header = ChatListSearchItemHeader(type: .text("CHANNELS YOU JOINED", 0), theme: theme, strings: strings, actionTitle: isChannelsTabExpanded ? "Show less" : "Show more", action: {
+                        header = ChatListSearchItemHeader(type: .text(presentationData.strings.ChatList_Search_SectionLocalChannels, 0), theme: theme, strings: strings, actionTitle: isChannelsTabExpanded ? presentationData.strings.ChatList_Search_SectionActionShowLess : presentationData.strings.ChatList_Search_SectionActionShowMore, action: {
                             toggleChannelsTabExpanded()
                         })
                     }
@@ -1273,10 +1271,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.emptyResultsAnimationNode.isHidden = true
         
         if key == .channels {
-            //TODO:localize
             let emptyRecentTitleNode = ImmediateTextNode()
             emptyRecentTitleNode.displaysAsynchronously = false
-            emptyRecentTitleNode.attributedText = NSAttributedString(string: "No Channels Yet...", font: Font.semibold(17.0), textColor: self.presentationData.theme.list.freeTextColor)
+            emptyRecentTitleNode.attributedText = NSAttributedString(string: presentationData.strings.ChatList_Search_RecommendedChannelsEmpty_Title, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.freeTextColor)
             emptyRecentTitleNode.textAlignment = .center
             emptyRecentTitleNode.isHidden = true
             self.emptyRecentTitleNode = emptyRecentTitleNode
@@ -1286,7 +1283,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             emptyRecentTextNode.maximumNumberOfLines = 0
             emptyRecentTextNode.textAlignment = .center
             emptyRecentTextNode.isHidden = true
-            emptyRecentTextNode.attributedText = NSAttributedString(string: "You are not currently subscribed to any channel.", font: Font.regular(15.0), textColor: presentationData.theme.list.freeTextColor)
+            emptyRecentTextNode.attributedText = NSAttributedString(string: presentationData.strings.ChatList_Search_RecommendedChannelsEmpty_Text, font: Font.regular(15.0), textColor: presentationData.theme.list.freeTextColor)
             self.emptyRecentTextNode = emptyRecentTextNode
                  
             let emptyRecentAnimationNode = DefaultAnimatedStickerNodeImpl()

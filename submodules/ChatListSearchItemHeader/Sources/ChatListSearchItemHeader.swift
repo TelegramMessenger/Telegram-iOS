@@ -64,8 +64,7 @@ public enum ChatListSearchItemHeaderType {
             case .chats:
                 return strings.Cache_ByPeerHeader
             case .channels:
-                //TODO:localize
-                return "Channels"
+                return strings.ChatList_ChannelsSection
             case .chatTypes:
                 return strings.ChatList_ChatTypesSection
             case .faq:

@@ -206,8 +206,7 @@ private func reactionNotificationSettingsEntries(
 ) -> [ReactionNotificationSettingsEntry] {
     var entries: [ReactionNotificationSettingsEntry] = []
     
-    //TODO:localize
-    entries.append(.categoriesHeader("NOTIFY ME ABOUT..."))
+    entries.append(.categoriesHeader(presentationData.strings.Notifications_Reactions_SettingsHeader))
     
     let messagesText: String?
     let messagesValue: Bool
@@ -216,10 +215,10 @@ private func reactionNotificationSettingsEntries(
         messagesText = nil
         messagesValue = false
     case .contacts:
-        messagesText = "From My Contacts"
+        messagesText = presentationData.strings.Notifications_Reactions_SubtitleContacts
         messagesValue = true
     case .everyone:
-        messagesText = "From Everyone"
+        messagesText = presentationData.strings.Notifications_Reactions_SubtitleEveryone
         messagesValue = true
     }
     
@@ -230,21 +229,20 @@ private func reactionNotificationSettingsEntries(
         storiesText = nil
         storiesValue = false
     case .contacts:
-        storiesText = "From My Contacts"
+        storiesText = presentationData.strings.Notifications_Reactions_SubtitleContacts
         storiesValue = true
     case .everyone:
-        storiesText = "From Everyone"
+        storiesText = presentationData.strings.Notifications_Reactions_SubtitleEveryone
         storiesValue = true
     }
     
-    entries.append(.messages(title: "Reactions to my Messages", text: messagesText, value: messagesValue))
-    entries.append(.stories(title: "Reactions to my Stories", text: storiesText, value: storiesValue))
+    entries.append(.messages(title: presentationData.strings.Notifications_Reactions_ItemMessages, text: messagesText, value: messagesValue))
+    entries.append(.stories(title: presentationData.strings.Notifications_Reactions_ItemStories, text: storiesText, value: storiesValue))
     
     if messagesValue || storiesValue {
         entries.append(.optionsHeader(presentationData.strings.Notifications_Options.uppercased()))
         
-        //TODO:localize
-        entries.append(.previews("Show Sender's Name", globalSettings.reactionSettings.hideSender != .hide))
+        entries.append(.previews(presentationData.strings.Notifications_Stories_DisplayName, globalSettings.reactionSettings.hideSender != .hide))
         entries.append(.sound(presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: filteredGlobalSound(globalSettings.reactionSettings.sound)), filteredGlobalSound(globalSettings.reactionSettings.sound)))
     }
 
@@ -274,19 +272,19 @@ public func reactionNotificationSettingsController(
     let _ = updateState
     
     let openCategory: (Bool) -> Void = { isMessages in
-        //TODO:localize
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
         let text: String
         if isMessages {
-            text = "Notify about reactions to my messages from"
+            text = presentationData.strings.Notifications_Reactions_SheetTitleMessages
         } else {
-            text = "Notify about reactions to my stories from"
+            text = presentationData.strings.Notifications_Reactions_SheetTitleStories
         }
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationData: presentationData)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetTextItem(title: text),
-            ActionSheetButtonItem(title: "Everyone", color: .accent, action: { [weak actionSheet] in
+            ActionSheetButtonItem(title: presentationData.strings.Notifications_Reactions_SheetValueEveryone, color: .accent, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
                 let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
@@ -299,7 +297,7 @@ public func reactionNotificationSettingsController(
                     return settings
                 }).start()
             }),
-            ActionSheetButtonItem(title: "My Contacts", color: .accent, action: { [weak actionSheet] in
+            ActionSheetButtonItem(title: presentationData.strings.Notifications_Reactions_SheetValueContacts, color: .accent, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
                 let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
@@ -398,8 +396,7 @@ public func reactionNotificationSettingsController(
         leftNavigationButton = nil
         rightNavigationButton = nil
         
-        //TODO:localize
-        let title: String = "Reactions"
+        let title: String = presentationData.strings.Notifications_Reactions_Title
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks)

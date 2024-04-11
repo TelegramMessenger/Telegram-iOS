@@ -797,20 +797,14 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 let reactionCountValueList = (1 ... 11).map { i -> String in
                     return "\(i)"
                 }
-                //TODO:localize
-                let sliderTitle: String
-                if self.allowedReactionCount == 1 {
-                    sliderTitle = "1 reaction"
-                } else {
-                    sliderTitle = "\(self.allowedReactionCount) reactions"
-                }
+                let sliderTitle: String = environment.strings.PeerInfo_AllowedReactions_MaxCountValue(Int32(self.allowedReactionCount))
                 let reactionCountSectionSize = reactionCountSection.update(
                     transition: transition,
                     component: AnyComponent(ListSectionComponent(
                         theme: environment.theme,
                         header: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "MAXIMUM REACTIONS PER POST",
+                                string: environment.strings.PeerInfo_AllowedReactions_MaxCountSectionTitle,
                                 font: Font.regular(13.0),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -818,7 +812,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         )),
                         footer: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Limit the number of different reactions that can be added to a post, including already published posts.",
+                                string: environment.strings.PeerInfo_AllowedReactions_MaxCountSectionFooter,
                                 font: Font.regular(13.0),
                                 textColor: environment.theme.list.freeTextColor
                             )),

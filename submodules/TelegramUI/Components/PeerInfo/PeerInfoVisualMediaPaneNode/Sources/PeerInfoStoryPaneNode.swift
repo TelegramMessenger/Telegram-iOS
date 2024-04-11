@@ -1798,10 +1798,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             
             var items: [ContextMenuItem] = []
             
-            //TODO:localize
-            
             if canManage {
-                items.append(.action(ContextMenuActionItem(text: !self.isArchive ? "Archive" : "Unarchive", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: self.isArchive ? "Chat/Context Menu/Archive" : "Chat/Context Menu/Unarchive"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                items.append(.action(ContextMenuActionItem(text: !self.isArchive ? self.presentationData.strings.StoryList_ItemAction_Archive : self.presentationData.strings.StoryList_ItemAction_Unarchive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: self.isArchive ? "Chat/Context Menu/Archive" : "Chat/Context Menu/Unarchive"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                     guard let self else {
                         f(.default)
                         return
@@ -1814,12 +1812,12 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     }
                     
                     let _ = self.context.engine.messages.updateStoriesArePinned(peerId: self.peerId, ids: [item.id: item], isPinned: self.isArchive ? true : false).startStandalone()
-                    self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: self.isArchive ? "Story unarchived." : "Story archived.", cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                    self.parentController?.present(UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: nil, text: self.isArchive ? self.presentationData.strings.StoryList_ToastUnarchived_Text(1) : self.presentationData.strings.StoryList_ToastArchived_Text(1), cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                 })))
                 
                 if !self.isArchive {
                     let isPinned = self.pinnedIds.contains(item.id)
-                    items.append(.action(ContextMenuActionItem(text: isPinned ? "Unpin" : "Pin", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { [weak self, weak itemLayer] _, f in
+                    items.append(.action(ContextMenuActionItem(text: isPinned ? self.presentationData.strings.StoryList_ItemAction_Unpin : self.presentationData.strings.StoryList_ItemAction_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { [weak self, weak itemLayer] _, f in
                         itemLayer?.isHidden = false
                         guard let self else {
                             f(.default)
@@ -1830,7 +1828,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                             f(.default)
                             
                             let presentationData = self.presentationData
-                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can't pin more than 3 posts.", timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.StoryList_ToastPinLimit_Text(Int32(3)), timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                             
                             return
                         }
@@ -1845,23 +1843,22 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         }
                         let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: self.peerId, ids: Array(updatedPinnedIds)).startStandalone()
                         
-                        //TODO:localize
                         let presentationData = self.presentationData
                         
                         let toastTitle: String?
                         let toastText: String
                         if isPinned {
                             toastTitle = nil
-                            toastText = "Story unpinned."
+                            toastText = presentationData.strings.StoryList_ToastUnpinned_Text(1)
                         } else {
-                            toastTitle = "Story pinned"
-                            toastText = "Now it will always be shown on the top."
+                            toastTitle = presentationData.strings.StoryList_ToastPinned_Title(1)
+                            toastText = presentationData.strings.StoryList_ToastPinned_Text(1)
                         }
                         self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: isPinned ? "anim_toastunpin" : "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     })))
                 }
                 
-                /*items.append(.action(ContextMenuActionItem(text: "Edit", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                /*items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Edit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                  c.dismiss(completion: {
                  guard let self else {
                  return
@@ -1874,7 +1871,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             }
             
             if !item.isForwardingDisabled, case .everyone = item.privacy?.base {
-                items.append(.action(ContextMenuActionItem(text: "Forward", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Forward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                     c.dismiss(completion: {
                         guard let self else {
                             return
@@ -1916,7 +1913,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             }
             
             if canManage {
-                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
                     c.dismiss(completion: {
                         guard let self else {
                             return
@@ -2414,18 +2411,12 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             controller?.dismissAnimated()
         }
         
-        //TODO:localize
-        let title: String
-        if ids.count == 1 {
-            title = "Delete 1 story?"
-        } else {
-            title = "Delete \(ids.count) stories?"
-        }
+        let title: String = presentationData.strings.StoryList_DeleteConfirmation_Title(Int32(ids.count))
         
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
                 ActionSheetTextItem(title: title),
-                ActionSheetButtonItem(title: "Delete", color: .destructive, action: { [weak self] in
+                ActionSheetButtonItem(title: presentationData.strings.StoryList_DeleteConfirmation_Action, color: .destructive, action: { [weak self] in
                     dismissAction()
                     
                     guard let self else {
@@ -2465,7 +2456,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             selectionItems.append(BottomActionsPanelComponent.Item(
                 id: "pin-unpin",
                 color: .accent,
-                title: actionIsPin ? "Pin" : "Unpin",
+                title: actionIsPin ? presentationData.strings.StoryList_ActionPanel_Pin : presentationData.strings.StoryList_ActionPanel_Unpin,
                 isEnabled: !selectedIds.isEmpty,
                 action: { [weak self] in
                     guard let self, let selectedIds = self.itemInteraction.selectedIds else {
@@ -2479,23 +2470,16 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         if updatedPinnedIds.count > 3 {
                             let presentationData = self.presentationData
                             let animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
-                            let toastText = "You can't pin more than 3 posts."
+                            let toastText = presentationData.strings.StoryList_ToastPinLimit_Text(3)
                             self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_infotip", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: nil, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         } else {
                             let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: self.peerId, ids: Array(updatedPinnedIds)).startStandalone()
                             
-                            //TODO:localize
                             let presentationData = self.presentationData
                             
-                            let toastTitle: String
-                            let toastText: String
-                            if selectedIds.count == 1 {
-                                toastTitle = "Story Pinned"
-                                toastText = "Now it will always be shown on the top."
-                            } else {
-                                toastTitle = "Stories Pinned"
-                                toastText = "Now they will always be shown on the top."
-                            }
+                            let toastTitle = presentationData.strings.StoryList_ToastPinned_Title(Int32(selectedIds.count))
+                            let toastText = presentationData.strings.StoryList_ToastPinned_Text(Int32(selectedIds.count))
+                            
                             self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                             
                             if let parentController = self.parentController as? PeerInfoScreen {
@@ -2509,18 +2493,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         }
                         let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: self.peerId, ids: Array(updatedPinnedIds)).startStandalone()
                         
-                        //TODO:localize
                         let presentationData = self.presentationData
                         
-                        let toastTitle: String?
-                        let toastText: String
-                        if selectedIds.count == 1 {
-                            toastTitle = nil
-                            toastText = "Story unpinned."
-                        } else {
-                            toastTitle = nil
-                            toastText = "Stories unpinned."
-                        }
+                        let toastTitle: String? = nil
+                        let toastText: String = presentationData.strings.StoryList_ToastUnpinned_Text(Int32(selectedIds.count))
+                        
                         self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_toastunpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         
                         if let parentController = self.parentController as? PeerInfoScreen {
@@ -2532,7 +2509,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             selectionItems.append(BottomActionsPanelComponent.Item(
                 id: "archive",
                 color: .accent,
-                title: self.isArchive ? "Unarchive" : "Archive",
+                title: self.isArchive ? presentationData.strings.StoryList_ActionPanel_Unarchive : presentationData.strings.StoryList_ActionPanel_Archive,
                 isEnabled: !selectedIds.isEmpty,
                 action: { [weak self] in
                     guard let self, let _ = self.itemInteraction.selectedIds else {
@@ -2549,17 +2526,9 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     
                     let text: String
                     if self.isArchive {
-                        if items.count == 1 {
-                            text = "Story unarchived."
-                        } else {
-                            text = "Stories unarchived."
-                        }
+                        text = presentationData.strings.StoryList_ToastUnarchived_Text(Int32(items.count))
                     } else {
-                        if items.count == 1 {
-                            text = "Story archived."
-                        } else {
-                            text = "Stories archived."
-                        }
+                        text = presentationData.strings.StoryList_ToastArchived_Text(Int32(items.count))
                     }
                     self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: text, cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                 }
@@ -2567,7 +2536,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             selectionItems.append(BottomActionsPanelComponent.Item(
                 id: "delete",
                 color: .destructive,
-                title: "Delete",
+                title: presentationData.strings.StoryList_ActionPanel_Delete,
                 isEnabled: !selectedIds.isEmpty,
                 action: { [weak self] in
                     guard let self, let selectedIds = self.itemInteraction.selectedIds else {
