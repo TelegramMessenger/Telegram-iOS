@@ -236,9 +236,14 @@ private final class MediaCutoutScreenComponent: Component {
             }
             let previewView = controller.previewView
             
+            let maxSize = CGSize(width: 320.0, height: 568.0)
+            let fittedSize = previewView.bounds.size.aspectFitted(maxSize)
+            let scale = previewView.bounds.width / fittedSize.width
+            
             let dustEffectLayer = DustEffectLayer()
             dustEffectLayer.position = previewView.center
-            dustEffectLayer.bounds = previewView.bounds
+            dustEffectLayer.bounds = CGRect(origin: .zero, size: fittedSize)
+            dustEffectLayer.transform = CATransform3DMakeScale(scale, scale, 1.0)
             previewView.superview?.layer.insertSublayer(dustEffectLayer, below: previewView.layer)
             
             dustEffectLayer.animationSpeed = 2.2
@@ -246,7 +251,7 @@ private final class MediaCutoutScreenComponent: Component {
                 dustEffectLayer?.removeFromSuperlayer()
             }
 
-            dustEffectLayer.addItem(frame: previewView.bounds, image: resultImage)
+            dustEffectLayer.addItem(frame: dustEffectLayer.bounds, image: resultImage)
             
             controller.completedWithCutout()
             controller.requestDismiss(animated: true)
