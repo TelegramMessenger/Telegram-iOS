@@ -573,15 +573,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
             }, iconSource: nil, action: { c, _ in
                 c.dismiss(completion: {
-                    var replaceImpl: ((ViewController) -> Void)?
-                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, action: {
-                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
-                        replaceImpl?(controller)
-                    })
-                    replaceImpl = { [weak controller] c in
-                        controller?.replace(with: c)
-                    }
-                    controllerInteraction.navigationController()?.pushViewController(controller)
+                    controllerInteraction.openNoAdsDemo()
                 })
             })))
         } else {
