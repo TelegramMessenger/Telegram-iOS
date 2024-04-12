@@ -166,7 +166,7 @@ private func getPathFromMaskImage(_ image: CIImage, size: CGSize, values: MediaE
     let contourImageSize = image.extent.size.aspectFilled(CGSize(width: 256.0, height: 256.0))
     
     var contour = findEdgePoints(in: pixelBuffer)
-    guard !contour.isEmpty else {
+    guard contour.count > 1 else {
         return nil
     }
     

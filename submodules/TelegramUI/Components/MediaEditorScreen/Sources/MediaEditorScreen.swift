@@ -6498,6 +6498,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         return
                     }
                     
+                    if !isVideo {
+                        self.stickerResultController?.disappeared = nil
+                    }
+                    
                     let _ = (imagesReady.get()
                     |> filter { $0 }
                     |> take(1)
@@ -6508,7 +6512,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         if isVideo {
                             self.uploadSticker(file, action: .send)
                         } else {
-                            self.stickerResultController?.disappeared = nil
                             self.completion(MediaEditorScreen.Result(
                                 media: .sticker(file: file, emoji: self.effectiveStickerEmoji()),
                                 mediaAreas: [],

@@ -2198,7 +2198,7 @@ public class CameraScreen: ViewController {
                     self.animatedIn = false
                     
                     let destinationInnerFrame = destinationView.convert(transitionOut.destinationRect, to: self.previewContainerView)
-                    let initialCenter = self.mainPreviewView.layer.position
+                    let initialCenter = self.mainPreviewAnimationWrapperView.layer.position
                    
                     self.mainPreviewAnimationWrapperView.center = destinationInnerFrame.center
                     self.mainPreviewAnimationWrapperView.layer.animatePosition(from: initialCenter, to: self.mainPreviewAnimationWrapperView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in

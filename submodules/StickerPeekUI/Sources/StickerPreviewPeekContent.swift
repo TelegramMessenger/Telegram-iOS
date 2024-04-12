@@ -578,7 +578,9 @@ final class EmojiStickerAccessoryNode: SparseNode, PeekControllerAccessoryNode {
         self.reactionContextNode.updateLayout(size: size, insets: UIEdgeInsets(top: 64.0, left: 0.0, bottom: 0.0, right: 0.0), anchorRect: anchorRect, centerAligned: true, isCoveredByInput: false, isAnimatingOut: false, forceUpdate: forceUpdate, transition: transition)
         
         if isFirstTime {
-            self.reactionContextNode.animateIn(from: anchorRect)
+            Queue.mainQueue().justDispatch {
+                self.reactionContextNode.animateIn(from: anchorRect)
+            }
         }
     }
 }
