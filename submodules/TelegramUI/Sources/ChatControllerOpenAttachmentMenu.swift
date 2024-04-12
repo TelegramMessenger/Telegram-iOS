@@ -554,9 +554,10 @@ extension ChatControllerImpl {
                         }
                     }))
                 case .poll:
-                    let controller = strongSelf.configurePollCreation()
-                    completion(controller, controller?.mediaPickerContext)
-                    strongSelf.controllerNavigationDisposable.set(nil)
+                    if let controller = strongSelf.configurePollCreation() as? AttachmentContainable {
+                        completion(controller, controller.mediaPickerContext)
+                        strongSelf.controllerNavigationDisposable.set(nil)
+                    }
                 case .gift:
                     if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                         let premiumGiftOptions = strongSelf.presentationInterfaceState.premiumGiftOptions

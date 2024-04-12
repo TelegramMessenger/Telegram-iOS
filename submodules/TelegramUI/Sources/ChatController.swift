@@ -13838,7 +13838,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.present(tooltipScreen, in: .current)
     }
         
-    func configurePollCreation(isQuiz: Bool? = nil) -> CreatePollControllerImpl? {
+    func configurePollCreation(isQuiz: Bool? = nil) -> ViewController? {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return nil
         }

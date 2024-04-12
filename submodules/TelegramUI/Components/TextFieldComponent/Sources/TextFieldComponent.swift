@@ -114,6 +114,7 @@ public final class TextFieldComponent: Component {
     public let present: (ViewController) -> Void
     public let paste: (PasteData) -> Void
     public let returnKeyAction: (() -> Void)?
+    public let backspaceKeyAction: (() -> Void)?
     
     public init(
         context: AccountContext,
@@ -134,7 +135,8 @@ public final class TextFieldComponent: Component {
         lockedFormatAction: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
         paste: @escaping (PasteData) -> Void,
-        returnKeyAction: (() -> Void)? = nil
+        returnKeyAction: (() -> Void)? = nil,
+        backspaceKeyAction: (() -> Void)? = nil
     ) {
         self.context = context
         self.theme = theme
@@ -155,6 +157,7 @@ public final class TextFieldComponent: Component {
         self.present = present
         self.paste = paste
         self.returnKeyAction = returnKeyAction
+        self.backspaceKeyAction = backspaceKeyAction
     }
     
     public static func ==(lhs: TextFieldComponent, rhs: TextFieldComponent) -> Bool {
@@ -463,6 +466,10 @@ public final class TextFieldComponent: Component {
         }
         
         public func chatInputTextNodeBackspaceWhileEmpty() {
+            guard let component = self.component else {
+                return
+            }
+            component.backspaceKeyAction?()
         }
         
         @available(iOS 13.0, *)

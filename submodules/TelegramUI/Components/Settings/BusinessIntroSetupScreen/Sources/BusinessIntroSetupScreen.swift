@@ -821,8 +821,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                         )),
                         maximumNumberOfLines: 0
                     )),
-                    items: introSectionItems,
-                    itemUpdateOrder: introSectionItems.map(\.id).reversed()
+                    items: introSectionItems
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)

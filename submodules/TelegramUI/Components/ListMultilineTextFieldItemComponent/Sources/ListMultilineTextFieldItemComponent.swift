@@ -51,6 +51,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
     public let emptyLineHandling: EmptyLineHandling
     public let updated: ((String) -> Void)?
     public let returnKeyAction: (() -> Void)?
+    public let backspaceKeyAction: (() -> Void)?
     public let textUpdateTransition: Transition
     public let tag: AnyObject?
     
@@ -68,8 +69,9 @@ public final class ListMultilineTextFieldItemComponent: Component {
         characterLimit: Int? = nil,
         displayCharacterLimit: Bool = false,
         emptyLineHandling: EmptyLineHandling = .allowed,
-        updated: ((String) -> Void)?,
+        updated: ((String) -> Void)? = nil,
         returnKeyAction: (() -> Void)? = nil,
+        backspaceKeyAction: (() -> Void)? = nil,
         textUpdateTransition: Transition = .immediate,
         tag: AnyObject? = nil
     ) {
@@ -88,6 +90,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
         self.emptyLineHandling = emptyLineHandling
         self.updated = updated
         self.returnKeyAction = returnKeyAction
+        self.backspaceKeyAction = backspaceKeyAction
         self.textUpdateTransition = textUpdateTransition
         self.tag = tag
     }
@@ -138,23 +141,12 @@ public final class ListMultilineTextFieldItemComponent: Component {
         return true
     }
     
-    private final class TextField: UITextField {
-        var sideInset: CGFloat = 0.0
-        
-        override func textRect(forBounds bounds: CGRect) -> CGRect {
-            return CGRect(origin: CGPoint(x: self.sideInset, y: 0.0), size: CGSize(width: bounds.width - self.sideInset * 2.0, height: bounds.height))
-        }
-        
-        override func editingRect(forBounds bounds: CGRect) -> CGRect {
-            return CGRect(origin: CGPoint(x: self.sideInset, y: 0.0), size: CGSize(width: bounds.width - self.sideInset * 2.0, height: bounds.height))
-        }
-    }
-    
     public final class View: UIView, ListSectionComponent.ChildView, ComponentTaggedView {
         private let textField = ComponentView<Empty>()
         private let textFieldExternalState = TextFieldComponent.ExternalState()
         
         private let placeholder = ComponentView<Empty>()
+        private var customPlaceholder: ComponentView<Empty>?
         
         private var measureTextLimitLabel: ComponentView<Empty>?
         private var textLimitLabel: ComponentView<Empty>?
@@ -287,6 +279,12 @@ public final class ListMultilineTextFieldItemComponent: Component {
                             return
                         }
                         component.returnKeyAction?()
+                    },
+                    backspaceKeyAction: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.backspaceKeyAction?()
                     }
                 )),
                 environment: {},
@@ -376,6 +374,51 @@ public final class ListMultilineTextFieldItemComponent: Component {
             }
             
             return size
+        }
+        
+        public func updateCustomPlaceholder(value: String, size: CGSize, transition: Transition) {
+            guard let component = self.component else {
+                return
+            }
+            
+            let verticalInset: CGFloat = 12.0
+            let sideInset: CGFloat = 16.0
+            
+            if !value.isEmpty {
+                let customPlaceholder: ComponentView<Empty>
+                var customPlaceholderTransition = transition
+                if let current = self.customPlaceholder {
+                    customPlaceholder = current
+                } else {
+                    customPlaceholderTransition = customPlaceholderTransition.withAnimation(.none)
+                    customPlaceholder = ComponentView()
+                    self.customPlaceholder = customPlaceholder
+                }
+                
+                let placeholderSize = customPlaceholder.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: value.isEmpty ? " " : value, font: Font.regular(17.0), textColor: component.theme.list.itemPlaceholderTextColor))
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: size.width - sideInset * 2.0, height: 100.0)
+                )
+                let placeholderFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: placeholderSize)
+                if let placeholderView = customPlaceholder.view {
+                    if placeholderView.superview == nil {
+                        placeholderView.layer.anchorPoint = CGPoint()
+                        placeholderView.isUserInteractionEnabled = false
+                        self.insertSubview(placeholderView, at: 0)
+                    }
+                    transition.setPosition(view: placeholderView, position: placeholderFrame.origin)
+                    placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
+                    
+                    placeholderView.isHidden = self.textFieldExternalState.hasText
+                }
+            } else if let customPlaceholder = self.customPlaceholder {
+                self.customPlaceholder = nil
+                customPlaceholder.view?.removeFromSuperview()
+            }
         }
     }
     
