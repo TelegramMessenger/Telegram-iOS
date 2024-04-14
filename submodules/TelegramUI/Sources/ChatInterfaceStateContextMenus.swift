@@ -1158,16 +1158,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        for attribute in message.attributes {
-            if hasExpandedAudioTranscription, let attribute = attribute as? AudioTranscriptionMessageAttribute {
-                if !messageText.isEmpty {
-                    messageText.append("\n")
-                }
-                messageText.append(attribute.text)
-                break
-            }
-        }
-        
         var isPoll = false
         if messageText.isEmpty {
             for media in message.media {
