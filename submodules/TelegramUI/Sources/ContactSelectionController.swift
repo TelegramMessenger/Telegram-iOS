@@ -197,7 +197,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
             self?.activateSearch()
         }
         
-        self.contactsNode.contactListNode.openPeer = { [weak self] peer, action in
+        self.contactsNode.contactListNode.openPeer = { [weak self] peer, action, _, _ in
             self?.openPeer(peer: peer, action: action)
         }
                 

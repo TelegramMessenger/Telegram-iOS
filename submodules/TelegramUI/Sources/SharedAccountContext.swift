@@ -2164,15 +2164,33 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mode = .premiumGifting(birthdays: nil, selectToday: false)
         }
         
-        let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: mode, options: [], isPeerEnabled: { peer in
-            if case let .user(user) = peer, user.botInfo == nil && !peer.isService && !user.flags.contains(.isSupport) {
-                return true
-            } else {
-                return false
-            }
-        }, limit: limit, reachedLimit: { limit in
-            reachedLimitImpl?(limit)
-        }))
+        var openProfileImpl: ((EnginePeer) -> Void)?
+        var sendMessageImpl: ((EnginePeer) -> Void)?
+        
+        let controller = context.sharedContext.makeContactMultiselectionController(
+            ContactMultiselectionControllerParams(
+                context: context,
+                mode: mode,
+                options: [],
+                isPeerEnabled: { peer in
+                    if case let .user(user) = peer, user.botInfo == nil && !peer.isService && !user.flags.contains(.isSupport) {
+                        return true
+                    } else {
+                        return false
+                    }
+                }, 
+                limit: limit,
+                reachedLimit: { limit in
+                    reachedLimitImpl?(limit)
+                },
+                openProfile: { peer in
+                    openProfileImpl?(peer)
+                },
+                sendMessage: { peer in
+                    sendMessageImpl?(peer)
+                }
+            )
+        )
         
         reachedLimitImpl = { [weak controller] limit in
             guard let controller else {
@@ -2226,6 +2244,36 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             controller.push(giftController)
         })
+        
+        sendMessageImpl = { [weak self, weak controller] peer in
+            guard let self, let controller, let navigationController = controller.navigationController as? NavigationController else {
+                return
+            }
+            self.navigateToChatController(
+                NavigateToChatControllerParams(
+                    navigationController: navigationController,
+                    context: context,
+                    chatLocation: .peer(peer)
+                )
+            )
+        }
+        
+        openProfileImpl = { [weak self, weak controller] peer in
+            guard let self, let controller else {
+                return
+            }
+            if let infoController = self.makePeerInfoController(
+                context: context,
+                updatedPresentationData: nil,
+                peer: peer._asPeer(),
+                mode: .generic,
+                avatarInitiallyExpanded: true,
+                fromChat: false,
+                requestsContext: nil
+            ) {
+                controller.replace(with: infoController)
+            }
+        }
         
         return controller
     }

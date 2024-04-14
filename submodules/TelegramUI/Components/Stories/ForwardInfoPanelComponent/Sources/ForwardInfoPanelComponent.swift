@@ -2,25 +2,35 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import TelegramCore
 import MultilineTextComponent
+import MultilineTextWithEntitiesComponent
 import MessageInlineBlockBackgroundView
+import AccountContext
+import TextFormat
 
 public final class ForwardInfoPanelComponent: Component {
+    public let context: AccountContext
     public let authorName: String
     public let text: String
+    public let entities: [MessageTextEntity]
     public let isChannel: Bool
     public let isVibrant: Bool
     public let fillsWidth: Bool
     
     public init(
+        context: AccountContext,
         authorName: String,
         text: String,
+        entities: [MessageTextEntity],
         isChannel: Bool,
         isVibrant: Bool,
         fillsWidth: Bool
     ) {
+        self.context = context
         self.authorName = authorName
         self.text = text
+        self.entities = entities
         self.isChannel = isChannel
         self.isVibrant = isVibrant
         self.fillsWidth = fillsWidth
@@ -31,6 +41,9 @@ public final class ForwardInfoPanelComponent: Component {
             return false
         }
         if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.entities != rhs.entities {
             return false
         }
         if lhs.isChannel != rhs.isChannel {
@@ -47,7 +60,6 @@ public final class ForwardInfoPanelComponent: Component {
     
     public final class View: UIView {
         public let backgroundView: UIImageView
-//        private let blurBackgroundView: BlurredBackgroundView
         private let blurBackgroundView: UIVisualEffectView
         private let blockView: MessageInlineBlockBackgroundView
         private var iconView: UIImageView?
@@ -58,8 +70,6 @@ public final class ForwardInfoPanelComponent: Component {
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
-//            self.blurBackgroundView = BlurredBackgroundView(color: UIColor(rgb: 0x000000, alpha: 0.4))
-            
             if #available(iOS 13.0, *) {
                 self.blurBackgroundView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialDark))
             } else {
@@ -102,7 +112,7 @@ public final class ForwardInfoPanelComponent: Component {
                 iconView.frame = CGRect(origin: CGPoint(x: sideInset + UIScreenPixel, y: 5.0), size: image.size)
             }
             titleOffset += 13.0
-       
+                   
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -124,14 +134,20 @@ public final class ForwardInfoPanelComponent: Component {
                 view.frame = titleFrame
             }
             
+            let textFont = Font.regular(14.0)
+            let textColor = UIColor.white
+            let attributedText = stringWithAppliedEntities(component.text, entities: component.entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: nil)
+                                    
             let textSize = self.text.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: component.text,
-                        font: Font.regular(14.0),
-                        textColor: .white
-                    )),
+                component: AnyComponent(MultilineTextWithEntitiesComponent(
+                    context: component.context,
+                    animationCache: component.context.animationCache,
+                    animationRenderer: component.context.animationRenderer,
+                    placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.4),
+                    text: .plain(attributedText),
+                    horizontalAlignment: .natural,
+                    truncationType: .end,
                     maximumNumberOfLines: 1
                 )),
                 environment: {},

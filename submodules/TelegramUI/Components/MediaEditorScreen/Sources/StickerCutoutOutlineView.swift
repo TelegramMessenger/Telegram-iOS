@@ -228,20 +228,48 @@ func findEdgePoints(in pixelBuffer: CVPixelBuffer) -> [CGPoint] {
         return pixel >= 235
     }
     
-    let directions = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
-    var lastDirectionIndex = 0
-    
     var startPoint: Point? = nil
-outerLoop: for y in 0..<height {
+    var visited = Set<Point>()
+    var componentSize = 0
+
+    func floodFill(from point: Point) -> Int {
+        var stack = [point]
+        var size = 0
+
+        while let current = stack.popLast() {
+            let x = Int(current.x)
+            let y = Int(current.y)
+
+            if x < 0 || x >= width || y < 0 || y >= height || visited.contains(current) || !isPixelWhiteAt(x: x, y: y) {
+                continue
+            }
+
+            visited.insert(current)
+            size += 1
+            stack.append(contentsOf: [Point(x: x+1, y: y), Point(x: x-1, y: y), Point(x: x, y: y+1), Point(x: x, y: y-1)])
+        }
+        
+        return size
+    }
+
+    for y in 0..<height {
         for x in 0..<width {
-            if isPixelWhiteAt(x: x, y: y) {
-                startPoint = Point(x: x, y: y)
-                break outerLoop
+            let point = Point(x: x, y: y)
+            if isPixelWhiteAt(x: x, y: y) && !visited.contains(point) {
+                let size = floodFill(from: point)
+                if size > componentSize {
+                    componentSize = size
+                    startPoint = point
+                }
             }
         }
     }
     
-    guard let startingPoint = startPoint else { return [] }
+    let directions = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+    var lastDirectionIndex = 0
+    
+    guard let startingPoint = startPoint, componentSize > 60 else { return [] }
+    
     edgePoints.insert(startingPoint)
     edgePath.append(startingPoint)
     var currentPoint = startingPoint
@@ -326,7 +354,7 @@ private func getEdgesBitmap(_ ciImage: CIImage) -> CVPixelBuffer? {
     context.fill(CGRect(origin: .zero, size: size))
     image.draw(in: CGRect(origin: .zero, size: size))
     UIGraphicsPopContext()
-    
+        
     return buffer
 }
 

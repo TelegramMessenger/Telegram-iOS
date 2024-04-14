@@ -112,6 +112,10 @@ private final class MediaCutoutScreenComponent: Component {
                 x: location.x / controller.drawingView.bounds.width,
                 y: location.y / controller.drawingView.bounds.height
             )
+            let validRange: Range<CGFloat> = 0.0 ..< 1.0
+            guard validRange.contains(point.x) && validRange.contains(point.y) else {
+                return
+            }
             
             component.mediaEditor.processImage { [weak self] originalImage, _ in
                 cutoutImage(from: originalImage, values: nil, target: .point(point), includeExtracted: false, completion: { [weak self] results in

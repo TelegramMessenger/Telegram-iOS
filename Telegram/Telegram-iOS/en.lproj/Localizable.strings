@@ -12050,3 +12050,5 @@ Sorry for the inconvenience.";
 "MediaEditor.NewStickerPack.Title" = "New Sticker Set";
 "MediaEditor.NewStickerPack.Text" = "Choose a name for your sticker set.";
 
+"Premium.Gift.ContactSelection.SendMessage" = "Send Message";
+"Premium.Gift.ContactSelection.OpenProfile" = "Open Profile";

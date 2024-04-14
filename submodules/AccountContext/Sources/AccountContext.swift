@@ -637,6 +637,7 @@ public enum ContactListAction: Equatable {
     case generic
     case voiceCall
     case videoCall
+    case more
 }
 
 public enum ContactListPeer: Equatable {
