@@ -424,7 +424,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             let presentationData = self.presentationData
             
             var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: presentationData.stings.Premium_Gift_ContactSelection_SendMessage, icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Premium_Gift_ContactSelection_SendMessage, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MessageBubble"), color: theme.contextMenu.primaryColor)
             }, iconPosition: .left, action: { [weak self] _, a in
                 a(.default)
@@ -434,7 +434,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 }
             })))
             
-            items.append(.action(ContextMenuActionItem(text: presentationData.stings.Premium_Gift_ContactSelection_OpenProfile, icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Premium_Gift_ContactSelection_OpenProfile, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
             }, iconPosition: .left, action: { [weak self] _, a in
                 a(.default)
