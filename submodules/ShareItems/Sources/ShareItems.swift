@@ -35,15 +35,11 @@ public enum PreparedShareItems {
 }
 
 private func scalePhotoImage(_ image: UIImage, dimensions: CGSize) -> UIImage? {
-    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1.0
-        let renderer = UIGraphicsImageRenderer(size: dimensions, format: format)
-        return renderer.image { _ in
-            image.draw(in: CGRect(origin: .zero, size: dimensions))
-        }
-    } else {
-        return TGScaleImageToPixelSize(image, dimensions)
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1.0
+    let renderer = UIGraphicsImageRenderer(size: dimensions, format: format)
+    return renderer.image { _ in
+        image.draw(in: CGRect(origin: .zero, size: dimensions))
     }
 }
 
@@ -234,7 +230,7 @@ private func preparedShareItem(postbox: Postbox, network: Network, to peerId: Pe
                     }
                 )
             } else {
-                let scaledImage = TGScaleImageToPixelSize(image, CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale).fitted(CGSize(width: 1280.0, height: 1280.0)))!
+                let scaledImage = scalePhotoImage(image, dimensions: CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale).fitted(CGSize(width: 1280.0, height: 1280.0)))!
                 let imageData = scaledImage.jpegData(compressionQuality: 0.54)!
                 return .single(.preparing(false))
                 |> then(
