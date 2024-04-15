@@ -52,6 +52,10 @@ public extension TelegramEngineUnauthorized {
             return _internal_uploadedPeerVideo(postbox: self.account.postbox, network: self.account.network, messageMediaPreuploadManager: nil, resource: resource)
         }
         
+        public func reportMissingCode(phoneNumber: String, phoneCodeHash: String, mnc: String) -> Signal<Never, ReportMissingCodeError> {
+            return _internal_reportMissingCode(network: self.account.network, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, mnc: mnc)
+        }
+        
         public func state() -> Signal<TelegramEngineAuthorizationState?, NoError> {
             return self.account.postbox.stateView()
             |> map { view -> TelegramEngineAuthorizationState? in
@@ -201,6 +205,10 @@ public extension TelegramEngine {
         
         public func invalidateLoginCodes(codes: [String]) -> Signal<Never, NoError> {
             return _internal_invalidateLoginCodes(network: self.account.network, codes: codes)
+        }
+        
+        public func reportMissingCode(phoneNumber: String, phoneCodeHash: String, mnc: String) -> Signal<Never, ReportMissingCodeError> {
+            return _internal_reportMissingCode(network: self.account.network, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, mnc: mnc)
         }
     }
 }

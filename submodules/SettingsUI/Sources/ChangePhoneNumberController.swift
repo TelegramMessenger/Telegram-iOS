@@ -99,7 +99,11 @@ public func ChangePhoneNumberController(context: AccountContext) -> ViewControll
                 guard let codeController else {
                     return
                 }
-                AuthorizationSequenceController.presentDidNotGetCodeUI(controller: codeController, presentationData: context.sharedContext.currentPresentationData.with({ $0 }), number: phoneNumber)
+                let carrier = CTCarrier()
+                let mnc = carrier.mobileNetworkCode ?? "none"
+                let _ = context.engine.auth.reportMissingCode(phoneNumber: phoneNumber, phoneCodeHash: next.hash, mnc: mnc).start()
+                
+                AuthorizationSequenceController.presentDidNotGetCodeUI(controller: codeController, presentationData: context.sharedContext.currentPresentationData.with({ $0 }), phoneNumber: phoneNumber, mnc: mnc)
             }
             codeController.openFragment = { url in
                 context.sharedContext.applicationBindings.openUrl(url)

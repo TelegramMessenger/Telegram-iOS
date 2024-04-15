@@ -1325,3 +1325,17 @@ public func resetAuthorizationState(account: UnauthorizedAccount, to value: Auth
         }
     }
 }
+
+public enum ReportMissingCodeError {
+    case generic
+}
+
+func _internal_reportMissingCode(network: Network, phoneNumber: String, phoneCodeHash: String, mnc: String) -> Signal<Never, ReportMissingCodeError> {
+    return network.request(Api.functions.auth.reportMissingCode(phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, mnc: mnc))
+    |> mapError { error -> ReportMissingCodeError in
+        return .generic
+    }
+    |> mapToSignal { result -> Signal<Never, ReportMissingCodeError> in
+        return .complete()
+    }
+}
