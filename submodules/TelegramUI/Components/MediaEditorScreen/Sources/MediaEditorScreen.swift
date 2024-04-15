@@ -6744,54 +6744,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             dismissImpl?()
             completion()
             
-            self.updateEditProgress(0.0, cancel: { [weak self] in
-                self?.stickerUploadDisposable.set(nil)
-            })
-            self.stickerUploadDisposable.set((self.context.engine.stickers.createStickerSet(
-                title: title ?? "",
-                shortName: "",
-                stickers: [
-                    ImportSticker(
-                        resource: .standalone(resource: file.resource),
-                        thumbnailResource: file.previewRepresentations.first.flatMap { .standalone(resource: $0.resource) },
-                        emojis: self.effectiveStickerEmoji(),
-                        dimensions: file.dimensions ?? PixelDimensions(width: 512, height: 512),
-                        duration: file.duration,
-                        mimeType: file.mimeType,
-                        keywords: ""
-                    )
-                ],
-                thumbnail: nil,
-                type: .stickers(content: .image),
-                software: nil
-            ) |> deliverOnMainQueue).startStandalone(next: { [weak self] status in
-                guard let self else {
-                    return
-                }
-                switch status {
-                case let .progress(progress, _, _):
-                    self.updateEditProgress(progress, cancel: { [weak self] in
-                        self?.stickerUploadDisposable.set(nil)
-                    })
-                case let .complete(info, items):
-                    self.completion(MediaEditorScreen.Result(), { [weak self] finished in
-                        self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
-                            guard let self else {
-                                return
-                            }
-                            let navigationController = self.navigationController as? NavigationController
-                            self.dismiss()
-                            if let navigationController {
-                                Queue.mainQueue().after(0.2) {
-                                    let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-                                    let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [.result(info: info, items: items, installed: true)], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker)
-                                    (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
-                                }
-                            }
-                        })
-                    })
-                }
-            }))
+            if let title {
+                self.uploadSticker(file, action: .createStickerPack(title: title))
+            }
         }, cancel: {})
         dismissImpl = { [weak controller] in
             controller?.dismiss()
@@ -6855,38 +6810,38 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         let signal = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
         |> castError(UploadStickerError.self)
-        |> mapToSignal { peer -> Signal<UploadStickerStatus, UploadStickerError> in
+        |> mapToSignal { peer -> Signal<(UploadStickerStatus, (StickerPackReference, String)?), UploadStickerError> in
             guard let peer else {
                 return .complete()
             }
             return resourceSignal
-            |> mapToSignal { result -> Signal<UploadStickerStatus, UploadStickerError> in
+            |> mapToSignal { result -> Signal<(UploadStickerStatus, (StickerPackReference, String)?), UploadStickerError> in
                 switch result {
                 case .failed:
                     return .fail(.generic)
                 case let .progress(progress):
-                    return .single(.progress(progress * 0.5))
+                    return .single((.progress(progress * 0.5), nil))
                 case let .complete(resource):
                     if let resource = resource as? CloudDocumentMediaResource {
-                        return .single(.progress(1.0)) |> then(.single(.complete(resource, mimeType)))
+                        return .single((.progress(1.0), nil)) |> then(.single((.complete(resource, mimeType), nil)))
                     } else {
                         return context.engine.stickers.uploadSticker(peer: peer._asPeer(), resource: resource, thumbnail: file.previewRepresentations.first?.resource, alt: "", dimensions: dimensions, duration: duration, mimeType: mimeType)
-                        |> mapToSignal { status -> Signal<UploadStickerStatus, UploadStickerError> in
+                        |> mapToSignal { status -> Signal<(UploadStickerStatus, (StickerPackReference, String)?), UploadStickerError> in
                             switch status {
                             case let .progress(progress):
-                                return .single(.progress(isVideo ? 0.5 + progress * 0.5 : progress))
+                                return .single((.progress(isVideo ? 0.5 + progress * 0.5 : progress), nil))
                             case let .complete(resource, _):
                                 let file = stickerFile(resource: resource, thumbnailResource: file.previewRepresentations.first?.resource, size: file.size ?? 0, dimensions: dimensions, duration: file.duration, isVideo: isVideo)
                                 switch action {
                                 case .send:
-                                    return .single(status)
+                                    return .single((status, nil))
                                 case .addToFavorites:
                                     return context.engine.stickers.toggleStickerSaved(file: file, saved: true)
                                     |> `catch` { _ -> Signal<SavedStickerResult, UploadStickerError> in
                                         return .fail(.generic)
                                     }
                                     |> map { _ in
-                                        return status
+                                        return (status, nil)
                                     }
                                 case let .createStickerPack(title):
                                     let sticker = ImportSticker(
@@ -6902,13 +6857,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         return .fail(.generic)
                                     }
                                     |> mapToSignal { innerStatus in
-                                        if case .complete = innerStatus {
-                                            return .single(status)
+                                        if case let .complete(info, _) = innerStatus {
+                                            return .single((status, (.id(id: info.id.id, accessHash: info.accessHash), title)))
                                         } else {
                                             return .complete()
                                         }
                                     }
-                                case let .addToStickerPack(pack, _):
+                                case let .addToStickerPack(pack, title):
                                     let sticker = ImportSticker(
                                         resource: .standalone(resource: resource),
                                         emojis: emojis,
@@ -6922,10 +6877,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         return .fail(.generic)
                                     }
                                     |> map { _ in
-                                        return status
+                                        return (status, (pack, title))
                                     }
                                 case .upload, .update:
-                                    return .single(status)
+                                    return .single((status, nil))
                                 }
                             }
                         }
@@ -6934,7 +6889,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         self.stickerUploadDisposable.set((signal
-        |> deliverOnMainQueue).startStandalone(next: { [weak self] status in
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] (status, packReferenceAndTitle) in
             guard let self else {
                 return
             }
@@ -6976,15 +6931,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 if let parentController = navigationController?.viewControllers.last as? ViewController {
                                     parentController.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: self.context, file: file, loop: true, title: nil, text: presentationData.strings.Conversation_StickerAddedToFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                                 }
-                            case let .addToStickerPack(packReference, title):
-                                let navigationController = self.navigationController as? NavigationController
-                                if let navigationController {
+                            case .addToStickerPack, .createStickerPack:
+                                if let (packReference, packTitle) = packReferenceAndTitle, let navigationController = self.navigationController as? NavigationController {
                                     Queue.mainQueue().after(0.2) {
                                         let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker)
                                         (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                         
                                         Queue.mainQueue().after(0.1) {
-                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: self.context, file: file, loop: true, title: nil, text: presentationData.strings.StickerPack_StickerAdded(title).string, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: self.context, file: file, loop: true, title: nil, text: presentationData.strings.StickerPack_StickerAdded(packTitle).string, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                                         }
                                     }
                                 }
