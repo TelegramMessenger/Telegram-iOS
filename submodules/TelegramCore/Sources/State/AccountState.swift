@@ -38,6 +38,10 @@ extension SentAuthorizationCodeType {
                 self = .fragment(url: url, length: length)
             case let .sentCodeTypeFirebaseSms(_, _, _, pushTimeout, length):
                 self = .firebase(pushTimeout: pushTimeout, length: length)
+            case let .sentCodeTypeSmsWord(_, beginning):
+                self = .word(startsWith: beginning)
+            case let .sentCodeTypeSmsPhrase(_, beginning):
+                self = .phrase(startsWith: beginning)
         }
     }
 }

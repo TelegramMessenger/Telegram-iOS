@@ -41,39 +41,53 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, ph
         return parseMarkdownIntoAttributedString(strings.Login_EnterCodeFragmentText(phoneNumber).string, attributes: attributes, textAlignment: .center)
     case .firebase:
         return parseMarkdownIntoAttributedString(strings.Login_EnterCodeSMSText(phoneNumber).string, attributes: attributes, textAlignment: .center)
+    case let .word(startsWith):
+        if let startsWith {
+            return parseMarkdownIntoAttributedString(strings.Login_EnterWordBeginningText(startsWith, phoneNumber).string, attributes: attributes, textAlignment: .center)
+        } else {
+            return parseMarkdownIntoAttributedString(strings.Login_EnterWordText(phoneNumber).string, attributes: attributes, textAlignment: .center)
+        }
+    case let .phrase(startsWith):
+        if let startsWith {
+            return parseMarkdownIntoAttributedString(strings.Login_EnterPhraseBeginningText(startsWith, phoneNumber).string, attributes: attributes, textAlignment: .center)
+        } else {
+            return parseMarkdownIntoAttributedString(strings.Login_EnterPhraseText(phoneNumber).string, attributes: attributes, textAlignment: .center)
+        }
     }
 }
 
 public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> (NSAttributedString, Bool) {
+    let font = Font.regular(16.0)
+    
     if let nextType = nextType, let timeout = timeout, timeout > 0 {
         let minutes = timeout / 60
         let seconds = timeout % 60
         switch nextType {
         case .sms:
             if timeout <= 0 {
-                return (NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+                return (NSAttributedString(string: strings.Login_CodeSentSms, font: font, textColor: primaryColor, paragraphAlignment: .center), false)
             } else {
                 let timeString = NSString(format: "%d:%.02d", Int(minutes), Int(seconds))
-                return (NSAttributedString(string: strings.Login_WillSendSms(timeString as String).string, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+                return (NSAttributedString(string: strings.Login_WillSendSms(timeString as String).string, font: font, textColor: primaryColor, paragraphAlignment: .center), false)
             }
         case .call:
             if timeout <= 0 {
-                return (NSAttributedString(string: strings.Login_CodeSentCall, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+                return (NSAttributedString(string: strings.Login_CodeSentCall, font: font, textColor: primaryColor, paragraphAlignment: .center), false)
             } else {
-                return (NSAttributedString(string: String(format: strings.ChangePhoneNumberCode_CallTimer(String(format: "%d:%.2d", minutes, seconds)).string, minutes, seconds), font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+                return (NSAttributedString(string: String(format: strings.ChangePhoneNumberCode_CallTimer(String(format: "%d:%.2d", minutes, seconds)).string, minutes, seconds), font: font, textColor: primaryColor, paragraphAlignment: .center), false)
             }
         case .flashCall, .missedCall:
             if timeout <= 0 {
-                return (NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+                return (NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: font, textColor: primaryColor, paragraphAlignment: .center), false)
             } else {
-                return (NSAttributedString(string: String(format: strings.ChangePhoneNumberCode_CallTimer(String(format: "%d:%.2d", minutes, seconds)).string, minutes, seconds), font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+                return (NSAttributedString(string: String(format: strings.ChangePhoneNumberCode_CallTimer(String(format: "%d:%.2d", minutes, seconds)).string, minutes, seconds), font: font, textColor: primaryColor, paragraphAlignment: .center), false)
             }
         case .fragment:
             if timeout <= 0 {
-                return (NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+                return (NSAttributedString(string: strings.Login_CodeSentSms, font: font, textColor: primaryColor, paragraphAlignment: .center), false)
             } else {
                 let timeString = NSString(format: "%d:%.02d", Int(minutes), Int(seconds))
-                return (NSAttributedString(string: strings.Login_WillSendSms(timeString as String).string, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+                return (NSAttributedString(string: strings.Login_WillSendSms(timeString as String).string, font: font, textColor: primaryColor, paragraphAlignment: .center), false)
             }
         }
     } else {
@@ -81,28 +95,28 @@ public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, 
         case .otherSession:
             switch nextType {
             case .sms:
-                return (NSAttributedString(string: strings.Login_SendCodeViaSms, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+                return (NSAttributedString(string: strings.Login_SendCodeViaSms, font: font, textColor: accentColor, paragraphAlignment: .center), true)
             case .call:
-                return (NSAttributedString(string: strings.Login_SendCodeViaCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+                return (NSAttributedString(string: strings.Login_SendCodeViaCall, font: font, textColor: accentColor, paragraphAlignment: .center), true)
             case .flashCall, .missedCall:
-                return (NSAttributedString(string: strings.Login_SendCodeViaFlashCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+                return (NSAttributedString(string: strings.Login_SendCodeViaFlashCall, font: font, textColor: accentColor, paragraphAlignment: .center), true)
             case .fragment:
-                return (NSAttributedString(string: strings.Login_GetCodeViaFragment, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+                return (NSAttributedString(string: strings.Login_GetCodeViaFragment, font: font, textColor: accentColor, paragraphAlignment: .center), true)
             case .none:
-                return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+                return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: font, textColor: accentColor, paragraphAlignment: .center), true)
             }
         default:
             switch nextType {
             case .sms:
-                return (NSAttributedString(string: strings.Login_SendCodeViaSms, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+                return (NSAttributedString(string: strings.Login_SendCodeViaSms, font: font, textColor: accentColor, paragraphAlignment: .center), true)
             case .call:
-                return (NSAttributedString(string: strings.Login_SendCodeViaCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+                return (NSAttributedString(string: strings.Login_SendCodeViaCall, font: font, textColor: accentColor, paragraphAlignment: .center), true)
             case .flashCall, .missedCall:
-                return (NSAttributedString(string: strings.Login_SendCodeViaFlashCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+                return (NSAttributedString(string: strings.Login_SendCodeViaFlashCall, font: font, textColor: accentColor, paragraphAlignment: .center), true)
             case .fragment:
-                return (NSAttributedString(string: strings.Login_GetCodeViaFragment, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+                return (NSAttributedString(string: strings.Login_GetCodeViaFragment, font: font, textColor: accentColor, paragraphAlignment: .center), true)
             case .none:
-                return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+                return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: font, textColor: accentColor, paragraphAlignment: .center), true)
             }
         }
     }

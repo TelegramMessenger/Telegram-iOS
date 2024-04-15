@@ -10,6 +10,8 @@ private enum SentAuthorizationCodeTypeValue: Int32 {
     case emailSetupRequired = 6
     case fragment = 7
     case firebase = 8
+    case word = 9
+    case phrase = 10
 }
 
 public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
@@ -22,6 +24,8 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
     case emailSetupRequired(appleSignInAllowed: Bool)
     case fragment(url: String, length: Int32)
     case firebase(pushTimeout: Int32?, length: Int32)
+    case word(startsWith: String?)
+    case phrase(startsWith: String?)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -43,6 +47,10 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
                 self = .fragment(url: decoder.decodeStringForKey("u", orElse: ""), length: decoder.decodeInt32ForKey("l", orElse: 0))
             case SentAuthorizationCodeTypeValue.firebase.rawValue:
                 self = .firebase(pushTimeout: decoder.decodeOptionalInt32ForKey("pushTimeout"), length: decoder.decodeInt32ForKey("length", orElse: 0))
+            case SentAuthorizationCodeTypeValue.word.rawValue:
+                self = .word(startsWith: decoder.decodeOptionalStringForKey("w"))
+            case SentAuthorizationCodeTypeValue.phrase.rawValue:
+                self = .phrase(startsWith: decoder.decodeOptionalStringForKey("ph"))
             default:
                 preconditionFailure()
         }
@@ -97,6 +105,20 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
                 encoder.encodeNil(forKey: "pushTimeout")
             }
             encoder.encodeInt32(length, forKey: "length")
+        case let .word(startsWith):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.word.rawValue, forKey: "v")
+            if let startsWith = startsWith {
+                encoder.encodeString(startsWith, forKey: "w")
+            } else {
+                encoder.encodeNil(forKey: "w")
+            }
+        case let .phrase(startsWith):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.phrase.rawValue, forKey: "v")
+            if let startsWith = startsWith {
+                encoder.encodeString(startsWith, forKey: "ph")
+            } else {
+                encoder.encodeNil(forKey: "ph")
+            }
         }
     }
 }

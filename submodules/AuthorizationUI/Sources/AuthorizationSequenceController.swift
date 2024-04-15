@@ -54,6 +54,10 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
     }
     private var didSetReady = false
     
+    fileprivate var engine: TelegramEngineUnauthorized {
+        return TelegramEngineUnauthorized(account: self.account)
+    }
+    
     public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), presentationData: PresentationData, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String, authorizationCompleted: @escaping () -> Void) {
         self.sharedContext = sharedContext
         self.account = account
@@ -74,7 +78,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         
         super.init(mode: .single, theme: NavigationControllerTheme(statusBar: navigationStatusBar, navigationBar: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), emptyAreaColor: .black), isFlat: true)
         
-        self.stateDisposable = (TelegramEngineUnauthorized(account: self.account).auth.state()
+        self.stateDisposable = (self.engine.auth.state()
         |> map { state -> InnerState in
             if case .authorized = state {
                 return .authorized
@@ -127,7 +131,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                     
                     let countryCode = AuthorizationSequenceController.defaultCountryCode()
                     
-                    let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: isTestingEnvironment, masterDatacenterId: masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
+                    let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: isTestingEnvironment, masterDatacenterId: masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
                 }
             }
         }
@@ -157,7 +161,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                         transaction.removeAuth()
                     }).startStandalone()
                 } else {
-                    let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .empty)).startStandalone()
+                    let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .empty)).startStandalone()
                 }
             })
             if let splashController = splashController {
@@ -299,9 +303,6 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 if c.data?.2 == type {
                     currentController = c
                 }
-//                else if case let .email(_, _, _, newPendingDate, _, _) = type, let previousType = c.data?.2, case let .email(_, _, _, previousPendingDate, _, _) = previousType, newPendingDate != nil && previousPendingDate == nil {
-//                    currentController = c
-//                }
                 break
             }
         }
@@ -315,7 +316,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 }
                 let countryCode = AuthorizationSequenceController.defaultCountryCode()
                 
-                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
+                let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
             })
             controller.retryResetEmail = { [weak self] in
                 if let self {
@@ -381,7 +382,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                                              case .codeExpired:
                                                  text = self.presentationData.strings.Login_CodeExpired
                                                  let account = self.account
-                                                 let _ = TelegramEngineUnauthorized(account: self.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
+                                                 let _ = self.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
                                              }
                                              
                                              controller.presentInGlobalOverlay(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]))
@@ -430,7 +431,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                                             case .codeExpired:
                                                 text = strongSelf.presentationData.strings.Login_CodeExpired
                                                 let account = strongSelf.account
-                                                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
+                                                let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
                                             case .timeout:
                                                 text = strongSelf.presentationData.strings.Login_NetworkError
                                             case .invalidEmailToken:
@@ -490,7 +491,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                                                             return
                                                         }
                                                         let account = strongSelf.account
-                                                        let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
+                                                        let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
                                                     })]), on: .root, blockInteraction: false, completion: {})
                                                 })
                                             ], actionLayout: .vertical, dismissOnOutsideTap: true)
@@ -522,7 +523,14 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                                     controller.inProgress = false
                                     
                                     if case .invalidCode = error {
-                                        controller.animateError(text: strongSelf.presentationData.strings.Login_WrongCodeError)
+                                        let text: String
+                                        switch type {
+                                        case .word, .phrase:
+                                            text = strongSelf.presentationData.strings.Login_WrongPhraseError
+                                        default:
+                                            text = strongSelf.presentationData.strings.Login_WrongCodeError
+                                        }
+                                        controller.animateError(text: text)
                                     } else {
                                         var resetCode = false
                                         let text: String
@@ -538,7 +546,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                                             case .codeExpired:
                                                 text = strongSelf.presentationData.strings.Login_CodeExpired
                                                 let account = strongSelf.account
-                                                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
+                                                let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
                                             case .invalidEmailToken:
                                                 text = strongSelf.presentationData.strings.Login_InvalidEmailTokenError
                                             case .invalidEmailAddress:
@@ -562,7 +570,11 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
             if let strongSelf = self {
                 if nextType == nil {
                     if let controller {
-                        AuthorizationSequenceController.presentDidNotGetCodeUI(controller: controller, presentationData: strongSelf.presentationData, number: number)
+                        let carrier = CTCarrier()
+                        let mnc = carrier.mobileNetworkCode ?? "none"
+                        let _ = strongSelf.engine.auth.reportMissingCode(phoneNumber: number, phoneCodeHash: phoneCodeHash, mnc: mnc).start()
+                        
+                        AuthorizationSequenceController.presentDidNotGetCodeUI(controller: controller, presentationData: strongSelf.presentationData, phoneNumber: number, mnc: mnc)
                     }
                 } else {
                     controller?.inProgress = true
@@ -607,7 +619,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         controller.reset = { [weak self] in
             if let strongSelf = self {
                 let account = strongSelf.account
-                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
+                let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
             }
         }
         controller.signInWithApple = { [weak self] in
@@ -659,7 +671,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 }
                 let countryCode = AuthorizationSequenceController.defaultCountryCode()
                 
-                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
+                let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
             })
         }
         controller.proceedWithEmail = { [weak self, weak controller] email in
@@ -783,7 +795,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                                     case .codeExpired:
                                         text = strongSelf.presentationData.strings.Login_CodeExpired
                                         let account = strongSelf.account
-                                        let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
+                                        let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
                                     case .invalidEmailToken:
                                         text = strongSelf.presentationData.strings.Login_InvalidEmailTokenError
                                     case .invalidEmailAddress:
@@ -832,7 +844,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 }
                 let countryCode = AuthorizationSequenceController.defaultCountryCode()
                 
-                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
+                let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
             })
             controller.loginWithPassword = { [weak self, weak controller] password in
                 if let strongSelf = self {
@@ -864,19 +876,19 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         controller.forgot = { [weak self, weak controller] in
             if let strongSelf = self, let strongController = controller {
                 strongController.inProgress = true
-                strongSelf.actionDisposable.set((TelegramEngineUnauthorized(account: strongSelf.account).auth.requestTwoStepVerificationPasswordRecoveryCode()
+                strongSelf.actionDisposable.set((strongSelf.engine.auth.requestTwoStepVerificationPasswordRecoveryCode()
                 |> deliverOnMainQueue).startStrict(next: { pattern in
                     if let strongSelf = self, let strongController = controller {
                         strongController.inProgress = false
 
-                        let _ = (TelegramEngineUnauthorized(account: strongSelf.account).auth.state()
+                        let _ = (strongSelf.engine.auth.state()
                         |> take(1)
                         |> deliverOnMainQueue).startStandalone(next: { state in
                             guard let strongSelf = self else {
                                 return
                             }
                             if case let .unauthorized(state) = state, case let .passwordEntry(hint, number, code, _, syncContacts) = state.contents {
-                                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordRecovery(hint: hint, number: number, code: code, emailPattern: pattern, syncContacts: syncContacts))).startStandalone()
+                                let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordRecovery(hint: hint, number: number, code: code, emailPattern: pattern, syncContacts: syncContacts))).startStandalone()
                             }
                         })
                     }
@@ -937,7 +949,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = TwoFactorDataInputScreen(sharedContext: self.sharedContext, engine: .unauthorized(TelegramEngineUnauthorized(account: self.account)), mode: .passwordRecoveryEmail(emailPattern: emailPattern, mode: .notAuthorized(syncContacts: syncContacts), doneText: self.presentationData.strings.TwoFactorSetup_Done_Action), stateUpdated: { _ in
+            controller = TwoFactorDataInputScreen(sharedContext: self.sharedContext, engine: .unauthorized(self.engine), mode: .passwordRecoveryEmail(emailPattern: emailPattern, mode: .notAuthorized(syncContacts: syncContacts), doneText: self.presentationData.strings.TwoFactorSetup_Done_Action), stateUpdated: { _ in
             }, presentation: .default)
         }
         controller.passwordRecoveryFailed = { [weak self] in
@@ -945,14 +957,14 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 return
             }
 
-            let _ = (TelegramEngineUnauthorized(account: strongSelf.account).auth.state()
+            let _ = (strongSelf.engine.auth.state()
             |> take(1)
             |> deliverOnMainQueue).startStandalone(next: { state in
                 guard let strongSelf = self else {
                     return
                 }
                 if case let .unauthorized(state) = state, case let .passwordRecovery(hint, number, code, _, syncContacts) = state.contents {
-                    let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code, suggestReset: true, syncContacts: syncContacts))).startStandalone()
+                    let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .passwordEntry(hint: hint, number: number, code: code, suggestReset: true, syncContacts: syncContacts))).startStandalone()
                 }
             })
         }
@@ -977,7 +989,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 }
                 let countryCode = AuthorizationSequenceController.defaultCountryCode()
                 
-                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
+                let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
             })
             controller.reset = { [weak self, weak controller] in
                 if let strongSelf = self, let strongController = controller {
@@ -1011,7 +1023,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
             controller.logout = { [weak self] in
                 if let strongSelf = self {
                     let account = strongSelf.account
-                    let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
+                    let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
                 }
             }
         }
@@ -1037,7 +1049,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 }
                 let countryCode = AuthorizationSequenceController.defaultCountryCode()
                 
-                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
+                let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
             }, displayCancel: displayCancel)
             controller.openUrl = { [weak self] url in
                 guard let self else {
@@ -1056,7 +1068,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                     
                     let avatarVideo: Signal<UploadedPeerPhotoData?, NoError>?
                     if let avatarAsset = avatarAsset as? AVAsset {
-                        let account = strongSelf.account
+                        let engine = strongSelf.engine
                         avatarVideo = Signal<TelegramMediaResource?, NoError> { subscriber in
                             let entityRenderer: LegacyPaintEntityRenderer? = avatarAdjustments.flatMap { adjustments in
                                 if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
@@ -1075,7 +1087,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                                     if stat(result.fileURL.path, &value) == 0 {
                                         if let data = try? Data(contentsOf: result.fileURL) {
                                             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                            account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                            engine.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                                             subscriber.putNext(resource)
                                             
                                             EngineTempBox.shared.dispose(tempFile)
@@ -1096,7 +1108,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                         }
                         |> mapToSignal { resource -> Signal<UploadedPeerPhotoData?, NoError> in
                             if let resource = resource {
-                                return TelegramEngineUnauthorized(account: account).auth.uploadedPeerVideo(resource: resource) |> map(Optional.init)
+                                return engine.auth.uploadedPeerVideo(resource: resource) |> map(Optional.init)
                             } else {
                                 return .single(nil)
                             }
@@ -1320,9 +1332,14 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         return countryCode
     }
     
-    public static func presentDidNotGetCodeUI(controller: ViewController, presentationData: PresentationData, number: String) {
+    public static func presentDidNotGetCodeUI(
+        controller: ViewController,
+        presentationData: PresentationData,
+        phoneNumber: String,
+        mnc: String
+    ) {
         if MFMailComposeViewController.canSendMail() {
-            let formattedNumber = formatPhoneNumber(number)
+            let formattedNumber = formatPhoneNumber(phoneNumber)
             
             var emailBody = ""
             emailBody.append(presentationData.strings.Login_EmailCodeBody(formattedNumber).string)
@@ -1331,8 +1348,6 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
             let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
             let systemVersion = UIDevice.current.systemVersion
             let locale = Locale.current.identifier
-            let carrier = CTCarrier()
-            let mnc = carrier.mobileNetworkCode ?? "none"
             emailBody.append("Telegram: \(appVersion)\n")
             emailBody.append("OS: \(systemVersion)\n")
             emailBody.append("Locale: \(locale)\n")

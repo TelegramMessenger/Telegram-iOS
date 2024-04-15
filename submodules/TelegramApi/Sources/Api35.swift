@@ -2044,6 +2044,23 @@ public extension Api.functions.auth {
                 }
 }
 public extension Api.functions.auth {
+                static func reportMissingCode(phoneNumber: String, phoneCodeHash: String, mnc: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-878841866)
+                    serializeString(phoneNumber, buffer: buffer, boxed: false)
+                    serializeString(phoneCodeHash, buffer: buffer, boxed: false)
+                    serializeString(mnc, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "auth.reportMissingCode", parameters: [("phoneNumber", String(describing: phoneNumber)), ("phoneCodeHash", String(describing: phoneCodeHash)), ("mnc", String(describing: mnc))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.auth {
                 static func requestFirebaseSms(flags: Int32, phoneNumber: String, phoneCodeHash: String, safetyNetToken: String?, iosPushSecret: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1991881904)
