@@ -41,12 +41,23 @@ public func makeTelegramAccountAuxiliaryMethods(uploadInBackground: ((Postbox, M
             }
             |> castError(MediaResourceDataFetchError.self)
             |> mapToSignal { useModernPipeline -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
-                fetchLocalFileVideoMediaResource(postbox: postbox, resource: resource, alwaysUseModernPipeline: useModernPipeline)
+                return fetchLocalFileVideoMediaResource(postbox: postbox, resource: resource, alwaysUseModernPipeline: useModernPipeline)
             }
         } else if let resource = resource as? LocalFileGifMediaResource {
             return fetchLocalFileGifMediaResource(resource: resource)
         } else if let photoLibraryResource = resource as? PhotoLibraryMediaResource {
-            return fetchPhotoLibraryResource(localIdentifier: photoLibraryResource.localIdentifier, width: photoLibraryResource.width, height: photoLibraryResource.height, format: photoLibraryResource.format, quality: photoLibraryResource.quality)
+            return postbox.transaction { transaction -> Bool in
+                var useExif = true
+                let appConfig = currentAppConfiguration(transaction: transaction)
+                if let data = appConfig.data, let _ = data["ios_killswitch_disable_use_photo_exif"] {
+                    useExif = false
+                }
+                return useExif
+            }
+            |> castError(MediaResourceDataFetchError.self)
+            |> mapToSignal { useExif -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
+                return fetchPhotoLibraryResource(localIdentifier: photoLibraryResource.localIdentifier, width: photoLibraryResource.width, height: photoLibraryResource.height, format: photoLibraryResource.format, quality: photoLibraryResource.quality, useExif: useExif)
+            }
         } else if let resource = resource as? ICloudFileResource {
             return fetchICloudFileResource(resource: resource)
         } else if let resource = resource as? SecureIdLocalImageResource {

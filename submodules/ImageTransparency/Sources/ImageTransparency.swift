@@ -5,7 +5,7 @@ import Display
 private func generateHistogram(cgImage: CGImage) -> ([[vImagePixelCount]], Int)? {
     var sourceBuffer = vImage_Buffer()
     defer {
-        free(sourceBuffer.data)
+        sourceBuffer.data?.deallocate()
     }
     
     var cgImageFormat = vImage_CGImageFormat(
