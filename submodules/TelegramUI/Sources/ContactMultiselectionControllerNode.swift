@@ -13,6 +13,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import EditableTokenListNode
 import SolidRoundedButtonNode
+import ContextUI
 
 private struct SearchResultEntry: Identifiable {
     let index: Int
@@ -58,6 +59,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((ContactListPeerId) -> Void)?
     var openPeer: ((ContactListPeer) -> Void)?
+    var openPeerMore: ((ContactListPeer, ASDisplayNode?, ContextGesture?) -> Void)?
     var openDisabledPeer: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
     var removeSelectedPeer: ((ContactListPeerId) -> Void)?
     var removeSelectedCategory: ((Int) -> Void)?
@@ -262,8 +264,12 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         switch self.contentNode {
         case let .contacts(contactsNode):
-            contactsNode.openPeer = { [weak self] peer, _ in
-                self?.openPeer?(peer)
+            contactsNode.openPeer = { [weak self] peer, action, sourceNode, gesture in
+                if case .more = action {
+                    self?.openPeerMore?(peer, sourceNode, gesture)
+                } else {
+                    self?.openPeer?(peer)
+                }
             }
             contactsNode.openDisabledPeer = { [weak self] peer, reason in
                 guard let self else {
@@ -362,7 +368,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                                 globalSearch: globalSearch,
                                 displaySavedMessages: displaySavedMessages
                             ))), filters: filters, onlyWriteable: strongSelf.onlyWriteable, isGroupInvitation: strongSelf.isGroupInvitation, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
-                        searchResultsNode.openPeer = { peer, _ in
+                        searchResultsNode.openPeer = { peer, _, _, _ in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)
                         }

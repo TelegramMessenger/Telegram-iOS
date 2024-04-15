@@ -698,6 +698,7 @@ final class StoryContentCaptionComponent: Component {
                 let authorName: String
                 let isChannel: Bool
                 let text: String?
+                let entities: [MessageTextEntity]
                 
                 switch forwardInfo {
                 case let .known(peer, _, _):
@@ -706,6 +707,7 @@ final class StoryContentCaptionComponent: Component {
                     
                     if let story = self.forwardInfoStory {
                         text = story.text
+                        entities = story.entities
                     } else if self.forwardInfoDisposable == nil, let forwardInfoStory = component.forwardInfoStory {
                         self.forwardInfoDisposable = (forwardInfoStory
                         |> deliverOnMainQueue).start(next: { story in
@@ -717,13 +719,16 @@ final class StoryContentCaptionComponent: Component {
                             }
                         })
                         text = ""
+                        entities = []
                     } else {
                         text = ""
+                        entities = []
                     }
                 case let .unknown(name, _):
                     authorName = name
                     isChannel = false
                     text = ""
+                    entities = []
                 }
                 
                 if let text {
@@ -741,8 +746,10 @@ final class StoryContentCaptionComponent: Component {
                             PlainButtonComponent(
                                 content: AnyComponent(
                                     ForwardInfoPanelComponent(
+                                        context: component.context,
                                         authorName: authorName,
                                         text: text,
+                                        entities: entities,
                                         isChannel: isChannel,
                                         isVibrant: false,
                                         fillsWidth: false

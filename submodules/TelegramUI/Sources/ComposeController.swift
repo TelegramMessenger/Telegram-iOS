@@ -116,7 +116,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
             self?.activateSearch()
         }
         
-        self.contactsNode.contactListNode.openPeer = { [weak self] peer, _ in
+        self.contactsNode.contactListNode.openPeer = { [weak self] peer, _, _, _ in
             if case let .peer(peer, _, _) = peer {
                 self?.openPeer(peerId: peer.id)
             }

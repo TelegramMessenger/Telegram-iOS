@@ -345,7 +345,7 @@ public class ContactsController: ViewController {
             self?.activateSearch()
         }
         
-        self.contactsNode.contactListNode.openPeer = { [weak self] peer, _ in
+        self.contactsNode.contactListNode.openPeer = { [weak self] peer, _, _, _ in
             guard let self else {
                 return
             }

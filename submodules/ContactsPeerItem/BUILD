@@ -31,6 +31,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
         "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
+        "//submodules/MoreButtonNode",
     ],
     visibility = [
         "//visibility:public",

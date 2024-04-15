@@ -1177,8 +1177,10 @@ final class MediaEditorScreenComponent: Component {
                 let authorName = forwardAuthor.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                 header = AnyComponent(
                     ForwardInfoPanelComponent(
+                        context: component.context,
                         authorName: authorName,
                         text: forwardStory.text,
+                        entities: forwardStory.entities,
                         isChannel: forwardAuthor.id.isGroupOrChannel,
                         isVibrant: true,
                         fillsWidth: true

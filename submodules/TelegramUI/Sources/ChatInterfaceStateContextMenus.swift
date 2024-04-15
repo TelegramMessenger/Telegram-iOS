@@ -670,10 +670,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     if messages.count == 1 {
         for media in messages[0].media {
             if let file = media as? TelegramMediaFile {
-                for attribute in file.attributes {
-                    if case let .Sticker(_, packInfo, _) = attribute, packInfo != nil {
-                        loadStickerSaveStatus = file.fileId
-                    }
+                if file.isSticker {
+                    loadStickerSaveStatus = file.fileId
                 }
                 if loadStickerSaveStatus == nil {
                     loadCopyMediaResource = file.resource
@@ -1147,16 +1145,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     messageText = ""
                     break
                 }
-            }
-        }
-        
-        for attribute in message.attributes {
-            if hasExpandedAudioTranscription, let attribute = attribute as? AudioTranscriptionMessageAttribute {
-                if !messageText.isEmpty {
-                    messageText.append("\n")
-                }
-                messageText.append(attribute.text)
-                break
             }
         }
         
