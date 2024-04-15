@@ -23,6 +23,7 @@ import AppBundle
 import ContextUI
 import PhoneNumberFormat
 import LocalizedPeerData
+import ContextUI
 
 private let dropDownIcon = { () -> UIImage in
     UIGraphicsBeginImageContextWithOptions(CGSize(width: 12.0, height: 12.0), false, 0.0)
@@ -56,7 +57,7 @@ private final class ContactListNodeInteraction {
     fileprivate let activateSearch: () -> Void
     fileprivate let authorize: () -> Void
     fileprivate let suppressWarning: () -> Void
-    fileprivate let openPeer: (ContactListPeer, ContactListAction) -> Void
+    fileprivate let openPeer: (ContactListPeer, ContactListAction, ASDisplayNode?, ContextGesture?) -> Void
     fileprivate let openDisabledPeer: (EnginePeer, ChatListDisabledPeerReason) -> Void
     fileprivate let contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)?
     fileprivate let openStories: (EnginePeer, ASDisplayNode) -> Void
@@ -65,7 +66,7 @@ private final class ContactListNodeInteraction {
     
     let itemHighlighting = ContactItemHighlighting()
     
-    init(activateSearch: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer, ContactListAction) -> Void, openDisabledPeer: @escaping (EnginePeer, ChatListDisabledPeerReason) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)?, openStories: @escaping (EnginePeer, ASDisplayNode) -> Void, deselectAll: @escaping () -> Void, toggleSelection: @escaping ([EnginePeer], Bool) -> Void) {
+    init(activateSearch: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer, ContactListAction, ASDisplayNode?, ContextGesture?) -> Void, openDisabledPeer: @escaping (EnginePeer, ChatListDisabledPeerReason) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)?, openStories: @escaping (EnginePeer, ASDisplayNode) -> Void, deselectAll: @escaping () -> Void, toggleSelection: @escaping ([EnginePeer], Bool) -> Void) {
         self.activateSearch = activateSearch
         self.authorize = authorize
         self.suppressWarning = suppressWarning
@@ -96,7 +97,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
     case permissionInfo(PresentationTheme, String, String, Bool)
     case permissionEnable(PresentationTheme, String)
     case option(Int, ContactListAdditionalOption, ListViewItemHeader?, PresentationTheme, PresentationStrings)
-    case peer(Int, ContactListPeer, EnginePeer.Presence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool, Bool, StoryData?, Bool)
+    case peer(Int, ContactListPeer, EnginePeer.Presence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool, Bool, Bool, StoryData?, Bool)
     
     var stableId: ContactListNodeEntryId {
         switch self {
@@ -110,7 +111,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return .permission(action: true)
             case let .option(index, _, _, _, _):
                 return .option(index: index)
-            case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, storyData, _):
+            case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, _, storyData, _):
                 switch peer {
                     case let .peer(peer, _, _):
                         return .peerId(peerId: peer.id.toInt64(), section: storyData != nil ? .stories : .contacts)
@@ -143,7 +144,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 })
             case let .option(_, option, header, _, _):
                 return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: option.title, icon: option.icon, clearHighlightAutomatically: option.clearHighlightAutomatically, header: header, action: option.action)
-            case let .peer(_, peer, presence, header, selection, _, strings, dateTimeFormat, nameSortOrder, nameDisplayOrder, displayCallIcons, enabled, storyData, requiresPremiumForMessaging):
+            case let .peer(_, peer, presence, header, selection, _, strings, dateTimeFormat, nameSortOrder, nameDisplayOrder, displayCallIcons, hasMoreButton, enabled, storyData, requiresPremiumForMessaging):
                 var status: ContactsPeerItemStatus
                 let itemPeer: ContactsPeerItemPeer
                 var isContextActionEnabled = false
@@ -200,11 +201,15 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 }
                 
                 var additionalActions: [ContactsPeerItemAction] = []
-                if displayCallIcons {
-                    additionalActions = [ContactsPeerItemAction(icon: .voiceCall, action: { _ in
-                        interaction.openPeer(peer, .voiceCall)
-                    }), ContactsPeerItemAction(icon: .videoCall, action: { _ in
-                        interaction.openPeer(peer, .videoCall)
+                if hasMoreButton {
+                    additionalActions = [ContactsPeerItemAction(icon: .more, action: { _, sourceNode, gesture in
+                        interaction.openPeer(peer, .more, sourceNode, gesture)
+                    })]
+                } else if displayCallIcons {
+                    additionalActions = [ContactsPeerItemAction(icon: .voiceCall, action: { _, sourceNode, gesture  in
+                        interaction.openPeer(peer, .voiceCall, sourceNode, gesture)
+                    }), ContactsPeerItemAction(icon: .videoCall, action: { _, sourceNode, gesture in
+                        interaction.openPeer(peer, .videoCall, sourceNode, gesture)
                     })]
                 }
                 
@@ -218,7 +223,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 }
                 
             return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: isSearch ? .generalSearch(isSavedMessages: false) : .peer, peer: itemPeer, status: status, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: selection, selectionPosition: .left, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), additionalActions: additionalActions, index: nil, header: header, action: { _ in
-                    interaction.openPeer(peer, .generic)
+                    interaction.openPeer(peer, .generic, nil, nil)
             }, disabledAction: { _ in
                 if case let .peer(peer, _, _) = peer {
                     interaction.openDisabledPeer(EnginePeer(peer), requiresPremiumForMessaging ? .premiumRequired : .generic)
@@ -263,9 +268,9 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsPeer, lhsPresence, lhsHeader, lhsSelection, lhsTheme, lhsStrings, lhsTimeFormat, lhsSortOrder, lhsDisplayOrder, lhsDisplayCallIcons, lhsEnabled, lhsStoryData, lhsRequiresPremiumForMessaging):
+            case let .peer(lhsIndex, lhsPeer, lhsPresence, lhsHeader, lhsSelection, lhsTheme, lhsStrings, lhsTimeFormat, lhsSortOrder, lhsDisplayOrder, lhsDisplayCallIcons, lhsHasMoreButton, lhsEnabled, lhsStoryData, lhsRequiresPremiumForMessaging):
                 switch rhs {
-                    case let .peer(rhsIndex, rhsPeer, rhsPresence, rhsHeader, rhsSelection, rhsTheme, rhsStrings, rhsTimeFormat, rhsSortOrder, rhsDisplayOrder, rhsDisplayCallIcons, rhsEnabled, rhsStoryData, rhsRequiresPremiumForMessaging):
+                    case let .peer(rhsIndex, rhsPeer, rhsPresence, rhsHeader, rhsSelection, rhsTheme, rhsStrings, rhsTimeFormat, rhsSortOrder, rhsDisplayOrder, rhsDisplayCallIcons, rhsHasMoreButton, rhsEnabled, rhsStoryData, rhsRequiresPremiumForMessaging):
                         if lhsIndex != rhsIndex {
                             return false
                         }
@@ -301,6 +306,9 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                             return false
                         }
                         if lhsDisplayCallIcons != rhsDisplayCallIcons {
+                            return false
+                        }
+                        if lhsHasMoreButton != rhsHasMoreButton {
                             return false
                         }
                         if lhsEnabled != rhsEnabled {
@@ -353,11 +361,11 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         case .peer:
                             return true
                 }
-            case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _, _, _, lhsStoryData, _):
+            case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _, _, _, _, lhsStoryData, _):
                 switch rhs {
                     case .search, .sort, .permissionInfo, .permissionEnable, .option:
                         return false
-                    case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _, _, rhsStoryData, _):
+                    case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _, _, _, rhsStoryData, _):
                         if (lhsStoryData == nil) != (rhsStoryData == nil) {
                             if lhsStoryData != nil {
                                 return true
@@ -551,7 +559,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                 }
                 
                 let presence = presences[peer.id]
-                entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, true, nil, false))
+                entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, false, true, nil, false))
                 
                 index += 1
             }
@@ -608,7 +616,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                         }
                         
                         let presence = presences[peer.id]
-                        entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, true, nil, false))
+                        entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, true, true, nil, false))
                         
                         index += 1
                     }
@@ -657,7 +665,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                 }
                 
                 let presence = presences[peer.id]
-                entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, true, nil, false))
+                entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, false, true, nil, false))
                 
                 index += 1
             }
@@ -701,7 +709,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                     enabled = true
             }
             
-            entries.append(.peer(index, peer, presence, nil, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, enabled, nil, false))
+            entries.append(.peer(index, peer, presence, nil, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, false, enabled, nil, false))
             index += 1
         }
     }
@@ -748,7 +756,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
         }
         
         
-        entries.append(.peer(index, peer, presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, enabled, nil, requiresPremiumForMessaging))
+        entries.append(.peer(index, peer, presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, false, enabled, nil, requiresPremiumForMessaging))
         index += 1
     }
     return entries
@@ -772,7 +780,7 @@ private func preparedContactListNodeTransition(context: AccountContext, presenta
                 case .search:
                     //indexSections.apend(CollectionIndexNode.searchIndex)
                     break
-                case let .peer(_, _, _, header, _, _, _, _, _, _, _, _, _, _):
+                case let .peer(_, _, _, header, _, _, _, _, _, _, _, _, _, _, _):
                     if let header = header as? ContactListNameIndexHeader {
                         if !existingSections.contains(header.letter) {
                             existingSections.insert(header.letter)
@@ -1036,7 +1044,7 @@ public final class ContactListNode: ASDisplayNode {
     public var contentScrollingEnded: ((ListView) -> Bool)?
     
     public var activateSearch: (() -> Void)?
-    public var openPeer: ((ContactListPeer, ContactListAction) -> Void)?
+    public var openPeer: ((ContactListPeer, ContactListAction, ASDisplayNode?, ContextGesture?) -> Void)?
     public var openDisabledPeer: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
     public var deselectedAll: (() -> Void)?
     public var updatedSelection: (([EnginePeer], Bool) -> Void)?
@@ -1136,7 +1144,7 @@ public final class ContactListNode: ASDisplayNode {
             authorizeImpl?()
         }, suppressWarning: { [weak self] in
             self?.suppressPermissionWarning?()
-        }, openPeer: { [weak self] peer, action in
+        }, openPeer: { [weak self] peer, action, sourceNode, gesture in
             if let strongSelf = self {
                 if strongSelf.multipleSelection {
                     var updated = false
@@ -1151,10 +1159,10 @@ public final class ContactListNode: ASDisplayNode {
                         }
                     })
                     if !updated {
-                        strongSelf.openPeer?(peer, action)
+                        strongSelf.openPeer?(peer, action, sourceNode, gesture)
                     }
                 } else {
-                    strongSelf.openPeer?(peer, action)
+                    strongSelf.openPeer?(peer, action, sourceNode, gesture)
                 }
             }
         }, openDisabledPeer: { [weak self] peer, reason in
@@ -1224,7 +1232,7 @@ public final class ContactListNode: ASDisplayNode {
                             strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.PreferSynchronousDrawing, .PreferSynchronousResourceLoading], scrollToItem: ListViewScrollToItem(index: index, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: nil), directionHint: .Down), additionalScrollDistance: 0.0, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                             break loop
                         }
-                    case let .peer(_, _, _, header, _, _, _, _, _, _, _, _, _, _):
+                    case let .peer(_, _, _, header, _, _, _, _, _, _, _, _, _, _, _):
                         if let header = header as? ContactListNameIndexHeader {
                             if let scalar = UnicodeScalar(header.letter) {
                                 let title = "\(Character(scalar))"

@@ -1163,6 +1163,8 @@ extension ChatControllerImpl {
         controller.openCamera = { [weak self] cameraView in
             if let cameraView = cameraView as? TGAttachmentCameraView {
                 self?.openCamera(cameraView: cameraView)
+            } else {
+                self?.openCamera(cameraView: nil)
             }
         }
         controller.presentWebSearch = { [weak self, weak controller] mediaGroups, activateOnDisplay in

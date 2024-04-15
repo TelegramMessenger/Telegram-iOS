@@ -12,9 +12,13 @@ swift_library(
     deps = [
         "//submodules/Display",
         "//submodules/ComponentFlow",
+        "//submodules/TelegramCore",
         "//submodules/TelegramPresentationData",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/MultilineTextWithEntitiesComponent",
         "//submodules/TelegramUI/Components/Chat/MessageInlineBlockBackgroundView",
+        "//submodules/AccountContext",
+        "//submodules/TextFormat",
     ],
     visibility = [
         "//visibility:public",

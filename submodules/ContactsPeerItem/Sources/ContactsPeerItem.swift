@@ -20,6 +20,7 @@ import ComponentFlow
 import AnimationCache
 import MultiAnimationRenderer
 import EmojiStatusComponent
+import MoreButtonNode
 
 public final class ContactItemHighlighting {
     public var chatLocation: ChatLocation?
@@ -88,13 +89,14 @@ public enum ContactsPeerItemActionIcon {
     case add
     case voiceCall
     case videoCall
+    case more
 }
 
 public struct ContactsPeerItemAction {
     public let icon: ContactsPeerItemActionIcon
-    public let action: ((ContactsPeerItemPeer) -> Void)?
+    public let action: ((ContactsPeerItemPeer, ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(icon: ContactsPeerItemActionIcon, action: @escaping (ContactsPeerItemPeer) -> Void) {
+    public init(icon: ContactsPeerItemActionIcon, action: @escaping (ContactsPeerItemPeer, ASDisplayNode, ContextGesture?) -> Void) {
         self.icon = icon
         self.action = action
     }
@@ -417,6 +419,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var badgeTextNode: TextNode?
     private var selectionNode: CheckNode?
     private var actionButtonNodes: [HighlightableButtonNode]?
+    private var moreButtonNode: MoreButtonNode?
     private var arrowButtonNode: HighlightableButtonNode?
     
     private var avatarTapRecognizer: UITapGestureRecognizer?
@@ -744,10 +747,11 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             var actionButtons: [ActionButton]?
             struct ActionButton {
+                let type: ContactsPeerItemActionIcon
                 let image: UIImage?
-                let action: ((ContactsPeerItemPeer) -> Void)?
+                let action: ((ContactsPeerItemPeer, ASDisplayNode, ContextGesture?) -> Void)?
                 
-                init(theme: PresentationTheme, icon: ContactsPeerItemActionIcon, action: ((ContactsPeerItemPeer) -> Void)?) {
+                init(theme: PresentationTheme, icon: ContactsPeerItemActionIcon, action: ((ContactsPeerItemPeer, ASDisplayNode, ContextGesture?) -> Void)?) {
                     let image: UIImage?
                     switch icon {
                         case .none:
@@ -758,7 +762,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             image = PresentationResourcesItemList.voiceCallIcon(theme)
                         case .videoCall:
                             image = PresentationResourcesItemList.videoCallIcon(theme)
+                        case .more:
+                            image = PresentationResourcesItemList.videoCallIcon(theme)
                     }
+                    self.type = icon
                     self.image = image
                     self.action = action
                 }
@@ -1357,7 +1364,23 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 verifiedIconView.removeFromSuperview()
                             }
                             
-                            if let actionButtons = actionButtons {
+                            if let actionButtons, actionButtons.count == 1, let actionButton = actionButtons.first, case .more = actionButton.type {
+                                let moreButtonNode: MoreButtonNode
+                                if let current = strongSelf.moreButtonNode {
+                                    moreButtonNode = current
+                                } else {
+                                    moreButtonNode = MoreButtonNode(theme: item.presentationData.theme)
+                                    moreButtonNode.iconNode.enqueueState(.more, animated: false)
+                                    moreButtonNode.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
+                                    strongSelf.offsetContainerNode.addSubnode(moreButtonNode)
+                                    strongSelf.moreButtonNode = moreButtonNode
+                                }
+                                moreButtonNode.action = { sourceNode, gesture in
+                                    actionButton.action?(item.peer, sourceNode, gesture)
+                                }
+                                let moreButtonSize = moreButtonNode.measure(CGSize(width: 100.0, height: nodeLayout.contentSize.height))
+                                moreButtonNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - params.rightInset - 18.0 - moreButtonSize.width, y:floor((nodeLayout.contentSize.height - moreButtonSize.height) / 2.0)), size: moreButtonSize)
+                            } else if let actionButtons = actionButtons {
                                 if strongSelf.actionButtonNodes == nil {
                                     var actionButtonNodes: [HighlightableButtonNode] = []
                                     for action in actionButtons {
@@ -1524,7 +1547,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         guard let actionButtonNodes = self.actionButtonNodes, let index = actionButtonNodes.firstIndex(of: sender), let item = self.item, index < item.additionalActions.count else {
             return
         }
-        item.additionalActions[index].action?(item.peer)
+        item.additionalActions[index].action?(item.peer, sender, nil)
     }
     
     override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {

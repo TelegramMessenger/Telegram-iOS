@@ -16,6 +16,7 @@ import CounterContollerTitleView
 import EditableTokenListNode
 import PremiumUI
 import UndoUI
+import ContextUI
 
 private func peerTokenTitle(accountPeerId: PeerId, peer: Peer, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> String {
     if peer.id == accountPeerId {
@@ -415,6 +416,38 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             }
         }
         
+        self.contactsNode.openPeerMore  = { [weak self] peer, node, gesture in
+            guard let self, case let .peer(peer, _, _) = peer, let node = node as? ContextReferenceContentNode else {
+                return
+            }
+            
+            let presentationData = self.presentationData
+            
+            var items: [ContextMenuItem] = []
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Premium_Gift_ContactSelection_SendMessage, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MessageBubble"), color: theme.contextMenu.primaryColor)
+            }, iconPosition: .left, action: { [weak self] _, a in
+                a(.default)
+              
+                if let self {
+                    self.params.sendMessage?(EnginePeer(peer))
+                }
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Premium_Gift_ContactSelection_OpenProfile, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
+            }, iconPosition: .left, action: { [weak self] _, a in
+                a(.default)
+
+                if let self {
+                    self.params.openProfile?(EnginePeer(peer))
+                }
+            })))
+            
+            let contextController = ContextController(presentationData: presentationData, source: .reference(ContactContextReferenceContentSource(controller: self, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            self.present(contextController, in: .window(.root))
+        }
+        
         self.contactsNode.openDisabledPeer = { [weak self] peer, reason in
             guard let self else {
                 return
@@ -763,5 +796,19 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             additionalOptionIds.sort()
         }
         self._result.set(.single(.result(peerIds: peerIds, additionalOptionIds: additionalOptionIds)))
+    }
+}
+
+private final class ContactContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceNode: ContextReferenceContentNode
+    
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

@@ -1599,7 +1599,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             videoNode.setBaseRate(self.playbackRate ?? 1.0)
                         }
                     } else {
-                        if self.shouldAutoplayOnCentrality()  {
+                        if isAnimated {
+                            self.playOnContentOwnership = true
+                        } else if self.shouldAutoplayOnCentrality()  {
                             self.playOnContentOwnership = true
                         }
                     }
