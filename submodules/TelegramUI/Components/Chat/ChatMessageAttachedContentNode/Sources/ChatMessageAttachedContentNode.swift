@@ -982,8 +982,9 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                         self.inlineStickerLayers = [stickerLayer]
                                     }
                                     stickerLayer.isVisibleForAnimations = self.visibility != .none
+                                    stickerLayer.dynamicColor = file.isCustomTemplateEmoji ? mainColor : nil
                                     stickerLayer.frame = inlineMediaFrame
-                                } else if contentAnimatedFilesValue.count == 4 {
+                                } else if contentAnimatedFilesValue.count == 4, let file = contentAnimatedFilesValue.first {
                                     var stickerLayers: [InlineStickerItemLayer] = []
                                     if self.inlineStickerLayers.count == contentAnimatedFilesValue.count {
                                         stickerLayers = self.inlineStickerLayers
@@ -995,14 +996,16 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                         }
                                         self.inlineStickerLayers = stickerLayers
                                     }
+                                                                        
                                     var frames: [CGRect] = []
                                     let smallSize = CGSize(width: inlineMediaFrame.width / 2.0, height: inlineMediaFrame.width / 2.0)
-                                    frames.append(CGRect(origin: inlineMediaFrame.origin, size: smallSize))
-                                    frames.append(CGRect(origin: inlineMediaFrame.origin.offsetBy(dx: smallSize.width, dy: 0.0), size: smallSize))
-                                    frames.append(CGRect(origin: inlineMediaFrame.origin.offsetBy(dx: 0.0, dy: smallSize.height), size: smallSize))
-                                    frames.append(CGRect(origin: inlineMediaFrame.origin.offsetBy(dx: smallSize.width, dy: smallSize.height), size: smallSize))
+                                    frames.append(CGRect(origin: inlineMediaFrame.origin, size: smallSize).insetBy(dx: 2.0, dy: 2.0))
+                                    frames.append(CGRect(origin: inlineMediaFrame.origin.offsetBy(dx: smallSize.width, dy: 0.0), size: smallSize).insetBy(dx: 2.0, dy: 2.0))
+                                    frames.append(CGRect(origin: inlineMediaFrame.origin.offsetBy(dx: 0.0, dy: smallSize.height), size: smallSize).insetBy(dx: 2.0, dy: 2.0))
+                                    frames.append(CGRect(origin: inlineMediaFrame.origin.offsetBy(dx: smallSize.width, dy: smallSize.height), size: smallSize).insetBy(dx: 2.0, dy: 2.0))
                                     for i in 0 ..< stickerLayers.count {
                                         stickerLayers[i].frame = frames[i]
+                                        stickerLayers[i].dynamicColor = file.isCustomTemplateEmoji ? mainColor : nil
                                     }
                                 }
                             }
