@@ -270,7 +270,7 @@
 "PUSH_CHAT_MESSAGE_STORY" = "%2$@|%1$@ shared a story to the group";
 
 "PUSH_REACT_HIDDEN" = "New reaction to your message";
-"PUSH_REACT_STORY" = "%1$@|%3$@ %2$@ to your story";
+"PUSH_REACT_STORY" = "%1$@|%2$@ to your story";
 "PUSH_REACT_STORY_HIDDEN" = "New reaction to your story";
 
 "LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";

@@ -857,6 +857,8 @@ private final class NotificationServiceHandler {
                 }
                 strongSelf.stateManager = stateManager
                 
+                let accountPeerId = stateManager.accountPeerId
+                
                 let settings = stateManager.postbox.transaction { transaction -> NotificationSoundList? in
                     return _internal_cachedNotificationSoundList(transaction: transaction)
                 }
@@ -978,7 +980,7 @@ private final class NotificationServiceHandler {
                     enum Action {
                         case logout
                         case poll(peerId: PeerId, content: NotificationContent, messageId: MessageId?)
-                        case pollStories(peerId: PeerId, content: NotificationContent, storyId: Int32)
+                        case pollStories(peerId: PeerId, content: NotificationContent, storyId: Int32, isReaction: Bool)
                         case deleteMessage([MessageId])
                         case readReactions([MessageId])
                         case readMessage(MessageId)
@@ -1046,7 +1048,7 @@ private final class NotificationServiceHandler {
                             break
                         }
                     } else {
-                        if let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId {
+                        if let aps = payloadJson["aps"] as? [String: Any], var peerId = peerId {
                             var content: NotificationContent = NotificationContent(isLockedMessage: isLockedMessage)
                             if let alert = aps["alert"] as? [String: Any] {
                                 if let topicTitleValue = payloadJson["topic_title"] as? String {
@@ -1075,8 +1077,35 @@ private final class NotificationServiceHandler {
                                 
                                 messageIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageId)
                             }
+                            
+                            var isReaction = false
+                            if let category = aps["category"] as? String {
+                                if peerId.isGroupOrChannel && ["r", "m"].contains(category) {
+                                    content.category = "g\(category)"
+                                } else {
+                                    content.category = category
+                                }
+                                
+                                if aps["r"] != nil || aps["react_emoji"] != nil {
+                                    isReaction = true
+                                    content.category = "t"
+                                } else if payloadJson["r"] != nil || payloadJson["react_emoji"] != nil {
+                                    isReaction = true
+                                    content.category = "t"
+                                }
+                                
+                                if category == "str" {
+                                    isReaction = true
+                                }
+
+                                let _ = messageId
+                            }
+                            
                             if let storyId = storyId {
                                 interactionAuthorId = peerId
+                                if isReaction {
+                                    peerId = accountPeerId
+                                }
                                 content.userInfo["story_id"] = "\(storyId)"
                             }
 
@@ -1144,29 +1173,14 @@ private final class NotificationServiceHandler {
                                 content.sound = sound
                             }
 
-                            if let category = aps["category"] as? String {
-                                if peerId.isGroupOrChannel && ["r", "m"].contains(category) {
-                                    content.category = "g\(category)"
-                                } else {
-                                    content.category = category
-                                }
-                                
-                                if aps["r"] != nil || aps["react_emoji"] != nil {
-                                    content.category = "t"
-                                } else if payloadJson["r"] != nil || payloadJson["react_emoji"] != nil {
-                                    content.category = "t"
-                                }
-
-                                let _ = messageId
-                            }
-
                             if let storyId {
-                                if content.category == "t" {
+                                if isReaction {
                                     content.category = "str"
                                 } else {
                                     content.category = "st"
                                 }
-                                action = .pollStories(peerId: peerId, content: content, storyId: storyId)
+                                
+                                action = .pollStories(peerId: peerId, content: content, storyId: storyId, isReaction: isReaction)
                             } else {
                                 action = .poll(peerId: peerId, content: content, messageId: messageIdValue)
                             }
@@ -1645,8 +1659,8 @@ private final class NotificationServiceHandler {
                             } else {
                                 completed()
                             }
-                        case let .pollStories(peerId, initialContent, storyId):
-                            Logger.shared.log("NotificationService \(episode)", "Will poll stories for \(peerId)")
+                        case let .pollStories(peerId, initialContent, storyId, isReaction):
+                            Logger.shared.log("NotificationService \(episode)", "Will poll stories for \(peerId) isReaction: \(isReaction)")
                             if let stateManager = strongSelf.stateManager {
                                 let pollCompletion: (NotificationContent) -> Void = { content in
                                     let content = content
@@ -1674,8 +1688,12 @@ private final class NotificationServiceHandler {
                                                 let firstUnseenItem = transaction.getStoryItems(peerId: peerId).first(where: { entry in
                                                     return entry.id > state.maxReadId
                                                 })
-                                                guard let firstUnseenItem, firstUnseenItem.id == storyId else {
+                                                if isReaction {
                                                     return nil
+                                                } else {
+                                                    guard let firstUnseenItem, firstUnseenItem.id == storyId else {
+                                                        return nil
+                                                    }
                                                 }
                                                 guard let peer = transaction.getPeer(peerId).flatMap(PeerReference.init) else {
                                                     return nil
@@ -1812,8 +1830,13 @@ private final class NotificationServiceHandler {
                                             }
                                         }
                                         
-                                        let wasDisplayed = stateManager.postbox.transaction { transaction -> Bool in
-                                            return _internal_getStoryNotificationWasDisplayed(transaction: transaction, id: StoryId(peerId: peerId, id: storyId))
+                                        let wasDisplayed: Signal<Bool, NoError>
+                                        if isReaction {
+                                            wasDisplayed = .single(false)
+                                        } else {
+                                            wasDisplayed = stateManager.postbox.transaction { transaction -> Bool in
+                                                return _internal_getStoryNotificationWasDisplayed(transaction: transaction, id: StoryId(peerId: peerId, id: storyId))
+                                            }
                                         }
 
                                         Logger.shared.log("NotificationService \(episode)", "Will fetch media")
