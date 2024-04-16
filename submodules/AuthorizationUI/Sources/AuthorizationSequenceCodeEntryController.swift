@@ -23,10 +23,11 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     
     var reset: (() -> Void)?
     public var requestNextOption: (() -> Void)?
+    public var requestPreviousOption: (() -> Void)?
     var resetEmail: (() -> Void)?
     var retryResetEmail: (() -> Void)?
     
-    var data: (String, String?, SentAuthorizationCodeType, AuthorizationCodeNextType?, Int32?)?
+    var data: (String, String?, SentAuthorizationCodeType, AuthorizationCodeNextType?, Int32?, Bool, Bool)?
     var termsOfService: (UnauthorizedAccountTermsOfService, Bool)?
     
     private let hapticFeedback = HapticFeedback()
@@ -37,6 +38,19 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         didSet {
             self.updateNavigationItems()
             self.controllerNode.inProgress = self.inProgress
+        }
+    }
+    
+    var isWordOrPhrase: Bool {
+        if let type = self.data?.2 {
+            switch type {
+            case .word, .phrase:
+                return true
+            default:
+                return false
+            }
+        } else {
+            return false
         }
     }
     
@@ -60,7 +74,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             let proceed: String
             let stop: String
             
-            if let (_, _, type, _, _) = self?.data, case .email = type {
+            if let (_, _, type, _, _, _, _) = self?.data, case .email = type {
                 text = presentationData.strings.Login_CancelEmailVerification
                 proceed = presentationData.strings.Login_CancelEmailVerificationContinue
                 stop = presentationData.strings.Login_CancelEmailVerificationStop
@@ -107,6 +121,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             self?.requestNextOption?()
         }
         
+        self.controllerNode.requestPreviousOption = { [weak self] in
+            self?.requestPreviousOption?()
+        }
+        
         self.controllerNode.updateNextEnabled = { [weak self] value in
             self?.navigationItem.rightBarButtonItem?.isEnabled = value
         }
@@ -123,12 +141,12 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             self?.present(c, in: .window(.root), with: a)
         }
         
-        if let (number, email, codeType, nextType, timeout) = self.data {
+        if let (number, email, codeType, nextType, timeout, hasPreviousCode, previousIsPhrase) = self.data {
             var appleSignInAllowed = false
             if case let .email(_, _, _, _, appleSignInAllowedValue, _) = codeType {
                 appleSignInAllowed = appleSignInAllowedValue
             }
-            self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed)
+            self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed, hasPreviousCode: hasPreviousCode, previousIsPhrase: previousIsPhrase)
         }
     }
     
@@ -155,6 +173,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         self.controllerNode.animateError(text: text)
     }
     
+    func updateAppIsActive(_ isActive: Bool) {
+        self.controllerNode.updatePasteVisibility()
+    }
+    
     func updateNavigationItems() {
         guard let layout = self.validLayout, layout.size.width < 360.0 else {
             return
@@ -168,10 +190,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         }
     }
     
-    public func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) {
+    public func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?, hasPreviousCode: Bool, previousIsPhrase: Bool) {
         self.termsOfService = termsOfService
-        if self.data?.0 != number || self.data?.1 != email || self.data?.2 != codeType || self.data?.3 != nextType || self.data?.4 != timeout {
-            self.data = (number, email, codeType, nextType, timeout)
+        if self.data?.0 != number || self.data?.1 != email || self.data?.2 != codeType || self.data?.3 != nextType || self.data?.4 != timeout || self.data?.5 != hasPreviousCode || self.data?.6 != previousIsPhrase {
+            self.data = (number, email, codeType, nextType, timeout, hasPreviousCode, previousIsPhrase)
                         
             var appleSignInAllowed = false
             if case let .email(_, _, _, _, appleSignInAllowedValue, _) = codeType {
@@ -179,7 +201,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             }
             
             if self.isNodeLoaded {
-                self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed)
+                self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed, hasPreviousCode: hasPreviousCode, previousIsPhrase: previousIsPhrase)
                 self.requestLayout(transition: .immediate)
             }
         }
@@ -199,7 +221,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     }
     
     @objc private func nextPressed() {
-        guard let (_, _, type, _, _) = self.data else {
+        guard let (_, _, type, _, _, _, _) = self.data else {
             return
         }
         

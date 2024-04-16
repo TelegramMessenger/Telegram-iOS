@@ -207,10 +207,14 @@ public final class MediaEditor {
     }
     
     public var resultIsVideo: Bool {
+        if self.values.entities.contains(where: { $0.entity.isAnimated }) {
+            return true
+        }
         if case let .sticker(file) = self.subject {
             return file.isAnimatedSticker || file.isVideoSticker
+        } else {
+            return self.player != nil || self.audioPlayer != nil || self.additionalPlayer != nil
         }
-        return self.player != nil || self.audioPlayer != nil || self.additionalPlayer != nil || self.values.entities.contains(where: { $0.entity.isAnimated })
     }
     
     public var resultImage: UIImage? {

@@ -5,10 +5,12 @@ import AsyncDisplayKit
 
 private final class LiveLocationWavesNodeParams: NSObject {
     let color: UIColor
+    let extend: Bool
     let progress: CGFloat
     
-    init(color: UIColor, progress: CGFloat) {
+    init(color: UIColor, extend: Bool, progress: CGFloat) {
         self.color = color
+        self.extend = extend
         self.progress = progress
         
         super.init()
@@ -26,6 +28,12 @@ public final class LiveLocationWavesNode: ASDisplayNode {
         }
     }
     
+    public var extend: Bool {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
+    
     private var effectiveProgress: CGFloat = 0.0 {
         didSet {
             self.setNeedsDisplay()
@@ -34,8 +42,9 @@ public final class LiveLocationWavesNode: ASDisplayNode {
     
     var animator: ConstantDisplayLinkAnimator?
     
-    public init(color: UIColor) {
+    public init(color: UIColor, extend: Bool = false) {
         self.color = color
+        self.extend = extend
         
         super.init()
         
@@ -105,7 +114,7 @@ public final class LiveLocationWavesNode: ASDisplayNode {
     public override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         let t = CACurrentMediaTime()
         let value: CGFloat = CGFloat(t.truncatingRemainder(dividingBy: 2.0)) / 2.0
-        return LiveLocationWavesNodeParams(color: self.color, progress: value)
+        return LiveLocationWavesNodeParams(color: self.color, extend: self.extend, progress: value)
     }
     
     @objc public override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -142,7 +151,9 @@ public final class LiveLocationWavesNode: ASDisplayNode {
             }
             context.setAlpha(alpha * 0.7)
             
-            draw(context, position, false)
+            if !parameters.extend {
+                draw(context, position, false)
+            }
             draw(context, position, true)
             
             var progress = parameters.progress + 0.5
@@ -157,7 +168,9 @@ public final class LiveLocationWavesNode: ASDisplayNode {
             }
             context.setAlpha(largerAlpha * 0.7)
             
-            draw(context, largerPos, false)
+            if !parameters.extend {
+                draw(context, largerPos, false)
+            }
             draw(context, largerPos, true)
         }
     }

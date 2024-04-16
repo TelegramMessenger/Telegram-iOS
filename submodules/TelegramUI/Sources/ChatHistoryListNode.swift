@@ -2547,7 +2547,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 contentRequiredValidation = true
                             } else if message.flags.contains(.Incoming), let media = media as? TelegramMediaMap, let liveBroadcastingTimeout = media.liveBroadcastingTimeout {
                                 let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                                if message.timestamp + liveBroadcastingTimeout > timestamp {
+                                if liveBroadcastingTimeout == liveLocationIndefinitePeriod || message.timestamp + liveBroadcastingTimeout > timestamp {
                                     messageIdsWithLiveLocation.append(message.id)
                                 }
                             } else if let telegramFile = media as? TelegramMediaFile {

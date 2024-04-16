@@ -68,14 +68,18 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
                             for media in message.media {
                                 if let telegramMap = media as? TelegramMediaMap {
                                     if let liveBroadcastingTimeout = telegramMap.liveBroadcastingTimeout {
-                                        if message.timestamp + liveBroadcastingTimeout > timestamp {
+                                        if liveBroadcastingTimeout == liveLocationIndefinitePeriod || message.timestamp + liveBroadcastingTimeout > timestamp {
                                             activeLiveBroadcastingTimeout = liveBroadcastingTimeout
                                         }
                                     }
                                 }
                             }
                             if let activeLiveBroadcastingTimeout = activeLiveBroadcastingTimeout {
-                                broadcastToMessageIds[message.id] = message.timestamp + activeLiveBroadcastingTimeout
+                                if activeLiveBroadcastingTimeout == liveLocationIndefinitePeriod {
+                                    broadcastToMessageIds[message.id] = activeLiveBroadcastingTimeout
+                                } else {
+                                    broadcastToMessageIds[message.id] = message.timestamp + activeLiveBroadcastingTimeout
+                                }
                             } else {
                                 stopMessageIds.insert(message.id)
                             }

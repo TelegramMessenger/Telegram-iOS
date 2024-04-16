@@ -1,5 +1,7 @@
 import Postbox
 
+public let liveLocationIndefinitePeriod: Int32 = 0x7fffffff
+
 public final class NamedGeoPlace: PostboxCoding, Equatable {
     public let country: String?
     public let state: String?

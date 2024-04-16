@@ -85,7 +85,7 @@ public class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                     selectedMedia = telegramMap
                     if let liveBroadcastingTimeout = telegramMap.liveBroadcastingTimeout {
                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                        if item.message.timestamp != scheduleWhenOnlineTimestamp && item.message.timestamp + liveBroadcastingTimeout > timestamp {
+                        if item.message.timestamp != scheduleWhenOnlineTimestamp && (liveBroadcastingTimeout == liveLocationIndefinitePeriod || item.message.timestamp + liveBroadcastingTimeout > timestamp) {
                             activeLiveBroadcastingTimeout = liveBroadcastingTimeout
                         }
                     }
@@ -402,7 +402,7 @@ public class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                                 
                                 let timerForegroundColor: UIColor = incoming ? item.presentationData.theme.theme.chat.message.incoming.accentControlColor : item.presentationData.theme.theme.chat.message.outgoing.accentControlColor
                                 let timerTextColor: UIColor = incoming ? item.presentationData.theme.theme.chat.message.incoming.secondaryTextColor : item.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
-                                strongSelf.liveTimerNode?.update(backgroundColor: timerForegroundColor.withAlphaComponent(0.4), foregroundColor: timerForegroundColor, textColor: timerTextColor, beginTimestamp: Double(item.message.timestamp), timeout: Double(activeLiveBroadcastingTimeout), strings: item.presentationData.strings)
+                                strongSelf.liveTimerNode?.update(backgroundColor: timerForegroundColor.withAlphaComponent(0.4), foregroundColor: timerForegroundColor, textColor: timerTextColor, beginTimestamp: Double(item.message.timestamp), timeout: activeLiveBroadcastingTimeout == liveLocationIndefinitePeriod ? -1.0 : Double(activeLiveBroadcastingTimeout), strings: item.presentationData.strings)
                                 
                                 if strongSelf.liveTextNode == nil {
                                     let liveTextNode = ChatMessageLiveLocationTextNode()
@@ -421,20 +421,25 @@ public class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                                 
                                 strongSelf.liveTextNode?.update(color: timerTextColor, timestamp: Double(updateTimestamp), strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
                                 
-                                let timeoutDeadline = item.message.timestamp + activeLiveBroadcastingTimeout
-                                if strongSelf.timeoutTimer?.1 != timeoutDeadline {
+                                if activeLiveBroadcastingTimeout != liveLocationIndefinitePeriod {
+                                    let timeoutDeadline = item.message.timestamp + activeLiveBroadcastingTimeout
+                                    if strongSelf.timeoutTimer?.1 != timeoutDeadline {
+                                        strongSelf.timeoutTimer?.0.invalidate()
+                                        let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                                        
+                                        let timer = SwiftSignalKit.Timer(timeout: Double(max(0, timeoutDeadline - currentTimestamp)), repeat: false, completion: {
+                                            if let strongSelf = self {
+                                                strongSelf.timeoutTimer?.0.invalidate()
+                                                strongSelf.timeoutTimer = nil
+                                                item.controllerInteraction.requestMessageUpdate(item.message.id, false)
+                                            }
+                                        }, queue: Queue.mainQueue())
+                                        strongSelf.timeoutTimer = (timer, timeoutDeadline)
+                                        timer.start()
+                                    }
+                                } else {
                                     strongSelf.timeoutTimer?.0.invalidate()
-                                    let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                                    
-                                    let timer = SwiftSignalKit.Timer(timeout: Double(max(0, timeoutDeadline - currentTimestamp)), repeat: false, completion: {
-                                        if let strongSelf = self {
-                                            strongSelf.timeoutTimer?.0.invalidate()
-                                            strongSelf.timeoutTimer = nil
-                                            item.controllerInteraction.requestMessageUpdate(item.message.id, false)
-                                        }
-                                    }, queue: Queue.mainQueue())
-                                    strongSelf.timeoutTimer = (timer, timeoutDeadline)
-                                    timer.start()
+                                    strongSelf.timeoutTimer = nil
                                 }
                             } else {
                                 if let liveTimerNode = strongSelf.liveTimerNode {

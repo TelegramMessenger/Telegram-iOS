@@ -45,6 +45,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
     
     private var stateDisposable: Disposable?
     private let actionDisposable = MetaDisposable()
+    private var applicationStateDisposable: Disposable?
     
     private var didPlayPresentationAnimation = false
     
@@ -92,6 +93,18 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         |> deliverOnMainQueue).startStrict(next: { [weak self] state in
             self?.updateState(state: state)
         }).strict()
+        
+        self.applicationStateDisposable = (self.sharedContext.applicationBindings.applicationIsActive
+        |> deliverOnMainQueue).start(next: { [weak self] isActive in
+            guard let self else {
+                return
+            }
+            for viewController in self.viewControllers {
+                if let codeController = viewController as? AuthorizationSequenceCodeEntryController {
+                    codeController.updateAppIsActive(isActive)
+                }
+            }
+        })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -101,6 +114,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
     deinit {
         self.stateDisposable?.dispose()
         self.actionDisposable.dispose()
+        self.applicationStateDisposable?.dispose()
     }
     
     override public func loadView() {
@@ -296,7 +310,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         return controller
     }
     
-    private func codeEntryController(number: String, phoneCodeHash: String, email: String?, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
+    private func codeEntryController(number: String, phoneCodeHash: String, email: String?, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, hasPreviousCode: Bool, previousIsPhrase: Bool, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
         var currentController: AuthorizationSequenceCodeEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceCodeEntryController {
@@ -568,6 +582,16 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         }
         controller.requestNextOption = { [weak self, weak controller] in
             if let strongSelf = self {
+                switch type {
+                case .word, .phrase:
+                    if hasPreviousCode {
+                        strongSelf.actionDisposable.set(togglePreviousCodeEntry(account: strongSelf.account).start())
+                        return
+                    }
+                default:
+                    break
+                }
+                
                 if nextType == nil {
                     if let controller {
                         let carrier = CTCarrier()
@@ -616,11 +640,17 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 }
             }
         }
-        controller.reset = { [weak self] in
-            if let strongSelf = self {
-                let account = strongSelf.account
-                let _ = strongSelf.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).startStandalone()
+        controller.requestPreviousOption = { [weak self] in
+            guard let self else {
+                return
             }
+            self.actionDisposable.set(togglePreviousCodeEntry(account: self.account).start())
+        }
+        controller.reset = { [weak self] in
+            guard let self else {
+                return
+            }
+            let _ = self.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: self.account.testingEnvironment, masterDatacenterId: self.account.masterDatacenterId, contents: .empty)).startStandalone()
         }
         controller.signInWithApple = { [weak self] in
             guard let strongSelf = self else {
@@ -645,7 +675,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 strongSelf.sharedContext.applicationBindings.openUrl(url)
             }
         }
-        controller.updateData(number: formatPhoneNumber(number), email: email, codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)
+        controller.updateData(number: formatPhoneNumber(number), email: email, codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService, hasPreviousCode: hasPreviousCode, previousIsPhrase: previousIsPhrase)
         return controller
     }
     
@@ -1189,12 +1219,14 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 
                     controllers.append(self.phoneEntryController(countryCode: countryCode, number: number, splashController: previousSplashController))
                     self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty && (previousSplashController == nil || self.viewControllers.count > 2))
-                case let .confirmationCodeEntry(number, type, phoneCodeHash, timeout, nextType, _):
+                case let .confirmationCodeEntry(number, type, phoneCodeHash, timeout, nextType, _, previousCodeEntry, usePrevious):
                     var controllers: [ViewController] = []
                     if !self.otherAccountPhoneNumbers.1.isEmpty {
                         controllers.append(self.splashController())
                     }
                     controllers.append(self.phoneEntryController(countryCode: AuthorizationSequenceController.defaultCountryCode(), number: "", splashController: nil))
+                
+                    var isGoingBack = false
                     if case let .emailSetupRequired(appleSignInAllowed) = type {
                         self.appleSignInAllowed = appleSignInAllowed
                         controllers.append(self.emailSetupController(number: number, appleSignInAllowed: appleSignInAllowed))
@@ -1202,9 +1234,35 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                         if let _ = self.currentEmail {
                             controllers.append(self.emailSetupController(number: number, appleSignInAllowed: self.appleSignInAllowed))
                         }
-                        controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, termsOfService: nil))
+                        
+                        if let previousCodeEntry, case let .confirmationCodeEntry(number, type, phoneCodeHash, timeout, nextType, _, _, _) = previousCodeEntry, usePrevious {
+                            var previousIsPhrase = false
+                            if case .phrase = type {
+                                previousIsPhrase = true
+                            }
+                            controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, hasPreviousCode: true, previousIsPhrase: previousIsPhrase, termsOfService: nil))
+                            isGoingBack = true
+                        } else {
+                            var previousIsPhrase = false
+                            if let previousCodeEntry, case let .confirmationCodeEntry(_, type, _, _, _, _, _, _) = previousCodeEntry {
+                                if case .phrase = type {
+                                    previousIsPhrase = true
+                                }
+                            }
+                            controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, hasPreviousCode: previousCodeEntry != nil, previousIsPhrase: previousIsPhrase, termsOfService: nil))
+                        }
                     }
-                    self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
+                
+                    if isGoingBack, let currentLastController = self.viewControllers.last as? AuthorizationSequenceCodeEntryController, !currentLastController.isWordOrPhrase {
+                        var tempControllers = controllers
+                        tempControllers.append(currentLastController)
+                        self.setViewControllers(tempControllers, animated: false)
+                        Queue.mainQueue().justDispatch {
+                            self.setViewControllers(controllers, animated: true)
+                        }
+                    } else {
+                        self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
+                    }
                 case let .passwordEntry(hint, _, _, suggestReset, syncContacts):
                     var controllers: [ViewController] = []
                     if !self.otherAccountPhoneNumbers.1.isEmpty {
