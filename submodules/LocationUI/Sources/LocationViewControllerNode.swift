@@ -48,14 +48,14 @@ private enum LocationViewEntryId: Hashable {
 
 private enum LocationViewEntry: Comparable, Identifiable {
     case info(PresentationTheme, TelegramMediaMap, String?, Double?, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime, Bool)
-    case toggleLiveLocation(PresentationTheme, String, String, Double?, Double?, Bool)
+    case toggleLiveLocation(PresentationTheme, String, String, Double?, Double?, Bool, EngineMessage.Id?)
     case liveLocation(PresentationTheme, PresentationDateTimeFormat, PresentationPersonNameOrder, EngineMessage, Double?, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime, Int)
     
     var stableId: LocationViewEntryId {
         switch self {
             case .info:
                 return .info
-            case let .toggleLiveLocation(_, _, _, _, _, additional):
+            case let .toggleLiveLocation(_, _, _, _, _, additional, _):
                 return .toggleLiveLocation(additional)
             case let .liveLocation(_, _, _, message, _, _, _, _, _):
                 return .liveLocation(message.stableId)
@@ -70,8 +70,8 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .toggleLiveLocation(lhsTheme, lhsTitle, lhsSubtitle, lhsBeginTimestamp, lhsTimeout, lhsAdditional):
-                if case let .toggleLiveLocation(rhsTheme, rhsTitle, rhsSubtitle, rhsBeginTimestamp, rhsTimeout, rhsAdditional) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsBeginTimestamp == rhsBeginTimestamp, lhsTimeout == rhsTimeout, lhsAdditional == rhsAdditional {
+            case let .toggleLiveLocation(lhsTheme, lhsTitle, lhsSubtitle, lhsBeginTimestamp, lhsTimeout, lhsAdditional, lhsMessageId):
+                if case let .toggleLiveLocation(rhsTheme, rhsTitle, rhsSubtitle, rhsBeginTimestamp, rhsTimeout, rhsAdditional, rhsMessageId) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsBeginTimestamp == rhsBeginTimestamp, lhsTimeout == rhsTimeout, lhsAdditional == rhsAdditional, lhsMessageId == rhsMessageId {
                     return true
                 } else {
                     return false
@@ -94,11 +94,11 @@ private enum LocationViewEntry: Comparable, Identifiable {
                     case .toggleLiveLocation, .liveLocation:
                         return true
                 }
-            case let .toggleLiveLocation(_, _, _, _, _, lhsAdditional):
+            case let .toggleLiveLocation(_, _, _, _, _, lhsAdditional, _):
                 switch rhs {
                     case .info:
                         return false
-                    case let .toggleLiveLocation(_, _, _, _, _, rhsAdditional):
+                    case let .toggleLiveLocation(_, _, _, _, _, rhsAdditional, _):
                         return !lhsAdditional && rhsAdditional
                     case .liveLocation:
                         return true
@@ -137,7 +137,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 }, walkingAction: {
                     interaction?.requestDirections(location, nil, .walking)
                 })
-            case let .toggleLiveLocation(_, title, subtitle, beginTimstamp, timeout, additional):
+            case let .toggleLiveLocation(_, title, subtitle, beginTimstamp, timeout, additional, messageId):
                 var beginTimeAndTimeout: (Double, Double)?
                 if let beginTimstamp = beginTimstamp, let timeout = timeout {
                     beginTimeAndTimeout = (beginTimstamp, timeout)
@@ -160,13 +160,13 @@ private enum LocationViewEntry: Comparable, Identifiable {
                             if additional {
                                 interaction?.stopLiveLocation()
                             } else {
-                                interaction?.sendLiveLocation(nil, true)
+                                interaction?.sendLiveLocation(nil, true, messageId)
                             }
                         } else {
                             interaction?.stopLiveLocation()
                         }
                     } else {
-                        interaction?.sendLiveLocation(nil, false)
+                        interaction?.sendLiveLocation(nil, false, nil)
                     }
                 }, highlighted: { highlight in
                     interaction?.updateSendActionHighlight(highlight)
@@ -442,10 +442,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     if case let .channel(channel) = subject.author, case .broadcast = channel.info, activeOwnLiveLocation == nil {
                     } else {
                         if let timeout, Int32(timeout) != liveLocationIndefinitePeriod {
-                            entries.append(.toggleLiveLocation(presentationData.theme, presentationData.strings.Map_SharingLocation, presentationData.strings.Map_TapToAddTime, beginTime, timeout, false))
-                            entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, beginTime, timeout, true))
+                            entries.append(.toggleLiveLocation(presentationData.theme, presentationData.strings.Map_SharingLocation, presentationData.strings.Map_TapToAddTime, beginTime, timeout, false, activeOwnLiveLocation?.id))
+                            entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, beginTime, timeout, true, nil))
                         } else {
-                            entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, beginTime, timeout, false))
+                            entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, beginTime, timeout, false, nil))
                         }
                     }
                     

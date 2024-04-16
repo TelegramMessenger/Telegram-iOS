@@ -177,7 +177,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         let addedStopped = stopMessageIds.subtracting(self.stopMessageIds)
         self.stopMessageIds = stopMessageIds
         for id in addedStopped {
-            self.editMessageDisposables.set((self.engine.messages.requestEditLiveLocation(messageId: id, stop: true, coordinate: nil, heading: nil, proximityNotificationRadius: nil)
+            self.editMessageDisposables.set((self.engine.messages.requestEditLiveLocation(messageId: id, stop: true, coordinate: nil, heading: nil, proximityNotificationRadius: nil, extendPeriod: nil)
                 |> deliverOn(self.queue)).start(completed: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.editMessageDisposables.set(nil, forKey: id)
@@ -232,7 +232,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         let ids = self.broadcastToMessageIds
         let remainingIds = Atomic<Set<EngineMessage.Id>>(value: Set(ids.keys))
         for id in ids.keys {
-            self.editMessageDisposables.set((self.engine.messages.requestEditLiveLocation(messageId: id, stop: false, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude, accuracyRadius: Int32(accuracyRadius)), heading: heading.flatMap { Int32($0) }, proximityNotificationRadius: nil)
+            self.editMessageDisposables.set((self.engine.messages.requestEditLiveLocation(messageId: id, stop: false, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude, accuracyRadius: Int32(accuracyRadius)), heading: heading.flatMap { Int32($0) }, proximityNotificationRadius: nil, extendPeriod: nil)
             |> deliverOn(self.queue)).start(completed: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.editMessageDisposables.set(nil, forKey: id)
