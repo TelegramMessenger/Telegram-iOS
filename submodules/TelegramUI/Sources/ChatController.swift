@@ -15521,12 +15521,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let dismissWebAppContollers: () -> Void = {
+            let dismissWebAppControllers: () -> Void = {
             }
             
             switch navigation {
                 case let .chat(textInputState, subject, peekData):
-                    dismissWebAppContollers()
+                    dismissWebAppControllers()
                     if case .peer(peerId.id) = strongSelf.chatLocation {
                         if let subject = subject, case let .message(messageSubject, _, timecode) = subject {
                             if case let .id(messageId) = messageSubject {
@@ -15544,7 +15544,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     commit()
                 case .info:
-                    dismissWebAppContollers()
+                    dismissWebAppControllers()
                     strongSelf.navigationActionDisposable.set((strongSelf.context.account.postbox.loadedPeerWithId(peerId.id)
                     |> take(1)
                     |> deliverOnMainQueue).startStrict(next: { [weak self] peer in
@@ -15556,7 +15556,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }))
                     commit()
                 case let .withBotStartPayload(startPayload):
-                    dismissWebAppContollers()
+                    dismissWebAppControllers()
                     if case .peer(peerId.id) = strongSelf.chatLocation {
                         strongSelf.startBot(startPayload.payload)
                     } else if let navigationController = strongSelf.effectiveNavigationController {
@@ -15564,7 +15564,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     commit()
                 case let .withAttachBot(attachBotStart):
-                    dismissWebAppContollers()
+                    dismissWebAppControllers()
                     if let navigationController = strongSelf.effectiveNavigationController {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), attachBotStart: attachBotStart))
                     }
@@ -15574,7 +15574,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
                         if let strongSelf = self, let peer {
                             strongSelf.presentBotApp(botApp: botAppStart.botApp, botPeer: peer, payload: botAppStart.payload, concealed: concealed, commit: {
-                                dismissWebAppContollers()
+                                dismissWebAppControllers()
                                 commit()
                             })
                         }
