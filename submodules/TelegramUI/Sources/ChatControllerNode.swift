@@ -456,7 +456,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 }
                                 if let poll = media as? TelegramMediaPoll {
                                     var updatedMedia = message.media.filter { !($0 is TelegramMediaPoll) }
-                                    updatedMedia.append(TelegramMediaPoll(pollId: poll.pollId, publicity: poll.publicity, kind: poll.kind, text: poll.text, options: poll.options, correctAnswers: poll.correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil), isClosed: false, deadlineTimeout: nil))
+                                    updatedMedia.append(TelegramMediaPoll(pollId: poll.pollId, publicity: poll.publicity, kind: poll.kind, text: poll.text, textEntities: poll.textEntities, options: poll.options, correctAnswers: poll.correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil), isClosed: false, deadlineTimeout: nil))
                                     messageMedia = updatedMedia
                                 }
                                 if let _ = media as? TelegramMediaDice {

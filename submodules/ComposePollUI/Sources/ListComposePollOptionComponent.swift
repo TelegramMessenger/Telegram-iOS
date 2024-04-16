@@ -10,17 +10,11 @@ import TextFieldComponent
 import AccountContext
 import MultilineTextComponent
 import PresentationDataUtils
+import LottieComponent
+import PlainButtonComponent
+import SwiftSignalKit
 
 public final class ListComposePollOptionComponent: Component {
-    public final class ExternalState {
-        public fileprivate(set) var hasText: Bool = false
-        public fileprivate(set) var text: NSAttributedString = NSAttributedString()
-        public fileprivate(set) var isEditing: Bool = false
-        
-        public init() {
-        }
-    }
-    
     public final class ResetText: Equatable {
         public let value: String
         
@@ -50,7 +44,31 @@ public final class ListComposePollOptionComponent: Component {
         }
     }
     
-    public let externalState: ExternalState?
+    public enum InputMode {
+        case keyboard
+        case emoji
+    }
+    
+    public final class EmojiSuggestion {
+        public struct Position: Equatable {
+            public var range: NSRange
+            public var value: String
+        }
+        
+        public var localPosition: CGPoint
+        public var position: Position
+        public var disposable: Disposable?
+        public var value: Any?
+        
+        init(localPosition: CGPoint, position: Position) {
+            self.localPosition = localPosition
+            self.position = position
+            self.disposable = nil
+            self.value = nil
+        }
+    }
+    
+    public let externalState: TextFieldComponent.ExternalState?
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
@@ -59,9 +77,12 @@ public final class ListComposePollOptionComponent: Component {
     public let returnKeyAction: (() -> Void)?
     public let backspaceKeyAction: (() -> Void)?
     public let selection: Selection?
+    public let inputMode: InputMode?
+    public let toggleInputMode: (() -> Void)?
+    public let tag: AnyObject?
     
     public init(
-        externalState: ExternalState?,
+        externalState: TextFieldComponent.ExternalState?,
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
@@ -69,7 +90,10 @@ public final class ListComposePollOptionComponent: Component {
         characterLimit: Int,
         returnKeyAction: (() -> Void)?,
         backspaceKeyAction: (() -> Void)?,
-        selection: Selection?
+        selection: Selection?,
+        inputMode: InputMode?,
+        toggleInputMode: (() -> Void)?,
+        tag: AnyObject? = nil
     ) {
         self.externalState = externalState
         self.context = context
@@ -80,6 +104,9 @@ public final class ListComposePollOptionComponent: Component {
         self.returnKeyAction = returnKeyAction
         self.backspaceKeyAction = backspaceKeyAction
         self.selection = selection
+        self.inputMode = inputMode
+        self.toggleInputMode = toggleInputMode
+        self.tag = tag
     }
     
     public static func ==(lhs: ListComposePollOptionComponent, rhs: ListComposePollOptionComponent) -> Bool {
@@ -102,6 +129,9 @@ public final class ListComposePollOptionComponent: Component {
             return false
         }
         if lhs.selection != rhs.selection {
+            return false
+        }
+        if lhs.inputMode != rhs.inputMode {
             return false
         }
 
@@ -181,9 +211,10 @@ public final class ListComposePollOptionComponent: Component {
         }
     }
     
-    public final class View: UIView, ListSectionComponent.ChildView {
+    public final class View: UIView, ListSectionComponent.ChildView, ComponentTaggedView {
         private let textField = ComponentView<Empty>()
-        private let textFieldExternalState = TextFieldComponent.ExternalState()
+        
+        private var modeSelector: ComponentView<Empty>?
         
         private var checkView: CheckView?
         
@@ -201,6 +232,10 @@ public final class ListComposePollOptionComponent: Component {
             }
         }
         
+        public var textFieldView: TextFieldComponent.View? {
+            return self.textField.view as? TextFieldComponent.View
+        }
+        
         public var customUpdateIsHighlighted: ((Bool) -> Void)?
         public private(set) var separatorInset: CGFloat = 0.0
         
@@ -212,9 +247,31 @@ public final class ListComposePollOptionComponent: Component {
             preconditionFailure()
         }
         
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
+        
         public func activateInput() {
             if let textFieldView = self.textField.view as? TextFieldComponent.View {
                 textFieldView.activateInput()
+            }
+        }
+        
+        public func insertText(text: NSAttributedString) {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                textFieldView.insertText(text)
+            }
+        }
+        
+        public func backwardsDeleteText() {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                textFieldView.deleteBackward()
             }
         }
         
@@ -224,15 +281,21 @@ public final class ListComposePollOptionComponent: Component {
                 self.isUpdating = false
             }
             
+            let previousComponent = self.component
             self.component = component
             self.state = state
             
             let verticalInset: CGFloat = 12.0
             var leftInset: CGFloat = 16.0
-            let rightInset: CGFloat = 16.0
+            var rightInset: CGFloat = 16.0
+            let modeSelectorSize = CGSize(width: 32.0, height: 32.0)
             
             if component.selection != nil {
                 leftInset += 34.0
+            }
+            
+            if component.inputMode != nil {
+                rightInset += 34.0
             }
             
             let textFieldSize = self.textField.update(
@@ -241,11 +304,11 @@ public final class ListComposePollOptionComponent: Component {
                     context: component.context,
                     theme: component.theme,
                     strings: component.strings,
-                    externalState: self.textFieldExternalState,
+                    externalState: component.externalState ?? TextFieldComponent.ExternalState(),
                     fontSize: 17.0,
                     textColor: component.theme.list.itemPrimaryTextColor,
                     insets: UIEdgeInsets(top: verticalInset, left: 8.0, bottom: verticalInset, right: 8.0),
-                    hideKeyboard: false,
+                    hideKeyboard: component.inputMode == .emoji,
                     customInputView: nil,
                     resetText: component.resetText.flatMap { resetText in
                         return NSAttributedString(string: resetText.value, font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor)
@@ -275,10 +338,10 @@ public final class ListComposePollOptionComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - leftInset - rightInset, height: availableSize.height)
+                containerSize: CGSize(width: availableSize.width - leftInset - rightInset + 8.0 * 2.0, height: availableSize.height)
             )
             
-            let size = CGSize(width: textFieldSize.width, height: textFieldSize.height - 1.0)
+            let size = CGSize(width: availableSize.width, height: textFieldSize.height - 1.0)
             let textFieldFrame = CGRect(origin: CGPoint(x: leftInset - 16.0, y: 0.0), size: textFieldSize)
             
             if let textFieldView = self.textField.view {
@@ -327,11 +390,73 @@ public final class ListComposePollOptionComponent: Component {
                 })
             }
             
-            self.separatorInset = leftInset
+            if let inputMode = component.inputMode {
+                var modeSelectorTransition = transition
+                let modeSelector: ComponentView<Empty>
+                if let current = self.modeSelector {
+                    modeSelector = current
+                } else {
+                    modeSelectorTransition = modeSelectorTransition.withAnimation(.none)
+                    modeSelector = ComponentView()
+                    self.modeSelector = modeSelector
+                }
+                let animationName: String
+                var playAnimation = false
+                if let previousComponent, let previousInputMode = previousComponent.inputMode {
+                    if previousInputMode != inputMode {
+                        playAnimation = true
+                    }
+                }
+                switch inputMode {
+                case .keyboard:
+                    animationName = "input_anim_keyToSmile"
+                case .emoji:
+                    animationName = "input_anim_smileToKey"
+                }
+                
+                let _ = modeSelector.update(
+                    transition: modeSelectorTransition,
+                    component: AnyComponent(PlainButtonComponent(
+                        content: AnyComponent(LottieComponent(
+                            content: LottieComponent.AppBundleContent(
+                                name: animationName
+                            ),
+                            color: component.theme.chat.inputPanel.inputControlColor.blitOver(component.theme.list.itemBlocksBackgroundColor, alpha: 1.0),
+                            size: modeSelectorSize
+                        )),
+                        effectAlignment: .center,
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.toggleInputMode?()
+                        },
+                        animateScale: false
+                    )),
+                    environment: {},
+                    containerSize: modeSelectorSize
+                )
+                let modeSelectorFrame = CGRect(origin: CGPoint(x: size.width - 4.0 - modeSelectorSize.width, y: floor((size.height - modeSelectorSize.height) * 0.5)), size: modeSelectorSize)
+                if let modeSelectorView = modeSelector.view as? PlainButtonComponent.View {
+                    if modeSelectorView.superview == nil {
+                        self.addSubview(modeSelectorView)
+                    }
+                    
+                    if playAnimation, let animationView = modeSelectorView.contentView as? LottieComponent.View {
+                        animationView.playOnce()
+                    }
+                    
+                    modeSelectorTransition.setFrame(view: modeSelectorView, frame: modeSelectorFrame)
+                    if let externalState = component.externalState {
+                        modeSelectorView.isHidden = !externalState.isEditing
+                    }
+                }
+            } else if let modeSelector = self.modeSelector {
+                self.modeSelector = nil
+                modeSelector.view?.removeFromSuperview()
+            }
             
-            component.externalState?.hasText = self.textFieldExternalState.hasText
-            component.externalState?.text = self.textFieldExternalState.text
-            component.externalState?.isEditing = self.textFieldExternalState.isEditing
+            self.separatorInset = leftInset
             
             return size
         }
@@ -378,7 +503,9 @@ public final class ListComposePollOptionComponent: Component {
                     transition.setPosition(view: placeholderView, position: placeholderFrame.origin)
                     placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
                     
-                    placeholderView.isHidden = self.textFieldExternalState.hasText
+                    if let externalState = component.externalState {
+                        placeholderView.isHidden = externalState.hasText
+                    }
                 }
             } else if let customPlaceholder = self.customPlaceholder {
                 self.customPlaceholder = nil

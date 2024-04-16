@@ -41,49 +41,47 @@ static const void *positionChangedKey = &positionChangedKey;
 - (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self != nil) {
-        if (iosMajorVersion() >= 8) {
-            _offIconView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PermissionSwitchOff.png")];
-            _onIconView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PermissionSwitchOn.png")];
-            self.layer.cornerRadius = 17.0f;
-            self.backgroundColor = [UIColor redColor];
-            self.tintColor = [UIColor redColor];
-            UIView *handleView = self.subviews[0].subviews.lastObject;
-            if (iosMajorVersion() >= 13) {
-                handleView = self.subviews[0].subviews[1].subviews.lastObject;
-            } else {
-                handleView = self.subviews[0].subviews.lastObject;
-            }
-            
-            static Class subclass;
-            static dispatch_once_t onceToken;
-            dispatch_once(&onceToken, ^{
-                subclass = freedomMakeClass([handleView.layer class], [TGBaseIconSwitch class]);
-                object_setClass(handleView.layer, subclass);
-            });
-            
-            CGPoint offset = CGPointZero;
-            if (iosMajorVersion() >= 12) {
-                offset = CGPointMake(-7.0, -3.0);
-            }
-            
-            _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(14.5f) + offset.y);
-            _onIconView.frame = CGRectOffset(_onIconView.bounds, 20.0f + offset.x, 15.0f + offset.y);
-            [handleView addSubview:_onIconView];
-            [handleView addSubview:_offIconView];
-            
-            _onIconView.alpha = 0.0f;
-            
-            [self addTarget:self action:@selector(currentValueChanged) forControlEvents:UIControlEventValueChanged];
-            
-            __weak TGIconSwitchView *weakSelf = self;
-            void (^block)(CGPoint) = ^(CGPoint point) {
-                __strong TGIconSwitchView *strongSelf = weakSelf;
-                if (strongSelf != nil) {
-                    [strongSelf updateState:point.x > 30.0 animated:true force:false];
-                }
-            };
-            objc_setAssociatedObject(handleView.layer, positionChangedKey, [block copy], OBJC_ASSOCIATION_RETAIN);
+        _offIconView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PermissionSwitchOff.png")];
+        _onIconView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PermissionSwitchOn.png")];
+        self.layer.cornerRadius = 17.0f;
+        self.backgroundColor = [UIColor redColor];
+        self.tintColor = [UIColor redColor];
+        UIView *handleView = self.subviews[0].subviews.lastObject;
+        if (iosMajorVersion() >= 13) {
+            handleView = self.subviews[0].subviews[1].subviews.lastObject;
+        } else {
+            handleView = self.subviews[0].subviews.lastObject;
         }
+        
+        static Class subclass;
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            subclass = freedomMakeClass([handleView.layer class], [TGBaseIconSwitch class]);
+            object_setClass(handleView.layer, subclass);
+        });
+        
+        CGPoint offset = CGPointZero;
+        if (iosMajorVersion() >= 12) {
+            offset = CGPointMake(-7.0, -3.0);
+        }
+        
+        _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(14.5f) + offset.y);
+        _onIconView.frame = CGRectOffset(_onIconView.bounds, 20.0f + offset.x, 15.0f + offset.y);
+        [handleView addSubview:_onIconView];
+        [handleView addSubview:_offIconView];
+        
+        _onIconView.alpha = 0.0f;
+        
+        [self addTarget:self action:@selector(currentValueChanged) forControlEvents:UIControlEventValueChanged];
+        
+        __weak TGIconSwitchView *weakSelf = self;
+        void (^block)(CGPoint) = ^(CGPoint point) {
+            __strong TGIconSwitchView *strongSelf = weakSelf;
+            if (strongSelf != nil) {
+                [strongSelf updateState:point.x > 30.0 animated:true force:false];
+            }
+        };
+        objc_setAssociatedObject(handleView.layer, positionChangedKey, [block copy], OBJC_ASSOCIATION_RETAIN);
     }
     return self;
 }

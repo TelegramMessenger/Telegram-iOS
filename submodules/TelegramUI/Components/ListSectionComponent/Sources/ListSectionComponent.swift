@@ -88,8 +88,6 @@ public final class ListSectionContentView: UIView {
         
         super.init(frame: CGRect())
         
-        self.clipsToBounds = true
-        
         self.layer.addSublayer(self.contentSeparatorContainerLayer)
         self.layer.addSublayer(self.contentHighlightContainerLayer)
         self.addSubview(self.contentItemContainerView)
@@ -132,8 +130,15 @@ public final class ListSectionContentView: UIView {
         }
     }
     
-    public func update(configuration: Configuration, width: CGFloat, readyItems: [ReadyItem], transition: Transition) -> UpdateResult {
+    public func update(configuration: Configuration, width: CGFloat, leftInset: CGFloat, readyItems: [ReadyItem], transition: Transition) -> UpdateResult {
         self.configuration = configuration
+        
+        switch configuration.background {
+        case .all, .range:
+            self.clipsToBounds = true
+        case let .none(clipped):
+            self.clipsToBounds = clipped
+        }
         
         let backgroundColor: UIColor
         if self.highlightedItemId != nil && configuration.extendsItemHighlightToSection {
@@ -149,9 +154,11 @@ public final class ListSectionContentView: UIView {
             let readyItem = readyItems[index]
             validItemIds.append(readyItem.id)
             
-            let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: innerContentHeight), size: readyItem.size)
+            let itemFrame = CGRect(origin: CGPoint(x: leftInset, y: innerContentHeight), size: readyItem.size)
             if let itemComponentView = readyItem.itemView.contents.view {
+                var isAdded = false
                 if itemComponentView.superview == nil {
+                    isAdded = true
                     readyItem.itemView.addSubview(itemComponentView)
                     self.contentItemContainerView.addSubview(readyItem.itemView)
                     self.contentSeparatorContainerLayer.addSublayer(readyItem.itemView.separatorLayer)
@@ -174,16 +181,32 @@ public final class ListSectionContentView: UIView {
                 if let itemComponentView = itemComponentView as? ListSectionComponentChildView {
                     separatorInset = itemComponentView.separatorInset
                 }
-                readyItem.transition.setFrame(view: readyItem.itemView, frame: itemFrame)
+                
+                let itemSeparatorFrame = CGRect(origin: CGPoint(x: separatorInset, y: itemFrame.maxY - UIScreenPixel), size: CGSize(width: width - separatorInset, height: UIScreenPixel))
+                
+                if isAdded && itemComponentView is ListSubSectionComponent.View {
+                    readyItem.itemView.frame = itemFrame
+                    readyItem.itemView.clipsToBounds = true
+                    readyItem.itemView.frame = CGRect(origin: CGPoint(x: itemFrame.minX, y: itemFrame.minY), size: CGSize(width: itemFrame.width, height: 0.0))
+                    let itemView = readyItem.itemView
+                    transition.setFrame(view: readyItem.itemView, frame: itemFrame, completion: { [weak itemView] completed in
+                        if completed {
+                            itemView?.clipsToBounds = false
+                        }
+                    })
+                    
+                    readyItem.itemView.separatorLayer.frame = CGRect(origin: CGPoint(x: itemSeparatorFrame.minX, y: itemFrame.minY), size: CGSize(width: itemSeparatorFrame.width, height: 0.0))
+                    transition.setFrame(layer: readyItem.itemView.separatorLayer, frame: itemSeparatorFrame)
+                } else {
+                    readyItem.transition.setFrame(view: readyItem.itemView, frame: itemFrame)
+                    readyItem.transition.setFrame(layer: readyItem.itemView.separatorLayer, frame: itemSeparatorFrame)
+                }
                 
                 let itemSeparatorTopOffset: CGFloat = index == 0 ? 0.0 : -UIScreenPixel
                 let itemHighlightFrame = CGRect(origin: CGPoint(x: itemFrame.minX, y: itemFrame.minY + itemSeparatorTopOffset), size: CGSize(width: itemFrame.width, height: itemFrame.height - itemSeparatorTopOffset))
                 readyItem.transition.setFrame(layer: readyItem.itemView.highlightLayer, frame: itemHighlightFrame)
                 
                 readyItem.transition.setFrame(view: itemComponentView, frame: CGRect(origin: CGPoint(), size: itemFrame.size))
-                
-                let itemSeparatorFrame = CGRect(origin: CGPoint(x: separatorInset, y: itemFrame.maxY - UIScreenPixel), size: CGSize(width: width - separatorInset, height: UIScreenPixel))
-                readyItem.transition.setFrame(layer: readyItem.itemView.separatorLayer, frame: itemSeparatorFrame)
                 
                 let separatorAlpha: CGFloat
                 if configuration.displaySeparators {
@@ -205,6 +228,12 @@ public final class ListSectionContentView: UIView {
         for (id, itemView) in self.itemViews {
             if !validItemIds.contains(id) {
                 removedItemIds.append(id)
+                
+                if let itemComponentView = itemView.contents.view, itemComponentView is ListSubSectionComponent.View {
+                    itemView.clipsToBounds = true
+                    transition.setFrame(view: itemView, frame: CGRect(origin: itemView.frame.origin, size: CGSize(width: itemView.bounds.width, height: 0.0)))
+                    transition.setFrame(layer: itemView.separatorLayer, frame: CGRect(origin: CGPoint(x: itemView.separatorLayer.frame.minX, y: itemView.frame.minY), size: itemView.separatorLayer.bounds.size))
+                }
                 
                 transition.setAlpha(view: itemView, alpha: 0.0, completion: { [weak itemView] _ in
                     itemView?.removeFromSuperview()
@@ -328,8 +357,6 @@ public final class ListSectionComponent: Component {
         private var header: ComponentView<Empty>?
         private var footer: ComponentView<Empty>?
         
-        private var highlightedItemId: AnyHashable?
-        
         private var component: ListSectionComponent?
         
         public override init(frame: CGRect) {
@@ -343,6 +370,10 @@ public final class ListSectionComponent: Component {
         
         required public init?(coder: NSCoder) {
             preconditionFailure()
+        }
+        
+        public func itemView(id: AnyHashable) -> UIView? {
+            return self.contentView.itemViews[id]?.contents.view
         }
         
         func update(component: ListSectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
@@ -422,6 +453,7 @@ public final class ListSectionComponent: Component {
                     background: component.background
                 ),
                 width: availableSize.width,
+                leftInset: 0.0,
                 readyItems: readyItems,
                 transition: transition
             )
@@ -483,3 +515,135 @@ public final class ListSectionComponent: Component {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
+
+public final class ListSubSectionComponent: Component {
+    public typealias ChildView = ListSectionComponentChildView
+    
+    public let theme: PresentationTheme
+    public let leftInset: CGFloat
+    public let items: [AnyComponentWithIdentity<Empty>]
+    public let displaySeparators: Bool
+    
+    public init(
+        theme: PresentationTheme,
+        leftInset: CGFloat,
+        items: [AnyComponentWithIdentity<Empty>],
+        displaySeparators: Bool = true
+    ) {
+        self.theme = theme
+        self.leftInset = leftInset
+        self.items = items
+        self.displaySeparators = displaySeparators
+    }
+    
+    public static func ==(lhs: ListSubSectionComponent, rhs: ListSubSectionComponent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.leftInset != rhs.leftInset {
+            return false
+        }
+        if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.displaySeparators != rhs.displaySeparators {
+            return false
+        }
+        return true
+    }
+    
+    public final class View: UIView, ListSectionComponent.ChildView {
+        private let contentView: ListSectionContentView
+        
+        private var component: ListSubSectionComponent?
+        
+        public var customUpdateIsHighlighted: ((Bool) -> Void)?
+        public var separatorInset: CGFloat = 0.0
+        
+        public override init(frame: CGRect) {
+            self.contentView = ListSectionContentView()
+            
+            super.init(frame: CGRect())
+            
+            self.addSubview(self.contentView)
+        }
+        
+        required public init?(coder: NSCoder) {
+            preconditionFailure()
+        }
+        
+        public func itemView(id: AnyHashable) -> UIView? {
+            return self.contentView.itemViews[id]?.contents.view
+        }
+        
+        func update(component: ListSubSectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.component = component
+            
+            var contentHeight: CGFloat = 0.0
+            
+            var readyItems: [ListSectionContentView.ReadyItem] = []
+            for i in 0 ..< component.items.count {
+                let item = component.items[i]
+                let itemId = item.id
+                
+                let itemView: ListSectionContentView.ItemView
+                var itemTransition = transition
+                if let current = self.contentView.itemViews[itemId] {
+                    itemView = current
+                } else {
+                    itemTransition = itemTransition.withAnimation(.none)
+                    itemView = ListSectionContentView.ItemView()
+                    self.contentView.itemViews[itemId] = itemView
+                    itemView.contents.parentState = state
+                }
+                
+                let itemSize = itemView.contents.update(
+                    transition: itemTransition,
+                    component: item.component,
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - component.leftInset, height: availableSize.height)
+                )
+                
+                readyItems.append(ListSectionContentView.ReadyItem(
+                    id: itemId,
+                    itemView: itemView,
+                    size: itemSize,
+                    transition: itemTransition
+                ))
+            }
+            
+            let contentResult = self.contentView.update(
+                configuration: ListSectionContentView.Configuration(
+                    theme: component.theme,
+                    displaySeparators: component.displaySeparators,
+                    extendsItemHighlightToSection: false,
+                    background: .none(clipped: false)
+                ),
+                width: availableSize.width - component.leftInset,
+                leftInset: 0.0,
+                readyItems: readyItems,
+                transition: transition
+            )
+            let innerContentHeight = contentResult.size.height
+            
+            let contentFrame = CGRect(origin: CGPoint(x: component.leftInset, y: contentHeight), size: CGSize(width: availableSize.width - component.leftInset, height: innerContentHeight))
+            transition.setFrame(view: self.contentView, frame: contentFrame)
+            transition.setFrame(view: self.contentView.externalContentBackgroundView, frame: contentResult.backgroundFrame.offsetBy(dx: contentFrame.minX, dy: contentFrame.minY))
+
+            contentHeight += innerContentHeight
+            
+            self.separatorInset = component.leftInset
+            
+            return CGSize(width: availableSize.width, height: contentHeight)
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+

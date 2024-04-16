@@ -488,10 +488,20 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
 }
 
 public final class ComposedPoll {
+    public struct Text {
+        public let string: String
+        public let entities: [MessageTextEntity]
+        
+        public init(string: String, entities: [MessageTextEntity]) {
+            self.string = string
+            self.entities = entities
+        }
+    }
+    
     public let publicity: TelegramMediaPollPublicity
     public let kind: TelegramMediaPollKind
 
-    public let text: String
+    public let text: Text
     public let options: [TelegramMediaPollOption]
     public let correctAnswers: [Data]?
     public let results: TelegramMediaPollResults
@@ -500,7 +510,7 @@ public final class ComposedPoll {
     public init(
         publicity: TelegramMediaPollPublicity,
         kind: TelegramMediaPollKind,
-        text: String,
+        text: Text,
         options: [TelegramMediaPollOption],
         correctAnswers: [Data]?,
         results: TelegramMediaPollResults,
@@ -928,7 +938,7 @@ public func createPollController(context: AccountContext, updatedPresentationDat
                 let optionText = state.options[i].item.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !optionText.isEmpty {
                     let optionData = "\(i)".data(using: .utf8)!
-                    options.append(TelegramMediaPollOption(text: optionText, opaqueIdentifier: optionData))
+                    options.append(TelegramMediaPollOption(text: optionText, entities: [], opaqueIdentifier: optionData))
                     if state.isQuiz && state.options[i].item.isSelected {
                         correctAnswers = [optionData]
                     }
@@ -959,7 +969,7 @@ public func createPollController(context: AccountContext, updatedPresentationDat
             completion(ComposedPoll(
                 publicity: publicity,
                 kind: kind,
-                text: processPollText(state.text),
+                text: ComposedPoll.Text(string: processPollText(state.text), entities: []),
                 options: options,
                 correctAnswers: correctAnswers,
                 results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: resolvedSolution),

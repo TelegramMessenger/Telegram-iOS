@@ -44,7 +44,7 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
                                         } else {
                                             kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
                                         }
-                                        resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod)
+                                        resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: question, textEntities: [], options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod)
                                     }
                                 }
                                 

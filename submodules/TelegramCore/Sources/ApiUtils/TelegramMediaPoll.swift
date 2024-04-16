@@ -7,7 +7,7 @@ extension TelegramMediaPollOption {
     init(apiOption: Api.PollAnswer) {
         switch apiOption {
             case let .pollAnswer(text, option):
-                self.init(text: text, opaqueIdentifier: option.makeData())
+                self.init(text: text, entities: [], opaqueIdentifier: option.makeData())
         }
     }
     
