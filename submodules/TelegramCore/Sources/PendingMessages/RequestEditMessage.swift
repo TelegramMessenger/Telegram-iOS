@@ -305,7 +305,19 @@ func _internal_requestEditLiveLocation(postbox: Postbox, network: Network, state
             if let _ = proximityNotificationRadius {
                 flags |= 1 << 3
             }
-            inputMedia = .inputMediaGeoLive(flags: flags, geoPoint: inputGeoPoint, heading: heading, period: extendPeriod.flatMap { $0 + liveBroadcastingTimeout } ?? liveBroadcastingTimeout, proximityNotificationRadius: proximityNotificationRadius)
+            
+            let period: Int32
+            if let extendPeriod {
+                if extendPeriod == liveLocationIndefinitePeriod {
+                    period = extendPeriod
+                } else {
+                    period = liveBroadcastingTimeout + extendPeriod
+                }
+            } else {
+                period = liveBroadcastingTimeout
+            }
+            
+            inputMedia = .inputMediaGeoLive(flags: flags, geoPoint: inputGeoPoint, heading: heading, period: period, proximityNotificationRadius: proximityNotificationRadius)
         } else {
             inputMedia = .inputMediaGeoLive(flags: 1 << 0, geoPoint: .inputGeoPoint(flags: 0, lat: media.latitude, long: media.longitude, accuracyRadius: nil), heading: nil, period: nil, proximityNotificationRadius: nil)
         }
