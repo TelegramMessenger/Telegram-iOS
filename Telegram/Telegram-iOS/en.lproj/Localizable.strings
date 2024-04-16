@@ -12063,7 +12063,14 @@ Sorry for the inconvenience.";
 "Login.EnterPhraseBeginningText" = "We've sent you an SMS with a secret phrase that starts with **\"%1$@\"** to your phone **%2$@**.";
 "Login.EnterPhrasePlaceholder" = "Enter Phrase from SMS";
 
+"Login.EnterPhraseHint" = "You can copy and paste the phrase here.";
+"Login.BackToWord" = "Back to entering word";
+"Login.BackToPhrase" = "Back to entering phrase";
+
 "Login.WrongPhraseError" = "Incorrect, please try again.";
+"Login.Paste" = "Paste";
+
+"Login.ReturnToCode" = "Return to entering the code";
 
 "Map.LiveLocationPrivateNewDescription" = "Choose for how long **%@** will see your accurate location, including when the app is closed.";
 "Map.LiveLocationGroupNewDescription" = "Choose for how long people in this chat will see your accurate location, including when the app is closed.";
@@ -12077,3 +12084,5 @@ Sorry for the inconvenience.";
 "Map.LiveLocationForHours_any" = "For %@ hours";
 
 "Map.LiveLocationIndefinite" = "Until I turn it off";
+
+"Channel.AdminLog.Settings" = "Settings";
