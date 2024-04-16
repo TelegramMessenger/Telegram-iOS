@@ -19,7 +19,7 @@ func _internal_topPeerActiveLiveLocationMessages(viewTracker: AccountViewTracker
         for entry in view.entries {
             for media in entry.message.media {
                 if let location = media as? TelegramMediaMap, let liveBroadcastingTimeout = location.liveBroadcastingTimeout {
-                    if entry.message.timestamp + liveBroadcastingTimeout > timestamp {
+                    if liveBroadcastingTimeout == liveLocationIndefinitePeriod || entry.message.timestamp + liveBroadcastingTimeout > timestamp {
                         result.append(entry.message)
                     }
                 } else {

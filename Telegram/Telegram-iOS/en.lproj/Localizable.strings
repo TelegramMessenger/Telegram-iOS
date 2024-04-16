@@ -12085,4 +12085,7 @@ Sorry for the inconvenience.";
 
 "Map.LiveLocationIndefinite" = "Until I turn it off";
 
+"Map.TapToAddTime" = "tap to add time";
+"Map.SharingLocation" = "Sharing Location...";
+
 "Channel.AdminLog.Settings" = "Settings";

@@ -142,33 +142,34 @@ public final class LocationPickerController: ViewController, AttachmentContainab
                     return
                 }
                 let controller = ActionSheetController(presentationData: strongSelf.presentationData)
-                var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
+                var title = strongSelf.presentationData.strings.Map_LiveLocationGroupNewDescription
                 if case let .share(peer, _, _) = strongSelf.mode, let peer = peer, case .user = peer {
-                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(peer.compactDisplayTitle).string
+                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateNewDescription(peer.compactDisplayTitle).string
                 }
+                
+                let sendLiveLocationImpl: (Int32) -> Void = { [weak self, weak controller] period in
+                    controller?.dismissAnimated()
+                    guard let self, let controller else {
+                        return
+                    }
+                    controller.dismissAnimated()
+                    self.completion(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: period), nil, nil, nil, nil)
+                    self.dismiss()
+                }
+                
                 controller.setItemGroups([
                     ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: title),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor15Minutes, color: .accent, action: { [weak self, weak controller] in
-                            controller?.dismissAnimated()
-                            if let strongSelf = self {
-                                strongSelf.completion(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 15 * 60), nil, nil, nil, nil)
-                                strongSelf.dismiss()
-                            }
+                        ActionSheetTextItem(title: title, font: .large, parseMarkdown: true),
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationForMinutes(15), color: .accent, action: { sendLiveLocationImpl(15 * 60)
                         }),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: { [weak self, weak controller] in
-                            controller?.dismissAnimated()
-                            if let strongSelf = self {
-                                strongSelf.completion(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 60 * 60 - 1), nil, nil, nil, nil)
-                                strongSelf.dismiss()
-                            }
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationForHours(1), color: .accent, action: {
+                            sendLiveLocationImpl(60 * 60 - 1)
                         }),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: { [weak self, weak controller] in
-                            controller?.dismissAnimated()
-                            if let strongSelf = self {
-                                strongSelf.completion(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 8 * 60 * 60), nil, nil, nil, nil)
-                                strongSelf.dismiss()
-                            }
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationForHours(8), color: .accent, action: {
+                            sendLiveLocationImpl(8 * 60 * 60)
+                        }),
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationIndefinite, color: .accent, action: {
+                            sendLiveLocationImpl(liveLocationIndefinitePeriod)
                         })
                     ]),
                     ActionSheetItemGroup(items: [
