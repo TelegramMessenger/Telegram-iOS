@@ -3,20 +3,24 @@ import Postbox
 
 public struct TelegramMediaPollOption: Equatable, PostboxCoding {
     public let text: String
+    public let entities: [MessageTextEntity]
     public let opaqueIdentifier: Data
     
-    public init(text: String, opaqueIdentifier: Data) {
+    public init(text: String, entities: [MessageTextEntity], opaqueIdentifier: Data) {
         self.text = text
+        self.entities = entities
         self.opaqueIdentifier = opaqueIdentifier
     }
     
     public init(decoder: PostboxDecoder) {
         self.text = decoder.decodeStringForKey("t", orElse: "")
+        self.entities = decoder.decodeObjectArrayWithDecoderForKey("et")
         self.opaqueIdentifier = decoder.decodeDataForKey("i") ?? Data()
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.text, forKey: "t")
+        encoder.encodeObjectArray(self.entities, forKey: "et")
         encoder.encodeData(self.opaqueIdentifier, forKey: "i")
     }
 }
@@ -150,17 +154,19 @@ public final class TelegramMediaPoll: Media, Equatable {
     public let kind: TelegramMediaPollKind
     
     public let text: String
+    public let textEntities: [MessageTextEntity]
     public let options: [TelegramMediaPollOption]
     public let correctAnswers: [Data]?
     public let results: TelegramMediaPollResults
     public let isClosed: Bool
     public let deadlineTimeout: Int32?
     
-    public init(pollId: MediaId, publicity: TelegramMediaPollPublicity, kind: TelegramMediaPollKind, text: String, options: [TelegramMediaPollOption], correctAnswers: [Data]?, results: TelegramMediaPollResults, isClosed: Bool, deadlineTimeout: Int32?) {
+    public init(pollId: MediaId, publicity: TelegramMediaPollPublicity, kind: TelegramMediaPollKind, text: String, textEntities: [MessageTextEntity], options: [TelegramMediaPollOption], correctAnswers: [Data]?, results: TelegramMediaPollResults, isClosed: Bool, deadlineTimeout: Int32?) {
         self.pollId = pollId
         self.publicity = publicity
         self.kind = kind
         self.text = text
+        self.textEntities = textEntities
         self.options = options
         self.correctAnswers = correctAnswers
         self.results = results
@@ -177,6 +183,7 @@ public final class TelegramMediaPoll: Media, Equatable {
         self.publicity = TelegramMediaPollPublicity(rawValue: decoder.decodeInt32ForKey("pb", orElse: 0)) ?? TelegramMediaPollPublicity.anonymous
         self.kind = decoder.decodeObjectForKey("kn", decoder: { TelegramMediaPollKind(decoder: $0) }) as? TelegramMediaPollKind ?? TelegramMediaPollKind.poll(multipleAnswers: false)
         self.text = decoder.decodeStringForKey("t", orElse: "")
+        self.textEntities = decoder.decodeObjectArrayWithDecoderForKey("te")
         self.options = decoder.decodeObjectArrayWithDecoderForKey("os")
         self.correctAnswers = decoder.decodeOptionalDataArrayForKey("ca")
         self.results = decoder.decodeObjectForKey("rs", decoder: { TelegramMediaPollResults(decoder: $0) }) as? TelegramMediaPollResults ?? TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil)
@@ -191,6 +198,7 @@ public final class TelegramMediaPoll: Media, Equatable {
         encoder.encodeObject(self.kind, forKey: "kn")
         encoder.encodeBytes(buffer, forKey: "i")
         encoder.encodeString(self.text, forKey: "t")
+        encoder.encodeObjectArray(self.textEntities, forKey: "te")
         encoder.encodeObjectArray(self.options, forKey: "os")
         if let correctAnswers = self.correctAnswers {
             encoder.encodeDataArray(correctAnswers, forKey: "ca")
@@ -228,6 +236,9 @@ public final class TelegramMediaPoll: Media, Equatable {
             return false
         }
         if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.textEntities != rhs.textEntities {
             return false
         }
         if lhs.options != rhs.options {
@@ -273,6 +284,6 @@ public final class TelegramMediaPoll: Media, Equatable {
         } else {
             updatedResults = results
         }
-        return TelegramMediaPoll(pollId: self.pollId, publicity: self.publicity, kind: self.kind, text: self.text, options: self.options, correctAnswers: self.correctAnswers, results: updatedResults, isClosed: self.isClosed, deadlineTimeout: self.deadlineTimeout)
+        return TelegramMediaPoll(pollId: self.pollId, publicity: self.publicity, kind: self.kind, text: self.text, textEntities: self.textEntities, options: self.options, correctAnswers: self.correctAnswers, results: updatedResults, isClosed: self.isClosed, deadlineTimeout: self.deadlineTimeout)
     }
 }

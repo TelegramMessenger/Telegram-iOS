@@ -21,6 +21,11 @@ import PeerAllowedReactionsScreen
 import AttachmentUI
 import ListMultilineTextFieldItemComponent
 import ListActionItemComponent
+import ChatEntityKeyboardInputNode
+import ChatPresentationInterfaceState
+import EmojiSuggestionsComponent
+import TextFormat
+import TextFieldComponent
 
 final class ComposePollScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -48,7 +53,7 @@ final class ComposePollScreenComponent: Component {
     
     private final class PollOption {
         let id: Int
-        let textInputState = ListComposePollOptionComponent.ExternalState()
+        let textInputState = TextFieldComponent.ExternalState()
         let textFieldTag = NSObject()
         var resetText: String?
         
@@ -78,10 +83,7 @@ final class ComposePollScreenComponent: Component {
         private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
         
-        private var emojiContent: EmojiPagerContentComponent?
-        private var emojiContentDisposable: Disposable?
-        
-        private let pollTextInputState = ListMultilineTextFieldItemComponent.ExternalState()
+        private let pollTextInputState = TextFieldComponent.ExternalState()
         private let pollTextFieldTag = NSObject()
         private var resetPollText: String?
         
@@ -96,7 +98,18 @@ final class ComposePollScreenComponent: Component {
         private var isQuiz: Bool = false
         private var selectedQuizOptionId: Int?
         
-        private var displayInput: Bool = false
+        private var currentInputMode: ListComposePollOptionComponent.InputMode = .keyboard
+        
+        private var inputMediaNodeData: ChatEntityKeyboardInputNode.InputData?
+        private var inputMediaNodeDataDisposable: Disposable?
+        private var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
+        private var inputMediaInteraction: ChatEntityKeyboardInputNode.Interaction?
+        private var inputMediaNode: ChatEntityKeyboardInputNode?
+        private var inputMediaNodeBackground = SimpleLayer()
+        
+        private let inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
+        
+        private var currentEmojiSuggestionView: ComponentHostView<Empty>?
         
         override init(frame: CGRect) {
             self.scrollView = UIScrollView()
@@ -121,7 +134,7 @@ final class ComposePollScreenComponent: Component {
         }
         
         deinit {
-            self.emojiContentDisposable?.dispose()
+            self.inputMediaNodeDataDisposable?.dispose()
         }
 
         func scrollToTop() {
@@ -150,8 +163,19 @@ final class ComposePollScreenComponent: Component {
                 if self.selectedQuizOptionId == pollOption.id {
                     selectedQuizOption = optionData
                 }
+                var entities: [MessageTextEntity] = []
+                for entity in generateChatInputTextEntities(pollOption.textInputState.text) {
+                    switch entity.type {
+                    case .CustomEmoji:
+                        entities.append(entity)
+                    default:
+                        break
+                    }
+                }
+                
                 mappedOptions.append(TelegramMediaPollOption(
                     text: pollOption.textInputState.text.string,
+                    entities: entities,
                     opaqueIdentifier: optionData
                 ))
             }
@@ -174,10 +198,20 @@ final class ComposePollScreenComponent: Component {
                 mappedSolution = self.quizAnswerTextInputState.text.string
             }
             
+            var textEntities: [MessageTextEntity] = []
+            for entity in generateChatInputTextEntities(self.pollTextInputState.text) {
+                switch entity.type {
+                case .CustomEmoji:
+                    textEntities.append(entity)
+                default:
+                    break
+                }
+            }
+            
             return ComposedPoll(
                 publicity: self.isAnonymous ? .anonymous : .public,
                 kind: mappedKind,
-                text: self.pollTextInputState.text.string,
+                text: ComposedPoll.Text(string: self.pollTextInputState.text.string, entities: textEntities),
                 options: mappedOptions,
                 correctAnswers: mappedCorrectAnswers,
                 results: TelegramMediaPollResults(
@@ -215,6 +249,187 @@ final class ComposePollScreenComponent: Component {
             }
         }
         
+        func isPanGestureEnabled() -> Bool {
+            if self.inputMediaNode != nil {
+                return false
+            }
+            
+            for (_, state) in self.collectTextInputStates() {
+                if state.isEditing {
+                    return false
+                }
+            }
+            
+            return true
+        }
+        
+        private func updateInputMediaNode(
+            component: ComposePollScreenComponent,
+            availableSize: CGSize,
+            bottomInset: CGFloat,
+            inputHeight: CGFloat,
+            effectiveInputHeight: CGFloat,
+            metrics: LayoutMetrics,
+            deviceMetrics: DeviceMetrics,
+            transition: Transition
+        ) -> CGFloat {
+            let bottomInset: CGFloat = bottomInset + 8.0
+            let bottomContainerInset: CGFloat = 0.0
+            let needsInputActivation: Bool = !"".isEmpty
+            
+            var height: CGFloat = 0.0
+            if case .emoji = self.currentInputMode, let inputData = self.inputMediaNodeData {
+                let inputMediaNode: ChatEntityKeyboardInputNode
+                var inputMediaNodeTransition = transition
+                var animateIn = false
+                if let current = self.inputMediaNode {
+                    inputMediaNode = current
+                } else {
+                    animateIn = true
+                    inputMediaNodeTransition = inputMediaNodeTransition.withAnimation(.none)
+                    inputMediaNode = ChatEntityKeyboardInputNode(
+                        context: component.context,
+                        currentInputData: inputData,
+                        updatedInputData: self.inputMediaNodeDataPromise.get(),
+                        defaultToEmojiTab: true,
+                        opaqueTopPanelBackground: false,
+                        interaction: self.inputMediaInteraction,
+                        chatPeerId: nil,
+                        stateContext: self.inputMediaNodeStateContext
+                    )
+                    inputMediaNode.clipsToBounds = true
+                    
+                    inputMediaNode.externalTopPanelContainerImpl = nil
+                    inputMediaNode.useExternalSearchContainer = true
+                    if inputMediaNode.view.superview == nil {
+                        self.inputMediaNodeBackground.removeAllAnimations()
+                        self.layer.addSublayer(self.inputMediaNodeBackground)
+                        self.addSubview(inputMediaNode.view)
+                    }
+                    self.inputMediaNode = inputMediaNode
+                }
+                
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                let presentationInterfaceState = ChatPresentationInterfaceState(
+                    chatWallpaper: .builtin(WallpaperSettings()),
+                    theme: presentationData.theme,
+                    strings: presentationData.strings,
+                    dateTimeFormat: presentationData.dateTimeFormat,
+                    nameDisplayOrder: presentationData.nameDisplayOrder,
+                    limitsConfiguration: component.context.currentLimitsConfiguration.with { $0 },
+                    fontSize: presentationData.chatFontSize,
+                    bubbleCorners: presentationData.chatBubbleCorners,
+                    accountPeerId: component.context.account.peerId,
+                    mode: .standard(.default),
+                    chatLocation: .peer(id: component.context.account.peerId),
+                    subject: nil,
+                    peerNearbyData: nil,
+                    greetingData: nil,
+                    pendingUnpinnedAllMessages: false,
+                    activeGroupCallInfo: nil,
+                    hasActiveGroupCall: false,
+                    importState: nil,
+                    threadData: nil,
+                    isGeneralThreadClosed: nil,
+                    replyMessage: nil,
+                    accountPeerColor: nil,
+                    businessIntro: nil
+                )
+                
+                self.inputMediaNodeBackground.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.cgColor
+                
+                let heightAndOverflow = inputMediaNode.updateLayout(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, bottomInset: bottomInset, standardInputHeight: deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: inputHeight < 100.0 ? inputHeight - bottomContainerInset : inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: metrics, deviceMetrics: deviceMetrics, isVisible: true, isExpanded: false)
+                let inputNodeHeight = heightAndOverflow.0
+                let inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputNodeHeight), size: CGSize(width: availableSize.width, height: inputNodeHeight))
+                
+                let inputNodeBackgroundFrame = CGRect(origin: CGPoint(x: inputNodeFrame.minX, y: inputNodeFrame.minY - 6.0), size: CGSize(width: inputNodeFrame.width, height: inputNodeFrame.height + 6.0))
+                
+                if needsInputActivation {
+                    let inputNodeFrame = inputNodeFrame.offsetBy(dx: 0.0, dy: inputNodeHeight)
+                    Transition.immediate.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                    Transition.immediate.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeBackgroundFrame)
+                }
+                
+                if animateIn {
+                    var targetFrame = inputMediaNode.frame
+                    targetFrame.origin.y = availableSize.height
+                    inputMediaNodeTransition.setFrame(layer: inputMediaNode.layer, frame: targetFrame)
+                    
+                    let inputNodeBackgroundTargetFrame = CGRect(origin: CGPoint(x: targetFrame.minX, y: targetFrame.minY - 6.0), size: CGSize(width: targetFrame.width, height: targetFrame.height + 6.0))
+                    
+                    inputMediaNodeTransition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeBackgroundTargetFrame)
+                    
+                    transition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                    transition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeBackgroundFrame)
+                } else {
+                    inputMediaNodeTransition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                    inputMediaNodeTransition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeBackgroundFrame)
+                }
+                
+                height = heightAndOverflow.0
+            } else if let inputMediaNode = self.inputMediaNode {
+                self.inputMediaNode = nil
+                
+                var targetFrame = inputMediaNode.frame
+                targetFrame.origin.y = availableSize.height
+                transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
+                    if let inputMediaNode {
+                        Queue.mainQueue().after(0.3) {
+                            inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
+                                inputMediaNode?.view.removeFromSuperview()
+                            })
+                        }
+                    }
+                })
+                transition.setFrame(layer: self.inputMediaNodeBackground, frame: targetFrame, completion: { [weak self] _ in
+                    Queue.mainQueue().after(0.3) {
+                        guard let self else {
+                            return
+                        }
+                        if self.currentInputMode == .keyboard {
+                            self.inputMediaNodeBackground.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak self] finished in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                if finished {
+                                    self.inputMediaNodeBackground.removeFromSuperlayer()
+                                }
+                                self.inputMediaNodeBackground.removeAllAnimations()
+                            })
+                        }
+                    }
+                })
+            }
+            
+            /*if needsInputActivation {
+                needsInputActivation = false
+                Queue.mainQueue().justDispatch {
+                    inputPanelView.activateInput()
+                }
+            }*/
+            
+            /*if let controller = self.environment?.controller() as? ComposePollScreen {
+                controller.updateTabBarAlpha(self.inputMediaNode == nil ? 1.0 : 0.0, transition.containedViewLayoutTransition)
+            }*/
+            
+            return height
+        }
+        
+        private func collectTextInputStates() -> [(view: ListComposePollOptionComponent.View, state: TextFieldComponent.ExternalState)] {
+            var textInputStates: [(view: ListComposePollOptionComponent.View, state: TextFieldComponent.ExternalState)] = []
+            if let textInputView = self.pollTextSection.findTaggedView(tag: self.pollTextFieldTag) as? ListComposePollOptionComponent.View {
+                textInputStates.append((textInputView, self.pollTextInputState))
+            }
+            for pollOption in self.pollOptions {
+                if let textInputView = findTaggedComponentViewImpl(view: self.pollOptionsSectionContainer, tag: pollOption.textFieldTag) as? ListComposePollOptionComponent.View {
+                    textInputStates.append((textInputView, pollOption.textInputState))
+                }
+            }
+            
+            return textInputStates
+        }
+        
         func update(component: ComposePollScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -234,6 +449,104 @@ final class ComposePollScreenComponent: Component {
                     id: self.nextPollOptionId
                 ))
                 self.nextPollOptionId += 1
+                
+                self.inputMediaNodeDataPromise.set(
+                    ChatEntityKeyboardInputNode.inputData(
+                        context: component.context,
+                        chatPeerId: nil,
+                        areCustomEmojiEnabled: true,
+                        hasTrending: false,
+                        hasSearch: true,
+                        hasStickers: false,
+                        hasGifs: false,
+                        hideBackground: true,
+                        sendGif: nil
+                    )
+                )
+                self.inputMediaNodeDataDisposable = (self.inputMediaNodeDataPromise.get()
+                |> deliverOnMainQueue).start(next: { [weak self] value in
+                    guard let self else {
+                        return
+                    }
+                    self.inputMediaNodeData = value
+                })
+                
+                self.inputMediaInteraction = ChatEntityKeyboardInputNode.Interaction(
+                    sendSticker: { _, _, _, _, _, _, _, _, _ in
+                        return false
+                    },
+                    sendEmoji: { _, _, _ in
+                        let _ = self
+                    },
+                    sendGif: { _, _, _, _, _ in
+                        return false
+                    },
+                    sendBotContextResultAsGif: { _, _ , _, _, _, _ in
+                        return false
+                    },
+                    updateChoosingSticker: { _ in
+                    },
+                    switchToTextInput: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.currentInputMode = .keyboard
+                        self.state?.updated(transition: .immediate)
+                    },
+                    dismissTextInput: {
+                    },
+                    insertText: { [weak self] text in
+                        guard let self else {
+                            return
+                        }
+                        
+                        for (textInputView, externalState) in self.collectTextInputStates() {
+                            if externalState.isEditing {
+                                textInputView.insertText(text: text)
+                                break
+                            }
+                        }
+                    },
+                    backwardsDeleteText: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        for (textInputView, externalState) in self.collectTextInputStates() {
+                            if externalState.isEditing {
+                                textInputView.backwardsDeleteText()
+                                break
+                            }
+                        }
+                    },
+                    openStickerEditor: {
+                    },
+                    presentController: { [weak self] c, a in
+                        guard let self else {
+                            return
+                        }
+                        self.environment?.controller()?.present(c, in: .window(.root), with: a)
+                    },
+                    presentGlobalOverlayController: { [weak self] c, a in
+                        guard let self else {
+                            return
+                        }
+                        self.environment?.controller()?.presentInGlobalOverlay(c, with: a)
+                    },
+                    getNavigationController: { [weak self] in
+                        guard let self else {
+                            return nil
+                        }
+                        return self.environment?.controller()?.navigationController as? NavigationController
+                    },
+                    requestLayout: { [weak self] transition in
+                        guard let self else {
+                            return
+                        }
+                        if !self.isUpdating {
+                            self.state?.updated(transition: Transition(transition))
+                        }
+                    }
+                )
             }
             
             self.component = component
@@ -243,95 +556,6 @@ final class ComposePollScreenComponent: Component {
             let bottomInset: CGFloat = 8.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let sectionSpacing: CGFloat = 24.0
-            
-            if self.emojiContentDisposable == nil {
-                let emojiContent = EmojiPagerContentComponent.emojiInputData(
-                    context: component.context,
-                    animationCache: component.context.animationCache,
-                    animationRenderer: component.context.animationRenderer,
-                    isStandalone: false,
-                    subject: .emoji,
-                    hasTrending: false,
-                    topReactionItems: [],
-                    areUnicodeEmojiEnabled: false,
-                    areCustomEmojiEnabled: true,
-                    chatPeerId: nil,
-                    selectedItems: Set(),
-                    backgroundIconColor: nil,
-                    hasSearch: false,
-                    forceHasPremium: true
-                )
-                self.emojiContentDisposable = (emojiContent
-                |> deliverOnMainQueue).start(next: { [weak self] emojiContent in
-                    guard let self else {
-                        return
-                    }
-                    self.emojiContent = emojiContent
-                    
-                    emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
-                        performItemAction: { [weak self] _, item, _, _, _, _ in
-                            guard let self else {
-                                return
-                            }
-                            guard let itemFile = item.itemFile else {
-                                return
-                            }
-                            
-                            AudioServicesPlaySystemSound(0x450)
-                            
-                            let _ = itemFile
-                            
-                            if !self.isUpdating {
-                                self.state?.updated(transition: .spring(duration: 0.25))
-                            }
-                        },
-                        deleteBackwards: {
-                        },
-                        openStickerSettings: {
-                        },
-                        openFeatured: {
-                        },
-                        openSearch: {
-                        },
-                        addGroupAction: { _, _, _ in
-                        },
-                        clearGroup: { _ in
-                        },
-                        editAction: { _ in
-                        },
-                        pushController: { c in
-                        },
-                        presentController: { c in
-                        },
-                        presentGlobalOverlayController: { c in
-                        },
-                        navigationController: {
-                            return nil
-                        },
-                        requestUpdate: { _ in
-                        },
-                        updateSearchQuery: { _ in
-                        },
-                        updateScrollingToItemGroup: {
-                        },
-                        onScroll: {},
-                        chatPeerId: nil,
-                        peekBehavior: nil,
-                        customLayout: nil,
-                        externalBackground: nil,
-                        externalExpansionView: nil,
-                        customContentView: nil,
-                        useOpaqueTheme: true,
-                        hideBackground: false,
-                        stateContext: nil,
-                        addImage: nil
-                    )
-                    
-                    if !self.isUpdating {
-                        self.state?.updated(transition: .immediate)
-                    }
-                })
-            }
             
             if themeUpdated {
                 self.backgroundColor = environment.theme.list.blocksBackgroundColor
@@ -344,23 +568,42 @@ final class ComposePollScreenComponent: Component {
             contentHeight += topInset
             
             var pollTextSectionItems: [AnyComponentWithIdentity<Empty>] = []
-            pollTextSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListMultilineTextFieldItemComponent(
+            pollTextSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListComposePollOptionComponent(
                 externalState: self.pollTextInputState,
                 context: component.context,
                 theme: environment.theme,
                 strings: environment.strings,
-                initialText: "",
-                resetText: self.resetPollText.flatMap { resetPollText in
-                    return ListMultilineTextFieldItemComponent.ResetText(value: resetPollText)
+                resetText: self.resetPollText.flatMap { resetText in
+                    return ListComposePollOptionComponent.ResetText(value: resetText)
                 },
-                placeholder: "Enter Question",
-                autocapitalizationType: .none,
-                autocorrectionType: .no,
                 characterLimit: 256,
-                emptyLineHandling: .oneConsecutive,
-                updated: { _ in
+                returnKeyAction: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    if !self.pollOptions.isEmpty {
+                        if let pollOptionView = self.pollOptionsSectionContainer.itemViews[self.pollOptions[0].id] {
+                            if let pollOptionComponentView = pollOptionView.contents.view as? ListComposePollOptionComponent.View {
+                                pollOptionComponentView.activateInput()
+                            }
+                        }
+                    }
                 },
-                textUpdateTransition: .spring(duration: 0.4),
+                backspaceKeyAction: nil,
+                selection: nil,
+                inputMode: self.currentInputMode,
+                toggleInputMode: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    switch self.currentInputMode {
+                    case .keyboard:
+                        self.currentInputMode = .emoji
+                    case .emoji:
+                        self.currentInputMode = .keyboard
+                    }
+                    self.state?.updated(transition: .spring(duration: 0.4))
+                },
                 tag: self.pollTextFieldTag
             ))))
             self.resetPollText = nil
@@ -385,12 +628,16 @@ final class ComposePollScreenComponent: Component {
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
             )
             let pollTextSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: pollTextSectionSize)
-            if let pollTextSectionView = self.pollTextSection.view {
+            if let pollTextSectionView = self.pollTextSection.view as? ListSectionComponent.View {
                 if pollTextSectionView.superview == nil {
                     self.scrollView.addSubview(pollTextSectionView)
                     self.pollTextSection.parentState = state
                 }
                 transition.setFrame(view: pollTextSectionView, frame: pollTextSectionFrame)
+                
+                if let itemView = pollTextSectionView.itemView(id: 0) as? ListComposePollOptionComponent.View {
+                    itemView.updateCustomPlaceholder(value: "Ask a Question", size: itemView.bounds.size, transition: .immediate)
+                }
             }
             contentHeight += pollTextSectionSize.height
             contentHeight += sectionSpacing
@@ -454,7 +701,21 @@ final class ComposePollScreenComponent: Component {
                             }
                         }
                     },
-                    selection: optionSelection
+                    selection: optionSelection,
+                    inputMode: self.currentInputMode,
+                    toggleInputMode: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        switch self.currentInputMode {
+                        case .keyboard:
+                            self.currentInputMode = .emoji
+                        case .emoji:
+                            self.currentInputMode = .keyboard
+                        }
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    },
+                    tag: pollOption.textFieldTag
                 ))))
                 
                 let item = pollOptionsSectionItems[i]
@@ -475,7 +736,7 @@ final class ComposePollScreenComponent: Component {
                     transition: itemTransition,
                     component: item.component,
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: availableSize.height)
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
                 )
                 
                 pollOptionsSectionReadyItems.append(ListSectionContentView.ReadyItem(
@@ -530,6 +791,7 @@ final class ComposePollScreenComponent: Component {
                     background: .all
                 ),
                 width: availableSize.width - sideInset * 2.0,
+                leftInset: 0.0,
                 readyItems: pollOptionsSectionReadyItems,
                 transition: transition
             )
@@ -777,65 +1039,156 @@ final class ComposePollScreenComponent: Component {
             }
             
             var inputHeight: CGFloat = 0.0
-            if self.displayInput, let emojiContent = self.emojiContent {
-                let reactionSelectionControl: ComponentView<Empty>
-                var animateIn = false
-                if let current = self.reactionSelectionControl {
-                    reactionSelectionControl = current
-                } else {
-                    animateIn = true
-                    reactionSelectionControl = ComponentView()
-                    self.reactionSelectionControl = reactionSelectionControl
+            inputHeight += self.updateInputMediaNode(
+                component: component,
+                availableSize: availableSize,
+                bottomInset: environment.safeInsets.bottom,
+                inputHeight: 0.0,
+                effectiveInputHeight: environment.deviceMetrics.standardInputHeight(inLandscape: false),
+                metrics: environment.metrics,
+                deviceMetrics: environment.deviceMetrics,
+                transition: transition
+            )
+            
+            let textInputStates = self.collectTextInputStates()
+            
+            let isEditing = textInputStates.contains(where: { $0.state.isEditing })
+            
+            if let (_, suggestionTextInputState) = textInputStates.first(where: { $0.state.isEditing && $0.state.currentEmojiSuggestion != nil }), let emojiSuggestion = suggestionTextInputState.currentEmojiSuggestion, emojiSuggestion.disposable == nil {
+                emojiSuggestion.disposable = (EmojiSuggestionsComponent.suggestionData(context: component.context, isSavedMessages: false, query: emojiSuggestion.position.value)
+                |> deliverOnMainQueue).start(next: { [weak self, weak suggestionTextInputState, weak emojiSuggestion] result in
+                    guard let self, let suggestionTextInputState, let emojiSuggestion, suggestionTextInputState.currentEmojiSuggestion === emojiSuggestion else {
+                        return
+                    }
+                    
+                    emojiSuggestion.value = result
+                    self.state?.updated()
+                })
+            }
+            
+            for (_, suggestionTextInputState) in textInputStates {
+                var hasTrackingView = suggestionTextInputState.hasTrackingView
+                if let currentEmojiSuggestion = suggestionTextInputState.currentEmojiSuggestion, let value = currentEmojiSuggestion.value as? [TelegramMediaFile], value.isEmpty {
+                    hasTrackingView = false
                 }
-                let reactionSelectionControlSize = reactionSelectionControl.update(
-                    transition: animateIn ? .immediate : transition,
-                    component: AnyComponent(EmojiSelectionComponent(
-                        theme: environment.theme,
-                        strings: environment.strings,
-                        sideInset: environment.safeInsets.left,
-                        bottomInset: environment.safeInsets.bottom,
-                        deviceMetrics: environment.deviceMetrics,
-                        emojiContent: emojiContent,
-                        stickerContent: nil,
-                        backgroundIconColor: nil,
-                        backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
-                        separatorColor: environment.theme.list.itemBlocksSeparatorColor,
-                        backspace: { [weak self] in
-                            guard let self else {
+                if !suggestionTextInputState.isEditing {
+                    hasTrackingView = false
+                }
+                
+                if !hasTrackingView {
+                    if let currentEmojiSuggestion = suggestionTextInputState.currentEmojiSuggestion {
+                        suggestionTextInputState.currentEmojiSuggestion = nil
+                        currentEmojiSuggestion.disposable?.dispose()
+                    }
+                    
+                    if let currentEmojiSuggestionView = self.currentEmojiSuggestionView {
+                        self.currentEmojiSuggestionView = nil
+                        
+                        currentEmojiSuggestionView.alpha = 0.0
+                        currentEmojiSuggestionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak currentEmojiSuggestionView] _ in
+                            currentEmojiSuggestionView?.removeFromSuperview()
+                        })
+                    }
+                }
+            }
+            
+            if let (suggestionTextInputView, suggestionTextInputState) = textInputStates.first(where: { $0.state.isEditing && $0.state.currentEmojiSuggestion != nil }), let emojiSuggestion = suggestionTextInputState.currentEmojiSuggestion, let value = emojiSuggestion.value as? [TelegramMediaFile] {
+                let currentEmojiSuggestionView: ComponentHostView<Empty>
+                if let current = self.currentEmojiSuggestionView {
+                    currentEmojiSuggestionView = current
+                } else {
+                    currentEmojiSuggestionView = ComponentHostView<Empty>()
+                    self.currentEmojiSuggestionView = currentEmojiSuggestionView
+                    self.addSubview(currentEmojiSuggestionView)
+                    
+                    currentEmojiSuggestionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                }
+            
+                let globalPosition: CGPoint
+                if let textView = suggestionTextInputView.textFieldView {
+                    globalPosition = textView.convert(emojiSuggestion.localPosition, to: self)
+                } else {
+                    globalPosition = .zero
+                }
+                
+                let sideInset: CGFloat = 7.0
+                
+                let viewSize = currentEmojiSuggestionView.update(
+                    transition: .immediate,
+                    component: AnyComponent(EmojiSuggestionsComponent(
+                        context: component.context,
+                        userLocation: .other,
+                        theme: EmojiSuggestionsComponent.Theme(theme: environment.theme),
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        files: value,
+                        action: { [weak self, weak suggestionTextInputView, weak suggestionTextInputState] file in
+                            guard let self, let suggestionTextInputView, let suggestionTextInputState, let textView = suggestionTextInputView.textFieldView, let currentEmojiSuggestion = suggestionTextInputState.currentEmojiSuggestion else {
                                 return
                             }
                             
-                            if !self.isUpdating {
-                                self.state?.updated(transition: .spring(duration: 0.25))
+                            let _ = self
+                            
+                            AudioServicesPlaySystemSound(0x450)
+                            
+                            let inputState = textView.getInputState()
+                            let inputText = NSMutableAttributedString(attributedString: inputState.inputText)
+                            
+                            var text: String?
+                            var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
+                            loop: for attribute in file.attributes {
+                                switch attribute {
+                                case let .CustomEmoji(_, _, displayText, _):
+                                    text = displayText
+                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
+                                    break loop
+                                default:
+                                    break
+                                }
+                            }
+                            
+                            if let emojiAttribute = emojiAttribute, let text = text {
+                                let replacementText = NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute])
+                                
+                                let range = currentEmojiSuggestion.position.range
+                                let previousText = inputText.attributedSubstring(from: range)
+                                inputText.replaceCharacters(in: range, with: replacementText)
+                                
+                                var replacedUpperBound = range.lowerBound
+                                while true {
+                                    if inputText.attributedSubstring(from: NSRange(location: 0, length: replacedUpperBound)).string.hasSuffix(previousText.string) {
+                                        let replaceRange = NSRange(location: replacedUpperBound - previousText.length, length: previousText.length)
+                                        if replaceRange.location < 0 {
+                                            break
+                                        }
+                                        let adjacentString = inputText.attributedSubstring(from: replaceRange)
+                                        if adjacentString.string != previousText.string || adjacentString.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) != nil {
+                                            break
+                                        }
+                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: emojiAttribute.interactivelySelectedFromPackId, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
+                                        replacedUpperBound = replaceRange.lowerBound
+                                    } else {
+                                        break
+                                    }
+                                }
+                                
+                                let selectionPosition = range.lowerBound + (replacementText.string as NSString).length
+                                textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
                             }
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: availableSize.height)
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
                 )
-                let reactionSelectionControlFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - reactionSelectionControlSize.height), size: reactionSelectionControlSize)
-                if let reactionSelectionControlView = reactionSelectionControl.view {
-                    if reactionSelectionControlView.superview == nil {
-                        self.addSubview(reactionSelectionControlView)
-                    }
-                    if animateIn {
-                        reactionSelectionControlView.frame = reactionSelectionControlFrame
-                        transition.animatePosition(view: reactionSelectionControlView, from: CGPoint(x: 0.0, y: reactionSelectionControlFrame.height), to: CGPoint(), additive: true)
-                    } else {
-                        transition.setFrame(view: reactionSelectionControlView, frame: reactionSelectionControlFrame)
-                    }
-                }
-                inputHeight = reactionSelectionControlSize.height
-            } else if let reactionSelectionControl = self.reactionSelectionControl {
-                self.reactionSelectionControl = nil
-                if let reactionSelectionControlView = reactionSelectionControl.view {
-                    transition.setPosition(view: reactionSelectionControlView, position: CGPoint(x: reactionSelectionControlView.center.x, y: availableSize.height + reactionSelectionControlView.bounds.height * 0.5), completion: { [weak reactionSelectionControlView] _ in
-                        reactionSelectionControlView?.removeFromSuperview()
-                    })
+                
+                let viewFrame = CGRect(origin: CGPoint(x: min(availableSize.width - sideInset - viewSize.width, max(sideInset, floor(globalPosition.x - viewSize.width / 2.0))), y: globalPosition.y - 4.0 - viewSize.height), size: viewSize)
+                currentEmojiSuggestionView.frame = viewFrame
+                if let componentView = currentEmojiSuggestionView.componentView as? EmojiSuggestionsComponent.View {
+                    componentView.adjustBackground(relativePositionX: floor(globalPosition.x + 10.0))
                 }
             }
             
-            if self.displayInput {
+            if isEditing {
                 contentHeight += bottomInset + 8.0
                 contentHeight += inputHeight
             } else {
@@ -857,7 +1210,7 @@ final class ComposePollScreenComponent: Component {
             
             self.updateScrolling(transition: transition)
             
-            if self.pollTextInputState.isEditing || self.pollOptions.contains(where: { $0.textInputState.isEditing }) {
+            if isEditing {
                 if let controller = environment.controller() as? ComposePollScreen {
                     DispatchQueue.main.async { [weak controller] in
                         controller?.requestAttachmentMenuExpansion()
@@ -907,6 +1260,15 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
         return false
     }
     public var mediaPickerContext: AttachmentMediaPickerContext?
+    
+    public var isPanGestureEnabled: (() -> Bool)? {
+        return { [weak self] in
+            guard let self, let componentView = self.node.hostView.componentView as? ComposePollScreenComponent.View else {
+                return true
+            }
+            return componentView.isPanGestureEnabled()
+        }
+    }
     
     public init(
         context: AccountContext,

@@ -1047,7 +1047,6 @@ public final class TextFieldComponent: Component {
                                     if let current = component.externalState.currentEmojiSuggestion, current.position.value == emojiSuggestionPosition.value {
                                         emojiSuggestion = current
                                     } else {
-
                                         emojiSuggestion = EmojiSuggestion(localPosition: trackingPosition, position: emojiSuggestionPosition)
                                         component.externalState.currentEmojiSuggestion = emojiSuggestion
                                     }

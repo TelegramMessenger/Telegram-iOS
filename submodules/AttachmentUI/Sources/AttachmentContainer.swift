@@ -68,6 +68,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
     
     var isPanningUpdated: (Bool) -> Void = { _ in }
     var isExpandedUpdated: (Bool) -> Void = { _ in }
+    var isPanGestureEnabled: (() -> Bool)?
     var onExpandAnimationCompleted: () -> Void = {}
     
     override init() {
@@ -131,6 +132,12 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         if let (layout, _, _) = self.validLayout {
             if case .regular = layout.metrics.widthClass {
                 return false
+            }
+            
+            if let isPanGestureEnabled = self.isPanGestureEnabled {
+                if !isPanGestureEnabled() {
+                    return false
+                }
             }
         }
         return true

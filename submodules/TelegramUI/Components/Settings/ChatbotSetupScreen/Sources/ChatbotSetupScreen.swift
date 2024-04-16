@@ -770,11 +770,11 @@ final class ChatbotSetupScreenComponent: Component {
                                     maximumNumberOfLines: 1
                                 ))),
                             ], alignment: .left, spacing: 2.0)),
-                            leftIcon: AnyComponentWithIdentity(id: 0, component: AnyComponent(Image(
+                            leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(Image(
                                 image: checkIcon,
                                 tintColor: !self.hasAccessToAllChatsByDefault ? .clear : environment.theme.list.itemAccentColor,
                                 contentMode: .center
-                            ))),
+                            )))),
                             accessory: nil,
                             action: { [weak self] _ in
                                 guard let self else {
@@ -800,11 +800,11 @@ final class ChatbotSetupScreenComponent: Component {
                                     maximumNumberOfLines: 1
                                 ))),
                             ], alignment: .left, spacing: 2.0)),
-                            leftIcon: AnyComponentWithIdentity(id: 0, component: AnyComponent(Image(
+                            leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(Image(
                                 image: checkIcon,
                                 tintColor: self.hasAccessToAllChatsByDefault ? .clear : environment.theme.list.itemAccentColor,
                                 contentMode: .center
-                            ))),
+                            )))),
                             accessory: nil,
                             action: { [weak self] _ in
                                 guard let self else {

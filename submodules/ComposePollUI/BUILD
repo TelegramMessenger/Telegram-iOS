@@ -37,6 +37,10 @@ swift_library(
         "//submodules/TelegramUI/Components/ListMultilineTextFieldItemComponent",
         "//submodules/TelegramUI/Components/ListActionItemComponent",
         "//submodules/TelegramUI/Components/TextFieldComponent",
+        "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
+        "//submodules/ChatPresentationInterfaceState",
+        "//submodules/TelegramUI/Components/EmojiSuggestionsComponent",
     ],
     visibility = [
         "//visibility:public",

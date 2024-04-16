@@ -528,10 +528,10 @@ final class BusinessDaySetupScreenComponent: Component {
                                     maximumNumberOfLines: 1
                                 ))),
                             ], alignment: .left, spacing: 2.0)),
-                            leftIcon: AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
+                            leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
                                 name: "Item List/AddTimeIcon",
                                 tintColor: environment.theme.list.itemAccentColor
-                            ))),
+                            )))),
                             accessory: nil,
                             action: { [weak self] _ in
                                 guard let self else {

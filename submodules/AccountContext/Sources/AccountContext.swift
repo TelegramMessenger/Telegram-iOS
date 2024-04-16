@@ -159,14 +159,16 @@ public struct ChatAvailableMessageActionOptions: OptionSet {
 public struct ChatAvailableMessageActions {
     public var options: ChatAvailableMessageActionOptions
     public var banAuthor: Peer?
+    public var banAuthors: [Peer]
     public var disableDelete: Bool
     public var isCopyProtected: Bool
     public var setTag: Bool
     public var editTags: Set<MessageReaction.Reaction>
     
-    public init(options: ChatAvailableMessageActionOptions, banAuthor: Peer?, disableDelete: Bool, isCopyProtected: Bool, setTag: Bool, editTags: Set<MessageReaction.Reaction>) {
+    public init(options: ChatAvailableMessageActionOptions, banAuthor: Peer?, banAuthors: [Peer], disableDelete: Bool, isCopyProtected: Bool, setTag: Bool, editTags: Set<MessageReaction.Reaction>) {
         self.options = options
         self.banAuthor = banAuthor
+        self.banAuthors = banAuthors
         self.disableDelete = disableDelete
         self.isCopyProtected = isCopyProtected
         self.setTag = setTag

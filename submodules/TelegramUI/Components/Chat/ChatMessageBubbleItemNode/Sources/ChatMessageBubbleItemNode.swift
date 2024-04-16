@@ -1199,6 +1199,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                     replyInfoNode.updateTouchesAtPoint(translatedPoint)
                 }
+                if let forwardInfoNode = strongSelf.forwardInfoNode {
+                    var translatedPoint: CGPoint?
+                    let convertedNodeFrame = forwardInfoNode.view.convert(forwardInfoNode.bounds, to: strongSelf.view)
+                    if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
+                        translatedPoint = strongSelf.view.convert(point, to: forwardInfoNode.view)
+                    }
+                    forwardInfoNode.updateTouchesAtPoint(translatedPoint)
+                }
                 for contentNode in strongSelf.contentNodes {
                     var translatedPoint: CGPoint?
                     let convertedNodeFrame = contentNode.view.convert(contentNode.bounds, to: strongSelf.view)
@@ -2312,6 +2320,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 let sizeAndApply = forwardInfoLayout(item.context, item.presentationData, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, forwardPsaType, nil, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                 forwardInfoSizeApply = (sizeAndApply.0, { width in sizeAndApply.1(width) })
                 
+                headerSize.height += 2.0
                 forwardInfoOriginY = headerSize.height
                 headerSize.width = max(headerSize.width, forwardInfoSizeApply.0.width + bubbleWidthInsets)
                 headerSize.height += forwardInfoSizeApply.0.height
@@ -2341,6 +2350,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 
                 if storyType != .regular {
                     headerSize.height += 6.0
+                } else {
+                    headerSize.height += 2.0
                 }
                 
                 forwardInfoOriginY = headerSize.height
@@ -2349,6 +2360,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 
                 if storyType != .regular {
                     headerSize.height += 16.0
+                } else {
+                    headerSize.height += 2.0
                 }
             }
                         
@@ -4425,7 +4438,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info(nil) : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                             } else if let _ = forwardInfo.authorSignature {
                                 var subRect: CGRect?
-                                if let textNode = forwardInfoNode.textNode {
+                                if let textNode = forwardInfoNode.nameNode {
                                     subRect = textNode.frame
                                 }
                                 item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, subRect)

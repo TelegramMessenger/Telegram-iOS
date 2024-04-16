@@ -93,6 +93,7 @@ public protocol AttachmentContainable: ViewController {
     var cancelPanGesture: () -> Void { get set }
     var isContainerPanning: () -> Bool { get set }
     var isContainerExpanded: () -> Bool { get set }
+    var isPanGestureEnabled: (() -> Bool)? { get }
     var mediaPickerContext: AttachmentMediaPickerContext? { get }
     
     func isContainerPanningUpdated(_ panning: Bool)
@@ -123,6 +124,10 @@ public extension AttachmentContainable {
     
     func shouldDismissImmediately() -> Bool {
          return true
+    }
+    
+    var isPanGestureEnabled: (() -> Bool)? {
+        return nil
     }
 }
 
@@ -351,6 +356,17 @@ public class AttachmentController: ViewController {
                 }
             }
             
+            self.container.isPanGestureEnabled = { [weak self] in
+                guard let self, let currentController = self.currentControllers.last else {
+                    return true
+                }
+                if let isPanGestureEnabled = currentController.isPanGestureEnabled {
+                    return isPanGestureEnabled()
+                } else {
+                    return true
+                }
+            }
+            
             self.container.shouldCancelPanGesture = { [weak self] in
                 if let strongSelf = self, let currentController = strongSelf.currentControllers.last {
                     if !currentController.shouldDismissImmediately() {
@@ -548,6 +564,7 @@ public class AttachmentController: ViewController {
                                 strongSelf.panel.updateBackgroundAlpha(alpha, transition: transition)
                             }
                         }
+                        
                         controller.cancelPanGesture = { [weak self] in
                             if let strongSelf = self {
                                 strongSelf.container.cancelPanGesture()

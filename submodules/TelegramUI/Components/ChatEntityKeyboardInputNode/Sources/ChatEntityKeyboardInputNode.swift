@@ -160,7 +160,18 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         return hasPremium
     }
     
-    public static func inputData(context: AccountContext, chatPeerId: PeerId?, areCustomEmojiEnabled: Bool, hasEdit: Bool = false, hasTrending: Bool = true, hasSearch: Bool = true, hideBackground: Bool = false, sendGif: ((FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool)?) -> Signal<InputData, NoError> {
+    public static func inputData(
+        context: AccountContext,
+        chatPeerId: PeerId?,
+        areCustomEmojiEnabled: Bool,
+        hasEdit: Bool = false,
+        hasTrending: Bool = true,
+        hasSearch: Bool = true,
+        hasStickers: Bool = true,
+        hasGifs: Bool = true,
+        hideBackground: Bool = false,
+        sendGif: ((FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool)?
+    ) -> Signal<InputData, NoError> {
         let animationCache = context.animationCache
         let animationRenderer = context.animationRenderer
         
@@ -184,7 +195,13 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
-        let stickerItems = EmojiPagerContentComponent.stickerInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, stickerNamespaces: stickerNamespaces, stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds, chatPeerId: chatPeerId, hasSearch: hasSearch, hasTrending: hasTrending, forceHasPremium: false, hasEdit: hasEdit, hideBackground: hideBackground)
+        let stickerItems: Signal<EmojiPagerContentComponent?, NoError>
+        if hasStickers {
+            stickerItems = EmojiPagerContentComponent.stickerInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, stickerNamespaces: stickerNamespaces, stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds, chatPeerId: chatPeerId, hasSearch: hasSearch, hasTrending: hasTrending, forceHasPremium: false, hasEdit: hasEdit, hideBackground: hideBackground)
+            |> map(Optional.init)
+        } else {
+            stickerItems = .single(nil)
+        }
         
         let reactions: Signal<[String], NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.App())
         |> map { appConfiguration -> [String] in
@@ -197,10 +214,13 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
         |> distinctUntilChanged
         
-        let animatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
-        |> map { animatedEmoji -> [String: [StickerPackItem]] in
-            var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
-            switch animatedEmoji {
+        let animatedEmojiStickers: Signal<[String: [StickerPackItem]], NoError>
+        
+        if hasGifs {
+            animatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
+            |> map { animatedEmoji -> [String: [StickerPackItem]] in
+                var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
+                switch animatedEmoji {
                 case let .result(_, items, _):
                     for item in items {
                         if let emoji = item.getStringRepresentationsOfIndexKeys().first {
@@ -213,8 +233,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     }
                 default:
                     break
+                }
+                return animatedEmojiStickers
             }
-            return animatedEmojiStickers
+        } else {
+            animatedEmojiStickers = .single([:])
         }
         
         let gifInputInteraction = GifPagerContentComponent.InputInteraction(
@@ -236,22 +259,27 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         )
         
         // We are going to subscribe to the actual data when the view is loaded
-        let gifItems: Signal<EntityKeyboardGifContent, NoError> = .single(EntityKeyboardGifContent(
-            hasRecentGifs: true,
-            component: GifPagerContentComponent(
-                context: context,
-                inputInteraction: gifInputInteraction,
-                subject: .recent,
-                items: [],
-                isLoading: false,
-                loadMoreToken: nil,
-                displaySearchWithPlaceholder: nil,
-                searchCategories: nil,
-                searchInitiallyHidden: true,
-                searchState: .empty(hasResults: false),
-                hideBackground: hideBackground
-            )
-        ))
+        let gifItems: Signal<EntityKeyboardGifContent?, NoError>
+        if hasGifs {
+            gifItems = .single(EntityKeyboardGifContent(
+                hasRecentGifs: true,
+                component: GifPagerContentComponent(
+                    context: context,
+                    inputInteraction: gifInputInteraction,
+                    subject: .recent,
+                    items: [],
+                    isLoading: false,
+                    loadMoreToken: nil,
+                    displaySearchWithPlaceholder: nil,
+                    searchCategories: nil,
+                    searchInitiallyHidden: true,
+                    searchState: .empty(hasResults: false),
+                    hideBackground: hideBackground
+                )
+            ))
+        } else {
+            gifItems = .single(nil)
+        }
         
         return combineLatest(queue: .mainQueue(),
             emojiItems,
