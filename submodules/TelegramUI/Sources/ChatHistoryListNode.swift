@@ -2464,7 +2464,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             }
                         case let .MessageGroupEntry(_, messages, _):
                             for (message, _, _, _, _) in messages {
-                                guard message.adAttribute && message.id.namespace == Namespaces.Message.Cloud == nil else {
+                                guard message.adAttribute == nil && message.id.namespace == Namespaces.Message.Cloud else {
                                     continue
                                 }
                                 if !message.text.isEmpty && message.author?.id != self.context.account.peerId {
