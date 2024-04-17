@@ -77,7 +77,7 @@ swift_library(
         "//submodules/AuthorizationUI:AuthorizationUI",
         "//submodules/InstantPageUI:InstantPageUI",
         "//submodules/CheckNode:CheckNode",
-        "//submodules/CounterContollerTitleView:CounterContollerTitleView",
+        "//submodules/CounterControllerTitleView:CounterControllerTitleView",
         "//submodules/GridMessageSelectionNode:GridMessageSelectionNode",
         "//submodules/InstantPageCache:InstantPageCache",
         "//submodules/AppBundle:AppBundle",

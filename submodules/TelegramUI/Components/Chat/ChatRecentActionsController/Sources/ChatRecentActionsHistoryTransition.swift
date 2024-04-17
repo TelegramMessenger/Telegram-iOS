@@ -404,6 +404,9 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 if let attribute = attribute as? TextEntitiesMessageAttribute {
                                     attributes.append(attribute)
                                 }
+                                if let attribute = attribute as? ReplyMessageAttribute {
+                                    attributes.append(attribute)
+                                }
                             }
                             for attribute in attributes {
                                 for peerId in attribute.associatedPeerIds {
@@ -412,7 +415,10 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     }
                                 }
                             }
-                            let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: message.effectiveAuthor, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                            if let peer = self.entry.peers[message.id.peerId] {
+                                peers[peer.id] = peer
+                            }
+                            let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: message.effectiveAuthor, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: message.associatedThreadInfo, associatedStories: [:])
                             return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, savedMessageTags: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
                         } else {
                             var peers = SimpleDictionary<PeerId, Peer>()
@@ -488,6 +494,9 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             if let attribute = attribute as? TextEntitiesMessageAttribute {
                                 attributes.append(attribute)
                             }
+                            if let attribute = attribute as? ReplyMessageAttribute {
+                                attributes.append(attribute)
+                            }
                         }
                         for attribute in attributes {
                             for peerId in attribute.associatedPeerIds {
@@ -496,7 +505,10 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 }
                             }
                         }
-                        let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: message.effectiveAuthor, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                        if let peer = self.entry.peers[message.id.peerId] {
+                            peers[peer.id] = peer
+                        }
+                        let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: message.effectiveAuthor, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: message.associatedMessages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: message.associatedThreadInfo, associatedStories: [:])
                         return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, savedMessageTags: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: filterOriginalMessageFlags(message), read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil), additionalContent: !prev.text.isEmpty || !message.text.isEmpty ? .eventLogPreviousMessage(filterOriginalMessageFlags(prev)) : nil)
                 }
             case let .deleteMessage(message):
@@ -531,6 +543,9 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             if let attribute = attribute as? TextEntitiesMessageAttribute {
                                 attributes.append(attribute)
                             }
+                            if let attribute = attribute as? ReplyMessageAttribute {
+                                attributes.append(attribute)
+                            }
                         }
                         for attribute in attributes {
                             for peerId in attribute.associatedPeerIds {
@@ -549,7 +564,10 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         if let peer = self.entry.peers[self.entry.event.peerId] {
                             peers[peer.id] = peer
                         }
-                        let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: message.id.id), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: message.effectiveAuthor, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                        if let peer = self.entry.peers[message.id.peerId] {
+                            peers[peer.id] = peer
+                        }
+                    let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: message.id.id), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: message.effectiveAuthor, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: message.associatedMessages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: message.associatedThreadInfo, associatedStories: [:])
                         return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, savedMessageTags: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
                 }
             case .participantJoin, .participantLeave:
@@ -1110,6 +1128,9 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             if let attribute = attribute as? TextEntitiesMessageAttribute {
                                 attributes.append(attribute)
                             }
+                            if let attribute = attribute as? ReplyMessageAttribute {
+                                attributes.append(attribute)
+                            }
                         }
                         for attribute in attributes {
                             for peerId in attribute.associatedPeerIds {
@@ -1118,7 +1139,10 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 }
                             }
                         }
-                        let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: message.author, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                        if let peer = self.entry.peers[message.id.peerId] {
+                            peers[peer.id] = peer
+                        }
+                        let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: message.author, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: message.associatedMessages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: message.associatedThreadInfo, associatedStories: [:])
                         return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, savedMessageTags: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: filterOriginalMessageFlags(message), read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil), additionalContent: nil)
                 }
             case let .linkedPeerUpdated(previous, updated):
@@ -1706,6 +1730,9 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             if let attribute = attribute as? TextEntitiesMessageAttribute {
                                 attributes.append(attribute)
                             }
+                            if let attribute = attribute as? ReplyMessageAttribute {
+                                attributes.append(attribute)
+                            }
                         }
                         for attribute in attributes {
                             for peerId in attribute.associatedPeerIds {
@@ -1714,7 +1741,10 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 }
                             }
                         }
-                        let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: message.effectiveAuthor, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                        if let peer = self.entry.peers[message.id.peerId] {
+                            peers[peer.id] = peer
+                        }
+                        let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: message.effectiveAuthor, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: message.associatedMessages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: message.associatedThreadInfo, associatedStories: [:])
                         return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, savedMessageTags: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
             }
             case let .createTopic(info):

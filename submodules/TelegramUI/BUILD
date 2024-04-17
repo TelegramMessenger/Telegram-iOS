@@ -201,7 +201,7 @@ swift_library(
         "//submodules/QrCode:QrCode",
         "//submodules/WallpaperResources:WallpaperResources",
         "//submodules/AuthorizationUI:AuthorizationUI",
-        "//submodules/CounterContollerTitleView:CounterContollerTitleView",
+        "//submodules/CounterControllerTitleView:CounterControllerTitleView",
         "//submodules/GridMessageSelectionNode:GridMessageSelectionNode",
         "//submodules/InstantPageCache:InstantPageCache",
         "//submodules/PersistentStringHash:PersistentStringHash",

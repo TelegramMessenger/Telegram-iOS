@@ -18,7 +18,7 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/AccountContext:AccountContext",
         "//submodules/AttachmentUI:AttachmentUI",
-        "//submodules/CounterContollerTitleView:CounterContollerTitleView",
+        "//submodules/CounterControllerTitleView:CounterControllerTitleView",
         "//submodules/HexColor:HexColor",
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/ShimmerEffect:ShimmerEffect",

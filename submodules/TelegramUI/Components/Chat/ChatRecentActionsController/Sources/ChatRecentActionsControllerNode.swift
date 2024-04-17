@@ -49,8 +49,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private let pushController: (ViewController) -> Void
     private let presentController: (ViewController, PresentationContextType,  Any?) -> Void
     private let getNavigationController: () -> NavigationController?
+    var isEmptyUpdated: (Bool) -> Void = { _ in }
     
-    private let interaction: ChatRecentActionsInteraction
     private var controllerInteraction: ChatControllerInteraction!
     
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
@@ -68,6 +68,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private let panelBackgroundNode: NavigationBackgroundNode
     private let panelSeparatorNode: ASDisplayNode
     private let panelButtonNode: HighlightableButtonNode
+    private let panelInfoButtonNode: HighlightableButtonNode
     
     fileprivate let listNode: ListView
     private let loadingNode: ChatLoadingNode
@@ -99,12 +100,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     
     private weak var controller: ChatRecentActionsController?
     
-    init(context: AccountContext, controller: ChatRecentActionsController, peer: Peer, presentationData: PresentationData, interaction: ChatRecentActionsInteraction, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, PresentationContextType, Any?) -> Void, getNavigationController: @escaping () -> NavigationController?) {
+    init(context: AccountContext, controller: ChatRecentActionsController, peer: Peer, presentationData: PresentationData, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, PresentationContextType, Any?) -> Void, getNavigationController: @escaping () -> NavigationController?) {
         self.context = context
         self.controller = controller
         self.peer = peer
         self.presentationData = presentationData
-        self.interaction = interaction
         self.pushController = pushController
         self.presentController = presentController
         self.getNavigationController = getNavigationController
@@ -118,7 +118,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.panelSeparatorNode = ASDisplayNode()
         self.panelSeparatorNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelSeparatorColor
         self.panelButtonNode = HighlightableButtonNode()
-        self.panelButtonNode.setTitle(self.presentationData.strings.Channel_AdminLog_InfoPanelTitle, with: Font.regular(17.0), with: self.presentationData.theme.chat.inputPanel.panelControlAccentColor, for: [])
+        self.panelButtonNode.setTitle(self.presentationData.strings.Channel_AdminLog_Settings, with: Font.regular(17.0), with: self.presentationData.theme.chat.inputPanel.panelControlAccentColor, for: [])
+        self.panelInfoButtonNode = HighlightableButtonNode()
         
         self.listNode = ListView()
         self.listNode.dynamicBounceEnabled = false
@@ -145,8 +146,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.addSubnode(self.panelBackgroundNode)
         self.addSubnode(self.panelSeparatorNode)
         self.addSubnode(self.panelButtonNode)
+        self.addSubnode(self.panelInfoButtonNode)
         
-        self.panelButtonNode.addTarget(self, action: #selector(self.infoButtonPressed), forControlEvents: .touchUpInside)
+        self.panelButtonNode.addTarget(self, action: #selector(self.settingsButtonPressed), forControlEvents: .touchUpInside)
+        self.panelInfoButtonNode.addTarget(self, action: #selector(self.infoButtonPressed), forControlEvents: .touchUpInside)
         
         let (adminsDisposable, _) = self.context.peerChannelMemberCategoriesContextsManager.admins(engine: self.context.engine, postbox: self.context.account.postbox, network: self.context.account.network, accountPeerId: context.account.peerId, peerId: self.peer.id, searchQuery: nil, updated: { [weak self] state in
             self?.adminsState = state
@@ -275,7 +278,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, activateMessagePinch: { _ in
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _, _ in }, navigateToMessageStandalone: { _ in
-        }, navigateToThreadMessage: { _, _, _ in
+        }, navigateToThreadMessage: { [weak self] peerId, threadId, _ in
+            if let context = self?.context, let navigationController = self?.getNavigationController() {
+                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).startStandalone()
+            }
         }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { [weak self] url in
             self?.openUrl(url.url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
@@ -674,7 +680,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.panelBackgroundNode.updateColor(color: presentationData.theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
         self.panelSeparatorNode.backgroundColor = presentationData.theme.chat.inputPanel.panelSeparatorColor
-        self.panelButtonNode.setTitle(presentationData.strings.Channel_AdminLog_InfoPanelTitle, with: Font.regular(17.0), with: presentationData.theme.chat.inputPanel.panelControlAccentColor, for: [])
+        self.panelButtonNode.setTitle(presentationData.strings.Channel_AdminLog_Settings, with: Font.regular(17.0), with: presentationData.theme.chat.inputPanel.panelControlAccentColor, for: [])
+        self.panelInfoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Recent Actions/Info"), color: presentationData.theme.chat.inputPanel.panelControlAccentColor), for: .normal)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -695,7 +702,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.panelBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
         self.panelBackgroundNode.update(size: self.panelBackgroundNode.bounds.size, transition: transition)
         transition.updateFrame(node: self.panelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
-        transition.updateFrame(node: self.panelButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: intrinsicPanelHeight)))
+        
+        let infoButtonSize = CGSize(width: 56.0, height: intrinsicPanelHeight)
+        transition.updateFrame(node: self.panelButtonNode, frame: CGRect(origin: CGPoint(x: insets.left + infoButtonSize.width, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width - insets.left - insets.right - infoButtonSize.width * 2.0, height: intrinsicPanelHeight)))
+        
+        transition.updateFrame(node: self.panelInfoButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - insets.right - infoButtonSize.width, y: layout.size.height - panelHeight), size: infoButtonSize))
         
         self.visibleAreaInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: panelHeight, right: 0.0)
         
@@ -788,6 +799,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             strongSelf.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                         }
                         strongSelf.isLoading = isLoading
+                        
+                        var isEmpty = false
+                        if strongSelf.filter.isEmpty && (transition.isEmpty || isLoading) {
+                            isEmpty = true
+                        }
+                        strongSelf.isEmptyUpdated(isEmpty)
                     }
                 })
             } else {
@@ -796,8 +813,22 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }
     }
     
+    @objc func settingsButtonPressed() {
+        self.controller?.openFilterSetup()
+    }
+    
     @objc func infoButtonPressed() {
-        self.interaction.displayInfoAlert()
+        guard let controller = self.controller else {
+            return
+        }
+        let text: String
+        if let channel = self.peer as? TelegramChannel, case .broadcast = channel.info {
+            text = self.presentationData.strings.Channel_AdminLog_InfoPanelChannelAlertText
+        } else {
+            text = self.presentationData.strings.Channel_AdminLog_InfoPanelAlertText
+        }
+        controller.present(textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.Channel_AdminLog_InfoPanelAlertTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+        
     }
     
     func updateSearchQuery(_ query: String) {
@@ -931,6 +962,40 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             |> deliverOnMainQueue).startStrict(next: { participant in
                                 if let strongSelf = self {
                                     strongSelf.presentController(channelBannedMemberController(context: strongSelf.context, peerId: strongSelf.peer.id, memberId: author.id, initialParticipant: participant, updated: { _ in }, upgradedToSupergroup: { _, f in f() }), .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                }
+                            }), forKey: author.id)
+                        }
+                    }))
+                )
+                actions.append(
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuBanFull, textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Ban"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] _, f in
+                        if let strongSelf = self {
+                            f(.default)
+                            strongSelf.banDisposables.set((strongSelf.context.engine.peers.fetchChannelParticipant(peerId: strongSelf.peer.id, participantId: author.id)
+                            |> deliverOnMainQueue).startStrict(next: { participant in
+                                if let strongSelf = self {
+                                    let initialUserBannedRights = participant?.banInfo?.rights
+                                    strongSelf.banDisposables.set(strongSelf.context.engine.peers.removePeerMember(peerId: strongSelf.peer.id, memberId: author.id).startStandalone(), forKey: author.id)
+                                    
+                                    strongSelf.presentController(UndoOverlayController(
+                                        presentationData: strongSelf.presentationData,
+                                        content: .actionSucceeded(title: nil, text: "**\(EnginePeer(author).compactDisplayTitle)** was banned.", cancel: strongSelf.presentationData.strings.Undo_Undo, destructive: false),
+                                        elevatedLayout: false,
+                                        action: { [weak self] action in
+                                            guard let self else {
+                                                return true
+                                            }
+                                            switch action {
+                                            case .commit:
+                                                break
+                                            case .undo:
+                                                let _ = self.context.engine.peers.updateChannelMemberBannedRights(peerId: self.peer.id, memberId: author.id, rights: initialUserBannedRights).startStandalone()
+                                            default:
+                                                break
+                                            }
+                                            return true
+                                        }
+                                    ), .current, nil)
                                 }
                             }), forKey: author.id)
                         }

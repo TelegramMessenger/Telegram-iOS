@@ -12089,3 +12089,5 @@ Sorry for the inconvenience.";
 "Map.SharingLocation" = "Sharing Location...";
 
 "Channel.AdminLog.Settings" = "Settings";
+
+"Conversation.ContextMenuBanFull" = "Ban";
