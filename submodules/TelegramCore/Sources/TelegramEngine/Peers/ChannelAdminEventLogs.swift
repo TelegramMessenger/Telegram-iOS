@@ -181,6 +181,14 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                         
                         var events: [AdminLogEvent] = []
                         
+                        func renderedMessage(message: StoreMessage) -> Message? {
+                            var associatedThreadInfo: Message.AssociatedThreadInfo?
+                            if let threadId = message.threadId, let threadInfo = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: threadId) {
+                                associatedThreadInfo = postbox.seedConfiguration.decodeMessageThreadInfo(threadInfo.data)
+                            }
+                            return locallyRenderedMessage(message: message, peers: peers, associatedThreadInfo: associatedThreadInfo)
+                        }
+                        
                         for event in apiEvents {
                             switch event {
                             case let .channelAdminLogEvent(id, date, userId, apiAction):
@@ -205,16 +213,16 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                     case .messageEmpty:
                                         action = .updatePinned(nil)
                                     default:
-                                        if let message = StoreMessage(apiMessage: new, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                        if let message = StoreMessage(apiMessage: new, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let rendered = renderedMessage(message: message) {
                                             action = .updatePinned(rendered)
                                         }
                                     }
                                 case let .channelAdminLogEventActionEditMessage(prev, new):
-                                    if let prev = StoreMessage(apiMessage: prev, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let prevRendered = locallyRenderedMessage(message: prev, peers: peers), let new = StoreMessage(apiMessage: new, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let newRendered = locallyRenderedMessage(message: new, peers: peers) {
+                                    if let prev = StoreMessage(apiMessage: prev, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let prevRendered = renderedMessage(message: prev), let new = StoreMessage(apiMessage: new, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let newRendered = renderedMessage(message: new) {
                                         action = .editMessage(prev: prevRendered, new: newRendered)
                                     }
                                 case let .channelAdminLogEventActionDeleteMessage(message):
-                                    if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                    if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let rendered = renderedMessage(message: message) {
                                         action = .deleteMessage(rendered)
                                     }
                                 case .channelAdminLogEventActionParticipantJoin:
@@ -248,7 +256,7 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                 case let .channelAdminLogEventActionDefaultBannedRights(prevBannedRights, newBannedRights):
                                     action = .updateDefaultBannedRights(prev: TelegramChatBannedRights(apiBannedRights: prevBannedRights), new: TelegramChatBannedRights(apiBannedRights: newBannedRights))
                                 case let .channelAdminLogEventActionStopPoll(message):
-                                    if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                    if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let rendered = renderedMessage(message: message) {
                                         action = .pollStopped(rendered)
                                     }
                                 case let .channelAdminLogEventActionChangeLinkedChat(prevValue, newValue):
@@ -287,7 +295,7 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                 case let .channelAdminLogEventActionToggleNoForwards(new):
                                     action = .toggleCopyProtection(boolFromApiValue(new))
                                 case let .channelAdminLogEventActionSendMessage(message):
-                                    if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                    if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let rendered = renderedMessage(message: message) {
                                         action = .sendMessage(rendered)
                                     }
                                 case let .channelAdminLogEventActionChangeAvailableReactions(prevValue, newValue):
