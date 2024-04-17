@@ -154,9 +154,9 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         super.viewDidAppear(animated)
         
         if let navigationController = self.navigationController as? NavigationController, let layout = self.validLayout {
-            addTemporaryKeyboardSnapshotView(navigationController: navigationController, parentView: self.view, layout: layout)
+            addTemporaryKeyboardSnapshotView(navigationController: navigationController, layout: layout)
         }
-        
+                
         self.controllerNode.activateInput()
     }
     
@@ -215,6 +215,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         
         if !hadLayout {
             self.updateNavigationItems()
+            
+            if let navigationController = self.navigationController as? NavigationController {
+                addTemporaryKeyboardSnapshotView(navigationController: navigationController, layout: layout, local: true)
+            }
         }
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
@@ -263,18 +267,20 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     }
 }
 
-func addTemporaryKeyboardSnapshotView(navigationController: NavigationController, parentView: UIView, layout: ContainerViewLayout) {
+func addTemporaryKeyboardSnapshotView(navigationController: NavigationController, layout: ContainerViewLayout, local: Bool = false) {
     if case .compact = layout.metrics.widthClass, let statusBarHost = navigationController.statusBarHost {
         if let keyboardView = statusBarHost.keyboardView {
+            keyboardView.layer.removeAllAnimations()
             if let snapshotView = keyboardView.snapshotView(afterScreenUpdates: false) {
-                keyboardView.layer.removeAllAnimations()
                 UIView.performWithoutAnimation {
                     snapshotView.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - snapshotView.frame.size.height), size: snapshotView.frame.size)
-                    if let keyboardWindow = statusBarHost.keyboardWindow {
+                    if local {
+                        navigationController.view.addSubview(snapshotView)
+                    } else if let keyboardWindow = statusBarHost.keyboardWindow {
                         keyboardWindow.addSubview(snapshotView)
                     }
                     
-                    Queue.mainQueue().after(0.5, {
+                    Queue.mainQueue().after(local ? 0.8 : 0.7, {
                         snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                             snapshotView?.removeFromSuperview()
                         })
