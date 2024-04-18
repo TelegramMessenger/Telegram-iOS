@@ -69,6 +69,8 @@ open class IconSwitchNode: ASDisplayNode {
         }
     }
     
+    private var _isLocked: Bool = false
+    
     override public init() {
         super.init()
         
@@ -82,8 +84,8 @@ open class IconSwitchNode: ASDisplayNode {
         
         (self.view as! UISwitch).backgroundColor = self.backgroundColor
         (self.view as! UISwitch).tintColor = self.frameColor
-        //(self.view as! UISwitch).thumbTintColor = self.handleColor
         (self.view as! UISwitch).onTintColor = self.contentColor
+        (self.view as? TGIconSwitchView)?.updateIsLocked(self._isLocked)
         (self.view as! IconSwitchNodeView).setNegativeContentColor(self.negativeContentColor)
         (self.view as! IconSwitchNodeView).setPositiveContentColor(self.positiveContentColor)
         
@@ -96,6 +98,16 @@ open class IconSwitchNode: ASDisplayNode {
         self._isOn = value
         if self.isNodeLoaded {
             (self.view as! UISwitch).setOn(value, animated: animated)
+        }
+    }
+    
+    public func updateIsLocked(_ value: Bool) {
+        if self._isLocked == value {
+            return
+        }
+        self._isLocked = value
+        if self.isNodeLoaded {
+            (self.view as? TGIconSwitchView)?.updateIsLocked(value)
         }
     }
     

@@ -414,4 +414,16 @@ public struct PresentationResourcesItemList {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: theme.list.itemSecondaryTextColor)
         })
     }
+    
+    public static func expandDownArrowImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.expandDownArrowImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/ExpandingItemVerticalRegularArrow"), color: .white)?.withRenderingMode(.alwaysTemplate)
+        })
+    }
+    
+    public static func expandSmallDownArrowImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.expandSmallDownArrowImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/ExpandingItemVerticalSmallArrow"), color: .white)?.withRenderingMode(.alwaysTemplate)
+        })
+    }
 }

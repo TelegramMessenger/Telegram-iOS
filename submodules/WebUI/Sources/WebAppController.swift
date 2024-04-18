@@ -1501,10 +1501,18 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 var alertTitle: String?
                 let alertText: String
                 if let reason {
-                    alertTitle = self.presentationData.strings.WebApp_AlertBiometryAccessText(botPeer.compactDisplayTitle).string
+                    if case .touchId = LocalAuth.biometricAuthentication {
+                        alertTitle = self.presentationData.strings.WebApp_AlertBiometryAccessTouchIDText(botPeer.compactDisplayTitle).string
+                    } else {
+                        alertTitle = self.presentationData.strings.WebApp_AlertBiometryAccessText(botPeer.compactDisplayTitle).string
+                    }
                     alertText = reason
                 } else {
-                    alertText = self.presentationData.strings.WebApp_AlertBiometryAccessText(botPeer.compactDisplayTitle).string
+                    if case .touchId = LocalAuth.biometricAuthentication {
+                        alertText = self.presentationData.strings.WebApp_AlertBiometryAccessTouchIDText(botPeer.compactDisplayTitle).string
+                    } else {
+                        alertText = self.presentationData.strings.WebApp_AlertBiometryAccessText(botPeer.compactDisplayTitle).string
+                    }
                 }
                 controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: alertTitle, text: alertText, actions: [
                     TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_No, action: {

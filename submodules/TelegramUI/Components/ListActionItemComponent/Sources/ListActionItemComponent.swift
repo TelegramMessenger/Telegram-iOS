@@ -607,6 +607,7 @@ public final class ListActionItemComponent: Component {
                             }
                         }
                     }
+                    
                     switchNode.isUserInteractionEnabled = toggle.isInteractive
                     
                     if updateSwitchTheme {
@@ -624,11 +625,15 @@ public final class ListActionItemComponent: Component {
                     var updateSwitchTheme = themeUpdated
                     if let current = self.iconSwitchNode {
                         switchNode = current
-                        switchNode.setOn(toggle.isOn, animated: !transition.animation.isImmediate)
+                        switchNode.updateIsLocked(toggle.style == .lock)
+                        if switchNode.isOn != toggle.isOn {
+                            switchNode.setOn(toggle.isOn, animated: !transition.animation.isImmediate)
+                        }
                     } else {
                         switchTransition = switchTransition.withAnimation(.none)
                         updateSwitchTheme = true
                         switchNode = IconSwitchNode()
+                        switchNode.updateIsLocked(toggle.style == .lock)
                         switchNode.setOn(toggle.isOn, animated: false)
                         self.iconSwitchNode = switchNode
                         self.addSubview(switchNode.view)

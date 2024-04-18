@@ -2182,7 +2182,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                         if message.flags.contains(.Incoming) {
                             optionsMap[id]!.insert(.report)
                         }
-                        if channel.hasPermission(.banMembers), case .group = channel.info {
+                        if (channel.hasPermission(.banMembers) || channel.hasPermission(.deleteAllMessages)), case .group = channel.info {
                             if message.flags.contains(.Incoming) {
                                 if let author = message.author {
                                     if author is TelegramUser {

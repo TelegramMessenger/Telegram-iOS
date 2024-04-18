@@ -26,7 +26,7 @@ extension ChatControllerImpl {
         }
         
         //TODO:localize
-        let title: String = "Messages Deleted"
+        var title: String? = messageIds.count == 1 ? "Message Deleted" : "Messages Deleted"
         var text: String = ""
         var undoRights: [EnginePeer.Id: InitialBannedRights] = [:]
         
@@ -35,9 +35,9 @@ extension ChatControllerImpl {
                 text.append("\n")
             }
             if result.reportSpamPeers.count == 1 {
-                text.append("**1** user reported for spam")
+                text.append("**1** user reported for spam.")
             } else {
-                text.append("**\(result.reportSpamPeers.count)** users reported for spam")
+                text.append("**\(result.reportSpamPeers.count)** users reported for spam.")
             }
         }
         if !result.banPeers.isEmpty {
@@ -45,9 +45,9 @@ extension ChatControllerImpl {
                 text.append("\n")
             }
             if result.banPeers.count == 1 {
-                text.append("**1** user banned")
+                text.append("**1** user banned.")
             } else {
-                text.append("**\(result.banPeers.count)** users banned")
+                text.append("**\(result.banPeers.count)** users banned.")
             }
             for id in result.banPeers {
                 if let value = initialUserBannedRights[id] {
@@ -60,9 +60,9 @@ extension ChatControllerImpl {
                 text.append("\n")
             }
             if result.updateBannedRights.count == 1 {
-                text.append("**1** user restricted")
+                text.append("**1** user restricted.")
             } else {
-                text.append("**\(result.updateBannedRights.count)** users restricted")
+                text.append("**\(result.updateBannedRights.count)** users restricted.")
             }
             for id in result.banPeers {
                 if let value = initialUserBannedRights[id] {
@@ -92,10 +92,15 @@ extension ChatControllerImpl {
             }
         }
         
+        if text.isEmpty {
+            text = messageIds.count == 1 ? "Message Deleted." : "Messages Deleted."
+            title = nil
+        }
+        
         self.present(
             UndoOverlayController(
                 presentationData: self.presentationData,
-                content: undoRights.isEmpty ? .actionSucceeded(title: text.isEmpty ? nil : title, text: text.isEmpty ? title : text, cancel: nil, destructive: false) : .removedChat(title: title, text: text),
+                content: undoRights.isEmpty ? .actionSucceeded(title: title, text: text, cancel: nil, destructive: false) : .removedChat(title: title ?? text, text: title == nil ? nil : text),
                 elevatedLayout: false,
                 action: { [weak self] action in
                     guard let self else {
@@ -140,12 +145,19 @@ extension ChatControllerImpl {
                 guard let self, let chatPeer else {
                     return
                 }
-                var peers: [EnginePeer] = []
+                var renderedParticipants: [RenderedChannelParticipant] = []
                 var initialUserBannedRights: [EnginePeer.Id: InitialBannedRights] = [:]
                 for maybeParticipant in participants {
                     guard let participant = maybeParticipant else {
                         continue
                     }
+                    guard let peer = authors.first(where: { $0.id == participant.peerId }) else {
+                        continue
+                    }
+                    renderedParticipants.append(RenderedChannelParticipant(
+                        participant: participant,
+                        peer: peer
+                    ))
                     switch participant {
                     case .creator:
                         break
@@ -157,13 +169,10 @@ extension ChatControllerImpl {
                         }
                     }
                 }
-                for author in authors {
-                    peers.append(EnginePeer(author))
-                }
                 self.push(AdminUserActionsSheet(
                     context: self.context,
                     chatPeer: chatPeer,
-                    peers: peers,
+                    peers: renderedParticipants,
                     messageCount: messageIds.count,
                     completion: { [weak self] result in
                         guard let self else {
@@ -186,6 +195,9 @@ extension ChatControllerImpl {
             |> deliverOnMainQueue).startStrict(next: { [weak self] participant in
                 if let strongSelf = self {
                     if "".isEmpty {
+                        guard let participant else {
+                            return
+                        }
                         let _ = (strongSelf.context.engine.data.get(
                             TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
                             TelegramEngine.EngineData.Item.Peer.Peer(id: author.id)
@@ -198,22 +210,23 @@ extension ChatControllerImpl {
                                 return
                             }
                             var initialUserBannedRights: [EnginePeer.Id: InitialBannedRights] = [:]
-                            if let participant {
-                                switch participant {
-                                case .creator:
-                                    break
-                                case let .member(_, _, _, banInfo, _):
-                                    if let banInfo {
-                                        initialUserBannedRights[participant.peerId] = InitialBannedRights(value: banInfo.rights)
-                                    } else {
-                                        initialUserBannedRights[participant.peerId] = InitialBannedRights(value: nil)
-                                    }
+                            switch participant {
+                            case .creator:
+                                break
+                            case let .member(_, _, _, banInfo, _):
+                                if let banInfo {
+                                    initialUserBannedRights[participant.peerId] = InitialBannedRights(value: banInfo.rights)
+                                } else {
+                                    initialUserBannedRights[participant.peerId] = InitialBannedRights(value: nil)
                                 }
                             }
                             self.push(AdminUserActionsSheet(
                                 context: self.context,
                                 chatPeer: chatPeer,
-                                peers: [authorPeer],
+                                peers: [RenderedChannelParticipant(
+                                    participant: participant,
+                                    peer: authorPeer._asPeer()
+                                )],
                                 messageCount: messageIds.count,
                                 completion: { [weak self] result in
                                     guard let self else {

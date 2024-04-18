@@ -7000,7 +7000,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             UIPasteboard.general.string = bioText
             
-            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: self.presentationData.strings.MyProfile_ToastBioCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            let toastText: String
+            if let _ = self.data?.peer as? TelegramUser {
+                toastText = self.presentationData.strings.MyProfile_ToastBioCopied
+            } else {
+                toastText = self.presentationData.strings.ChannelProfile_ToastAboutCopied
+            }
+            
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: toastText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
         }
         
         var items: [ContextMenuItem] = []
@@ -7027,7 +7034,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             })))
         }
         
-        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_BioActionCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+        let copyText: String
+        if let _ = self.data?.peer as? TelegramUser {
+            copyText = self.presentationData.strings.MyProfile_BioActionCopy
+        } else {
+            copyText = self.presentationData.strings.ChannelProfile_AboutActionCopy
+        }
+        items.append(.action(ContextMenuActionItem(text: copyText, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
             c.dismiss {
                 copyAction()
             }

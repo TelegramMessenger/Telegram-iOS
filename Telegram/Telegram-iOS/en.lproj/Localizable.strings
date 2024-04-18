@@ -11896,6 +11896,7 @@ Sorry for the inconvenience.";
 "BusinessLink.ErrorExpired" = "Link Expired";
 
 "WebApp.AlertBiometryAccessText" = "Do you want to allow %@ to use Face ID?";
+"WebApp.AlertBiometryAccessTouchIDText" = "Do you want to allow %@ to use Touch ID?";
 
 "StoryList.SubtitleArchived_1" = "1 archived post";
 "StoryList.SubtitleArchived_any" = "%d archived posts";
@@ -12089,3 +12090,6 @@ Sorry for the inconvenience.";
 "Map.SharingLocation" = "Sharing Location...";
 
 "Channel.AdminLog.Settings" = "Settings";
+
+"ChannelProfile.AboutActionCopy" = "Copy";
+"ChannelProfile.ToastAboutCopied" = "Copied to clipboard.";

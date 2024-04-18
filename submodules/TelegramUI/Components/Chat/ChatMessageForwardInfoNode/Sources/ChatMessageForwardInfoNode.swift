@@ -403,7 +403,7 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                         if let current = node.avatarNode {
                             avatarNode = current
                         } else {
-                            avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 11.0))
+                            avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 8.0))
                             node.avatarNode = avatarNode
                             node.addSubnode(avatarNode)
                         }

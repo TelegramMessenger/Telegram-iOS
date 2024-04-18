@@ -20,16 +20,171 @@ import ListSectionComponent
 import ListActionItemComponent
 import PlainButtonComponent
 
-private let banSendMediaFlags: TelegramChatBannedRightsFlags = [
-    .banSendPhotos,
-    .banSendVideos,
-    .banSendGifs,
-    .banSendMusic,
-    .banSendFiles,
-    .banSendVoice,
-    .banSendInstantVideos,
-    .banEmbedLinks,
-    .banSendPolls
+struct MediaRight: OptionSet, Hashable {
+    var rawValue: Int
+    
+    static let photos = MediaRight(rawValue: 1 << 0)
+    static let videos = MediaRight(rawValue: 1 << 1)
+    static let stickersAndGifs = MediaRight(rawValue: 1 << 2)
+    static let music = MediaRight(rawValue: 1 << 3)
+    static let files = MediaRight(rawValue: 1 << 4)
+    static let voiceMessages = MediaRight(rawValue: 1 << 5)
+    static let videoMessages = MediaRight(rawValue: 1 << 6)
+    static let links = MediaRight(rawValue: 1 << 7)
+    static let polls = MediaRight(rawValue: 1 << 8)
+}
+
+extension MediaRight {
+    var count: Int {
+        var result = 0
+        var index = 0
+        while index < 31 {
+            let currentValue = self.rawValue >> UInt32(index)
+            index += 1
+            if currentValue == 0 {
+                break
+            }
+            
+            if (currentValue & 1) != 0 {
+                result += 1
+            }
+        }
+        return result
+    }
+}
+
+private struct ParticipantRight: OptionSet {
+    var rawValue: Int
+    
+    static let sendMessages = ParticipantRight(rawValue: 1 << 0)
+    static let addMembers = ParticipantRight(rawValue: 1 << 2)
+    static let pinMessages = ParticipantRight(rawValue: 1 << 3)
+    static let changeInfo = ParticipantRight(rawValue: 1 << 4)
+}
+
+private func rightsFromBannedRights(_ rights: TelegramChatBannedRightsFlags) -> (participantRights: ParticipantRight, mediaRights: MediaRight) {
+    var participantResult: ParticipantRight = [
+        .sendMessages,
+        .addMembers,
+        .pinMessages,
+        .changeInfo
+    ]
+    var mediaResult: MediaRight = [
+        .photos,
+        .videos,
+        .stickersAndGifs,
+        .music,
+        .files,
+        .voiceMessages,
+        .videoMessages,
+        .links,
+        .polls
+    ]
+    
+    if rights.contains(.banSendText) {
+        participantResult.remove(.sendMessages)
+    }
+    if rights.contains(.banAddMembers) {
+        participantResult.remove(.addMembers)
+    }
+    if rights.contains(.banPinMessages) {
+        participantResult.remove(.pinMessages)
+    }
+    if rights.contains(.banChangeInfo) {
+        participantResult.remove(.changeInfo)
+    }
+    
+    if rights.contains(.banSendPhotos) {
+        mediaResult.remove(.photos)
+    }
+    if rights.contains(.banSendVideos) {
+        mediaResult.remove(.videos)
+    }
+    if rights.contains(.banSendStickers) || rights.contains(.banSendGifs) || rights.contains(.banSendGames) || rights.contains(.banSendInline) {
+        mediaResult.remove(.stickersAndGifs)
+    }
+    if rights.contains(.banSendMusic) {
+        mediaResult.remove(.music)
+    }
+    if rights.contains(.banSendFiles) {
+        mediaResult.remove(.files)
+    }
+    if rights.contains(.banSendVoice) {
+        mediaResult.remove(.voiceMessages)
+    }
+    if rights.contains(.banSendInstantVideos) {
+        mediaResult.remove(.videoMessages)
+    }
+    if rights.contains(.banEmbedLinks) {
+        mediaResult.remove(.links)
+    }
+    if rights.contains(.banSendPolls) {
+        mediaResult.remove(.polls)
+    }
+    
+    return (participantResult, mediaResult)
+}
+
+private func rightFlagsFromRights(participantRights: ParticipantRight, mediaRights: MediaRight) -> TelegramChatBannedRightsFlags {
+    var result: TelegramChatBannedRightsFlags = []
+    
+    if !participantRights.contains(.sendMessages) {
+        result.insert(.banSendText)
+    }
+    if !participantRights.contains(.addMembers) {
+        result.insert(.banAddMembers)
+    }
+    if !participantRights.contains(.pinMessages) {
+        result.insert(.banPinMessages)
+    }
+    if !participantRights.contains(.changeInfo) {
+        result.insert(.banChangeInfo)
+    }
+    
+    if !mediaRights.contains(.photos) {
+        result.insert(.banSendPhotos)
+    }
+    if !mediaRights.contains(.videos) {
+        result.insert(.banSendVideos)
+    }
+    if !mediaRights.contains(.stickersAndGifs) {
+        result.insert(.banSendStickers)
+        result.insert(.banSendGifs)
+        result.insert(.banSendGames)
+        result.insert(.banSendInline)
+    }
+    if !mediaRights.contains(.music) {
+        result.insert(.banSendMusic)
+    }
+    if !mediaRights.contains(.files) {
+        result.insert(.banSendFiles)
+    }
+    if !mediaRights.contains(.voiceMessages) {
+        result.insert(.banSendVoice)
+    }
+    if !mediaRights.contains(.videoMessages) {
+        result.insert(.banSendInstantVideos)
+    }
+    if !mediaRights.contains(.links) {
+        result.insert(.banEmbedLinks)
+    }
+    if !mediaRights.contains(.polls) {
+        result.insert(.banSendPolls)
+    }
+    
+    return result
+}
+
+private let allMediaRightItems: [MediaRight] = [
+    .photos,
+    .videos,
+    .stickersAndGifs,
+    .music,
+    .files,
+    .voiceMessages,
+    .videoMessages,
+    .links,
+    .polls
 ]
 
 private final class AdminUserActionsSheetComponent: Component {
@@ -37,14 +192,14 @@ private final class AdminUserActionsSheetComponent: Component {
     
     let context: AccountContext
     let chatPeer: EnginePeer
-    let peers: [EnginePeer]
+    let peers: [RenderedChannelParticipant]
     let messageCount: Int
     let completion: (AdminUserActionsSheet.Result) -> Void
     
     init(
         context: AccountContext,
         chatPeer: EnginePeer,
-        peers: [EnginePeer],
+        peers: [RenderedChannelParticipant],
         messageCount: Int,
         completion: @escaping (AdminUserActionsSheet.Result) -> Void
     ) {
@@ -131,11 +286,12 @@ private final class AdminUserActionsSheetComponent: Component {
         private var optionBanSelectedPeers = Set<EnginePeer.Id>()
         
         private var isConfigurationExpanded: Bool = false
-        private var configSendMessages: Bool = false
-        private var configSendMedia: Bool = false
-        private var configAddUsers: Bool = false
-        private var configPinMessages: Bool = false
-        private var configChangeInfo: Bool = false
+        private var isMediaSectionExpanded: Bool = false
+        
+        private var allowedParticipantRights: ParticipantRight = []
+        private var allowedMediaRights: MediaRight = []
+        private var participantRights: ParticipantRight = []
+        private var mediaRights: MediaRight = []
         
         private var previousWasConfigurationExpanded: Bool = false
         
@@ -263,22 +419,7 @@ private final class AdminUserActionsSheetComponent: Component {
                 }
             } else {
                 var banFlags: TelegramChatBannedRightsFlags = []
-                
-                if !self.configSendMessages {
-                    banFlags.insert(.banSendText)
-                }
-                if !self.configSendMedia {
-                    banFlags.formUnion(banSendMediaFlags)
-                }
-                if !self.configAddUsers {
-                    banFlags.insert(.banAddMembers)
-                }
-                if !self.configPinMessages {
-                    banFlags.insert(.banPinMessages)
-                }
-                if !self.configChangeInfo {
-                    banFlags.insert(.banChangeInfo)
-                }
+                banFlags = rightFlagsFromRights(participantRights: self.participantRights, mediaRights: self.mediaRights)
                 
                 let bannedRights = TelegramChatBannedRights(flags: banFlags, untilDate: Int32.max)
                 for id in self.optionBanSelectedPeers.sorted() {
@@ -370,6 +511,44 @@ private final class AdminUserActionsSheetComponent: Component {
             let sideInset: CGFloat = 16.0
             
             if self.component == nil {
+                var (allowedParticipantRights, allowedMediaRights) = rightsFromBannedRights([])
+                if case let .channel(channel) = component.chatPeer {
+                    (allowedParticipantRights, allowedMediaRights) = rightsFromBannedRights(channel.defaultBannedRights?.flags ?? [])
+                }
+                
+                var (commonParticipantRights, commonMediaRights) = rightsFromBannedRights([])
+                
+                loop: for peer in component.peers {
+                    var (peerParticipantRights, peerMediaRights) = rightsFromBannedRights([])
+                    switch peer.participant {
+                    case .creator:
+                        allowedParticipantRights = []
+                        allowedMediaRights = []
+                        break loop
+                    case let .member(_, _, adminInfo, banInfo, _):
+                        if adminInfo != nil {
+                            allowedParticipantRights = []
+                            allowedMediaRights = []
+                            break loop
+                        } else if let banInfo {
+                            (peerParticipantRights, peerMediaRights) = rightsFromBannedRights(banInfo.rights.flags)
+                        }
+                    }
+                    peerParticipantRights = peerParticipantRights.intersection(allowedParticipantRights)
+                    peerMediaRights = peerMediaRights.intersection(allowedMediaRights)
+                    
+                    commonParticipantRights = commonParticipantRights.intersection(peerParticipantRights)
+                    commonMediaRights = commonMediaRights.intersection(peerMediaRights)
+                }
+                
+                commonParticipantRights = commonParticipantRights.intersection(allowedParticipantRights)
+                commonMediaRights = commonMediaRights.intersection(allowedMediaRights)
+                
+                self.allowedParticipantRights = allowedParticipantRights
+                self.participantRights = commonParticipantRights
+                
+                self.allowedMediaRights = allowedMediaRights
+                self.mediaRights = commonMediaRights
             }
             
             self.component = component
@@ -423,6 +602,43 @@ private final class AdminUserActionsSheetComponent: Component {
                 case ban
             }
             
+            var availableOptions: [OptionsSection] = []
+            availableOptions.append(.report)
+            
+            if case let .channel(channel) = component.chatPeer {
+                if channel.hasPermission(.deleteAllMessages) {
+                    availableOptions.append(.deleteAll)
+                    
+                    if channel.hasPermission(.banMembers) {
+                        var canBanEveryone = true
+                        for peer in component.peers {
+                            if peer.peer.id == component.context.account.peerId {
+                                canBanEveryone = false
+                                continue
+                            }
+                            
+                            switch peer.participant {
+                            case .creator:
+                                canBanEveryone = false
+                            case let .member(_, _, adminInfo, banInfo, _):
+                                let _ = banInfo
+                                if let adminInfo {
+                                    if channel.flags.contains(.isCreator) {
+                                    } else if adminInfo.promotedBy == component.context.account.peerId {
+                                    } else {
+                                        canBanEveryone = false
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if canBanEveryone {
+                            availableOptions.append(.ban)
+                        }
+                    }
+                }
+            }
+            
             let optionsItem: (OptionsSection) -> AnyComponentWithIdentity<Empty> = { section in
                 let sectionId: AnyHashable
                 let selectedPeers: Set<EnginePeer.Id>
@@ -442,7 +658,7 @@ private final class AdminUserActionsSheetComponent: Component {
                     isExpanded = self.isOptionDeleteAllExpanded
                     
                     if component.peers.count == 1 {
-                        title = "Delete All from \(component.peers[0].compactDisplayTitle)"
+                        title = "Delete All from \(EnginePeer(component.peers[0].peer).compactDisplayTitle)"
                     } else {
                         title = "Delete All from Users"
                     }
@@ -454,8 +670,8 @@ private final class AdminUserActionsSheetComponent: Component {
                     let banTitle: String
                     let restrictTitle: String
                     if component.peers.count == 1 {
-                        banTitle = "Ban \(component.peers[0].compactDisplayTitle)"
-                        restrictTitle = "Restrict \(component.peers[0].compactDisplayTitle)"
+                        banTitle = "Ban \(EnginePeer(component.peers[0].peer).compactDisplayTitle)"
+                        restrictTitle = "Restrict \(EnginePeer(component.peers[0].peer).compactDisplayTitle)"
                     } else {
                         banTitle = "Ban Users"
                         restrictTitle = "Restrict Users"
@@ -527,7 +743,7 @@ private final class AdminUserActionsSheetComponent: Component {
                             
                             if selectedPeers.isEmpty {
                                 for peer in component.peers {
-                                    selectedPeers.insert(peer.id)
+                                    selectedPeers.insert(peer.peer.id)
                                 }
                             } else {
                                 selectedPeers.removeAll()
@@ -567,7 +783,7 @@ private final class AdminUserActionsSheetComponent: Component {
                         
                         if selectedPeers.isEmpty {
                             for peer in component.peers {
-                                selectedPeers.insert(peer.id)
+                                selectedPeers.insert(peer.peer.id)
                             }
                         } else {
                             selectedPeers.removeAll()
@@ -605,14 +821,14 @@ private final class AdminUserActionsSheetComponent: Component {
                 
                 var peerItems: [AnyComponentWithIdentity<Empty>] = []
                 for peer in component.peers {
-                    peerItems.append(AnyComponentWithIdentity(id: peer.id, component: AnyComponent(AdminUserActionsPeerComponent(
+                    peerItems.append(AnyComponentWithIdentity(id: peer.peer.id, component: AnyComponent(AdminUserActionsPeerComponent(
                         context: component.context,
                         theme: environment.theme,
                         strings: environment.strings,
                         sideInset: 0.0,
-                        title: peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
-                        peer: peer,
-                        selectionState: .editing(isSelected: selectedPeers.contains(peer.id)),
+                        title: EnginePeer(peer.peer).displayTitle(strings: environment.strings, displayOrder: .firstLast),
+                        peer: EnginePeer(peer.peer),
+                        selectionState: .editing(isSelected: selectedPeers.contains(peer.peer.id)),
                         action: { [weak self] peer in
                             guard let self else {
                                 return
@@ -653,7 +869,7 @@ private final class AdminUserActionsSheetComponent: Component {
                     items: peerItems
                 )))
             }
-             
+            
             //TODO:localize
             let titleString: String
             if component.messageCount == 1 {
@@ -684,19 +900,21 @@ private final class AdminUserActionsSheetComponent: Component {
             
             var optionsSectionItems: [AnyComponentWithIdentity<Empty>] = []
             
-            optionsSectionItems.append(optionsItem(.report))
-            if self.isOptionReportExpanded {
-                optionsSectionItems.append(expandedPeersItem(.report))
-            }
-            
-            optionsSectionItems.append(optionsItem(.deleteAll))
-            if self.isOptionDeleteAllExpanded {
-                optionsSectionItems.append(expandedPeersItem(.deleteAll))
-            }
-            
-            optionsSectionItems.append(optionsItem(.ban))
-            if self.isOptionBanExpanded {
-                optionsSectionItems.append(expandedPeersItem(.ban))
+            for option in availableOptions {
+                let isOptionExpanded: Bool
+                switch option {
+                case .report:
+                    isOptionExpanded = self.isOptionReportExpanded
+                case .deleteAll:
+                    isOptionExpanded = self.isOptionDeleteAllExpanded
+                case .ban:
+                    isOptionExpanded = self.isOptionBanExpanded
+                }
+                
+                optionsSectionItems.append(optionsItem(option))
+                if isOptionExpanded {
+                    optionsSectionItems.append(expandedPeersItem(option))
+                }
             }
             
             var optionsSectionTransition = transition
@@ -748,7 +966,7 @@ private final class AdminUserActionsSheetComponent: Component {
                 component: AnyComponent(PlainButtonComponent(
                     content: AnyComponent(OptionsSectionFooterComponent(
                         theme: environment.theme,
-                        text: self.isConfigurationExpanded ? fullyBanTitle : partiallyRestrictTitle,
+                        text: self.isConfigurationExpanded ? partiallyRestrictTitle : fullyBanTitle,
                         fontSize: presentationData.listsFontSize.itemListBaseHeaderFontSize,
                         isExpanded: self.isConfigurationExpanded
                     )),
@@ -761,7 +979,7 @@ private final class AdminUserActionsSheetComponent: Component {
                         self.isConfigurationExpanded = !self.isConfigurationExpanded
                         if self.isConfigurationExpanded && self.optionBanSelectedPeers.isEmpty {
                             for peer in component.peers {
-                                self.optionBanSelectedPeers.insert(peer.id)
+                                self.optionBanSelectedPeers.insert(peer.peer.id)
                             }
                         }
                         self.state?.updated(transition: .spring(duration: 0.35))
@@ -776,7 +994,7 @@ private final class AdminUserActionsSheetComponent: Component {
             
             var configSectionItems: [AnyComponentWithIdentity<Empty>] = []
             
-            enum ConfigItem: Hashable {
+            enum ConfigItem: Hashable, CaseIterable {
                 case sendMessages
                 case sendMedia
                 case addUsers
@@ -784,93 +1002,238 @@ private final class AdminUserActionsSheetComponent: Component {
                 case changeInfo
             }
             
-            let allConfigItems: [ConfigItem] = [
-                .sendMessages,
-                .sendMedia,
-                .addUsers,
-                .pinMessages,
-                .changeInfo
-            ]
-            if case let .channel(channel) = component.chatPeer {
-                let defaultBannedFlags = channel.defaultBannedRights?.flags ?? []
-                
-                loop: for configItem in allConfigItems {
-                    let itemTitle: String
-                    let itemValue: Bool
+            var allConfigItems: [(ConfigItem, Bool)] = []
+            if !self.allowedMediaRights.isEmpty || !self.allowedParticipantRights.isEmpty {
+                for configItem in ConfigItem.allCases {
+                    let isEnabled: Bool
                     switch configItem {
                     case .sendMessages:
-                        if defaultBannedFlags.contains(.banSendText) {
-                            continue loop
-                        }
-                        
-                        itemTitle = "Send Text Messages"
-                        itemValue = self.configSendMessages
+                        isEnabled = self.allowedParticipantRights.contains(.sendMessages)
                     case .sendMedia:
-                        if !defaultBannedFlags.intersection(banSendMediaFlags).isEmpty {
-                            continue loop
-                        }
-                        
-                        itemTitle = "Send Media"
-                        itemValue = self.configSendMedia
+                        isEnabled = !self.allowedMediaRights.isEmpty
                     case .addUsers:
-                        if defaultBannedFlags.contains(.banAddMembers) {
-                            continue loop
-                        }
-                        
-                        itemTitle = "Add Users"
-                        itemValue = self.configAddUsers
+                        isEnabled = self.allowedParticipantRights.contains(.addMembers)
                     case .pinMessages:
-                        if defaultBannedFlags.contains(.banPinMessages) {
-                            continue loop
-                        }
-                        
-                        itemTitle = "Pin Messages"
-                        itemValue = self.configPinMessages
+                        isEnabled = self.allowedParticipantRights.contains(.pinMessages)
                     case .changeInfo:
-                        if defaultBannedFlags.contains(.banChangeInfo) {
-                            continue loop
-                        }
-                        
-                        itemTitle = "Change Chat Info"
-                        itemValue = self.configChangeInfo
+                        isEnabled = self.allowedParticipantRights.contains(.changeInfo)
                     }
-                    
-                    configSectionItems.append(AnyComponentWithIdentity(id: configItem, component: AnyComponent(ListActionItemComponent(
-                        theme: environment.theme,
-                        title: AnyComponent(VStack([
-                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                    allConfigItems.append((configItem, isEnabled))
+                }
+            }
+            
+            loop: for (configItem, isEnabled) in allConfigItems {
+                let itemTitle: AnyComponent<Empty>
+                let itemValue: Bool
+                switch configItem {
+                case .sendMessages:
+                    itemTitle = AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: "Send Messages",
+                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                            textColor: environment.theme.list.itemPrimaryTextColor
+                        )),
+                        maximumNumberOfLines: 1
+                    ))
+                    itemValue = self.participantRights.contains(.sendMessages)
+                case .sendMedia:
+                    if isEnabled {
+                        itemTitle = AnyComponent(HStack([
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
-                                    string: itemTitle,
+                                    string: "Send Media",
                                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                     textColor: environment.theme.list.itemPrimaryTextColor
                                 )),
                                 maximumNumberOfLines: 1
                             ))),
-                        ], alignment: .left, spacing: 2.0)),
-                        accessory: .toggle(ListActionItemComponent.Toggle(
-                            style: .icons,
-                            isOn: itemValue,
-                            isInteractive: true,
+                            AnyComponentWithIdentity(id: 1, component: AnyComponent(MediaSectionExpandIndicatorComponent(
+                                theme: environment.theme,
+                                title: "\(self.mediaRights.count)/\(self.allowedMediaRights.count)",
+                                isExpanded: self.isMediaSectionExpanded
+                            )))
+                        ], spacing: 7.0))
+                    } else {
+                        itemTitle = AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "Send Media",
+                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                textColor: environment.theme.list.itemPrimaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        ))
+                    }
+                    
+                    itemValue = !self.mediaRights.isEmpty
+                case .addUsers:
+                    itemTitle = AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: "Add Users",
+                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                            textColor: environment.theme.list.itemPrimaryTextColor
+                        )),
+                        maximumNumberOfLines: 1
+                    ))
+                    itemValue = self.participantRights.contains(.addMembers)
+                case .pinMessages:
+                    itemTitle = AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: "Pin Messages",
+                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                            textColor: environment.theme.list.itemPrimaryTextColor
+                        )),
+                        maximumNumberOfLines: 1
+                    ))
+                    itemValue = self.participantRights.contains(.pinMessages)
+                case .changeInfo:
+                    itemTitle = AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: "Change Chat Info",
+                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                            textColor: environment.theme.list.itemPrimaryTextColor
+                        )),
+                        maximumNumberOfLines: 1
+                    ))
+                    itemValue = self.participantRights.contains(.changeInfo)
+                }
+                
+                configSectionItems.append(AnyComponentWithIdentity(id: configItem, component: AnyComponent(ListActionItemComponent(
+                    theme: environment.theme,
+                    title: itemTitle,
+                    accessory: .toggle(ListActionItemComponent.Toggle(
+                        style: isEnabled ? .icons : .lock,
+                        isOn: itemValue,
+                        isInteractive: isEnabled,
+                        action: isEnabled ? { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            switch configItem {
+                            case .sendMessages:
+                                if self.participantRights.contains(.sendMessages) {
+                                    self.participantRights.remove(.sendMessages)
+                                } else {
+                                    self.participantRights.insert(.sendMessages)
+                                }
+                            case .sendMedia:
+                                if self.mediaRights.isEmpty {
+                                    self.mediaRights = self.allowedMediaRights
+                                } else {
+                                    self.mediaRights = []
+                                }
+                            case .addUsers:
+                                if self.participantRights.contains(.addMembers) {
+                                    self.participantRights.remove(.addMembers)
+                                } else {
+                                    self.participantRights.insert(.addMembers)
+                                }
+                            case .pinMessages:
+                                if self.participantRights.contains(.pinMessages) {
+                                    self.participantRights.remove(.pinMessages)
+                                } else {
+                                    self.participantRights.insert(.pinMessages)
+                                }
+                            case .changeInfo:
+                                if self.participantRights.contains(.changeInfo) {
+                                    self.participantRights.remove(.changeInfo)
+                                } else {
+                                    self.participantRights.insert(.changeInfo)
+                                }
+                            }
+                            self.state?.updated(transition: .spring(duration: 0.35))
+                        } : nil
+                    )),
+                    action: (isEnabled && configItem == .sendMedia) ? { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.isMediaSectionExpanded = !self.isMediaSectionExpanded
+                        self.state?.updated(transition: .spring(duration: 0.35))
+                    } : nil,
+                    highlighting: .disabled
+                ))))
+                
+                if isEnabled, case .sendMedia = configItem, self.isMediaSectionExpanded {
+                    var mediaItems: [AnyComponentWithIdentity<Empty>] = []
+                    mediaRightsLoop: for possibleMediaItem in allMediaRightItems {
+                        if !self.allowedMediaRights.contains(possibleMediaItem) {
+                            continue
+                        }
+                        
+                        let mediaItemTitle: String
+                        switch possibleMediaItem {
+                        case .photos:
+                            mediaItemTitle = "Send Photos"
+                        case .videos:
+                            mediaItemTitle = "Send Videos"
+                        case .stickersAndGifs:
+                            mediaItemTitle = "Send Stickers & GIFs"
+                        case .music:
+                            mediaItemTitle = "Send Music"
+                        case .files:
+                            mediaItemTitle = "Send Files"
+                        case .voiceMessages:
+                            mediaItemTitle = "Send Voice Messages"
+                        case .videoMessages:
+                            mediaItemTitle = "Send Video Messages"
+                        case .links:
+                            mediaItemTitle = "Embed Links"
+                        case .polls:
+                            mediaItemTitle = "Send Polls"
+                        default:
+                            continue mediaRightsLoop
+                        }
+                        
+                        mediaItems.append(AnyComponentWithIdentity(id: possibleMediaItem, component: AnyComponent(ListActionItemComponent(
+                            theme: environment.theme,
+                            title: AnyComponent(VStack([
+                                AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                    text: .plain(NSAttributedString(
+                                        string: mediaItemTitle,
+                                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                        textColor: environment.theme.list.itemPrimaryTextColor
+                                    )),
+                                    maximumNumberOfLines: 1
+                                ))),
+                            ], alignment: .left, spacing: 2.0)),
+                            leftIcon: .check(ListActionItemComponent.LeftIcon.Check(
+                                isSelected: self.mediaRights.contains(possibleMediaItem),
+                                toggle: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    
+                                    if self.mediaRights.contains(possibleMediaItem) {
+                                        self.mediaRights.remove(possibleMediaItem)
+                                    } else {
+                                        self.mediaRights.insert(possibleMediaItem)
+                                    }
+                                    
+                                    self.state?.updated(transition: .spring(duration: 0.35))
+                                }
+                            )),
+                            icon: .none,
+                            accessory: .none,
                             action: { [weak self] _ in
                                 guard let self else {
                                     return
                                 }
-                                switch configItem {
-                                case .sendMessages:
-                                    self.configSendMessages = !self.configSendMessages
-                                case .sendMedia:
-                                    self.configSendMedia = !self.configSendMedia
-                                case .addUsers:
-                                    self.configAddUsers = !self.configAddUsers
-                                case .pinMessages:
-                                    self.configPinMessages = !self.configPinMessages
-                                case .changeInfo:
-                                    self.configChangeInfo = !self.configChangeInfo
+                                
+                                if self.mediaRights.contains(possibleMediaItem) {
+                                    self.mediaRights.remove(possibleMediaItem)
+                                } else {
+                                    self.mediaRights.insert(possibleMediaItem)
                                 }
+                                
                                 self.state?.updated(transition: .spring(duration: 0.35))
-                            }
-                        )),
-                        action: nil
+                            },
+                            highlighting: .disabled
+                        ))))
+                    }
+                    configSectionItems.append(AnyComponentWithIdentity(id: "media-sub", component: AnyComponent(ListSubSectionComponent(
+                        theme: environment.theme,
+                        leftInset: 0.0,
+                        items: mediaItems
                     ))))
                 }
             }
@@ -911,23 +1274,35 @@ private final class AdminUserActionsSheetComponent: Component {
                 transition.setAlpha(view: configSectionView, alpha: self.isConfigurationExpanded ? 1.0 : 0.0)
             }
             
-            let optionsFooterFrame: CGRect
-            if self.isConfigurationExpanded {
-                contentHeight += 30.0
-                contentHeight += configSectionSize.height
-                contentHeight += 7.0
-                optionsFooterFrame = CGRect(origin: CGPoint(x: sideInset + 16.0, y: contentHeight), size: optionsFooterSize)
-                contentHeight += optionsFooterSize.height
-            } else {
-                contentHeight += 7.0
-                optionsFooterFrame = CGRect(origin: CGPoint(x: sideInset + 16.0, y: contentHeight), size: optionsFooterSize)
-                contentHeight += optionsFooterSize.height
-            }
-            if let optionsFooterView = self.optionsFooter.view {
-                if optionsFooterView.superview == nil {
-                    self.scrollContentView.addSubview(optionsFooterView)
+            if availableOptions.contains(.ban) && !configSectionItems.isEmpty {
+                let optionsFooterFrame: CGRect
+                if self.isConfigurationExpanded {
+                    contentHeight += 30.0
+                    contentHeight += configSectionSize.height
+                    contentHeight += 7.0
+                    optionsFooterFrame = CGRect(origin: CGPoint(x: sideInset + 16.0, y: contentHeight), size: optionsFooterSize)
+                    contentHeight += optionsFooterSize.height
+                } else {
+                    contentHeight += 7.0
+                    optionsFooterFrame = CGRect(origin: CGPoint(x: sideInset + 16.0, y: contentHeight), size: optionsFooterSize)
+                    contentHeight += optionsFooterSize.height
                 }
-                transition.setFrame(view: optionsFooterView, frame: optionsFooterFrame)
+                if let optionsFooterView = self.optionsFooter.view {
+                    if optionsFooterView.superview == nil {
+                        self.scrollContentView.addSubview(optionsFooterView)
+                    }
+                    transition.setFrame(view: optionsFooterView, frame: optionsFooterFrame)
+                    transition.setAlpha(view: optionsFooterView, alpha: 1.0)
+                }
+            } else {
+                if let optionsFooterView = self.optionsFooter.view {
+                    if optionsFooterView.superview == nil {
+                        self.scrollContentView.addSubview(optionsFooterView)
+                    }
+                    let optionsFooterFrame = CGRect(origin: CGPoint(x: sideInset + 16.0, y: contentHeight), size: optionsFooterSize)
+                    transition.setFrame(view: optionsFooterView, frame: optionsFooterFrame)
+                    transition.setAlpha(view: optionsFooterView, alpha: 0.0)
+                }
             }
             
             contentHeight += 30.0
@@ -1034,7 +1409,7 @@ public class AdminUserActionsSheet: ViewControllerComponentContainer {
         public let banPeers: [EnginePeer.Id]
         public let updateBannedRights: [EnginePeer.Id: TelegramChatBannedRights]
         
-        init(reportSpamPeers: [EnginePeer.Id], deleteAllFromPeers: [EnginePeer.Id], banPeers: [EnginePeer.Id], updateBannedRights: [EnginePeer.Id : TelegramChatBannedRights]) {
+        init(reportSpamPeers: [EnginePeer.Id], deleteAllFromPeers: [EnginePeer.Id], banPeers: [EnginePeer.Id], updateBannedRights: [EnginePeer.Id: TelegramChatBannedRights]) {
             self.reportSpamPeers = reportSpamPeers
             self.deleteAllFromPeers = deleteAllFromPeers
             self.banPeers = banPeers
@@ -1046,46 +1421,8 @@ public class AdminUserActionsSheet: ViewControllerComponentContainer {
     
     private var isDismissed: Bool = false
     
-    public init(context: AccountContext, chatPeer: EnginePeer, peers: [EnginePeer], messageCount: Int, completion: @escaping (Result) -> Void) {
+    public init(context: AccountContext, chatPeer: EnginePeer, peers: [RenderedChannelParticipant], messageCount: Int, completion: @escaping (Result) -> Void) {
         self.context = context
-        
-        /*#if DEBUG
-        var peers = peers
-        
-        if !"".isEmpty {
-            var nextPeerId: Int64 = 1
-            let makePeer: () -> EnginePeer = {
-                guard case let .user(user) = peers[0] else {
-                    preconditionFailure()
-                }
-                let id = nextPeerId
-                nextPeerId += 1
-                return .user(TelegramUser(
-                    id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(id)),
-                    accessHash: user.accessHash,
-                    firstName: user.firstName,
-                    lastName: user.lastName,
-                    username: user.username,
-                    phone: user.phone,
-                    photo: user.photo,
-                    botInfo: user.botInfo,
-                    restrictionInfo: user.restrictionInfo,
-                    flags: user.flags,
-                    emojiStatus: user.emojiStatus,
-                    usernames: user.usernames,
-                    storiesHidden: user.storiesHidden,
-                    nameColor: user.nameColor,
-                    backgroundEmojiId: user.backgroundEmojiId,
-                    profileColor: user.profileColor,
-                    profileBackgroundEmojiId: user.profileBackgroundEmojiId
-                ))
-            }
-            
-            for _ in 0 ..< 3 {
-                peers.append(makePeer())
-            }
-        }
-        #endif*/
         
         super.init(context: context, component: AdminUserActionsSheetComponent(context: context, chatPeer: chatPeer, peers: peers, messageCount: messageCount, completion: completion), navigationBarAppearance: .none)
         
@@ -1128,7 +1465,7 @@ public class AdminUserActionsSheet: ViewControllerComponentContainer {
 }
 
 private let optionExpandUsersIcon: UIImage? = {
-    let sourceImage = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextGroupIcon")!
+    let sourceImage = UIImage(bundleImageName: "Item List/InlineIconUsers")!
     return generateImage(CGSize(width: sourceImage.size.width, height: sourceImage.size.height), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         UIGraphicsPushContext(context)
@@ -1185,21 +1522,21 @@ private final class OptionSectionExpandIndicatorComponent: Component {
         }
         
         func update(component: OptionSectionExpandIndicatorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            let countArrowSpacing: CGFloat = -1.0
-            let iconCountSpacing: CGFloat = 2.0
+            let countArrowSpacing: CGFloat = 1.0
+            let iconCountSpacing: CGFloat = 1.0
             
             if self.iconView.image == nil {
                 self.iconView.image = optionExpandUsersIcon
             }
             self.iconView.tintColor = component.theme.list.itemPrimaryTextColor
-            let iconSize = CGSize(width: 12.0, height: 12.0)
+            let iconSize = self.iconView.image?.size ?? CGSize(width: 12.0, height: 12.0)
             
             if self.arrowView.image == nil {
-                self.arrowView.image = PresentationResourcesItemList.downArrowImage(component.theme)?.withRenderingMode(.alwaysTemplate)
+                self.arrowView.image = PresentationResourcesItemList.expandDownArrowImage(component.theme)
             }
             self.arrowView.tintColor = component.theme.list.itemPrimaryTextColor
-            
-            let arrowSize = CGSize(width: 20.0, height: 20.0)
+            let arrowSize = self.arrowView.image?.size ?? CGSize(width: 1.0, height: 1.0)
+
             let countSize = self.count.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -1211,12 +1548,7 @@ private final class OptionSectionExpandIndicatorComponent: Component {
             
             let size = CGSize(width: 60.0, height: availableSize.height)
             
-            var arrowFrame = CGRect(origin: CGPoint(x: size.width - arrowSize.width - 10.0, y: floor((size.height - arrowSize.height) * 0.5)), size: arrowSize)
-            if component.isExpanded {
-                arrowFrame = arrowFrame.offsetBy(dx: 0.0, dy: -1.0)
-            } else {
-                arrowFrame = arrowFrame.offsetBy(dx: 0.0, dy: 1.0)
-            }
+            let arrowFrame = CGRect(origin: CGPoint(x: size.width - arrowSize.width - 12.0, y: floor((size.height - arrowSize.height) * 0.5)), size: arrowSize)
             
             let countFrame = CGRect(origin: CGPoint(x: arrowFrame.minX - countArrowSpacing - countSize.width, y: floor((size.height - countSize.height) * 0.5)), size: countSize)
             
@@ -1229,11 +1561,102 @@ private final class OptionSectionExpandIndicatorComponent: Component {
                 countView.frame = countFrame
             }
             
-            transition.setPosition(view: self.arrowView, position: arrowFrame.center)
+            self.arrowView.center = arrowFrame.center
             self.arrowView.bounds = CGRect(origin: CGPoint(), size: arrowFrame.size)
-            transition.setTransform(view: self.arrowView, transform: CATransform3DMakeRotation(component.isExpanded ? CGFloat.pi : 0.0, 0.0, 0.0, 1.0))
+            transition.setTransform(view: self.arrowView, transform: CATransform3DTranslate(CATransform3DMakeRotation(component.isExpanded ? CGFloat.pi : 0.0, 0.0, 0.0, 1.0), 0.0, component.isExpanded ? 1.0 : 0.0, 0.0))
             
             self.iconView.frame = iconFrame
+            
+            return size
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class MediaSectionExpandIndicatorComponent: Component {
+    let theme: PresentationTheme
+    let title: String
+    let isExpanded: Bool
+    
+    init(
+        theme: PresentationTheme,
+        title: String,
+        isExpanded: Bool
+    ) {
+        self.theme = theme
+        self.title = title
+        self.isExpanded = isExpanded
+    }
+    
+    static func ==(lhs: MediaSectionExpandIndicatorComponent, rhs: MediaSectionExpandIndicatorComponent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.isExpanded != rhs.isExpanded {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private let arrowView: UIImageView
+        private let title = ComponentView<Empty>()
+        
+        override init(frame: CGRect) {
+            self.arrowView = UIImageView()
+            
+            super.init(frame: frame)
+            
+            self.addSubview(self.arrowView)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: MediaSectionExpandIndicatorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let titleArrowSpacing: CGFloat = 1.0
+            
+            if self.arrowView.image == nil {
+                self.arrowView.image = PresentationResourcesItemList.expandDownArrowImage(component.theme)
+            }
+            self.arrowView.tintColor = component.theme.list.itemPrimaryTextColor
+            let arrowSize = self.arrowView.image?.size ?? CGSize(width: 1.0, height: 1.0)
+            
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: component.title, font: Font.semibold(13.0), textColor: component.theme.list.itemPrimaryTextColor))
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            
+            let size = CGSize(width: titleSize.width + titleArrowSpacing + arrowSize.width, height: titleSize.height)
+            
+            let titleFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((size.height - titleSize.height) * 0.5)), size: titleSize)
+            let arrowFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + titleArrowSpacing, y: floor((size.height - arrowSize.height) * 0.5) + 2.0), size: arrowSize)
+            
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.addSubview(titleView)
+                }
+                titleView.frame = titleFrame
+            }
+            
+            self.arrowView.center = arrowFrame.center
+            self.arrowView.bounds = CGRect(origin: CGPoint(), size: arrowFrame.size)
+            transition.setTransform(view: self.arrowView, transform: CATransform3DTranslate(CATransform3DMakeRotation(component.isExpanded ? CGFloat.pi : 0.0, 0.0, 0.0, 1.0), 0.0, component.isExpanded ? 1.0 : -1.0, 0.0))
             
             return size
         }
@@ -1304,11 +1727,10 @@ private final class OptionsSectionFooterComponent: Component {
         
         func update(component: OptionsSectionFooterComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             if self.arrowView.image == nil {
-                self.arrowView.image = PresentationResourcesItemList.downArrowImage(component.theme)?.withRenderingMode(.alwaysTemplate)
+                self.arrowView.image = PresentationResourcesItemList.expandSmallDownArrowImage(component.theme)
             }
             self.arrowView.tintColor = component.theme.list.itemAccentColor
-            
-            let arrowSize = CGSize(width: 14.0, height: 14.0)
+            let arrowSize = self.arrowView.image?.size ?? CGSize(width: 1.0, height: 1.0)
             
             let attributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: component.text, font: Font.regular(component.fontSize), textColor: component.theme.list.itemAccentColor))
             attributedText.append(NSAttributedString(string: ">", font: Font.regular(component.fontSize), textColor: .clear))
@@ -1321,7 +1743,7 @@ private final class OptionsSectionFooterComponent: Component {
             
             var arrowFrame = CGRect()
             if let lineRect = textLayout.linesRects().last {
-                arrowFrame = CGRect(origin: CGPoint(x: textFrame.minX + lineRect.maxX - arrowSize.width + 6.0, y: textFrame.minY + lineRect.maxY - lineRect.height - arrowSize.height + 4.0), size: arrowSize)
+                arrowFrame = CGRect(origin: CGPoint(x: textFrame.minX + lineRect.maxX - arrowSize.width + 6.0, y: textFrame.minY + lineRect.maxY - lineRect.height - arrowSize.height - 1.0), size: arrowSize)
             }
             
             self.arrowView.center = arrowFrame.center

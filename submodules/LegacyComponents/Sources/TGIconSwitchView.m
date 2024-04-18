@@ -30,8 +30,10 @@ static const void *positionChangedKey = &positionChangedKey;
 @interface TGIconSwitchView () {
     UIImageView *_offIconView;
     UIImageView *_onIconView;
+    UIColor *_negativeContentColor;
     
     bool _stateIsOn;
+    bool _isLocked;
 }
 
 @end
@@ -60,13 +62,8 @@ static const void *positionChangedKey = &positionChangedKey;
             object_setClass(handleView.layer, subclass);
         });
         
-        CGPoint offset = CGPointZero;
-        if (iosMajorVersion() >= 12) {
-            offset = CGPointMake(-7.0, -3.0);
-        }
+        [self updateIconFrame];
         
-        _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(14.5f) + offset.y);
-        _onIconView.frame = CGRectOffset(_onIconView.bounds, 20.0f + offset.x, 15.0f + offset.y);
         [handleView addSubview:_onIconView];
         [handleView addSubview:_offIconView];
         
@@ -90,6 +87,21 @@ static const void *positionChangedKey = &positionChangedKey;
     [super setOn:on animated:animated];
     
     [self updateState:on animated:animated force:true];
+}
+
+- (void)updateIconFrame {
+    CGPoint offset = CGPointZero;
+    if (iosMajorVersion() >= 12) {
+        offset = CGPointMake(-7.0, -3.0);
+    }
+    
+    if (_isLocked) {
+        _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(12.5f) + offset.y);
+    } else {
+        _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(14.5f) + offset.y);
+    }
+    
+    _onIconView.frame = CGRectOffset(_onIconView.bounds, 20.0f + offset.x, 15.0f + offset.y);
 }
 
 - (void)updateState:(bool)on animated:(bool)animated force:(bool)force {
@@ -125,7 +137,24 @@ static const void *positionChangedKey = &positionChangedKey;
 }
 
 - (void)setNegativeContentColor:(UIColor *)color {
-    _offIconView.image = TGTintedImage(TGComponentsImageNamed(@"PermissionSwitchOff.png"), color);
+    _negativeContentColor = color;
+    if (_isLocked) {
+        _offIconView.image = TGTintedImage(TGComponentsImageNamed(@"Item List/SwitchLockIcon"), color);
+        _offIconView.frame = CGRectMake(_offIconView.frame.origin.x, _offIconView.frame.origin.y, _offIconView.image.size.width, _offIconView.image.size.height);
+    } else {
+        _offIconView.image = TGTintedImage(TGComponentsImageNamed(@"PermissionSwitchOff.png"), color);
+    }
+}
+
+- (void)updateIsLocked:(bool)isLocked {
+    if (_isLocked != isLocked) {
+        _isLocked = isLocked;
+        
+        if (_negativeContentColor) {
+            [self setNegativeContentColor:_negativeContentColor];
+        }
+        [self updateIconFrame];
+    }
 }
 
 - (void)currentValueChanged {
