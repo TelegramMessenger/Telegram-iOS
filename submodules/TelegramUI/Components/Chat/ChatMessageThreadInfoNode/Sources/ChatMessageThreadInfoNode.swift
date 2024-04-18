@@ -481,8 +481,12 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
                 }
                 
                 let titleTopicIconContent: EmojiStatusComponent.Content
+                var containerSize: CGSize = CGSize(width: 22.0, height: 22.0)
+                var iconX: CGFloat = 0.0
                 if arguments.threadId == 1 {
                     titleTopicIconContent = .image(image: generalThreadIcon)
+                    containerSize = CGSize(width: 18.0, height: 18.0)
+                    iconX = 3.0
                 } else if let fileId = topicIconId, fileId != 0 {
                     titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: arguments.presentationData.theme.theme.list.mediaPlaceholderColor, themeColor: arguments.presentationData.theme.theme.list.itemAccentColor, loopMode: .count(1))
                 } else {
@@ -504,7 +508,7 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
                         transition: .immediate,
                         component: AnyComponent(titleTopicIconComponent),
                         environment: {},
-                        containerSize: CGSize(width: 22.0, height: 22.0)
+                        containerSize: containerSize
                     )
                     
                     let iconY: CGFloat
@@ -514,7 +518,7 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
                         iconY = 0.0
                     }
                     
-                    titleTopicIconView.frame = CGRect(origin: CGPoint(x: insets.left, y: insets.top + iconY), size: iconSize)
+                    titleTopicIconView.frame = CGRect(origin: CGPoint(x: insets.left + iconX, y: insets.top + iconY), size: iconSize)
                 }
 
                 let textFrame = CGRect(origin: CGPoint(x: iconSize.width + 2.0 + insets.left, y: insets.top), size: textLayout.size)

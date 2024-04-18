@@ -12093,3 +12093,5 @@ Sorry for the inconvenience.";
 
 "ChannelProfile.AboutActionCopy" = "Copy";
 "ChannelProfile.ToastAboutCopied" = "Copied to clipboard.";
+
+"Conversation.ContextMenuBanFull" = "Ban";

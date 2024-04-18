@@ -142,7 +142,7 @@ private func sendFirebaseAuthorizationCode(accountManager: AccountManager<Telegr
     }
 }
 
-public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, pushNotificationConfiguration: AuthorizationCodePushNotificationConfiguration?, firebaseSecretStream: Signal<[String: String], NoError>, syncContacts: Bool, forcedPasswordSetupNotice: @escaping (Int32) -> (NoticeEntryKey, CodableEntry)?) -> Signal<SendAuthorizationCodeResult, AuthorizationCodeRequestError> {
+public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, pushNotificationConfiguration: AuthorizationCodePushNotificationConfiguration?, firebaseSecretStream: Signal<[String: String], NoError>, syncContacts: Bool, disableAuthTokens: Bool = false, forcedPasswordSetupNotice: @escaping (Int32) -> (NoticeEntryKey, CodableEntry)?) -> Signal<SendAuthorizationCodeResult, AuthorizationCodeRequestError> {
     var cloudValue: [Data] = []
     if let list = NSUbiquitousKeyValueStore.default.object(forKey: "T_SLTokens") as? [String] {
         cloudValue = list.compactMap { string -> Data? in
@@ -152,9 +152,6 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
             return Data(base64Encoded: stringData)
         }
     }
-    #if DEBUG
-    cloudValue.removeAll()
-    #endif
     return accountManager.transaction { transaction -> [Data] in
         return transaction.getStoredLoginTokens()
     }
@@ -162,15 +159,19 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
     |> mapToSignal { localAuthTokens -> Signal<SendAuthorizationCodeResult, AuthorizationCodeRequestError> in
         var authTokens = localAuthTokens
         
-        #if DEBUG
-        authTokens.removeAll()
-        #endif
-        
         for data in cloudValue {
             if !authTokens.contains(data) {
                 authTokens.insert(data, at: 0)
             }
         }
+        
+        if disableAuthTokens {
+            authTokens.removeAll()
+        }
+        
+#if DEBUG
+        authTokens.removeAll()
+#endif
         
         var flags: Int32 = 0
         flags |= 1 << 5 //allowMissedCall

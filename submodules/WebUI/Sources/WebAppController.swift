@@ -9,7 +9,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 import AttachmentUI
-import CounterContollerTitleView
+import CounterControllerTitleView
 import ContextUI
 import PresentationDataUtils
 import HexColor
@@ -1711,7 +1711,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         return self.displayNode as! Node
     }
     
-    private var titleView: CounterContollerTitleView?
+    private var titleView: CounterControllerTitleView?
     fileprivate let cancelButtonNode: WebAppCancelButtonNode
     fileprivate let moreButtonNode: MoreButtonNode
     
@@ -1782,8 +1782,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.navigationItem.rightBarButtonItem?.action = #selector(self.moreButtonPressed)
         self.navigationItem.rightBarButtonItem?.target = self
         
-        let titleView = CounterContollerTitleView(theme: self.presentationData.theme)
-        titleView.title = CounterContollerTitle(title: params.botName, counter: self.presentationData.strings.Bot_GenericBotStatus)
+        let titleView = CounterControllerTitleView(theme: self.presentationData.theme)
+        titleView.title = CounterControllerTitle(title: params.botName, counter: self.presentationData.strings.Bot_GenericBotStatus)
         self.navigationItem.titleView = titleView
         self.titleView = titleView
         

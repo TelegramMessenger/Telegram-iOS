@@ -359,12 +359,14 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         if let text = UIPasteboard.general.string, !text.isEmpty {
             if checkValidity(text: text) {
                 self.textField.textField.text = text
+                self.updatePasteVisibility()
             }
         }
     }
         
     func updatePasteVisibility() {
-        self.pasteButton.isHidden = !UIPasteboard.general.hasStrings
+        let text = self.textField.textField.text ?? ""
+        self.pasteButton.isHidden = !text.isEmpty || !UIPasteboard.general.hasStrings
     }
     
     func updateCode(_ code: String) {
@@ -932,6 +934,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         let text = self.textField.textField.text ?? ""
         self.proceedNode.isEnabled = !text.isEmpty
         self.updateNextEnabled?(!text.isEmpty)
+        
+        self.updatePasteVisibility()
     }
     
     private func codeChanged(text: String) {
@@ -961,7 +965,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             }
         }
     }
-    
+
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if self.inProgress {
             return false

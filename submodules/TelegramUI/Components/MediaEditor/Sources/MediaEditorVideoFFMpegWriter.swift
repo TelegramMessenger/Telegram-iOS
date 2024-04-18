@@ -46,7 +46,7 @@ final class MediaEditorVideoFFMpegWriter: MediaEditorVideoExportWriter {
         }
         self.pool = pool
         
-        if !self.ffmpegWriter.setup(withOutputPath: outputPath, width: width, height: height, bitrate: 200 * 1000, framerate: 30) {
+        if !self.ffmpegWriter.setup(withOutputPath: outputPath, width: width, height: height, bitrate: 240 * 1000, framerate: 30) {
             self.status = .failed
         }
     }

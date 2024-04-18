@@ -11,6 +11,7 @@ import AlertUI
 import PresentationDataUtils
 import ChatPresentationInterfaceState
 import ChatNavigationButton
+import CounterControllerTitleView
 
 public final class ChatRecentActionsController: TelegramBaseController {
     private var controllerNode: ChatRecentActionsControllerNode {
@@ -28,10 +29,10 @@ public final class ChatRecentActionsController: TelegramBaseController {
     private var presentationDataDisposable: Disposable?
     private var didSetPresentationData = false
     
-    private var interaction: ChatRecentActionsInteraction!
     private var panelInteraction: ChatPanelInterfaceInteraction!
     
-    private let titleView: ChatRecentActionsTitleView
+    private let titleView: CounterControllerTitleView
+    private var rightBarButton: ChatNavigationButton?
     
     public init(context: AccountContext, peer: Peer, adminPeerId: PeerId?) {
         self.context = context
@@ -40,25 +41,13 @@ public final class ChatRecentActionsController: TelegramBaseController {
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        self.titleView = ChatRecentActionsTitleView(color: self.presentationData.theme.rootController.navigationBar.primaryTextColor)
+        self.titleView = CounterControllerTitleView(theme: self.presentationData.theme)
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none, groupCallPanelSource: .none)
         
         self.automaticallyControlPresentationContextLayout = false
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        
-        self.interaction = ChatRecentActionsInteraction(displayInfoAlert: { [weak self] in
-            if let strongSelf = self {
-                let text: String
-                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                    text = strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelChannelAlertText
-                } else {
-                    text = strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertText
-                }
-                self?.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-            }
-        })
         
         self.panelInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _, _ in
         }, setupEditMessage: { _, _ in
@@ -181,13 +170,10 @@ public final class ChatRecentActionsController: TelegramBaseController {
         
         self.navigationItem.titleView = self.titleView
         
-        let rightButton = ChatNavigationButton(action: .search(hasTags: false), buttonItem: UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.activateSearch)))
-        self.navigationItem.setRightBarButton(rightButton.buttonItem, animated: false)
+        let rightBarButton = ChatNavigationButton(action: .search(hasTags: false), buttonItem: UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.activateSearch)))
+        self.rightBarButton = rightBarButton
         
-        self.titleView.title = self.presentationData.strings.Channel_AdminLog_TitleAllEvents
-        self.titleView.pressed = { [weak self] in
-            self?.openFilterSetup()
-        }
+        self.titleView.title = CounterControllerTitle(title: EnginePeer(peer).compactDisplayTitle, counter: self.presentationData.strings.Channel_AdminLog_TitleAllEvents)
         
         let themeEmoticon = self.context.account.postbox.peerView(id: peer.id)
         |> map { view -> String? in
@@ -238,7 +224,7 @@ public final class ChatRecentActionsController: TelegramBaseController {
     }
     
     private func updateThemeAndStrings() {
-        self.titleView.color = self.presentationData.theme.rootController.navigationBar.primaryTextColor
+        self.titleView.theme = self.presentationData.theme
         self.updateTitle()
         
         let rightButton = ChatNavigationButton(action: .search(hasTags: false), buttonItem: UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.activateSearch)))
@@ -251,14 +237,19 @@ public final class ChatRecentActionsController: TelegramBaseController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatRecentActionsControllerNode(context: self.context, controller: self, peer: self.peer, presentationData: self.presentationData, interaction: self.interaction, pushController: { [weak self] c in
+        self.displayNode = ChatRecentActionsControllerNode(context: self.context, controller: self, peer: self.peer, presentationData: self.presentationData, pushController: { [weak self] c in
             (self?.navigationController as? NavigationController)?.pushViewController(c)
         }, presentController: { [weak self] c, t, a in
             self?.present(c, in: t, with: a, blockInteraction: true)
         }, getNavigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         })
-        
+        self.controllerNode.isEmptyUpdated = { [weak self] isEmpty in
+            guard let self, let rightBarButton = self.rightBarButton else {
+                return
+            }
+            self.navigationItem.setRightBarButton(isEmpty ? nil : rightBarButton.buttonItem, animated: true)
+        }
         if let adminPeerId = self.initialAdminPeerId {
             self.controllerNode.updateFilter(events: .all, adminPeerIds: [adminPeerId])
             self.updateTitle()
@@ -300,7 +291,7 @@ public final class ChatRecentActionsController: TelegramBaseController {
         self.updateTitle()
     }
     
-    private func openFilterSetup() {
+    func openFilterSetup() {
         self.present(channelRecentActionsFilterController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: self.peer, events: self.controllerNode.filter.events, adminPeerIds: self.controllerNode.filter.adminPeerIds, apply: { [weak self] events, adminPeerIds in
             self?.controllerNode.updateFilter(events: events, adminPeerIds: adminPeerIds)
             self?.updateTitle()
@@ -308,10 +299,13 @@ public final class ChatRecentActionsController: TelegramBaseController {
     }
     
     private func updateTitle() {
+        let title = EnginePeer(self.peer).compactDisplayTitle
+        let subtitle: String
         if self.controllerNode.filter.isEmpty {
-            self.titleView.title = self.presentationData.strings.Channel_AdminLog_TitleAllEvents
+            subtitle = self.presentationData.strings.Channel_AdminLog_TitleAllEvents
         } else {
-            self.titleView.title = self.presentationData.strings.Channel_AdminLog_TitleSelectedEvents
+            subtitle = self.presentationData.strings.Channel_AdminLog_TitleSelectedEvents
         }
+        self.titleView.title = CounterControllerTitle(title: title, counter: subtitle)
     }
 }

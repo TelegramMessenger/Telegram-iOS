@@ -48,6 +48,7 @@ swift_library(
         "//submodules/UndoUI",
         "//submodules/WallpaperBackgroundNode",
         "//submodules/TextFormat",
+        "//submodules/CounterControllerTitleView"
     ],
     visibility = [
         "//visibility:public",

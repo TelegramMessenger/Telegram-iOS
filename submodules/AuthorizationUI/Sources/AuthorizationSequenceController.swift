@@ -192,13 +192,15 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                     return
                 }
                 controller?.inProgress = true
+                
+                let disableAuthTokens = self.sharedContext.immediateExperimentalUISettings.disableReloginTokens
                 let authorizationPushConfiguration = self.sharedContext.authorizationPushConfiguration
                 |> take(1)
                 |> timeout(2.0, queue: .mainQueue(), alternate: .single(nil))
                 let _ = (authorizationPushConfiguration
                 |> deliverOnMainQueue).startStandalone(next: { [weak self] authorizationPushConfiguration in
                     if let strongSelf = self {
-                        strongSelf.actionDisposable.set((sendAuthorizationCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, phoneNumber: number, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash, pushNotificationConfiguration: authorizationPushConfiguration, firebaseSecretStream: strongSelf.sharedContext.firebaseSecretStream, syncContacts: syncContacts, forcedPasswordSetupNotice: { value in
+                        strongSelf.actionDisposable.set((sendAuthorizationCode(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, phoneNumber: number, apiId: strongSelf.apiId, apiHash: strongSelf.apiHash, pushNotificationConfiguration: authorizationPushConfiguration, firebaseSecretStream: strongSelf.sharedContext.firebaseSecretStream, syncContacts: syncContacts, disableAuthTokens: disableAuthTokens, forcedPasswordSetupNotice: { value in
                             guard let entry = CodableEntry(ApplicationSpecificCounterNotice(value: value)) else {
                                 return nil
                             }

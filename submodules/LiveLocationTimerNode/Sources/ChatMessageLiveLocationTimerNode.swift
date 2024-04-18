@@ -63,6 +63,8 @@ public final class ChatMessageLiveLocationTimerNode: ASDisplayNode {
             }), selector: #selector(RadialTimeoutNodeTimer.event), userInfo: nil, repeats: true)
             self.animationTimer = animationTimer
             RunLoop.main.add(animationTimer, forMode: .common)
+            
+            self.setNeedsDisplay()
         }
     }
     
