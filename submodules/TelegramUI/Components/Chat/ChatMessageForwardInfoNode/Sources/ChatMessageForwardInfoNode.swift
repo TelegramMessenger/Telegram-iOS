@@ -352,7 +352,7 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
             
             var authorAvatarInset: CGFloat = 0.0
             if peer != nil {
-                authorAvatarInset = 19.0
+                authorAvatarInset = 20.0
             }
             
             let resultSize: CGSize
