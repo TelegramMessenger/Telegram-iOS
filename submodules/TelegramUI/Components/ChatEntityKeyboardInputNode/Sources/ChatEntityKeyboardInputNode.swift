@@ -345,6 +345,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
     private var inputDataDisposable: Disposable?
     private var hasRecentGifsDisposable: Disposable?
     private let opaqueTopPanelBackground: Bool
+    private let useOpaqueTheme: Bool
     
     private struct EmojiSearchResult {
         var groups: [EmojiPagerContentComponent.ItemGroup]
@@ -451,11 +452,12 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         |> distinctUntilChanged
     }
     
-    public init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, opaqueTopPanelBackground: Bool = false, interaction: ChatEntityKeyboardInputNode.Interaction?, chatPeerId: PeerId?, stateContext: StateContext?) {
+    public init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, opaqueTopPanelBackground: Bool = false, useOpaqueTheme: Bool = false, interaction: ChatEntityKeyboardInputNode.Interaction?, chatPeerId: PeerId?, stateContext: StateContext?) {
         self.context = context
         self.currentInputData = currentInputData
         self.defaultToEmojiTab = defaultToEmojiTab
         self.opaqueTopPanelBackground = opaqueTopPanelBackground
+        self.useOpaqueTheme = useOpaqueTheme
         self.stateContext = stateContext
         
         self.interaction = interaction
@@ -1164,7 +1166,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             externalBackground: nil,
             externalExpansionView: nil,
             customContentView: nil,
-            useOpaqueTheme: false,
+            useOpaqueTheme: self.useOpaqueTheme,
             hideBackground: false,
             stateContext: self.stateContext?.emojiState,
             addImage: nil
@@ -1508,7 +1510,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             externalBackground: nil,
             externalExpansionView: nil,
             customContentView: nil,
-            useOpaqueTheme: false,
+            useOpaqueTheme: self.useOpaqueTheme,
             hideBackground: false,
             stateContext: nil,
             addImage: nil

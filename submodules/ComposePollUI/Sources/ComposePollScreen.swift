@@ -299,6 +299,7 @@ final class ComposePollScreenComponent: Component {
                         updatedInputData: self.inputMediaNodeDataPromise.get(),
                         defaultToEmojiTab: true,
                         opaqueTopPanelBackground: false,
+                        useOpaqueTheme: true,
                         interaction: self.inputMediaInteraction,
                         chatPeerId: nil,
                         stateContext: self.inputMediaNodeStateContext

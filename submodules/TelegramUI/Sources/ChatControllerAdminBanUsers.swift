@@ -131,11 +131,6 @@ extension ChatControllerImpl {
             return
         }
         
-        if "".isEmpty {
-            self.push(RecentActionsSettingsSheet(context: self.context, adminPeers: authors.map(EnginePeer.init), completion: { _ in }))
-            return
-        }
-        
         self.navigationActionDisposable.set((combineLatest(authors.map { author in
             self.context.engine.peers.fetchChannelParticipant(peerId: peerId, participantId: author.id)
         })
