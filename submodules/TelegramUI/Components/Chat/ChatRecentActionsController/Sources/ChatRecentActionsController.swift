@@ -12,6 +12,7 @@ import PresentationDataUtils
 import ChatPresentationInterfaceState
 import ChatNavigationButton
 import CounterControllerTitleView
+import AdminUserActionsSheet
 
 public final class ChatRecentActionsController: TelegramBaseController {
     private var controllerNode: ChatRecentActionsControllerNode {
@@ -33,6 +34,8 @@ public final class ChatRecentActionsController: TelegramBaseController {
     
     private let titleView: CounterControllerTitleView
     private var rightBarButton: ChatNavigationButton?
+    
+    private var adminsDisposable: Disposable?
     
     public init(context: AccountContext, peer: Peer, adminPeerId: PeerId?) {
         self.context = context
@@ -221,6 +224,7 @@ public final class ChatRecentActionsController: TelegramBaseController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.adminsDisposable?.dispose()
     }
     
     private func updateThemeAndStrings() {
@@ -291,11 +295,55 @@ public final class ChatRecentActionsController: TelegramBaseController {
         self.updateTitle()
     }
     
+    private var adminsPromise: Promise<[RenderedChannelParticipant]?>?
     func openFilterSetup() {
-        self.present(channelRecentActionsFilterController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: self.peer, events: self.controllerNode.filter.events, adminPeerIds: self.controllerNode.filter.adminPeerIds, apply: { [weak self] events, adminPeerIds in
-            self?.controllerNode.updateFilter(events: events, adminPeerIds: adminPeerIds)
-            self?.updateTitle()
-        }), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        if self.adminsPromise == nil {
+            self.adminsPromise = Promise()
+            let (disposable, _) = self.context.peerChannelMemberCategoriesContextsManager.admins(engine: self.context.engine, postbox: self.context.account.postbox, network: self.context.account.network, accountPeerId: self.context.account.peerId, peerId: self.peer.id) { membersState in
+                if case .loading = membersState.loadingState, membersState.list.isEmpty {
+                    self.adminsPromise?.set(.single(nil))
+                } else {
+                    self.adminsPromise?.set(.single(membersState.list))
+                }
+            }
+            self.adminsDisposable = disposable
+        }
+        
+        guard let adminsPromise = self.adminsPromise else {
+            return
+        }
+        
+        let _ = (adminsPromise.get()
+        |> filter { $0 != nil }
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] result in
+            guard let self else {
+                return
+            }
+            var adminPeers: [EnginePeer] = []
+            if let result {
+                for participant in result {
+                    adminPeers.append(EnginePeer(participant.peer))
+                }
+            }
+            let controller = RecentActionsSettingsSheet(
+                context: self.context,
+                peer: EnginePeer(self.peer),
+                adminPeers: adminPeers,
+                initialValue: RecentActionsSettingsSheet.Value(
+                    events: self.controllerNode.filter.events,
+                    admins: self.controllerNode.filter.adminPeerIds
+                ),
+                completion: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    self.controllerNode.updateFilter(events: result.events, adminPeerIds: result.admins)
+                    self.updateTitle()
+                }
+            )
+            self.push(controller)
+        })
     }
     
     private func updateTitle() {

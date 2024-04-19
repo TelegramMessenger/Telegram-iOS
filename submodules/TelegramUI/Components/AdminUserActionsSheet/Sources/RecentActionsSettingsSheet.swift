@@ -43,6 +43,29 @@ private enum MembersActionType: Hashable, CaseIterable {
             return "Members left the Group"
         }
     }
+    
+    var eventFlags: AdminLogEventsFlags {
+        switch self {
+        case .newAdminRights:
+            return [.promote, .demote]
+        case .newExceptions:
+            return [.ban, .unban, .kick, .unkick]
+        case .newMembers:
+            return [.invite, .join]
+        case .leftMembers:
+            return [.leave]
+        }
+    }
+    
+    static func actionTypesFromFlags(_ eventFlags: AdminLogEventsFlags) -> [Self] {
+        var actionTypes: [Self] = []
+        for actionType in Self.allCases {
+            if !actionType.eventFlags.intersection(eventFlags).isEmpty {
+                actionTypes.append(actionType)
+            }
+        }
+        return actionTypes
+    }
 }
 
 private enum SettingsActionType: Hashable, CaseIterable {
@@ -50,15 +73,36 @@ private enum SettingsActionType: Hashable, CaseIterable {
     case inviteLinks
     case videoChats
     
-    func title(strings: PresentationStrings) -> String {
+    func title(isGroup: Bool, strings: PresentationStrings) -> String {
         switch self {
         case .groupInfo:
-            return "Group Info"
+            return isGroup ? strings.Channel_AdminLogFilter_EventsInfo : strings.Channel_AdminLogFilter_ChannelEventsInfo
         case .inviteLinks:
-            return "Invite Links"
+            return strings.Channel_AdminLogFilter_EventsInviteLinks
         case .videoChats:
-            return "Video Chats"
+            return isGroup ? strings.Channel_AdminLogFilter_EventsCalls : strings.Channel_AdminLogFilter_EventsLiveStreams
         }
+    }
+    
+    var eventFlags: AdminLogEventsFlags {
+        switch self {
+        case .groupInfo:
+            return [.info, .settings]
+        case .inviteLinks:
+            return [.invites]
+        case .videoChats:
+            return [.calls]
+        }
+    }
+    
+    static func actionTypesFromFlags(_ eventFlags: AdminLogEventsFlags) -> [Self] {
+        var actionTypes: [Self] = []
+        for actionType in Self.allCases {
+            if !actionType.eventFlags.intersection(eventFlags).isEmpty {
+                actionTypes.append(actionType)
+            }
+        }
+        return actionTypes
     }
 }
 
@@ -70,12 +114,33 @@ private enum MessagesActionType: Hashable, CaseIterable {
     func title(strings: PresentationStrings) -> String {
         switch self {
         case .deletedMessages:
-            return "Deleted Messages"
+            return strings.Channel_AdminLogFilter_EventsDeletedMessages
         case .editedMessages:
-            return "Edited Messages"
+            return strings.Channel_AdminLogFilter_EventsEditedMessages
         case .pinnedMessages:
-            return "Pinned Messages"
+            return strings.Channel_AdminLogFilter_EventsPinned
         }
+    }
+    
+    var eventFlags: AdminLogEventsFlags {
+        switch self {
+        case .deletedMessages:
+            return [.deleteMessages]
+        case .editedMessages:
+            return [.editMessages]
+        case .pinnedMessages:
+            return [.pinnedMessages]
+        }
+    }
+    
+    static func actionTypesFromFlags(_ eventFlags: AdminLogEventsFlags) -> [Self] {
+        var actionTypes: [Self] = []
+        for actionType in Self.allCases {
+            if !actionType.eventFlags.intersection(eventFlags).isEmpty {
+                actionTypes.append(actionType)
+            }
+        }
+        return actionTypes
     }
 }
 
@@ -84,12 +149,12 @@ private enum ActionType: Hashable {
     case settings(SettingsActionType)
     case messages(MessagesActionType)
     
-    func title(strings: PresentationStrings) -> String {
+    func title(isGroup: Bool, strings: PresentationStrings) -> String {
         switch self {
         case let .members(value):
             return value.title(strings: strings)
         case let .settings(value):
-            return value.title(strings: strings)
+            return value.title(isGroup: isGroup, strings: strings)
         case let .messages(value):
             return value.title(strings: strings)
         }
@@ -100,21 +165,30 @@ private final class RecentActionsSettingsSheetComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let peer: EnginePeer
     let adminPeers: [EnginePeer]
-    let completion: (RecentActionsSettingsSheet.Result) -> Void
+    let initialValue: RecentActionsSettingsSheet.Value
+    let completion: (RecentActionsSettingsSheet.Value) -> Void
     
     init(
         context: AccountContext,
+        peer: EnginePeer,
         adminPeers: [EnginePeer],
-        completion: @escaping (RecentActionsSettingsSheet.Result) -> Void
+        initialValue: RecentActionsSettingsSheet.Value,
+        completion: @escaping (RecentActionsSettingsSheet.Value) -> Void
     ) {
         self.context = context
+        self.peer = peer
         self.adminPeers = adminPeers
+        self.initialValue = initialValue
         self.completion = completion
     }
     
     static func ==(lhs: RecentActionsSettingsSheetComponent, rhs: RecentActionsSettingsSheetComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.peer != rhs.peer {
             return false
         }
         if lhs.adminPeers != rhs.adminPeers {
@@ -274,8 +348,24 @@ private final class RecentActionsSettingsSheetComponent: Component {
             }
         }
         
-        private func calculateResult() -> RecentActionsSettingsSheet.Result {
-            return RecentActionsSettingsSheet.Result(
+        private func calculateResult() -> RecentActionsSettingsSheet.Value {
+            var events: AdminLogEventsFlags = []
+            var admins: [EnginePeer.Id] = []
+            for action in self.selectedMembersActions {
+                events.formUnion(action.eventFlags)
+            }
+            for action in self.selectedSettingsActions {
+                events.formUnion(action.eventFlags)
+            }
+            for action in self.selectedMessagesActions {
+                events.formUnion(action.eventFlags)
+            }
+            for peerId in self.selectedAdmins {
+                admins.append(peerId)
+            }
+            return RecentActionsSettingsSheet.Value(
+                events: events,
+                admins: admins
             )
         }
         
@@ -352,13 +442,18 @@ private final class RecentActionsSettingsSheetComponent: Component {
             
             let resetScrolling = self.scrollView.bounds.width != availableSize.width
             
-            let sideInset: CGFloat = 16.0
-            
+            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
+                        
             if self.component == nil {
-                self.selectedMembersActions = Set(MembersActionType.allCases)
-                self.selectedSettingsActions = Set(SettingsActionType.allCases)
-                self.selectedMessagesActions = Set(MessagesActionType.allCases)
-                self.selectedAdmins = Set(component.adminPeers.map(\.id))
+                self.selectedMembersActions = Set(MembersActionType.actionTypesFromFlags(component.initialValue.events))
+                self.selectedSettingsActions = Set(SettingsActionType.actionTypesFromFlags(component.initialValue.events))
+                self.selectedMessagesActions = Set(MessagesActionType.actionTypesFromFlags(component.initialValue.events))
+                self.selectedAdmins = component.initialValue.admins.flatMap { Set($0) } ?? Set(component.adminPeers.map(\.id))
+            }
+            
+            var isGroup = true
+            if case let .channel(channel) = component.peer, case .broadcast = channel.info {
+                isGroup = false
             }
             
             self.component = component
@@ -394,7 +489,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 120.0, height: 100.0)
             )
-            let leftButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: 0.0), size: leftButtonSize)
+            let leftButtonFrame = CGRect(origin: CGPoint(x: 16.0 + environment.safeInsets.left, y: 0.0), size: leftButtonSize)
             if let leftButtonView = self.leftButton.view {
                 if leftButtonView.superview == nil {
                     self.navigationBarContainer.addSubview(leftButtonView)
@@ -420,11 +515,11 @@ private final class RecentActionsSettingsSheetComponent: Component {
                 case .members:
                     totalCount = MembersActionType.allCases.count
                     selectedCount = self.selectedMembersActions.count
-                    title = "Members and Admins"
+                    title = isGroup ? "Members and Admins" : "Subscribers and Admins"
                 case .settings:
                     totalCount = SettingsActionType.allCases.count
                     selectedCount = self.selectedSettingsActions.count
-                    title = "Group Settings"
+                    title = isGroup ? "Group Settings" : "Channel Settings"
                 case .messages:
                     totalCount = MessagesActionType.allCases.count
                     selectedCount = self.selectedMessagesActions.count
@@ -524,7 +619,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                 
                 var subItems: [AnyComponentWithIdentity<Empty>] = []
                 for actionType in actionTypes {
-                    let actionItemTitle: String = actionType.title(strings: environment.strings)
+                    let actionItemTitle: String = actionType.title(isGroup: isGroup, strings: environment.strings)
                     
                     let subItemToggleAction: () -> Void = { [weak self] in
                         guard let self else {
@@ -846,8 +941,13 @@ private final class RecentActionsSettingsSheetComponent: Component {
 }
 
 public class RecentActionsSettingsSheet: ViewControllerComponentContainer {
-    public final class Result {
-        init() {
+    public final class Value {
+        public let events: AdminLogEventsFlags
+        public let admins: [EnginePeer.Id]?
+        
+        public init(events: AdminLogEventsFlags, admins: [EnginePeer.Id]?) {
+            self.events = events
+            self.admins = admins
         }
     }
     
@@ -855,10 +955,10 @@ public class RecentActionsSettingsSheet: ViewControllerComponentContainer {
     
     private var isDismissed: Bool = false
     
-    public init(context: AccountContext, adminPeers: [EnginePeer], completion: @escaping (Result) -> Void) {
+    public init(context: AccountContext, peer: EnginePeer, adminPeers: [EnginePeer], initialValue: Value, completion: @escaping (Value) -> Void) {
         self.context = context
         
-        super.init(context: context, component: RecentActionsSettingsSheetComponent(context: context, adminPeers: adminPeers, completion: completion), navigationBarAppearance: .none)
+        super.init(context: context, component: RecentActionsSettingsSheetComponent(context: context, peer: peer, adminPeers: adminPeers, initialValue: initialValue, completion: completion), navigationBarAppearance: .none)
         
         self.statusBar.statusBarStyle = .Ignore
         self.navigationPresentation = .flatModal

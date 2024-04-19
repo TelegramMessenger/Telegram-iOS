@@ -48,7 +48,8 @@ swift_library(
         "//submodules/UndoUI",
         "//submodules/WallpaperBackgroundNode",
         "//submodules/TextFormat",
-        "//submodules/CounterControllerTitleView"
+        "//submodules/CounterControllerTitleView",
+        "//submodules/TelegramUI/Components/AdminUserActionsSheet",
     ],
     visibility = [
         "//visibility:public",

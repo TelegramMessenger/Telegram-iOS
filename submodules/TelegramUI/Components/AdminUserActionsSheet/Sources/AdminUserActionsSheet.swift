@@ -508,7 +508,7 @@ private final class AdminUserActionsSheetComponent: Component {
             
             let resetScrolling = self.scrollView.bounds.width != availableSize.width
             
-            let sideInset: CGFloat = 16.0
+            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
             if self.component == nil {
                 var (allowedParticipantRights, allowedMediaRights) = rightsFromBannedRights([])
@@ -584,7 +584,7 @@ private final class AdminUserActionsSheetComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 120.0, height: 100.0)
             )
-            let leftButtonFrame = CGRect(origin: CGPoint(x: 16.0, y: 0.0), size: leftButtonSize)
+            let leftButtonFrame = CGRect(origin: CGPoint(x: 16.0 + environment.safeInsets.left, y: 0.0), size: leftButtonSize)
             if let leftButtonView = self.leftButton.view {
                 if leftButtonView.superview == nil {
                     self.navigationBarContainer.addSubview(leftButtonView)
