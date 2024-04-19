@@ -436,17 +436,17 @@ public extension Api {
 }
 public extension Api {
     enum Poll: TypeConstructorDescription {
-        case poll(id: Int64, flags: Int32, question: String, answers: [Api.PollAnswer], closePeriod: Int32?, closeDate: Int32?)
+        case poll(id: Int64, flags: Int32, question: Api.TextWithEntities, answers: [Api.PollAnswer], closePeriod: Int32?, closeDate: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .poll(let id, let flags, let question, let answers, let closePeriod, let closeDate):
                     if boxed {
-                        buffer.appendInt32(-2032041631)
+                        buffer.appendInt32(1484026161)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(question, buffer: buffer, boxed: false)
+                    question.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(answers.count))
                     for item in answers {
@@ -470,8 +470,10 @@ public extension Api {
             _1 = reader.readInt64()
             var _2: Int32?
             _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
+            var _3: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
             var _4: [Api.PollAnswer]?
             if let _ = reader.readInt32() {
                 _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PollAnswer.self)
@@ -498,15 +500,15 @@ public extension Api {
 }
 public extension Api {
     enum PollAnswer: TypeConstructorDescription {
-        case pollAnswer(text: String, option: Buffer)
+        case pollAnswer(text: Api.TextWithEntities, option: Buffer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .pollAnswer(let text, let option):
                     if boxed {
-                        buffer.appendInt32(1823064809)
+                        buffer.appendInt32(-15277366)
                     }
-                    serializeString(text, buffer: buffer, boxed: false)
+                    text.serialize(buffer, true)
                     serializeBytes(option, buffer: buffer, boxed: false)
                     break
     }
@@ -520,8 +522,10 @@ public extension Api {
     }
     
         public static func parse_pollAnswer(_ reader: BufferReader) -> PollAnswer? {
-            var _1: String?
-            _1 = parseString(reader)
+            var _1: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
             var _2: Buffer?
             _2 = parseBytes(reader)
             let _c1 = _1 != nil

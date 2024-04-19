@@ -710,8 +710,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[236446268] = { return Api.PhotoSize.parse_photoSizeEmpty($0) }
     dict[-96535659] = { return Api.PhotoSize.parse_photoSizeProgressive($0) }
     dict[-525288402] = { return Api.PhotoSize.parse_photoStrippedSize($0) }
-    dict[-2032041631] = { return Api.Poll.parse_poll($0) }
-    dict[1823064809] = { return Api.PollAnswer.parse_pollAnswer($0) }
+    dict[1484026161] = { return Api.Poll.parse_poll($0) }
+    dict[-15277366] = { return Api.PollAnswer.parse_pollAnswer($0) }
     dict[997055186] = { return Api.PollAnswerVoters.parse_pollAnswerVoters($0) }
     dict[2061444128] = { return Api.PollResults.parse_pollResults($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
@@ -1358,7 +1358,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
