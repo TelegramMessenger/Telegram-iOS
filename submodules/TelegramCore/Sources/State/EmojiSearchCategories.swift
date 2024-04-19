@@ -8,6 +8,8 @@ public final class EmojiSearchCategories: Equatable, Codable {
         case emoji = 0
         case status = 1
         case avatar = 2
+        case chatStickers = 3
+        case greetingStickers = 4
     }
 
     public struct Group: Codable, Equatable {
@@ -125,6 +127,12 @@ func managedSynchronizeEmojiSearchCategories(postbox: Postbox, network: Network,
                 }
             case .avatar:
                 signal = network.request(Api.functions.messages.getEmojiProfilePhotoGroups(hash: current?.hash ?? 0))
+                |> `catch` { _ -> Signal<Api.messages.EmojiGroups, NoError> in
+                    return .single(.emojiGroupsNotModified)
+                }
+            //TODO:localize
+            case .chatStickers, .greetingStickers:
+                signal = network.request(Api.functions.messages.getEmojiGroups(hash: current?.hash ?? 0))
                 |> `catch` { _ -> Signal<Api.messages.EmojiGroups, NoError> in
                     return .single(.emojiGroupsNotModified)
                 }

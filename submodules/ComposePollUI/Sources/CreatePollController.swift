@@ -506,6 +506,7 @@ public final class ComposedPoll {
     public let correctAnswers: [Data]?
     public let results: TelegramMediaPollResults
     public let deadlineTimeout: Int32?
+    public let usedCustomEmojiFiles: [Int64: TelegramMediaFile]
 
     public init(
         publicity: TelegramMediaPollPublicity,
@@ -514,7 +515,8 @@ public final class ComposedPoll {
         options: [TelegramMediaPollOption],
         correctAnswers: [Data]?,
         results: TelegramMediaPollResults,
-        deadlineTimeout: Int32?
+        deadlineTimeout: Int32?,
+        usedCustomEmojiFiles: [Int64: TelegramMediaFile]
     ) {
         self.publicity = publicity
         self.kind = kind
@@ -523,6 +525,7 @@ public final class ComposedPoll {
         self.correctAnswers = correctAnswers
         self.results = results
         self.deadlineTimeout = deadlineTimeout
+        self.usedCustomEmojiFiles = usedCustomEmojiFiles
     }
 }
 
@@ -974,7 +977,8 @@ public func createPollController(context: AccountContext, updatedPresentationDat
                 options: options,
                 correctAnswers: correctAnswers,
                 results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: resolvedSolution),
-                deadlineTimeout: deadlineTimeout
+                deadlineTimeout: deadlineTimeout,
+                usedCustomEmojiFiles: [:]
             ))
         })
         

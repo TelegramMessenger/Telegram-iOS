@@ -1542,8 +1542,7 @@ public final class AvatarEditorScreen: ViewControllerComponentContainer {
             hasTrending: false,
             forceHasPremium: true,
             searchIsPlaceholderOnly: false,
-            isProfilePhotoEmojiSelection: !isGroup,
-            isGroupPhotoEmojiSelection: isGroup
+            subject: isGroup ? .groupPhotoEmojiSelection : .profilePhotoEmojiSelection
         )
         
         let signal = combineLatest(queue: .mainQueue(),

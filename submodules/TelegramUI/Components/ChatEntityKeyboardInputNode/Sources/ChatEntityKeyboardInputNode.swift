@@ -197,7 +197,20 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         let stickerItems: Signal<EmojiPagerContentComponent?, NoError>
         if hasStickers {
-            stickerItems = EmojiPagerContentComponent.stickerInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, stickerNamespaces: stickerNamespaces, stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds, chatPeerId: chatPeerId, hasSearch: hasSearch, hasTrending: hasTrending, forceHasPremium: false, hasEdit: hasEdit, hideBackground: hideBackground)
+            stickerItems = EmojiPagerContentComponent.stickerInputData(
+                context: context,
+                animationCache: animationCache,
+                animationRenderer: animationRenderer,
+                stickerNamespaces: stickerNamespaces,
+                stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds,
+                chatPeerId: chatPeerId,
+                hasSearch: hasSearch,
+                hasTrending: hasTrending,
+                forceHasPremium: false,
+                hasEdit: hasEdit,
+                subject: .chatStickers,
+                hideBackground: hideBackground
+            )
             |> map(Optional.init)
         } else {
             stickerItems = .single(nil)

@@ -212,6 +212,8 @@ final class ComposePollScreenComponent: Component {
                 }
             }
             
+            let usedCustomEmojiFiles: [Int64: TelegramMediaFile] = [:]
+            
             return ComposedPoll(
                 publicity: self.isAnonymous ? .anonymous : .public,
                 kind: mappedKind,
@@ -226,7 +228,8 @@ final class ComposePollScreenComponent: Component {
                         return TelegramMediaPollResults.Solution(text: mappedSolution, entities: [])
                     }
                 ),
-                deadlineTimeout: nil
+                deadlineTimeout: nil,
+                usedCustomEmojiFiles: usedCustomEmojiFiles
             )
         }
         

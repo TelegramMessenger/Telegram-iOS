@@ -14,6 +14,7 @@ import TelegramStringFormatting
 import StorageUsageScreen
 import SettingsUI
 import DeleteChatPeerActionSheetItem
+import OverlayStatusController
 
 fileprivate struct InitialBannedRights {
     var value: TelegramChatBannedRights?
@@ -131,9 +132,40 @@ extension ChatControllerImpl {
             return
         }
         
-        self.navigationActionDisposable.set((combineLatest(authors.map { author in
+        var signal = combineLatest(authors.map { author in
             self.context.engine.peers.fetchChannelParticipant(peerId: peerId, participantId: author.id)
         })
+        let disposables = MetaDisposable()
+        self.navigationActionDisposable.set(disposables)
+        
+        var cancelImpl: (() -> Void)?
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            self?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.3, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.startStrict()
+        
+        signal = signal
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        cancelImpl = {
+            disposables.set(nil)
+        }
+        
+        disposables.set((signal
         |> deliverOnMainQueue).startStrict(next: { [weak self] participants in
             guard let self else {
                 return
@@ -190,52 +222,88 @@ extension ChatControllerImpl {
             return
         }
         
-        do {
-            self.navigationActionDisposable.set((self.context.engine.peers.fetchChannelParticipant(peerId: peerId, participantId: author.id)
-            |> deliverOnMainQueue).startStrict(next: { [weak self] participant in
-                if let strongSelf = self {
-                    if "".isEmpty {
-                        guard let participant else {
+        var signal = self.context.engine.peers.fetchChannelParticipant(peerId: peerId, participantId: author.id)
+        let disposables = MetaDisposable()
+        self.navigationActionDisposable.set(disposables)
+        
+        var cancelImpl: (() -> Void)?
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            self?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.3, queue: Queue.mainQueue())
+        let progressDisposable = progressSignal.startStrict()
+        
+        signal = signal
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        cancelImpl = {
+            disposables.set(nil)
+        }
+        
+        disposables.set((signal
+        |> deliverOnMainQueue).startStrict(next: { [weak self] participant in
+            guard let self, let participant else {
+                return
+            }
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.Peer.Peer(id: author.id)
+            )
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] chatPeer, authorPeer in
+                guard let self, let chatPeer else {
+                    return
+                }
+                guard let authorPeer else {
+                    return
+                }
+                var initialUserBannedRights: [EnginePeer.Id: InitialBannedRights] = [:]
+                switch participant {
+                case .creator:
+                    break
+                case let .member(_, _, _, banInfo, _):
+                    if let banInfo {
+                        initialUserBannedRights[participant.peerId] = InitialBannedRights(value: banInfo.rights)
+                    } else {
+                        initialUserBannedRights[participant.peerId] = InitialBannedRights(value: nil)
+                    }
+                }
+                self.push(AdminUserActionsSheet(
+                    context: self.context,
+                    chatPeer: chatPeer,
+                    peers: [RenderedChannelParticipant(
+                        participant: participant,
+                        peer: authorPeer._asPeer()
+                    )],
+                    messageCount: messageIds.count,
+                    completion: { [weak self] result in
+                        guard let self else {
                             return
                         }
-                        let _ = (strongSelf.context.engine.data.get(
-                            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
-                            TelegramEngine.EngineData.Item.Peer.Peer(id: author.id)
-                        )
-                        |> deliverOnMainQueue).startStandalone(next: { chatPeer, authorPeer in
-                            guard let self, let chatPeer else {
-                                return
-                            }
-                            guard let authorPeer else {
-                                return
-                            }
-                            var initialUserBannedRights: [EnginePeer.Id: InitialBannedRights] = [:]
-                            switch participant {
-                            case .creator:
-                                break
-                            case let .member(_, _, _, banInfo, _):
-                                if let banInfo {
-                                    initialUserBannedRights[participant.peerId] = InitialBannedRights(value: banInfo.rights)
-                                } else {
-                                    initialUserBannedRights[participant.peerId] = InitialBannedRights(value: nil)
-                                }
-                            }
-                            self.push(AdminUserActionsSheet(
-                                context: self.context,
-                                chatPeer: chatPeer,
-                                peers: [RenderedChannelParticipant(
-                                    participant: participant,
-                                    peer: authorPeer._asPeer()
-                                )],
-                                messageCount: messageIds.count,
-                                completion: { [weak self] result in
-                                    guard let self else {
-                                        return
-                                    }
-                                    self.applyAdminUserActionsResult(messageIds: messageIds, result: result, initialUserBannedRights: initialUserBannedRights)
-                                }
-                            ))
-                        })
+                        self.applyAdminUserActionsResult(messageIds: messageIds, result: result, initialUserBannedRights: initialUserBannedRights)
+                    }
+                ))
+            })
+        }))
+        
+        /*do {
+            self.navigationActionDisposable.set((self.context.engine.peers.fetchChannelParticipant(peerId: peerId, participantId: author.id)
+            |> deliverOnMainQueue).startStrict(next: {
+                if let strongSelf = self {
+                    if "".isEmpty {
+                        
                         return
                     }
                     
@@ -310,7 +378,7 @@ extension ChatControllerImpl {
                     strongSelf.present(actionSheet, in: .window(.root))
                 }
             }))
-        }
+        }*/
     }
     
     func presentDeleteMessageOptions(messageIds: Set<MessageId>, options: ChatAvailableMessageActionOptions, contextController: ContextControllerProtocol?, completion: @escaping (ContextMenuActionResult) -> Void) {
