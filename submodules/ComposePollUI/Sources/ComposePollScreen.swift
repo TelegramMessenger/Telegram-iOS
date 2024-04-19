@@ -69,7 +69,8 @@ final class ComposePollScreenComponent: Component {
         private let quizAnswerSection = ComponentView<Empty>()
         
         private let pollOptionsSectionHeader = ComponentView<Empty>()
-        private let pollOptionsSectionFooter = ComponentView<Empty>()
+        private let pollOptionsSectionFooterContainer = UIView()
+        private var pollOptionsSectionFooter = ComponentView<Empty>()
         private var pollOptionsSectionContainer: ListSectionContentView
         
         private let pollSettingsSection = ComponentView<Empty>()
@@ -78,6 +79,8 @@ final class ComposePollScreenComponent: Component {
         private var reactionSelectionControl: ComponentView<Empty>?
         
         private var isUpdating: Bool = false
+        private var ignoreScrolling: Bool = false
+        private var previousHadInputHeight: Bool = false
         
         private var component: ComposePollScreenComponent?
         private(set) weak var state: EmptyComponentState?
@@ -92,6 +95,7 @@ final class ComposePollScreenComponent: Component {
         
         private var nextPollOptionId: Int = 0
         private var pollOptions: [PollOption] = []
+        private var currentPollOptionsLimitReached: Bool = false
         
         private var isAnonymous: Bool = true
         private var isMultiAnswer: Bool = false
@@ -237,7 +241,9 @@ final class ComposePollScreenComponent: Component {
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            self.updateScrolling(transition: .immediate)
+            if !self.ignoreScrolling {
+                self.updateScrolling(transition: .immediate)
+            }
         }
         
         private func updateScrolling(transition: Transition) {
@@ -351,7 +357,7 @@ final class ComposePollScreenComponent: Component {
                 }
                 
                 if animateIn {
-                    var targetFrame = inputMediaNode.frame
+                    var targetFrame = inputNodeFrame
                     targetFrame.origin.y = availableSize.height
                     inputMediaNodeTransition.setFrame(layer: inputMediaNode.layer, frame: targetFrame)
                     
@@ -409,9 +415,12 @@ final class ComposePollScreenComponent: Component {
                 }
             }*/
             
-            /*if let controller = self.environment?.controller() as? ComposePollScreen {
-                controller.updateTabBarAlpha(self.inputMediaNode == nil ? 1.0 : 0.0, transition.containedViewLayoutTransition)
-            }*/
+            if let controller = self.environment?.controller() as? ComposePollScreen {
+                let isTabBarVisible = self.inputMediaNode == nil
+                DispatchQueue.main.async { [weak controller] in
+                    controller?.updateTabBarVisibility(isTabBarVisible, transition.containedViewLayoutTransition)
+                }
+            }
             
             return height
         }
@@ -434,6 +443,11 @@ final class ComposePollScreenComponent: Component {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
+            }
+            
+            var alphaTransition = transition
+            if !transition.animation.isImmediate {
+                alphaTransition = alphaTransition.withAnimation(.curve(duration: 0.25, curve: .easeInOut))
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -491,7 +505,7 @@ final class ComposePollScreenComponent: Component {
                             return
                         }
                         self.currentInputMode = .keyboard
-                        self.state?.updated(transition: .immediate)
+                        self.state?.updated(transition: .spring(duration: 0.4))
                     },
                     dismissTextInput: {
                     },
@@ -692,7 +706,11 @@ final class ComposePollScreenComponent: Component {
                             return
                         }
                         if let index = self.pollOptions.firstIndex(where: { $0.id == optionId }) {
-                            if index != 0 {
+                            if index == 0 {
+                                if let textInputView = self.pollTextSection.findTaggedView(tag: self.pollTextFieldTag) as? ListComposePollOptionComponent.View {
+                                    textInputView.activateInput()
+                                }
+                            } else {
                                 if let pollOptionView = self.pollOptionsSectionContainer.itemViews[self.pollOptions[index - 1].id] {
                                     if let pollOptionComponentView = pollOptionView.contents.view as? ListComposePollOptionComponent.View {
                                         pollOptionComponentView.activateInput()
@@ -832,14 +850,31 @@ final class ComposePollScreenComponent: Component {
             contentHeight += pollOptionsSectionUpdateResult.size.height
             
             contentHeight += 7.0
-            var pollOptionsFooterItems: [AnimatedTextComponent.Item] = []
-            if self.pollOptions.count >= 10, !"".isEmpty {
-                pollOptionsFooterItems.append(AnimatedTextComponent.Item(
-                    id: 3,
-                    isUnbreakable: true,
-                    content: .text("You have added the maximum number of options.")
+            
+            let pollOptionsLimitReached = self.pollOptions.count >= 10
+            var animatePollOptionsFooterIn = false
+            var pollOptionsFooterTransition = transition
+            if self.currentPollOptionsLimitReached != pollOptionsLimitReached {
+                self.currentPollOptionsLimitReached = pollOptionsLimitReached
+                if let pollOptionsSectionFooterView = self.pollOptionsSectionFooter.view {
+                    animatePollOptionsFooterIn = true
+                    pollOptionsFooterTransition = pollOptionsFooterTransition.withAnimation(.none)
+                    alphaTransition.setAlpha(view: pollOptionsSectionFooterView, alpha: 0.0, completion: { [weak pollOptionsSectionFooterView] _ in
+                        pollOptionsSectionFooterView?.removeFromSuperview()
+                    })
+                    self.pollOptionsSectionFooter = ComponentView()
+                }
+            }
+            
+            let pollOptionsComponent: AnyComponent<Empty>
+            if pollOptionsLimitReached {
+                pollOptionsFooterTransition = pollOptionsFooterTransition.withAnimation(.none)
+                pollOptionsComponent = AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: "You have added the maximum number of options.", font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor)),
+                    maximumNumberOfLines: 0
                 ))
             } else {
+                var pollOptionsFooterItems: [AnimatedTextComponent.Item] = []
                 pollOptionsFooterItems.append(AnimatedTextComponent.Item(
                     id: 0,
                     isUnbreakable: true,
@@ -855,25 +890,36 @@ final class ComposePollScreenComponent: Component {
                     isUnbreakable: true,
                     content: .text(" more options.")
                 ))
-            }
-            let pollOptionsSectionFooterSize = self.pollOptionsSectionFooter.update(
-                transition: transition,
-                component: AnyComponent(AnimatedTextComponent(
+                pollOptionsComponent = AnyComponent(AnimatedTextComponent(
                     font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                     color: environment.theme.list.freeTextColor,
                     items: pollOptionsFooterItems
-                )),
+                ))
+            }
+            
+            let pollOptionsSectionFooterSize = self.pollOptionsSectionFooter.update(
+                transition: pollOptionsFooterTransition,
+                component: pollOptionsComponent,
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - sectionHeaderSideInset * 2.0, height: 1000.0)
             )
             let pollOptionsSectionFooterFrame = CGRect(origin: CGPoint(x: sideInset + sectionHeaderSideInset, y: contentHeight), size: pollOptionsSectionFooterSize)
+            
+            if self.pollOptionsSectionFooterContainer.superview == nil {
+                self.scrollView.addSubview(self.pollOptionsSectionFooterContainer)
+            }
+            transition.setFrame(view: self.pollOptionsSectionFooterContainer, frame: pollOptionsSectionFooterFrame)
+            
             if let pollOptionsSectionFooterView = self.pollOptionsSectionFooter.view {
                 if pollOptionsSectionFooterView.superview == nil {
                     pollOptionsSectionFooterView.layer.anchorPoint = CGPoint()
-                    self.scrollView.addSubview(pollOptionsSectionFooterView)
+                    self.pollOptionsSectionFooterContainer.addSubview(pollOptionsSectionFooterView)
                 }
-                transition.setPosition(view: pollOptionsSectionFooterView, position: pollOptionsSectionFooterFrame.origin)
+                pollOptionsFooterTransition.setPosition(view: pollOptionsSectionFooterView, position: CGPoint())
                 pollOptionsSectionFooterView.bounds = CGRect(origin: CGPoint(), size: pollOptionsSectionFooterFrame.size)
+                if animatePollOptionsFooterIn && !transition.animation.isImmediate {
+                    alphaTransition.animateAlpha(view: pollOptionsSectionFooterView, from: 0.0, to: 1.0)
+                }
             }
             contentHeight += pollOptionsSectionFooterSize.height
             contentHeight += sectionSpacing
@@ -1049,6 +1095,9 @@ final class ComposePollScreenComponent: Component {
                 deviceMetrics: environment.deviceMetrics,
                 transition: transition
             )
+            if self.inputMediaNode == nil {
+                inputHeight = environment.inputHeight
+            }
             
             let textInputStates = self.collectTextInputStates()
             
@@ -1188,14 +1237,47 @@ final class ComposePollScreenComponent: Component {
                 }
             }
             
+            let combinedBottomInset: CGFloat
             if isEditing {
-                contentHeight += bottomInset + 8.0
-                contentHeight += inputHeight
+                combinedBottomInset = bottomInset + 8.0 + inputHeight
             } else {
-                contentHeight += bottomInset
-                contentHeight += environment.safeInsets.bottom
+                combinedBottomInset = bottomInset + environment.safeInsets.bottom
             }
+            contentHeight += combinedBottomInset
             
+            var recenterOnTag: AnyObject?
+            if let hint = transition.userData(TextFieldComponent.AnimationHint.self), let targetView = hint.view {
+                var matches = false
+                switch hint.kind {
+                case .textChanged:
+                    matches = true
+                case let .textFocusChanged(isFocused):
+                    if isFocused {
+                        matches = true
+                    }
+                }
+                
+                if matches {
+                    for (textView, _) in self.collectTextInputStates() {
+                        if targetView.isDescendant(of: textView) {
+                            recenterOnTag = textView.currentTag
+                            break
+                        }
+                    }
+                }
+            }
+            if recenterOnTag == nil && self.previousHadInputHeight != (inputHeight > 0.0) {
+                for (textView, state) in self.collectTextInputStates() {
+                    if state.isEditing {
+                        recenterOnTag = textView.currentTag
+                        break
+                    }
+                }
+            }
+            self.previousHadInputHeight = (inputHeight > 0.0)
+            
+            self.ignoreScrolling = true
+            let previousBounds = self.scrollView.bounds
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
             if self.scrollView.frame != CGRect(origin: CGPoint(), size: availableSize) {
                 self.scrollView.frame = CGRect(origin: CGPoint(), size: availableSize)
@@ -1207,6 +1289,31 @@ final class ComposePollScreenComponent: Component {
             if self.scrollView.scrollIndicatorInsets != scrollInsets {
                 self.scrollView.scrollIndicatorInsets = scrollInsets
             }
+            
+            if let recenterOnTag {
+                if let targetView = self.collectTextInputStates().first(where: { $0.view.currentTag === recenterOnTag })?.view {
+                    let caretRect = targetView.convert(targetView.bounds, to: self.scrollView)
+                    var scrollViewBounds = self.scrollView.bounds
+                    let minButtonDistance: CGFloat = 16.0
+                    if -scrollViewBounds.minY + caretRect.maxY > availableSize.height - combinedBottomInset - minButtonDistance {
+                        scrollViewBounds.origin.y = -(availableSize.height - combinedBottomInset - minButtonDistance - caretRect.maxY)
+                        if scrollViewBounds.origin.y < 0.0 {
+                            scrollViewBounds.origin.y = 0.0
+                        }
+                    }
+                    if self.scrollView.bounds != scrollViewBounds {
+                        self.scrollView.bounds = scrollViewBounds
+                    }
+                }
+            }
+            if !previousBounds.isEmpty, !transition.animation.isImmediate {
+                let bounds = self.scrollView.bounds
+                if bounds.maxY != previousBounds.maxY {
+                    let offsetY = previousBounds.maxY - bounds.maxY
+                    transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: offsetY), to: CGPoint(), additive: true)
+                }
+            }
+            self.ignoreScrolling = false
             
             self.updateScrolling(transition: transition)
             
@@ -1250,6 +1357,8 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in
     }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in
+    }
+    public var updateTabBarVisibility: (Bool, ContainedViewLayoutTransition) -> Void = { _, _ in
     }
     public var cancelPanGesture: () -> Void = {
     }

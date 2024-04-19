@@ -79,6 +79,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     var requestAttachmentMenuExpansion: () -> Void = {}
     var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    var updateTabBarVisibility: (Bool, ContainedViewLayoutTransition) -> Void = { _, _ in }
     var cancelPanGesture: () -> Void = { }
     var isContainerPanning: () -> Bool = { return false }
     var isContainerExpanded: () -> Bool = { return false }

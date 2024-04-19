@@ -69,9 +69,9 @@ public final class TextFieldComponent: Component {
     
     
     public final class AnimationHint {
-        public enum Kind {
+        public enum Kind: Equatable {
             case textChanged
-            case textFocusChanged
+            case textFocusChanged(isFocused: Bool)
         }
         
         public weak var view: View?
@@ -450,7 +450,7 @@ public final class TextFieldComponent: Component {
                 return
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged(isFocused: true))))
             }
             if component.isOneLineWhenUnfocused {
                 Queue.mainQueue().justDispatch {
@@ -461,7 +461,7 @@ public final class TextFieldComponent: Component {
         
         public func chatInputTextNodeDidFinishEditing() {
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged(isFocused: false))))
             }
         }
         

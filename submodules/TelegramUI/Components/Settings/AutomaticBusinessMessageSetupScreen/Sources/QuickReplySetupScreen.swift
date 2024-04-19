@@ -1305,6 +1305,8 @@ public final class QuickReplySetupScreen: ViewControllerComponentContainer, Atta
     }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in
     }
+    public var updateTabBarVisibility: (Bool, ContainedViewLayoutTransition) -> Void = { _, _ in
+    }
     public var cancelPanGesture: () -> Void = {
     }
     public var isContainerPanning: () -> Bool = {

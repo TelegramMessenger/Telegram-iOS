@@ -236,6 +236,10 @@ public final class ListComposePollOptionComponent: Component {
             return self.textField.view as? TextFieldComponent.View
         }
         
+        public var currentTag: AnyObject? {
+            return self.component?.tag
+        }
+        
         public var customUpdateIsHighlighted: ((Bool) -> Void)?
         public private(set) var separatorInset: CGFloat = 0.0
         
