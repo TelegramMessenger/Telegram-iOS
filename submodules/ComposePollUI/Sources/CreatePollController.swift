@@ -613,15 +613,16 @@ public class CreatePollControllerImpl: ItemListController, AttachmentContainable
 }
 
 public func createPollController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, isQuiz: Bool? = nil, completion: @escaping (ComposedPoll) -> Void) -> ViewController {
-    if "".isEmpty {
-        return ComposePollScreen(
-            context: context,
-            peer: peer,
-            isQuiz: isQuiz,
-            completion: completion
-        )
-    }
+    return ComposePollScreen(
+        context: context,
+        initialData: ComposePollScreen.initialData(context: context),
+        peer: peer,
+        isQuiz: isQuiz,
+        completion: completion
+    )
+}
     
+private func legacyCreatePollController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, isQuiz: Bool?, completion: @escaping (ComposedPoll) -> Void) -> ViewController {
     var initialState = CreatePollControllerState()
     if let isQuiz = isQuiz {
         initialState.isQuiz = isQuiz

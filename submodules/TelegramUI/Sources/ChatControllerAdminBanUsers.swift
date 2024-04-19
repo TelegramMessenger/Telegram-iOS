@@ -65,7 +65,7 @@ extension ChatControllerImpl {
             } else {
                 text.append("**\(result.updateBannedRights.count)** users restricted.")
             }
-            for id in result.banPeers {
+            for (id, _) in result.updateBannedRights {
                 if let value = initialUserBannedRights[id] {
                     undoRights[id] = value
                 }

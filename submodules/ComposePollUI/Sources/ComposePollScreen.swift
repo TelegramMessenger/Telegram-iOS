@@ -33,17 +33,20 @@ final class ComposePollScreenComponent: Component {
     let context: AccountContext
     let peer: EnginePeer
     let isQuiz: Bool?
+    let initialData: ComposePollScreen.InitialData
     let completion: (ComposedPoll) -> Void
 
     init(
         context: AccountContext,
         peer: EnginePeer,
         isQuiz: Bool?,
+        initialData: ComposePollScreen.InitialData,
         completion: @escaping (ComposedPoll) -> Void
     ) {
         self.context = context
         self.peer = peer
         self.isQuiz = isQuiz
+        self.initialData = initialData
         self.completion = completion
     }
 
@@ -110,6 +113,7 @@ final class ComposePollScreenComponent: Component {
         private var inputMediaInteraction: ChatEntityKeyboardInputNode.Interaction?
         private var inputMediaNode: ChatEntityKeyboardInputNode?
         private var inputMediaNodeBackground = SimpleLayer()
+        private var inputMediaNodeTargetTag: AnyObject?
         
         private let inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
         
@@ -288,6 +292,10 @@ final class ComposePollScreenComponent: Component {
             
             var height: CGFloat = 0.0
             if case .emoji = self.currentInputMode, let inputData = self.inputMediaNodeData {
+                if let updatedTag = self.collectTextInputStates().first(where: { $1.isEditing })?.view.currentTag {
+                    self.inputMediaNodeTargetTag = updatedTag
+                }
+                
                 let inputMediaNode: ChatEntityKeyboardInputNode
                 var inputMediaNodeTransition = transition
                 var animateIn = false
@@ -377,39 +385,42 @@ final class ComposePollScreenComponent: Component {
                 }
                 
                 height = heightAndOverflow.0
-            } else if let inputMediaNode = self.inputMediaNode {
-                self.inputMediaNode = nil
+            } else {
+                self.inputMediaNodeTargetTag = nil
                 
-                var targetFrame = inputMediaNode.frame
-                targetFrame.origin.y = availableSize.height
-                transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
-                    if let inputMediaNode {
+                if let inputMediaNode = self.inputMediaNode {
+                    self.inputMediaNode = nil
+                    var targetFrame = inputMediaNode.frame
+                    targetFrame.origin.y = availableSize.height
+                    transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
+                        if let inputMediaNode {
+                            Queue.mainQueue().after(0.3) {
+                                inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
+                                    inputMediaNode?.view.removeFromSuperview()
+                                })
+                            }
+                        }
+                    })
+                    transition.setFrame(layer: self.inputMediaNodeBackground, frame: targetFrame, completion: { [weak self] _ in
                         Queue.mainQueue().after(0.3) {
-                            inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
-                                inputMediaNode?.view.removeFromSuperview()
-                            })
+                            guard let self else {
+                                return
+                            }
+                            if self.currentInputMode == .keyboard {
+                                self.inputMediaNodeBackground.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak self] finished in
+                                    guard let self else {
+                                        return
+                                    }
+                                    
+                                    if finished {
+                                        self.inputMediaNodeBackground.removeFromSuperlayer()
+                                    }
+                                    self.inputMediaNodeBackground.removeAllAnimations()
+                                })
+                            }
                         }
-                    }
-                })
-                transition.setFrame(layer: self.inputMediaNodeBackground, frame: targetFrame, completion: { [weak self] _ in
-                    Queue.mainQueue().after(0.3) {
-                        guard let self else {
-                            return
-                        }
-                        if self.currentInputMode == .keyboard {
-                            self.inputMediaNodeBackground.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak self] finished in
-                                guard let self else {
-                                    return
-                                }
-                                
-                                if finished {
-                                    self.inputMediaNodeBackground.removeFromSuperlayer()
-                                }
-                                self.inputMediaNodeBackground.removeAllAnimations()
-                            })
-                        }
-                    }
-                })
+                    })
+                }
             }
             
             /*if needsInputActivation {
@@ -518,10 +529,21 @@ final class ComposePollScreenComponent: Component {
                             return
                         }
                         
+                        var found = false
                         for (textInputView, externalState) in self.collectTextInputStates() {
                             if externalState.isEditing {
                                 textInputView.insertText(text: text)
+                                found = true
                                 break
+                            }
+                        }
+                        if !found, let inputMediaNodeTargetTag = self.inputMediaNodeTargetTag {
+                            for (textInputView, _) in self.collectTextInputStates() {
+                                if textInputView.currentTag === inputMediaNodeTargetTag {
+                                    textInputView.insertText(text: text)
+                                    found = true
+                                    break
+                                }
                             }
                         }
                     },
@@ -529,10 +551,21 @@ final class ComposePollScreenComponent: Component {
                         guard let self else {
                             return
                         }
+                        var found = false
                         for (textInputView, externalState) in self.collectTextInputStates() {
                             if externalState.isEditing {
                                 textInputView.backwardsDeleteText()
+                                found = true
                                 break
+                            }
+                        }
+                        if !found, let inputMediaNodeTargetTag = self.inputMediaNodeTargetTag {
+                            for (textInputView, _) in self.collectTextInputStates() {
+                                if textInputView.currentTag === inputMediaNodeTargetTag {
+                                    textInputView.backwardsDeleteText()
+                                    found = true
+                                    break
+                                }
                             }
                         }
                     },
@@ -594,7 +627,8 @@ final class ComposePollScreenComponent: Component {
                 resetText: self.resetPollText.flatMap { resetText in
                     return ListComposePollOptionComponent.ResetText(value: resetText)
                 },
-                characterLimit: 256,
+                assumeIsEditing: self.inputMediaNodeTargetTag === self.pollTextFieldTag,
+                characterLimit: component.initialData.maxPollTextLength,
                 returnKeyAction: { [weak self] in
                     guard let self else {
                         return
@@ -688,7 +722,8 @@ final class ComposePollScreenComponent: Component {
                     resetText: pollOption.resetText.flatMap { resetText in
                         return ListComposePollOptionComponent.ResetText(value: resetText)
                     },
-                    characterLimit: 256,
+                    assumeIsEditing: self.inputMediaNodeTargetTag === pollOption.textFieldTag,
+                    characterLimit: component.initialData.maxPollOptionLength,
                     returnKeyAction: { [weak self] in
                         guard let self else {
                             return
@@ -1350,6 +1385,19 @@ final class ComposePollScreenComponent: Component {
 }
 
 public class ComposePollScreen: ViewControllerComponentContainer, AttachmentContainable {
+    public final class InitialData {
+        fileprivate let maxPollTextLength: Int
+        fileprivate let maxPollOptionLength: Int
+        
+        fileprivate init(
+            maxPollTextLength: Int,
+            maxPollOptionLength: Int
+        ) {
+            self.maxPollTextLength = maxPollTextLength
+            self.maxPollOptionLength = maxPollOptionLength
+        }
+    }
+    
     private let context: AccountContext
     private let completion: (ComposedPoll) -> Void
     private var isDismissed: Bool = false
@@ -1385,6 +1433,7 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     
     public init(
         context: AccountContext,
+        initialData: InitialData,
         peer: EnginePeer,
         isQuiz: Bool?,
         completion: @escaping (ComposedPoll) -> Void
@@ -1396,6 +1445,7 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
             context: context,
             peer: peer,
             isQuiz: isQuiz,
+            initialData: initialData,
             completion: completion
         ), navigationBarAppearance: .default, theme: .default)
         
@@ -1430,6 +1480,13 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     }
     
     deinit {
+    }
+    
+    public static func initialData(context: AccountContext) -> InitialData {
+        return InitialData(
+            maxPollTextLength: Int(context.userLimits.maxCaptionLength),
+            maxPollOptionLength: 100
+        )
     }
     
     @objc private func cancelPressed() {

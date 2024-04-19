@@ -73,6 +73,7 @@ public final class ListComposePollOptionComponent: Component {
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let resetText: ResetText?
+    public let assumeIsEditing: Bool
     public let characterLimit: Int?
     public let returnKeyAction: (() -> Void)?
     public let backspaceKeyAction: (() -> Void)?
@@ -87,6 +88,7 @@ public final class ListComposePollOptionComponent: Component {
         theme: PresentationTheme,
         strings: PresentationStrings,
         resetText: ResetText? = nil,
+        assumeIsEditing: Bool = false,
         characterLimit: Int,
         returnKeyAction: (() -> Void)?,
         backspaceKeyAction: (() -> Void)?,
@@ -100,6 +102,7 @@ public final class ListComposePollOptionComponent: Component {
         self.theme = theme
         self.strings = strings
         self.resetText = resetText
+        self.assumeIsEditing = assumeIsEditing
         self.characterLimit = characterLimit
         self.returnKeyAction = returnKeyAction
         self.backspaceKeyAction = backspaceKeyAction
@@ -123,6 +126,9 @@ public final class ListComposePollOptionComponent: Component {
             return false
         }
         if lhs.resetText != rhs.resetText {
+            return false
+        }
+        if lhs.assumeIsEditing != rhs.assumeIsEditing {
             return false
         }
         if lhs.characterLimit != rhs.characterLimit {
