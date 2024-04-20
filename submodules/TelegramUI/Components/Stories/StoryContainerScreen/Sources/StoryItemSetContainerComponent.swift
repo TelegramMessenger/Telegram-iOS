@@ -905,7 +905,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if hasFirstResponder(self) {
                     view.deactivateInput()
                 } else {
-                    self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(view: nil, kind: .textFocusChanged)))
+                    self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(view: nil, kind: .textFocusChanged(isFocused: false))))
                 }
             }
         }

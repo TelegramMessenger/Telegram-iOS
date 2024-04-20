@@ -3897,7 +3897,16 @@ func replayFinalState(
                             } else {
                                 kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
                             }
-                            updatedPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: question, textEntities: [], options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: poll.results, isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod)
+                            
+                            let questionText: String
+                            let questionEntities: [MessageTextEntity]
+                            switch question {
+                            case let .textWithEntities(text, entities):
+                                questionText = text
+                                questionEntities = messageTextEntitiesFromApiEntities(entities)
+                            }
+                            
+                            updatedPoll = TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: poll.results, isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod)
                         }
                     }
                     updatedPoll = updatedPoll.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)

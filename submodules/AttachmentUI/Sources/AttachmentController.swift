@@ -90,6 +90,7 @@ public protocol AttachmentContainable: ViewController {
     var requestAttachmentMenuExpansion: () -> Void { get set }
     var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void { get set }
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void { get set }
+    var updateTabBarVisibility: (Bool, ContainedViewLayoutTransition) -> Void { get set }
     var cancelPanGesture: () -> Void { get set }
     var isContainerPanning: () -> Bool { get set }
     var isContainerExpanded: () -> Bool { get set }
@@ -564,6 +565,11 @@ public class AttachmentController: ViewController {
                                 strongSelf.panel.updateBackgroundAlpha(alpha, transition: transition)
                             }
                         }
+                        controller.updateTabBarVisibility = { [weak self, weak controller] isVisible, transition in
+                            if let strongSelf = self, strongSelf.currentControllers.contains(where: { $0 === controller }) {
+                                strongSelf.updateIsPanelVisible(isVisible, transition: transition)
+                            }
+                        }
                         
                         controller.cancelPanGesture = { [weak self] in
                             if let strongSelf = self {
@@ -748,6 +754,18 @@ public class AttachmentController: ViewController {
         
         private var hasButton = false
         
+        private var isPanelVisible: Bool = true
+        
+        private func updateIsPanelVisible(_ isVisible: Bool, transition: ContainedViewLayoutTransition) {
+            if self.isPanelVisible == isVisible {
+                return
+            }
+            self.isPanelVisible = isVisible
+            if let layout = self.validLayout {
+                self.containerLayoutUpdated(layout, transition: transition)
+            }
+        }
+        
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
             self.validLayout = layout
             
@@ -836,6 +854,9 @@ public class AttachmentController: ViewController {
             self.hasButton = hasButton
             if let controller = self.controller, controller.buttons.count > 1 || controller.hasTextInput {
                 hasPanel = true
+            }
+            if !self.isPanelVisible {
+                hasPanel = false
             }
                             
             let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)

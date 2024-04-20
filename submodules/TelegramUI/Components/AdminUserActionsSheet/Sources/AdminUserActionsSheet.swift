@@ -966,7 +966,7 @@ private final class AdminUserActionsSheetComponent: Component {
                 component: AnyComponent(PlainButtonComponent(
                     content: AnyComponent(OptionsSectionFooterComponent(
                         theme: environment.theme,
-                        text: self.isConfigurationExpanded ? partiallyRestrictTitle : fullyBanTitle,
+                        text: self.isConfigurationExpanded ? fullyBanTitle : partiallyRestrictTitle,
                         fontSize: presentationData.listsFontSize.itemListBaseHeaderFontSize,
                         isExpanded: self.isConfigurationExpanded
                     )),

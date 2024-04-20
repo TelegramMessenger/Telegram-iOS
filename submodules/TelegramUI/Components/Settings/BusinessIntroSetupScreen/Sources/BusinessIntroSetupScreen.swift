@@ -229,7 +229,8 @@ final class BusinessIntroSetupScreenComponent: Component {
                     hasSearch: true,
                     hasTrending: false,
                     forceHasPremium: true,
-                    searchIsPlaceholderOnly: false
+                    searchIsPlaceholderOnly: false,
+                    subject: .greetingStickers
                 )
                 self.stickerContentDisposable = (stickerContent
                 |> deliverOnMainQueue).start(next: { [weak self] stickerContent in

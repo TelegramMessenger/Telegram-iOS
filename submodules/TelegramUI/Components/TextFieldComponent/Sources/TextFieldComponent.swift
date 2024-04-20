@@ -69,9 +69,9 @@ public final class TextFieldComponent: Component {
     
     
     public final class AnimationHint {
-        public enum Kind {
+        public enum Kind: Equatable {
             case textChanged
-            case textFocusChanged
+            case textFocusChanged(isFocused: Bool)
         }
         
         public weak var view: View?
@@ -105,6 +105,7 @@ public final class TextFieldComponent: Component {
     public let hideKeyboard: Bool
     public let customInputView: UIView?
     public let resetText: NSAttributedString?
+    public let assumeIsEditing: Bool
     public let isOneLineWhenUnfocused: Bool
     public let characterLimit: Int?
     public let emptyLineHandling: EmptyLineHandling
@@ -127,6 +128,7 @@ public final class TextFieldComponent: Component {
         hideKeyboard: Bool,
         customInputView: UIView?,
         resetText: NSAttributedString?,
+        assumeIsEditing: Bool = false,
         isOneLineWhenUnfocused: Bool,
         characterLimit: Int? = nil,
         emptyLineHandling: EmptyLineHandling = .allowed,
@@ -148,6 +150,7 @@ public final class TextFieldComponent: Component {
         self.hideKeyboard = hideKeyboard
         self.customInputView = customInputView
         self.resetText = resetText
+        self.assumeIsEditing = assumeIsEditing
         self.isOneLineWhenUnfocused = isOneLineWhenUnfocused
         self.characterLimit = characterLimit
         self.emptyLineHandling = emptyLineHandling
@@ -189,6 +192,9 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.resetText != rhs.resetText {
+            return false
+        }
+        if lhs.assumeIsEditing != rhs.assumeIsEditing {
             return false
         }
         if lhs.isOneLineWhenUnfocused != rhs.isOneLineWhenUnfocused {
@@ -450,7 +456,7 @@ public final class TextFieldComponent: Component {
                 return
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged(isFocused: true))))
             }
             if component.isOneLineWhenUnfocused {
                 Queue.mainQueue().justDispatch {
@@ -461,7 +467,7 @@ public final class TextFieldComponent: Component {
         
         public func chatInputTextNodeDidFinishEditing() {
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged(isFocused: false))))
             }
         }
         
@@ -1141,7 +1147,7 @@ public final class TextFieldComponent: Component {
             }
             
             let wasEditing = component.externalState.isEditing
-            let isEditing = self.textView.isFirstResponder
+            let isEditing = self.textView.isFirstResponder || component.assumeIsEditing
             
             var innerTextInsets = component.insets
             innerTextInsets.left = 0.0

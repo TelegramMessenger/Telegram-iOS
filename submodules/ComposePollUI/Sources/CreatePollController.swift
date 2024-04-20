@@ -506,6 +506,7 @@ public final class ComposedPoll {
     public let correctAnswers: [Data]?
     public let results: TelegramMediaPollResults
     public let deadlineTimeout: Int32?
+    public let usedCustomEmojiFiles: [Int64: TelegramMediaFile]
 
     public init(
         publicity: TelegramMediaPollPublicity,
@@ -514,7 +515,8 @@ public final class ComposedPoll {
         options: [TelegramMediaPollOption],
         correctAnswers: [Data]?,
         results: TelegramMediaPollResults,
-        deadlineTimeout: Int32?
+        deadlineTimeout: Int32?,
+        usedCustomEmojiFiles: [Int64: TelegramMediaFile]
     ) {
         self.publicity = publicity
         self.kind = kind
@@ -523,6 +525,7 @@ public final class ComposedPoll {
         self.correctAnswers = correctAnswers
         self.results = results
         self.deadlineTimeout = deadlineTimeout
+        self.usedCustomEmojiFiles = usedCustomEmojiFiles
     }
 }
 
@@ -561,6 +564,7 @@ public class CreatePollControllerImpl: ItemListController, AttachmentContainable
     public var requestAttachmentMenuExpansion: () -> Void = {}
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    public var updateTabBarVisibility: (Bool, ContainedViewLayoutTransition) -> Void = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
@@ -609,15 +613,16 @@ public class CreatePollControllerImpl: ItemListController, AttachmentContainable
 }
 
 public func createPollController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, isQuiz: Bool? = nil, completion: @escaping (ComposedPoll) -> Void) -> ViewController {
-    if "".isEmpty {
-        return ComposePollScreen(
-            context: context,
-            peer: peer,
-            isQuiz: isQuiz,
-            completion: completion
-        )
-    }
+    return ComposePollScreen(
+        context: context,
+        initialData: ComposePollScreen.initialData(context: context),
+        peer: peer,
+        isQuiz: isQuiz,
+        completion: completion
+    )
+}
     
+private func legacyCreatePollController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, isQuiz: Bool?, completion: @escaping (ComposedPoll) -> Void) -> ViewController {
     var initialState = CreatePollControllerState()
     if let isQuiz = isQuiz {
         initialState.isQuiz = isQuiz
@@ -973,7 +978,8 @@ public func createPollController(context: AccountContext, updatedPresentationDat
                 options: options,
                 correctAnswers: correctAnswers,
                 results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: resolvedSolution),
-                deadlineTimeout: deadlineTimeout
+                deadlineTimeout: deadlineTimeout,
+                usedCustomEmojiFiles: [:]
             ))
         })
         
