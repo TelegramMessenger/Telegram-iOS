@@ -366,7 +366,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
     func updatePasteVisibility() {
         let text = self.textField.textField.text ?? ""
-        self.pasteButton.isHidden = !text.isEmpty || !UIPasteboard.general.hasStrings
+        self.pasteButton.isHidden = !text.isEmpty
     }
     
     func updateCode(_ code: String) {
@@ -928,12 +928,23 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.hintButtonNode.alpha = 0.0
         self.hintButtonNode.layer.animateAlpha(from: previousHintAlpha, to: 0.0, duration: 0.1)
         
+        let previousResetAlpha = self.resetNode.alpha
+        if !self.resetNode.isHidden {
+            self.resetNode.alpha = 0.0
+            self.resetNode.layer.animateAlpha(from: previousResetAlpha, to: 0.0, duration: 0.1)
+        }
+        
         Queue.mainQueue().after(1.6) {
             self.errorTextNode.alpha = 0.0
             self.errorTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
             
             self.hintButtonNode.alpha = previousHintAlpha
             self.hintButtonNode.layer.animateAlpha(from: 0.0, to: previousHintAlpha, duration: 0.1)
+            
+            if !self.resetNode.isHidden {
+                self.resetNode.alpha = previousResetAlpha
+                self.resetNode.layer.animateAlpha(from: 0.0, to: previousResetAlpha, duration: 0.1)
+            }
             
             let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
             transition.updateBackgroundColor(node: self.textSeparatorNode, color: self.theme.list.itemPlainSeparatorColor)
