@@ -8,6 +8,7 @@ import MergeLists
 import AccountContext
 import ChatControllerInteraction
 import ChatHistoryEntry
+import ChatMessageItem
 import ChatMessageItemImpl
 import TextFormat
 
@@ -95,6 +96,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
     let id: ChatRecentActionsEntryId
     let presentationData: ChatPresentationData
     let entry: ChannelAdminEventLogEntry
+    let subEntries: [ChannelAdminEventLogEntry]
+    let isExpanded: Bool?
     
     static func ==(lhs: ChatRecentActionsEntry, rhs: ChatRecentActionsEntry) -> Bool {
         if lhs.id != rhs.id {
@@ -104,6 +107,12 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
             return false
         }
         if lhs.entry != rhs.entry {
+            return false
+        }
+        if lhs.subEntries != rhs.subEntries {
+            return false
+        }
+        if lhs.isExpanded != rhs.isExpanded {
             return false
         }
         return true
@@ -524,13 +533,48 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         
                         var text: String = ""
                         var entities: [MessageTextEntity] = []
-                        
-                        appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageDeleted(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
-                            if index == 0, let author = author {
-                                return [.TextMention(peerId: author.id)]
+                    
+                        let authorName = author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
+                    
+                        if !self.subEntries.isEmpty {
+                            var peers: [EnginePeer] = []
+                            var existingPeerIds = Set<EnginePeer.Id>()
+                            for entry in self.subEntries {
+                                if case let .deleteMessage(message) = entry.event.action, let author = message.author {
+                                    guard !existingPeerIds.contains(author.id) else {
+                                        continue
+                                    }
+                                    peers.append(EnginePeer(author))
+                                    existingPeerIds.insert(author.id)
+                                }
                             }
-                            return []
-                        }, to: &text, entities: &entities)
+                            let peerNames = peers.map { $0.compactDisplayTitle }.joined(separator: ", ")
+                            let messagesString = self.presentationData.strings.Channel_AdminLog_MessageManyDeleted_Messages(Int32(self.subEntries.count))
+                            
+                            let fullText: PresentationStrings.FormattedString
+                            if let isExpanded = self.isExpanded {
+                                let moreText = (isExpanded ? self.presentationData.strings.Channel_AdminLog_MessageManyDeleted_HideAll : self.presentationData.strings.Channel_AdminLog_MessageManyDeleted_ShowAll).replacingOccurrences(of: " ", with: "\u{00A0}")
+                                fullText = self.presentationData.strings.Channel_AdminLog_MessageManyDeletedMore(authorName, messagesString, peerNames, moreText)
+                            } else {
+                                fullText = self.presentationData.strings.Channel_AdminLog_MessageManyDeleted(authorName, messagesString, peerNames)
+                            }
+                            
+                            appendAttributedText(text: fullText, generateEntities: { index in
+                                if index == 0, let author = author {
+                                    return [.TextMention(peerId: author.id)]
+                                } else if index == 3 {
+                                    return [.Custom(type: ApplicationSpecificEntityType.Button)]
+                                }
+                                return []
+                            }, to: &text, entities: &entities)
+                        } else {
+                            appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageDeleted(authorName), generateEntities: { index in
+                                if index == 0, let author = author {
+                                    return [.TextMention(peerId: author.id)]
+                                }
+                                return []
+                            }, to: &text, entities: &entities)
+                        }
                         
                         let action = TelegramMediaActionType.customText(text: text, entities: entities, additionalAttributes: nil)
                         
@@ -567,8 +611,24 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         if let peer = self.entry.peers[message.id.peerId] {
                             peers[peer.id] = peer
                         }
-                    let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: message.id.id), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: message.effectiveAuthor, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: message.associatedMessages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: message.associatedThreadInfo, associatedStories: [:])
-                        return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, savedMessageTags: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
+                    
+                        var additionalContent: ChatMessageItemAdditionalContent?
+                        if !self.subEntries.isEmpty {
+                            var messages: [Message] = []
+                            for entry in self.subEntries {
+                                if case let .deleteMessage(message) = entry.event.action {
+                                    messages.append(message)
+                                }
+                            }
+                            var hasButton = false
+                            if let isExpanded = self.isExpanded, !isExpanded {
+                                hasButton = true
+                            }
+                            additionalContent = .eventLogGroupedMessages(messages, hasButton)
+                        }
+                        
+                        let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: message.id.id), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: message.effectiveAuthor, text: message.text, attributes: attributes, media: message.media, peers: peers, associatedMessages: message.associatedMessages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: message.associatedThreadInfo, associatedStories: [:])
+                        return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, savedMessageTags: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil), additionalContent: additionalContent)
                 }
             case .participantJoin, .participantLeave:
                 var peers = SimpleDictionary<PeerId, Peer>()
@@ -2184,16 +2244,53 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
     }
 }
 
-func chatRecentActionsEntries(entries: [ChannelAdminEventLogEntry], presentationData: ChatPresentationData) -> [ChatRecentActionsEntry] {
+func chatRecentActionsEntries(entries: [ChannelAdminEventLogEntry], presentationData: ChatPresentationData, expandedDeletedMessages: Set<EngineMessage.Id>) -> [ChatRecentActionsEntry] {
     var result: [ChatRecentActionsEntry] = []
-    for entry in entries.reversed() {
-        result.append(ChatRecentActionsEntry(id: ChatRecentActionsEntryId(eventId: entry.event.id, contentIndex: .content), presentationData: presentationData, entry: entry))
-        if eventNeedsHeader(entry.event) {
-            result.append(ChatRecentActionsEntry(id: ChatRecentActionsEntryId(eventId: entry.event.id, contentIndex: .header), presentationData: presentationData, entry: entry))
+    var deleteMessageEntries: [ChannelAdminEventLogEntry] = []
+    
+    func appendCurrentDeleteEntries() {
+        if !deleteMessageEntries.isEmpty, let lastEntry = deleteMessageEntries.last, let lastMessageId = lastEntry.event.action.messageId {
+            let isExpandable = deleteMessageEntries.count > 10
+            let isExpanded = expandedDeletedMessages.contains(lastMessageId) || !isExpandable
+            let isGroup = deleteMessageEntries.count > 1
+            
+            for i in 0 ..< deleteMessageEntries.count {
+                let entry = deleteMessageEntries[i]
+                let isLast = i == deleteMessageEntries.count - 1
+                if isExpanded || isLast {
+                    result.append(ChatRecentActionsEntry(id: ChatRecentActionsEntryId(eventId: entry.event.id, contentIndex: .content), presentationData: presentationData, entry: entry, subEntries: isGroup && isExpandable ? deleteMessageEntries : [], isExpanded: isExpandable && isLast ? isExpanded : nil))
+                }
+            }
+
+            result.append(ChatRecentActionsEntry(id: ChatRecentActionsEntryId(eventId: lastEntry.event.id, contentIndex: .header), presentationData: presentationData, entry: lastEntry, subEntries: isGroup ? deleteMessageEntries : [], isExpanded: isExpandable ? isExpanded : nil))
+            
+            deleteMessageEntries = []
         }
     }
     
-    assert(result == result.sorted().reversed())
+    for entry in entries.reversed() {
+        let currentDeleteMessageEvent = deleteMessageEntries.first?.event
+        var skipAppending = false
+        if case .deleteMessage = entry.event.action {
+            if currentDeleteMessageEvent == nil || (currentDeleteMessageEvent!.peerId == entry.event.peerId && abs(currentDeleteMessageEvent!.date - entry.event.date) < 5) {
+            } else {
+                appendCurrentDeleteEntries()
+            }
+            deleteMessageEntries.append(entry)
+            skipAppending = true
+        }
+        if !skipAppending {
+            appendCurrentDeleteEntries()
+            
+            result.append(ChatRecentActionsEntry(id: ChatRecentActionsEntryId(eventId: entry.event.id, contentIndex: .content), presentationData: presentationData, entry: entry, subEntries: [], isExpanded: nil))
+            if eventNeedsHeader(entry.event) {
+                result.append(ChatRecentActionsEntry(id: ChatRecentActionsEntryId(eventId: entry.event.id, contentIndex: .header), presentationData: presentationData, entry: entry, subEntries: [], isExpanded: nil))
+            }
+        }
+    }
+    appendCurrentDeleteEntries()
+    
+//    assert(result == result.sorted().reversed())
     return result
 }
 
@@ -2205,17 +2302,18 @@ struct ChatRecentActionsHistoryTransition {
     let updates: [ListViewUpdateItem]
     let canLoadEarlier: Bool
     let displayingResults: Bool
+    let searchResultsState: (String, [MessageIndex])?
     let isEmpty: Bool
 }
 
-func chatRecentActionsHistoryPreparedTransition(from fromEntries: [ChatRecentActionsEntry], to toEntries: [ChatRecentActionsEntry], type: ChannelAdminEventLogUpdateType, canLoadEarlier: Bool, displayingResults: Bool, context: AccountContext, peer: Peer, controllerInteraction: ChatControllerInteraction, chatThemes: [TelegramTheme]) -> ChatRecentActionsHistoryTransition {
-    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
+func chatRecentActionsHistoryPreparedTransition(from fromEntries: [ChatRecentActionsEntry], to toEntries: [ChatRecentActionsEntry], type: ChannelAdminEventLogUpdateType, canLoadEarlier: Bool, displayingResults: Bool, context: AccountContext, peer: Peer, controllerInteraction: ChatControllerInteraction, chatThemes: [TelegramTheme], searchResultsState: (String, [MessageIndex])?) -> ChatRecentActionsHistoryTransition {
+    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdatesReversed(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes), directionHint: nil) }
     
-    return ChatRecentActionsHistoryTransition(filteredEntries: toEntries, type: type, deletions: deletions, insertions: insertions, updates: updates, canLoadEarlier: canLoadEarlier, displayingResults: displayingResults, isEmpty: toEntries.isEmpty)
+    return ChatRecentActionsHistoryTransition(filteredEntries: toEntries, type: type, deletions: deletions, insertions: insertions, updates: updates, canLoadEarlier: canLoadEarlier, displayingResults: displayingResults, searchResultsState: searchResultsState, isEmpty: toEntries.isEmpty)
 }
 
 private extension ExportedInvitation {

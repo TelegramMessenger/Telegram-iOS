@@ -253,6 +253,9 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     if let time = parseTimecodeString(text) {
                         string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Timecode), value: TelegramTimecode(time: time, text: text), range: range)
                     }
+                } else if type == ApplicationSpecificEntityType.Button {
+                    string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Button), value: true as NSNumber, range: range)
+                    addFontAttributes(range, .smaller)
                 }
             case let .CustomEmoji(_, fileId):
                 let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
@@ -284,6 +287,8 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 font = italicFont
             } else if fontAttributes == [.monospace] {
                 font = fixedFont
+            } else if fontAttributes == [.smaller] {
+                font = baseFont.withSize(floor(baseFont.pointSize * 0.9))
             } else {
                 font = baseFont
             }

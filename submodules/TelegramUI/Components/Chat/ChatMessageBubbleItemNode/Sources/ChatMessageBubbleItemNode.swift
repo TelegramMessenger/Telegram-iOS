@@ -304,6 +304,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             case let .eventLogPreviousLink(previousMessage):
                 result.append((previousMessage, ChatMessageEventLogPreviousLinkContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 needReactions = false
+            case .eventLogGroupedMessages:
+                break
         }
     }
     
@@ -2483,7 +2485,25 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var maxContentWidth: CGFloat = headerSize.width
         
         var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode))?
-        if let replyMarkup = replyMarkup, !item.presentationData.isPreview {
+        if let additionalContent = item.additionalContent, case let .eventLogGroupedMessages(messages, hasButton) = additionalContent, hasButton {
+            let (minWidth, buttonsLayout) = actionButtonsLayout(
+                item.context,
+                item.presentationData.theme,
+                item.presentationData.chatBubbleCorners,
+                item.presentationData.strings,
+                item.controllerInteraction.presentationContext.backgroundNode,
+                ReplyMarkupMessageAttribute(
+                    rows: [
+                        ReplyMarkupRow(
+                            buttons: [ReplyMarkupButton(title: "Show \(messages.count - 1) More Messages", titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: MemoryBuffer(data: Data())))]
+                        )
+                    ],
+                    flags: [],
+                    placeholder: nil
+            ), item.message, maximumNodeWidth)
+            maxContentWidth = max(maxContentWidth, minWidth)
+            actionButtonsFinalize = buttonsLayout
+        } else if let replyMarkup = replyMarkup, !item.presentationData.isPreview {
             let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, item.controllerInteraction.presentationContext.backgroundNode, replyMarkup, item.message, maximumNodeWidth)
             maxContentWidth = max(maxContentWidth, minWidth)
             actionButtonsFinalize = buttonsLayout
@@ -2964,6 +2984,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     ) -> Void {
         guard let strongSelf = selfReference.value else {
             return
+        }
+        
+        if let additionalContent = item.additionalContent, case .eventLogGroupedMessages = additionalContent {
+            applyInfo.setInvertOffsetDirection()
         }
         
         let themeUpdated = strongSelf.appliedItem?.presentationData.theme.theme !== item.presentationData.theme.theme

@@ -63,6 +63,7 @@ import BusinessIntroSetupScreen
 import TelegramNotices
 import BotSettingsScreen
 import CameraScreen
+import BirthdayPickerScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2151,7 +2152,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 
         let limit: Int32 = 10
         var reachedLimitImpl: ((Int32) -> Void)?
-        
+        var presentBirthdayPickerImpl: (() -> Void)?
         let mode: ContactMultiselectionControllerMode
         var currentBirthdays: [EnginePeer.Id: TelegramBirthday]?
         if case let .chatList(birthdays) = source, let birthdays, !birthdays.isEmpty {
@@ -2164,6 +2165,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mode = .premiumGifting(birthdays: nil, selectToday: false)
         }
         
+        var contactOptions: [ContactListAdditionalOption] = []
+        if currentBirthdays != nil || "".isEmpty {
+            contactOptions = [ContactListAdditionalOption(
+                title: "Add Your Birthday",
+                icon: .generic(UIImage(bundleImageName: "Contact List/AddBirthdayIcon")!),
+                action: {
+                    presentBirthdayPickerImpl?()
+                },
+                clearHighlightAutomatically: true
+            )]
+        }
+        
         var openProfileImpl: ((EnginePeer) -> Void)?
         var sendMessageImpl: ((EnginePeer) -> Void)?
         
@@ -2171,7 +2184,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             ContactMultiselectionControllerParams(
                 context: context,
                 mode: mode,
-                options: [],
+                options: contactOptions,
                 isPeerEnabled: { peer in
                     if case let .user(user) = peer, user.botInfo == nil && !peer.isService && !user.flags.contains(.isSupport) {
                         return true
@@ -2273,6 +2286,33 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             ) {
                 controller.replace(with: infoController)
             }
+        }
+        
+        presentBirthdayPickerImpl = { [weak controller] in
+            guard let controller else {
+                return
+            }
+            let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupBirthday).startStandalone()
+                    
+            let settingsPromise: Promise<AccountPrivacySettings?>
+            if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface, let current = rootController.getPrivacySettings() {
+                settingsPromise = current
+            } else {
+                settingsPromise = Promise()
+                settingsPromise.set(.single(nil) |> then(context.engine.privacy.requestAccountPrivacySettings() |> map(Optional.init)))
+            }
+            let birthdayController = BirthdayPickerScreen(context: context, settings: settingsPromise.get(), openSettings: {
+                context.sharedContext.makeBirthdayPrivacyController(context: context, settings: settingsPromise, openedFromBirthdayScreen: true, present: { [weak controller] c in
+                    controller?.push(c)
+                })
+            }, completion: { [weak controller] value in
+                let _ = context.engine.accountData.updateBirthday(birthday: value).startStandalone()
+                
+                controller?.present(UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: presentationData.strings.Birthday_Added, cancel: nil, destructive: false), elevatedLayout: false, action: { _ in
+                    return true
+                }), in: .current)
+            })
+            controller.push(birthdayController)
         }
         
         return controller

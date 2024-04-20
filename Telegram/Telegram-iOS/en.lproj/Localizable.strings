@@ -12065,8 +12065,8 @@ Sorry for the inconvenience.";
 "Login.EnterPhrasePlaceholder" = "Enter Phrase from SMS";
 
 "Login.EnterPhraseHint" = "You can copy and paste the phrase here.";
-"Login.BackToWord" = "Back to entering word";
-"Login.BackToPhrase" = "Back to entering phrase";
+"Login.BackToWord" = "Back to entering the word";
+"Login.BackToPhrase" = "Back to entering the phrase";
 
 "Login.WrongPhraseError" = "Incorrect, please try again.";
 "Login.Paste" = "Paste";
@@ -12095,3 +12095,10 @@ Sorry for the inconvenience.";
 "ChannelProfile.ToastAboutCopied" = "Copied to clipboard.";
 
 "Conversation.ContextMenuBanFull" = "Ban";
+
+"Channel.AdminLog.MessageManyDeleted" = "%1$@ deleted %2$@ from %3$@";
+"Channel.AdminLog.MessageManyDeletedMore" = "%1$@ deleted %2$@ from %3$@  %4$@";
+"Channel.AdminLog.MessageManyDeleted.Messages_1" = "%@ message";
+"Channel.AdminLog.MessageManyDeleted.Messages_any" = "%@ messages";
+"Channel.AdminLog.MessageManyDeleted.ShowAll" = "show all";
+"Channel.AdminLog.MessageManyDeleted.HideAll" = "hide all";

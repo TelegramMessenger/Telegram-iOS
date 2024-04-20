@@ -405,7 +405,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, appleSignInAllowed: Bool, hasPreviousCode: Bool, previousIsPhrase: Bool) {
         self.codeType = codeType
-        self.phoneNumber = number
+        self.phoneNumber = number.replacingOccurrences(of: " ", with: "\u{00A0}").replacingOccurrences(of: "-", with: "\u{2011}")
         self.email = email
         self.hasPreviousCode = hasPreviousCode
         self.previousIsPhrase = previousIsPhrase
@@ -878,6 +878,21 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.textField.layer.addShakeAnimation()
         default:
             self.codeInputView.layer.addShakeAnimation()
+        }
+    }
+    
+    func selectIncorrectPart() {
+        switch self.codeType {
+        case .word:
+            self.textField.textField.selectAll(nil)
+        case let .phrase(startsWith):
+            if let startsWith, let fromPosition = self.textField.textField.position(from: self.textField.textField.beginningOfDocument, offset: startsWith.count + 1) {
+                self.textField.textField.selectedTextRange = self.textField.textField.textRange(from: fromPosition, to: self.textField.textField.endOfDocument)
+            } else {
+                self.textField.textField.selectAll(nil)
+            }
+        default:
+            break
         }
     }
     

@@ -838,8 +838,12 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
                 let diameter: CGFloat = self.buttonHeight - 22.0
                 let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(buttonOffset + (buttonWidth - diameter) / 2.0), y: floorToScreenPixels((self.buttonHeight - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter))
                 progressNode.frame = progressFrame
-                progressNode.image = generateIndefiniteActivityIndicatorImage(color: self.theme.foregroundColor, diameter: diameter, lineWidth: 3.0)
-                    
+            
+                if !self.isEnabled, let disabledForegroundColor = self.theme.disabledForegroundColor {
+                    progressNode.image = generateIndefiniteActivityIndicatorImage(color: disabledForegroundColor, diameter: diameter, lineWidth: 3.0)
+                } else {
+                    progressNode.image = generateIndefiniteActivityIndicatorImage(color: self.theme.foregroundColor, diameter: diameter, lineWidth: 3.0)
+                }
                 self.addSubnode(progressNode)
         }
         

@@ -168,6 +168,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         self.controllerNode.animateSuccess()
     }
     
+    public func selectIncorrectPart() {
+        self.controllerNode.selectIncorrectPart()
+    }
+    
     public func animateError(text: String) {
         self.hapticFeedback.error()
         self.controllerNode.animateError(text: text)

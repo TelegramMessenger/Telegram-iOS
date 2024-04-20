@@ -76,6 +76,13 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     
     private let navigationActionDisposable = MetaDisposable()
     
+    private var expandedDeletedMessages = Set<EngineMessage.Id>() {
+        didSet {
+            self.expandedDeletedMessagesPromise.set(self.expandedDeletedMessages)
+        }
+    }
+    private let expandedDeletedMessagesPromise = ValuePromise<Set<EngineMessage.Id>>(Set())
+    
     private var isLoading: Bool = false {
         didSet {
             if self.isLoading != oldValue {
@@ -88,6 +95,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private let eventLogContext: ChannelAdminEventLogContext
     
     private var enqueuedTransitions: [(ChatRecentActionsHistoryTransition, Bool)] = []
+    private var searchResultsState: (String, [MessageIndex])?
     
     private var historyDisposable: Disposable?
     private let resolvePeerByNameDisposable = MetaDisposable()
@@ -162,6 +170,16 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     return false
                 }
                 for entry in state.entries {
+                    if entry.entry.headerStableId == message.stableId {
+                        if case let .deleteMessage(message) = entry.entry.event.action {
+                            if strongSelf.expandedDeletedMessages.contains(message.id) {
+                                strongSelf.expandedDeletedMessages.remove(message.id)
+                            } else {
+                                strongSelf.expandedDeletedMessages.insert(message.id)
+                            }
+                            return true
+                        }
+                    }
                     if entry.entry.stableId == message.stableId {
                         switch entry.entry.event.action {
                             case let .changeStickerPack(_, new):
@@ -277,12 +295,28 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, updateMessageReaction: { _, _, _, _ in
         }, activateMessagePinch: { _ in
         }, openMessageContextActions: { _, _, _, _ in
-        }, navigateToMessage: { _, _, _ in }, navigateToMessageStandalone: { _ in
+        }, navigateToMessage: { [weak self] fromId, toId, params in
+            guard let self else {
+                return
+            }
+        
+            context.sharedContext.navigateToChat(accountId: self.context.account.id, peerId: toId.peerId, messageId: toId)
+        }, navigateToMessageStandalone: { _ in
         }, navigateToThreadMessage: { [weak self] peerId, threadId, _ in
             if let context = self?.context, let navigationController = self?.getNavigationController() {
                 let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).startStandalone()
             }
-        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { [weak self] url in
+        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in return false
+        }, requestMessageActionCallback: { [weak self] messageId, _, _, _ in
+            guard let self else {
+                return
+            }
+            if self.expandedDeletedMessages.contains(messageId) {
+                self.expandedDeletedMessages.remove(messageId)
+            } else {
+                self.expandedDeletedMessages.insert(messageId)
+            }
+        }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { [weak self] url in
             self?.openUrl(url.url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -616,15 +650,36 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }
         
         let previousView = Atomic<[ChatRecentActionsEntry]?>(value: nil)
+        let previousExpandedDeletedMessages = Atomic<Set<EngineMessage.Id>>(value: Set())
         
         let chatThemes = self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager)
         
-        let historyViewTransition = combineLatest(historyViewUpdate, self.chatPresentationDataPromise.get(), chatThemes)
-        |> mapToQueue { update, chatPresentationData, chatThemes -> Signal<ChatRecentActionsHistoryTransition, NoError> in
-            let processedView = chatRecentActionsEntries(entries: update.0, presentationData: chatPresentationData)
+        let historyViewTransition = combineLatest(
+            historyViewUpdate,
+            self.chatPresentationDataPromise.get(),
+            chatThemes,
+            self.expandedDeletedMessagesPromise.get()
+        )
+        |> mapToQueue { [weak self] update, chatPresentationData, chatThemes, expandedDeletedMessages -> Signal<ChatRecentActionsHistoryTransition, NoError> in
+            let processedView = chatRecentActionsEntries(entries: update.0, presentationData: chatPresentationData, expandedDeletedMessages: expandedDeletedMessages)
             let previous = previousView.swap(processedView)
+            let previousExpandedDeletedMessages = previousExpandedDeletedMessages.swap(expandedDeletedMessages)
             
-            return .single(chatRecentActionsHistoryPreparedTransition(from: previous ?? [], to: processedView, type: update.2, canLoadEarlier: update.1, displayingResults: update.3, context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes))
+            var updateType = update.2
+            if previousExpandedDeletedMessages.count != expandedDeletedMessages.count {
+                updateType = .generic
+            }
+            
+            var searchResultsState: (String, [MessageIndex])?
+            if update.3, let query = self?.filter.query {
+                searchResultsState = (query, processedView.compactMap { entry in
+                    return entry.entry.event.action.messageId.flatMap { MessageIndex(id: $0, timestamp: entry.entry.event.date) }
+                })
+            } else {
+                searchResultsState = nil
+            }
+            
+            return .single(chatRecentActionsHistoryPreparedTransition(from: previous ?? [], to: processedView, type: updateType, canLoadEarlier: update.1, displayingResults: update.3, context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes, searchResultsState: searchResultsState))
         }
         
         let appliedTransition = historyViewTransition |> deliverOnMainQueue |> mapToQueue { [weak self] transition -> Signal<Void, NoError> in
@@ -698,15 +753,20 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.backgroundNode.updateLayout(size: self.backgroundNode.bounds.size, displayMode: .aspectFill, transition: transition)
         
         let intrinsicPanelHeight: CGFloat = 47.0
-        let panelHeight = intrinsicPanelHeight + cleanInsets.bottom
-        transition.updateFrame(node: self.panelBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
+        var panelHeight = intrinsicPanelHeight + cleanInsets.bottom
+        var panelOffset: CGFloat = panelHeight
+        if insets.bottom > cleanInsets.bottom {
+            panelHeight = intrinsicPanelHeight
+            panelOffset = insets.bottom + panelHeight
+        }
+        transition.updateFrame(node: self.panelBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelOffset), size: CGSize(width: layout.size.width, height: panelHeight)))
         self.panelBackgroundNode.update(size: self.panelBackgroundNode.bounds.size, transition: transition)
-        transition.updateFrame(node: self.panelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.panelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelOffset), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
         let infoButtonSize = CGSize(width: 56.0, height: intrinsicPanelHeight)
-        transition.updateFrame(node: self.panelButtonNode, frame: CGRect(origin: CGPoint(x: insets.left + infoButtonSize.width, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width - insets.left - insets.right - infoButtonSize.width * 2.0, height: intrinsicPanelHeight)))
+        transition.updateFrame(node: self.panelButtonNode, frame: CGRect(origin: CGPoint(x: insets.left + infoButtonSize.width, y: layout.size.height - panelOffset), size: CGSize(width: layout.size.width - insets.left - insets.right - infoButtonSize.width * 2.0, height: intrinsicPanelHeight)))
         
-        transition.updateFrame(node: self.panelInfoButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - insets.right - infoButtonSize.width, y: layout.size.height - panelHeight), size: infoButtonSize))
+        transition.updateFrame(node: self.panelInfoButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - insets.right - infoButtonSize.width, y: layout.size.height - panelOffset), size: infoButtonSize))
         
         self.visibleAreaInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: panelHeight, right: 0.0)
         
@@ -714,14 +774,14 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         transition.updatePosition(node: self.listNode, position: CGRect(origin: CGPoint(), size: layout.size).center)
         
         transition.updateFrame(node: self.loadingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        loadingNode.updateLayout(size: layout.size, insets: insets, transition: transition)
+        self.loadingNode.updateLayout(size: layout.size, insets: insets, transition: transition)
         
         let emptyFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight - panelHeight))
         transition.updateFrame(node: self.emptyNode, frame: emptyFrame)
         self.emptyNode.update(rect: emptyFrame, within: layout.size)
         self.emptyNode.updateLayout(presentationData: self.chatPresentationData, backgroundNode: self.backgroundNode, size: emptyFrame.size, transition: transition)
         
-        let contentBottomInset: CGFloat = panelHeight + 4.0
+        let contentBottomInset: CGFloat = panelOffset + 4.0
         let listInsets = UIEdgeInsets(top: contentBottomInset, left: layout.safeInsets.right, bottom: insets.top, right: layout.safeInsets.left)
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
@@ -763,6 +823,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 let displayingResults = transition.displayingResults
                 let isEmpty = transition.isEmpty
                 let displayEmptyNode = isEmpty && displayingResults
+                
+                self.searchResultsState = transition.searchResultsState
+            
                 self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: ChatRecentActionsListOpaqueState(entries: transition.filteredEntries, canLoadEarlier: transition.canLoadEarlier), completion: { [weak self] _ in
                     if let strongSelf = self {
                         if displayEmptyNode != strongSelf.listNode.isHidden {
@@ -805,6 +868,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             isEmpty = true
                         }
                         strongSelf.isEmptyUpdated(isEmpty)
+                        
+                        strongSelf.updateItemNodesSearchTextHighlightStates()
                     }
                 })
             } else {
@@ -834,6 +899,29 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     func updateSearchQuery(_ query: String) {
         self.filter = self.filter.withQuery(query.isEmpty ? nil : query)
         self.eventLogContext.setFilter(self.filter)
+        
+        self.updateItemNodesSearchTextHighlightStates()
+    }
+    
+    func updateItemNodesSearchTextHighlightStates() {
+        var searchString: String?
+        var resultsMessageIndices: [MessageIndex]? = nil
+        if let (query, indices) = self.searchResultsState {
+            searchString = query
+            resultsMessageIndices = indices
+        }
+        if searchString != self.controllerInteraction?.searchTextHighightState?.0 || resultsMessageIndices != self.controllerInteraction?.searchTextHighightState?.1 {
+            var searchTextHighightState: (String, [MessageIndex])?
+            if let searchString = searchString, let resultsMessageIndices = resultsMessageIndices {
+                searchTextHighightState = (searchString, resultsMessageIndices)
+            }
+            self.controllerInteraction?.searchTextHighightState = searchTextHighightState
+            self.listNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ChatMessageItemView {
+                    itemNode.updateSearchTextHighlightState()
+                }
+            }
+        }
     }
     
     func updateFilter(events: AdminLogEventsFlags, adminPeerIds: [PeerId]?) {
@@ -1292,5 +1380,22 @@ final class ChatMessageContextLocationContentSource: ContextLocationContentSourc
     
     func transitionInfo() -> ContextControllerLocationViewInfo? {
         return ContextControllerLocationViewInfo(location: self.location, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+extension AdminLogEventAction {
+    var messageId: MessageId? {
+        switch self {
+        case let .editMessage(_, new):
+            return new.id
+        case let .deleteMessage(message):
+            return message.id
+        case let .pollStopped(message):
+            return message.id
+        case let .sendMessage(message):
+            return message.id
+        default:
+            return nil
+        }
     }
 }

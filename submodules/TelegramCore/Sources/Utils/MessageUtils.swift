@@ -211,7 +211,7 @@ func messagesIdsGroupedByPeerId(_ ids: [MessageAndThreadId]) -> [PeerAndThreadId
     return dict
 }
 
-func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer], associatedThreadInfo: Message.AssociatedThreadInfo? = nil) -> Message? {
+func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer], associatedThreadInfo: Message.AssociatedThreadInfo? = nil, associatedMessages: SimpleDictionary<MessageId, Message> = SimpleDictionary()) -> Message? {
     guard case let .Id(id) = message.id else {
         return nil
     }
@@ -264,7 +264,7 @@ func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer], associ
     let second = UInt32(hashValue & 0xffffffff)
     let stableId = first &+ second
         
-    return Message(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, customTags: [], forwardInfo: forwardInfo, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: associatedThreadInfo, associatedStories: [:])
+    return Message(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, customTags: [], forwardInfo: forwardInfo, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: associatedMessages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: associatedThreadInfo, associatedStories: [:])
 }
 
 func locallyRenderedMessage(message: StoreMessage, peers: AccumulatedPeers, associatedThreadInfo: Message.AssociatedThreadInfo? = nil) -> Message? {

@@ -83,7 +83,11 @@ public final class ChatMessageLiveLocationTimerNode: ASDisplayNode {
                 let intRemaining = Int32(remaining)
                 if intRemaining > 60 * 60 {
                     let hours = Int32(round(remaining / (60.0 * 60.0)))
-                    string = strings.Map_LiveLocationShortHour("\(hours)").string
+                    if hours > 99 {
+                        string = "99+"
+                    } else {
+                        string = strings.Map_LiveLocationShortHour("\(hours)").string
+                    }
                 } else {
                     let minutes = Int32(round(remaining / (60.0)))
                     string = "\(minutes)"

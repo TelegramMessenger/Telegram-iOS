@@ -476,7 +476,6 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                             guard let strongSelf = self else {
                                 return
                             }
-                            controller?.inProgress = false
                             switch result {
                                 case let .signUp(data):
                                     if let (termsOfService, explicit) = termsOfService, explicit {
@@ -543,6 +542,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                                         switch type {
                                         case .word, .phrase:
                                             text = strongSelf.presentationData.strings.Login_WrongPhraseError
+                                            controller.selectIncorrectPart()
                                         default:
                                             text = strongSelf.presentationData.strings.Login_WrongCodeError
                                         }
