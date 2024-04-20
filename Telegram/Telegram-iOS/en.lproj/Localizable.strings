@@ -12102,3 +12102,5 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageManyDeleted.Messages_any" = "%@ messages";
 "Channel.AdminLog.MessageManyDeleted.ShowAll" = "show all";
 "Channel.AdminLog.MessageManyDeleted.HideAll" = "hide all";
+
+"Shortcut.AppIcon" = "Edit App Icon";

@@ -366,7 +366,6 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let baseBackgroundFrame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
 
-                            
                             if var rect = strongSelf.labelNode.textNode.cachedLayout?.allAttributeRects(name: TelegramTextAttributes.Button).first?.1 {
                                 rect = rect.insetBy(dx: -2.0, dy: 2.0).offsetBy(dx: 0.0, dy: 1.0 - UIScreenPixel)
                                 let highlightNode: LinkHighlightingNode

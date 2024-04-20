@@ -947,6 +947,10 @@ final class AuthorizedApplicationContext {
         self.rootController.openRootCamera()
     }
     
+    func openAppIcon() {
+        self.rootController.openAppIcon()
+    }
+    
     func switchAccount() {
         let _ = (activeAccountsAndPeers(context: self.context)
         |> take(1)

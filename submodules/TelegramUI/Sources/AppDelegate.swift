@@ -2379,6 +2379,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                     self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId, threadId: nil, storyId: nil)
                                 case .account:
                                     context.switchAccount()
+                                case .appIcon:
+                                    context.openAppIcon()
                             }
                         }
                     }
