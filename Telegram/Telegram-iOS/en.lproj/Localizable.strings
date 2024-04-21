@@ -12104,3 +12104,9 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageManyDeleted.HideAll" = "hide all";
 
 "Shortcut.AppIcon" = "Edit App Icon";
+
+"ReportPeer.BanAndReport" = "Ban and Report";
+
+"ReportPeer.ReportReaction.Text" = "Are you sure you want to report reactions from this user?";
+"ReportPeer.ReportReaction.BanAndReport" = "Ban and Report";
+"ReportPeer.ReportReaction.Report" = "Report Reaction";
