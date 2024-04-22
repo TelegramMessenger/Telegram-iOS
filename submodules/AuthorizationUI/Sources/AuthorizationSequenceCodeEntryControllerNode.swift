@@ -61,6 +61,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private var appleSignInAllowed = false
     
     private var previousCodeType: SentAuthorizationCodeType?
+    private var isPrevious = false
     
     var phoneNumber: String = "" {
         didSet {
@@ -403,11 +404,12 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeInputView.text = ""
     }
     
-    func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, appleSignInAllowed: Bool, previousCodeType: SentAuthorizationCodeType?) {
+    func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, appleSignInAllowed: Bool, previousCodeType: SentAuthorizationCodeType?, isPrevious: Bool) {
         self.codeType = codeType
         self.phoneNumber = number.replacingOccurrences(of: " ", with: "\u{00A0}").replacingOccurrences(of: "-", with: "\u{2011}")
         self.email = email
         self.previousCodeType = previousCodeType
+        self.isPrevious = isPrevious
         
         var appleSignInAllowed = appleSignInAllowed
         if #available(iOS 13.0, *) {
@@ -440,7 +442,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 if let strongSelf = self {
                     if let currentTimeoutTime = strongSelf.currentTimeoutTime, currentTimeoutTime > 0 {
                         strongSelf.currentTimeoutTime = currentTimeoutTime - 1
-                        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, previousCodeType: previousCodeType, timeout: strongSelf.currentTimeoutTime, strings: strongSelf.strings, primaryColor: strongSelf.theme.list.itemSecondaryTextColor, accentColor: strongSelf.theme.list.itemAccentColor)
+                        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, previousCodeType: isPrevious ? previousCodeType : nil, timeout: strongSelf.currentTimeoutTime, strings: strongSelf.strings, primaryColor: strongSelf.theme.list.itemSecondaryTextColor, accentColor: strongSelf.theme.list.itemAccentColor)
                         strongSelf.nextOptionTitleNode.attributedText = nextOptionText
                         strongSelf.nextOptionButtonNode.isUserInteractionEnabled = nextOptionActive
                         strongSelf.nextOptionButtonNode.accessibilityLabel = nextOptionText.string
@@ -481,7 +483,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.countdownDisposable.set(nil)
         }
         
-        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, previousCodeType: previousCodeType, timeout: self.currentTimeoutTime, strings: self.strings, primaryColor: self.theme.list.itemSecondaryTextColor, accentColor: self.theme.list.itemAccentColor)
+        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, previousCodeType: isPrevious ? previousCodeType : nil, timeout: self.currentTimeoutTime, strings: self.strings, primaryColor: self.theme.list.itemSecondaryTextColor, accentColor: self.theme.list.itemAccentColor)
         self.nextOptionTitleNode.attributedText = nextOptionText
         self.nextOptionButtonNode.isUserInteractionEnabled = nextOptionActive
         self.nextOptionButtonNode.accessibilityLabel = nextOptionText.string
@@ -491,7 +493,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.nextOptionButtonNode.accessibilityTraits = [.button, .notEnabled]
         }
         
-        self.nextOptionArrowNode.isHidden = previousCodeType == nil
+        self.nextOptionArrowNode.isHidden = previousCodeType == nil || !isPrevious
         
         if let layoutArguments = self.layoutArguments {
             self.containerLayoutUpdated(layoutArguments.0, navigationBarHeight: layoutArguments.1, transition: .immediate)
@@ -801,7 +803,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         if let codeType = self.codeType {
             let yOffset: CGFloat = layout.size.width > 320.0 ? 18.0 : 5.0
-            if let previousCodeType = self.previousCodeType {
+            if let previousCodeType = self.previousCodeType, !self.isPrevious {
                 self.hintButtonNode.alpha = 1.0
                 self.hintButtonNode.isUserInteractionEnabled = true
                 
@@ -817,8 +819,15 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 
                 self.hintTextNode.attributedText = NSAttributedString(string: actionTitle, font: Font.regular(13.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center)
                 
+                let originY: CGFloat
+                if !self.codeInputView.isHidden {
+                    originY = self.codeInputView.frame.maxY + 6.0
+                } else {
+                    originY = self.textField.frame.maxY
+                }
+                
                 let hintTextSize = self.hintTextNode.updateLayout(CGSize(width: layout.size.width - 48.0, height: .greatestFiniteMagnitude))
-                transition.updateFrame(node: self.hintButtonNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - hintTextSize.width) / 2.0), y: self.codeInputView.frame.maxY + yOffset + 6.0), size: hintTextSize))
+                transition.updateFrame(node: self.hintButtonNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - hintTextSize.width) / 2.0), y: originY + yOffset), size: hintTextSize))
                 self.hintTextNode.frame = CGRect(origin: .zero, size: hintTextSize)
                 
                 if let icon = self.hintArrowNode.image {

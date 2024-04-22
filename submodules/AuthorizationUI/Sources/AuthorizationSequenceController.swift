@@ -312,7 +312,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         return controller
     }
     
-    private func codeEntryController(number: String, phoneCodeHash: String, email: String?, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, previousCodeType: SentAuthorizationCodeType?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
+    private func codeEntryController(number: String, phoneCodeHash: String, email: String?, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, previousCodeType: SentAuthorizationCodeType?, isPrevious: Bool, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
         var currentController: AuthorizationSequenceCodeEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceCodeEntryController {
@@ -584,7 +584,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         }
         controller.requestNextOption = { [weak self, weak controller] in
             if let strongSelf = self {
-                if previousCodeType != nil {
+                if previousCodeType != nil && isPrevious {
                     strongSelf.actionDisposable.set(togglePreviousCodeEntry(account: strongSelf.account).start())
                     return
                 }
@@ -672,7 +672,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 strongSelf.sharedContext.applicationBindings.openUrl(url)
             }
         }
-        controller.updateData(number: formatPhoneNumber(number), email: email, codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService, previousCodeType: previousCodeType)
+        controller.updateData(number: formatPhoneNumber(number), email: email, codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService, previousCodeType: previousCodeType, isPrevious: isPrevious)
         return controller
     }
     
@@ -1233,18 +1233,18 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                         }
                         
                         if let previousCodeEntry, case let .confirmationCodeEntry(number, type, phoneCodeHash, timeout, nextType, _, _, _) = previousCodeEntry, usePrevious {
-                            controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, previousCodeType: type, termsOfService: nil))
+                            controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, previousCodeType: type, isPrevious: true, termsOfService: nil))
                             isGoingBack = true
                         } else {
                             var previousCodeType: SentAuthorizationCodeType?
                             if let previousCodeEntry, case let .confirmationCodeEntry(_, type, _, _, _, _, _, _) = previousCodeEntry {
                                 previousCodeType = type
                             }
-                            controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, previousCodeType: previousCodeType, termsOfService: nil))
+                            controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, previousCodeType: previousCodeType, isPrevious: false, termsOfService: nil))
                         }
                     }
                 
-                    if isGoingBack, let currentLastController = self.viewControllers.last as? AuthorizationSequenceCodeEntryController, !currentLastController.isWordOrPhrase {
+                    if isGoingBack, let currentLastController = self.viewControllers.last as? AuthorizationSequenceCodeEntryController, !currentLastController.isPrevious {
                         var tempControllers = controllers
                         tempControllers.append(currentLastController)
                         self.setViewControllers(tempControllers, animated: false)

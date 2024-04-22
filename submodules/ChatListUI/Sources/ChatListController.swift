@@ -3082,20 +3082,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                         })))
                         
-                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.StoryFeed_ViewAnonymously, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: self.context.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, a in
-                            a(.default)
-                            
-                            guard let self else {
-                                return
-                            }
-                            if self.context.isPremium {
-//                                self.sendMessageContext.requestStealthMode(view: self)
-                            } else {
-//                                self.presentStealthModeUpgradeScreen()
-                            }
-                        })))
+//                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.StoryFeed_ViewAnonymously, icon: { theme in
+//                            return generateTintedImage(image: UIImage(bundleImageName: self.context.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
+//                        }, action: { [weak self] _, a in
+//                            a(.default)
+//                            
+//                            guard let self else {
+//                                return
+//                            }
+//                            if self.context.isPremium {
+////                                self.sendMessageContext.requestStealthMode(view: self)
+//                            } else {
+////                                self.presentStealthModeUpgradeScreen()
+//                            }
+//                        })))
                         
                         let hideText: String
                         if self.location == .chatList(groupId: .archive) {
