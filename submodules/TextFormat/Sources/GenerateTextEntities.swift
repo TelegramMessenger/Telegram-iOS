@@ -59,6 +59,7 @@ private let validTimecodePreviousSet: CharacterSet = {
 
 public struct ApplicationSpecificEntityType {
     public static let Timecode: Int32 = 1
+    public static let Button: Int32 = 2
 }
 
 private enum CurrentEntityType {

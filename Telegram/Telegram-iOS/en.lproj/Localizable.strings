@@ -12065,8 +12065,8 @@ Sorry for the inconvenience.";
 "Login.EnterPhrasePlaceholder" = "Enter Phrase from SMS";
 
 "Login.EnterPhraseHint" = "You can copy and paste the phrase here.";
-"Login.BackToWord" = "Back to entering word";
-"Login.BackToPhrase" = "Back to entering phrase";
+"Login.BackToWord" = "Back to entering the word";
+"Login.BackToPhrase" = "Back to entering the phrase";
 
 "Login.WrongPhraseError" = "Incorrect, please try again.";
 "Login.Paste" = "Paste";
@@ -12095,3 +12095,18 @@ Sorry for the inconvenience.";
 "ChannelProfile.ToastAboutCopied" = "Copied to clipboard.";
 
 "Conversation.ContextMenuBanFull" = "Ban";
+
+"Channel.AdminLog.MessageManyDeleted" = "%1$@ deleted %2$@ from %3$@";
+"Channel.AdminLog.MessageManyDeletedMore" = "%1$@ deleted %2$@ from %3$@  %4$@";
+"Channel.AdminLog.MessageManyDeleted.Messages_1" = "%@ message";
+"Channel.AdminLog.MessageManyDeleted.Messages_any" = "%@ messages";
+"Channel.AdminLog.MessageManyDeleted.ShowAll" = "show all";
+"Channel.AdminLog.MessageManyDeleted.HideAll" = "hide all";
+
+"Shortcut.AppIcon" = "Edit App Icon";
+
+"ReportPeer.BanAndReport" = "Ban and Report";
+
+"ReportPeer.ReportReaction.Text" = "Are you sure you want to report reactions from this user?";
+"ReportPeer.ReportReaction.BanAndReport" = "Ban and Report";
+"ReportPeer.ReportReaction.Report" = "Report Reaction";

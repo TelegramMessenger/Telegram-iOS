@@ -83,6 +83,7 @@ public enum ChatMessageItemAdditionalContent {
     case eventLogPreviousMessage(Message)
     case eventLogPreviousDescription(Message)
     case eventLogPreviousLink(Message)
+    case eventLogGroupedMessages([Message], Bool)
 }
 
 public enum ChatMessageMerge: Int32 {

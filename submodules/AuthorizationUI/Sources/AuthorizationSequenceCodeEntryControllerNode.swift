@@ -366,7 +366,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
     func updatePasteVisibility() {
         let text = self.textField.textField.text ?? ""
-        self.pasteButton.isHidden = !text.isEmpty || !UIPasteboard.general.hasStrings
+        self.pasteButton.isHidden = !text.isEmpty
     }
     
     func updateCode(_ code: String) {
@@ -405,7 +405,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, appleSignInAllowed: Bool, hasPreviousCode: Bool, previousIsPhrase: Bool) {
         self.codeType = codeType
-        self.phoneNumber = number
+        self.phoneNumber = number.replacingOccurrences(of: " ", with: "\u{00A0}").replacingOccurrences(of: "-", with: "\u{2011}")
         self.email = email
         self.hasPreviousCode = hasPreviousCode
         self.previousIsPhrase = previousIsPhrase
@@ -881,6 +881,21 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         }
     }
     
+    func selectIncorrectPart() {
+        switch self.codeType {
+        case .word:
+            self.textField.textField.selectAll(nil)
+        case let .phrase(startsWith):
+            if let startsWith, let fromPosition = self.textField.textField.position(from: self.textField.textField.beginningOfDocument, offset: startsWith.count + 1) {
+                self.textField.textField.selectedTextRange = self.textField.textField.textRange(from: fromPosition, to: self.textField.textField.endOfDocument)
+            } else {
+                self.textField.textField.selectAll(nil)
+            }
+        default:
+            break
+        }
+    }
+    
     func animateError(text: String) {
         let errorOriginY: CGFloat
         let errorOriginOffset: CGFloat
@@ -913,12 +928,23 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.hintButtonNode.alpha = 0.0
         self.hintButtonNode.layer.animateAlpha(from: previousHintAlpha, to: 0.0, duration: 0.1)
         
+        let previousResetAlpha = self.resetNode.alpha
+        if !self.resetNode.isHidden {
+            self.resetNode.alpha = 0.0
+            self.resetNode.layer.animateAlpha(from: previousResetAlpha, to: 0.0, duration: 0.1)
+        }
+        
         Queue.mainQueue().after(1.6) {
             self.errorTextNode.alpha = 0.0
             self.errorTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
             
             self.hintButtonNode.alpha = previousHintAlpha
             self.hintButtonNode.layer.animateAlpha(from: 0.0, to: previousHintAlpha, duration: 0.1)
+            
+            if !self.resetNode.isHidden {
+                self.resetNode.alpha = previousResetAlpha
+                self.resetNode.layer.animateAlpha(from: 0.0, to: previousResetAlpha, duration: 0.1)
+            }
             
             let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
             transition.updateBackgroundColor(node: self.textSeparatorNode, color: self.theme.list.itemPlainSeparatorColor)

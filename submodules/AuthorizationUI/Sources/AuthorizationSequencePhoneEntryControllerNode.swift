@@ -684,7 +684,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
                 tokenString = tokenString.replacingOccurrences(of: "/", with: "_")
                 let urlString = "tg://login?token=\(tokenString)"
                 let _ = (qrCode(string: urlString, color: .black, backgroundColor: .white, icon: .none)
-                |> deliverOnMainQueue).startStrict(next: { _, generate in
+                |> deliverOnMainQueue).startStandalone(next: { _, generate in
                     guard let strongSelf = self else {
                         return
                     }

@@ -186,7 +186,28 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                             if let threadId = message.threadId, let threadInfo = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: threadId) {
                                 associatedThreadInfo = postbox.seedConfiguration.decodeMessageThreadInfo(threadInfo.data)
                             }
-                            return locallyRenderedMessage(message: message, peers: peers, associatedThreadInfo: associatedThreadInfo)
+                            var associatedMessages: SimpleDictionary<MessageId, Message> = SimpleDictionary()
+                            if let replyAttribute = message.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute {
+                                var foundDeletedReplyMessage = false
+                                for event in apiEvents {
+                                    switch event {
+                                    case let .channelAdminLogEvent(_, _, _, apiAction):
+                                        switch apiAction {
+                                        case let .channelAdminLogEventActionDeleteMessage(apiMessage):
+                                            if let messageId = apiMessage.id(namespace: Namespaces.Message.Cloud), messageId == replyAttribute.messageId, let message = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let replyMessage = locallyRenderedMessage(message: message, peers: peers, associatedThreadInfo: associatedThreadInfo) {
+                                                associatedMessages[replyMessage.id] = replyMessage
+                                                foundDeletedReplyMessage = true
+                                            }
+                                        default:
+                                            break
+                                        }
+                                    }
+                                }
+                                if !foundDeletedReplyMessage, let replyMessage = transaction.getMessage(replyAttribute.messageId) {
+                                    associatedMessages[replyMessage.id] = replyMessage
+                                }
+                            }
+                            return locallyRenderedMessage(message: message, peers: peers, associatedThreadInfo: associatedThreadInfo, associatedMessages: associatedMessages)
                         }
                         
                         for event in apiEvents {

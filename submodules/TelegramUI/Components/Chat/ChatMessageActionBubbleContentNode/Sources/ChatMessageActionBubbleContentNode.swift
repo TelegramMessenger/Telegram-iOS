@@ -27,6 +27,8 @@ private func attributedServiceMessageString(theme: ChatPresentationThemeData, st
 }
 
 public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
+    public var expandHighlightingNode: LinkHighlightingNode?
+    
     public let labelNode: TextNodeWithEntities
     private var dustNode: InvisibleInkDustNode?
     public var backgroundNode: WallpaperBubbleBackgroundNode?
@@ -364,6 +366,24 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let baseBackgroundFrame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
 
+                            if var rect = strongSelf.labelNode.textNode.cachedLayout?.allAttributeRects(name: TelegramTextAttributes.Button).first?.1 {
+                                rect = rect.insetBy(dx: -2.0, dy: 2.0).offsetBy(dx: 0.0, dy: 1.0 - UIScreenPixel)
+                                let highlightNode: LinkHighlightingNode
+                                if let current = strongSelf.expandHighlightingNode {
+                                    highlightNode = current
+                                } else {
+                                    highlightNode = LinkHighlightingNode(color: UIColor(rgb: 0x000000, alpha: 0.1))
+                                    highlightNode.outerRadius = 7.5
+                                    strongSelf.insertSubnode(highlightNode, belowSubnode: strongSelf.labelNode.textNode)
+                                    strongSelf.expandHighlightingNode = highlightNode
+                                }
+                                highlightNode.frame = strongSelf.labelNode.textNode.frame
+                                highlightNode.updateRects([rect])
+                            } else {
+                                strongSelf.expandHighlightingNode?.removeFromSupernode()
+                                strongSelf.expandHighlightingNode = nil
+                            }
+                            
                             if let (offset, image) = backgroundMaskImage {
                                 if item.context.sharedContext.energyUsageSettings.fullTranslucency {
                                     if strongSelf.backgroundNode == nil {

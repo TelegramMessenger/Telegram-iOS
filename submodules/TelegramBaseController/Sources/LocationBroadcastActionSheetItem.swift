@@ -107,7 +107,7 @@ public class LocationBroadcastActionSheetItemNode: ActionSheetItemNode {
         
         self.avatarNode.setPeer(context: item.context, theme: (item.context.sharedContext.currentPresentationData.with { $0 }).theme, peer: EnginePeer(item.peer))
         
-        self.timerNode.update(backgroundColor: self.theme.controlAccentColor.withAlphaComponent(0.4), foregroundColor: self.theme.controlAccentColor, textColor: self.theme.controlAccentColor, beginTimestamp: item.beginTimestamp, timeout: item.timeout, strings: item.strings)
+        self.timerNode.update(backgroundColor: self.theme.controlAccentColor.withAlphaComponent(0.4), foregroundColor: self.theme.controlAccentColor, textColor: self.theme.controlAccentColor, beginTimestamp: item.beginTimestamp, timeout: Int32(item.timeout) == liveLocationIndefinitePeriod ? -1.0 : item.timeout, strings: item.strings)
     }
     
     public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
