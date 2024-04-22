@@ -2244,13 +2244,15 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
     }
 }
 
+private let deletedMessagesDisplayedLimit = 5
+
 func chatRecentActionsEntries(entries: [ChannelAdminEventLogEntry], presentationData: ChatPresentationData, expandedDeletedMessages: Set<EngineMessage.Id>) -> [ChatRecentActionsEntry] {
     var result: [ChatRecentActionsEntry] = []
     var deleteMessageEntries: [ChannelAdminEventLogEntry] = []
     
     func appendCurrentDeleteEntries() {
         if !deleteMessageEntries.isEmpty, let lastEntry = deleteMessageEntries.last, let lastMessageId = lastEntry.event.action.messageId {
-            let isExpandable = deleteMessageEntries.count > 10
+            let isExpandable = deleteMessageEntries.count > deletedMessagesDisplayedLimit
             let isExpanded = expandedDeletedMessages.contains(lastMessageId) || !isExpandable
             let isGroup = deleteMessageEntries.count > 1
             

@@ -4156,7 +4156,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if case .user = peerType, maxQuantity > 1 {
                 let presentationData = self.presentationData
                 var reachedLimitImpl: ((Int32) -> Void)?
-                let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .requestedUsersSelection, options: [], isPeerEnabled: { peer in
+                let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .requestedUsersSelection, isPeerEnabled: { peer in
                     if case let .user(user) = peer, user.botInfo == nil {
                         return true
                     } else {

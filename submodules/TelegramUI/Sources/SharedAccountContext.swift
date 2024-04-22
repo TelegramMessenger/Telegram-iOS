@@ -2165,16 +2165,26 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mode = .premiumGifting(birthdays: nil, selectToday: false)
         }
         
-        var contactOptions: [ContactListAdditionalOption] = []
+        let contactOptions: Signal<[ContactListAdditionalOption], NoError>
         if currentBirthdays != nil || "".isEmpty {
-            contactOptions = [ContactListAdditionalOption(
-                title: "Add Your Birthday",
-                icon: .generic(UIImage(bundleImageName: "Contact List/AddBirthdayIcon")!),
-                action: {
-                    presentBirthdayPickerImpl?()
-                },
-                clearHighlightAutomatically: true
-            )]
+            contactOptions = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Birthday(id: context.account.peerId))
+            |> map { birthday in
+                if birthday == nil {
+                    return [ContactListAdditionalOption(
+                        title: presentationData.strings.Premium_Gift_ContactSelection_AddBirthday,
+                        icon: .generic(UIImage(bundleImageName: "Contact List/AddBirthdayIcon")!),
+                        action: {
+                            presentBirthdayPickerImpl?()
+                        },
+                        clearHighlightAutomatically: true
+                    )]
+                } else {
+                    return []
+                }
+            }
+            |> deliverOnMainQueue
+        } else {
+            contactOptions = .single([])
         }
         
         var openProfileImpl: ((EnginePeer) -> Void)?

@@ -108,7 +108,7 @@ public func ChangePhoneNumberController(context: AccountContext) -> ViewControll
             codeController.openFragment = { url in
                 context.sharedContext.applicationBindings.openUrl(url)
             }
-            codeController.updateData(number: formatPhoneNumber(context: context, number: phoneNumber), email: nil, codeType: next.type, nextType: nil, timeout: next.timeout, termsOfService: nil, hasPreviousCode: false, previousIsPhrase: false)
+            codeController.updateData(number: formatPhoneNumber(context: context, number: phoneNumber), email: nil, codeType: next.type, nextType: nil, timeout: next.timeout, termsOfService: nil, previousCodeType: nil, isPrevious: false)
             dismissImpl = { [weak codeController] in
                 codeController?.dismiss()
             }

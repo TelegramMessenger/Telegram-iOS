@@ -1401,11 +1401,11 @@ private func monetizationEntries(
         isCreator = true
     }
     entries.append(.adsBalanceTitle(presentationData.theme, presentationData.strings.Monetization_BalanceTitle))
-    entries.append(.adsBalance(presentationData.theme, data, isCreator && data.availableBalance > 0, monetizationConfiguration.withdrawalAvailable, diamond))
+    entries.append(.adsBalance(presentationData.theme, data, isCreator && data.balances.availableBalance > 0, monetizationConfiguration.withdrawalAvailable, diamond))
 
     if isCreator {
         let withdrawalInfoText: String
-        if data.availableBalance == 0 {
+        if data.balances.availableBalance == 0 {
             withdrawalInfoText = presentationData.strings.Monetization_Balance_ZeroInfo
         } else if monetizationConfiguration.withdrawalAvailable {
             withdrawalInfoText = presentationData.strings.Monetization_Balance_AvailableInfo
@@ -1579,7 +1579,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
 
     let boostsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: false)
     let giftsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: true)
-    let revenueContext = RevenueStatsContext(postbox: context.account.postbox, network: context.account.network, peerId: peerId)
+    let revenueContext = RevenueStatsContext(account: context.account, peerId: peerId)
     let revenueState = Promise<RevenueStatsContextState?>()
     revenueState.set(.single(nil) |> then(revenueContext.state |> map(Optional.init)))
     
@@ -2127,11 +2127,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         |> deliverOnMainQueue).start(error: { error in
             let controller = revenueWithdrawalController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, initialError: error, present: { c, _ in
                 presentImpl?(c)
-            }, completion: { [weak revenueContext] url in
+            }, completion: { url in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
-                
-                revenueContext?.reload()
             })
             presentImpl?(controller)
         }))

@@ -315,7 +315,6 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                     chatListFilters: nil,
                     displayAutoremoveTimeout: true
                 )),
-                options: [],
                 filters: [.excludeSelf],
                 isPeerEnabled: { peer in
                     var canManage = false

@@ -27,7 +27,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     var resetEmail: (() -> Void)?
     var retryResetEmail: (() -> Void)?
     
-    var data: (String, String?, SentAuthorizationCodeType, AuthorizationCodeNextType?, Int32?, Bool, Bool)?
+    var data: (String, String?, SentAuthorizationCodeType, AuthorizationCodeNextType?, Int32?, SentAuthorizationCodeType?, Bool)?
     var termsOfService: (UnauthorizedAccountTermsOfService, Bool)?
     
     private let hapticFeedback = HapticFeedback()
@@ -41,17 +41,8 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         }
     }
     
-    var isWordOrPhrase: Bool {
-        if let type = self.data?.2 {
-            switch type {
-            case .word, .phrase:
-                return true
-            default:
-                return false
-            }
-        } else {
-            return false
-        }
+    var isPrevious: Bool {
+        return self.data?.6 ?? false
     }
     
     public init(presentationData: PresentationData, back: @escaping () -> Void) {
@@ -141,12 +132,12 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             self?.present(c, in: .window(.root), with: a)
         }
         
-        if let (number, email, codeType, nextType, timeout, hasPreviousCode, previousIsPhrase) = self.data {
+        if let (number, email, codeType, nextType, timeout, previousCodeType, isPrevious) = self.data {
             var appleSignInAllowed = false
             if case let .email(_, _, _, _, appleSignInAllowedValue, _) = codeType {
                 appleSignInAllowed = appleSignInAllowedValue
             }
-            self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed, hasPreviousCode: hasPreviousCode, previousIsPhrase: previousIsPhrase)
+            self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed, previousCodeType: previousCodeType, isPrevious: isPrevious)
         }
     }
     
@@ -194,10 +185,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         }
     }
     
-    public func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?, hasPreviousCode: Bool, previousIsPhrase: Bool) {
+    public func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?, previousCodeType: SentAuthorizationCodeType?, isPrevious: Bool) {
         self.termsOfService = termsOfService
-        if self.data?.0 != number || self.data?.1 != email || self.data?.2 != codeType || self.data?.3 != nextType || self.data?.4 != timeout || self.data?.5 != hasPreviousCode || self.data?.6 != previousIsPhrase {
-            self.data = (number, email, codeType, nextType, timeout, hasPreviousCode, previousIsPhrase)
+        if self.data?.0 != number || self.data?.1 != email || self.data?.2 != codeType || self.data?.3 != nextType || self.data?.4 != timeout || self.data?.5 != previousCodeType || self.data?.6 != isPrevious {
+            self.data = (number, email, codeType, nextType, timeout, previousCodeType, isPrevious)
                         
             var appleSignInAllowed = false
             if case let .email(_, _, _, _, appleSignInAllowedValue, _) = codeType {
@@ -205,7 +196,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             }
             
             if self.isNodeLoaded {
-                self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed, hasPreviousCode: hasPreviousCode, previousIsPhrase: previousIsPhrase)
+                self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed, previousCodeType: previousCodeType, isPrevious: isPrevious)
                 self.requestLayout(transition: .immediate)
             }
         }

@@ -242,7 +242,7 @@ final class BusinessRecipientListScreenComponent: Component {
                 additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
                 chatListFilters: nil,
                 onlyUsers: true
-            )), options: [], filters: [], alwaysEnabled: true, limit: 100, reachedLimit: { _ in
+            )), filters: [], alwaysEnabled: true, limit: 100, reachedLimit: { _ in
             }))
             controller.navigationPresentation = .modal
             

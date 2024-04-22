@@ -760,7 +760,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         selectedChats: Set(filterData.includePeers.peers),
         additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
         chatListFilters: allFilters
-    )), options: [], filters: [], alwaysEnabled: true, limit: isPremium ? premiumLimit : limit, reachedLimit: { count in
+    )), filters: [], alwaysEnabled: true, limit: isPremium ? premiumLimit : limit, reachedLimit: { count in
         if count >= premiumLimit {
             let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: min(premiumLimit, count), action: {
                 return true
@@ -913,7 +913,7 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
         selectedChats: Set(filterData.excludePeers),
         additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
         chatListFilters: allFilters
-    )), options: [], filters: [], alwaysEnabled: true, limit: 100))
+    )), filters: [], alwaysEnabled: true, limit: 100))
     controller.navigationPresentation = .modal
     let _ = (controller.result
     |> take(1)

@@ -44,6 +44,10 @@ private final class UpdatedPeersNearbySubscriberContext {
     let subscribers = Bag<([PeerNearby]) -> Void>()
 }
 
+private final class UpdatedRevenueBalancesSubscriberContext {
+    let subscribers = Bag<(RevenueStats.Balances) -> Void>()
+}
+
 public enum DeletedMessageId: Hashable {
     case global(Int32)
     case messageId(MessageId)
@@ -277,6 +281,7 @@ public final class AccountStateManager {
         
         private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
         private var updatedPeersNearbyContext = UpdatedPeersNearbySubscriberContext()
+        private var updatedRevenueBalancesContext = UpdatedRevenueBalancesSubscriberContext()
         
         private let delayNotificatonsUntil = Atomic<Int32?>(value: nil)
         private let appliedMaxMessageIdPromise = Promise<Int32?>(nil)
@@ -1022,6 +1027,9 @@ public final class AccountStateManager {
                             if let updatedPeersNearby = events.updatedPeersNearby {
                                 strongSelf.notifyUpdatedPeersNearby(updatedPeersNearby)
                             }
+                            if let updatedRevenueBalances = events.updatedRevenueBalances {
+                                strongSelf.notifyUpdatedRevenueBalances(updatedRevenueBalances)
+                            }
                             if !events.updatedCalls.isEmpty {
                                 for call in events.updatedCalls {
                                     strongSelf.callSessionManager?.updateSession(call, completion: { _ in })
@@ -1594,6 +1602,33 @@ public final class AccountStateManager {
             }
         }
         
+        public func updatedRevenueBalances() -> Signal<RevenueStats.Balances, NoError> {
+            let queue = self.queue
+            return Signal { [weak self] subscriber in
+                let disposable = MetaDisposable()
+                queue.async {
+                    if let strongSelf = self {
+                        let index = strongSelf.updatedRevenueBalancesContext.subscribers.add({ revenueBalances in
+                            subscriber.putNext(revenueBalances)
+                        })
+                        
+                        disposable.set(ActionDisposable {
+                            if let strongSelf = self {
+                                strongSelf.updatedRevenueBalancesContext.subscribers.remove(index)
+                            }
+                        })
+                    }
+                }
+                return disposable
+            }
+        }
+        
+        private func notifyUpdatedRevenueBalances(_ updatedRevenueBalances: RevenueStats.Balances) {
+            for subscriber in self.updatedRevenueBalancesContext.subscribers.copyItems() {
+                subscriber(updatedRevenueBalances)
+            }
+        }
+        
         func notifyDeletedMessages(messageIds: [MessageId]) {
             self.deletedMessagesPipe.putNext(messageIds.map { .messageId($0) })
         }
@@ -1878,6 +1913,12 @@ public final class AccountStateManager {
     public func updatedPeersNearby() -> Signal<[PeerNearby], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.updatedPeersNearby().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    public func updatedRevenueBalances() -> Signal<RevenueStats.Balances, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.updatedRevenueBalances().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
     

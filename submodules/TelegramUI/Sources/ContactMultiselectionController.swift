@@ -81,7 +81,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     private var limitsConfiguration: LimitsConfiguration?
     private var limitsConfigurationDisposable: Disposable?
     private var initialPeersDisposable: Disposable?
-    private let options: [ContactListAdditionalOption]
+    private let options: Signal<[ContactListAdditionalOption], NoError>
     private let filters: [ContactListFilter]
     private let onlyWriteable: Bool
     private let isGroupInvitation: Bool

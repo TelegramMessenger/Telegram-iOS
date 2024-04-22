@@ -12067,10 +12067,13 @@ Sorry for the inconvenience.";
 "Login.EnterPhraseHint" = "You can copy and paste the phrase here.";
 "Login.BackToWord" = "Back to entering the word";
 "Login.BackToPhrase" = "Back to entering the phrase";
+"Login.BackToCode" = "Back to entering the code";
 
 "Login.WrongPhraseError" = "Incorrect, please try again.";
 "Login.Paste" = "Paste";
 
+"Login.ReturnToWord" = "Return to entering the word";
+"Login.ReturnToPhrase" = "Return to entering the phrase";
 "Login.ReturnToCode" = "Return to entering the code";
 
 "Map.LiveLocationPrivateNewDescription" = "Choose for how long **%@** will see your accurate location, including when the app is closed.";
@@ -12110,3 +12113,24 @@ Sorry for the inconvenience.";
 "ReportPeer.ReportReaction.Text" = "Are you sure you want to report reactions from this user?";
 "ReportPeer.ReportReaction.BanAndReport" = "Ban and Report";
 "ReportPeer.ReportReaction.Report" = "Report Reaction";
+
+"StoryFeed.ViewAnonymously" = "View Anonymously";
+
+"Channel.AdminLogFilter.EventsAdminRights" = "New Admin Rights";
+"Channel.AdminLogFilter.EventsExceptions" = "New Exceptions";
+"Channel.AdminLogFilter.EventsLeavingGroup" = "Members Left the Group";
+"Channel.AdminLogFilter.EventsLeavingChannel" = "Subscribers Removed";
+
+"Channel.AdminLogFilter.RecentActionsTitle" = "Recent Actions";
+"Channel.AdminLogFilter.FilterActionsTypeTitle" = "FILTER ACTIONS BY TYPE";
+"Channel.AdminLogFilter.FilterActionsAdminsTitle" = "FILTER ACTIONS BY ADMINS";
+"Channel.AdminLogFilter.ShowAllAdminsActions" = "Show Actions by All Admins";
+"Channel.AdminLogFilter.ApplyFilter" = "Apply Filter";
+
+"Channel.AdminLogFilter.Section.MembersGroup" = "Members and Admins";
+"Channel.AdminLogFilter.Section.MembersChannel" = "Subscribers and Admins";
+"Channel.AdminLogFilter.Section.SettingsGroup" = "Group Settings";
+"Channel.AdminLogFilter.Section.SettingsChannel" = "Channel Settings";
+"Channel.AdminLogFilter.Section.Messages" = "Messages";
+
+"Premium.Gift.ContactSelection.AddBirthday" = "Add Your Birthday";
