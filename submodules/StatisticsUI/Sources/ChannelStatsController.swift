@@ -1401,11 +1401,11 @@ private func monetizationEntries(
         isCreator = true
     }
     entries.append(.adsBalanceTitle(presentationData.theme, presentationData.strings.Monetization_BalanceTitle))
-    entries.append(.adsBalance(presentationData.theme, data, isCreator && data.availableBalance > 0, monetizationConfiguration.withdrawalAvailable, diamond))
+    entries.append(.adsBalance(presentationData.theme, data, isCreator && data.balances.availableBalance > 0, monetizationConfiguration.withdrawalAvailable, diamond))
 
     if isCreator {
         let withdrawalInfoText: String
-        if data.availableBalance == 0 {
+        if data.balances.availableBalance == 0 {
             withdrawalInfoText = presentationData.strings.Monetization_Balance_ZeroInfo
         } else if monetizationConfiguration.withdrawalAvailable {
             withdrawalInfoText = presentationData.strings.Monetization_Balance_AvailableInfo

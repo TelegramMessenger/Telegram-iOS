@@ -31,16 +31,16 @@ private enum MembersActionType: Hashable, CaseIterable {
     case newMembers
     case leftMembers
     
-    func title(strings: PresentationStrings) -> String {
+    func title(isGroup: Bool, strings: PresentationStrings) -> String {
         switch self {
         case .newAdminRights:
-            return "New Admin Rights"
+            return strings.Channel_AdminLogFilter_EventsAdminRights
         case .newExceptions:
-            return "New Exceptions"
+            return strings.Channel_AdminLogFilter_EventsExceptions
         case .newMembers:
-            return "New Members"
+            return isGroup ? strings.Channel_AdminLogFilter_EventsNewMembers : strings.Channel_AdminLogFilter_EventsNewSubscribers
         case .leftMembers:
-            return "Members left the Group"
+            return isGroup ? strings.Channel_AdminLogFilter_EventsLeavingGroup : strings.Channel_AdminLogFilter_EventsLeavingChannel
         }
     }
     
@@ -152,7 +152,7 @@ private enum ActionType: Hashable {
     func title(isGroup: Bool, strings: PresentationStrings) -> String {
         switch self {
         case let .members(value):
-            return value.title(strings: strings)
+            return value.title(isGroup: isGroup, strings: strings)
         case let .settings(value):
             return value.title(isGroup: isGroup, strings: strings)
         case let .messages(value):
@@ -515,15 +515,15 @@ private final class RecentActionsSettingsSheetComponent: Component {
                 case .members:
                     totalCount = MembersActionType.allCases.count
                     selectedCount = self.selectedMembersActions.count
-                    title = isGroup ? "Members and Admins" : "Subscribers and Admins"
+                    title = isGroup ? environment.strings.Channel_AdminLogFilter_Section_MembersGroup : environment.strings.Channel_AdminLogFilter_Section_MembersChannel
                 case .settings:
                     totalCount = SettingsActionType.allCases.count
                     selectedCount = self.selectedSettingsActions.count
-                    title = isGroup ? "Group Settings" : "Channel Settings"
+                    title = isGroup ? environment.strings.Channel_AdminLogFilter_Section_SettingsGroup : environment.strings.Channel_AdminLogFilter_Section_SettingsChannel
                 case .messages:
                     totalCount = MessagesActionType.allCases.count
                     selectedCount = self.selectedMessagesActions.count
-                    title = "Messages"
+                    title = environment.strings.Channel_AdminLogFilter_Section_Messages
                 }
                 
                 let itemTitle: AnyComponent<Empty> = AnyComponent(HStack([
@@ -575,7 +575,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                     theme: environment.theme,
                     title: itemTitle,
                     leftIcon: .check(ListActionItemComponent.LeftIcon.Check(
-                        isSelected: selectedCount != 0,
+                        isSelected: selectedCount == totalCount,
                         toggle: {
                             toggleAction()
                         }
@@ -684,8 +684,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                 )))
             }
             
-            //TODO:localize
-            let titleString: String = "Recent Actions"
+            let titleString: String = environment.strings.Channel_AdminLogFilter_RecentActionsTitle
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -722,7 +721,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "FILTER ACTIONS BY TYPE",
+                            string: environment.strings.Channel_AdminLogFilter_FilterActionsTypeTitle,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -790,7 +789,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Show Actions by All Admins",
+                            string: environment.strings.Channel_AdminLogFilter_ShowAllAdminsActions,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -798,7 +797,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                     ))),
                 ], alignment: .left, spacing: 2.0)),
                 leftIcon: .check(ListActionItemComponent.LeftIcon.Check(
-                    isSelected: !self.selectedAdmins.isEmpty,
+                    isSelected: self.selectedAdmins.count == component.adminPeers.count,
                     toggle: {
                         allAdminsToggleAction()
                     }
@@ -821,7 +820,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "FILTER ACTIONS BY ADMINS",
+                            string: environment.strings.Channel_AdminLogFilter_FilterActionsAdminsTitle,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -856,7 +855,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                     content: AnyComponentWithIdentity(
                         id: AnyHashable(0),
                         component: AnyComponent(ButtonTextContentComponent(
-                            text: "Apply Filter",
+                            text: environment.strings.Channel_AdminLogFilter_ApplyFilter,
                             badge: 0,
                             textColor: environment.theme.list.itemCheckColors.foregroundColor,
                             badgeBackground: environment.theme.list.itemCheckColors.foregroundColor,

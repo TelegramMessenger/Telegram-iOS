@@ -5,19 +5,21 @@ import TelegramApi
 import MtProtoKit
 
 public struct RevenueStats: Equatable {
+    public struct Balances: Equatable {
+        public let currentBalance: Int64
+        public let availableBalance: Int64
+        public let overallRevenue: Int64
+    }
+    
     public let topHoursGraph: StatsGraph
     public let revenueGraph: StatsGraph
-    public let currentBalance: Int64
-    public let availableBalance: Int64
-    public let overallRevenue: Int64
+    public let balances: Balances
     public let usdRate: Double
     
-    init(topHoursGraph: StatsGraph, revenueGraph: StatsGraph, currentBalance: Int64, availableBalance: Int64, overallRevenue: Int64, usdRate: Double) {
+    init(topHoursGraph: StatsGraph, revenueGraph: StatsGraph, balances: Balances, usdRate: Double) {
         self.topHoursGraph = topHoursGraph
         self.revenueGraph = revenueGraph
-        self.currentBalance = currentBalance
-        self.availableBalance = availableBalance
-        self.overallRevenue = overallRevenue
+        self.balances = balances
         self.usdRate = usdRate
     }
     
@@ -28,13 +30,7 @@ public struct RevenueStats: Equatable {
         if lhs.revenueGraph != rhs.revenueGraph {
             return false
         }
-        if lhs.currentBalance != rhs.currentBalance {
-            return false
-        }
-        if lhs.availableBalance != rhs.availableBalance {
-            return false
-        }
-        if lhs.overallRevenue != rhs.overallRevenue {
+        if lhs.balances != rhs.balances {
             return false
         }
         if lhs.usdRate != rhs.usdRate {
@@ -47,8 +43,17 @@ public struct RevenueStats: Equatable {
 extension RevenueStats {
     init(apiRevenueStats: Api.stats.BroadcastRevenueStats, peerId: PeerId) {
         switch apiRevenueStats {
-        case let .broadcastRevenueStats(topHoursGraph, revenueGraph, currentBalance, availableBalance, overallRevenue, usdRate):
-            self.init(topHoursGraph: StatsGraph(apiStatsGraph: topHoursGraph), revenueGraph: StatsGraph(apiStatsGraph: revenueGraph), currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, usdRate: usdRate)
+        case let .broadcastRevenueStats(topHoursGraph, revenueGraph, balances, usdRate):
+            self.init(topHoursGraph: StatsGraph(apiStatsGraph: topHoursGraph), revenueGraph: StatsGraph(apiStatsGraph: revenueGraph), balances: RevenueStats.Balances(apiRevenueBalances: balances), usdRate: usdRate)
+        }
+    }
+}
+
+extension RevenueStats.Balances {
+    init(apiRevenueBalances: Api.BroadcastRevenueBalances) {
+        switch apiRevenueBalances {
+        case let .broadcastRevenueBalances(currentBalance, availableBalance, overallRevenue):
+            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue)
         }
     }
 }

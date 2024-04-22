@@ -56,18 +56,20 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, ph
     }
 }
 
-public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, returnToCode: Bool = false, timeout: Int32?, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> (NSAttributedString, Bool) {
+public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, previousCodeType: SentAuthorizationCodeType? = nil, timeout: Int32?, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> (NSAttributedString, Bool) {
     let font = Font.regular(16.0)
     
-    switch currentType {
-    case .word, .phrase:
-        if returnToCode {
+    if let previousCodeType {
+        switch previousCodeType {
+        case .word:
+            return (NSAttributedString(string: strings.Login_ReturnToWord, font: font, textColor: accentColor, paragraphAlignment: .center), true)
+        case .phrase:
+            return (NSAttributedString(string: strings.Login_ReturnToPhrase, font: font, textColor: accentColor, paragraphAlignment: .center), true)
+        default:
             return (NSAttributedString(string: strings.Login_ReturnToCode, font: font, textColor: accentColor, paragraphAlignment: .center), true)
         }
-    default:
-        break
     }
-        
+    
     if let nextType = nextType, let timeout = timeout, timeout > 0 {
         let minutes = timeout / 60
         let seconds = timeout % 60

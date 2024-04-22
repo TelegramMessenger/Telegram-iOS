@@ -145,13 +145,15 @@ func managedSynchronizeEmojiSearchCategories(postbox: Postbox, network: Network,
                     case let .emojiGroups(hash, groups):
                         let categories = EmojiSearchCategories(
                             hash: hash,
-                            groups: groups.map { item -> EmojiSearchCategories.Group in
+                            groups: groups.compactMap { item -> EmojiSearchCategories.Group? in
                                 switch item {
                                 case let .emojiGroup(title, iconEmojiId, emoticons):
                                     return EmojiSearchCategories.Group(
                                         id: iconEmojiId,
                                         title: title, identifiers: emoticons
                                     )
+                                case .emojiGroupGreeting, .emojiGroupPremium:
+                                    return nil
                                 }
                             }
                         )

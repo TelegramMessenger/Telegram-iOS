@@ -5784,6 +5784,21 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getEmojiStickerGroups(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.EmojiGroups>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(500711669)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getEmojiStickerGroups", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.EmojiGroups? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.EmojiGroups?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.EmojiGroups
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getEmojiStickers(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AllStickers>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-67329649)

@@ -1776,6 +1776,9 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateNewAuthorization(isUnconfirmed: isUnconfirmed, hash: hash, date: date ?? 0, device: device ?? "", location: location ?? "")
             case let .updatePeerWallpaper(_, peer, wallpaper):
                 updatedState.updateWallpaper(peerId: peer.peerId, wallpaper: wallpaper.flatMap { TelegramWallpaper(apiWallpaper: $0) })
+            case let .updateBroadcastRevenueTransactions(balances):
+                let _ = balances
+                break
             default:
                 break
         }

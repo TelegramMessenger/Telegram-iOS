@@ -312,7 +312,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         return controller
     }
     
-    private func codeEntryController(number: String, phoneCodeHash: String, email: String?, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, hasPreviousCode: Bool, previousIsPhrase: Bool, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
+    private func codeEntryController(number: String, phoneCodeHash: String, email: String?, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, previousCodeType: SentAuthorizationCodeType?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
         var currentController: AuthorizationSequenceCodeEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceCodeEntryController {
@@ -584,14 +584,9 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         }
         controller.requestNextOption = { [weak self, weak controller] in
             if let strongSelf = self {
-                switch type {
-                case .word, .phrase:
-                    if hasPreviousCode {
-                        strongSelf.actionDisposable.set(togglePreviousCodeEntry(account: strongSelf.account).start())
-                        return
-                    }
-                default:
-                    break
+                if previousCodeType != nil {
+                    strongSelf.actionDisposable.set(togglePreviousCodeEntry(account: strongSelf.account).start())
+                    return
                 }
                 
                 if nextType == nil {
@@ -677,7 +672,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 strongSelf.sharedContext.applicationBindings.openUrl(url)
             }
         }
-        controller.updateData(number: formatPhoneNumber(number), email: email, codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService, hasPreviousCode: hasPreviousCode, previousIsPhrase: previousIsPhrase)
+        controller.updateData(number: formatPhoneNumber(number), email: email, codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService, previousCodeType: previousCodeType)
         return controller
     }
     
@@ -1238,20 +1233,14 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                         }
                         
                         if let previousCodeEntry, case let .confirmationCodeEntry(number, type, phoneCodeHash, timeout, nextType, _, _, _) = previousCodeEntry, usePrevious {
-                            var previousIsPhrase = false
-                            if case .phrase = type {
-                                previousIsPhrase = true
-                            }
-                            controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, hasPreviousCode: true, previousIsPhrase: previousIsPhrase, termsOfService: nil))
+                            controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, previousCodeType: type, termsOfService: nil))
                             isGoingBack = true
                         } else {
-                            var previousIsPhrase = false
+                            var previousCodeType: SentAuthorizationCodeType?
                             if let previousCodeEntry, case let .confirmationCodeEntry(_, type, _, _, _, _, _, _) = previousCodeEntry {
-                                if case .phrase = type {
-                                    previousIsPhrase = true
-                                }
+                                previousCodeType = type
                             }
-                            controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, hasPreviousCode: previousCodeEntry != nil, previousIsPhrase: previousIsPhrase, termsOfService: nil))
+                            controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, previousCodeType: previousCodeType, termsOfService: nil))
                         }
                     }
                 

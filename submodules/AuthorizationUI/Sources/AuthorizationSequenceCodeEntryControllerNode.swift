@@ -59,8 +59,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private var layoutArguments: (ContainerViewLayout, CGFloat)?
     
     private var appleSignInAllowed = false
-    private var hasPreviousCode = false
-    private var previousIsPhrase = false
+    
+    private var previousCodeType: SentAuthorizationCodeType?
     
     var phoneNumber: String = "" {
         didSet {
@@ -403,12 +403,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeInputView.text = ""
     }
     
-    func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, appleSignInAllowed: Bool, hasPreviousCode: Bool, previousIsPhrase: Bool) {
+    func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, appleSignInAllowed: Bool, previousCodeType: SentAuthorizationCodeType?) {
         self.codeType = codeType
         self.phoneNumber = number.replacingOccurrences(of: " ", with: "\u{00A0}").replacingOccurrences(of: "-", with: "\u{2011}")
         self.email = email
-        self.hasPreviousCode = hasPreviousCode
-        self.previousIsPhrase = previousIsPhrase
+        self.previousCodeType = previousCodeType
         
         var appleSignInAllowed = appleSignInAllowed
         if #available(iOS 13.0, *) {
@@ -441,7 +440,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 if let strongSelf = self {
                     if let currentTimeoutTime = strongSelf.currentTimeoutTime, currentTimeoutTime > 0 {
                         strongSelf.currentTimeoutTime = currentTimeoutTime - 1
-                        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, returnToCode: hasPreviousCode, timeout: strongSelf.currentTimeoutTime, strings: strongSelf.strings, primaryColor: strongSelf.theme.list.itemSecondaryTextColor, accentColor: strongSelf.theme.list.itemAccentColor)
+                        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, previousCodeType: previousCodeType, timeout: strongSelf.currentTimeoutTime, strings: strongSelf.strings, primaryColor: strongSelf.theme.list.itemSecondaryTextColor, accentColor: strongSelf.theme.list.itemAccentColor)
                         strongSelf.nextOptionTitleNode.attributedText = nextOptionText
                         strongSelf.nextOptionButtonNode.isUserInteractionEnabled = nextOptionActive
                         strongSelf.nextOptionButtonNode.accessibilityLabel = nextOptionText.string
@@ -482,7 +481,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.countdownDisposable.set(nil)
         }
         
-        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, returnToCode: hasPreviousCode, timeout: self.currentTimeoutTime, strings: self.strings, primaryColor: self.theme.list.itemSecondaryTextColor, accentColor: self.theme.list.itemAccentColor)
+        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, previousCodeType: previousCodeType, timeout: self.currentTimeoutTime, strings: self.strings, primaryColor: self.theme.list.itemSecondaryTextColor, accentColor: self.theme.list.itemAccentColor)
         self.nextOptionTitleNode.attributedText = nextOptionText
         self.nextOptionButtonNode.isUserInteractionEnabled = nextOptionActive
         self.nextOptionButtonNode.accessibilityLabel = nextOptionText.string
@@ -492,12 +491,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.nextOptionButtonNode.accessibilityTraits = [.button, .notEnabled]
         }
         
-        switch codeType {
-        case .word, .phrase:
-            self.nextOptionArrowNode.isHidden = !hasPreviousCode
-        default:
-            self.nextOptionArrowNode.isHidden = true
-        }
+        self.nextOptionArrowNode.isHidden = previousCodeType == nil
         
         if let layoutArguments = self.layoutArguments {
             self.containerLayoutUpdated(layoutArguments.0, navigationBarHeight: layoutArguments.1, transition: .immediate)
@@ -807,7 +801,31 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         if let codeType = self.codeType {
             let yOffset: CGFloat = layout.size.width > 320.0 ? 18.0 : 5.0
-            if case .phrase = codeType {
+            if let previousCodeType = self.previousCodeType {
+                self.hintButtonNode.alpha = 1.0
+                self.hintButtonNode.isUserInteractionEnabled = true
+                
+                let actionTitle: String
+                switch previousCodeType {
+                case .word:
+                    actionTitle = self.strings.Login_BackToWord
+                case .phrase:
+                    actionTitle = self.strings.Login_BackToPhrase
+                default:
+                    actionTitle = self.strings.Login_BackToCode
+                }
+                
+                self.hintTextNode.attributedText = NSAttributedString(string: actionTitle, font: Font.regular(13.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center)
+                
+                let hintTextSize = self.hintTextNode.updateLayout(CGSize(width: layout.size.width - 48.0, height: .greatestFiniteMagnitude))
+                transition.updateFrame(node: self.hintButtonNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - hintTextSize.width) / 2.0), y: self.codeInputView.frame.maxY + yOffset + 6.0), size: hintTextSize))
+                self.hintTextNode.frame = CGRect(origin: .zero, size: hintTextSize)
+                
+                if let icon = self.hintArrowNode.image {
+                    self.hintArrowNode.frame = CGRect(origin: CGPoint(x: self.hintTextNode.frame.minX - icon.size.width - 5.0, y: self.hintTextNode.frame.midY - icon.size.height / 2.0), size: icon.size)
+                }
+                self.hintArrowNode.isHidden = false
+            } else if case .phrase = codeType {
                 if self.errorTextNode.alpha.isZero {
                     self.hintButtonNode.alpha = 1.0
                 }
@@ -827,20 +845,10 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 self.hintButtonNode.alpha = 0.0
                 self.hintButtonNode.isUserInteractionEnabled = false
                 self.hintArrowNode.isHidden = true
-            } else if self.hasPreviousCode {
-                self.hintButtonNode.alpha = 1.0
-                self.hintButtonNode.isUserInteractionEnabled = true
                 
-                self.hintTextNode.attributedText = NSAttributedString(string: self.previousIsPhrase ? self.strings.Login_BackToPhrase : self.strings.Login_BackToWord, font: Font.regular(13.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center)
-                
-                let hintTextSize = self.hintTextNode.updateLayout(CGSize(width: layout.size.width - 48.0, height: .greatestFiniteMagnitude))
-                transition.updateFrame(node: self.hintButtonNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - hintTextSize.width) / 2.0), y: self.codeInputView.frame.maxY + yOffset + 6.0), size: hintTextSize))
-                self.hintTextNode.frame = CGRect(origin: .zero, size: hintTextSize)
-                
-                if let icon = self.hintArrowNode.image {
-                    self.hintArrowNode.frame = CGRect(origin: CGPoint(x: self.hintTextNode.frame.minX - icon.size.width - 5.0, y: self.hintTextNode.frame.midY - icon.size.height / 2.0), size: icon.size)
-                }
-                self.hintArrowNode.isHidden = false
+                let pasteSize = self.pasteButton.measure(layout.size)
+                let pasteButtonSize = CGSize(width: pasteSize.width + 16.0, height: 24.0)
+                transition.updateFrame(node: self.pasteButton, frame: CGRect(origin: CGPoint(x: layout.size.width - 40.0 - pasteButtonSize.width, y: self.textField.frame.midY - pasteButtonSize.height / 2.0), size: pasteButtonSize))
             } else {
                 self.hintButtonNode.alpha = 0.0
                 self.hintButtonNode.isUserInteractionEnabled = false
@@ -1002,7 +1010,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         var updated = textField.text ?? ""
         updated.replaceSubrange(updated.index(updated.startIndex, offsetBy: range.lowerBound) ..< updated.index(updated.startIndex, offsetBy: range.upperBound), with: string)
         
-        return checkValidity(text: updated) && !updated.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if updated.isEmpty {
+            return true
+        } else {
+            return checkValidity(text: updated) && !updated.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
     }
     
     func checkValidity(text: String) -> Bool {
@@ -1019,7 +1031,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 if let startsWith, !text.isEmpty {
                     let firstWord = text.components(separatedBy: " ").first ?? ""
                     if !firstWord.isEmpty && !startsWith.hasPrefix(firstWord) {
-                        if self.errorTextNode.alpha.isZero {
+                        if self.errorTextNode.alpha.isZero, text.count < 3 {
                             self.animateError(text: self.strings.Login_WrongPhraseError)
                         }
                         return false
