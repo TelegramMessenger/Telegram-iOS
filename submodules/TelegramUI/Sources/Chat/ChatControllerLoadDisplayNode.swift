@@ -4629,7 +4629,7 @@ extension ChatControllerImpl {
             downPressed: buttonAction
         )
 
-        self.chatDisplayNode.historyNode.openNextChannelToRead = { [weak self] peer, location in
+        self.chatDisplayNode.historyNode.openNextChannelToRead = { [weak self] peer, threadData, location in
             guard let strongSelf = self else {
                 return
             }
@@ -4652,12 +4652,32 @@ extension ChatControllerImpl {
                 }
                 
                 var updatedChatNavigationStack = strongSelf.chatNavigationStack
-                updatedChatNavigationStack.removeAll(where: { $0 == ChatNavigationStackItem(peerId: peer.id, threadId: nil) })
+                updatedChatNavigationStack.removeAll(where: { $0 == ChatNavigationStackItem(peerId: peer.id, threadId: threadData?.id) })
                 if let peerId = strongSelf.chatLocation.peerId {
                     updatedChatNavigationStack.insert(ChatNavigationStackItem(peerId: peerId, threadId: strongSelf.chatLocation.threadId), at: 0)
                 }
+                
+                let chatLocation: NavigateToChatControllerParams.Location
+                if let threadData {
+                    chatLocation = .replyThread(ChatReplyThreadMessage(
+                        peerId: peer.id,
+                        threadId: threadData.id,
+                        channelMessageId: nil,
+                        isChannelPost: false,
+                        isForumPost: true,
+                        maxMessage: nil,
+                        maxReadIncomingMessageId: nil,
+                        maxReadOutgoingMessageId: nil,
+                        unreadCount: 0,
+                        initialFilledHoles: IndexSet(),
+                        initialAnchor: .automatic,
+                        isNotAvailable: false
+                    ))
+                } else {
+                    chatLocation = .peer(peer)
+                }
 
-                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), animated: false, chatListFilter: nextFolderId, chatNavigationStack: updatedChatNavigationStack, completion: { nextController in
+                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: chatLocation, animated: false, chatListFilter: nextFolderId, chatNavigationStack: updatedChatNavigationStack, completion: { nextController in
                     (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
                 }, customChatNavigationStack: strongSelf.customChatNavigationStack))
             }

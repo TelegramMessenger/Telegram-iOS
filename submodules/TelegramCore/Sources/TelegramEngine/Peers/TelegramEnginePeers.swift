@@ -937,6 +937,32 @@ public extension TelegramEngine {
                 }
             }
         }
+        
+        public func getNextUnreadForumTopic(peerId: PeerId, topicId: Int32) -> Signal<(id: Int64, data: MessageHistoryThreadData)?, NoError> {
+            return self.account.postbox.transaction { transaction -> (id: Int64, data: MessageHistoryThreadData)? in
+                var unreadThreads: [(id: Int64, data: MessageHistoryThreadData, index: MessageIndex)] = []
+                for item in transaction.getMessageHistoryThreadIndex(peerId: peerId, limit: 100) {
+                    if item.threadId == Int64(topicId) {
+                        continue
+                    }
+                    guard let data = item.info.data.get(MessageHistoryThreadData.self) else {
+                        continue
+                    }
+                    if data.incomingUnreadCount <= 0 {
+                        continue
+                    }
+                    guard let messageIndex = transaction.getMessageHistoryThreadTopMessage(peerId: peerId, threadId: item.threadId, namespaces: Set([Namespaces.Message.Cloud])) else {
+                        continue
+                    }
+                    unreadThreads.append((item.threadId, data, messageIndex))
+                }
+                if let result = unreadThreads.min(by: { $0.index > $1.index }) {
+                    return (result.id, result.data)
+                } else {
+                    return nil
+                }
+            }
+        }
 
         public func getOpaqueChatInterfaceState(peerId: PeerId, threadId: Int64?) -> Signal<OpaqueChatInterfaceState?, NoError> {
             return self.account.postbox.transaction { transaction -> OpaqueChatInterfaceState? in
