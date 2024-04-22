@@ -1223,6 +1223,16 @@ private final class StoryContainerScreenComponent: Component {
             }
         }
         
+        func presentExternalTooltip(_ tooltipScreen: UndoOverlayController) {
+            guard let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
+                return
+            }
+            itemSetComponentView.sendMessageContext.tooltipScreen = tooltipScreen
+            itemSetComponentView.updateIsProgressPaused()
+            
+            self.environment?.controller()?.present(tooltipScreen, in: .current)
+        }
+        
         func update(component: StoryContainerScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
             if self.didAnimateOut {
                 return availableSize
@@ -2054,6 +2064,12 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
             if let componentView = self.node.hostView.componentView as? StoryContainerScreenComponent.View {
                 componentView.animateIn()
             }
+        }
+    }
+    
+    public func presentExternalTooltip(_ tooltipScreen: UndoOverlayController) {
+        if let componentView = self.node.hostView.componentView as? StoryContainerScreenComponent.View {
+            componentView.presentExternalTooltip(tooltipScreen)
         }
     }
     

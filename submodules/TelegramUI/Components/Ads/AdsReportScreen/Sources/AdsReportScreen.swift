@@ -625,10 +625,10 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
                 })
             case .premiumRequired:
                 var replaceImpl: ((ViewController) -> Void)?
-                let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, action: {
+                let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: false, action: {
                     let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
                     replaceImpl?(controller)
-                })
+                }, dismissed: nil)
                 replaceImpl = { [weak controller] c in
                     controller?.replace(with: c)
                 }

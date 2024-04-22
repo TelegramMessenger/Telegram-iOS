@@ -1425,6 +1425,71 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case businessChatBots
         case businessIntro
         case businessLinks
+        
+        public var perk: PremiumPerk {
+            switch self {
+            case .doubleLimits:
+                return .doubleLimits
+            case .moreUpload:
+                return .moreUpload
+            case .fasterDownload:
+                return .fasterDownload
+            case .voiceToText:
+                return .voiceToText
+            case .noAds:
+                return .noAds
+            case .uniqueReactions:
+                return .uniqueReactions
+            case .premiumStickers:
+                return .premiumStickers
+            case .advancedChatManagement:
+                return .advancedChatManagement
+            case .profileBadge:
+                return .profileBadge
+            case .animatedUserpics:
+                return .animatedUserpics
+            case .appIcons:
+                return .appIcons
+            case .animatedEmoji:
+                return .animatedEmoji
+            case .emojiStatus:
+                return .emojiStatus
+            case .translation:
+                return .translation
+            case .stories:
+                return .stories
+            case .colors:
+                return .colors
+            case .wallpapers:
+                return .wallpapers
+            case .messageTags:
+                return .messageTags
+            case .lastSeen:
+                return .lastSeen
+            case .messagePrivacy:
+                return .messagePrivacy
+            case .business:
+                return .business
+            case .folderTags:
+                return .folderTags
+            case .businessLocation:
+                return .businessLocation
+            case .businessHours:
+                return .businessHours
+            case .businessGreetingMessage:
+                return .businessGreetingMessage
+            case .businessQuickReplies:
+                return .businessQuickReplies
+            case .businessAwayMessage:
+                return .businessAwayMessage
+            case .businessChatBots:
+                return .businessChatBots
+            case .businessIntro:
+                return .businessIntro
+            case .businessLinks:
+                return .businessLinks
+            }
+        }
     }
     
     public enum Source: Equatable {

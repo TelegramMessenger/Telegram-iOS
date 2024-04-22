@@ -72,6 +72,7 @@ public enum PremiumDemoSubject {
     case lastSeen
     case messagePrivacy
     case folderTags
+    case business
     
     case businessLocation
     case businessHours

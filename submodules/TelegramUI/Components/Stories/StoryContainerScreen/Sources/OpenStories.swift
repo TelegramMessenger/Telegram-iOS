@@ -170,7 +170,8 @@ public extension StoryContainerScreen {
         transitionIn: @escaping () -> StoryContainerScreen.TransitionIn?,
         transitionOut: @escaping (EnginePeer.Id) -> StoryContainerScreen.TransitionOut?,
         setFocusedItem: @escaping (Signal<StoryId?, NoError>) -> Void,
-        setProgress: @escaping (Signal<Never, NoError>) -> Void
+        setProgress: @escaping (Signal<Never, NoError>) -> Void,
+        completion: @escaping (StoryContainerScreen) -> Void = { _ in }
     ) {
         let storyContent = StoryContentContextImpl(context: context, isHidden: isHidden, focusedPeerId: peerId, singlePeer: singlePeer, fixedOrder: initialOrder)
         let signal = storyContent.state
@@ -211,6 +212,7 @@ public extension StoryContainerScreen {
             )
             setFocusedItem(storyContainerScreen.focusedItem)
             parentController?.push(storyContainerScreen)
+            completion(storyContainerScreen)
         }
         |> ignoreValues
         

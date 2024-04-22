@@ -369,7 +369,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
             )
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(isFirstTime: Bool = false, transition: Transition) {
             guard let environment = self.environment, let controller = environment.controller(), let itemLayout = self.itemLayout else {
                 return
             }
@@ -389,16 +389,23 @@ private final class RecentActionsSettingsSheetComponent: Component {
             var topOffsetFraction = topOffset / topOffsetDistance
             topOffsetFraction = max(0.0, min(1.0, topOffsetFraction))
             
+            let modalStyleOverlayTransition: ContainedViewLayoutTransition
+            if isFirstTime {
+                modalStyleOverlayTransition = .animated(duration: 0.4, curve: .spring)
+            } else {
+                modalStyleOverlayTransition = transition.containedViewLayoutTransition
+            }
+            
             let transitionFactor: CGFloat = 1.0 - topOffsetFraction
             if self.isUpdating {
                 DispatchQueue.main.async { [weak controller] in
                     guard let controller else {
                         return
                     }
-                    controller.updateModalStyleOverlayTransitionFactor(transitionFactor, transition: transition.containedViewLayoutTransition)
+                    controller.updateModalStyleOverlayTransitionFactor(transitionFactor, transition: modalStyleOverlayTransition)
                 }
             } else {
-                controller.updateModalStyleOverlayTransitionFactor(transitionFactor, transition: transition.containedViewLayoutTransition)
+                controller.updateModalStyleOverlayTransitionFactor(transitionFactor, transition: modalStyleOverlayTransition)
             }
         }
         
@@ -443,8 +450,10 @@ private final class RecentActionsSettingsSheetComponent: Component {
             let resetScrolling = self.scrollView.bounds.width != availableSize.width
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-                        
+                     
+            var isFirstTime = false
             if self.component == nil {
+                isFirstTime = true
                 self.selectedMembersActions = Set(MembersActionType.actionTypesFromFlags(component.initialValue.events))
                 self.selectedSettingsActions = Set(SettingsActionType.actionTypesFromFlags(component.initialValue.events))
                 self.selectedMessagesActions = Set(MessagesActionType.actionTypesFromFlags(component.initialValue.events))
@@ -924,7 +933,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                 }
             }
             self.ignoreScrolling = false
-            self.updateScrolling(transition: transition)
+            self.updateScrolling(isFirstTime: isFirstTime, transition: transition)
             
             return availableSize
         }

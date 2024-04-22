@@ -2062,7 +2062,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
-    public func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController {
+    public func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, forceDark: Bool, action: @escaping () -> Void, dismissed: (() -> Void)?) -> ViewController {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var buttonText: String = presentationData.strings.Common_OK
         let mappedSubject: PremiumDemoScreen.Subject
         switch subject {
         case .doubleLimits:
@@ -2095,6 +2097,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .translation
         case .stories:
             mappedSubject = .stories
+            buttonText = presentationData.strings.Story_PremiumUpgradeStoriesButton
         case .colors:
             mappedSubject = .colors
         case .wallpapers:
@@ -2107,10 +2110,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .messagePrivacy
         case .folderTags:
             mappedSubject = .folderTags
+        case .business:
+            mappedSubject = .business
+            buttonText = presentationData.strings.Chat_EmptyStateIntroFooterPremiumActionButton
         default:
             mappedSubject = .doubleLimits
         }
-        return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
+        
+        switch mappedSubject {
+        case .stories, .business, .doubleLimits:
+            let controller = PremiumLimitsListScreen(context: context, subject: mappedSubject, source: .other, order: [mappedSubject.perk], buttonText: buttonText, isPremium: false, forceDark: forceDark)
+            controller.action = action
+            if let dismissed {
+                controller.disposed = dismissed
+            }
+            return controller
+        default:
+            return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
+        }
     }
     
     public func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Bool) -> ViewController {
