@@ -448,22 +448,41 @@ public final class ListComposePollOptionComponent: Component {
                 )
                 let modeSelectorFrame = CGRect(origin: CGPoint(x: size.width - 4.0 - modeSelectorSize.width, y: floor((size.height - modeSelectorSize.height) * 0.5)), size: modeSelectorSize)
                 if let modeSelectorView = modeSelector.view as? PlainButtonComponent.View {
+                    let alphaTransition: Transition = .easeInOut(duration: 0.2)
+                    
                     if modeSelectorView.superview == nil {
                         self.addSubview(modeSelectorView)
+                        Transition.immediate.setAlpha(view: modeSelectorView, alpha: 0.0)
+                        Transition.immediate.setScale(view: modeSelectorView, scale: 0.001)
                     }
                     
                     if playAnimation, let animationView = modeSelectorView.contentView as? LottieComponent.View {
                         animationView.playOnce()
                     }
                     
-                    modeSelectorTransition.setFrame(view: modeSelectorView, frame: modeSelectorFrame)
+                    modeSelectorTransition.setPosition(view: modeSelectorView, position: modeSelectorFrame.center)
+                    modeSelectorTransition.setBounds(view: modeSelectorView, bounds: CGRect(origin: CGPoint(), size: modeSelectorFrame.size))
+                    
                     if let externalState = component.externalState {
-                        modeSelectorView.isHidden = !externalState.isEditing
+                        let displaySelector = externalState.isEditing
+                        
+                        alphaTransition.setAlpha(view: modeSelectorView, alpha: displaySelector ? 1.0 : 0.0)
+                        alphaTransition.setScale(view: modeSelectorView, scale: displaySelector ? 1.0 : 0.001)
                     }
                 }
             } else if let modeSelector = self.modeSelector {
                 self.modeSelector = nil
-                modeSelector.view?.removeFromSuperview()
+                if let modeSelectorView = modeSelector.view {
+                    if !transition.animation.isImmediate {
+                        let alphaTransition: Transition = .easeInOut(duration: 0.2)
+                        alphaTransition.setAlpha(view: modeSelectorView, alpha: 0.0, completion: { [weak modeSelectorView] _ in
+                            modeSelectorView?.removeFromSuperview()
+                        })
+                        alphaTransition.setScale(view: modeSelectorView, scale: 0.001)
+                    } else {
+                        modeSelectorView.removeFromSuperview()
+                    }
+                }
             }
             
             self.separatorInset = leftInset

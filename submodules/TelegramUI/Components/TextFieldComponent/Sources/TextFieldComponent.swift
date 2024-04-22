@@ -305,7 +305,14 @@ public final class TextFieldComponent: Component {
         }
         
         public func insertText(_ text: NSAttributedString) {
+            guard let component = self.component else {
+                return
+            }
+            
             self.updateInputState { state in
+                if let characterLimit = component.characterLimit, state.inputText.length + text.length > characterLimit {
+                    return state
+                }
                 return state.insertText(text)
             }
             if !self.isUpdating {
