@@ -47,8 +47,11 @@ public struct RevenueStats: Equatable {
 extension RevenueStats {
     init(apiRevenueStats: Api.stats.BroadcastRevenueStats, peerId: PeerId) {
         switch apiRevenueStats {
-        case let .broadcastRevenueStats(topHoursGraph, revenueGraph, currentBalance, availableBalance, overallRevenue, usdRate):
-            self.init(topHoursGraph: StatsGraph(apiStatsGraph: topHoursGraph), revenueGraph: StatsGraph(apiStatsGraph: revenueGraph), currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, usdRate: usdRate)
+        case let .broadcastRevenueStats(topHoursGraph, revenueGraph, balances, usdRate):
+            switch balances {
+            case let .broadcastRevenueBalances(currentBalance, availableBalance, overallRevenue):
+                self.init(topHoursGraph: StatsGraph(apiStatsGraph: topHoursGraph), revenueGraph: StatsGraph(apiStatsGraph: revenueGraph), currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, usdRate: usdRate)
+            }
         }
     }
 }

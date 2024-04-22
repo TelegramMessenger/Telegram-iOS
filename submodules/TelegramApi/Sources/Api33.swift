@@ -104,19 +104,17 @@ public extension Api.smsjobs {
 }
 public extension Api.stats {
     enum BroadcastRevenueStats: TypeConstructorDescription {
-        case broadcastRevenueStats(topHoursGraph: Api.StatsGraph, revenueGraph: Api.StatsGraph, currentBalance: Int64, availableBalance: Int64, overallRevenue: Int64, usdRate: Double)
+        case broadcastRevenueStats(topHoursGraph: Api.StatsGraph, revenueGraph: Api.StatsGraph, balances: Api.BroadcastRevenueBalances, usdRate: Double)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .broadcastRevenueStats(let topHoursGraph, let revenueGraph, let currentBalance, let availableBalance, let overallRevenue, let usdRate):
+                case .broadcastRevenueStats(let topHoursGraph, let revenueGraph, let balances, let usdRate):
                     if boxed {
-                        buffer.appendInt32(-797226067)
+                        buffer.appendInt32(1409802903)
                     }
                     topHoursGraph.serialize(buffer, true)
                     revenueGraph.serialize(buffer, true)
-                    serializeInt64(currentBalance, buffer: buffer, boxed: false)
-                    serializeInt64(availableBalance, buffer: buffer, boxed: false)
-                    serializeInt64(overallRevenue, buffer: buffer, boxed: false)
+                    balances.serialize(buffer, true)
                     serializeDouble(usdRate, buffer: buffer, boxed: false)
                     break
     }
@@ -124,8 +122,8 @@ public extension Api.stats {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .broadcastRevenueStats(let topHoursGraph, let revenueGraph, let currentBalance, let availableBalance, let overallRevenue, let usdRate):
-                return ("broadcastRevenueStats", [("topHoursGraph", topHoursGraph as Any), ("revenueGraph", revenueGraph as Any), ("currentBalance", currentBalance as Any), ("availableBalance", availableBalance as Any), ("overallRevenue", overallRevenue as Any), ("usdRate", usdRate as Any)])
+                case .broadcastRevenueStats(let topHoursGraph, let revenueGraph, let balances, let usdRate):
+                return ("broadcastRevenueStats", [("topHoursGraph", topHoursGraph as Any), ("revenueGraph", revenueGraph as Any), ("balances", balances as Any), ("usdRate", usdRate as Any)])
     }
     }
     
@@ -138,22 +136,18 @@ public extension Api.stats {
             if let signature = reader.readInt32() {
                 _2 = Api.parse(reader, signature: signature) as? Api.StatsGraph
             }
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: Int64?
-            _4 = reader.readInt64()
-            var _5: Int64?
-            _5 = reader.readInt64()
-            var _6: Double?
-            _6 = reader.readDouble()
+            var _3: Api.BroadcastRevenueBalances?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.BroadcastRevenueBalances
+            }
+            var _4: Double?
+            _4 = reader.readDouble()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.stats.BroadcastRevenueStats.broadcastRevenueStats(topHoursGraph: _1!, revenueGraph: _2!, currentBalance: _3!, availableBalance: _4!, overallRevenue: _5!, usdRate: _6!)
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.stats.BroadcastRevenueStats.broadcastRevenueStats(topHoursGraph: _1!, revenueGraph: _2!, balances: _3!, usdRate: _4!)
             }
             else {
                 return nil

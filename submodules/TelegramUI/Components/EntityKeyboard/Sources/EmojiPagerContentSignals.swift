@@ -1663,10 +1663,36 @@ public extension EmojiPagerContentComponent {
         switch subject {
         case .groupPhotoEmojiSelection, .profilePhotoEmojiSelection:
             searchCategories = context.engine.stickers.emojiSearchCategories(kind: .avatar)
-        case .chatStickers:
-            searchCategories = context.engine.stickers.emojiSearchCategories(kind: .chatStickers)
-        case .greetingStickers:
-            searchCategories = context.engine.stickers.emojiSearchCategories(kind: .greetingStickers)
+        case .chatStickers, .greetingStickers:
+            searchCategories = context.engine.stickers.emojiSearchCategories(kind: .combinedChatStickers)
+            |> map { result -> EmojiSearchCategories? in
+                guard let result else {
+                    return nil
+                }
+                
+                var groups: [EmojiSearchCategories.Group] = []
+                groups = result.groups
+                if case .greetingStickers = subject {
+                    if let index = groups.firstIndex(where: { group in
+                        return group.kind == .greeting
+                    }) {
+                        let group = groups.remove(at: index)
+                        groups.insert(group, at: 0)
+                    }
+                } else if case .chatStickers = subject {
+                    if let index = groups.firstIndex(where: { group in
+                        return group.kind == .premium
+                    }) {
+                        let group = groups.remove(at: index)
+                        groups.append(group)
+                    }
+                }
+                
+                return EmojiSearchCategories(
+                    hash: result.hash,
+                    groups: groups
+                )
+            }
         }
         
         return combineLatest(

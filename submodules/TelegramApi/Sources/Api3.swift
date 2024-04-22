@@ -1,4 +1,50 @@
 public extension Api {
+    enum BusinessLocation: TypeConstructorDescription {
+        case businessLocation(flags: Int32, geoPoint: Api.GeoPoint?, address: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .businessLocation(let flags, let geoPoint, let address):
+                    if boxed {
+                        buffer.appendInt32(-1403249929)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {geoPoint!.serialize(buffer, true)}
+                    serializeString(address, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .businessLocation(let flags, let geoPoint, let address):
+                return ("businessLocation", [("flags", flags as Any), ("geoPoint", geoPoint as Any), ("address", address as Any)])
+    }
+    }
+    
+        public static func parse_businessLocation(_ reader: BufferReader) -> BusinessLocation? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.GeoPoint?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.GeoPoint
+            } }
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.BusinessLocation.businessLocation(flags: _1!, geoPoint: _2, address: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum BusinessRecipients: TypeConstructorDescription {
         case businessRecipients(flags: Int32, users: [Int64]?)
     

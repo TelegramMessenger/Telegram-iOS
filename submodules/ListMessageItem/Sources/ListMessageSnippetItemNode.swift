@@ -313,7 +313,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                 }
                             } else if let file = content.file {
                                 if content.type == "telegram_background" {
-                                    if let wallpaper = parseWallpaperUrl(content.url) {
+                                    if let wallpaper = parseWallpaperUrl(sharedContext: item.context.sharedContext, url: content.url) {
                                         switch wallpaper {
                                         case let .slug(slug, _, colors, intensity, angle):
                                             previewWallpaperFileReference = .message(message: MessageReference(message), media: file)
