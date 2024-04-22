@@ -1117,6 +1117,27 @@ public func parseWallpaperUrl(sharedContext: SharedAccountContext, url: String) 
     return nil
 }
 
+public func parseAdUrl(sharedContext: SharedAccountContext, url: String) -> ParsedInternalUrl? {
+    let schemes = ["http://", "https://", ""]
+    for basePath in baseTelegramMePaths {
+        for scheme in schemes {
+            let basePrefix = scheme + basePath + "/"
+            if url.lowercased().hasPrefix(basePrefix) {
+                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: String(url[basePrefix.endIndex...])), case .peer = internalUrl {
+                    return internalUrl
+                }
+            }
+        }
+    }
+    if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
+        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: host + "?" + query), case .peer = internalUrl {
+            return internalUrl
+        }
+    }
+    
+    return nil
+}
+
 private struct UrlHandlingConfiguration {
     static var defaultValue: UrlHandlingConfiguration {
         return UrlHandlingConfiguration(domains: [], urlAuthDomains: [])
