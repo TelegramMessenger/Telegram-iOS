@@ -93,7 +93,8 @@ final class ComposePollScreenComponent: Component {
         private let pollTextFieldTag = NSObject()
         private var resetPollText: String?
         
-        private var quizAnswerTextInputState = ListMultilineTextFieldItemComponent.ExternalState()
+        private var quizAnswerTextInputState = TextFieldComponent.ExternalState()
+        private let quizAnswerTextInputTag = NSObject()
         private var resetQuizAnswerText: String?
         
         private var nextPollOptionId: Int = 0
@@ -118,6 +119,8 @@ final class ComposePollScreenComponent: Component {
         private let inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
         
         private var currentEmojiSuggestionView: ComponentHostView<Empty>?
+        
+        private var currentEditingTag: AnyObject?
         
         override init(frame: CGRect) {
             self.scrollView = UIScrollView()
@@ -448,6 +451,11 @@ final class ComposePollScreenComponent: Component {
             for pollOption in self.pollOptions {
                 if let textInputView = findTaggedComponentViewImpl(view: self.pollOptionsSectionContainer, tag: pollOption.textFieldTag) as? ListComposePollOptionComponent.View {
                     textInputStates.append((textInputView, pollOption.textInputState))
+                }
+            }
+            if self.isQuiz {
+                if let textInputView = self.quizAnswerSection.findTaggedView(tag: self.quizAnswerTextInputTag) as? ListComposePollOptionComponent.View {
+                    textInputStates.append((textInputView, self.quizAnswerTextInputState))
                 }
             }
             
@@ -1085,39 +1093,59 @@ final class ComposePollScreenComponent: Component {
                         maximumNumberOfLines: 0
                     )),
                     items: [
-                        AnyComponentWithIdentity(id: 0, component: AnyComponent(ListMultilineTextFieldItemComponent(
+                        AnyComponentWithIdentity(id: 0, component: AnyComponent(ListComposePollOptionComponent(
                             externalState: self.quizAnswerTextInputState,
                             context: component.context,
                             theme: environment.theme,
                             strings: environment.strings,
-                            initialText: "",
-                            resetText: self.resetQuizAnswerText.flatMap { resetQuizAnswerText in
-                                return ListMultilineTextFieldItemComponent.ResetText(value: resetQuizAnswerText)
+                            resetText: self.resetQuizAnswerText.flatMap { resetText in
+                                return ListComposePollOptionComponent.ResetText(value: resetText)
                             },
-                            placeholder: "Add a Comment (Optional)",
-                            autocapitalizationType: .none,
-                            autocorrectionType: .no,
-                            characterLimit: 256,
-                            emptyLineHandling: .oneConsecutive,
-                            updated: { _ in
+                            assumeIsEditing: self.inputMediaNodeTargetTag === self.quizAnswerTextInputTag,
+                            characterLimit: component.initialData.maxPollTextLength,
+                            returnKeyAction: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.endEditing(true)
                             },
-                            textUpdateTransition: .spring(duration: 0.4)
+                            backspaceKeyAction: nil,
+                            selection: nil,
+                            inputMode: self.currentInputMode,
+                            toggleInputMode: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                switch self.currentInputMode {
+                                case .keyboard:
+                                    self.currentInputMode = .emoji
+                                case .emoji:
+                                    self.currentInputMode = .keyboard
+                                }
+                                self.state?.updated(transition: .spring(duration: 0.4))
+                            },
+                            tag: self.quizAnswerTextInputTag
                         )))
                     ]
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
             )
+            self.resetQuizAnswerText = nil
             let quizAnswerSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + quizAnswerSectionHeight), size: quizAnswerSectionSize)
-            if let quizAnswerSectionView = self.quizAnswerSection.view {
+            if let quizAnswerSectionView = self.quizAnswerSection.view as? ListSectionComponent.View {
                 if quizAnswerSectionView.superview == nil {
                     self.scrollView.addSubview(quizAnswerSectionView)
                     self.quizAnswerSection.parentState = state
                 }
                 transition.setFrame(view: quizAnswerSectionView, frame: quizAnswerSectionFrame)
                 transition.setAlpha(view: quizAnswerSectionView, alpha: self.isQuiz ? 1.0 : 0.0)
+                
+                if let itemView = quizAnswerSectionView.itemView(id: 0) as? ListComposePollOptionComponent.View {
+                    itemView.updateCustomPlaceholder(value: environment.strings.CreatePoll_Explanation, size: itemView.bounds.size, transition: .immediate)
+                }
             }
-            quizAnswerSectionHeight += pollTextSectionSize.height
+            quizAnswerSectionHeight += quizAnswerSectionSize.height
             
             if self.isQuiz {
                 contentHeight += quizAnswerSectionHeight
@@ -1140,7 +1168,15 @@ final class ComposePollScreenComponent: Component {
             
             let textInputStates = self.collectTextInputStates()
             
-            let isEditing = textInputStates.contains(where: { $0.state.isEditing })
+            let previousEditingTag = self.currentEditingTag
+            let isEditing: Bool
+            if let index = textInputStates.firstIndex(where: { $0.state.isEditing }) {
+                isEditing = true
+                self.currentEditingTag = textInputStates[index].view.currentTag
+            } else {
+                isEditing = false
+                self.currentEditingTag = nil
+            }
             
             if let (_, suggestionTextInputState) = textInputStates.first(where: { $0.state.isEditing && $0.state.currentEmojiSuggestion != nil }), let emojiSuggestion = suggestionTextInputState.currentEmojiSuggestion, emojiSuggestion.disposable == nil {
                 emojiSuggestion.disposable = (EmojiSuggestionsComponent.suggestionData(context: component.context, isSavedMessages: false, query: emojiSuggestion.position.value)
@@ -1277,11 +1313,7 @@ final class ComposePollScreenComponent: Component {
             }
             
             let combinedBottomInset: CGFloat
-            if isEditing {
-                combinedBottomInset = bottomInset + 8.0 + inputHeight
-            } else {
-                combinedBottomInset = bottomInset + environment.safeInsets.bottom
-            }
+            combinedBottomInset = bottomInset + max(environment.safeInsets.bottom, 8.0 + inputHeight)
             contentHeight += combinedBottomInset
             
             var recenterOnTag: AnyObject?
@@ -1368,6 +1400,16 @@ final class ComposePollScreenComponent: Component {
             if let controller = environment.controller() as? ComposePollScreen, let sendButtonItem = controller.sendButtonItem {
                 if sendButtonItem.isEnabled != isValid {
                     sendButtonItem.isEnabled = isValid
+                }
+            }
+            
+            if previousEditingTag !== self.currentEditingTag, self.currentInputMode != .keyboard {
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.currentInputMode = .keyboard
+                    self.state?.updated(transition: .spring(duration: 0.4))
                 }
             }
             

@@ -14,13 +14,15 @@ private let collapsedInitialLimit: Int = 10
 
 private final class PollResultsControllerArguments {
     let context: AccountContext
+    let message: EngineMessage
     let collapseOption: (Data) -> Void
     let expandOption: (Data) -> Void
     let openPeer: (EngineRenderedPeer) -> Void
     let expandSolution: () -> Void
     
-    init(context: AccountContext, collapseOption: @escaping (Data) -> Void, expandOption: @escaping (Data) -> Void, openPeer: @escaping (EngineRenderedPeer) -> Void, expandSolution: @escaping () -> Void) {
+    init(context: AccountContext, message: EngineMessage, collapseOption: @escaping (Data) -> Void, expandOption: @escaping (Data) -> Void, openPeer: @escaping (EngineRenderedPeer) -> Void, expandSolution: @escaping () -> Void) {
         self.context = context
+        self.message = message
         self.collapseOption = collapseOption
         self.expandOption = expandOption
         self.openPeer = openPeer
@@ -66,17 +68,17 @@ private enum PollResultsItemTag: ItemListItemTag, Equatable {
 }
 
 private enum PollResultsEntry: ItemListNodeEntry {
-    case text(String)
-    case optionPeer(optionId: Int, index: Int, peer: EngineRenderedPeer, optionText: String, optionAdditionalText: String, optionCount: Int32, optionExpanded: Bool, opaqueIdentifier: Data, shimmeringAlternation: Int?, isFirstInOption: Bool)
+    case text(String, [MessageTextEntity])
+    case optionPeer(optionId: Int, index: Int, peer: EngineRenderedPeer, optionText: String, optionTextEntities: [MessageTextEntity], optionAdditionalText: String, optionCount: Int32, optionExpanded: Bool, opaqueIdentifier: Data, shimmeringAlternation: Int?, isFirstInOption: Bool)
     case optionExpand(optionId: Int, opaqueIdentifier: Data, text: String, enabled: Bool)
     case solutionHeader(String)
-    case solutionText(String)
+    case solutionText(String, [MessageTextEntity])
     
     var section: ItemListSectionId {
         switch self {
         case .text:
             return PollResultsSection.text.rawValue
-        case let .optionPeer(optionId, _, _, _, _, _, _, _, _, _):
+        case let .optionPeer(optionId, _, _, _, _, _, _, _, _, _, _):
             return PollResultsSection.option(optionId).rawValue
         case let .optionExpand(optionId, _, _, _):
             return PollResultsSection.option(optionId).rawValue
@@ -89,7 +91,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
         switch self {
         case .text:
             return .text
-        case let .optionPeer(optionId, index, _, _, _, _, _, _, _, _):
+        case let .optionPeer(optionId, index, _, _, _, _, _, _, _, _, _):
             return .optionPeer(optionId, index)
         case let .optionExpand(optionId, _, _, _):
             return .optionExpand(optionId)
@@ -129,7 +131,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
             default:
                 return true
             }
-        case let .optionPeer(lhsOptionId, lhsIndex, _, _, _, _, _, _, _, _):
+        case let .optionPeer(lhsOptionId, lhsIndex, _, _, _, _, _, _, _, _, _):
             switch rhs {
             case .text:
                 return false
@@ -137,7 +139,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
                 return false
             case .solutionText:
                 return false
-            case let .optionPeer(rhsOptionId, rhsIndex, _, _, _, _, _, _, _, _):
+            case let .optionPeer(rhsOptionId, rhsIndex, _, _, _, _, _, _, _, _, _):
                 if lhsOptionId == rhsOptionId {
                     return lhsIndex < rhsIndex
                 } else {
@@ -158,7 +160,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
                 return false
             case .solutionText:
                 return false
-            case let .optionPeer(rhsOptionId, _, _, _, _, _, _, _, _, _):
+            case let .optionPeer(rhsOptionId, _, _, _, _, _, _, _, _, _, _):
                 if lhsOptionId == rhsOptionId {
                     return false
                 } else {
@@ -177,14 +179,93 @@ private enum PollResultsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! PollResultsControllerArguments
         switch self {
-        case let .text(text):
-            return ItemListTextItem(presentationData: presentationData, text: .large(text), sectionId: self.section)
+        case let .text(text, entities):
+            let font = Font.semibold(presentationData.fontSize.itemListBaseFontSize)
+            var entityFiles: [EngineMedia.Id: TelegramMediaFile] = [:]
+            for (id, media) in arguments.message.associatedMedia {
+                if let file = media as? TelegramMediaFile {
+                    entityFiles[id] = file
+                }
+            }
+            let attributedText = stringWithAppliedEntities(
+                text,
+                entities: entities.filter { entity in
+                    if case .CustomEmoji = entity.type {
+                        return true
+                    } else {
+                        return false
+                    }
+                },
+                baseColor: presentationData.theme.list.freeTextColor,
+                linkColor: presentationData.theme.list.freeTextColor,
+                baseQuoteTintColor: nil,
+                baseQuoteSecondaryTintColor: nil,
+                baseQuoteTertiaryTintColor: nil,
+                codeBlockTitleColor: nil,
+                codeBlockAccentColor: nil,
+                codeBlockBackgroundColor: nil,
+                baseFont: font,
+                linkFont: font,
+                boldFont: font,
+                italicFont: font,
+                boldItalicFont: font,
+                fixedFont: font,
+                blockQuoteFont: font,
+                underlineLinks: false,
+                external: false,
+                message: arguments.message._asMessage(),
+                entityFiles: entityFiles,
+                adjustQuoteFontSize: false,
+                cachedMessageSyntaxHighlight: nil
+            )
+            return ItemListTextItem(presentationData: presentationData, text: .custom(context: arguments.context, string: attributedText), sectionId: self.section)
         case let .solutionHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .solutionText(text):
+        case let .solutionText(text, entities):
+            let _ = entities
+            //TODO:localize
             return ItemListMultilineTextItem(presentationData: presentationData, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks)
-        case let .optionPeer(optionId, _, peer, optionText, optionAdditionalText, optionCount, optionExpanded, opaqueIdentifier, shimmeringAlternation, isFirstInOption):
-            let header = ItemListPeerItemHeader(theme: presentationData.theme, strings: presentationData.strings, text: optionText, additionalText: optionAdditionalText, actionTitle: optionExpanded ? presentationData.strings.PollResults_Collapse : presentationData.strings.MessagePoll_VotedCount(optionCount), id: Int64(optionId), action: optionExpanded ? {
+        case let .optionPeer(optionId, _, peer, optionText, optionTextEntities, optionAdditionalText, optionCount, optionExpanded, opaqueIdentifier, shimmeringAlternation, isFirstInOption):
+            let font = Font.regular(13.0)
+            var entityFiles: [EngineMedia.Id: TelegramMediaFile] = [:]
+            for (id, media) in arguments.message.associatedMedia {
+                if let file = media as? TelegramMediaFile {
+                    entityFiles[id] = file
+                }
+            }
+            let attributedText = stringWithAppliedEntities(
+                optionText,
+                entities: optionTextEntities.filter { entity in
+                    if case .CustomEmoji = entity.type {
+                        return true
+                    } else {
+                        return false
+                    }
+                },
+                baseColor: presentationData.theme.list.freeTextColor,
+                linkColor: presentationData.theme.list.freeTextColor,
+                baseQuoteTintColor: nil,
+                baseQuoteSecondaryTintColor: nil,
+                baseQuoteTertiaryTintColor: nil,
+                codeBlockTitleColor: nil,
+                codeBlockAccentColor: nil,
+                codeBlockBackgroundColor: nil,
+                baseFont: font,
+                linkFont: font,
+                boldFont: font,
+                italicFont: font,
+                boldItalicFont: font,
+                fixedFont: font,
+                blockQuoteFont: font,
+                underlineLinks: false,
+                external: false,
+                message: arguments.message._asMessage(),
+                entityFiles: entityFiles,
+                adjustQuoteFontSize: false,
+                cachedMessageSyntaxHighlight: nil
+            )
+            
+            let header = ItemListPeerItemHeader(theme: presentationData.theme, strings: presentationData.strings, context: arguments.context, text: attributedText, additionalText: optionAdditionalText, actionTitle: optionExpanded ? presentationData.strings.PollResults_Collapse : presentationData.strings.MessagePoll_VotedCount(optionCount), id: Int64(optionId), action: optionExpanded ? {
                 arguments.collapseOption(opaqueIdentifier)
             } : nil)
             return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer.peers[peer.peerId]!, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: shimmeringAlternation == nil, sectionId: self.section, action: {
@@ -205,7 +286,7 @@ private struct PollResultsControllerState: Equatable {
     var isSolutionExpanded: Bool = false
 }
 
-private func pollResultsControllerEntries(presentationData: PresentationData, poll: TelegramMediaPoll, state: PollResultsControllerState, resultsState: PollResultsState) -> [PollResultsEntry] {
+private func pollResultsControllerEntries(presentationData: PresentationData, message: EngineMessage, poll: TelegramMediaPoll, state: PollResultsControllerState, resultsState: PollResultsState) -> [PollResultsEntry] {
     var entries: [PollResultsEntry] = []
     
     var isEmpty = false
@@ -216,7 +297,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
         }
     }
     
-    entries.append(.text(poll.text))
+    entries.append(.text(poll.text, poll.textEntities))
     
     var optionVoterCount: [Int: Int32] = [:]
     let totalVoterCount = poll.results.totalVoters ?? 0
@@ -241,6 +322,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
         let percentage = optionPercentage.count > i ? optionPercentage[i] : 0
         let option = poll.options[i]
         let optionTextHeader = option.text.uppercased()
+        let optionTextHeaderEntities = option.entities
         let optionAdditionalTextHeader = " — \(percentage)%"
         if isEmpty {
             if let voterCount = optionVoterCount[i], voterCount != 0 {
@@ -253,7 +335,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
                 for peerIndex in 0 ..< displayCount {
                     let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
                     let peer = EngineRenderedPeer(peer: EnginePeer(fakeUser))
-                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: optionTextHeader, optionAdditionalText: optionAdditionalTextHeader, optionCount: voterCount, optionExpanded: false, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: peerIndex % 2, isFirstInOption: peerIndex == 0))
+                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: peer, optionText: optionTextHeader, optionTextEntities: optionTextHeaderEntities, optionAdditionalText: optionAdditionalTextHeader, optionCount: voterCount, optionExpanded: false, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: peerIndex % 2, isFirstInOption: peerIndex == 0))
                 }
                 if displayCount < Int(voterCount) {
                     let remainingCount = Int(voterCount) - displayCount
@@ -295,7 +377,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
                     if peerIndex >= displayCount {
                         break inner
                     }
-                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: EngineRenderedPeer(peer), optionText: optionTextHeader, optionAdditionalText: optionAdditionalTextHeader, optionCount: Int32(count), optionExpanded: optionExpandedAtCount != nil, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: nil, isFirstInOption: peerIndex == 0))
+                    entries.append(.optionPeer(optionId: i, index: peerIndex, peer: EngineRenderedPeer(peer), optionText: optionTextHeader, optionTextEntities: optionTextHeaderEntities, optionAdditionalText: optionAdditionalTextHeader, optionCount: Int32(count), optionExpanded: optionExpandedAtCount != nil, opaqueIdentifier: option.opaqueIdentifier, shimmeringAlternation: nil, isFirstInOption: peerIndex == 0))
                     peerIndex += 1
                 }
                 
@@ -310,7 +392,7 @@ private func pollResultsControllerEntries(presentationData: PresentationData, po
     return entries
 }
 
-public func pollResultsController(context: AccountContext, messageId: EngineMessage.Id, poll: TelegramMediaPoll, focusOnOptionWithOpaqueIdentifier: Data? = nil) -> ViewController {
+public func pollResultsController(context: AccountContext, messageId: EngineMessage.Id, message: EngineMessage, poll: TelegramMediaPoll, focusOnOptionWithOpaqueIdentifier: Data? = nil) -> ViewController {
     let statePromise = ValuePromise(PollResultsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PollResultsControllerState())
     let updateState: ((PollResultsControllerState) -> PollResultsControllerState) -> Void = { f in
@@ -324,7 +406,7 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
     
     let resultsContext = context.engine.messages.pollResults(messageId: messageId, poll: poll)
     
-    let arguments = PollResultsControllerArguments(context: context,
+    let arguments = PollResultsControllerArguments(context: context, message: message,
     collapseOption: { optionId in
         updateState { state in
             var state = state
@@ -384,14 +466,14 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
             totalVoters = totalVotersValue
         }
         
-        let entries = pollResultsControllerEntries(presentationData: presentationData, poll: poll, state: state, resultsState: resultsState)
+        let entries = pollResultsControllerEntries(presentationData: presentationData, message: message, poll: poll, state: state, resultsState: resultsState)
         
         var initialScrollToItem: ListViewScrollToItem?
         if let focusOnOptionWithOpaqueIdentifier = focusOnOptionWithOpaqueIdentifier, previousWasEmptyValue == nil {
             var isFirstOption = true
             loop: for i in 0 ..< entries.count {
                 switch entries[i] {
-                case let .optionPeer(_, _, _, _, _, _, _, opaqueIdentifier, _, _):
+                case let .optionPeer(_, _, _, _, _, _, _, _, opaqueIdentifier, _, _):
                     if opaqueIdentifier == focusOnOptionWithOpaqueIdentifier {
                         if !isFirstOption {
                             initialScrollToItem = ListViewScrollToItem(index: i, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down)

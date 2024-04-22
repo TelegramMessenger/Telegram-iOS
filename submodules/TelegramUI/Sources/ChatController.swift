@@ -3237,7 +3237,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     for media in message.media {
                         if let poll = media as? TelegramMediaPoll, poll.pollId == pollId {
-                            strongSelf.push(pollResultsController(context: strongSelf.context, messageId: messageId, poll: poll))
+                            strongSelf.push(pollResultsController(context: strongSelf.context, messageId: messageId, message: message, poll: poll))
                             break
                         }
                     }
@@ -3532,7 +3532,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     for media in message.media {
                         if let poll = media as? TelegramMediaPoll, poll.pollId.namespace == Namespaces.Media.CloudPoll {
-                            strongSelf.push(pollResultsController(context: strongSelf.context, messageId: messageId, poll: poll, focusOnOptionWithOpaqueIdentifier: optionOpaqueIdentifier))
+                            strongSelf.push(pollResultsController(context: strongSelf.context, messageId: messageId, message: message, poll: poll, focusOnOptionWithOpaqueIdentifier: optionOpaqueIdentifier))
                             break
                         }
                     }

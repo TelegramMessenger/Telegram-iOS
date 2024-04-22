@@ -1351,27 +1351,6 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.item = item
                             strongSelf.poll = poll
                             
-                            let cachedLayout = strongSelf.textNode.textNode.cachedLayout
-                            
-                            if case .System = animation {
-                                if let cachedLayout = cachedLayout {
-                                    if cachedLayout != textLayout {
-                                        if let textContents = strongSelf.textNode.textNode.contents {
-                                            let fadeNode = ASDisplayNode()
-                                            fadeNode.displaysAsynchronously = false
-                                            fadeNode.contents = textContents
-                                            fadeNode.frame = strongSelf.textNode.textNode.frame
-                                            fadeNode.isLayerBacked = true
-                                            strongSelf.addSubnode(fadeNode)
-                                            fadeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak fadeNode] _ in
-                                                fadeNode?.removeFromSupernode()
-                                            })
-                                            strongSelf.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                                        }
-                                    }
-                                }
-                            }
-                            
                             let _ = textApply(TextNodeWithEntities.Arguments(
                                 context: item.context,
                                 cache: item.context.animationCache,

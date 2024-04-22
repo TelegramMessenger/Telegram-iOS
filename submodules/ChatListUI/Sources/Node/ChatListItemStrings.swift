@@ -292,7 +292,19 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                             messageText = text
                         }
                     case let poll as TelegramMediaPoll:
-                        messageText = "📊 \(poll.text)"
+                        let pollPrefix = "📊 "
+                        let entityOffset = (pollPrefix as NSString).length
+                        messageText = "\(pollPrefix)\(poll.text)"
+                        for entity in poll.textEntities {
+                            if case let .CustomEmoji(_, fileId) = entity.type {
+                                if customEmojiRanges == nil {
+                                    customEmojiRanges = []
+                                }
+                                let range = NSRange(location: entityOffset + entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+                                let attribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: message.associatedMedia[EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile)
+                                customEmojiRanges?.append((range, attribute))
+                            }
+                        }
                     case let dice as TelegramMediaDice:
                         messageText = dice.emoji
                     case let story as TelegramMediaStory:
