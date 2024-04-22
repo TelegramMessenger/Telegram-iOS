@@ -1232,8 +1232,8 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                             controllers.append(self.emailSetupController(number: number, appleSignInAllowed: self.appleSignInAllowed))
                         }
                         
-                        if let previousCodeEntry, case let .confirmationCodeEntry(number, type, phoneCodeHash, timeout, nextType, _, _, _) = previousCodeEntry, usePrevious {
-                            controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, previousCodeType: type, isPrevious: true, termsOfService: nil))
+                        if let previousCodeEntry, case let .confirmationCodeEntry(number, previousType, phoneCodeHash, timeout, nextType, _, _, _) = previousCodeEntry, usePrevious {
+                            controllers.append(self.codeEntryController(number: number, phoneCodeHash: phoneCodeHash, email: self.currentEmail, type: previousType, nextType: nextType, timeout: timeout, previousCodeType: type, isPrevious: true, termsOfService: nil))
                             isGoingBack = true
                         } else {
                             var previousCodeType: SentAuthorizationCodeType?

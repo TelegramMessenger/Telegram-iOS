@@ -1040,7 +1040,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 if let startsWith, !text.isEmpty {
                     let firstWord = text.components(separatedBy: " ").first ?? ""
                     if !firstWord.isEmpty && !startsWith.hasPrefix(firstWord) {
-                        if self.errorTextNode.alpha.isZero, text.count < 3 {
+                        if self.errorTextNode.alpha.isZero, text.count < 4 {
                             self.animateError(text: self.strings.Login_WrongPhraseError)
                         }
                         return false
