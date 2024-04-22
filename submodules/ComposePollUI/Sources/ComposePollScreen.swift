@@ -1403,7 +1403,7 @@ final class ComposePollScreenComponent: Component {
                 }
             }
             
-            if previousEditingTag !== self.currentEditingTag, self.currentInputMode != .keyboard {
+            if let currentEditingTag = self.currentEditingTag, previousEditingTag !== currentEditingTag, self.currentInputMode != .keyboard {
                 DispatchQueue.main.async { [weak self] in
                     guard let self else {
                         return
