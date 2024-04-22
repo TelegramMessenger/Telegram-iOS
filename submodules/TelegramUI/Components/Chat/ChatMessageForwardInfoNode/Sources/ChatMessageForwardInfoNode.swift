@@ -85,6 +85,8 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
     private var highlightColor: UIColor?
     private var linkHighlightingNode: LinkHighlightingNode?
     
+    private var previousPeer: Peer?
+    
     public var openPsa: ((String, ASDisplayNode) -> Void)?
     
     override public init() {
@@ -112,6 +114,32 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                 transition.updateSublayerTransformScale(node: infoNode, scale: isVisible ? 1.0 : 0.1)
             }
         }
+    }
+    
+    public func getBoundingRects() -> [CGRect] {
+        var initialRects: [CGRect] = []
+        let addRects: (TextNode, CGPoint, CGFloat) -> Void = { textNode, offset, additionalWidth in
+            guard let cachedLayout = textNode.cachedLayout else {
+                return
+            }
+            for rect in cachedLayout.linesRects() {
+                var rect = rect
+                rect.size.width += rect.origin.x + additionalWidth
+                rect.origin.x = 0.0
+                initialRects.append(rect.offsetBy(dx: offset.x, dy: offset.y))
+            }
+        }
+        
+        let offsetY: CGFloat = -12.0
+        if let titleNode = self.titleNode {
+            addRects(titleNode, CGPoint(x: titleNode.frame.minX, y: offsetY + titleNode.frame.minY), 0.0)
+            
+            if let nameNode = self.nameNode {
+                addRects(nameNode, CGPoint(x: titleNode.frame.minX, y: offsetY + nameNode.frame.minY), nameNode.frame.minX - titleNode.frame.minX)
+            }
+        }
+        
+        return initialRects
     }
     
     public func updateTouchesAtPoint(_ point: CGPoint?) {
@@ -167,14 +195,19 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let nameNodeLayout = TextNode.asyncLayout(maybeNode?.nameNode)
         
+        let previousPeer = maybeNode?.previousPeer
+        
         return { context, presentationData, strings, type, peer, authorName, psaType, storyData, constrainedSize in
+            let originalPeer = peer
+            let peer = peer ?? previousPeer
+            
             let fontSize = floor(presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
             let prefixFont = Font.regular(fontSize)
             let peerFont = Font.medium(fontSize)
             
             let peerString: String
             if let peer = peer {
-                if let authorName = authorName {
+                if let authorName = authorName, originalPeer === peer {
                     peerString = "\(EnginePeer(peer).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)) (\(authorName))"
                 } else {
                     peerString = EnginePeer(peer).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
@@ -343,17 +376,15 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
             
             let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth, height: constrainedSize.height), alignment: .natural, cutout: cutout, insets: UIEdgeInsets()))
             
+            var authorAvatarInset: CGFloat = 0.0
+            authorAvatarInset = 20.0
+            
             var nameLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             if let authorString {
-                nameLayoutAndApply = nameNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: authorString, font: peerFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth, height: constrainedSize.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                nameLayoutAndApply = nameNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: authorString, font: peer != nil ? peerFont : prefixFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth - authorAvatarInset, height: constrainedSize.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             }
             
             let titleAuthorSpacing: CGFloat = 0.0
-            
-            var authorAvatarInset: CGFloat = 0.0
-            if peer != nil {
-                authorAvatarInset = 20.0
-            }
             
             let resultSize: CGSize
             if let nameLayoutAndApply {
@@ -379,6 +410,8 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                 node.theme = presentationData.theme.theme
                 node.highlightColor = titleColor.withMultipliedAlpha(0.1)
                 
+                node.previousPeer = peer
+                
                 let titleNode = titleApply()
                 titleNode.displaysAsynchronously = !presentationData.isPreview
                 
@@ -398,7 +431,7 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                     }
                     nameNode.frame = CGRect(origin: CGPoint(x: leftOffset + authorAvatarInset, y: titleLayout.size.height + titleAuthorSpacing), size: nameLayout.size)
                     
-                    if let peer, authorAvatarInset != 0.0 {
+                    if authorAvatarInset != 0.0 {
                         let avatarNode: AvatarNode
                         if let current = node.avatarNode {
                             avatarNode = current
@@ -410,7 +443,13 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                         let avatarSize = CGSize(width: 16.0, height: 16.0)
                         avatarNode.frame = CGRect(origin: CGPoint(x: leftOffset, y: titleLayout.size.height + titleAuthorSpacing), size: avatarSize)
                         avatarNode.updateSize(size: avatarSize)
-                        avatarNode.setPeer(context: context, theme: presentationData.theme.theme, peer: EnginePeer(peer), displayDimensions: avatarSize)
+                        if let peer {
+                            avatarNode.setPeer(context: context, theme: presentationData.theme.theme, peer: EnginePeer(peer), displayDimensions: avatarSize)
+                        } else if let authorName, !authorName.isEmpty {
+                            avatarNode.setCustomLetters([String(authorName[authorName.startIndex])])
+                        } else {
+                            avatarNode.setCustomLetters([" "])
+                        }
                     } else {
                         if let avatarNode = node.avatarNode {
                             node.avatarNode = nil

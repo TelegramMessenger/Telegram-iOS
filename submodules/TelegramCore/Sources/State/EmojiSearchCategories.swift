@@ -8,8 +8,7 @@ public final class EmojiSearchCategories: Equatable, Codable {
         case emoji = 0
         case status = 1
         case avatar = 2
-        case chatStickers = 3
-        case greetingStickers = 4
+        case combinedChatStickers = 3
     }
 
     public struct Group: Codable, Equatable {
@@ -17,16 +16,25 @@ public final class EmojiSearchCategories: Equatable, Codable {
             case id
             case title
             case identifiers
+            case kind
+        }
+        
+        public enum Kind: Int32, Codable {
+            case generic
+            case greeting
+            case premium
         }
         
         public var id: Int64
         public var title: String
         public var identifiers: [String]
+        public var kind: Kind
 
-        public init(id: Int64, title: String, identifiers: [String]) {
+        public init(id: Int64, title: String, identifiers: [String], kind: Kind) {
             self.id = id
             self.title = title
             self.identifiers = identifiers
+            self.kind = kind
         }
         
         public init(from decoder: Decoder) throws {
@@ -35,6 +43,16 @@ public final class EmojiSearchCategories: Equatable, Codable {
             self.id = try container.decode(Int64.self, forKey: .id)
             self.title = try container.decode(String.self, forKey: .title)
             self.identifiers = try container.decode([String].self, forKey: .identifiers)
+            self.kind = ((try container.decodeIfPresent(Int32.self, forKey: .kind)).flatMap(Kind.init(rawValue:))) ?? .generic
+        }
+        
+        public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            try container.encode(self.id, forKey: .id)
+            try container.encode(self.title, forKey: .title)
+            try container.encode(self.identifiers, forKey: .identifiers)
+            try container.encode(self.kind.rawValue, forKey: .kind)
         }
     }
     
@@ -130,9 +148,8 @@ func managedSynchronizeEmojiSearchCategories(postbox: Postbox, network: Network,
                 |> `catch` { _ -> Signal<Api.messages.EmojiGroups, NoError> in
                     return .single(.emojiGroupsNotModified)
                 }
-            //TODO:localize
-            case .chatStickers, .greetingStickers:
-                signal = network.request(Api.functions.messages.getEmojiGroups(hash: current?.hash ?? 0))
+            case .combinedChatStickers:
+                signal = network.request(Api.functions.messages.getEmojiStickerGroups(hash: current?.hash ?? 0))
                 |> `catch` { _ -> Signal<Api.messages.EmojiGroups, NoError> in
                     return .single(.emojiGroupsNotModified)
                 }
@@ -150,10 +167,24 @@ func managedSynchronizeEmojiSearchCategories(postbox: Postbox, network: Network,
                                 case let .emojiGroup(title, iconEmojiId, emoticons):
                                     return EmojiSearchCategories.Group(
                                         id: iconEmojiId,
-                                        title: title, identifiers: emoticons
+                                        title: title,
+                                        identifiers: emoticons,
+                                        kind: .generic
                                     )
-                                case .emojiGroupGreeting, .emojiGroupPremium:
-                                    return nil
+                                case let .emojiGroupGreeting(title, iconEmojiId, emoticons):
+                                    return EmojiSearchCategories.Group(
+                                        id: iconEmojiId,
+                                        title: title,
+                                        identifiers: emoticons,
+                                        kind: .greeting
+                                    )
+                                case let .emojiGroupPremium(title, iconEmojiId):
+                                    return EmojiSearchCategories.Group(
+                                        id: iconEmojiId,
+                                        title: title,
+                                        identifiers: [],
+                                        kind: .premium
+                                    )
                                 }
                             }
                         )

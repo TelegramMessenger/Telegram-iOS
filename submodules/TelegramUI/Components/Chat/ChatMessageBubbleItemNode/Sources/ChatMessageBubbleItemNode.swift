@@ -1193,21 +1193,23 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         recognizer.highlight = { [weak self] point in
             if let strongSelf = self {
-                if let replyInfoNode = strongSelf.replyInfoNode {
-                    var translatedPoint: CGPoint?
-                    let convertedNodeFrame = replyInfoNode.view.convert(replyInfoNode.bounds, to: strongSelf.view)
-                    if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
-                        translatedPoint = strongSelf.view.convert(point, to: replyInfoNode.view)
+                if strongSelf.selectionNode == nil {
+                    if let replyInfoNode = strongSelf.replyInfoNode {
+                        var translatedPoint: CGPoint?
+                        let convertedNodeFrame = replyInfoNode.view.convert(replyInfoNode.bounds, to: strongSelf.view)
+                        if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
+                            translatedPoint = strongSelf.view.convert(point, to: replyInfoNode.view)
+                        }
+                        replyInfoNode.updateTouchesAtPoint(translatedPoint)
                     }
-                    replyInfoNode.updateTouchesAtPoint(translatedPoint)
-                }
-                if let forwardInfoNode = strongSelf.forwardInfoNode {
-                    var translatedPoint: CGPoint?
-                    let convertedNodeFrame = forwardInfoNode.view.convert(forwardInfoNode.bounds, to: strongSelf.view)
-                    if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
-                        translatedPoint = strongSelf.view.convert(point, to: forwardInfoNode.view)
+                    if let forwardInfoNode = strongSelf.forwardInfoNode {
+                        var translatedPoint: CGPoint?
+                        let convertedNodeFrame = forwardInfoNode.view.convert(forwardInfoNode.bounds, to: strongSelf.view)
+                        if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
+                            translatedPoint = strongSelf.view.convert(point, to: forwardInfoNode.view)
+                        }
+                        forwardInfoNode.updateTouchesAtPoint(translatedPoint)
                     }
-                    forwardInfoNode.updateTouchesAtPoint(translatedPoint)
                 }
                 for contentNode in strongSelf.contentNodes {
                     var translatedPoint: CGPoint?

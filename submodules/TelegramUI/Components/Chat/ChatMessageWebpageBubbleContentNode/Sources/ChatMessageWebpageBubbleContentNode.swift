@@ -315,7 +315,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         var colors: [UInt32] = []
                         var rotation: Int32?
                         var intensity: Int32?
-                        if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, colorsValue, intensityValue, rotationValue) = wallpaper {
+                        if let wallpaper = parseWallpaperUrl(sharedContext: item.context.sharedContext, url: webpage.url), case let .slug(_, _, colorsValue, intensityValue, rotationValue) = wallpaper {
                             colors = colorsValue
                             rotation = rotationValue
                             intensity = intensityValue
@@ -353,7 +353,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     if type == "telegram_background" {
                         var colors: [UInt32] = []
                         var rotation: Int32?
-                        if let wallpaper = parseWallpaperUrl(webpage.url) {
+                        if let wallpaper = parseWallpaperUrl(sharedContext: item.context.sharedContext, url: webpage.url) {
                             if case let .color(color) = wallpaper {
                                 colors = [color.rgb]
                             } else if case let .gradient(colorsValue, rotationValue) = wallpaper {

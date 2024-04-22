@@ -38,6 +38,7 @@ private struct LocationViewTransaction {
     let updates: [ListViewUpdateItem]
     let gotTravelTimes: Bool
     let count: Int
+    let animated: Bool
 }
 
 private enum LocationViewEntryId: Hashable {
@@ -197,14 +198,14 @@ private enum LocationViewEntry: Comparable, Identifiable {
     }
 }
 
-private func preparedTransition(from fromEntries: [LocationViewEntry], to toEntries: [LocationViewEntry], context: AccountContext, presentationData: PresentationData, interaction: LocationViewInteraction?, gotTravelTimes: Bool) -> LocationViewTransaction {
+private func preparedTransition(from fromEntries: [LocationViewEntry], to toEntries: [LocationViewEntry], context: AccountContext, presentationData: PresentationData, interaction: LocationViewInteraction?, gotTravelTimes: Bool, animated: Bool) -> LocationViewTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     
-    return LocationViewTransaction(deletions: deletions, insertions: insertions, updates: updates, gotTravelTimes: gotTravelTimes, count: toEntries.count)
+    return LocationViewTransaction(deletions: deletions, insertions: insertions, updates: updates, gotTravelTimes: gotTravelTimes, count: toEntries.count, animated: animated)
 }
 
 enum LocationViewLocation: Equatable {
@@ -573,7 +574,27 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 let previousState = previousState.swap(state)
                 let previousHadTravelTimes = previousHadTravelTimes.swap(!travelTimes.isEmpty)
                 
-                let transition = preparedTransition(from: previousEntries ?? [], to: entries, context: context, presentationData: presentationData, interaction: strongSelf.interaction, gotTravelTimes: !travelTimes.isEmpty && !previousHadTravelTimes)
+                var animated = false
+                var previousActionsCount = 0
+                var actionsCount = 0
+                if let previousEntries {
+                    for entry in previousEntries {
+                        if case .toggleLiveLocation = entry {
+                            previousActionsCount += 1
+                        }
+                    }
+                }
+                for entry in entries {
+                    if case .toggleLiveLocation = entry {
+                        actionsCount += 1
+                    }
+                }
+                
+                if actionsCount < previousActionsCount {
+                    animated = true
+                }
+                
+                let transition = preparedTransition(from: previousEntries ?? [], to: entries, context: context, presentationData: presentationData, interaction: strongSelf.interaction, gotTravelTimes: !travelTimes.isEmpty && !previousHadTravelTimes, animated: animated)
                 strongSelf.enqueueTransition(transition)
                 
                 strongSelf.headerNode.updateState(mapMode: state.mapMode, trackingMode: state.trackingMode, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: false, proximityNotification: proximityNotification, animated: false)
@@ -787,7 +808,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             scrollToItem = nil
         }
         
-        let options = ListViewDeleteAndInsertOptions()
+        var options = ListViewDeleteAndInsertOptions()
+        if transition.animated {
+            options.insert(.AnimateInsertion)
+        }
         self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
         })
     }

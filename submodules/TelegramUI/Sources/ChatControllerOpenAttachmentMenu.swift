@@ -856,7 +856,7 @@ extension ChatControllerImpl {
                         }
                     }, recognizedQRCode: { [weak self] code in
                         if let strongSelf = self {
-                            if let (host, port, username, password, secret) = parseProxyUrl(code) {
+                            if let (host, port, username, password, secret) = parseProxyUrl(sharedContext: strongSelf.context.sharedContext, url: code) {
                                 strongSelf.openResolved(result: ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret), sourceMessageId: nil)
                             }
                         }
@@ -1697,7 +1697,7 @@ extension ChatControllerImpl {
                 }
             }, recognizedQRCode: { [weak self] code in
                 if let strongSelf = self {
-                    if let (host, port, username, password, secret) = parseProxyUrl(code) {
+                    if let (host, port, username, password, secret) = parseProxyUrl(sharedContext: strongSelf.context.sharedContext, url: code) {
                         strongSelf.openResolved(result: ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret), sourceMessageId: nil)
                     }
                 }

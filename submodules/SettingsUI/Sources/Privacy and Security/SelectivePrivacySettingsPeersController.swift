@@ -355,7 +355,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             onlyUsers: false,
             disableChannels: true,
             disableBots: false
-        )), options: [], alwaysEnabled: true))
+        )), alwaysEnabled: true))
         addPeerDisposable.set((controller.result
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak controller] result in

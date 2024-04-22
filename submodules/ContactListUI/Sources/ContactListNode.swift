@@ -1770,25 +1770,32 @@ public final class ContactListNode: ASDisplayNode {
                         if (authorizationStatus == .notDetermined || authorizationStatus == .denied) && peers.isEmpty {
                             isEmpty = true
                         }
+                        
                         let entries = contactListNodeEntries(accountPeer: view.1, peers: peers, presences: presences, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, peerRequiresPremiumForMessaging: view.2, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed, displaySortOptions: displaySortOptions, displayCallIcons: displayCallIcons, storySubscriptions: storySubscriptions, topPeers: topPeers.map { $0.peer }, topPeersPresentation: displayTopPeers, interaction: interaction)
                         let previous = previousEntries.swap(entries)
                         let previousSelection = previousSelectionState.swap(selectionState)
                         let previousPendingRemovalPeerIds = previousPendingRemovalPeerIds.swap(pendingRemovalPeerIds)
                         
                         var hadPermissionInfo = false
+                        var previousOptionsCount = 0
                         if let previous = previous {
                             for entry in previous {
                                 if case .permissionInfo = entry {
                                     hadPermissionInfo = true
-                                    break
+                                }
+                                if case .option = entry {
+                                    previousOptionsCount += 1
                                 }
                             }
                         }
                         var hasPermissionInfo = false
+                        var optionsCount = 0
                         for entry in entries {
                             if case .permissionInfo = entry {
                                 hasPermissionInfo = true
-                                break
+                            }
+                            if case .option = entry {
+                                optionsCount += 1
                             }
                         }
                         
@@ -1798,6 +1805,8 @@ public final class ContactListNode: ASDisplayNode {
                         } else if previousPendingRemovalPeerIds != pendingRemovalPeerIds {
                             animation = .insertion
                         } else if hadPermissionInfo != hasPermissionInfo {
+                            animation = .insertion
+                        } else if optionsCount < previousOptionsCount {
                             animation = .insertion
                         } else {
                             animation = .none
