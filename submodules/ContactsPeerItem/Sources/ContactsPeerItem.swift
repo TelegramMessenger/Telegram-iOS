@@ -165,6 +165,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     public let peer: ContactsPeerItemPeer
     let status: ContactsPeerItemStatus
     let badge: ContactsPeerItemBadge?
+    let rightLabelText: String?
     let requiresPremiumForMessaging: Bool
     let enabled: Bool
     let selection: ContactsPeerItemSelection
@@ -202,6 +203,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         peer: ContactsPeerItemPeer,
         status: ContactsPeerItemStatus,
         badge: ContactsPeerItemBadge? = nil,
+        rightLabelText: String? = nil,
         requiresPremiumForMessaging: Bool = false,
         enabled: Bool,
         selection: ContactsPeerItemSelection,
@@ -233,6 +235,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.peer = peer
         self.status = status
         self.badge = badge
+        self.rightLabelText = rightLabelText
         self.requiresPremiumForMessaging = requiresPremiumForMessaging
         self.enabled = enabled
         self.selection = selection
@@ -421,6 +424,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var actionButtonNodes: [HighlightableButtonNode]?
     private var moreButtonNode: MoreButtonNode?
     private var arrowButtonNode: HighlightableButtonNode?
+    private var rightLabelTextNode: TextNode?
     
     private var avatarTapRecognizer: UITapGestureRecognizer?
     
@@ -579,12 +583,30 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 transition.updateFrame(node: strongSelf.extractedBackgroundImageNode, frame: rect)
             }
             
+            if let rightLabelTextNode = strongSelf.rightLabelTextNode {
+                transition.updateTransform(node: rightLabelTextNode, transform: CGAffineTransformMakeTranslation(isExtracted ? -24.0 : 0.0, 0.0))
+            }
+            
             transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? 12.0 : 0.0, y: 0.0))
             transition.updateAlpha(node: strongSelf.extractedBackgroundImageNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
                 if !isExtracted {
                     self?.extractedBackgroundImageNode.image = nil
                 }
             })
+        }
+    }
+    
+    override public func didLoad() {
+        super.didLoad()
+        
+        self.updateEnableGestures()
+    }
+    
+    private func updateEnableGestures() {
+        if let item = self.layoutParams?.0, !item.options.isEmpty {
+            self.view.disablesInteractiveTransitionGestureRecognizer = false
+        } else {
+            self.view.disablesInteractiveTransitionGestureRecognizer = false
         }
     }
     
@@ -665,6 +687,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         let currentSelectionNode = self.selectionNode
         
         let makeBadgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
+        let makeRightLabelTextLayout = TextNode.asyncLayout(self.rightLabelTextNode)
         
         let currentItem = self.layoutParams?.0
         
@@ -710,6 +733,13 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     selectionNode.isUserInteractionEnabled = false
                     updatedSelectionNode = selectionNode
                 }
+            }
+            
+            var rightLabelTextLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if let rightLabelText = item.rightLabelText {
+                let rightLabelTextLayoutAndApplyValue = makeRightLabelTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: rightLabelText, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 20.0, height: 100.0)))
+                rightLabelTextLayoutAndApply = rightLabelTextLayoutAndApplyValue
+                rightInset -= 6.0 + rightLabelTextLayoutAndApplyValue.0.size.width
             }
             
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
@@ -1117,7 +1147,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 transition = .immediate
                             }
                             
-                            let revealOffset = strongSelf.revealOffset
+                            let revealOffset: CGFloat = 0.0
                             
                             if let _ = updatedTheme {
                                 switch item.style {
@@ -1479,6 +1509,28 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 }
                             }
                             
+                            if let (rightLabelTextLayout, rightLabelTextApply) = rightLabelTextLayoutAndApply {
+                                let rightLabelTextNode = rightLabelTextApply()
+                                var rightLabelTextTransition = transition
+                                if rightLabelTextNode !== strongSelf.rightLabelTextNode {
+                                    strongSelf.rightLabelTextNode?.removeFromSupernode()
+                                    strongSelf.rightLabelTextNode = rightLabelTextNode
+                                    strongSelf.offsetContainerNode.addSubnode(rightLabelTextNode)
+                                    rightLabelTextTransition = .immediate
+                                }
+                                
+                                var rightLabelTextFrame = CGRect(x: revealOffset + params.width - params.rightInset - 8.0 - rightLabelTextLayout.size.width, y: floor((nodeLayout.contentSize.height - rightLabelTextLayout.size.height) / 2.0), width: rightLabelTextLayout.size.width, height: rightLabelTextLayout.size.height)
+                                if let arrowButtonImage = arrowButtonImage {
+                                    rightLabelTextFrame.origin.x -= arrowButtonImage.size.width + 6.0
+                                }
+                                
+                                rightLabelTextNode.bounds = CGRect(origin: CGPoint(), size: rightLabelTextFrame.size)
+                                rightLabelTextTransition.updatePosition(node: rightLabelTextNode, position: rightLabelTextFrame.center)
+                            } else if let rightLabelTextNode = strongSelf.rightLabelTextNode {
+                                strongSelf.rightLabelTextNode = nil
+                                rightLabelTextNode.removeFromSupernode()
+                            }
+                            
                             if let updatedSelectionNode = updatedSelectionNode {
                                 let hadSelectionNode = strongSelf.selectionNode != nil
                                 if strongSelf.selectionNode !== updatedSelectionNode {
@@ -1533,6 +1585,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.setRevealOptions((left: [], right: peerRevealOptions))
                                 strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
                             }
+                            
+                            strongSelf.updateEnableGestures()
                         }
                     })
                 } else {
@@ -1553,57 +1607,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         super.updateRevealOffset(offset: offset, transition: transition)
         
-        if let item = self.item, let params = self.layoutParams?.1 {
-            var leftInset: CGFloat = 65.0 + params.leftInset
-            
-            switch item.selection {
-                case .none:
-                    break
-                case .selectable:
-                    leftInset += 28.0
-            }
-            
-            var avatarFrame = self.avatarNode.frame
-            avatarFrame.origin.x = offset + leftInset - 50.0
-            transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
-            
-            var titleFrame = self.titleNode.frame
-            titleFrame.origin.x = leftInset + offset
-            transition.updateFrame(node: self.titleNode, frame: titleFrame)
-            
-            var statusFrame = self.statusNode.frame
-            let previousStatusFrame = statusFrame
-            statusFrame.origin.x = leftInset + offset
-            if let statusIconImage = self.statusIconNode?.image {
-                statusFrame.origin.x += statusIconImage.size.width + 1.0
-            }
-            self.statusNode.frame = statusFrame
-            transition.animatePositionAdditive(node: self.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
-            
-            var nextIconX = titleFrame.maxX
-            if let credibilityIconView = self.credibilityIconView {
-                var iconFrame = credibilityIconView.frame
-                iconFrame.origin.x = nextIconX + 4.0
-                nextIconX += 4.0 + iconFrame.width
-                transition.updateFrame(view: credibilityIconView, frame: iconFrame)
-            }
-            if let verifiedIconView = self.verifiedIconView {
-                var iconFrame = verifiedIconView.frame
-                iconFrame.origin.x = nextIconX + 4.0
-                nextIconX += 4.0 + iconFrame.width
-                transition.updateFrame(view: verifiedIconView, frame: iconFrame)
-            }
-            
-            if let badgeBackgroundNode = self.badgeBackgroundNode, let badgeTextNode = self.badgeTextNode {
-                var badgeBackgroundFrame = badgeBackgroundNode.frame
-                badgeBackgroundFrame.origin.x = offset + params.width - params.rightInset - badgeBackgroundFrame.width - 6.0
-                var badgeTextFrame = badgeTextNode.frame
-                badgeTextFrame.origin.x = badgeBackgroundFrame.midX - badgeTextFrame.width / 2.0
-                    
-                transition.updateFrame(node: badgeBackgroundNode, frame: badgeBackgroundFrame)
-                transition.updateFrame(node: badgeTextNode, frame: badgeTextFrame)
-            }
-        }
+        var offsetContainerBounds = self.offsetContainerNode.bounds
+        offsetContainerBounds.origin.x = -offset
+        transition.updateBounds(node: self.offsetContainerNode, bounds: offsetContainerBounds)
     }
     
     override public func revealOptionsInteractivelyOpened() {
