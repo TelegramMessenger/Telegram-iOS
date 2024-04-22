@@ -28,6 +28,9 @@ extension ChatControllerImpl {
         
         //TODO:localize
         var title: String? = messageIds.count == 1 ? "Message Deleted" : "Messages Deleted"
+        if !result.deleteAllFromPeers.isEmpty {
+            title = "Messages Deleted"
+        }
         var text: String = ""
         var undoRights: [EnginePeer.Id: InitialBannedRights] = [:]
         
@@ -95,6 +98,9 @@ extension ChatControllerImpl {
         
         if text.isEmpty {
             text = messageIds.count == 1 ? "Message Deleted." : "Messages Deleted."
+            if !result.deleteAllFromPeers.isEmpty {
+                text = "Messages Deleted."
+            }
             title = nil
         }
         
@@ -134,6 +140,9 @@ extension ChatControllerImpl {
         
         var signal = combineLatest(authors.map { author in
             self.context.engine.peers.fetchChannelParticipant(peerId: peerId, participantId: author.id)
+            |> map { result -> (Peer, ChannelParticipant?) in
+                return (author, result)
+            }
         })
         let disposables = MetaDisposable()
         self.navigationActionDisposable.set(disposables)
@@ -166,7 +175,7 @@ extension ChatControllerImpl {
         }
         
         disposables.set((signal
-        |> deliverOnMainQueue).startStrict(next: { [weak self] participants in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] authorsAndParticipants in
             guard let self else {
                 return
             }
@@ -179,13 +188,23 @@ extension ChatControllerImpl {
                 }
                 var renderedParticipants: [RenderedChannelParticipant] = []
                 var initialUserBannedRights: [EnginePeer.Id: InitialBannedRights] = [:]
-                for maybeParticipant in participants {
-                    guard let participant = maybeParticipant else {
-                        continue
+                for (author, maybeParticipant) in authorsAndParticipants {
+                    let participant: ChannelParticipant
+                    if let maybeParticipant {
+                        participant = maybeParticipant
+                    } else {
+                        participant = .member(id: author.id, invitedAt: 0, adminInfo: nil, banInfo: ChannelParticipantBannedInfo(
+                            rights: TelegramChatBannedRights(
+                                flags: [.banReadMessages],
+                                untilDate: Int32.max
+                            ),
+                            restrictedBy: self.context.account.peerId,
+                            timestamp: 0,
+                            isMember: false
+                        ), rank: nil)
                     }
-                    guard let peer = authors.first(where: { $0.id == participant.peerId }) else {
-                        continue
-                    }
+                    
+                    let peer = author
                     renderedParticipants.append(RenderedChannelParticipant(
                         participant: participant,
                         peer: peer
@@ -254,10 +273,26 @@ extension ChatControllerImpl {
         }
         
         disposables.set((signal
-        |> deliverOnMainQueue).startStrict(next: { [weak self] participant in
-            guard let self, let participant else {
+        |> deliverOnMainQueue).startStrict(next: { [weak self] maybeParticipant in
+            guard let self else {
                 return
             }
+            
+            let participant: ChannelParticipant
+            if let maybeParticipant {
+                participant = maybeParticipant
+            } else {
+                participant = .member(id: author.id, invitedAt: 0, adminInfo: nil, banInfo: ChannelParticipantBannedInfo(
+                    rights: TelegramChatBannedRights(
+                        flags: [.banReadMessages],
+                        untilDate: Int32.max
+                    ),
+                    restrictedBy: self.context.account.peerId,
+                    timestamp: 0,
+                    isMember: false
+                ), rank: nil)
+            }
+            
             let _ = (self.context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
                 TelegramEngine.EngineData.Item.Peer.Peer(id: author.id)

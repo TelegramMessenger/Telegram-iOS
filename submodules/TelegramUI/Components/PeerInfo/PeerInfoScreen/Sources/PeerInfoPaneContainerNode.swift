@@ -648,6 +648,12 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                 }
                 return [.leftCenter, .rightCenter]
             }
+            if case .members = currentPaneKey {
+                if index == 0 {
+                    return .leftCenter
+                }
+                return [.leftCenter, .rightCenter]
+            }
             if strongSelf.currentPane?.node.navigationContentNode != nil {
                 return []
             }

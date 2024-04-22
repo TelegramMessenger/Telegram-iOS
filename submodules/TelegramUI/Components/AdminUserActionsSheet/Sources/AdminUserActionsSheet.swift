@@ -616,6 +616,10 @@ private final class AdminUserActionsSheetComponent: Component {
                                 canBanEveryone = false
                                 continue
                             }
+                            if let banInfo = peer.participant.banInfo, !banInfo.isMember {
+                                canBanEveryone = false
+                                continue
+                            }
                             
                             switch peer.participant {
                             case .creator:
