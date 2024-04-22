@@ -34,6 +34,7 @@ import ChatMessageBubbleItemNode
 import ChatMessageTransitionNode
 import ChatControllerInteraction
 import DustEffect
+import UrlHandling
 
 struct ChatTopVisibleMessageRange: Equatable {
     var lowerBound: MessageIndex
@@ -674,7 +675,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
 
     let adMessagesContext: AdMessagesHistoryContext?
     private var adMessagesDisposable: Disposable?
-    private var preloadAdPeerId: PeerId?
+    private var preloadAdPeerName: String?
     private let preloadAdPeerDisposable = MetaDisposable()
     private var didSetupRecommendedChannelsPreload = false
     private let preloadRecommendedChannelsDisposable = MetaDisposable()
@@ -1117,16 +1118,23 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 
                 self.allAdMessages = (messages.first, [], 0)
             } else {
-                var adPeerId: PeerId?
-                adPeerId = messages.first?.author?.id
+                var adPeerName: String?
+                if let adAttribute = messages.first?.adAttribute, let parsedUrl = parseAdUrl(sharedContext: self.context.sharedContext, url: adAttribute.url), case let .peer(reference, _) = parsedUrl, case let .name(peerName) = reference {
+                    adPeerName = peerName
+                }
                 
-                if self.preloadAdPeerId != adPeerId {
-                    self.preloadAdPeerId = adPeerId
-                    if let adPeerId = adPeerId {
+                if self.preloadAdPeerName != adPeerName {
+                    self.preloadAdPeerName = adPeerName
+                    if let adPeerName {
+                        let context = self.context
                         let combinedDisposable = DisposableSet()
                         self.preloadAdPeerDisposable.set(combinedDisposable)
-                        combinedDisposable.add(self.context.account.viewTracker.polledChannel(peerId: adPeerId).startStrict())
-                        combinedDisposable.add(self.context.account.addAdditionalPreloadHistoryPeerId(peerId: adPeerId))
+                        combinedDisposable.add(context.engine.peers.resolvePeerByName(name: adPeerName).startStrict(next: { result in
+                            if case let .result(maybePeer) = result, let peer = maybePeer {
+                                combinedDisposable.add(context.account.viewTracker.polledChannel(peerId: peer.id).startStrict())
+                                combinedDisposable.add(context.account.addAdditionalPreloadHistoryPeerId(peerId: peer.id))
+                            }
+                        }))
                     } else {
                         self.preloadAdPeerDisposable.set(nil)
                     }
