@@ -20,6 +20,8 @@ swift_library(
         "//submodules/TextFormat",
         "//submodules/Markdown",
         "//submodules/WallpaperBackgroundNode",
+        "//submodules/TelegramPresentationData",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent",
     ],
     visibility = [
         "//visibility:public",

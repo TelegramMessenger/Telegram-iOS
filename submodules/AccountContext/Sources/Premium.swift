@@ -39,6 +39,7 @@ public enum PremiumIntroSource {
     case readTime
     case messageTags
     case folderTags
+    case animatedEmoji
 }
 
 public enum PremiumGiftSource: Equatable {

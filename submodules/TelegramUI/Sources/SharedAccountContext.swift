@@ -2056,6 +2056,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .messageTags
         case .folderTags:
             mappedSource = .folderTags
+        case .animatedEmoji:
+            mappedSource = .animatedEmoji
         }
         let controller = PremiumIntroScreen(context: context, source: mappedSource, modal: modal, forceDark: forceDark)
         controller.wasDismissed = dismissed
