@@ -242,7 +242,7 @@ final class BusinessRecipientListScreenComponent: Component {
                 additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
                 chatListFilters: nil,
                 onlyUsers: true
-            )), options: [], filters: [], alwaysEnabled: true, limit: 100, reachedLimit: { _ in
+            )), filters: [], alwaysEnabled: true, limit: 100, reachedLimit: { _ in
             }))
             controller.navigationPresentation = .modal
             
@@ -422,10 +422,10 @@ final class BusinessRecipientListScreenComponent: Component {
                         maximumNumberOfLines: 1
                     ))),
                 ], alignment: .left, spacing: 2.0)),
-                leftIcon: AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
+                leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
                     name: "Chat List/AddIcon",
                     tintColor: environment.theme.list.itemAccentColor
-                ))),
+                )))),
                 accessory: nil,
                 action: { [weak self] _ in
                     guard let self else {

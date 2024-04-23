@@ -615,7 +615,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                 }))
                             }
                         case let .category(value):
-                            let resultSignal = self.context.engine.stickers.searchEmoji(emojiString: value)
+                            let resultSignal = self.context.engine.stickers.searchEmoji(category: value)
                             |> mapToSignal { files, isFinalResult -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                                 var items: [EmojiPagerContentComponent.Item] = []
                                 
@@ -687,11 +687,11 @@ public final class EmojiStatusSelectionController: ViewController {
                                             fillWithLoadingPlaceholders: true,
                                             items: []
                                         )
-                                    ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                                    ], id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                                     return
                                 }
                                 
-                                self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                                self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                                 version += 1
                             }))
                         }

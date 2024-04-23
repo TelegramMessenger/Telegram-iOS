@@ -453,3 +453,64 @@ extension ChatControllerImpl {
         }
     }
 }
+
+final class ChatContextControllerContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceNode: ASDisplayNode?
+    weak var sourceView: UIView?
+    let sourceRect: CGRect?
+    
+    let navigationController: NavigationController? = nil
+
+    let passthroughTouches: Bool
+    
+    init(controller: ViewController, sourceNode: ASDisplayNode?, sourceRect: CGRect? = nil, passthroughTouches: Bool) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+        self.sourceRect = sourceRect
+        self.passthroughTouches = passthroughTouches
+    }
+    
+    init(controller: ViewController, sourceView: UIView?, sourceRect: CGRect? = nil, passthroughTouches: Bool) {
+        self.controller = controller
+        self.sourceView = sourceView
+        self.sourceRect = sourceRect
+        self.passthroughTouches = passthroughTouches
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceView = self.sourceView
+        let sourceNode = self.sourceNode
+        let sourceRect = self.sourceRect
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
+            if let sourceView = sourceView {
+                return (sourceView, sourceRect ?? sourceView.bounds)
+            } else if let sourceNode = sourceNode {
+                return (sourceNode.view, sourceRect ?? sourceNode.bounds)
+            } else {
+                return nil
+            }
+        })
+    }
+    
+    func animatedIn() {
+    }
+}
+
+final class ChatControllerContextReferenceContentSource: ContextReferenceContentSource {
+    let controller: ViewController
+    let sourceView: UIView
+    let insets: UIEdgeInsets
+    let contentInsets: UIEdgeInsets
+    
+    init(controller: ViewController, sourceView: UIView, insets: UIEdgeInsets, contentInsets: UIEdgeInsets = UIEdgeInsets()) {
+        self.controller = controller
+        self.sourceView = sourceView
+        self.insets = insets
+        self.contentInsets = contentInsets
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds.inset(by: self.insets), insets: self.contentInsets)
+    }
+}

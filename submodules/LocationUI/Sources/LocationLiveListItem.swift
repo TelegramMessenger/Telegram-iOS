@@ -321,7 +321,14 @@ final class LocationLiveListItemNode: ListViewItemNode {
                         }
                         
                         let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                        if currentTimestamp < item.message.timestamp + liveBroadcastingTimeout {
+                        let remainingTime: Int32
+                        if liveBroadcastingTimeout == liveLocationIndefinitePeriod {
+                            remainingTime = liveLocationIndefinitePeriod
+                        } else {
+                            remainingTime = max(0, item.message.timestamp + liveBroadcastingTimeout - currentTimestamp)
+                        }
+                        
+                        if remainingTime > 0 {
                             let timerNode: ChatMessageLiveLocationTimerNode
                             if let current = strongSelf.timerNode {
                                 timerNode = current
@@ -331,7 +338,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                                 strongSelf.timerNode = timerNode
                             }
                             let timerSize = CGSize(width: 28.0, height: 28.0)
-                            timerNode.update(backgroundColor: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4), foregroundColor: item.presentationData.theme.list.itemAccentColor, textColor: item.presentationData.theme.list.itemAccentColor, beginTimestamp: Double(item.message.timestamp), timeout: Double(liveBroadcastingTimeout), strings: item.presentationData.strings)
+                            timerNode.update(backgroundColor: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4), foregroundColor: item.presentationData.theme.list.itemAccentColor, textColor: item.presentationData.theme.list.itemAccentColor, beginTimestamp: Double(item.message.timestamp), timeout: Int32(liveBroadcastingTimeout) == liveLocationIndefinitePeriod ? -1.0 : Double(liveBroadcastingTimeout), strings: item.presentationData.strings)
                             timerNode.frame = CGRect(origin: CGPoint(x: contentSize.width - 16.0 - timerSize.width, y: 14.0), size: timerSize)
                         } else if let timerNode = strongSelf.timerNode {
                             strongSelf.timerNode = nil
@@ -391,7 +398,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5)
     }
     

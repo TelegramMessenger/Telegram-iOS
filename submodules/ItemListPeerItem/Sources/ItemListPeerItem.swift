@@ -19,6 +19,7 @@ import EmojiStatusComponent
 import CheckNode
 import AnimationCache
 import MultiAnimationRenderer
+import TextNodeWithEntities
 
 private final class ShimmerEffectNode: ASDisplayNode {
     private var currentBackgroundColor: UIColor?
@@ -1801,7 +1802,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         }
     }
     
-    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
@@ -1951,7 +1952,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
 
 public final class ItemListPeerItemHeader: ListViewItemHeader {
     public let id: ListViewItemNode.HeaderId
-    public let text: String
+    public let context: AccountContext
+    public let text: NSAttributedString
     public let additionalText: String
     public let stickDirection: ListViewItemHeaderStickDirection = .topEdge
     public let stickOverInsets: Bool = true
@@ -1962,7 +1964,8 @@ public final class ItemListPeerItemHeader: ListViewItemHeader {
     
     public let height: CGFloat = 28.0
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, text: String, additionalText: String, actionTitle: String? = nil, id: Int64, action: (() -> Void)? = nil) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, context: AccountContext, text: NSAttributedString, additionalText: String, actionTitle: String? = nil, id: Int64, action: (() -> Void)? = nil) {
+        self.context = context
         self.text = text
         self.additionalText = additionalText
         self.id = ListViewItemNode.HeaderId(space: 0, id: id)
@@ -1981,7 +1984,7 @@ public final class ItemListPeerItemHeader: ListViewItemHeader {
     }
     
     public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
-        return ItemListPeerItemHeaderNode(theme: self.theme, strings: self.strings, text: self.text, additionalText: self.additionalText, actionTitle: self.actionTitle, action: self.action)
+        return ItemListPeerItemHeaderNode(theme: self.theme, strings: self.strings, context: self.context, text: self.text, additionalText: self.additionalText, actionTitle: self.actionTitle, action: self.action)
     }
     
     public func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
@@ -1992,6 +1995,7 @@ public final class ItemListPeerItemHeader: ListViewItemHeader {
 public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListHeaderItemNode {
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private let context: AccountContext
     private var actionTitle: String?
     private var action: (() -> Void)?
     
@@ -2000,14 +2004,15 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
     private let backgroundNode: ASDisplayNode
     private let snappedBackgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
-    private let textNode: ImmediateTextNode
+    private let textNode: ImmediateTextNodeWithEntities
     private let additionalTextNode: ImmediateTextNode
     private let actionTextNode: ImmediateTextNode
     private let actionButton: HighlightableButtonNode
     
     private var stickDistanceFactor: CGFloat?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, text: String, additionalText: String, actionTitle: String?, action: (() -> Void)?) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, context: AccountContext, text: NSAttributedString, additionalText: String, actionTitle: String?, action: (() -> Void)?) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.actionTitle = actionTitle
@@ -2026,10 +2031,18 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
         
         let titleFont = Font.regular(13.0)
         
-        self.textNode = ImmediateTextNode()
+        self.textNode = ImmediateTextNodeWithEntities()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 1
-        self.textNode.attributedText = NSAttributedString(string: text, font: titleFont, textColor: theme.list.sectionHeaderTextColor)
+        self.textNode.attributedText = text
+        self.textNode.arguments = TextNodeWithEntities.Arguments(
+            context: self.context,
+            cache: self.context.animationCache,
+            renderer: self.context.animationRenderer,
+            placeholderColor: theme.list.mediaPlaceholderColor,
+            attemptSynchronous: true
+        )
+        self.textNode.visibility = true
         
         self.additionalTextNode = ImmediateTextNode()
         self.additionalTextNode.displaysAsynchronously = false
@@ -2086,11 +2099,11 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
         self.actionTextNode.attributedText = NSAttributedString(string: self.actionTextNode.attributedText?.string ?? "", font: titleFont, textColor: theme.list.sectionHeaderTextColor)
     }
     
-    public func update(text: String, additionalText: String, actionTitle: String?, action: (() -> Void)?) {
+    public func update(text: NSAttributedString, additionalText: String, actionTitle: String?, action: (() -> Void)?) {
         self.actionTitle = actionTitle
         self.action = action
         let titleFont = Font.regular(13.0)
-        self.textNode.attributedText = NSAttributedString(string: text, font: titleFont, textColor: theme.list.sectionHeaderTextColor)
+        self.textNode.attributedText = text
         self.additionalTextNode.attributedText = NSAttributedString(string: additionalText, font: titleFont, textColor: theme.list.sectionHeaderTextColor)
         self.actionTextNode.attributedText = NSAttributedString(string: actionTitle ?? "", font: titleFont, textColor: action == nil ? theme.list.sectionHeaderTextColor : theme.list.itemAccentColor)
         self.actionButton.isUserInteractionEnabled = self.action != nil

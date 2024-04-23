@@ -31,6 +31,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private let currentOptionInfoActivateAreaNode: AccessibilityAreaNode
     private let nextOptionTitleNode: ImmediateTextNode
     private let nextOptionButtonNode: HighlightableButtonNode
+    private let nextOptionArrowNode: ASImageNode
     
     private let resetTextNode: ImmediateTextNode
     private let resetNode: HighlightableButtonNode
@@ -39,8 +40,16 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private var signInWithAppleButton: UIControl?
     private let proceedNode: SolidRoundedButtonNode
     
+    private let textField: TextFieldNode
+    private let textSeparatorNode: ASDisplayNode
+    private let pasteButton: HighlightableButtonNode
+    
     private let codeInputView: CodeInputView
     private let errorTextNode: ImmediateTextNode
+    
+    private let hintButtonNode: HighlightTrackingButtonNode
+    private let hintTextNode: ImmediateTextNode
+    private let hintArrowNode: ASImageNode
     
     private var codeType: SentAuthorizationCodeType?
     
@@ -50,6 +59,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     private var layoutArguments: (ContainerViewLayout, CGFloat)?
     
     private var appleSignInAllowed = false
+    
+    private var previousCodeType: SentAuthorizationCodeType?
+    private var isPrevious = false
     
     var phoneNumber: String = "" {
         didSet {
@@ -64,7 +76,12 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     var email: String?
     
     var currentCode: String {
-        return self.codeInputView.text
+        switch self.codeType {
+        case .word, .phrase:
+            return self.textField.textField.text ?? ""
+        default:
+            return self.codeInputView.text
+        }
     }
     
     var loginWithCode: ((String) -> Void)?
@@ -74,6 +91,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     var requestNextOption: (() -> Void)?
     var requestAnotherOption: (() -> Void)?
+    var requestPreviousOption: (() -> Void)?
     var updateNextEnabled: ((Bool) -> Void)?
     var reset: (() -> Void)?
     var retryReset: (() -> Void)?
@@ -81,6 +99,19 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     var inProgress: Bool = false {
         didSet {
             self.codeInputView.alpha = self.inProgress ? 0.6 : 1.0
+            
+            switch self.codeType {
+            case .word, .phrase:
+                if self.inProgress != oldValue {
+                    if self.inProgress {
+                        self.proceedNode.transitionToProgress()
+                    } else {
+                        self.proceedNode.transitionFromProgress()
+                    }
+                }
+            default:
+                break
+            }
         }
     }
     
@@ -107,6 +138,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.titleIconNode.displaysAsynchronously = false
         
         self.currentOptionNode = ImmediateTextNodeWithEntities()
+        self.currentOptionNode.balancedTextLayout = true
         self.currentOptionNode.isUserInteractionEnabled = false
         self.currentOptionNode.displaysAsynchronously = false
         self.currentOptionNode.lineSpacing = 0.1
@@ -127,7 +159,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         self.nextOptionButtonNode = HighlightableButtonNode()
         self.nextOptionButtonNode.displaysAsynchronously = false
-        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: .sms(length: 5), nextType: .call, timeout: 60, strings: self.strings, primaryColor: self.theme.list.itemPrimaryTextColor, accentColor: self.theme.list.itemAccentColor)
+        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: .sms(length: 5), nextType: .call, timeout: 60, strings: self.strings, primaryColor: self.theme.list.itemSecondaryTextColor, accentColor: self.theme.list.itemAccentColor)
         self.nextOptionTitleNode.attributedText = nextOptionText
         self.nextOptionButtonNode.isUserInteractionEnabled = nextOptionActive
         self.nextOptionButtonNode.accessibilityLabel = nextOptionText.string
@@ -137,6 +169,10 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.nextOptionButtonNode.accessibilityTraits = [.button, .notEnabled]
         }
         self.nextOptionButtonNode.addSubnode(self.nextOptionTitleNode)
+        
+        self.nextOptionArrowNode = ASImageNode()
+        self.nextOptionArrowNode.displaysAsynchronously = false
+        self.nextOptionArrowNode.isUserInteractionEnabled = false
         
         self.codeInputView = CodeInputView()
         self.codeInputView.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
@@ -151,10 +187,47 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.codeInputView.textField.keyboardType = .numberPad
         }
         
+        self.textSeparatorNode = ASDisplayNode()
+        self.textSeparatorNode.isLayerBacked = true
+        self.textSeparatorNode.backgroundColor = self.theme.list.itemPlainSeparatorColor
+        
+        self.textField = TextFieldNode()
+        self.textField.textField.font = Font.regular(20.0)
+        self.textField.textField.textColor = self.theme.list.itemPrimaryTextColor
+        self.textField.textField.textAlignment = .natural
+        self.textField.textField.autocorrectionType = .yes
+        self.textField.textField.autocorrectionType = .no
+        self.textField.textField.spellCheckingType = .yes
+        self.textField.textField.spellCheckingType = .no
+        self.textField.textField.autocapitalizationType = .none
+        self.textField.textField.keyboardType = .default
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            self.textField.textField.textContentType = UITextContentType(rawValue: "")
+        }
+        self.textField.textField.returnKeyType = .default
+        self.textField.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
+        self.textField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
+        self.textField.textField.tintColor = self.theme.list.itemAccentColor
+        
+        self.pasteButton = HighlightableButtonNode()
+        
         self.errorTextNode = ImmediateTextNode()
         self.errorTextNode.alpha = 0.0
         self.errorTextNode.displaysAsynchronously = false
         self.errorTextNode.textAlignment = .center
+        self.errorTextNode.isUserInteractionEnabled = false
+        
+        self.hintButtonNode = HighlightableButtonNode()
+        self.hintButtonNode.alpha = 0.0
+        self.hintButtonNode.isUserInteractionEnabled = false
+        
+        self.hintTextNode = ImmediateTextNode()
+        self.hintTextNode.displaysAsynchronously = false
+        self.hintTextNode.textAlignment = .center
+        self.hintTextNode.isUserInteractionEnabled = false
+        
+        self.hintArrowNode = ASImageNode()
+        self.hintArrowNode.displaysAsynchronously = false
         
         self.resetNode = HighlightableButtonNode()
         self.resetNode.displaysAsynchronously = false
@@ -175,11 +248,12 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.signInWithAppleButton?.isHidden = true
             (self.signInWithAppleButton as? ASAuthorizationAppleIDButton)?.cornerRadius = 11
         }
-        self.proceedNode = SolidRoundedButtonNode(title: self.strings.Login_OpenFragment, theme: SolidRoundedButtonTheme(backgroundColor: UIColor(rgb: 0x37475a), foregroundColor: .white), height: 50.0, cornerRadius: 11.0, gloss: false)
+        self.proceedNode = SolidRoundedButtonNode(title: self.strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: self.theme), height: 50.0, cornerRadius: 11.0, gloss: false)
         self.proceedNode.progressType = .embedded
         self.proceedNode.isHidden = true
         self.proceedNode.iconSpacing = 4.0
         self.proceedNode.animationSize = CGSize(width: 36.0, height: 36.0)
+        self.proceedNode.isEnabled = false
         
         super.init()
         
@@ -189,7 +263,12 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         self.backgroundColor = self.theme.list.plainBackgroundColor
         
+        self.textField.textField.delegate = self
+        
         self.addSubnode(self.codeInputView)
+        self.addSubnode(self.textSeparatorNode)
+        self.addSubnode(self.textField)
+        self.addSubnode(self.pasteButton)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.titleActivateAreaNode)
         self.addSubnode(self.titleIconNode)
@@ -197,19 +276,25 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.addSubnode(self.currentOptionActivateAreaNode)
         self.addSubnode(self.currentOptionInfoNode)
         self.addSubnode(self.nextOptionButtonNode)
+        self.nextOptionButtonNode.addSubnode(self.nextOptionArrowNode)
         self.addSubnode(self.animationNode)
         self.addSubnode(self.resetNode)
         self.addSubnode(self.resetTextNode)
         self.addSubnode(self.dividerNode)
         self.addSubnode(self.errorTextNode)
+        self.addSubnode(self.hintButtonNode)
+        self.hintButtonNode.addSubnode(self.hintTextNode)
+        self.hintButtonNode.addSubnode(self.hintArrowNode)
         self.addSubnode(self.proceedNode)
         
         self.codeInputView.updated = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.textChanged(text: strongSelf.codeInputView.text)
+            strongSelf.codeChanged(text: strongSelf.codeInputView.text)
         }
+        
+        self.textField.textField.addTarget(self, action: #selector(self.textDidChange), for: .editingChanged)
         
         self.codeInputView.longPressed = { [weak self] in
             guard let strongSelf = self else {
@@ -245,6 +330,18 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         }
         self.signInWithAppleButton?.addTarget(self, action: #selector(self.signInWithApplePressed), for: .touchUpInside)
         self.resetNode.addTarget(self, action: #selector(self.resetPressed), forControlEvents: .touchUpInside)
+        
+        self.pasteButton.setTitle(strings.Login_Paste, with: Font.medium(13.0), with: theme.list.itemAccentColor, for: .normal)
+        self.pasteButton.setBackgroundImage(generateStretchableFilledCircleImage(radius: 12.0, color: theme.list.itemAccentColor.withAlphaComponent(0.1)), for: .normal)
+        self.pasteButton.addTarget(self, action: #selector(self.pastePressed), forControlEvents: .touchUpInside)
+        
+        self.hintButtonNode.addTarget(self, action: #selector(self.previousOptionNodePressed), forControlEvents: .touchUpInside)
+        
+        self.hintArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/InlineTextRightArrow"), color: theme.list.itemAccentColor)
+        self.hintArrowNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+        self.nextOptionArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: theme.list.itemAccentColor)
+        
+        self.updatePasteVisibility()
     }
     
     deinit {
@@ -258,10 +355,24 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.view.addSubview(signInWithAppleButton)
         }
     }
+    
+    @objc private func pastePressed() {
+        if let text = UIPasteboard.general.string, !text.isEmpty {
+            if checkValidity(text: text) {
+                self.textField.textField.text = text
+                self.updatePasteVisibility()
+            }
+        }
+    }
         
+    func updatePasteVisibility() {
+        let text = self.textField.textField.text ?? ""
+        self.pasteButton.isHidden = !text.isEmpty
+    }
+    
     func updateCode(_ code: String) {
         self.codeInputView.text = code
-        self.textChanged(text: code)
+        self.codeChanged(text: code)
 
         if let codeLength = self.requiredCodeLength, code.count == Int(codeLength) {
             self.loginWithCode?(code)
@@ -293,10 +404,12 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeInputView.text = ""
     }
     
-    func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, appleSignInAllowed: Bool) {
+    func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, appleSignInAllowed: Bool, previousCodeType: SentAuthorizationCodeType?, isPrevious: Bool) {
         self.codeType = codeType
-        self.phoneNumber = number
+        self.phoneNumber = number.replacingOccurrences(of: " ", with: "\u{00A0}").replacingOccurrences(of: "-", with: "\u{2011}")
         self.email = email
+        self.previousCodeType = previousCodeType
+        self.isPrevious = isPrevious
         
         var appleSignInAllowed = appleSignInAllowed
         if #available(iOS 13.0, *) {
@@ -319,6 +432,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 self.currentOptionInfoActivateAreaNode.removeFromSupernode()
             }
         }
+                
         if let timeout = timeout {
             #if DEBUG
             let timeout = min(timeout, 5)
@@ -328,7 +442,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 if let strongSelf = self {
                     if let currentTimeoutTime = strongSelf.currentTimeoutTime, currentTimeoutTime > 0 {
                         strongSelf.currentTimeoutTime = currentTimeoutTime - 1
-                        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, timeout: strongSelf.currentTimeoutTime, strings: strongSelf.strings, primaryColor: strongSelf.theme.list.itemPrimaryTextColor, accentColor: strongSelf.theme.list.itemAccentColor)
+                        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, previousCodeType: isPrevious ? previousCodeType : nil, timeout: strongSelf.currentTimeoutTime, strings: strongSelf.strings, primaryColor: strongSelf.theme.list.itemSecondaryTextColor, accentColor: strongSelf.theme.list.itemAccentColor)
                         strongSelf.nextOptionTitleNode.attributedText = nextOptionText
                         strongSelf.nextOptionButtonNode.isUserInteractionEnabled = nextOptionActive
                         strongSelf.nextOptionButtonNode.accessibilityLabel = nextOptionText.string
@@ -368,7 +482,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.currentTimeoutTime = nil
             self.countdownDisposable.set(nil)
         }
-        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, timeout: self.currentTimeoutTime, strings: self.strings, primaryColor: self.theme.list.itemPrimaryTextColor, accentColor: self.theme.list.itemAccentColor)
+        
+        let (nextOptionText, nextOptionActive) = authorizationNextOptionText(currentType: codeType, nextType: nextType, previousCodeType: isPrevious ? previousCodeType : nil, timeout: self.currentTimeoutTime, strings: self.strings, primaryColor: self.theme.list.itemSecondaryTextColor, accentColor: self.theme.list.itemAccentColor)
         self.nextOptionTitleNode.attributedText = nextOptionText
         self.nextOptionButtonNode.isUserInteractionEnabled = nextOptionActive
         self.nextOptionButtonNode.accessibilityLabel = nextOptionText.string
@@ -377,6 +492,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         } else {
             self.nextOptionButtonNode.accessibilityTraits = [.button, .notEnabled]
         }
+        
+        self.nextOptionArrowNode.isHidden = previousCodeType == nil || !isPrevious
+        
         if let layoutArguments = self.layoutArguments {
             self.containerLayoutUpdated(layoutArguments.0, navigationBarHeight: layoutArguments.1, transition: .immediate)
         }
@@ -401,6 +519,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 
         var animationName = "IntroMessage"
         var animationPlaybackMode: AnimatedStickerPlaybackMode = .once
+        var textFieldPlaceholder = ""
         if let codeType = self.codeType {
             switch codeType {
             case .missedCall:
@@ -412,9 +531,20 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterCodeSMSTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
             case .fragment:
                 self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterCodeFragmentTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+               
+                self.proceedNode.title = self.strings.Login_OpenFragment
+                self.proceedNode.updateTheme(SolidRoundedButtonTheme(backgroundColor: UIColor(rgb: 0x37475a), foregroundColor: .white))
+                self.proceedNode.isEnabled = true
+                
                 animationName = "IntroFragment"
                 animationPlaybackMode = .count(3)
                 self.proceedNode.animation = "anim_fragment"
+            case .word:
+                self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterWordTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+                textFieldPlaceholder = self.strings.Login_EnterWordPlaceholder
+            case .phrase:
+                self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterPhraseTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+                textFieldPlaceholder = self.strings.Login_EnterPhrasePlaceholder
             default:
                 self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterCodeTelegramTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
             }
@@ -422,14 +552,17 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterCodeTelegramTitle, font: Font.semibold(40.0), textColor: self.theme.list.itemPrimaryTextColor)
         }
         
+        self.textField.textField.attributedPlaceholder = NSAttributedString(string: textFieldPlaceholder, font: Font.regular(20.0), textColor: self.theme.list.itemPlaceholderTextColor)
+        
         self.titleActivateAreaNode.accessibilityLabel = self.titleNode.attributedText?.string ?? ""
         
         if let inputHeight = layout.inputHeight {
-            if let codeType = self.codeType, case .email = codeType {
+            switch self.codeType {
+            case .email, .fragment:
                 insets.bottom = max(inputHeight, insets.bottom)
-            } else if let codeType = self.codeType, case .fragment = codeType {
-                insets.bottom = max(inputHeight, insets.bottom)
-            } else {
+            case .word, .phrase:
+                insets.bottom = max(inputHeight, layout.standardKeyboardHeight)
+            default:
                 insets.bottom = max(inputHeight, layout.standardInputHeight)
             }
         }
@@ -475,6 +608,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             codeLength = Int(length)
         case .emailSetupRequired:
             codeLength = 6
+        case .word, .phrase:
+            codeLength = 0
         case .none:
             codeLength = 6
         }
@@ -498,8 +633,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         if layout.size.width > 320.0 {
             items.append(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
             self.animationNode.updateLayout(size: animationSize)
+            self.animationNode.isHidden = false
+            self.animationNode.visibility = true
         } else {
             insets.top = navigationBarHeight
+            self.animationNode.isHidden = true
         }
         
         var additionalBottomInset: CGFloat = 20.0
@@ -550,7 +688,19 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                     }
                 }
                 
-                items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 30.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: canReset || pendingDate != nil ? 0.0 : 104.0, maxValue: canReset ? 0.0 : 104.0)))
+                switch codeType {
+                case .word, .phrase:
+                    self.codeInputView.isHidden = true
+                    self.textField.isHidden = false
+                    self.textSeparatorNode.isHidden = false
+                    items.append(AuthorizationLayoutItem(node: self.textField, size: CGSize(width: maximumWidth - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                    items.append(AuthorizationLayoutItem(node: self.textSeparatorNode, size: CGSize(width: maximumWidth - 48.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                default:
+                    self.codeInputView.isHidden = false
+                    self.textField.isHidden = true
+                    self.textSeparatorNode.isHidden = true
+                    items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 30.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: canReset || pendingDate != nil ? 0.0 : 104.0, maxValue: canReset ? 0.0 : 104.0)))
+                }
                 
                 if canReset {
                     self.resetNode.setAttributedTitle(NSAttributedString(string: self.strings.Login_Email_CantAccess, font: Font.regular(17.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center), for: [])
@@ -614,12 +764,27 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 } else {
                     self.signInWithAppleButton?.isHidden = true
                     self.dividerNode.isHidden = true
-                    self.proceedNode.isHidden = true
                     
-                    if case .email = codeType {
-                        self.nextOptionButtonNode.isHidden = true
-                    } else {
+                    switch codeType {
+                    case .word, .phrase:
+                        additionalBottomInset = 100.0
+                        
                         self.nextOptionButtonNode.isHidden = false
+                        items.append(AuthorizationLayoutItem(node: self.nextOptionButtonNode, size: nextOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 120.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                        if layout.size.width > 320.0 {
+                            self.proceedNode.isHidden = false
+                        } else {
+                            self.proceedNode.isHidden = true
+                        }
+                        
+                        let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - proceedSize.width) / 2.0), y: layout.size.height - insets.bottom - proceedSize.height - inset), size: proceedSize)
+                        transition.updateFrame(node: self.proceedNode, frame: buttonFrame)
+                    case .email:
+                        self.nextOptionButtonNode.isHidden = true
+                        self.proceedNode.isHidden = true
+                    default:
+                        self.nextOptionButtonNode.isHidden = false
+                        self.proceedNode.isHidden = true
                         items.append(AuthorizationLayoutItem(node: self.nextOptionButtonNode, size: nextOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 120.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
                     }
                 }
@@ -636,7 +801,79 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
         
+        if let codeType = self.codeType {
+            let yOffset: CGFloat = layout.size.width > 320.0 ? 18.0 : 5.0
+            if let previousCodeType = self.previousCodeType, !self.isPrevious {
+                self.hintButtonNode.alpha = 1.0
+                self.hintButtonNode.isUserInteractionEnabled = true
+                
+                let actionTitle: String
+                switch previousCodeType {
+                case .word:
+                    actionTitle = self.strings.Login_BackToWord
+                case .phrase:
+                    actionTitle = self.strings.Login_BackToPhrase
+                default:
+                    actionTitle = self.strings.Login_BackToCode
+                }
+                
+                self.hintTextNode.attributedText = NSAttributedString(string: actionTitle, font: Font.regular(13.0), textColor: self.theme.list.itemAccentColor, paragraphAlignment: .center)
+                
+                let originY: CGFloat
+                if !self.codeInputView.isHidden {
+                    originY = self.codeInputView.frame.maxY + 6.0
+                } else {
+                    originY = self.textField.frame.maxY
+                }
+                
+                let hintTextSize = self.hintTextNode.updateLayout(CGSize(width: layout.size.width - 48.0, height: .greatestFiniteMagnitude))
+                transition.updateFrame(node: self.hintButtonNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - hintTextSize.width) / 2.0), y: originY + yOffset), size: hintTextSize))
+                self.hintTextNode.frame = CGRect(origin: .zero, size: hintTextSize)
+                
+                if let icon = self.hintArrowNode.image {
+                    self.hintArrowNode.frame = CGRect(origin: CGPoint(x: self.hintTextNode.frame.minX - icon.size.width - 5.0, y: self.hintTextNode.frame.midY - icon.size.height / 2.0), size: icon.size)
+                }
+                self.hintArrowNode.isHidden = false
+            } else if case .phrase = codeType {
+                if self.errorTextNode.alpha.isZero {
+                    self.hintButtonNode.alpha = 1.0
+                }
+                self.hintButtonNode.isUserInteractionEnabled = false
+                
+                self.hintTextNode.attributedText = NSAttributedString(string: self.strings.Login_EnterPhraseHint, font: Font.regular(13.0), textColor: self.theme.list.itemSecondaryTextColor, paragraphAlignment: .center)
+                
+                let hintTextSize = self.hintTextNode.updateLayout(CGSize(width: layout.size.width - 48.0, height: .greatestFiniteMagnitude))
+                transition.updateFrame(node: self.hintButtonNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - hintTextSize.width) / 2.0), y: self.textField.frame.maxY + yOffset), size: hintTextSize))
+                self.hintTextNode.frame = CGRect(origin: .zero, size: hintTextSize)
+                
+                let pasteSize = self.pasteButton.measure(layout.size)
+                let pasteButtonSize = CGSize(width: pasteSize.width + 16.0, height: 24.0)
+                transition.updateFrame(node: self.pasteButton, frame: CGRect(origin: CGPoint(x: layout.size.width - 40.0 - pasteButtonSize.width, y: self.textField.frame.midY - pasteButtonSize.height / 2.0), size: pasteButtonSize))
+                self.hintArrowNode.isHidden = true
+            } else if case .word = codeType {
+                self.hintButtonNode.alpha = 0.0
+                self.hintButtonNode.isUserInteractionEnabled = false
+                self.hintArrowNode.isHidden = true
+                
+                let pasteSize = self.pasteButton.measure(layout.size)
+                let pasteButtonSize = CGSize(width: pasteSize.width + 16.0, height: 24.0)
+                transition.updateFrame(node: self.pasteButton, frame: CGRect(origin: CGPoint(x: layout.size.width - 40.0 - pasteButtonSize.width, y: self.textField.frame.midY - pasteButtonSize.height / 2.0), size: pasteButtonSize))
+            } else {
+                self.hintButtonNode.alpha = 0.0
+                self.hintButtonNode.isUserInteractionEnabled = false
+                self.hintArrowNode.isHidden = true
+            }
+        } else {
+            self.hintButtonNode.alpha = 0.0
+            self.hintButtonNode.isUserInteractionEnabled = false
+            self.hintArrowNode.isHidden = true
+        }
+        
         self.nextOptionTitleNode.frame = self.nextOptionButtonNode.bounds
+        
+        if let icon = self.nextOptionArrowNode.image {
+            self.nextOptionArrowNode.frame = CGRect(origin: CGPoint(x: self.nextOptionTitleNode.frame.maxX + 7.0, y: self.nextOptionTitleNode.frame.midY - icon.size.height / 2.0), size: icon.size)
+        }
         
         self.titleActivateAreaNode.frame = self.titleNode.frame
         self.currentOptionActivateAreaNode.frame = self.currentOptionNode.frame
@@ -644,31 +881,90 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     }
     
     func activateInput() {
-        let _ = self.codeInputView.becomeFirstResponder()
+        switch self.codeType {
+        case .word, .phrase:
+            self.textField.textField.becomeFirstResponder()
+        default:
+            let _ = self.codeInputView.becomeFirstResponder()
+        }
     }
     
     func animateError() {
-        self.codeInputView.layer.addShakeAnimation()
+        switch self.codeType {
+        case .word, .phrase:
+            self.textField.layer.addShakeAnimation()
+        default:
+            self.codeInputView.layer.addShakeAnimation()
+        }
+    }
+    
+    func selectIncorrectPart() {
+        switch self.codeType {
+        case .word:
+            self.textField.textField.selectAll(nil)
+        case let .phrase(startsWith):
+            if let startsWith, let fromPosition = self.textField.textField.position(from: self.textField.textField.beginningOfDocument, offset: startsWith.count + 1) {
+                self.textField.textField.selectedTextRange = self.textField.textField.textRange(from: fromPosition, to: self.textField.textField.endOfDocument)
+            } else {
+                self.textField.textField.selectAll(nil)
+            }
+        default:
+            break
+        }
     }
     
     func animateError(text: String) {
-        self.codeInputView.animateError()
-        self.codeInputView.layer.addShakeAnimation(amplitude: -30.0, duration: 0.5, count: 6, decay: true)
+        let errorOriginY: CGFloat
+        let errorOriginOffset: CGFloat
+        switch self.codeType {
+        case .word, .phrase:
+            self.textField.layer.addShakeAnimation()
+            
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
+            transition.updateBackgroundColor(node: self.textSeparatorNode, color: self.theme.list.itemDestructiveColor)
+            errorOriginY = self.textField.frame.maxY
+            errorOriginOffset = 5.0
+        default:
+            self.codeInputView.animateError()
+            self.codeInputView.layer.addShakeAnimation(amplitude: -30.0, duration: 0.5, count: 6, decay: true)
+            errorOriginY = self.codeInputView.frame.maxY
+            errorOriginOffset = 11.0
+        }
         
-        self.errorTextNode.attributedText = NSAttributedString(string: text, font: Font.regular(17.0), textColor: self.theme.list.itemDestructiveColor, paragraphAlignment: .center)
+        self.errorTextNode.attributedText = NSAttributedString(string: text, font: Font.regular(13.0), textColor: self.theme.list.itemDestructiveColor, paragraphAlignment: .center)
         
         if let (layout, _) = self.layoutArguments {
             let errorTextSize = self.errorTextNode.updateLayout(CGSize(width: layout.size.width - 48.0, height: .greatestFiniteMagnitude))
-            let yOffset: CGFloat = layout.size.width > 320.0 ? 28.0 : 15.0
-            self.errorTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - errorTextSize.width) / 2.0), y: self.codeInputView.frame.maxY + yOffset), size: errorTextSize)
+            let yOffset: CGFloat = layout.size.width > 320.0 ? errorOriginOffset + 13.0 : errorOriginOffset
+            self.errorTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - errorTextSize.width) / 2.0), y: errorOriginY + yOffset), size: errorTextSize)
         }
         self.errorTextNode.alpha = 1.0
         self.errorTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-        self.errorTextNode.layer.addShakeAnimation(amplitude: -8.0, duration: 0.5, count: 6, decay: true)
         
-        Queue.mainQueue().after(0.85) {
+        let previousHintAlpha = self.hintButtonNode.alpha
+        self.hintButtonNode.alpha = 0.0
+        self.hintButtonNode.layer.animateAlpha(from: previousHintAlpha, to: 0.0, duration: 0.1)
+        
+        let previousResetAlpha = self.resetNode.alpha
+        if !self.resetNode.isHidden {
+            self.resetNode.alpha = 0.0
+            self.resetNode.layer.animateAlpha(from: previousResetAlpha, to: 0.0, duration: 0.1)
+        }
+        
+        Queue.mainQueue().after(1.6) {
             self.errorTextNode.alpha = 0.0
             self.errorTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
+            
+            self.hintButtonNode.alpha = previousHintAlpha
+            self.hintButtonNode.layer.animateAlpha(from: 0.0, to: previousHintAlpha, duration: 0.1)
+            
+            if !self.resetNode.isHidden {
+                self.resetNode.alpha = previousResetAlpha
+                self.resetNode.layer.animateAlpha(from: 0.0, to: previousResetAlpha, duration: 0.1)
+            }
+            
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
+            transition.updateBackgroundColor(node: self.textSeparatorNode, color: self.theme.list.itemPlainSeparatorColor)
         }
     }
     
@@ -678,12 +974,16 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         let values: [NSNumber] = [1.0, 1.1, 1.0]
         self.codeInputView.layer.animateKeyframes(values: values, duration: 0.4, keyPath: "transform.scale")
     }
-    
-    @objc func codeFieldTextChanged(_ textField: UITextField) {
-        self.textChanged(text: textField.text ?? "")
-    }
+            
+    @objc private func textDidChange() {
+        let text = self.textField.textField.text ?? ""
+        self.proceedNode.isEnabled = !text.isEmpty
+        self.updateNextEnabled?(!text.isEmpty)
         
-    private func textChanged(text: String) {
+        self.updatePasteVisibility()
+    }
+    
+    private func codeChanged(text: String) {
         self.updateNextEnabled?(!text.isEmpty)
         if let codeType = self.codeType {
             var codeLength: Int32?
@@ -710,24 +1010,45 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             }
         }
     }
-    
+
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if self.inProgress {
             return false
         }
-        var result = ""
-        for c in string {
-            if c.unicodeScalars.count == 1 {
-                let scalar = c.unicodeScalars.first!
-                if scalar >= "0" && scalar <= "9" {
-                    result.append(c)
-                }
-            }
+        
+        var updated = textField.text ?? ""
+        updated.replaceSubrange(updated.index(updated.startIndex, offsetBy: range.lowerBound) ..< updated.index(updated.startIndex, offsetBy: range.upperBound), with: string)
+        
+        if updated.isEmpty {
+            return true
+        } else {
+            return checkValidity(text: updated) && !updated.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
-        if result != string {
-            textField.text = result
-            self.codeFieldTextChanged(textField)
-            return false
+    }
+    
+    func checkValidity(text: String) -> Bool {
+        if let codeType = self.codeType {
+            switch codeType {
+            case let .word(startsWith):
+                if let startsWith, startsWith.count == 1, !text.isEmpty && !text.hasPrefix(startsWith) {
+                    if self.errorTextNode.alpha.isZero {
+                        self.animateError(text: self.strings.Login_WrongPhraseError)
+                    }
+                    return false
+                }
+            case let .phrase(startsWith):
+                if let startsWith, !text.isEmpty {
+                    let firstWord = text.components(separatedBy: " ").first ?? ""
+                    if !firstWord.isEmpty && !startsWith.hasPrefix(firstWord) {
+                        if self.errorTextNode.alpha.isZero, text.count < 4 {
+                            self.animateError(text: self.strings.Login_WrongPhraseError)
+                        }
+                        return false
+                    }
+                }
+            default:
+                break
+            }
         }
         return true
     }
@@ -736,9 +1057,20 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.requestAnotherOption?()
     }
     
+    @objc func previousOptionNodePressed() {
+        self.requestPreviousOption?()
+    }
+    
     @objc func proceedPressed() {
-        if case let .fragment(url, _) = self.codeType {
+        switch self.codeType {
+        case let .fragment(url, _):
             self.openFragment?(url)
+        case .word, .phrase:
+            if let text = self.textField.textField.text, !text.isEmpty {
+                self.loginWithCode?(text)
+            }
+        default:
+            break
         }
     }
     

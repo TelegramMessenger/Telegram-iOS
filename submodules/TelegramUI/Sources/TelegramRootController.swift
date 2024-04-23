@@ -273,6 +273,23 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         presentedLegacyShortcutCamera(context: self.context, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
     }
     
+    public func openAppIcon() {
+        guard let rootTabController = self.rootTabController else {
+            return
+        }
+        
+        self.popToRoot(animated: false)
+        
+        if let index = rootTabController.controllers.firstIndex(where: { $0 is PeerInfoScreenImpl }) {
+            rootTabController.selectedIndex = index
+        }
+        
+        let themeController = themeSettingsController(context: self.context, focusOnItemTag: .icon)
+        var controllers: [UIViewController] = Array(self.viewControllers.prefix(1))
+        controllers.append(themeController)
+        self.setViewControllers(controllers, animated: true)
+    }
+    
     @discardableResult
     public func openStoryCamera(customTarget: EnginePeer.Id?, transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator? {
         guard let controller = self.viewControllers.last as? ViewController else {

@@ -310,10 +310,10 @@ public enum ProxySettingsControllerMode {
 
 public func proxySettingsController(context: AccountContext, mode: ProxySettingsControllerMode = .default) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    return proxySettingsController(accountManager: context.sharedContext.accountManager, context: context, postbox: context.account.postbox, network: context.account.network, mode: mode, presentationData: presentationData, updatedPresentationData: context.sharedContext.presentationData)
+    return proxySettingsController(accountManager: context.sharedContext.accountManager, sharedContext: context.sharedContext, context: context, postbox: context.account.postbox, network: context.account.network, mode: mode, presentationData: presentationData, updatedPresentationData: context.sharedContext.presentationData)
 }
 
-public func proxySettingsController(accountManager: AccountManager<TelegramAccountManagerTypes>, context: AccountContext? = nil, postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, presentationData: PresentationData, updatedPresentationData: Signal<PresentationData, NoError>) -> ViewController {
+public func proxySettingsController(accountManager: AccountManager<TelegramAccountManagerTypes>, sharedContext: SharedAccountContext, context: AccountContext? = nil, postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, presentationData: PresentationData, updatedPresentationData: Signal<PresentationData, NoError>) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     let stateValue = Atomic(value: ProxySettingsControllerState())
@@ -341,7 +341,7 @@ public func proxySettingsController(accountManager: AccountManager<TelegramAccou
             return current
         }).start()
     }, addNewServer: {
-        pushControllerImpl?(proxyServerSettingsController(presentationData: presentationData, updatedPresentationData: updatedPresentationData, accountManager: accountManager, network: network, currentSettings: nil))
+        pushControllerImpl?(proxyServerSettingsController(sharedContext: sharedContext, presentationData: presentationData, updatedPresentationData: updatedPresentationData, accountManager: accountManager, network: network, currentSettings: nil))
     }, activateServer: { server in
         let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
@@ -354,7 +354,7 @@ public func proxySettingsController(accountManager: AccountManager<TelegramAccou
             return current
         }).start()
     }, editServer: { server in
-        pushControllerImpl?(proxyServerSettingsController(presentationData: presentationData, updatedPresentationData: updatedPresentationData, accountManager: accountManager, network: network, currentSettings: server))
+        pushControllerImpl?(proxyServerSettingsController(sharedContext: sharedContext, presentationData: presentationData, updatedPresentationData: updatedPresentationData, accountManager: accountManager, network: network, currentSettings: server))
     }, removeServer: { server in
         let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current

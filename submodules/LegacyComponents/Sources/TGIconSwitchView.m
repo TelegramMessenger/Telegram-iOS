@@ -30,8 +30,10 @@ static const void *positionChangedKey = &positionChangedKey;
 @interface TGIconSwitchView () {
     UIImageView *_offIconView;
     UIImageView *_onIconView;
+    UIColor *_negativeContentColor;
     
     bool _stateIsOn;
+    bool _isLocked;
 }
 
 @end
@@ -41,49 +43,42 @@ static const void *positionChangedKey = &positionChangedKey;
 - (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self != nil) {
-        if (iosMajorVersion() >= 8) {
-            _offIconView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PermissionSwitchOff.png")];
-            _onIconView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PermissionSwitchOn.png")];
-            self.layer.cornerRadius = 17.0f;
-            self.backgroundColor = [UIColor redColor];
-            self.tintColor = [UIColor redColor];
-            UIView *handleView = self.subviews[0].subviews.lastObject;
-            if (iosMajorVersion() >= 13) {
-                handleView = self.subviews[0].subviews[1].subviews.lastObject;
-            } else {
-                handleView = self.subviews[0].subviews.lastObject;
-            }
-            
-            static Class subclass;
-            static dispatch_once_t onceToken;
-            dispatch_once(&onceToken, ^{
-                subclass = freedomMakeClass([handleView.layer class], [TGBaseIconSwitch class]);
-                object_setClass(handleView.layer, subclass);
-            });
-            
-            CGPoint offset = CGPointZero;
-            if (iosMajorVersion() >= 12) {
-                offset = CGPointMake(-7.0, -3.0);
-            }
-            
-            _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(14.5f) + offset.y);
-            _onIconView.frame = CGRectOffset(_onIconView.bounds, 20.0f + offset.x, 15.0f + offset.y);
-            [handleView addSubview:_onIconView];
-            [handleView addSubview:_offIconView];
-            
-            _onIconView.alpha = 0.0f;
-            
-            [self addTarget:self action:@selector(currentValueChanged) forControlEvents:UIControlEventValueChanged];
-            
-            __weak TGIconSwitchView *weakSelf = self;
-            void (^block)(CGPoint) = ^(CGPoint point) {
-                __strong TGIconSwitchView *strongSelf = weakSelf;
-                if (strongSelf != nil) {
-                    [strongSelf updateState:point.x > 30.0 animated:true force:false];
-                }
-            };
-            objc_setAssociatedObject(handleView.layer, positionChangedKey, [block copy], OBJC_ASSOCIATION_RETAIN);
+        _offIconView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PermissionSwitchOff.png")];
+        _onIconView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"PermissionSwitchOn.png")];
+        self.layer.cornerRadius = 17.0f;
+        self.backgroundColor = [UIColor redColor];
+        self.tintColor = [UIColor redColor];
+        UIView *handleView = self.subviews[0].subviews.lastObject;
+        if (iosMajorVersion() >= 13) {
+            handleView = self.subviews[0].subviews[1].subviews.lastObject;
+        } else {
+            handleView = self.subviews[0].subviews.lastObject;
         }
+        
+        static Class subclass;
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            subclass = freedomMakeClass([handleView.layer class], [TGBaseIconSwitch class]);
+            object_setClass(handleView.layer, subclass);
+        });
+        
+        [self updateIconFrame];
+        
+        [handleView addSubview:_onIconView];
+        [handleView addSubview:_offIconView];
+        
+        _onIconView.alpha = 0.0f;
+        
+        [self addTarget:self action:@selector(currentValueChanged) forControlEvents:UIControlEventValueChanged];
+        
+        __weak TGIconSwitchView *weakSelf = self;
+        void (^block)(CGPoint) = ^(CGPoint point) {
+            __strong TGIconSwitchView *strongSelf = weakSelf;
+            if (strongSelf != nil) {
+                [strongSelf updateState:point.x > 30.0 animated:true force:false];
+            }
+        };
+        objc_setAssociatedObject(handleView.layer, positionChangedKey, [block copy], OBJC_ASSOCIATION_RETAIN);
     }
     return self;
 }
@@ -92,6 +87,21 @@ static const void *positionChangedKey = &positionChangedKey;
     [super setOn:on animated:animated];
     
     [self updateState:on animated:animated force:true];
+}
+
+- (void)updateIconFrame {
+    CGPoint offset = CGPointZero;
+    if (iosMajorVersion() >= 12) {
+        offset = CGPointMake(-7.0, -3.0);
+    }
+    
+    if (_isLocked) {
+        _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(12.5f) + offset.y);
+    } else {
+        _offIconView.frame = CGRectOffset(_offIconView.bounds, TGScreenPixelFloor(21.5f) + offset.x, TGScreenPixelFloor(14.5f) + offset.y);
+    }
+    
+    _onIconView.frame = CGRectOffset(_onIconView.bounds, 20.0f + offset.x, 15.0f + offset.y);
 }
 
 - (void)updateState:(bool)on animated:(bool)animated force:(bool)force {
@@ -127,7 +137,24 @@ static const void *positionChangedKey = &positionChangedKey;
 }
 
 - (void)setNegativeContentColor:(UIColor *)color {
-    _offIconView.image = TGTintedImage(TGComponentsImageNamed(@"PermissionSwitchOff.png"), color);
+    _negativeContentColor = color;
+    if (_isLocked) {
+        _offIconView.image = TGTintedImage(TGComponentsImageNamed(@"Item List/SwitchLockIcon"), color);
+        _offIconView.frame = CGRectMake(_offIconView.frame.origin.x, _offIconView.frame.origin.y, _offIconView.image.size.width, _offIconView.image.size.height);
+    } else {
+        _offIconView.image = TGTintedImage(TGComponentsImageNamed(@"PermissionSwitchOff.png"), color);
+    }
+}
+
+- (void)updateIsLocked:(bool)isLocked {
+    if (_isLocked != isLocked) {
+        _isLocked = isLocked;
+        
+        if (_negativeContentColor) {
+            [self setNegativeContentColor:_negativeContentColor];
+        }
+        [self updateIconFrame];
+    }
 }
 
 - (void)currentValueChanged {

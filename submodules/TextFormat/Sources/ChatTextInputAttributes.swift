@@ -80,6 +80,7 @@ public struct ChatTextFontAttributes: OptionSet, Hashable, Sequence {
     public static let italic = ChatTextFontAttributes(rawValue: 1 << 1)
     public static let monospace = ChatTextFontAttributes(rawValue: 1 << 2)
     public static let blockQuote = ChatTextFontAttributes(rawValue: 1 << 3)
+    public static let smaller = ChatTextFontAttributes(rawValue: 1 << 4)
     
     public func makeIterator() -> AnyIterator<ChatTextFontAttributes> {
         var index = 0

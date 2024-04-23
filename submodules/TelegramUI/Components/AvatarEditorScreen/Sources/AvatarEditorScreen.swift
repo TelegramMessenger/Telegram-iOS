@@ -483,7 +483,7 @@ final class AvatarEditorScreenComponent: Component {
                         }))
                     }
                 case let .category(value):
-                    let resultSignal = context.engine.stickers.searchEmoji(emojiString: value)
+                    let resultSignal = context.engine.stickers.searchEmoji(category: value)
                     |> mapToSignal { files, isFinalResult -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                         var items: [EmojiPagerContentComponent.Item] = []
                         
@@ -557,11 +557,11 @@ final class AvatarEditorScreenComponent: Component {
                                     fillWithLoadingPlaceholders: true,
                                     items: []
                                 )
-                            ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                            ], id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                             return
                         }
                         
-                        self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                        self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                         version += 1
                     }))
                 }
@@ -1542,8 +1542,7 @@ public final class AvatarEditorScreen: ViewControllerComponentContainer {
             hasTrending: false,
             forceHasPremium: true,
             searchIsPlaceholderOnly: false,
-            isProfilePhotoEmojiSelection: !isGroup,
-            isGroupPhotoEmojiSelection: isGroup
+            subject: isGroup ? .groupPhotoEmojiSelection : .profilePhotoEmojiSelection
         )
         
         let signal = combineLatest(queue: .mainQueue(),

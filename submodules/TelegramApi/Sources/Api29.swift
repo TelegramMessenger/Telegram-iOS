@@ -1,4 +1,102 @@
 public extension Api.help {
+    enum DeepLinkInfo: TypeConstructorDescription {
+        case deepLinkInfo(flags: Int32, message: String, entities: [Api.MessageEntity]?)
+        case deepLinkInfoEmpty
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .deepLinkInfo(let flags, let message, let entities):
+                    if boxed {
+                        buffer.appendInt32(1783556146)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(message, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities!.count))
+                    for item in entities! {
+                        item.serialize(buffer, true)
+                    }}
+                    break
+                case .deepLinkInfoEmpty:
+                    if boxed {
+                        buffer.appendInt32(1722786150)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .deepLinkInfo(let flags, let message, let entities):
+                return ("deepLinkInfo", [("flags", flags as Any), ("message", message as Any), ("entities", entities as Any)])
+                case .deepLinkInfoEmpty:
+                return ("deepLinkInfoEmpty", [])
+    }
+    }
+    
+        public static func parse_deepLinkInfo(_ reader: BufferReader) -> DeepLinkInfo? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: [Api.MessageEntity]?
+            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.help.DeepLinkInfo.deepLinkInfo(flags: _1!, message: _2!, entities: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_deepLinkInfoEmpty(_ reader: BufferReader) -> DeepLinkInfo? {
+            return Api.help.DeepLinkInfo.deepLinkInfoEmpty
+        }
+    
+    }
+}
+public extension Api.help {
+    enum InviteText: TypeConstructorDescription {
+        case inviteText(message: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inviteText(let message):
+                    if boxed {
+                        buffer.appendInt32(415997816)
+                    }
+                    serializeString(message, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inviteText(let message):
+                return ("inviteText", [("message", message as Any)])
+    }
+    }
+    
+        public static func parse_inviteText(_ reader: BufferReader) -> InviteText? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.help.InviteText.inviteText(message: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.help {
     enum PassportConfig: TypeConstructorDescription {
         case passportConfig(hash: Int32, countriesLangs: Api.DataJSON)
         case passportConfigNotModified
@@ -1158,186 +1256,6 @@ public extension Api.messages {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.messages.BotApp.botApp(flags: _1!, app: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum BotCallbackAnswer: TypeConstructorDescription {
-        case botCallbackAnswer(flags: Int32, message: String?, url: String?, cacheTime: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .botCallbackAnswer(let flags, let message, let url, let cacheTime):
-                    if boxed {
-                        buffer.appendInt32(911761060)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(message!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
-                    serializeInt32(cacheTime, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .botCallbackAnswer(let flags, let message, let url, let cacheTime):
-                return ("botCallbackAnswer", [("flags", flags as Any), ("message", message as Any), ("url", url as Any), ("cacheTime", cacheTime as Any)])
-    }
-    }
-    
-        public static func parse_botCallbackAnswer(_ reader: BufferReader) -> BotCallbackAnswer? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
-            var _3: String?
-            if Int(_1!) & Int(1 << 2) != 0 {_3 = parseString(reader) }
-            var _4: Int32?
-            _4 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.messages.BotCallbackAnswer.botCallbackAnswer(flags: _1!, message: _2, url: _3, cacheTime: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum BotResults: TypeConstructorDescription {
-        case botResults(flags: Int32, queryId: Int64, nextOffset: String?, switchPm: Api.InlineBotSwitchPM?, switchWebview: Api.InlineBotWebView?, results: [Api.BotInlineResult], cacheTime: Int32, users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .botResults(let flags, let queryId, let nextOffset, let switchPm, let switchWebview, let results, let cacheTime, let users):
-                    if boxed {
-                        buffer.appendInt32(-534646026)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(queryId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {switchPm!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 3) != 0 {switchWebview!.serialize(buffer, true)}
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(results.count))
-                    for item in results {
-                        item.serialize(buffer, true)
-                    }
-                    serializeInt32(cacheTime, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .botResults(let flags, let queryId, let nextOffset, let switchPm, let switchWebview, let results, let cacheTime, let users):
-                return ("botResults", [("flags", flags as Any), ("queryId", queryId as Any), ("nextOffset", nextOffset as Any), ("switchPm", switchPm as Any), ("switchWebview", switchWebview as Any), ("results", results as Any), ("cacheTime", cacheTime as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_botResults(_ reader: BufferReader) -> BotResults? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_3 = parseString(reader) }
-            var _4: Api.InlineBotSwitchPM?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.InlineBotSwitchPM
-            } }
-            var _5: Api.InlineBotWebView?
-            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.InlineBotWebView
-            } }
-            var _6: [Api.BotInlineResult]?
-            if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotInlineResult.self)
-            }
-            var _7: Int32?
-            _7 = reader.readInt32()
-            var _8: [Api.User]?
-            if let _ = reader.readInt32() {
-                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.messages.BotResults.botResults(flags: _1!, queryId: _2!, nextOffset: _3, switchPm: _4, switchWebview: _5, results: _6!, cacheTime: _7!, users: _8!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum ChatAdminsWithInvites: TypeConstructorDescription {
-        case chatAdminsWithInvites(admins: [Api.ChatAdminWithInvites], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .chatAdminsWithInvites(let admins, let users):
-                    if boxed {
-                        buffer.appendInt32(-1231326505)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(admins.count))
-                    for item in admins {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .chatAdminsWithInvites(let admins, let users):
-                return ("chatAdminsWithInvites", [("admins", admins as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_chatAdminsWithInvites(_ reader: BufferReader) -> ChatAdminsWithInvites? {
-            var _1: [Api.ChatAdminWithInvites]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ChatAdminWithInvites.self)
-            }
-            var _2: [Api.User]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.ChatAdminsWithInvites.chatAdminsWithInvites(admins: _1!, users: _2!)
             }
             else {
                 return nil

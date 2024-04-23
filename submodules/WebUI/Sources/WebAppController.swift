@@ -9,7 +9,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 import AttachmentUI
-import CounterContollerTitleView
+import CounterControllerTitleView
 import ContextUI
 import PresentationDataUtils
 import HexColor
@@ -258,7 +258,11 @@ public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) ->
 public final class WebAppController: ViewController, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = { }
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
+    public var parentController: () -> ViewController? = {
+        return nil
+    }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void  = { _, _ in }
+    public var updateTabBarVisibility: (Bool, ContainedViewLayoutTransition) -> Void = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
@@ -584,42 +588,66 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
                 
         func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+            var completed = false
             let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: message, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
-                completionHandler()
+                if !completed {
+                    completed = true
+                    completionHandler()
+                }
             })])
             alertController.dismissed = { byOutsideTap in
                 if byOutsideTap {
-                    completionHandler()
+                    if !completed {
+                        completed = true
+                        completionHandler()
+                    }
                 }
             }
             self.controller?.present(alertController, in: .window(.root))
         }
 
         func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+            var completed = false
             let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: message, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
-                completionHandler(false)
+                if !completed {
+                    completed = true
+                    completionHandler(false)
+                }
             }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
-                completionHandler(true)
+                if !completed {
+                    completed = true
+                    completionHandler(true)
+                }
             })])
             alertController.dismissed = { byOutsideTap in
                 if byOutsideTap {
-                    completionHandler(false)
+                    if !completed {
+                        completed = true
+                        completionHandler(false)
+                    }
                 }
             }
             self.controller?.present(alertController, in: .window(.root))
         }
 
         func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+            var completed = false
             let promptController = promptController(sharedContext: self.context.sharedContext, updatedPresentationData: self.controller?.updatedPresentationData, text: prompt, value: defaultText, apply: { value in
-                if let value = value {
-                    completionHandler(value)
-                } else {
-                    completionHandler(nil)
+                if !completed {
+                    completed = true
+                    if let value = value {
+                        completionHandler(value)
+                    } else {
+                        completionHandler(nil)
+                    }
                 }
             })
             promptController.dismissed = { byOutsideTap in
                 if byOutsideTap {
-                    completionHandler(nil)
+                    if !completed {
+                        completed = true
+                        completionHandler(nil)
+                    }
                 }
             }
             self.controller?.present(promptController, in: .window(.root))
@@ -1501,10 +1529,18 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 var alertTitle: String?
                 let alertText: String
                 if let reason {
-                    alertTitle = self.presentationData.strings.WebApp_AlertBiometryAccessText(botPeer.compactDisplayTitle).string
+                    if case .touchId = LocalAuth.biometricAuthentication {
+                        alertTitle = self.presentationData.strings.WebApp_AlertBiometryAccessTouchIDText(botPeer.compactDisplayTitle).string
+                    } else {
+                        alertTitle = self.presentationData.strings.WebApp_AlertBiometryAccessText(botPeer.compactDisplayTitle).string
+                    }
                     alertText = reason
                 } else {
-                    alertText = self.presentationData.strings.WebApp_AlertBiometryAccessText(botPeer.compactDisplayTitle).string
+                    if case .touchId = LocalAuth.biometricAuthentication {
+                        alertText = self.presentationData.strings.WebApp_AlertBiometryAccessTouchIDText(botPeer.compactDisplayTitle).string
+                    } else {
+                        alertText = self.presentationData.strings.WebApp_AlertBiometryAccessText(botPeer.compactDisplayTitle).string
+                    }
                 }
                 controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: alertTitle, text: alertText, actions: [
                     TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_No, action: {
@@ -1703,7 +1739,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         return self.displayNode as! Node
     }
     
-    private var titleView: CounterContollerTitleView?
+    private var titleView: CounterControllerTitleView?
     fileprivate let cancelButtonNode: WebAppCancelButtonNode
     fileprivate let moreButtonNode: MoreButtonNode
     
@@ -1774,8 +1810,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.navigationItem.rightBarButtonItem?.action = #selector(self.moreButtonPressed)
         self.navigationItem.rightBarButtonItem?.target = self
         
-        let titleView = CounterContollerTitleView(theme: self.presentationData.theme)
-        titleView.title = CounterContollerTitle(title: params.botName, counter: self.presentationData.strings.Bot_GenericBotStatus)
+        let titleView = CounterControllerTitleView(theme: self.presentationData.theme)
+        titleView.title = CounterControllerTitle(title: params.botName, counter: self.presentationData.strings.Bot_GenericBotStatus)
         self.navigationItem.titleView = titleView
         self.titleView = titleView
         

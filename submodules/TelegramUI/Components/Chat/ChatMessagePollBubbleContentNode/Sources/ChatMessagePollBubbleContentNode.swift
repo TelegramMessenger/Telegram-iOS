@@ -16,6 +16,7 @@ import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import PollBubbleTimerNode
 import MergedAvatarsNode
+import TextNodeWithEntities
 
 private final class ChatMessagePollOptionRadioNodeParameters: NSObject {
     let timestamp: Double
@@ -386,7 +387,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private(set) var radioNode: ChatMessagePollOptionRadioNode?
     private let percentageNode: ASDisplayNode
     private var percentageImage: UIImage?
-    private var titleNode: TextNode?
+    private var titleNode: TextNodeWithEntities?
     private let buttonNode: HighlightTrackingButtonNode
     let separatorNode: ASDisplayNode
     private let resultBarNode: ASImageNode
@@ -399,6 +400,20 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private var theme: PresentationTheme?
     
     weak var previousOptionNode: ChatMessagePollOptionNode?
+    
+    var visibilityRect: CGRect? {
+        didSet {
+            if self.visibilityRect != oldValue {
+                if let titleNode = self.titleNode {
+                    if let visibilityRect = self.visibilityRect {
+                        titleNode.visibilityRect = visibilityRect.offsetBy(dx: 0.0, dy: titleNode.textNode.frame.minY)
+                    } else {
+                        titleNode.visibilityRect = nil
+                    }
+                }
+            }
+        }
+    }
     
     override init() {
         self.highlightedBackgroundNode = ASDisplayNode()
@@ -476,19 +491,35 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ maybeNode: ChatMessagePollOptionNode?) -> (_ accountPeerId: PeerId, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool) -> ChatMessagePollOptionNode))) {
-        let makeTitleLayout = TextNode.asyncLayout(maybeNode?.titleNode)
+    static func asyncLayout(_ maybeNode: ChatMessagePollOptionNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode))) {
+        let makeTitleLayout = TextNodeWithEntities.asyncLayout(maybeNode?.titleNode)
         let currentResult = maybeNode?.currentResult
         let currentSelection = maybeNode?.currentSelection
         let currentTheme = maybeNode?.theme
         
-        return { accountPeerId, presentationData, message, poll, option, optionResult, constrainedWidth in
+        return { context, presentationData, message, poll, option, optionResult, constrainedWidth in
             let leftInset: CGFloat = 50.0
             let rightInset: CGFloat = 12.0
             
-            let incoming = message.effectivelyIncoming(accountPeerId)
+            let incoming = message.effectivelyIncoming(context.account.peerId)
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: option.text, font: presentationData.messageFont, textColor: incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: max(1.0, constrainedWidth - leftInset - rightInset), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
+            let optionTextColor: UIColor = incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor
+            let optionAttributedText = stringWithAppliedEntities(
+                option.text,
+                entities: option.entities,
+                baseColor: optionTextColor,
+                linkColor: optionTextColor,
+                baseFont: presentationData.messageFont,
+                linkFont: presentationData.messageFont,
+                boldFont: presentationData.messageFont,
+                italicFont: presentationData.messageFont,
+                boldItalicFont: presentationData.messageFont,
+                fixedFont: presentationData.messageFont,
+                blockQuoteFont: presentationData.messageFont,
+                message: message
+            )
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: optionAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: max(1.0, constrainedWidth - leftInset - rightInset), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
             
             let contentHeight: CGFloat = max(46.0, titleLayout.size.height + 22.0)
             
@@ -578,7 +609,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
             }
             
             return (titleLayout.size.width + leftInset + rightInset, { width in
-                return (CGSize(width: width, height: contentHeight), { animated, inProgress in
+                return (CGSize(width: width, height: contentHeight), { animated, inProgress, attemptSynchronous in
                     let node: ChatMessagePollOptionNode
                     if let maybeNode = maybeNode {
                         node = maybeNode
@@ -596,17 +627,29 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     
                     node.buttonNode.accessibilityLabel = option.text
                     
-                    let titleNode = titleApply()
+                    let titleNode = titleApply(TextNodeWithEntities.Arguments(
+                        context: context,
+                        cache: context.animationCache,
+                        renderer: context.animationRenderer,
+                        placeholderColor: incoming ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor,
+                        attemptSynchronous: attemptSynchronous
+                    ))
+                    let titleNodeFrame: CGRect
+                    if titleLayout.hasRTL {
+                        titleNodeFrame = CGRect(origin: CGPoint(x: width - rightInset - titleLayout.size.width, y: 11.0), size: titleLayout.size)
+                    } else {
+                        titleNodeFrame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
+                    }
                     if node.titleNode !== titleNode {
                         node.titleNode = titleNode
-                        node.addSubnode(titleNode)
-                        titleNode.isUserInteractionEnabled = false
+                        node.addSubnode(titleNode.textNode)
+                        titleNode.textNode.isUserInteractionEnabled = false
+                        
+                        if let visibilityRect = node.visibilityRect {
+                            titleNode.visibilityRect = visibilityRect.offsetBy(dx: 0.0, dy: titleNodeFrame.minY)
+                        }
                     }
-                    if titleLayout.hasRTL {
-                        titleNode.frame = CGRect(origin: CGPoint(x: width - rightInset - titleLayout.size.width, y: 11.0), size: titleLayout.size)
-                    } else {
-                        titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
-                    }
+                    titleNode.textNode.frame = titleNodeFrame
                     
                     if shouldHaveRadioNode {
                         let radioNode: ChatMessagePollOptionRadioNode
@@ -773,7 +816,7 @@ private final class SolutionButtonNode: HighlightableButtonNode {
 }
 
 public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
-    private let textNode: TextNode
+    private let textNode: TextNodeWithEntities
     private let typeNode: TextNode
     private var timerNode: PollBubbleTimerNode?
     private let solutionButtonNode: SolutionButtonNode
@@ -792,12 +835,34 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         return self.solutionButtonNode
     }
     
+    override public var visibility: ListViewItemNodeVisibility {
+        didSet {
+            if oldValue != self.visibility {
+                switch self.visibility {
+                case .none:
+                    self.textNode.visibilityRect = nil
+                    for optionNode in self.optionNodes {
+                        optionNode.visibilityRect = nil
+                    }
+                case let .visible(_, subRect):
+                    var subRect = subRect
+                    subRect.origin.x = 0.0
+                    subRect.size.width = 10000.0
+                    self.textNode.visibilityRect = subRect.offsetBy(dx: 0.0, dy: -self.textNode.textNode.frame.minY)
+                    for optionNode in self.optionNodes {
+                        optionNode.visibilityRect = subRect.offsetBy(dx: 0.0, dy: -optionNode.frame.minY)
+                    }
+                }
+            }
+        }
+    }
+    
     required public init() {
-        self.textNode = TextNode()
-        self.textNode.isUserInteractionEnabled = false
-        self.textNode.contentMode = .topLeft
-        self.textNode.contentsScale = UIScreenScale
-        self.textNode.displaysAsynchronously = false
+        self.textNode = TextNodeWithEntities()
+        self.textNode.textNode.isUserInteractionEnabled = false
+        self.textNode.textNode.contentMode = .topLeft
+        self.textNode.textNode.contentsScale = UIScreenScale
+        self.textNode.textNode.displaysAsynchronously = false
         
         self.typeNode = TextNode()
         self.typeNode.isUserInteractionEnabled = false
@@ -844,7 +909,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         
         super.init()
         
-        self.addSubnode(self.textNode)
+        self.addSubnode(self.textNode.textNode)
         self.addSubnode(self.typeNode)
         self.addSubnode(self.avatarsNode)
         self.addSubnode(self.votersNode)
@@ -914,7 +979,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
-        let makeTextLayout = TextNode.asyncLayout(self.textNode)
+        let makeTextLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         let makeTypeLayout = TextNode.asyncLayout(self.typeNode)
         let makeVotersLayout = TextNode.asyncLayout(self.votersNode)
         let makeSubmitInactiveTextLayout = TextNode.asyncLayout(self.buttonSubmitInactiveTextNode)
@@ -931,7 +996,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         
-        var previousOptionNodeLayouts: [Data: (_ accountPeerId: PeerId, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool) -> ChatMessagePollOptionNode)))] = [:]
+        var previousOptionNodeLayouts: [Data: (_ contet: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode)))] = [:]
         for optionNode in self.optionNodes {
             if let option = optionNode.option {
                 previousOptionNodeLayouts[option.opaqueIdentifier] = ChatMessagePollOptionNode.asyncLayout(optionNode)
@@ -1049,7 +1114,25 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 
                 let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
-                let attributedText = NSAttributedString(string: poll?.text ?? "", font: item.presentationData.messageBoldFont, textColor: messageTheme.primaryTextColor)
+                let attributedText: NSAttributedString
+                if let poll {
+                    attributedText = stringWithAppliedEntities(
+                        poll.text,
+                        entities: poll.textEntities,
+                        baseColor: messageTheme.primaryTextColor,
+                        linkColor: messageTheme.linkTextColor,
+                        baseFont: item.presentationData.messageBoldFont,
+                        linkFont: item.presentationData.messageBoldFont,
+                        boldFont: item.presentationData.messageBoldFont,
+                        italicFont: item.presentationData.messageBoldFont,
+                        boldItalicFont: item.presentationData.messageBoldFont,
+                        fixedFont: item.presentationData.messageBoldFont,
+                        blockQuoteFont: item.presentationData.messageBoldFont,
+                        message: message
+                    )
+                } else {
+                    attributedText = NSAttributedString(string: "", font: item.presentationData.messageBoldFont, textColor: messageTheme.primaryTextColor)
+                }
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 0.0, bottom: 5.0, right: 0.0)
                 
@@ -1144,7 +1227,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     isClosed = false
                 }
                 
-                var pollOptionsFinalizeLayouts: [(CGFloat) -> (CGSize, (Bool, Bool) -> ChatMessagePollOptionNode)] = []
+                var pollOptionsFinalizeLayouts: [(CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode)] = []
                 if let poll = poll {
                     var optionVoterCount: [Int: Int32] = [:]
                     var maxOptionVoterCount: Int32 = 0
@@ -1186,7 +1269,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     for i in 0 ..< poll.options.count {
                         let option = poll.options[i]
                         
-                        let makeLayout: (_ accountPeerId: PeerId, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool) -> ChatMessagePollOptionNode)))
+                        let makeLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ poll: TelegramMediaPoll, _ option: TelegramMediaPollOption, _ optionResult: ChatMessagePollOptionResult?, _ constrainedWidth: CGFloat) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode)))
                         if let previous = previousOptionNodeLayouts[option.opaqueIdentifier] {
                             makeLayout = previous
                         } else {
@@ -1202,7 +1285,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         } else if isClosed {
                             optionResult = ChatMessagePollOptionResult(normalized: 0, percent: 0, count: 0)
                         }
-                        let result = makeLayout(item.context.account.peerId, item.presentationData, item.message, poll, option, optionResult, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
+                        let result = makeLayout(item.context, item.presentationData, item.message, poll, option, optionResult, constrainedSize.width - layoutConstants.bubble.borderInset * 2.0)
                         boundingSize.width = max(boundingSize.width, result.minimumWidth + layoutConstants.bubble.borderInset * 2.0)
                         pollOptionsFinalizeLayouts.append(result.1)
                     }
@@ -1233,7 +1316,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     let typeOptionsSpacing: CGFloat = 3.0
                     resultSize.height += titleTypeSpacing + typeLayout.size.height + typeOptionsSpacing
                     
-                    var optionNodesSizesAndApply: [(CGSize, (Bool, Bool) -> ChatMessagePollOptionNode)] = []
+                    var optionNodesSizesAndApply: [(CGSize, (Bool, Bool, Bool) -> ChatMessagePollOptionNode)] = []
                     for finalizeLayout in pollOptionsFinalizeLayouts {
                         let result = finalizeLayout(boundingWidth - layoutConstants.bubble.borderInset * 2.0)
                         resultSize.width = max(resultSize.width, result.0.width + layoutConstants.bubble.borderInset * 2.0)
@@ -1268,28 +1351,13 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.item = item
                             strongSelf.poll = poll
                             
-                            let cachedLayout = strongSelf.textNode.cachedLayout
-                            
-                            if case .System = animation {
-                                if let cachedLayout = cachedLayout {
-                                    if cachedLayout != textLayout {
-                                        if let textContents = strongSelf.textNode.contents {
-                                            let fadeNode = ASDisplayNode()
-                                            fadeNode.displaysAsynchronously = false
-                                            fadeNode.contents = textContents
-                                            fadeNode.frame = strongSelf.textNode.frame
-                                            fadeNode.isLayerBacked = true
-                                            strongSelf.addSubnode(fadeNode)
-                                            fadeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak fadeNode] _ in
-                                                fadeNode?.removeFromSupernode()
-                                            })
-                                            strongSelf.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            let _ = textApply()
+                            let _ = textApply(TextNodeWithEntities.Arguments(
+                                context: item.context,
+                                cache: item.context.animationCache,
+                                renderer: item.context.animationRenderer,
+                                placeholderColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor,
+                                attemptSynchronous: synchronousLoad)
+                            )
                             let _ = typeApply()
                             
                             var verticalOffset = textFrame.maxY + titleTypeSpacing + typeLayout.size.height + typeOptionsSpacing
@@ -1302,7 +1370,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                         isRequesting = inProgressOpaqueIds.contains(poll.options[i].opaqueIdentifier)
                                     }
                                 }
-                                let optionNode = apply(animation.isAnimated, isRequesting)
+                                let optionNode = apply(animation.isAnimated, isRequesting, synchronousLoad)
                                 if optionNode.supernode !== strongSelf {
                                     strongSelf.addSubnode(optionNode)
                                     let option = optionNode.option
@@ -1337,9 +1405,9 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.optionNodes = updatedOptionNodes
                             
                             if textLayout.hasRTL {
-                                strongSelf.textNode.frame = CGRect(origin: CGPoint(x: resultSize.width - textFrame.size.width - textInsets.left - layoutConstants.text.bubbleInsets.right - additionalTextRightInset, y: textFrame.origin.y), size: textFrame.size)
+                                strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: resultSize.width - textFrame.size.width - textInsets.left - layoutConstants.text.bubbleInsets.right - additionalTextRightInset, y: textFrame.origin.y), size: textFrame.size)
                             } else {
-                                strongSelf.textNode.frame = textFrame
+                                strongSelf.textNode.textNode.frame = textFrame
                             }
                             let typeFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: textFrame.maxY + titleTypeSpacing), size: typeLayout.size)
                             strongSelf.typeNode.frame = typeFrame
@@ -1599,26 +1667,26 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
-        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
     override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
-        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
     override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
-        self.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.textNode.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
-        let textNodeFrame = self.textNode.frame
-        if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+        let textNodeFrame = self.textNode.textNode.frame
+        if let (index, attributes) = self.textNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
-                if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                if let (attributeText, fullText) = self.textNode.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
                 return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed)))

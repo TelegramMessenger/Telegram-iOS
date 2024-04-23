@@ -93,6 +93,7 @@ final class AccountTaskManager {
                     tasks.add(managedSynchronizeEmojiSearchCategories(postbox: self.stateManager.postbox, network: self.stateManager.network, kind: .emoji).start())
                     tasks.add(managedSynchronizeEmojiSearchCategories(postbox: self.stateManager.postbox, network: self.stateManager.network, kind: .status).start())
                     tasks.add(managedSynchronizeEmojiSearchCategories(postbox: self.stateManager.postbox, network: self.stateManager.network, kind: .avatar).start())
+                    tasks.add(managedSynchronizeEmojiSearchCategories(postbox: self.stateManager.postbox, network: self.stateManager.network, kind: .combinedChatStickers).start())
                     tasks.add(managedSynchronizeAttachMenuBots(accountPeerId: self.accountPeerId, postbox: self.stateManager.postbox, network: self.stateManager.network, force: true).start())
                     tasks.add(managedSynchronizeNotificationSoundList(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     tasks.add(managedChatListFilters(postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId).start())

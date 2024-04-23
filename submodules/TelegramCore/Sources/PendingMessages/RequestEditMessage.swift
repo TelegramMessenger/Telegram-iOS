@@ -263,7 +263,7 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
     }
 }
 
-func _internal_requestEditLiveLocation(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId, stop: Bool, coordinate: (latitude: Double, longitude: Double, accuracyRadius: Int32?)?, heading: Int32?, proximityNotificationRadius: Int32?) -> Signal<Void, NoError> {
+func _internal_requestEditLiveLocation(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId, stop: Bool, coordinate: (latitude: Double, longitude: Double, accuracyRadius: Int32?)?, heading: Int32?, proximityNotificationRadius: Int32?, extendPeriod: Int32?) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> (Api.InputPeer, TelegramMediaMap)? in
         guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
             return nil
@@ -305,7 +305,19 @@ func _internal_requestEditLiveLocation(postbox: Postbox, network: Network, state
             if let _ = proximityNotificationRadius {
                 flags |= 1 << 3
             }
-            inputMedia = .inputMediaGeoLive(flags: flags, geoPoint: inputGeoPoint, heading: heading, period: liveBroadcastingTimeout, proximityNotificationRadius: proximityNotificationRadius)
+            
+            let period: Int32
+            if let extendPeriod {
+                if extendPeriod == liveLocationIndefinitePeriod {
+                    period = extendPeriod
+                } else {
+                    period = liveBroadcastingTimeout + extendPeriod
+                }
+            } else {
+                period = liveBroadcastingTimeout
+            }
+            
+            inputMedia = .inputMediaGeoLive(flags: flags, geoPoint: inputGeoPoint, heading: heading, period: period, proximityNotificationRadius: proximityNotificationRadius)
         } else {
             inputMedia = .inputMediaGeoLive(flags: 1 << 0, geoPoint: .inputGeoPoint(flags: 0, lat: media.latitude, long: media.longitude, accuracyRadius: nil), heading: nil, period: nil, proximityNotificationRadius: nil)
         }
@@ -319,7 +331,7 @@ func _internal_requestEditLiveLocation(postbox: Postbox, network: Network, state
             if let updates = updates {
                 stateManager.addUpdates(updates)
             }
-            if coordinate == nil && proximityNotificationRadius == nil {
+            if coordinate == nil && proximityNotificationRadius == nil && extendPeriod == nil {
                 return postbox.transaction { transaction -> Void in
                     transaction.updateMessage(messageId, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?

@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import LocalizedPeerData
 import AccountContext
+import AvatarNode
 
 public enum ChatMessageForwardInfoType: Equatable {
     case bubble(incoming: Bool)
@@ -73,10 +74,18 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
         }
     }
     
-    public private(set) var textNode: TextNode?
+    public private(set) var titleNode: TextNode?
+    public private(set) var nameNode: TextNode?
     private var credibilityIconNode: ASImageNode?
     private var infoNode: InfoButtonNode?
     private var expiredStoryIconView: UIImageView?
+    private var avatarNode: AvatarNode?
+    
+    private var theme: PresentationTheme?
+    private var highlightColor: UIColor?
+    private var linkHighlightingNode: LinkHighlightingNode?
+    
+    private var previousPeer: Peer?
     
     public var openPsa: ((String, ASDisplayNode) -> Void)?
     
@@ -107,17 +116,98 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
         }
     }
     
+    public func getBoundingRects() -> [CGRect] {
+        var initialRects: [CGRect] = []
+        let addRects: (TextNode, CGPoint, CGFloat) -> Void = { textNode, offset, additionalWidth in
+            guard let cachedLayout = textNode.cachedLayout else {
+                return
+            }
+            for rect in cachedLayout.linesRects() {
+                var rect = rect
+                rect.size.width += rect.origin.x + additionalWidth
+                rect.origin.x = 0.0
+                initialRects.append(rect.offsetBy(dx: offset.x, dy: offset.y))
+            }
+        }
+        
+        let offsetY: CGFloat = -12.0
+        if let titleNode = self.titleNode {
+            addRects(titleNode, CGPoint(x: titleNode.frame.minX, y: offsetY + titleNode.frame.minY), 0.0)
+            
+            if let nameNode = self.nameNode {
+                addRects(nameNode, CGPoint(x: titleNode.frame.minX, y: offsetY + nameNode.frame.minY), nameNode.frame.minX - titleNode.frame.minX)
+            }
+        }
+        
+        return initialRects
+    }
+    
+    public func updateTouchesAtPoint(_ point: CGPoint?) {
+        var isHighlighted = false
+        if point != nil {
+            isHighlighted = true
+        }
+        
+        var initialRects: [CGRect] = []
+        let addRects: (TextNode, CGPoint, CGFloat) -> Void = { textNode, offset, additionalWidth in
+            guard let cachedLayout = textNode.cachedLayout else {
+                return
+            }
+            for rect in cachedLayout.linesRects() {
+                var rect = rect
+                rect.size.width += rect.origin.x + additionalWidth
+                rect.origin.x = 0.0
+                initialRects.append(rect.offsetBy(dx: offset.x, dy: offset.y))
+            }
+        }
+        
+        let offsetY: CGFloat = -12.0
+        if let titleNode = self.titleNode {
+            addRects(titleNode, CGPoint(x: titleNode.frame.minX, y: offsetY + titleNode.frame.minY), 0.0)
+            
+            if let nameNode = self.nameNode {
+                addRects(nameNode, CGPoint(x: titleNode.frame.minX, y: offsetY + nameNode.frame.minY), nameNode.frame.minX - titleNode.frame.minX)
+            }
+        }
+        
+        if isHighlighted, !initialRects.isEmpty, let highlightColor = self.highlightColor {
+            let rects = initialRects
+            
+            let linkHighlightingNode: LinkHighlightingNode
+            if let current = self.linkHighlightingNode {
+                linkHighlightingNode = current
+            } else {
+                linkHighlightingNode = LinkHighlightingNode(color: highlightColor)
+                self.linkHighlightingNode = linkHighlightingNode
+                self.addSubnode(linkHighlightingNode)
+            }
+            linkHighlightingNode.frame = self.bounds
+            linkHighlightingNode.updateRects(rects)
+        } else if let linkHighlightingNode = self.linkHighlightingNode {
+            self.linkHighlightingNode = nil
+            linkHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak linkHighlightingNode] _ in
+                linkHighlightingNode?.removeFromSupernode()
+            })
+        }
+    }
+    
     public static func asyncLayout(_ maybeNode: ChatMessageForwardInfoNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ strings: PresentationStrings, _ type: ChatMessageForwardInfoType, _ peer: Peer?, _ authorName: String?, _ psaType: String?, _ storyData: StoryData?, _ constrainedSize: CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode) {
-        let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
+        let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
+        let nameNodeLayout = TextNode.asyncLayout(maybeNode?.nameNode)
+        
+        let previousPeer = maybeNode?.previousPeer
         
         return { context, presentationData, strings, type, peer, authorName, psaType, storyData, constrainedSize in
-            let fontSize = floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)
+            let originalPeer = peer
+            let peer = peer ?? previousPeer
+            
+            let fontSize = floor(presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
             let prefixFont = Font.regular(fontSize)
             let peerFont = Font.medium(fontSize)
             
             let peerString: String
             if let peer = peer {
-                if let authorName = authorName {
+                if let authorName = authorName, originalPeer === peer {
                     peerString = "\(EnginePeer(peer).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)) (\(authorName))"
                 } else {
                     peerString = EnginePeer(peer).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
@@ -134,87 +224,93 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
             }
             
             let titleColor: UIColor
-            let completeSourceString: PresentationStrings.FormattedString
+            let titleString: PresentationStrings.FormattedString
+            var authorString: String?
             
             switch type {
-                case let .bubble(incoming):
-                    if let psaType = psaType {
-                        titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.barPositive : presentationData.theme.theme.chat.message.outgoing.polls.barPositive
-                        
-                        var customFormat: String?
-                        let key = "Message.ForwardedPsa.\(psaType)"
-                        if let string = presentationData.strings.primaryComponent.dict[key] {
-                            customFormat = string
-                        } else if let string = presentationData.strings.secondaryComponent?.dict[key] {
-                            customFormat = string
-                        }
-                        
-                        if let customFormat = customFormat {
-                            if let range = customFormat.range(of: "%@") {
-                                let leftPart = String(customFormat[customFormat.startIndex ..< range.lowerBound])
-                                let rightPart = String(customFormat[range.upperBound...])
-                                
-                                let formattedText = leftPart + peerString + rightPart
-                                completeSourceString = PresentationStrings.FormattedString(string: formattedText, ranges: [PresentationStrings.FormattedString.Range(index: 0, range: NSRange(location: leftPart.count, length: peerString.count))])
-                            } else {
-                                completeSourceString = PresentationStrings.FormattedString(string: customFormat, ranges: [])
-                            }
-                        } else {
-                            completeSourceString = strings.Message_GenericForwardedPsa(peerString)
-                        }
-                    } else {
-                        if incoming {
-                            if let nameColor = peer?.nameColor {
-                                titleColor = context.peerNameColors.get(nameColor, dark: presentationData.theme.theme.overallDarkAppearance).main
-                            } else {
-                                titleColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
-                            }
-                        } else {
-                            titleColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                        }
-                        
-                        if let storyData = storyData {
-                            switch storyData.storyType {
-                            case .regular:
-                                completeSourceString = strings.Message_ForwardedStoryShort(peerString)
-                            case .expired:
-                                completeSourceString = strings.Message_ForwardedExpiredStoryShort(peerString)
-                            case .unavailable:
-                                completeSourceString = strings.Message_ForwardedUnavailableStoryShort(peerString)
-                            }
-                        } else {
-                            completeSourceString = strings.Message_ForwardedMessageShort(peerString)
-                        }
-                    }
-                case .standalone:
-                    let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
-                    titleColor = serviceColor.primaryText
+            case let .bubble(incoming):
+                if let psaType = psaType {
+                    titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.barPositive : presentationData.theme.theme.chat.message.outgoing.polls.barPositive
                     
-                    if let psaType = psaType {
-                        var customFormat: String?
-                        let key = "Message.ForwardedPsa.\(psaType)"
-                        if let string = presentationData.strings.primaryComponent.dict[key] {
-                            customFormat = string
-                        } else if let string = presentationData.strings.secondaryComponent?.dict[key] {
-                            customFormat = string
-                        }
-                        
-                        if let customFormat = customFormat {
-                            if let range = customFormat.range(of: "%@") {
-                                let leftPart = String(customFormat[customFormat.startIndex ..< range.lowerBound])
-                                let rightPart = String(customFormat[range.upperBound...])
-                                
-                                let formattedText = leftPart + peerString + rightPart
-                                completeSourceString = PresentationStrings.FormattedString(string: formattedText, ranges: [PresentationStrings.FormattedString.Range(index: 0, range: NSRange(location: leftPart.count, length: peerString.count))])
-                            } else {
-                                completeSourceString = PresentationStrings.FormattedString(string: customFormat, ranges: [])
-                            }
+                    var customFormat: String?
+                    let key = "Message.ForwardedPsa.\(psaType)"
+                    if let string = presentationData.strings.primaryComponent.dict[key] {
+                        customFormat = string
+                    } else if let string = presentationData.strings.secondaryComponent?.dict[key] {
+                        customFormat = string
+                    }
+                    
+                    if let customFormat = customFormat {
+                        if let range = customFormat.range(of: "%@") {
+                            let leftPart = String(customFormat[customFormat.startIndex ..< range.lowerBound])
+                            let rightPart = String(customFormat[range.upperBound...])
+                            
+                            let formattedText = leftPart + peerString + rightPart
+                            titleString = PresentationStrings.FormattedString(string: formattedText, ranges: [PresentationStrings.FormattedString.Range(index: 0, range: NSRange(location: leftPart.count, length: peerString.count))])
                         } else {
-                            completeSourceString = strings.Message_GenericForwardedPsa(peerString)
+                            titleString = PresentationStrings.FormattedString(string: customFormat, ranges: [])
                         }
                     } else {
-                        completeSourceString = strings.Message_ForwardedMessageShort(peerString)
+                        titleString = strings.Message_GenericForwardedPsa(peerString)
                     }
+                } else {
+                    if incoming {
+                        if let nameColor = peer?.nameColor {
+                            titleColor = context.peerNameColors.get(nameColor, dark: presentationData.theme.theme.overallDarkAppearance).main
+                        } else {
+                            titleColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
+                        }
+                    } else {
+                        titleColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                    }
+                    
+                    if let storyData = storyData {
+                        switch storyData.storyType {
+                        case .regular:
+                            titleString = PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageForwardInfo_StoryHeader, ranges: [])
+                            authorString = peerString
+                        case .expired:
+                            titleString = PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageForwardInfo_ExpiredStoryHeader, ranges: [])
+                            authorString = peerString
+                        case .unavailable:
+                            titleString = PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageForwardInfo_UnavailableStoryHeader, ranges: [])
+                            authorString = peerString
+                        }
+                    } else {
+                        titleString = PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageForwardInfo_MessageHeader, ranges: [])
+                        authorString = peerString
+                    }
+                }
+            case .standalone:
+                let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                titleColor = serviceColor.primaryText
+                
+                if let psaType = psaType {
+                    var customFormat: String?
+                    let key = "Message.ForwardedPsa.\(psaType)"
+                    if let string = presentationData.strings.primaryComponent.dict[key] {
+                        customFormat = string
+                    } else if let string = presentationData.strings.secondaryComponent?.dict[key] {
+                        customFormat = string
+                    }
+                    
+                    if let customFormat = customFormat {
+                        if let range = customFormat.range(of: "%@") {
+                            let leftPart = String(customFormat[customFormat.startIndex ..< range.lowerBound])
+                            let rightPart = String(customFormat[range.upperBound...])
+                            
+                            let formattedText = leftPart + peerString + rightPart
+                            titleString = PresentationStrings.FormattedString(string: formattedText, ranges: [PresentationStrings.FormattedString.Range(index: 0, range: NSRange(location: leftPart.count, length: peerString.count))])
+                        } else {
+                            titleString = PresentationStrings.FormattedString(string: customFormat, ranges: [])
+                        }
+                    } else {
+                        titleString = strings.Message_GenericForwardedPsa(peerString)
+                    }
+                } else {
+                    titleString = PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageForwardInfo_MessageHeader, ranges: [])
+                    authorString = peerString
+                }
             }
             
             var currentCredibilityIconImage: UIImage?
@@ -230,17 +326,17 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                 
                 if peer.isFake {
                     switch type {
-                        case let .bubble(incoming):
-                            currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(presentationData.theme.theme, strings: presentationData.strings, type: incoming ? .regular : .outgoing)
-                        case .standalone:
-                            currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(presentationData.theme.theme, strings: presentationData.strings, type: .service)
+                    case let .bubble(incoming):
+                        currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(presentationData.theme.theme, strings: presentationData.strings, type: incoming ? .regular : .outgoing)
+                    case .standalone:
+                        currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(presentationData.theme.theme, strings: presentationData.strings, type: .service)
                     }
                 } else if peer.isScam {
                     switch type {
-                        case let .bubble(incoming):
-                            currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme.theme, strings: presentationData.strings, type: incoming ? .regular : .outgoing)
-                        case .standalone:
-                            currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme.theme, strings: presentationData.strings, type: .service)
+                    case let .bubble(incoming):
+                        currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme.theme, strings: presentationData.strings, type: incoming ? .regular : .outgoing)
+                    case .standalone:
+                        currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(presentationData.theme.theme, strings: presentationData.strings, type: .service)
                     }
                 } else {
                     currentCredibilityIconImage = nil
@@ -249,10 +345,9 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                 highlight = false
             }
             
-            //let completeString: NSString = (completeSourceString.string.replacingOccurrences(of: "\n", with: " \n")) as NSString
-            let completeString: NSString = completeSourceString.string as NSString
-            let string = NSMutableAttributedString(string: completeString as String, attributes: [NSAttributedString.Key.foregroundColor: titleColor, NSAttributedString.Key.font: prefixFont])
-            if highlight, let range = completeSourceString.ranges.first?.range {
+            let rawTitleString: NSString = titleString.string as NSString
+            let string = NSMutableAttributedString(string: rawTitleString as String, attributes: [NSAttributedString.Key.foregroundColor: titleColor, NSAttributedString.Key.font: prefixFont])
+            if highlight, let range = titleString.ranges.first?.range {
                 string.addAttributes([NSAttributedString.Key.font: peerFont], range: range)
             }
             
@@ -278,9 +373,32 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                 }
             }
             
-            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth, height: constrainedSize.height), alignment: .natural, cutout: cutout, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth, height: constrainedSize.height), alignment: .natural, cutout: cutout, insets: UIEdgeInsets()))
             
-            return (CGSize(width: textLayout.size.width + credibilityIconWidth + infoWidth, height: textLayout.size.height), { width in
+            var authorAvatarInset: CGFloat = 0.0
+            authorAvatarInset = 20.0
+            
+            var nameLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if let authorString {
+                nameLayoutAndApply = nameNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: authorString, font: peer != nil ? peerFont : prefixFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth - authorAvatarInset, height: constrainedSize.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            }
+            
+            let titleAuthorSpacing: CGFloat = 0.0
+            
+            let resultSize: CGSize
+            if let nameLayoutAndApply {
+                resultSize = CGSize(
+                    width: max(
+                        titleLayout.size.width + credibilityIconWidth + infoWidth,
+                        authorAvatarInset + nameLayoutAndApply.0.size.width
+                    ),
+                    height: titleLayout.size.height + titleAuthorSpacing + nameLayoutAndApply.0.size.height
+                )
+            } else {
+                resultSize = CGSize(width: titleLayout.size.width + credibilityIconWidth + infoWidth, height: titleLayout.size.height)
+            }
+            
+            return (resultSize, { width in
                 let node: ChatMessageForwardInfoNode
                 if let maybeNode = maybeNode {
                     node = maybeNode
@@ -288,15 +406,65 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                     node = ChatMessageForwardInfoNode()
                 }
                 
-                let textNode = textApply()
-                textNode.displaysAsynchronously = !presentationData.isPreview
+                node.theme = presentationData.theme.theme
+                node.highlightColor = titleColor.withMultipliedAlpha(0.1)
                 
-                if node.textNode == nil {
-                    textNode.isUserInteractionEnabled = false
-                    node.textNode = textNode
-                    node.addSubnode(textNode)
+                node.previousPeer = peer
+                
+                let titleNode = titleApply()
+                titleNode.displaysAsynchronously = !presentationData.isPreview
+                
+                if node.titleNode == nil {
+                    titleNode.isUserInteractionEnabled = false
+                    node.titleNode = titleNode
+                    node.addSubnode(titleNode)
                 }
-                textNode.frame = CGRect(origin: CGPoint(x: leftOffset, y: 0.0), size: textLayout.size)
+                titleNode.frame = CGRect(origin: CGPoint(x: leftOffset, y: 0.0), size: titleLayout.size)
+                
+                if let (nameLayout, nameApply) = nameLayoutAndApply {
+                    let nameNode = nameApply()
+                    if node.nameNode == nil {
+                        nameNode.isUserInteractionEnabled = false
+                        node.nameNode = nameNode
+                        node.addSubnode(nameNode)
+                    }
+                    nameNode.frame = CGRect(origin: CGPoint(x: leftOffset + authorAvatarInset, y: titleLayout.size.height + titleAuthorSpacing), size: nameLayout.size)
+                    
+                    if authorAvatarInset != 0.0 {
+                        let avatarNode: AvatarNode
+                        if let current = node.avatarNode {
+                            avatarNode = current
+                        } else {
+                            avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 8.0))
+                            node.avatarNode = avatarNode
+                            node.addSubnode(avatarNode)
+                        }
+                        let avatarSize = CGSize(width: 16.0, height: 16.0)
+                        avatarNode.frame = CGRect(origin: CGPoint(x: leftOffset, y: titleLayout.size.height + titleAuthorSpacing), size: avatarSize)
+                        avatarNode.updateSize(size: avatarSize)
+                        if let peer {
+                            avatarNode.setPeer(context: context, theme: presentationData.theme.theme, peer: EnginePeer(peer), displayDimensions: avatarSize)
+                        } else if let authorName, !authorName.isEmpty {
+                            avatarNode.setCustomLetters([String(authorName[authorName.startIndex])])
+                        } else {
+                            avatarNode.setCustomLetters([" "])
+                        }
+                    } else {
+                        if let avatarNode = node.avatarNode {
+                            node.avatarNode = nil
+                            avatarNode.removeFromSupernode()
+                        }
+                    }
+                } else {
+                    if let nameNode = node.nameNode {
+                        node.nameNode = nil
+                        nameNode.removeFromSupernode()
+                    }
+                    if let avatarNode = node.avatarNode {
+                        node.avatarNode = nil
+                        avatarNode.removeFromSupernode()
+                    }
+                }
                 
                 if let storyData, case .expired = storyData.storyType {
                     let expiredStoryIconView: UIImageView
@@ -334,7 +502,7 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                         node.credibilityIconNode = credibilityIconNode
                         node.addSubnode(credibilityIconNode)
                     }
-                    credibilityIconNode.frame = CGRect(origin: CGPoint(x: textLayout.size.width + 4.0, y: 16.0), size: credibilityIconImage.size)
+                    credibilityIconNode.frame = CGRect(origin: CGPoint(x: titleLayout.size.width + 4.0, y: 16.0), size: credibilityIconImage.size)
                     credibilityIconNode.image = credibilityIconImage
                 } else {
                     node.credibilityIconNode?.removeFromSupernode()

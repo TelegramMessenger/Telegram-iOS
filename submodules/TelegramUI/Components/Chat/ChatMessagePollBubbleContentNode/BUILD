@@ -26,6 +26,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/Chat/PollBubbleTimerNode",
         "//submodules/TelegramUI/Components/Chat/MergedAvatarsNode",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities",
     ],
     visibility = [
         "//visibility:public",

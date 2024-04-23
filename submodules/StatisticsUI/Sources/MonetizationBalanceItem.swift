@@ -158,13 +158,13 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
             let integralFont = Font.with(size: 48.0, design: .round, weight: .semibold)
             let fractionalFont = Font.with(size: 24.0, design: .round, weight: .semibold)
             
-            let cryptoValue = formatBalanceText(item.stats.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
+            let cryptoValue = formatBalanceText(item.stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
             
             let amountString = amountAttributedString(cryptoValue, integralFont: integralFont, fractionalFont: fractionalFont, color: item.presentationData.theme.list.itemPrimaryTextColor)
 
             let (balanceLayout, balanceApply) = makeBalanceTextLayout(TextNodeLayoutArguments(attributedString: amountString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let value = item.stats.availableBalance == 0 ? "" : "≈\(formatUsdValue(item.stats.availableBalance, rate: item.stats.usdRate))"
+            let value = item.stats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(item.stats.balances.availableBalance, rate: item.stats.usdRate))"
             let (valueLayout, valueApply) = makeValueTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: value, font: Font.regular(17.0), textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let verticalInset: CGFloat = 13.0
@@ -319,7 +319,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     

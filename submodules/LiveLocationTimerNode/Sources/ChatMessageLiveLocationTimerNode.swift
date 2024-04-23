@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 
+private let infinityFont = Font.with(size: 15.0, design: .round, weight: .bold)
 private let textFont = Font.with(size: 13.0, design: .round, weight: .bold)
 private let smallTextFont = Font.with(size: 11.0, design: .round, weight: .bold)
 
@@ -62,6 +63,8 @@ public final class ChatMessageLiveLocationTimerNode: ASDisplayNode {
             }), selector: #selector(RadialTimeoutNodeTimer.event), userInfo: nil, repeats: true)
             self.animationTimer = animationTimer
             RunLoop.main.add(animationTimer, forMode: .common)
+            
+            self.setNeedsDisplay()
         }
     }
     
@@ -72,14 +75,23 @@ public final class ChatMessageLiveLocationTimerNode: ASDisplayNode {
             let remaining = beginTimestamp + timeout - timestamp
             value = CGFloat(max(0.0, 1.0 - min(1.0, remaining / timeout)))
             
-            let intRemaining = Int32(remaining)
             let string: String
-            if intRemaining > 60 * 60 {
-                let hours = Int32(round(remaining / (60.0 * 60.0)))
-                string = strings.Map_LiveLocationShortHour("\(hours)").string
+            if timeout < 0.0 {
+                value = 0.0
+                string = "∞"
             } else {
-                let minutes = Int32(round(remaining / (60.0)))
-                string = "\(minutes)"
+                let intRemaining = Int32(remaining)
+                if intRemaining > 60 * 60 {
+                    let hours = Int32(round(remaining / (60.0 * 60.0)))
+                    if hours > 99 {
+                        string = "99+"
+                    } else {
+                        string = strings.Map_LiveLocationShortHour("\(hours)").string
+                    }
+                } else {
+                    let minutes = Int32(round(remaining / (60.0)))
+                    string = "\(minutes)"
+                }
             }
             
             return ChatMessageLiveLocationTimerNodeParams(backgroundColor: backgroundColor, foregroundColor: foregroundColor, textColor: textColor, value: value, string: string)
@@ -120,16 +132,27 @@ public final class ChatMessageLiveLocationTimerNode: ASDisplayNode {
             path.lineCapStyle = .round
             path.stroke()
             
-            let attributes: [NSAttributedString.Key: Any] = [.font: parameters.string.count > 2 ? smallTextFont : textFont, .foregroundColor: parameters.foregroundColor]
+            let font: UIFont
+            if parameters.string == "∞" {
+                font = infinityFont
+            } else if parameters.string.count > 2 {
+                font = smallTextFont
+            } else {
+                font = textFont
+            }
+            
+            let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: parameters.foregroundColor]
             let nsString = parameters.string as NSString
             let size = nsString.size(withAttributes: attributes)
             
-            var offset: CGFloat = 0.0
-            if parameters.string.count > 2 {
-                offset = UIScreenPixel
+            var offset = CGPoint()
+            if parameters.string == "∞" {
+                offset = CGPoint(x: 1.0, y: -1.0)
+            } else if parameters.string.count > 2 {
+                offset = CGPoint(x: 0.0, y: UIScreenPixel)
             }
             
-            nsString.draw(at: CGPoint(x: floor((bounds.size.width - size.width) / 2.0), y: floor((bounds.size.height - size.height) / 2.0) + offset), withAttributes: attributes)
+            nsString.draw(at: CGPoint(x: floor((bounds.size.width - size.width) / 2.0) + offset.x, y: floor((bounds.size.height - size.height) / 2.0) + offset.y), withAttributes: attributes)
         }
     }
 }

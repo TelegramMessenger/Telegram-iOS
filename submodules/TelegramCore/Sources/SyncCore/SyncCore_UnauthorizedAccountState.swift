@@ -10,6 +10,8 @@ private enum SentAuthorizationCodeTypeValue: Int32 {
     case emailSetupRequired = 6
     case fragment = 7
     case firebase = 8
+    case word = 9
+    case phrase = 10
 }
 
 public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
@@ -22,6 +24,8 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
     case emailSetupRequired(appleSignInAllowed: Bool)
     case fragment(url: String, length: Int32)
     case firebase(pushTimeout: Int32?, length: Int32)
+    case word(startsWith: String?)
+    case phrase(startsWith: String?)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -43,6 +47,10 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
                 self = .fragment(url: decoder.decodeStringForKey("u", orElse: ""), length: decoder.decodeInt32ForKey("l", orElse: 0))
             case SentAuthorizationCodeTypeValue.firebase.rawValue:
                 self = .firebase(pushTimeout: decoder.decodeOptionalInt32ForKey("pushTimeout"), length: decoder.decodeInt32ForKey("length", orElse: 0))
+            case SentAuthorizationCodeTypeValue.word.rawValue:
+                self = .word(startsWith: decoder.decodeOptionalStringForKey("w"))
+            case SentAuthorizationCodeTypeValue.phrase.rawValue:
+                self = .phrase(startsWith: decoder.decodeOptionalStringForKey("ph"))
             default:
                 preconditionFailure()
         }
@@ -97,6 +105,20 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
                 encoder.encodeNil(forKey: "pushTimeout")
             }
             encoder.encodeInt32(length, forKey: "length")
+        case let .word(startsWith):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.word.rawValue, forKey: "v")
+            if let startsWith = startsWith {
+                encoder.encodeString(startsWith, forKey: "w")
+            } else {
+                encoder.encodeNil(forKey: "w")
+            }
+        case let .phrase(startsWith):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.phrase.rawValue, forKey: "v")
+            if let startsWith = startsWith {
+                encoder.encodeString(startsWith, forKey: "ph")
+            } else {
+                encoder.encodeNil(forKey: "ph")
+            }
         }
     }
 }
@@ -151,10 +173,10 @@ public struct UnauthorizedAccountTermsOfService: PostboxCoding, Equatable {
     }
 }
 
-public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
+public indirect enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
     case empty
     case phoneEntry(countryCode: Int32, number: String)
-    case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?, syncContacts: Bool)
+    case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?, syncContacts: Bool, previousCodeEntry: UnauthorizedAccountStateContents?, usePrevious: Bool)
     case passwordEntry(hint: String, number: String?, code: AuthorizationCode?, suggestReset: Bool, syncContacts: Bool)
     case passwordRecovery(hint: String, number: String?, code: AuthorizationCode?, emailPattern: String, syncContacts: Bool)
     case awaitingAccountReset(protectedUntil: Int32, number: String?, syncContacts: Bool)
@@ -171,7 +193,7 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 if let value = decoder.decodeOptionalInt32ForKey("nt") {
                     nextType = AuthorizationCodeNextType(rawValue: value)
                 }
-                self = .confirmationCodeEntry(number: decoder.decodeStringForKey("num", orElse: ""), type: decoder.decodeObjectForKey("t", decoder: { SentAuthorizationCodeType(decoder: $0) }) as! SentAuthorizationCodeType, hash: decoder.decodeStringForKey("h", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("tm"), nextType: nextType, syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
+                self = .confirmationCodeEntry(number: decoder.decodeStringForKey("num", orElse: ""), type: decoder.decodeObjectForKey("t", decoder: { SentAuthorizationCodeType(decoder: $0) }) as! SentAuthorizationCodeType, hash: decoder.decodeStringForKey("h", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("tm"), nextType: nextType, syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0, previousCodeEntry: decoder.decodeObjectForKey("previousCodeEntry", decoder: { UnauthorizedAccountStateContents(decoder: $0) }) as? UnauthorizedAccountStateContents, usePrevious: decoder.decodeInt32ForKey("usePrevious", orElse: 1) != 0)
             case UnauthorizedAccountStateContentsValue.passwordEntry.rawValue:
                 var code: AuthorizationCode?
                 if let modernCode = decoder.decodeObjectForKey("modernCode", decoder: { AuthorizationCode(decoder: $0) }) as? AuthorizationCode {
@@ -206,7 +228,7 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.phoneEntry.rawValue, forKey: "v")
                 encoder.encodeInt32(countryCode, forKey: "cc")
                 encoder.encodeString(number, forKey: "n")
-            case let .confirmationCodeEntry(number, type, hash, timeout, nextType, syncContacts):
+            case let .confirmationCodeEntry(number, type, hash, timeout, nextType, syncContacts, previousCodeEntry, usePrevious):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.confirmationCodeEntry.rawValue, forKey: "v")
                 encoder.encodeString(number, forKey: "num")
                 encoder.encodeObject(type, forKey: "t")
@@ -222,6 +244,14 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                     encoder.encodeNil(forKey: "nt")
                 }
                 encoder.encodeInt32(syncContacts ? 1 : 0, forKey: "syncContacts")
+            
+                if let previousCodeEntry = previousCodeEntry {
+                    encoder.encodeObject(previousCodeEntry, forKey: "previousCodeEntry")
+                    encoder.encodeInt32(usePrevious ? 1 : 0, forKey: "usePrevious")
+                } else {
+                    encoder.encodeNil(forKey: "previousCodeEntry")
+                    encoder.encodeInt32(0, forKey: "usePrevious")
+                }
             case let .passwordEntry(hint, number, code, suggestReset, syncContacts):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.passwordEntry.rawValue, forKey: "v")
                 encoder.encodeString(hint, forKey: "h")
@@ -290,8 +320,8 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 } else {
                     return false
                 }
-            case let .confirmationCodeEntry(lhsNumber, lhsType, lhsHash, lhsTimeout, lhsNextType, lhsSyncContacts):
-                if case let .confirmationCodeEntry(rhsNumber, rhsType, rhsHash, rhsTimeout, rhsNextType, rhsSyncContacts) = rhs {
+            case let .confirmationCodeEntry(lhsNumber, lhsType, lhsHash, lhsTimeout, lhsNextType, lhsSyncContacts, lhsPreviousCodeEntry, lhsUsePrevious):
+                if case let .confirmationCodeEntry(rhsNumber, rhsType, rhsHash, rhsTimeout, rhsNextType, rhsSyncContacts, rhsPreviousCodeEntry, rhsUsePrevious) = rhs {
                     if lhsNumber != rhsNumber {
                         return false
                     }
@@ -308,6 +338,12 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                         return false
                     }
                     if lhsSyncContacts != rhsSyncContacts {
+                        return false
+                    }
+                    if lhsPreviousCodeEntry != rhsPreviousCodeEntry {
+                        return false
+                    }
+                    if lhsUsePrevious != rhsUsePrevious {
                         return false
                     }
                     return true

@@ -15,6 +15,7 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/SwitchNode",
+        "//submodules/CheckNode",
     ],
     visibility = [
         "//visibility:public",

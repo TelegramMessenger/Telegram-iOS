@@ -168,6 +168,10 @@ public final class PlainButtonComponent: Component {
         }
         
         override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if self.isHidden || self.alpha == 0.0 {
+                return nil
+            }
+            
             let result = super.hitTest(point, with: event)
             if result != nil {
                 return result

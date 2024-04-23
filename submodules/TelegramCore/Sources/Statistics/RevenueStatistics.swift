@@ -5,19 +5,21 @@ import TelegramApi
 import MtProtoKit
 
 public struct RevenueStats: Equatable {
+    public struct Balances: Equatable {
+        public let currentBalance: Int64
+        public let availableBalance: Int64
+        public let overallRevenue: Int64
+    }
+    
     public let topHoursGraph: StatsGraph
     public let revenueGraph: StatsGraph
-    public let currentBalance: Int64
-    public let availableBalance: Int64
-    public let overallRevenue: Int64
+    public let balances: Balances
     public let usdRate: Double
     
-    init(topHoursGraph: StatsGraph, revenueGraph: StatsGraph, currentBalance: Int64, availableBalance: Int64, overallRevenue: Int64, usdRate: Double) {
+    init(topHoursGraph: StatsGraph, revenueGraph: StatsGraph, balances: Balances, usdRate: Double) {
         self.topHoursGraph = topHoursGraph
         self.revenueGraph = revenueGraph
-        self.currentBalance = currentBalance
-        self.availableBalance = availableBalance
-        self.overallRevenue = overallRevenue
+        self.balances = balances
         self.usdRate = usdRate
     }
     
@@ -28,13 +30,7 @@ public struct RevenueStats: Equatable {
         if lhs.revenueGraph != rhs.revenueGraph {
             return false
         }
-        if lhs.currentBalance != rhs.currentBalance {
-            return false
-        }
-        if lhs.availableBalance != rhs.availableBalance {
-            return false
-        }
-        if lhs.overallRevenue != rhs.overallRevenue {
+        if lhs.balances != rhs.balances {
             return false
         }
         if lhs.usdRate != rhs.usdRate {
@@ -44,11 +40,31 @@ public struct RevenueStats: Equatable {
     }
 }
 
+public extension RevenueStats {
+    func withUpdated(balances: RevenueStats.Balances) -> RevenueStats {
+        return RevenueStats(
+            topHoursGraph: self.topHoursGraph,
+            revenueGraph: self.revenueGraph,
+            balances: balances,
+            usdRate: self.usdRate
+        )
+    }
+}
+
 extension RevenueStats {
     init(apiRevenueStats: Api.stats.BroadcastRevenueStats, peerId: PeerId) {
         switch apiRevenueStats {
-        case let .broadcastRevenueStats(topHoursGraph, revenueGraph, currentBalance, availableBalance, overallRevenue, usdRate):
-            self.init(topHoursGraph: StatsGraph(apiStatsGraph: topHoursGraph), revenueGraph: StatsGraph(apiStatsGraph: revenueGraph), currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, usdRate: usdRate)
+        case let .broadcastRevenueStats(topHoursGraph, revenueGraph, balances, usdRate):
+            self.init(topHoursGraph: StatsGraph(apiStatsGraph: topHoursGraph), revenueGraph: StatsGraph(apiStatsGraph: revenueGraph), balances: RevenueStats.Balances(apiRevenueBalances: balances), usdRate: usdRate)
+        }
+    }
+}
+
+extension RevenueStats.Balances {
+    init(apiRevenueBalances: Api.BroadcastRevenueBalances) {
+        switch apiRevenueBalances {
+        case let .broadcastRevenueBalances(currentBalance, availableBalance, overallRevenue):
+            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue)
         }
     }
 }
@@ -82,8 +98,7 @@ private func requestRevenueStats(postbox: Postbox, network: Network, peerId: Pee
 }
 
 private final class RevenueStatsContextImpl {
-    private let postbox: Postbox
-    private let network: Network
+    private let account: Account
     private let peerId: PeerId
     
     private var _state: RevenueStatsContextState {
@@ -100,11 +115,10 @@ private final class RevenueStatsContextImpl {
     
     private let disposable = MetaDisposable()
     
-    init(postbox: Postbox, network: Network, peerId: PeerId) {
+    init(account: Account, peerId: PeerId) {
         assert(Queue.mainQueue().isCurrent())
         
-        self.postbox = postbox
-        self.network = network
+        self.account = account
         self.peerId = peerId
         self._state = RevenueStatsContextState(stats: nil)
         self._statePromise.set(.single(self._state))
@@ -120,7 +134,22 @@ private final class RevenueStatsContextImpl {
     fileprivate func load() {
         assert(Queue.mainQueue().isCurrent())
         
-        self.disposable.set((requestRevenueStats(postbox: self.postbox, network: self.network, peerId: self.peerId)
+        let account = self.account
+        let signal = requestRevenueStats(postbox: self.account.postbox, network: self.account.network, peerId: self.peerId)
+        |> mapToSignal { initial -> Signal<RevenueStats?, NoError> in
+            guard let initial else {
+                return .single(nil)
+            }
+            return .single(initial)
+            |> then(
+                account.stateManager.updatedRevenueBalances()
+                |> map { balances in
+                    return initial.withUpdated(balances: balances)
+                }
+            )
+        }
+        
+        self.disposable.set((signal
         |> deliverOnMainQueue).start(next: { [weak self] stats in
             if let strongSelf = self {
                 strongSelf._state = RevenueStatsContextState(stats: stats)
@@ -131,7 +160,7 @@ private final class RevenueStatsContextImpl {
         
     func loadDetailedGraph(_ graph: StatsGraph, x: Int64) -> Signal<StatsGraph?, NoError> {
         if let token = graph.token {
-            return requestGraph(postbox: self.postbox, network: self.network, peerId: self.peerId, token: token, x: x)
+            return requestGraph(postbox: self.account.postbox, network: self.account.network, peerId: self.peerId, token: token, x: x)
         } else {
             return .single(nil)
         }
@@ -153,9 +182,9 @@ public final class RevenueStatsContext {
         }
     }
     
-    public init(postbox: Postbox, network: Network, peerId: PeerId) {
+    public init(account: Account, peerId: PeerId) {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
-            return RevenueStatsContextImpl(postbox: postbox, network: network, peerId: peerId)
+            return RevenueStatsContextImpl(account: account, peerId: peerId)
         })
     }
     
@@ -184,6 +213,7 @@ private final class RevenueStatsTransactionsContextImpl {
     private let account: Account
     private let peerId: EnginePeer.Id
     private let disposable = MetaDisposable()
+    private var updateDisposable: Disposable?
     private var isLoadingMore: Bool = false
     private var hasLoadedOnce: Bool = false
     private var canLoadMore: Bool = true
@@ -201,13 +231,21 @@ private final class RevenueStatsTransactionsContextImpl {
         self.count = 0
             
         self.loadMore()
+        
+        self.updateDisposable = (account.stateManager.updatedRevenueBalances()
+        |> deliverOn(self.queue)).startStrict(next: { [weak self] _ in
+            self?.reload()
+        })
     }
     
     deinit {
         self.disposable.dispose()
+        self.updateDisposable?.dispose()
     }
     
     func reload() {
+        self.lastOffset = nil
+        
         self.loadMore()
     }
     

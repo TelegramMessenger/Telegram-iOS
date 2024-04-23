@@ -1297,6 +1297,7 @@ open class PremiumGiftScreen: ViewControllerComponentContainer {
     public var animationColor: UIColor?
     
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    public var updateTabBarVisibility: (Bool, ContainedViewLayoutTransition) -> Void = { _, _ in }
     
     public let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
     private let mainButtonActionSlot = ActionSlot<Void>()

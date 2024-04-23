@@ -305,18 +305,6 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, ASScrollViewDe
                 if !session.deviceModel.isEmpty {
                     deviceString = session.deviceModel
                 }
-//                if !session.platform.isEmpty {
-//                    if !deviceString.isEmpty {
-//                        deviceString += ", "
-//                    }
-//                    deviceString += session.platform
-//                }
-//                if !session.systemVersion.isEmpty {
-//                    if !deviceString.isEmpty {
-//                        deviceString += ", "
-//                    }
-//                    deviceString += session.systemVersion
-//                }
                 title = deviceString
                 device = "\(session.appName) \(appVersion)"
                 location = session.country
@@ -801,7 +789,18 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, ASScrollViewDe
         transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
         
         let fieldItemHeight: CGFloat = 44.0
-        let fieldFrame = CGRect(x: inset, y: textFrame.maxY + 24.0, width: width - inset * 2.0, height: fieldItemHeight * 3.0)
+        var fieldFrame = CGRect(x: inset, y: textFrame.maxY + 24.0, width: width - inset * 2.0, height: fieldItemHeight * 2.0)
+        if !(self.ipValueNode.attributedText?.string ?? "").isEmpty {
+            fieldFrame.size.height += fieldItemHeight
+            
+            self.ipTitleNode.isHidden = false
+            self.ipValueNode.isHidden = false
+            self.secondSeparatorNode.isHidden = false
+        } else {
+            self.ipTitleNode.isHidden = true
+            self.ipValueNode.isHidden = true
+            self.secondSeparatorNode.isHidden = true
+        }
         transition.updateFrame(node: self.fieldBackgroundNode, frame: fieldFrame)
         
         let maxFieldTitleWidth = (width - inset * 4.0) * 0.4
@@ -827,11 +826,11 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, ASScrollViewDe
         transition.updateFrame(node: self.secondSeparatorNode, frame: CGRect(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight, width: fieldFrame.width - inset, height: UIScreenPixel))
                 
         let locationTitleTextSize = self.locationTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
-        let locationTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationTitleTextSize.height) / 2.0)), size: locationTitleTextSize)
+        let locationTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.maxY - fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationTitleTextSize.height) / 2.0)), size: locationTitleTextSize)
         transition.updateFrame(node: self.locationTitleNode, frame: locationTitleTextFrame)
         
         let locationValueTextSize = self.locationValueNode.updateLayout(CGSize(width: fieldFrame.width - inset * 2.0 - locationTitleTextSize.width - 10.0, height: fieldItemHeight))
-        let locationValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - locationValueTextSize.width - inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationValueTextSize.height) / 2.0)), size: locationValueTextSize)
+        let locationValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - locationValueTextSize.width - inset, y: fieldFrame.maxY - fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationValueTextSize.height) / 2.0)), size: locationValueTextSize)
         transition.updateFrame(node: self.locationValueNode, frame: locationValueTextFrame)
         
         let locationInfoTextSize = self.locationInfoNode.updateLayout(CGSize(width: fieldFrame.width - inset * 2.0, height: fieldItemHeight * 2.0))

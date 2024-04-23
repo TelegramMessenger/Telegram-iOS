@@ -215,8 +215,8 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
         }
     }
     
-    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
-        super.animateInsertion(currentTimestamp, duration: duration, short: short)
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
+        super.animateInsertion(currentTimestamp, duration: duration, options: options)
         
         self.transitionOffset = self.bounds.size.height * 1.6
         self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)
@@ -313,7 +313,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                 }
                             } else if let file = content.file {
                                 if content.type == "telegram_background" {
-                                    if let wallpaper = parseWallpaperUrl(content.url) {
+                                    if let wallpaper = parseWallpaperUrl(sharedContext: item.context.sharedContext, url: content.url) {
                                         switch wallpaper {
                                         case let .slug(slug, _, colors, intensity, angle):
                                             previewWallpaperFileReference = .message(message: MessageReference(message), media: file)

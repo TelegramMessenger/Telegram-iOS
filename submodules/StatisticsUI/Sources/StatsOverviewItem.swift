@@ -732,9 +732,9 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.context,
                     params.width,
                     item.presentationData,
-                    formatBalanceText(stats.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
+                    formatBalanceText(stats.balances.availableBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
                     item.presentationData.strings.Monetization_Overview_Available,
-                    (stats.availableBalance == 0 ? "" : "≈\(formatUsdValue(stats.availableBalance, rate: stats.usdRate))", .generic),
+                    (stats.balances.availableBalance == 0 ? "" : "≈\(formatUsdValue(stats.balances.availableBalance, rate: stats.usdRate))", .generic),
                     true
                 )
                 
@@ -742,9 +742,9 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.context,
                     params.width,
                     item.presentationData,
-                    formatBalanceText(stats.currentBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
+                    formatBalanceText(stats.balances.currentBalance, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
                     item.presentationData.strings.Monetization_Overview_Current,
-                    (stats.currentBalance == 0 ? "" : "≈\(formatUsdValue(stats.currentBalance, rate: stats.usdRate))", .generic),
+                    (stats.balances.currentBalance == 0 ? "" : "≈\(formatUsdValue(stats.balances.currentBalance, rate: stats.usdRate))", .generic),
                     true
                 )
                 
@@ -752,9 +752,9 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.context,
                     params.width,
                     item.presentationData,
-                    formatBalanceText(stats.overallRevenue, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
+                    formatBalanceText(stats.balances.overallRevenue, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator),
                     item.presentationData.strings.Monetization_Overview_Total,
-                    (stats.overallRevenue == 0 ? "" : "≈\(formatUsdValue(stats.overallRevenue, rate: stats.usdRate))", .generic),
+                    (stats.balances.overallRevenue == 0 ? "" : "≈\(formatUsdValue(stats.balances.overallRevenue, rate: stats.usdRate))", .generic),
                     true
                 )
                 
@@ -904,7 +904,7 @@ class StatsOverviewItemNode: ListViewItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     

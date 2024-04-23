@@ -72,6 +72,7 @@ public extension Api {
         case updateBotStopped(userId: Int64, date: Int32, stopped: Api.Bool, qts: Int32)
         case updateBotWebhookJSON(data: Api.DataJSON)
         case updateBotWebhookJSONQuery(queryId: Int64, data: Api.DataJSON, timeout: Int32)
+        case updateBroadcastRevenueTransactions(balances: Api.BroadcastRevenueBalances)
         case updateChannel(channelId: Int64)
         case updateChannelAvailableMessages(channelId: Int64, availableMinId: Int32)
         case updateChannelMessageForwards(channelId: Int64, id: Int32, forwards: Int32)
@@ -394,6 +395,12 @@ public extension Api {
                     serializeInt64(queryId, buffer: buffer, boxed: false)
                     data.serialize(buffer, true)
                     serializeInt32(timeout, buffer: buffer, boxed: false)
+                    break
+                case .updateBroadcastRevenueTransactions(let balances):
+                    if boxed {
+                        buffer.appendInt32(1550177112)
+                    }
+                    balances.serialize(buffer, true)
                     break
                 case .updateChannel(let channelId):
                     if boxed {
@@ -1406,6 +1413,8 @@ public extension Api {
                 return ("updateBotWebhookJSON", [("data", data as Any)])
                 case .updateBotWebhookJSONQuery(let queryId, let data, let timeout):
                 return ("updateBotWebhookJSONQuery", [("queryId", queryId as Any), ("data", data as Any), ("timeout", timeout as Any)])
+                case .updateBroadcastRevenueTransactions(let balances):
+                return ("updateBroadcastRevenueTransactions", [("balances", balances as Any)])
                 case .updateChannel(let channelId):
                 return ("updateChannel", [("channelId", channelId as Any)])
                 case .updateChannelAvailableMessages(let channelId, let availableMinId):
@@ -2093,6 +2102,19 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateBotWebhookJSONQuery(queryId: _1!, data: _2!, timeout: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBroadcastRevenueTransactions(_ reader: BufferReader) -> Update? {
+            var _1: Api.BroadcastRevenueBalances?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.BroadcastRevenueBalances
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateBroadcastRevenueTransactions(balances: _1!)
             }
             else {
                 return nil

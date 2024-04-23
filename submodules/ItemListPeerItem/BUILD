@@ -29,6 +29,7 @@ swift_library(
         "//submodules/CheckNode",
         "//submodules/TelegramUI/Components/AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities",
     ],
     visibility = [
         "//visibility:public",

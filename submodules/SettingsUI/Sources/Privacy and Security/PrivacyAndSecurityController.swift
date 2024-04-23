@@ -1446,7 +1446,7 @@ public func privacyAndSecurityController(
                        emailChangeCompletion(codeController)
                     }))
                 }
-                codeController.updateData(number: "", email: email, codeType: .email(emailPattern: "", length: data.length, resetAvailablePeriod: nil, resetPendingDate: nil, appleSignInAllowed: false, setup: true), nextType: nil, timeout: nil, termsOfService: nil)
+                codeController.updateData(number: "", email: email, codeType: .email(emailPattern: "", length: data.length, resetAvailablePeriod: nil, resetPendingDate: nil, appleSignInAllowed: false, setup: true), nextType: nil, timeout: nil, termsOfService: nil, previousCodeType: nil, isPrevious: false)
                 pushControllerImpl?(codeController, true)
                 dismissCodeControllerImpl = { [weak codeController] in
                     codeController?.dismiss()

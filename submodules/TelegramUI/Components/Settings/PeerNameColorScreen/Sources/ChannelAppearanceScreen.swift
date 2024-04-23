@@ -72,13 +72,17 @@ final class ChannelAppearanceScreenComponent: Component {
         let peer: EnginePeer?
         let peerWallpaper: TelegramWallpaper?
         let peerEmojiPack: StickerPackCollectionInfo?
+        let canSetStickerPack: Bool
+        let peerStickerPack: StickerPackCollectionInfo?
         let subscriberCount: Int?
         let availableThemes: [TelegramTheme]
         
-        init(peer: EnginePeer?, peerWallpaper: TelegramWallpaper?, peerEmojiPack: StickerPackCollectionInfo?, subscriberCount: Int?, availableThemes: [TelegramTheme]) {
+        init(peer: EnginePeer?, peerWallpaper: TelegramWallpaper?, peerEmojiPack: StickerPackCollectionInfo?, canSetStickerPack: Bool, peerStickerPack: StickerPackCollectionInfo?, subscriberCount: Int?, availableThemes: [TelegramTheme]) {
             self.peer = peer
             self.peerWallpaper = peerWallpaper
             self.peerEmojiPack = peerEmojiPack
+            self.canSetStickerPack = canSetStickerPack
+            self.peerStickerPack = peerStickerPack
             self.subscriberCount = subscriberCount
             self.availableThemes = availableThemes
         }
@@ -89,16 +93,20 @@ final class ChannelAppearanceScreenComponent: Component {
                     TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
                     TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: peerId),
                     TelegramEngine.EngineData.Item.Peer.EmojiPack(id: peerId),
+                    TelegramEngine.EngineData.Item.Peer.CanSetStickerPack(id: peerId),
+                    TelegramEngine.EngineData.Item.Peer.StickerPack(id: peerId),
                     TelegramEngine.EngineData.Item.Peer.Wallpaper(id: peerId)
                 ),
                 telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
             )
             |> map { peerData, cloudThemes -> ContentsData in
-                let (peer, subscriberCount, emojiPack, wallpaper) = peerData
+                let (peer, subscriberCount, emojiPack, canSetStickerPack, stickerPack, wallpaper) = peerData
                 return ContentsData(
                     peer: peer,
                     peerWallpaper: wallpaper,
                     peerEmojiPack: emojiPack,
+                    canSetStickerPack: canSetStickerPack,
+                    peerStickerPack: stickerPack,
                     subscriberCount: subscriberCount,
                     availableThemes: cloudThemes
                 )
@@ -178,6 +186,7 @@ final class ChannelAppearanceScreenComponent: Component {
         private let resetColorSection = ComponentView<Empty>()
         private let emojiStatusSection = ComponentView<Empty>()
         private let emojiPackSection = ComponentView<Empty>()
+        private let stickerPackSection = ComponentView<Empty>()
         
         private var chatPreviewItemNode: PeerNameColorChatPreviewItemNode?
         
@@ -650,6 +659,15 @@ final class ChannelAppearanceScreenComponent: Component {
                 self.environment?.controller()?.push(controller)
             }
             self.environment?.controller()?.push(controller)
+        }
+        
+        private func openStickerPackSetup() {
+            guard let component = self.component, let environment = self.environment, let contentsData = self.contentsData else {
+                return
+            }
+            
+            let controller = groupStickerPackSetupController(context: component.context, peerId: component.peerId, currentPackInfo: contentsData.peerStickerPack)
+            environment.controller()?.push(controller)
         }
         
         private func openEmojiPackSetup() {
@@ -1290,7 +1308,6 @@ final class ChannelAppearanceScreenComponent: Component {
                     ))))
                 }
                 
-                
                 var emojiPackFile: TelegramMediaFile?
                 if let thumbnail = emojiPack?.thumbnail {
                     emojiPackFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: thumbnail.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: thumbnail.immediateThumbnailData, mimeType: "", size: nil, attributes: [])
@@ -1408,6 +1425,70 @@ final class ChannelAppearanceScreenComponent: Component {
             contentHeight += emojiStatusSectionSize.height
             contentHeight += sectionSpacing
     
+            if isGroup && contentsData.canSetStickerPack {
+                var stickerPackContents: [AnyComponentWithIdentity<Empty>] = []
+                stickerPackContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: environment.strings.Stickers_GroupStickers,
+                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                        textColor: environment.theme.list.itemPrimaryTextColor
+                    )),
+                    maximumNumberOfLines: 0
+                ))))
+                
+                var stickerPackFile: TelegramMediaFile?
+                if let peerStickerPack = contentsData.peerStickerPack, let thumbnail = peerStickerPack.thumbnail {
+                    stickerPackFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: peerStickerPack.id.id), partialReference: nil, resource: thumbnail.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: thumbnail.immediateThumbnailData, mimeType: "", size: nil, attributes: [])
+                }
+                
+                let stickerPackSectionSize = self.stickerPackSection.update(
+                    transition: transition,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: nil,
+                        footer: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: environment.strings.Stickers_GroupStickersHelp,
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        )),
+                        items: [
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                                theme: environment.theme,
+                                title: AnyComponent(HStack(stickerPackContents, spacing: 6.0)),
+                                icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(EmojiActionIconComponent(
+                                    context: component.context,
+                                    color: environment.theme.list.itemAccentColor,
+                                    fileId: nil,
+                                    file: stickerPackFile
+                                )))),
+                                action: { [weak self] view in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.openStickerPackSetup()
+                                }
+                            )))
+                        ],
+                        displaySeparators: false,
+                        extendsItemHighlightToSection: true
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                )
+                let stickerPackSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: stickerPackSectionSize)
+                if let stickerPackSectionView = self.stickerPackSection.view {
+                    if stickerPackSectionView.superview == nil {
+                        self.scrollView.addSubview(stickerPackSectionView)
+                    }
+                    transition.setFrame(view: stickerPackSectionView, frame: stickerPackSectionFrame)
+                }
+                contentHeight += stickerPackSectionSize.height
+                contentHeight += sectionSpacing
+            }
+            
             var chatPreviewTheme: PresentationTheme = environment.theme
             var chatPreviewWallpaper: TelegramWallpaper = presentationData.chatWallpaper
             if let updatedWallpaper = self.updatedPeerWallpaper, case .remove = updatedWallpaper {

@@ -3186,7 +3186,8 @@ final class StoryItemSetContainerSendMessage {
             
             let sheet = StoryStealthModeSheetScreen(
                 context: component.context,
-                mode: .control(cooldownUntilTimestamp: config.stealthModeState.actualizedNow().cooldownUntilTimestamp),
+                mode: .control(external: false, cooldownUntilTimestamp: config.stealthModeState.actualizedNow().cooldownUntilTimestamp),
+                forceDark: true,
                 backwardDuration: pastPeriod,
                 forwardDuration: futurePeriod,
                 buttonAction: { [weak self, weak view] in
@@ -3261,6 +3262,7 @@ final class StoryItemSetContainerSendMessage {
             let sheet = StoryStealthModeSheetScreen(
                 context: component.context,
                 mode: .upgrade,
+                forceDark: true,
                 backwardDuration: pastPeriod,
                 forwardDuration: futurePeriod,
                 buttonAction: {

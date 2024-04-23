@@ -47,12 +47,12 @@ class LocationViewInteraction {
     let share: () -> Void
     let setupProximityNotification: (Bool, EngineMessage.Id?) -> Void
     let updateSendActionHighlight: (Bool) -> Void
-    let sendLiveLocation: (Int32?) -> Void
+    let sendLiveLocation: (Int32?, Bool, EngineMessage.Id?) -> Void
     let stopLiveLocation: () -> Void
     let updateRightBarButton: (LocationViewRightBarButton) -> Void
     let present: (ViewController) -> Void
     
-    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, toggleTrackingMode: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping (TelegramMediaMap, String?, OpenInLocationDirections) -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, EngineMessage.Id?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (Int32?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void, present: @escaping (ViewController) -> Void) {
+    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, toggleTrackingMode: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping (TelegramMediaMap, String?, OpenInLocationDirections) -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, EngineMessage.Id?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (Int32?, Bool, EngineMessage.Id?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void, present: @escaping (ViewController) -> Void) {
         self.toggleMapModeSelection = toggleMapModeSelection
         self.updateMapMode = updateMapMode
         self.toggleTrackingMode = toggleTrackingMode
@@ -214,7 +214,7 @@ public final class LocationViewController: ViewController {
                         return state
                     }
                     
-                    let _ = context.engine.messages.requestEditLiveLocation(messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: 0).start(completed: { [weak self] in
+                    let _ = context.engine.messages.requestEditLiveLocation(messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: 0, extendPeriod: nil).start(completed: { [weak self] in
                         guard let strongSelf = self else {
                             return
                         }
@@ -283,7 +283,7 @@ public final class LocationViewController: ViewController {
                                     return state
                                 }
                                 
-                                let _ = context.engine.messages.requestEditLiveLocation(messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: distance).start(completed: { [weak self] in
+                                let _ = context.engine.messages.requestEditLiveLocation(messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: distance, extendPeriod: nil).start(completed: { [weak self] in
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -323,7 +323,7 @@ public final class LocationViewController: ViewController {
                             } else {
                                 strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: updatedPresentationData, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_Title, text: strongSelf.presentationData.strings.Location_LiveLocationRequired_Description, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_ShareLocation, action: {
                                     completion()
-                                    strongSelf.interaction?.sendLiveLocation(distance)
+                                    strongSelf.interaction?.sendLiveLocation(distance, false, nil)
                                 }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
                             }
                             completion()
@@ -341,7 +341,7 @@ public final class LocationViewController: ViewController {
                 return
             }
             strongSelf.controllerNode.updateSendActionHighlight(highlighted)
-        }, sendLiveLocation: { [weak self] distance in
+        }, sendLiveLocation: { [weak self] distance, extend, messageId in
             guard let strongSelf = self else {
                 return
             }
@@ -400,33 +400,47 @@ public final class LocationViewController: ViewController {
                     let _  = (context.account.postbox.loadedPeerWithId(subject.id.peerId)
                     |> deliverOnMainQueue).start(next: { peer in
                         let controller = ActionSheetController(presentationData: strongSelf.presentationData)
-                        var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
-                        if let user = peer as? TelegramUser {
-                            title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(EnginePeer(user).compactDisplayTitle).string
+                        var title: String
+                        if extend {
+                            title = strongSelf.presentationData.strings.Map_LiveLocationExtendDescription
+                        } else {
+                            title = strongSelf.presentationData.strings.Map_LiveLocationGroupNewDescription
+                            if let user = peer as? TelegramUser {
+                                title = strongSelf.presentationData.strings.Map_LiveLocationPrivateNewDescription(EnginePeer(user).compactDisplayTitle).string
+                            }
                         }
                         
                         let sendLiveLocationImpl: (Int32) -> Void = { [weak controller] period in
                             controller?.dismissAnimated()
                             
-                            let _ = (strongSelf.controllerNode.coordinate
-                            |> deliverOnMainQueue).start(next: { coordinate in
-                                params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: period))
-                            })
-                            
-                            strongSelf.controllerNode.showAll()
+                            if extend {
+                                if let messageId {
+                                    let _ = context.engine.messages.requestEditLiveLocation(messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: nil, extendPeriod: period).start()
+                                }
+                            } else {
+                                let _ = (strongSelf.controllerNode.coordinate
+                                |> deliverOnMainQueue).start(next: { coordinate in
+                                    params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: period))
+                                })
+                                
+                                strongSelf.controllerNode.showAll()
+                            }
                         }
                         
                         controller.setItemGroups([
                             ActionSheetItemGroup(items: [
-                                ActionSheetTextItem(title: title),
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor15Minutes, color: .accent, action: {
+                                ActionSheetTextItem(title: title, font: .large, parseMarkdown: true),
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationForMinutes(15), color: .accent, action: {
                                     sendLiveLocationImpl(15 * 60)
                                 }),
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: {
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationForHours(1), color: .accent, action: {
                                     sendLiveLocationImpl(60 * 60 - 1)
                                 }),
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: {
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationForHours(8), color: .accent, action: {
                                     sendLiveLocationImpl(8 * 60 * 60)
+                                }),
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationIndefinite, color: .accent, action: {
+                                    sendLiveLocationImpl(liveLocationIndefinitePeriod)
                                 })
                             ]),
                             ActionSheetItemGroup(items: [

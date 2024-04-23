@@ -2165,13 +2165,13 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 return (sharedApplicationContext.sharedContext, context, authContext)
             }
         }
-        |> deliverOnMainQueue).start(next: { _, context, authContext in
-            if let authContext = authContext, let confirmationCode = parseConfirmationCodeUrl(url) {
+        |> deliverOnMainQueue).start(next: { sharedContext, context, authContext in
+            if let authContext = authContext, let confirmationCode = parseConfirmationCodeUrl(sharedContext: sharedContext, url: url) {
                 authContext.rootController.applyConfirmationCode(confirmationCode)
             } else if let context = context {
                 context.openUrl(url)
             } else if let authContext = authContext {
-                if let proxyData = parseProxyUrl(url) {
+                if let proxyData = parseProxyUrl(sharedContext: sharedContext, url: url) {
                     authContext.rootController.view.endEditing(true)
                     let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
                     let controller = ProxyServerActionSheetController(presentationData: presentationData, accountManager: authContext.sharedContext.accountManager, postbox: authContext.account.postbox, network: authContext.account.network, server: proxyData, updatedPresentationData: nil)
@@ -2379,6 +2379,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                     self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId, threadId: nil, storyId: nil)
                                 case .account:
                                     context.switchAccount()
+                                case .appIcon:
+                                    context.openAppIcon()
                             }
                         }
                     }

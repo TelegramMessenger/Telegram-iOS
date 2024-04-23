@@ -4,7 +4,7 @@ import Display
 import AsyncDisplayKit
 import TelegramPresentationData
 
-public struct CounterContollerTitle: Equatable {
+public struct CounterControllerTitle: Equatable {
     public var title: String
     public var counter: String
     
@@ -14,11 +14,11 @@ public struct CounterContollerTitle: Equatable {
     }
 }
 
-public final class CounterContollerTitleView: UIView {
+public final class CounterControllerTitleView: UIView {
     private let titleNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     
-    public var title: CounterContollerTitle = CounterContollerTitle(title: "", counter: "") {
+    public var title: CounterControllerTitle = CounterControllerTitle(title: "", counter: "") {
         didSet {
             if self.title != oldValue {
                 self.update()

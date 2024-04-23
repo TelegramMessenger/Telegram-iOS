@@ -6,11 +6,14 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TextFormat
 import Markdown
+import TextNodeWithEntities
+import AccountContext
 
 public enum ItemListTextItemText {
     case plain(String)
     case large(String)
     case markdown(String)
+    case custom(context: AccountContext, string: NSAttributedString)
 }
 
 public enum ItemListTextItemLinkAction {
@@ -75,7 +78,7 @@ public class ItemListTextItem: ListViewItem, ItemListItem {
 }
 
 public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
-    private let textNode: TextNode
+    private let textNode: TextNodeWithEntities
     private var linkHighlightingNode: LinkHighlightingNode?
     private let activateArea: AccessibilityAreaNode
     
@@ -88,17 +91,17 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     public init() {
-        self.textNode = TextNode()
-        self.textNode.isUserInteractionEnabled = false
-        self.textNode.contentMode = .left
-        self.textNode.contentsScale = UIScreen.main.scale
+        self.textNode = TextNodeWithEntities()
+        self.textNode.textNode.isUserInteractionEnabled = false
+        self.textNode.textNode.contentMode = .left
+        self.textNode.textNode.contentsScale = UIScreen.main.scale
         
         self.activateArea = AccessibilityAreaNode()
         self.activateArea.accessibilityTraits = .staticText
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.addSubnode(self.textNode)
+        self.addSubnode(self.textNode.textNode)
         self.addSubnode(self.activateArea)
     }
     
@@ -118,11 +121,11 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     public func asyncLayout() -> (_ item: ItemListTextItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let makeTitleLayout = TextNode.asyncLayout(self.textNode)
+        let makeTitleLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         let currentChevronImage = self.chevronImage
         let currentItem = self.item
         
-        return { item, params, neighbors in
+        return { [weak self] item, params, neighbors in
             let leftInset: CGFloat = 15.0
             let topInset: CGFloat = 7.0
             var bottomInset: CGFloat = 7.0
@@ -156,15 +159,20 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     }
                 }
                 attributedText = mutableAttributedText
+            case let .custom(_, string):
+                attributedText = string
             }
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0 - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             
             var insets = itemListNeighborsGroupedInsets(neighbors, params)
-            if case .large = item.text {
+            switch item.text {
+            case .large, .custom:
                 insets.top = 14.0
                 bottomInset = -6.0
+            default:
+                break
             }
             contentSize = CGSize(width: params.width, height: titleLayout.size.height + topInset + bottomInset)
             
@@ -174,7 +182,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
-            return (layout, { [weak self] in
+            return (layout, {
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.chevronImage = chevronImage
@@ -182,15 +190,25 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     strongSelf.activateArea.accessibilityLabel = attributedText.string
                     
-                    let _ = titleApply()
+                    var textArguments: TextNodeWithEntities.Arguments?
+                    if case let .custom(context, _) = item.text {
+                        textArguments = TextNodeWithEntities.Arguments(
+                            context: context,
+                            cache: context.animationCache,
+                            renderer: context.animationRenderer,
+                            placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor,
+                            attemptSynchronous: true
+                        )
+                    }
+                    let _ = titleApply(textArguments)
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + params.leftInset, y: topInset), size: titleLayout.size)
+                    strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: leftInset + params.leftInset, y: topInset), size: titleLayout.size)
                 }
             })
         }
     }
     
-    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
@@ -204,9 +222,9 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
-                            let titleFrame = self.textNode.frame
+                            let titleFrame = self.textNode.textNode.frame
                             if let item = self.item, titleFrame.contains(location) {
-                                if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
+                                if let (_, attributes) = self.textNode.textNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
                                     if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                                         item.linkAction?(.tap(url))
                                     }
@@ -225,8 +243,8 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
         if let item = self.item {
             var rects: [CGRect]?
             if let point = point {
-                let textNodeFrame = self.textNode.frame
-                if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+                let textNodeFrame = self.textNode.textNode.frame
+                if let (index, attributes) = self.textNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
                     let possibleNames: [String] = [
                         TelegramTextAttributes.URL,
                         TelegramTextAttributes.PeerMention,
@@ -236,7 +254,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     ]
                     for name in possibleNames {
                         if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
-                            rects = self.textNode.attributeRects(name: name, at: index)
+                            rects = self.textNode.textNode.attributeRects(name: name, at: index)
                             break
                         }
                     }
@@ -250,9 +268,9 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                 } else {
                     linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.2))
                     self.linkHighlightingNode = linkHighlightingNode
-                    self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
+                    self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode.textNode)
                 }
-                linkHighlightingNode.frame = self.textNode.frame
+                linkHighlightingNode.frame = self.textNode.textNode.frame
                 linkHighlightingNode.updateRects(rects)
             } else if let linkHighlightingNode = self.linkHighlightingNode {
                 self.linkHighlightingNode = nil

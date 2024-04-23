@@ -6,13 +6,21 @@ import TelegramApi
 extension TelegramMediaPollOption {
     init(apiOption: Api.PollAnswer) {
         switch apiOption {
-            case let .pollAnswer(text, option):
-                self.init(text: text, opaqueIdentifier: option.makeData())
+        case let .pollAnswer(text, option):
+            let answerText: String
+            let answerEntities: [MessageTextEntity]
+            switch text {
+            case let .textWithEntities(text, entities):
+                answerText = text
+                answerEntities = messageTextEntitiesFromApiEntities(entities)
+            }
+            
+            self.init(text: answerText, entities: answerEntities, opaqueIdentifier: option.makeData())
         }
     }
     
     var apiOption: Api.PollAnswer {
-        return .pollAnswer(text: self.text, option: Buffer(data: self.opaqueIdentifier))
+        return .pollAnswer(text: .textWithEntities(text: self.text, entities: apiEntitiesFromMessageTextEntities(self.entities, associatedPeers: SimpleDictionary())), option: Buffer(data: self.opaqueIdentifier))
     }
 }
 

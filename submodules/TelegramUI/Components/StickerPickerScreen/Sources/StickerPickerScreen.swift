@@ -1156,7 +1156,7 @@ public class StickerPickerScreen: ViewController {
                             }))
                         }
                     case let .category(value):
-                        let resultSignal = context.engine.stickers.searchEmoji(emojiString: value)
+                        let resultSignal = context.engine.stickers.searchEmoji(category: value)
                         |> mapToSignal { files, isFinalResult -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                             var items: [EmojiPagerContentComponent.Item] = []
                             
@@ -1227,10 +1227,10 @@ public class StickerPickerScreen: ViewController {
                                         fillWithLoadingPlaceholders: true,
                                         items: []
                                     )
-                                ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                                ], id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                                 return
                             }
-                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                            self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                             version += 1
                         }))
                     }
@@ -1442,7 +1442,7 @@ public class StickerPickerScreen: ViewController {
                         strongSelf.stickerSearchDisposable.set(nil)
                         strongSelf.stickerSearchStateValue = EmojiSearchState(result: nil, isSearching: false)
                     case let .category(value):
-                        let resultSignal = context.engine.stickers.searchStickers(query: value, scope: [.installed, .remote])
+                        let resultSignal = context.engine.stickers.searchStickers(category: value, scope: [.installed, .remote])
                         |> mapToSignal { files -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                             var items: [EmojiPagerContentComponent.Item] = []
                             
@@ -1513,10 +1513,10 @@ public class StickerPickerScreen: ViewController {
                                         fillWithLoadingPlaceholders: true,
                                         items: []
                                     )
-                                ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                                ], id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                                 return
                             }
-                            strongSelf.stickerSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                            strongSelf.stickerSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                             version += 1
                         }))
                     }

@@ -23,10 +23,11 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     
     var reset: (() -> Void)?
     public var requestNextOption: (() -> Void)?
+    public var requestPreviousOption: (() -> Void)?
     var resetEmail: (() -> Void)?
     var retryResetEmail: (() -> Void)?
     
-    var data: (String, String?, SentAuthorizationCodeType, AuthorizationCodeNextType?, Int32?)?
+    var data: (String, String?, SentAuthorizationCodeType, AuthorizationCodeNextType?, Int32?, SentAuthorizationCodeType?, Bool)?
     var termsOfService: (UnauthorizedAccountTermsOfService, Bool)?
     
     private let hapticFeedback = HapticFeedback()
@@ -38,6 +39,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             self.updateNavigationItems()
             self.controllerNode.inProgress = self.inProgress
         }
+    }
+    
+    var isPrevious: Bool {
+        return self.data?.6 ?? false
     }
     
     public init(presentationData: PresentationData, back: @escaping () -> Void) {
@@ -60,7 +65,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             let proceed: String
             let stop: String
             
-            if let (_, _, type, _, _) = self?.data, case .email = type {
+            if let (_, _, type, _, _, _, _) = self?.data, case .email = type {
                 text = presentationData.strings.Login_CancelEmailVerification
                 proceed = presentationData.strings.Login_CancelEmailVerificationContinue
                 stop = presentationData.strings.Login_CancelEmailVerificationStop
@@ -107,6 +112,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             self?.requestNextOption?()
         }
         
+        self.controllerNode.requestPreviousOption = { [weak self] in
+            self?.requestPreviousOption?()
+        }
+        
         self.controllerNode.updateNextEnabled = { [weak self] value in
             self?.navigationItem.rightBarButtonItem?.isEnabled = value
         }
@@ -123,12 +132,12 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             self?.present(c, in: .window(.root), with: a)
         }
         
-        if let (number, email, codeType, nextType, timeout) = self.data {
+        if let (number, email, codeType, nextType, timeout, previousCodeType, isPrevious) = self.data {
             var appleSignInAllowed = false
             if case let .email(_, _, _, _, appleSignInAllowedValue, _) = codeType {
                 appleSignInAllowed = appleSignInAllowedValue
             }
-            self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed)
+            self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed, previousCodeType: previousCodeType, isPrevious: isPrevious)
         }
     }
     
@@ -136,9 +145,9 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         super.viewDidAppear(animated)
         
         if let navigationController = self.navigationController as? NavigationController, let layout = self.validLayout {
-            addTemporaryKeyboardSnapshotView(navigationController: navigationController, parentView: self.view, layout: layout)
+            addTemporaryKeyboardSnapshotView(navigationController: navigationController, layout: layout)
         }
-        
+                
         self.controllerNode.activateInput()
     }
     
@@ -150,9 +159,17 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         self.controllerNode.animateSuccess()
     }
     
+    public func selectIncorrectPart() {
+        self.controllerNode.selectIncorrectPart()
+    }
+    
     public func animateError(text: String) {
         self.hapticFeedback.error()
         self.controllerNode.animateError(text: text)
+    }
+    
+    func updateAppIsActive(_ isActive: Bool) {
+        self.controllerNode.updatePasteVisibility()
     }
     
     func updateNavigationItems() {
@@ -168,10 +185,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         }
     }
     
-    public func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) {
+    public func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?, previousCodeType: SentAuthorizationCodeType?, isPrevious: Bool) {
         self.termsOfService = termsOfService
-        if self.data?.0 != number || self.data?.1 != email || self.data?.2 != codeType || self.data?.3 != nextType || self.data?.4 != timeout {
-            self.data = (number, email, codeType, nextType, timeout)
+        if self.data?.0 != number || self.data?.1 != email || self.data?.2 != codeType || self.data?.3 != nextType || self.data?.4 != timeout || self.data?.5 != previousCodeType || self.data?.6 != isPrevious {
+            self.data = (number, email, codeType, nextType, timeout, previousCodeType, isPrevious)
                         
             var appleSignInAllowed = false
             if case let .email(_, _, _, _, appleSignInAllowedValue, _) = codeType {
@@ -179,7 +196,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             }
             
             if self.isNodeLoaded {
-                self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed)
+                self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed, previousCodeType: previousCodeType, isPrevious: isPrevious)
                 self.requestLayout(transition: .immediate)
             }
         }
@@ -193,13 +210,17 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         
         if !hadLayout {
             self.updateNavigationItems()
+            
+            if let navigationController = self.navigationController as? NavigationController {
+                addTemporaryKeyboardSnapshotView(navigationController: navigationController, layout: layout, local: true)
+            }
         }
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     @objc private func nextPressed() {
-        guard let (_, _, type, _, _) = self.data else {
+        guard let (_, _, type, _, _, _, _) = self.data else {
             return
         }
         
@@ -220,7 +241,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
                 minimalCodeLength = Int(length)
             case let .firebase(_, length):
                 minimalCodeLength = Int(length)
-            case .flashCall, .emailSetupRequired:
+            case .flashCall, .emailSetupRequired, .word, .phrase:
                 break
         }
         
@@ -241,18 +262,20 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     }
 }
 
-func addTemporaryKeyboardSnapshotView(navigationController: NavigationController, parentView: UIView, layout: ContainerViewLayout) {
+func addTemporaryKeyboardSnapshotView(navigationController: NavigationController, layout: ContainerViewLayout, local: Bool = false) {
     if case .compact = layout.metrics.widthClass, let statusBarHost = navigationController.statusBarHost {
         if let keyboardView = statusBarHost.keyboardView {
+            keyboardView.layer.removeAllAnimations()
             if let snapshotView = keyboardView.snapshotView(afterScreenUpdates: false) {
-                keyboardView.layer.removeAllAnimations()
                 UIView.performWithoutAnimation {
                     snapshotView.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - snapshotView.frame.size.height), size: snapshotView.frame.size)
-                    if let keyboardWindow = statusBarHost.keyboardWindow {
+                    if local {
+                        navigationController.view.addSubview(snapshotView)
+                    } else if let keyboardWindow = statusBarHost.keyboardWindow {
                         keyboardWindow.addSubview(snapshotView)
                     }
                     
-                    Queue.mainQueue().after(0.5, {
+                    Queue.mainQueue().after(local ? 0.8 : 0.7, {
                         snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                             snapshotView?.removeFromSuperview()
                         })

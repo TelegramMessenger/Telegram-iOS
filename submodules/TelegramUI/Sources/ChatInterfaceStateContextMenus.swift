@@ -591,10 +591,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }, iconSource: nil, action: { c, _ in
                     c.dismiss(completion: {
                         var replaceImpl: ((ViewController) -> Void)?
-                        let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, action: {
+                        let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: false, action: {
                             let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
                             replaceImpl?(controller)
-                        })
+                        }, dismissed: nil)
                         replaceImpl = { [weak controller] c in
                             controller?.replace(with: c)
                         }
@@ -881,6 +881,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             messageActions = ChatAvailableMessageActions(
                 options: messageActions.options.intersection([.deleteLocally, .deleteGlobally, .forward]),
                 banAuthor: nil,
+                banAuthors: [],
                 disableDelete: true,
                 isCopyProtected: messageActions.isCopyProtected,
                 setTag: false,
@@ -1087,10 +1088,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }, action: { _, f in
                     let context = context
                     var replaceImpl: ((ViewController) -> Void)?
-                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .fasterDownload, action: {
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .fasterDownload, forceDark: false, action: {
                         let controller = context.sharedContext.makePremiumIntroController(context: context, source: .fasterDownload, forceDark: false, dismissed: nil)
                         replaceImpl?(controller)
-                    })
+                    }, dismissed: nil)
                     replaceImpl = { [weak controller] c in
                         controller?.replace(with: c)
                     }
@@ -2066,6 +2067,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
         
         var optionsMap: [MessageId: ChatAvailableMessageActionOptions] = [:]
         var banPeer: Peer?
+        var banPeers: [Peer] = []
         var hadPersonalIncoming = false
         var hadBanPeerId = false
         var disableDelete = false
@@ -2180,25 +2182,35 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                         if message.flags.contains(.Incoming) {
                             optionsMap[id]!.insert(.report)
                         }
-                        if channel.hasPermission(.banMembers), case .group = channel.info {
+                        if (channel.hasPermission(.banMembers) || channel.hasPermission(.deleteAllMessages)), case .group = channel.info {
                             if message.flags.contains(.Incoming) {
-                                if message.author is TelegramUser {
-                                    if !hadBanPeerId {
+                                if let author = message.author {
+                                    if author is TelegramUser {
+                                        if !hadBanPeerId {
+                                            hadBanPeerId = true
+                                            banPeer = author
+                                        } else if banPeer?.id != message.author?.id {
+                                            banPeer = nil
+                                        }
+                                        
+                                        if !banPeers.contains(where: { $0.id == author.id }) {
+                                            banPeers.append(author)
+                                        }
+                                    } else if author is TelegramChannel {
+                                        if !hadBanPeerId {
+                                            hadBanPeerId = true
+                                            banPeer = author
+                                        } else if banPeer?.id != message.author?.id {
+                                            banPeer = nil
+                                        }
+                                        
+                                        if !banPeers.contains(where: { $0.id == author.id }) {
+                                            banPeers.append(author)
+                                        }
+                                    } else {
                                         hadBanPeerId = true
-                                        banPeer = message.author
-                                    } else if banPeer?.id != message.author?.id {
                                         banPeer = nil
                                     }
-                                } else if message.author is TelegramChannel {
-                                    if !hadBanPeerId {
-                                        hadBanPeerId = true
-                                        banPeer = message.author
-                                    } else if banPeer?.id != message.author?.id {
-                                        banPeer = nil
-                                    }
-                                } else {
-                                    hadBanPeerId = true
-                                    banPeer = nil
                                 }
                             } else {
                                 hadBanPeerId = true
@@ -2338,9 +2350,9 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                 commonTags = nil
             }
             
-            return ChatAvailableMessageActions(options: reducedOptions, banAuthor: banPeer, disableDelete: disableDelete, isCopyProtected: isCopyProtected, setTag: setTag, editTags: commonTags ?? Set())
+            return ChatAvailableMessageActions(options: reducedOptions, banAuthor: banPeer, banAuthors: banPeers, disableDelete: disableDelete, isCopyProtected: isCopyProtected, setTag: setTag, editTags: commonTags ?? Set())
         } else {
-            return ChatAvailableMessageActions(options: [], banAuthor: nil, disableDelete: false, isCopyProtected: isCopyProtected, setTag: false, editTags: Set())
+            return ChatAvailableMessageActions(options: [], banAuthor: nil, banAuthors: [], disableDelete: false, isCopyProtected: isCopyProtected, setTag: false, editTags: Set())
         }
     }
 }

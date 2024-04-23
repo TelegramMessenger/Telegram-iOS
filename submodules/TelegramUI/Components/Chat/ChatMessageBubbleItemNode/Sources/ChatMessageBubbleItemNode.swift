@@ -304,6 +304,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             case let .eventLogPreviousLink(previousMessage):
                 result.append((previousMessage, ChatMessageEventLogPreviousLinkContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 needReactions = false
+            case .eventLogGroupedMessages:
+                break
         }
     }
     
@@ -839,8 +841,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         process(node: self)
     }
     
-    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
-        super.animateInsertion(currentTimestamp, duration: duration, short: short)
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
+        super.animateInsertion(currentTimestamp, duration: duration, options: options)
         
         self.shadowNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
@@ -1191,13 +1193,23 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         recognizer.highlight = { [weak self] point in
             if let strongSelf = self {
-                if let replyInfoNode = strongSelf.replyInfoNode {
-                    var translatedPoint: CGPoint?
-                    let convertedNodeFrame = replyInfoNode.view.convert(replyInfoNode.bounds, to: strongSelf.view)
-                    if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
-                        translatedPoint = strongSelf.view.convert(point, to: replyInfoNode.view)
+                if strongSelf.selectionNode == nil {
+                    if let replyInfoNode = strongSelf.replyInfoNode {
+                        var translatedPoint: CGPoint?
+                        let convertedNodeFrame = replyInfoNode.view.convert(replyInfoNode.bounds, to: strongSelf.view)
+                        if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
+                            translatedPoint = strongSelf.view.convert(point, to: replyInfoNode.view)
+                        }
+                        replyInfoNode.updateTouchesAtPoint(translatedPoint)
                     }
-                    replyInfoNode.updateTouchesAtPoint(translatedPoint)
+                    if let forwardInfoNode = strongSelf.forwardInfoNode {
+                        var translatedPoint: CGPoint?
+                        let convertedNodeFrame = forwardInfoNode.view.convert(forwardInfoNode.bounds, to: strongSelf.view)
+                        if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
+                            translatedPoint = strongSelf.view.convert(point, to: forwardInfoNode.view)
+                        }
+                        forwardInfoNode.updateTouchesAtPoint(translatedPoint)
+                    }
                 }
                 for contentNode in strongSelf.contentNodes {
                     var translatedPoint: CGPoint?
@@ -2050,7 +2062,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         } else {
             firstNodeTopPosition = .None(topNodeMergeStatus)
         }
-        let lastNodeTopPosition: ChatMessageBubbleRelativePosition = .None(bottomNodeMergeStatus)
+        var lastNodeTopPosition: ChatMessageBubbleRelativePosition = .None(bottomNodeMergeStatus)
         
         var calculatedGroupFramesAndSize: ([(CGRect, MosaicItemPosition)], CGSize)?
         var mosaicStatusSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)?
@@ -2312,6 +2324,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 let sizeAndApply = forwardInfoLayout(item.context, item.presentationData, item.presentationData.strings, .bubble(incoming: incoming), forwardSource, forwardAuthorSignature, forwardPsaType, nil, CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude))
                 forwardInfoSizeApply = (sizeAndApply.0, { width in sizeAndApply.1(width) })
                 
+                headerSize.height += 2.0
                 forwardInfoOriginY = headerSize.height
                 headerSize.width = max(headerSize.width, forwardInfoSizeApply.0.width + bubbleWidthInsets)
                 headerSize.height += forwardInfoSizeApply.0.height
@@ -2341,6 +2354,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 
                 if storyType != .regular {
                     headerSize.height += 6.0
+                } else {
+                    headerSize.height += 2.0
                 }
                 
                 forwardInfoOriginY = headerSize.height
@@ -2349,11 +2364,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 
                 if storyType != .regular {
                     headerSize.height += 16.0
+                } else {
+                    headerSize.height += 2.0
                 }
             }
                         
             var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
-            if !isInstantVideo, case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
+            if !isInstantVideo, case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1 || item.associatedData.isRecentActions), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
                 }
@@ -2470,7 +2487,27 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var maxContentWidth: CGFloat = headerSize.width
         
         var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode))?
-        if let replyMarkup = replyMarkup, !item.presentationData.isPreview {
+        if let additionalContent = item.additionalContent, case let .eventLogGroupedMessages(messages, hasButton) = additionalContent, hasButton {
+            let (minWidth, buttonsLayout) = actionButtonsLayout(
+                item.context,
+                item.presentationData.theme,
+                item.presentationData.chatBubbleCorners,
+                item.presentationData.strings,
+                item.controllerInteraction.presentationContext.backgroundNode,
+                ReplyMarkupMessageAttribute(
+                    rows: [
+                        ReplyMarkupRow(
+                            buttons: [ReplyMarkupButton(title: item.presentationData.strings.Channel_AdminLog_ShowMoreMessages(Int32(messages.count - 1)), titleWhenForwarded: nil, action: .callback(requiresPassword: false, data: MemoryBuffer(data: Data())))]
+                        )
+                    ],
+                    flags: [],
+                    placeholder: nil
+            ), item.message, maximumNodeWidth)
+            maxContentWidth = max(maxContentWidth, minWidth)
+            actionButtonsFinalize = buttonsLayout
+            
+            lastNodeTopPosition = .None(.Both)
+        } else if let replyMarkup = replyMarkup, !item.presentationData.isPreview {
             let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, item.controllerInteraction.presentationContext.backgroundNode, replyMarkup, item.message, maximumNodeWidth)
             maxContentWidth = max(maxContentWidth, minWidth)
             actionButtonsFinalize = buttonsLayout
@@ -3943,14 +3980,24 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 strongSelf.insertSubnode(actionButtonsNode, belowSubnode: strongSelf.messageAccessibilityArea)
                 actionButtonsNode.frame = actionButtonsFrame
+                
+                if animation.isAnimated {
+                    actionButtonsNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
             } else {
                 animation.animator.updateFrame(layer: actionButtonsNode.layer, frame: actionButtonsFrame, completion: nil)
             }
             
             reactionButtonsOffset += actionButtonsSizeAndApply.0.height
         } else if let actionButtonsNode = strongSelf.actionButtonsNode {
-            actionButtonsNode.removeFromSupernode()
             strongSelf.actionButtonsNode = nil
+            if animation.isAnimated {
+                actionButtonsNode.layer.animateAlpha(from: actionButtonsNode.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                    actionButtonsNode.removeFromSupernode()
+                })
+            } else {
+                actionButtonsNode.removeFromSupernode()
+            }
         }
         
         if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
@@ -4425,7 +4472,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info(nil) : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                             } else if let _ = forwardInfo.authorSignature {
                                 var subRect: CGRect?
-                                if let textNode = forwardInfoNode.textNode {
+                                if let textNode = forwardInfoNode.nameNode {
                                     subRect = textNode.frame
                                 }
                                 item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, subRect)

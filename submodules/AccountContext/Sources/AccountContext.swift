@@ -159,14 +159,16 @@ public struct ChatAvailableMessageActionOptions: OptionSet {
 public struct ChatAvailableMessageActions {
     public var options: ChatAvailableMessageActionOptions
     public var banAuthor: Peer?
+    public var banAuthors: [Peer]
     public var disableDelete: Bool
     public var isCopyProtected: Bool
     public var setTag: Bool
     public var editTags: Set<MessageReaction.Reaction>
     
-    public init(options: ChatAvailableMessageActionOptions, banAuthor: Peer?, disableDelete: Bool, isCopyProtected: Bool, setTag: Bool, editTags: Set<MessageReaction.Reaction>) {
+    public init(options: ChatAvailableMessageActionOptions, banAuthor: Peer?, banAuthors: [Peer], disableDelete: Bool, isCopyProtected: Bool, setTag: Bool, editTags: Set<MessageReaction.Reaction>) {
         self.options = options
         self.banAuthor = banAuthor
+        self.banAuthors = banAuthors
         self.disableDelete = disableDelete
         self.isCopyProtected = isCopyProtected
         self.setTag = setTag
@@ -1010,7 +1012,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?, temporary: Bool) -> ViewController
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController
-    func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController
+    func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, forceDark: Bool, action: @escaping () -> Void, dismissed: (() -> Void)?) -> ViewController
     func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Bool) -> ViewController
     func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (() -> Void)?) -> ViewController
     func makePremiumPrivacyControllerController(context: AccountContext, subject: PremiumPrivacySubject, peerId: EnginePeer.Id) -> ViewController

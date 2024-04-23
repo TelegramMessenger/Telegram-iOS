@@ -5,5 +5,6 @@
 
 - (void)setPositiveContentColor:(UIColor *)color;
 - (void)setNegativeContentColor:(UIColor *)color;
+- (void)updateIsLocked:(bool)isLocked;
 
 @end

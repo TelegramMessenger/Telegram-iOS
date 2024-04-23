@@ -17,6 +17,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatControllerInteraction",
         "//submodules/TelegramUI/Components/Chat/ChatHistoryEntry",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemView",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageItem",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemImpl",
         "//submodules/TelegramUI/Components/Chat/ChatNavigationButton",
         "//submodules/TelegramUI/Components/Chat/ChatLoadingNode",
@@ -48,6 +49,8 @@ swift_library(
         "//submodules/UndoUI",
         "//submodules/WallpaperBackgroundNode",
         "//submodules/TextFormat",
+        "//submodules/CounterControllerTitleView",
+        "//submodules/TelegramUI/Components/AdminUserActionsSheet",
     ],
     visibility = [
         "//visibility:public",

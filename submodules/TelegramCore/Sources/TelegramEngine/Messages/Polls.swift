@@ -44,7 +44,14 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
                                         } else {
                                             kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
                                         }
-                                        resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod)
+                                        let questionText: String
+                                        let questionEntities: [MessageTextEntity]
+                                        switch question {
+                                        case let .textWithEntities(text, entities):
+                                            questionText = text
+                                            questionEntities = messageTextEntitiesFromApiEntities(entities)
+                                        }
+                                        resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: questionText, textEntities: questionEntities, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod)
                                     }
                                 }
                                 
@@ -135,7 +142,7 @@ func _internal_requestClosePoll(postbox: Postbox, network: Network, stateManager
             pollMediaFlags |= 1 << 1
         }
         
-        return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: .inputMediaPoll(flags: pollMediaFlags, poll: .poll(id: poll.pollId.id, flags: pollFlags, question: poll.text, answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: nil), correctAnswers: correctAnswers, solution: mappedSolution, solutionEntities: mappedSolutionEntities), replyMarkup: nil, entities: nil, scheduleDate: nil, quickReplyShortcutId: nil))
+        return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: nil, media: .inputMediaPoll(flags: pollMediaFlags, poll: .poll(id: poll.pollId.id, flags: pollFlags, question: .textWithEntities(text: poll.text, entities: apiEntitiesFromMessageTextEntities(poll.textEntities, associatedPeers: SimpleDictionary())), answers: poll.options.map({ $0.apiOption }), closePeriod: poll.deadlineTimeout, closeDate: nil), correctAnswers: correctAnswers, solution: mappedSolution, solutionEntities: mappedSolutionEntities), replyMarkup: nil, entities: nil, scheduleDate: nil, quickReplyShortcutId: nil))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

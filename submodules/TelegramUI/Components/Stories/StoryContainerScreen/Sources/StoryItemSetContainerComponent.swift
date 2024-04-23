@@ -905,7 +905,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if hasFirstResponder(self) {
                     view.deactivateInput()
                 } else {
-                    self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(view: nil, kind: .textFocusChanged)))
+                    self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(view: nil, kind: .textFocusChanged(isFocused: false))))
                 }
             }
         }
@@ -5757,22 +5757,27 @@ public final class StoryItemSetContainerComponent: Component {
             })
         }
         
-        private func presentStoriesUpgradeScreen(source: PremiumSource) {
+        private func presentStoriesUpgradeScreen(source: PremiumIntroSource) {
             guard let component = self.component else {
                 return
             }
             
             let context = component.context
             var replaceImpl: ((ViewController) -> Void)?
-            let controller = PremiumLimitsListScreen(context: context, subject: .stories, source: .other, order: [.stories], buttonText: component.strings.Story_PremiumUpgradeStoriesButton, isPremium: false, forceDark: true)
-            controller.action = { [weak self] in
+            var dismissedImpl: (() -> Void)?
+            let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .stories, forceDark: true, action: { [weak self] in
                 guard let self else {
                     return
                 }
                 
-                let controller = PremiumIntroScreen(context: context, source: source, forceDark: true)
+                var dismissedImpl: (() -> Void)?
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: source, forceDark: true, dismissed: {
+                    dismissedImpl?()
+                })
                 self.sendMessageContext.actionSheet = controller
-                controller.wasDismissed = { [weak self, weak controller]in
+                replaceImpl?(controller)
+                
+                dismissedImpl = { [weak self, weak controller] in
                     guard let self else {
                         return
                     }
@@ -5782,10 +5787,10 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     self.updateIsProgressPaused()
                 }
-                
-                replaceImpl?(controller)
-            }
-            controller.disposed = { [weak self, weak controller] in
+            }, dismissed: {
+                dismissedImpl?()
+            })
+            dismissedImpl = { [weak self, weak controller] in
                 guard let self else {
                     return
                 }

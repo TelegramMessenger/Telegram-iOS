@@ -69,9 +69,9 @@ public final class TextFieldComponent: Component {
     
     
     public final class AnimationHint {
-        public enum Kind {
+        public enum Kind: Equatable {
             case textChanged
-            case textFocusChanged
+            case textFocusChanged(isFocused: Bool)
         }
         
         public weak var view: View?
@@ -105,6 +105,7 @@ public final class TextFieldComponent: Component {
     public let hideKeyboard: Bool
     public let customInputView: UIView?
     public let resetText: NSAttributedString?
+    public let assumeIsEditing: Bool
     public let isOneLineWhenUnfocused: Bool
     public let characterLimit: Int?
     public let emptyLineHandling: EmptyLineHandling
@@ -114,6 +115,7 @@ public final class TextFieldComponent: Component {
     public let present: (ViewController) -> Void
     public let paste: (PasteData) -> Void
     public let returnKeyAction: (() -> Void)?
+    public let backspaceKeyAction: (() -> Void)?
     
     public init(
         context: AccountContext,
@@ -126,6 +128,7 @@ public final class TextFieldComponent: Component {
         hideKeyboard: Bool,
         customInputView: UIView?,
         resetText: NSAttributedString?,
+        assumeIsEditing: Bool = false,
         isOneLineWhenUnfocused: Bool,
         characterLimit: Int? = nil,
         emptyLineHandling: EmptyLineHandling = .allowed,
@@ -134,7 +137,8 @@ public final class TextFieldComponent: Component {
         lockedFormatAction: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
         paste: @escaping (PasteData) -> Void,
-        returnKeyAction: (() -> Void)? = nil
+        returnKeyAction: (() -> Void)? = nil,
+        backspaceKeyAction: (() -> Void)? = nil
     ) {
         self.context = context
         self.theme = theme
@@ -146,6 +150,7 @@ public final class TextFieldComponent: Component {
         self.hideKeyboard = hideKeyboard
         self.customInputView = customInputView
         self.resetText = resetText
+        self.assumeIsEditing = assumeIsEditing
         self.isOneLineWhenUnfocused = isOneLineWhenUnfocused
         self.characterLimit = characterLimit
         self.emptyLineHandling = emptyLineHandling
@@ -155,6 +160,7 @@ public final class TextFieldComponent: Component {
         self.present = present
         self.paste = paste
         self.returnKeyAction = returnKeyAction
+        self.backspaceKeyAction = backspaceKeyAction
     }
     
     public static func ==(lhs: TextFieldComponent, rhs: TextFieldComponent) -> Bool {
@@ -186,6 +192,9 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.resetText != rhs.resetText {
+            return false
+        }
+        if lhs.assumeIsEditing != rhs.assumeIsEditing {
             return false
         }
         if lhs.isOneLineWhenUnfocused != rhs.isOneLineWhenUnfocused {
@@ -296,7 +305,14 @@ public final class TextFieldComponent: Component {
         }
         
         public func insertText(_ text: NSAttributedString) {
+            guard let component = self.component else {
+                return
+            }
+            
             self.updateInputState { state in
+                if let characterLimit = component.characterLimit, state.inputText.length + text.length > characterLimit {
+                    return state
+                }
                 return state.insertText(text)
             }
             if !self.isUpdating {
@@ -447,7 +463,7 @@ public final class TextFieldComponent: Component {
                 return
             }
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged(isFocused: true))))
             }
             if component.isOneLineWhenUnfocused {
                 Queue.mainQueue().justDispatch {
@@ -458,11 +474,15 @@ public final class TextFieldComponent: Component {
         
         public func chatInputTextNodeDidFinishEditing() {
             if !self.isUpdating {
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged)))
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(view: self, kind: .textFocusChanged(isFocused: false))))
             }
         }
         
         public func chatInputTextNodeBackspaceWhileEmpty() {
+            guard let component = self.component else {
+                return
+            }
+            component.backspaceKeyAction?()
         }
         
         @available(iOS 13.0, *)
@@ -1040,7 +1060,6 @@ public final class TextFieldComponent: Component {
                                     if let current = component.externalState.currentEmojiSuggestion, current.position.value == emojiSuggestionPosition.value {
                                         emojiSuggestion = current
                                     } else {
-
                                         emojiSuggestion = EmojiSuggestion(localPosition: trackingPosition, position: emojiSuggestionPosition)
                                         component.externalState.currentEmojiSuggestion = emojiSuggestion
                                     }
@@ -1135,7 +1154,7 @@ public final class TextFieldComponent: Component {
             }
             
             let wasEditing = component.externalState.isEditing
-            let isEditing = self.textView.isFirstResponder
+            let isEditing = self.textView.isFirstResponder || component.assumeIsEditing
             
             var innerTextInsets = component.insets
             innerTextInsets.left = 0.0

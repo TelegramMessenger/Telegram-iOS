@@ -1370,7 +1370,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     interaction.openChat(nil)
                 }))
                 
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_ReportReaction, color: .destructive, action: {
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.ReportPeer_BanAndReport, color: .destructive, action: {
                     interaction.openReport(.reaction(reactionSourceMessageId))
                 }))
             } else if let _ = nearbyPeerDistance {
@@ -1966,7 +1966,6 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 let ItemInviteLinks = 102
                 let ItemLinkedChannel = 103
                 let ItemPreHistory = 104
-                let ItemStickerPack = 105
                 let ItemMembers = 106
                 let ItemPermissions = 107
                 let ItemAdmins = 108
@@ -2135,13 +2134,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                             interaction.editingOpenPreHistorySetup()
                         }))
                     }
-                    
-                    if cachedData.flags.contains(.canSetStickerSet) && canEditPeerInfo(context: context, peer: channel, chatLocation: chatLocation, threadData: data.threadData) {
-                        items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStickerPack, label: .text(cachedData.stickerPack?.title ?? presentationData.strings.GroupInfo_SharedMediaNone), text: presentationData.strings.Stickers_GroupStickers, icon: UIImage(bundleImageName: "Settings/Menu/Stickers"), action: {
-                            interaction.editingOpenStickerPackSetup()
-                        }))
-                    }
-                    
+                                        
                     if isCreator, let appConfiguration = data.appConfiguration {
                         var minParticipants = 200
                         if let data = appConfiguration.data, let value = data["forum_upgrade_participants_min"] as? Double {
@@ -7000,7 +6993,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             UIPasteboard.general.string = bioText
             
-            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: self.presentationData.strings.MyProfile_ToastBioCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            let toastText: String
+            if let _ = self.data?.peer as? TelegramUser {
+                toastText = self.presentationData.strings.MyProfile_ToastBioCopied
+            } else {
+                toastText = self.presentationData.strings.ChannelProfile_ToastAboutCopied
+            }
+            
+            self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .copy(text: toastText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
         }
         
         var items: [ContextMenuItem] = []
@@ -7027,7 +7027,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             })))
         }
         
-        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.MyProfile_BioActionCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+        let copyText: String
+        if let _ = self.data?.peer as? TelegramUser {
+            copyText = self.presentationData.strings.MyProfile_BioActionCopy
+        } else {
+            copyText = self.presentationData.strings.ChannelProfile_AboutActionCopy
+        }
+        items.append(.action(ContextMenuActionItem(text: copyText, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
             c.dismiss {
                 copyAction()
             }
@@ -7991,13 +7997,39 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         switch type {
         case let .reaction(sourceMessageId):
-            let _ = (self.context.engine.peers.reportPeerReaction(authorId: self.peerId, messageId: sourceMessageId)
-            |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .emoji(name: "PoliceCar", text: strongSelf.presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
-            })
+            let presentationData = self.presentationData
+            let actionSheet = ActionSheetController(presentationData: presentationData)
+            let dismissAction: () -> Void = { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+            }
+            actionSheet.setItemGroups([
+                ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: presentationData.strings.ReportPeer_ReportReaction_Text),
+                    ActionSheetButtonItem(title: presentationData.strings.ReportPeer_ReportReaction_BanAndReport, color: .destructive, action: { [weak self] in
+                        dismissAction()
+                        guard let self else {
+                            return
+                        }
+                        self.activeActionDisposable.set(self.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: self.peerId, isBlocked: true).startStrict())
+                        self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .emoji(name: "PoliceCar", text: self.presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    }),
+                    ActionSheetButtonItem(title: presentationData.strings.ReportPeer_ReportReaction_Report, action: { [weak self] in
+                        dismissAction()
+                        guard let self else {
+                            return
+                        }
+                        let _ = (self.context.engine.peers.reportPeerReaction(authorId: self.peerId, messageId: sourceMessageId)
+                        |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .emoji(name: "PoliceCar", text: strongSelf.presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
+                        })
+                    })
+                ]),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+            ])
+            self.controller?.present(actionSheet, in: .window(.root))
         default:
             let options: [PeerReportOption]
             if case .user = type {
@@ -13058,7 +13090,7 @@ public func presentAddMembersImpl(context: AccountContext, updatedPresentationDa
             }, clearHighlightAutomatically: true))
         }
         
-        let contactsController = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, mode: .peerSelection(searchChatList: false, searchGroups: false, searchChannels: false), options: options, filters: [.excludeSelf, .disable(recentIds)], onlyWriteable: true, isGroupInvitation: true))
+        let contactsController = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, mode: .peerSelection(searchChatList: false, searchGroups: false, searchChannels: false), options: .single(options), filters: [.excludeSelf, .disable(recentIds)], onlyWriteable: true, isGroupInvitation: true))
             contactsController.navigationPresentation = .modal
         
         confirmationImpl = { [weak contactsController] peerId in

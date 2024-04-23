@@ -32,6 +32,7 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/TelegramUI/Components/TabSelectorComponent",
         "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities",
     ],
     visibility = [
         "//visibility:public",

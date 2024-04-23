@@ -4,11 +4,18 @@ import AsyncDisplayKit
 import Markdown
 
 public class ActionSheetTextItem: ActionSheetItem {
+    public enum Font {
+        case `default`
+        case large
+    }
+    
     public let title: String
+    public let font: Font
     public let parseMarkdown: Bool
     
-    public init(title: String, parseMarkdown: Bool = true) {
+    public init(title: String, font: Font = .default, parseMarkdown: Bool = true) {
         self.title = title
+        self.font = font
         self.parseMarkdown = parseMarkdown
     }
     
@@ -30,8 +37,6 @@ public class ActionSheetTextItem: ActionSheetItem {
 }
 
 public class ActionSheetTextNode: ActionSheetItemNode {
-    private let defaultFont: UIFont
-    
     private let theme: ActionSheetControllerTheme
     
     private var item: ActionSheetTextItem?
@@ -42,7 +47,6 @@ public class ActionSheetTextNode: ActionSheetItemNode {
     
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
-        self.defaultFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
         
         self.label = ImmediateTextNode()
         self.label.isUserInteractionEnabled = false
@@ -66,8 +70,16 @@ public class ActionSheetTextNode: ActionSheetItemNode {
     func setItem(_ item: ActionSheetTextItem) {
         self.item = item
         
-        let defaultFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
-        let boldFont = Font.semibold(floor(theme.baseFontSize * 13.0 / 17.0))
+        let fontSize: CGFloat
+        switch item.font {
+        case .default:
+            fontSize = 13.0
+        case .large:
+            fontSize = 15.0
+        }
+        
+        let defaultFont = Font.regular(floor(self.theme.baseFontSize * fontSize / 17.0))
+        let boldFont = Font.semibold(floor(self.theme.baseFontSize * fontSize / 17.0))
         
         if item.parseMarkdown {
             let body = MarkdownAttributeSet(font: defaultFont, textColor: self.theme.secondaryTextColor)

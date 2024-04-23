@@ -9,6 +9,8 @@ import AvatarNode
 import TextFormat
 import Markdown
 import WallpaperBackgroundNode
+import EmojiStatusComponent
+import TelegramPresentationData
 
 final class BlurredRoundedRectangle: Component {
     let color: UIColor
@@ -403,6 +405,16 @@ final class BadgeComponent: CombinedComponent {
     }
 }
 
+public struct ChatOverscrollThreadData: Equatable {
+    public var id: Int64
+    public var data: MessageHistoryThreadData
+    
+    public init(id: Int64, data: MessageHistoryThreadData) {
+        self.id = id
+        self.data = data
+    }
+}
+
 final class AvatarComponent: Component {
     final class Badge: Equatable {
         let count: Int
@@ -431,6 +443,7 @@ final class AvatarComponent: Component {
 
     let context: AccountContext
     let peer: EnginePeer
+    let threadData: ChatOverscrollThreadData?
     let badge: Badge?
     let rect: CGRect
     let withinSize: CGSize
@@ -439,6 +452,7 @@ final class AvatarComponent: Component {
     init(
         context: AccountContext,
         peer: EnginePeer,
+        threadData: ChatOverscrollThreadData?,
         badge: Badge?,
         rect: CGRect,
         withinSize: CGSize,
@@ -446,6 +460,7 @@ final class AvatarComponent: Component {
     ) {
         self.context = context
         self.peer = peer
+        self.threadData = threadData
         self.badge = badge
         self.rect = rect
         self.withinSize = withinSize
@@ -457,6 +472,9 @@ final class AvatarComponent: Component {
             return false
         }
         if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.threadData != rhs.threadData {
             return false
         }
         if lhs.badge != rhs.badge {
@@ -475,17 +493,20 @@ final class AvatarComponent: Component {
     }
 
     final class View: UIView {
-        private let avatarNode: AvatarNode
+        private let avatarContainer: UIView
+        private var avatarNode: AvatarNode?
+        private var avatarIcon: ComponentView<Empty>?
+        
         private let avatarMask: CAShapeLayer
         private var badgeView: ComponentHostView<Empty>?
 
         init() {
-            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 26.0))
+            self.avatarContainer = UIView()
             self.avatarMask = CAShapeLayer()
 
             super.init(frame: CGRect())
 
-            self.addSubview(self.avatarNode.view)
+            self.addSubview(self.avatarContainer)
         }
 
         required init?(coder aDecoder: NSCoder) {
@@ -493,9 +514,73 @@ final class AvatarComponent: Component {
         }
 
         func update(component: AvatarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
-            self.avatarNode.frame = CGRect(origin: CGPoint(), size: availableSize)
+            self.avatarContainer.frame = CGRect(origin: CGPoint(), size: availableSize)
             let theme = component.context.sharedContext.currentPresentationData.with({ $0 }).theme
-            self.avatarNode.setPeer(context: component.context, theme: theme, peer: component.peer, emptyColor: theme.list.mediaPlaceholderColor, synchronousLoad: true)
+            
+            if let threadData = component.threadData {
+                if let avatarNode = self.avatarNode {
+                    self.avatarNode = nil
+                    avatarNode.view.removeFromSuperview()
+                }
+                
+                let avatarIconContent: EmojiStatusComponent.Content
+                if threadData.id == 1 {
+                    avatarIconContent = .image(image: PresentationResourcesChatList.generalTopicIcon(theme))
+                } else if let fileId = threadData.data.info.icon, fileId != 0 {
+                    avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .count(0))
+                } else {
+                    avatarIconContent = .topic(title: String(threadData.data.info.title.prefix(1)), color: threadData.data.info.iconColor, size: CGSize(width: 32.0, height: 32.0))
+                }
+                
+                let avatarIcon: ComponentView<Empty>
+                if let current = self.avatarIcon {
+                    avatarIcon = current
+                } else {
+                    avatarIcon = ComponentView<Empty>()
+                    self.avatarIcon = avatarIcon
+                }
+                
+                let avatarIconComponent = EmojiStatusComponent(
+                    context: component.context,
+                    animationCache: component.context.animationCache,
+                    animationRenderer: component.context.animationRenderer,
+                    content: avatarIconContent,
+                    isVisibleForAnimations: true,
+                    action: nil
+                )
+                
+                let iconSize = avatarIcon.update(
+                    transition: .immediate,
+                    component: AnyComponent(avatarIconComponent),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                
+                let avatarIconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) / 2.0), y: floor((availableSize.height - iconSize.height) / 2.0)), size: iconSize)
+                if let avatarIconView = avatarIcon.view {
+                    if avatarIconView.superview == nil {
+                        self.avatarContainer.addSubview(avatarIconView)
+                    }
+                    avatarIconView.frame = avatarIconFrame
+                }
+            } else {
+                if let avatarIcon = self.avatarIcon {
+                    self.avatarIcon = nil
+                    avatarIcon.view?.removeFromSuperview()
+                }
+                
+                let avatarNode: AvatarNode
+                if let current = self.avatarNode {
+                    avatarNode = current
+                } else {
+                    avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 26.0))
+                    self.avatarNode = avatarNode
+                    self.avatarContainer.addSubview(avatarNode.view)
+                }
+                
+                avatarNode.frame = CGRect(origin: CGPoint(), size: availableSize)
+                avatarNode.setPeer(context: component.context, theme: theme, peer: component.peer, emptyColor: theme.list.mediaPlaceholderColor, synchronousLoad: true)
+            }
 
             if let badge = component.badge {
                 let badgeView: ComponentHostView<Empty>
@@ -528,14 +613,14 @@ final class AvatarComponent: Component {
                 )
                 badgeView.frame = CGRect(origin: CGPoint(x: circlePoint.x - badgeDiameter / 2.0, y: circlePoint.y - badgeDiameter / 2.0), size: badgeSize)
 
-                self.avatarMask.frame = self.avatarNode.bounds
+                self.avatarMask.frame = self.avatarContainer.bounds
                 self.avatarMask.fillRule = .evenOdd
 
                 let path = UIBezierPath(rect: self.avatarMask.bounds)
                 path.append(UIBezierPath(roundedRect: badgeView.frame.insetBy(dx: -2.0, dy: -2.0), cornerRadius: badgeDiameter / 2.0))
                 self.avatarMask.path = path.cgPath
 
-                self.avatarNode.view.layer.mask = self.avatarMask
+                self.avatarContainer.layer.mask = self.avatarMask
 
                 if animateIn {
                     badgeView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.14)
@@ -547,7 +632,7 @@ final class AvatarComponent: Component {
                     badgeView?.removeFromSuperview()
                 })
 
-                self.avatarNode.view.layer.mask = nil
+                self.avatarContainer.layer.mask = nil
             }
 
             return availableSize
@@ -666,6 +751,8 @@ final class OverscrollContentsComponent: Component {
     let backgroundColor: UIColor
     let foregroundColor: UIColor
     let peer: EnginePeer?
+    let threadData: ChatOverscrollThreadData?
+    let isForumThread: Bool
     let unreadCount: Int
     let location: TelegramEngine.NextUnreadChannelLocation
     let expandOffset: CGFloat
@@ -679,6 +766,8 @@ final class OverscrollContentsComponent: Component {
         backgroundColor: UIColor,
         foregroundColor: UIColor,
         peer: EnginePeer?,
+        threadData: ChatOverscrollThreadData?,
+        isForumThread: Bool,
         unreadCount: Int,
         location: TelegramEngine.NextUnreadChannelLocation,
         expandOffset: CGFloat,
@@ -691,6 +780,8 @@ final class OverscrollContentsComponent: Component {
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
         self.peer = peer
+        self.threadData = threadData
+        self.isForumThread = isForumThread
         self.unreadCount = unreadCount
         self.location = location
         self.expandOffset = expandOffset
@@ -711,6 +802,12 @@ final class OverscrollContentsComponent: Component {
             return false
         }
         if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.threadData != rhs.threadData {
+            return false
+        }
+        if lhs.isForumThread != rhs.isForumThread {
             return false
         }
         if lhs.unreadCount != rhs.unreadCount {
@@ -870,8 +967,12 @@ final class OverscrollContentsComponent: Component {
             transition.setSublayerTransform(view: self.avatarScalingContainer.view, transform: CATransform3DMakeScale(avatarExpandProgress, avatarExpandProgress, 1.0))
 
             let titleText: String
-            if let peer = component.peer {
+            if let threadData = component.threadData {
+                titleText = threadData.data.info.title
+            } else if let peer = component.peer {
                 titleText = peer.compactDisplayTitle
+            } else if component.isForumThread {
+                titleText = component.context.sharedContext.currentPresentationData.with({ $0 }).strings.Chat_NavigationNoTopics
             } else {
                 titleText = component.context.sharedContext.currentPresentationData.with({ $0 }).strings.Chat_NavigationNoChannels
             }
@@ -949,6 +1050,7 @@ final class OverscrollContentsComponent: Component {
                     component: AnyComponent(AvatarComponent(
                         context: component.context,
                         peer: peer,
+                        threadData: component.threadData,
                         badge: (isFullyExpanded && component.unreadCount != 0) ? AvatarComponent.Badge(count: component.unreadCount, backgroundColor: component.backgroundColor, foregroundColor: component.foregroundColor) : nil,
                         rect: avatarFrame.offsetBy(dx: self.avatarExtraScalingContainer.frame.midX + component.absoluteRect.minX, dy: self.avatarExtraScalingContainer.frame.midY + component.absoluteRect.minY),
                         withinSize: component.absoluteSize,
@@ -988,6 +1090,8 @@ public final class ChatOverscrollControl: CombinedComponent {
     let backgroundColor: UIColor
     let foregroundColor: UIColor
     let peer: EnginePeer?
+    let threadData: ChatOverscrollThreadData?
+    let isForumThread: Bool
     let unreadCount: Int
     let location: TelegramEngine.NextUnreadChannelLocation
     let context: AccountContext
@@ -1001,6 +1105,8 @@ public final class ChatOverscrollControl: CombinedComponent {
         backgroundColor: UIColor,
         foregroundColor: UIColor,
         peer: EnginePeer?,
+        threadData: ChatOverscrollThreadData?,
+        isForumThread: Bool,
         unreadCount: Int,
         location: TelegramEngine.NextUnreadChannelLocation,
         context: AccountContext,
@@ -1013,6 +1119,8 @@ public final class ChatOverscrollControl: CombinedComponent {
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
         self.peer = peer
+        self.threadData = threadData
+        self.isForumThread = isForumThread
         self.unreadCount = unreadCount
         self.location = location
         self.context = context
@@ -1031,6 +1139,12 @@ public final class ChatOverscrollControl: CombinedComponent {
             return false
         }
         if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.threadData != rhs.threadData {
+            return false
+        }
+        if lhs.isForumThread != rhs.isForumThread {
             return false
         }
         if lhs.unreadCount != rhs.unreadCount {
@@ -1070,6 +1184,8 @@ public final class ChatOverscrollControl: CombinedComponent {
                     backgroundColor: context.component.backgroundColor,
                     foregroundColor: context.component.foregroundColor,
                     peer: context.component.peer,
+                    threadData: context.component.threadData,
+                    isForumThread: context.component.isForumThread,
                     unreadCount: context.component.unreadCount,
                     location: context.component.location,
                     expandOffset: context.component.expandDistance,

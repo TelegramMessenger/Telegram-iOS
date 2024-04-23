@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "CounterContollerTitleView",
-    module_name = "CounterContollerTitleView",
+    name = "CounterControllerTitleView",
+    module_name = "CounterControllerTitleView",
     srcs = glob([
         "Sources/**/*.swift",
     ]),

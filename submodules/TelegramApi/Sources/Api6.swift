@@ -231,6 +231,8 @@ public extension Api {
 public extension Api {
     enum EmojiGroup: TypeConstructorDescription {
         case emojiGroup(title: String, iconEmojiId: Int64, emoticons: [String])
+        case emojiGroupGreeting(title: String, iconEmojiId: Int64, emoticons: [String])
+        case emojiGroupPremium(title: String, iconEmojiId: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -246,6 +248,25 @@ public extension Api {
                         serializeString(item, buffer: buffer, boxed: false)
                     }
                     break
+                case .emojiGroupGreeting(let title, let iconEmojiId, let emoticons):
+                    if boxed {
+                        buffer.appendInt32(-2133693241)
+                    }
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeInt64(iconEmojiId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(emoticons.count))
+                    for item in emoticons {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    break
+                case .emojiGroupPremium(let title, let iconEmojiId):
+                    if boxed {
+                        buffer.appendInt32(154914612)
+                    }
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeInt64(iconEmojiId, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -253,6 +274,10 @@ public extension Api {
         switch self {
                 case .emojiGroup(let title, let iconEmojiId, let emoticons):
                 return ("emojiGroup", [("title", title as Any), ("iconEmojiId", iconEmojiId as Any), ("emoticons", emoticons as Any)])
+                case .emojiGroupGreeting(let title, let iconEmojiId, let emoticons):
+                return ("emojiGroupGreeting", [("title", title as Any), ("iconEmojiId", iconEmojiId as Any), ("emoticons", emoticons as Any)])
+                case .emojiGroupPremium(let title, let iconEmojiId):
+                return ("emojiGroupPremium", [("title", title as Any), ("iconEmojiId", iconEmojiId as Any)])
     }
     }
     
@@ -270,6 +295,39 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.EmojiGroup.emojiGroup(title: _1!, iconEmojiId: _2!, emoticons: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_emojiGroupGreeting(_ reader: BufferReader) -> EmojiGroup? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: [String]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.EmojiGroup.emojiGroupGreeting(title: _1!, iconEmojiId: _2!, emoticons: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_emojiGroupPremium(_ reader: BufferReader) -> EmojiGroup? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.EmojiGroup.emojiGroupPremium(title: _1!, iconEmojiId: _2!)
             }
             else {
                 return nil
@@ -1028,100 +1086,6 @@ public extension Api {
         }
         public static func parse_chatInvitePublicJoinRequests(_ reader: BufferReader) -> ExportedChatInvite? {
             return Api.ExportedChatInvite.chatInvitePublicJoinRequests
-        }
-    
-    }
-}
-public extension Api {
-    enum ExportedChatlistInvite: TypeConstructorDescription {
-        case exportedChatlistInvite(flags: Int32, title: String, url: String, peers: [Api.Peer])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .exportedChatlistInvite(let flags, let title, let url, let peers):
-                    if boxed {
-                        buffer.appendInt32(206668204)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    serializeString(url, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(peers.count))
-                    for item in peers {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .exportedChatlistInvite(let flags, let title, let url, let peers):
-                return ("exportedChatlistInvite", [("flags", flags as Any), ("title", title as Any), ("url", url as Any), ("peers", peers as Any)])
-    }
-    }
-    
-        public static func parse_exportedChatlistInvite(_ reader: BufferReader) -> ExportedChatlistInvite? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: [Api.Peer]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.ExportedChatlistInvite.exportedChatlistInvite(flags: _1!, title: _2!, url: _3!, peers: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum ExportedContactToken: TypeConstructorDescription {
-        case exportedContactToken(url: String, expires: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .exportedContactToken(let url, let expires):
-                    if boxed {
-                        buffer.appendInt32(1103040667)
-                    }
-                    serializeString(url, buffer: buffer, boxed: false)
-                    serializeInt32(expires, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .exportedContactToken(let url, let expires):
-                return ("exportedContactToken", [("url", url as Any), ("expires", expires as Any)])
-    }
-    }
-    
-        public static func parse_exportedContactToken(_ reader: BufferReader) -> ExportedContactToken? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ExportedContactToken.exportedContactToken(url: _1!, expires: _2!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

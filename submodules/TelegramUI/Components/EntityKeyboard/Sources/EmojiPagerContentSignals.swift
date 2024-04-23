@@ -1589,6 +1589,13 @@ public extension EmojiPagerContentComponent {
         return emojiItems
     }
     
+    enum StickersSubject {
+        case profilePhotoEmojiSelection
+        case groupPhotoEmojiSelection
+        case chatStickers
+        case greetingStickers
+    }
+    
     static func stickerInputData(
         context: AccountContext,
         animationCache: AnimationCache,
@@ -1601,8 +1608,7 @@ public extension EmojiPagerContentComponent {
         forceHasPremium: Bool,
         hasEdit: Bool = false,
         searchIsPlaceholderOnly: Bool = true,
-        isProfilePhotoEmojiSelection: Bool = false,
-        isGroupPhotoEmojiSelection: Bool = false,
+        subject: StickersSubject = .chatStickers,
         hideBackground: Bool = false
     ) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
@@ -1653,11 +1659,41 @@ public extension EmojiPagerContentComponent {
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
         let searchCategories: Signal<EmojiSearchCategories?, NoError>
-        if isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection {
+        switch subject {
+        case .groupPhotoEmojiSelection, .profilePhotoEmojiSelection:
             searchCategories = context.engine.stickers.emojiSearchCategories(kind: .avatar)
-        } else {
-            searchCategories = context.engine.stickers.emojiSearchCategories(kind: .emoji)
+        case .chatStickers, .greetingStickers:
+            searchCategories = context.engine.stickers.emojiSearchCategories(kind: .combinedChatStickers)
+            |> map { result -> EmojiSearchCategories? in
+                guard let result else {
+                    return nil
+                }
+                
+                var groups: [EmojiSearchCategories.Group] = []
+                groups = result.groups
+                if case .greetingStickers = subject {
+                    if let index = groups.firstIndex(where: { group in
+                        return group.kind == .greeting
+                    }) {
+                        let group = groups.remove(at: index)
+                        groups.insert(group, at: 0)
+                    }
+                } else if case .chatStickers = subject {
+                    if let index = groups.firstIndex(where: { group in
+                        return group.kind == .premium
+                    }) {
+                        let group = groups.remove(at: index)
+                        groups.append(group)
+                    }
+                }
+                
+                return EmojiSearchCategories(
+                    hash: result.hash,
+                    groups: groups
+                )
+            }
         }
+        
         return combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: stickerOrderedItemListCollectionIds, namespaces: stickerNamespaces, aroundIndex: nil, count: 10000000),
             hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: false),
@@ -2091,6 +2127,14 @@ public extension EmojiPagerContentComponent {
                 )
             }
             
+            let warpContentsOnEdges: Bool
+            switch subject {
+            case .profilePhotoEmojiSelection, .groupPhotoEmojiSelection:
+                warpContentsOnEdges = true
+            default:
+                warpContentsOnEdges = false
+            }
+            
             return EmojiPagerContentComponent(
                 id: isMasks ? "masks" : "stickers",
                 context: context,
@@ -2103,7 +2147,7 @@ public extension EmojiPagerContentComponent {
                 itemLayoutType: .detailed,
                 itemContentUniqueId: nil,
                 searchState: .empty(hasResults: false),
-                warpContentsOnEdges: isProfilePhotoEmojiSelection || isGroupPhotoEmojiSelection,
+                warpContentsOnEdges: warpContentsOnEdges,
                 hideBackground: hideBackground,
                 displaySearchWithPlaceholder: hasSearch ? strings.StickersSearch_SearchStickersPlaceholder : nil,
                 searchCategories: searchCategories,

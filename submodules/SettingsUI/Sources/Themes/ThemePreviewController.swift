@@ -9,7 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import ShareController
-import CounterContollerTitleView
+import CounterControllerTitleView
 import WallpaperResources
 import OverlayStatusController
 import AppBundle
@@ -139,8 +139,8 @@ public final class ThemePreviewController: ViewController {
             isPreview = true
         }
         
-        let titleView = CounterContollerTitleView(theme: self.previewTheme)
-        titleView.title = CounterContollerTitle(title: themeName, counter: hasInstallsCount ? " " : "")
+        let titleView = CounterControllerTitleView(theme: self.previewTheme)
+        titleView.title = CounterControllerTitle(title: themeName, counter: hasInstallsCount ? " " : "")
         self.navigationItem.titleView = titleView
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
@@ -154,8 +154,8 @@ public final class ThemePreviewController: ViewController {
         self.disposable = (combineLatest(self.theme.get(), self.presentationTheme.get())
         |> deliverOnMainQueue).start(next: { [weak self] theme, presentationTheme in
             if let strongSelf = self, let theme = theme {
-                let titleView = CounterContollerTitleView(theme: strongSelf.previewTheme)
-                titleView.title = CounterContollerTitle(title: themeName, counter: hasInstallsCount ? strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount ?? 0)) : "")
+                let titleView = CounterControllerTitleView(theme: strongSelf.previewTheme)
+                titleView.title = CounterControllerTitle(title: themeName, counter: hasInstallsCount ? strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount ?? 0)) : "")
                 strongSelf.navigationItem.titleView = titleView
                 strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationTheme, presentationStrings: strongSelf.presentationData.strings))
             }

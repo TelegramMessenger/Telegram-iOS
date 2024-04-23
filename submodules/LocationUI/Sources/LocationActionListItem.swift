@@ -15,6 +15,7 @@ public enum LocationActionListItemIcon: Equatable {
     case location
     case liveLocation
     case stopLiveLocation
+    case extendLiveLocation
     case venue(TelegramMediaMap)
     
     public static func ==(lhs: LocationActionListItemIcon, rhs: LocationActionListItemIcon) -> Bool {
@@ -33,6 +34,12 @@ public enum LocationActionListItemIcon: Equatable {
                 }
             case .stopLiveLocation:
                 if case .stopLiveLocation = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .extendLiveLocation:
+                if case .extendLiveLocation = rhs {
                     return true
                 } else {
                     return false
@@ -63,18 +70,67 @@ private func generateLocationIcon(theme: PresentationTheme) -> UIImage {
     })!
 }
 
-private func generateLiveLocationIcon(theme: PresentationTheme, stop: Bool) -> UIImage {
+private enum LiveLocationIconType {
+    case start
+    case stop
+    case extend
+}
+private func generateLiveLocationIcon(theme: PresentationTheme, type: LiveLocationIconType) -> UIImage {
     return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
+        let imageName: String
+        let color: UIColor
+        switch type {
+        case .start:
+            imageName = "Location/SendLiveLocationIcon"
+            color = UIColor(rgb: 0x6cc139)
+        case .stop:
+            imageName = "Location/SendLocationIcon"
+            color = UIColor(rgb: 0xff6464)
+        case .extend:
+            imageName = "Location/SendLocationIcon"
+            color = UIColor(rgb: 0x6cc139)
+        }
+        
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(UIColor(rgb: stop ? 0xff6464 : 0x6cc139).cgColor)
+        context.setFillColor(color.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
         
         context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
         context.scaleBy(x: 1.0, y: -1.0)
         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
         
-        if let image = generateTintedImage(image: UIImage(bundleImageName: stop ? "Location/SendLocationIcon" : "Location/SendLiveLocationIcon"), color: theme.chat.inputPanel.actionControlForegroundColor) {
+        if let image = generateTintedImage(image: UIImage(bundleImageName: imageName), color: theme.chat.inputPanel.actionControlForegroundColor) {
             context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
+            
+            if case .extend = type {
+                context.setStrokeColor(theme.chat.inputPanel.actionControlForegroundColor.cgColor)
+                context.setLineWidth(2.0 - UIScreenPixel)
+                context.setLineCap(.round)
+                
+                let length: CGFloat = 6.0 + UIScreenPixel
+                context.move(to: CGPoint(x: 8.0 + 0.0, y: image.size.height / 2.0))
+                context.addLine(to: CGPoint(x: 8.0 + length, y: image.size.height / 2.0))
+                context.strokePath()
+                
+                context.move(to: CGPoint(x: 8.0 + length / 2.0, y: image.size.height / 2.0 - length / 2.0))
+                context.addLine(to: CGPoint(x: 8.0 + length / 2.0, y: image.size.height / 2.0 + length / 2.0))
+                context.strokePath()
+            } else if case .stop = type {
+                context.setStrokeColor(color.cgColor)
+                context.setLineWidth(5.0)
+
+                context.move(to: CGPoint(x: 10.0, y: size.height - 10.0))
+                context.addLine(to: CGPoint(x: size.width - 10.0, y: 10.0))
+                context.strokePath()
+                
+                context.setStrokeColor(theme.chat.inputPanel.actionControlForegroundColor.cgColor)
+                context.setLineWidth(2.0 - UIScreenPixel)
+                context.setLineCap(.round)
+                
+                context.move(to: CGPoint(x: 12.0, y: size.height - 12.0))
+                context.addLine(to: CGPoint(x: size.width - 12.0, y: 12.0))
+                context.strokePath()
+            }
         }
     })!
 }
@@ -273,10 +329,18 @@ final class LocationActionListItemNode: ListViewItemNode {
                                 strongSelf.iconNode.isHidden = false
                                 strongSelf.venueIconNode.isHidden = true
                                 strongSelf.iconNode.image = generateLocationIcon(theme: item.presentationData.theme)
-                            case .liveLocation, .stopLiveLocation:
+                            case .liveLocation:
                                 strongSelf.iconNode.isHidden = false
                                 strongSelf.venueIconNode.isHidden = true
-                                strongSelf.iconNode.image = generateLiveLocationIcon(theme: item.presentationData.theme, stop: updatedIcon == .stopLiveLocation)
+                                strongSelf.iconNode.image = generateLiveLocationIcon(theme: item.presentationData.theme, type: .start)
+                            case .stopLiveLocation:
+                                strongSelf.iconNode.isHidden = false
+                                strongSelf.venueIconNode.isHidden = true
+                                strongSelf.iconNode.image = generateLiveLocationIcon(theme: item.presentationData.theme, type: .stop)
+                            case .extendLiveLocation:
+                                strongSelf.iconNode.isHidden = false
+                                strongSelf.venueIconNode.isHidden = true
+                                strongSelf.iconNode.image = generateLiveLocationIcon(theme: item.presentationData.theme, type: .extend)
                             case let .venue(venue):
                                 strongSelf.iconNode.isHidden = true
                                 strongSelf.venueIconNode.isHidden = false
@@ -293,13 +357,14 @@ final class LocationActionListItemNode: ListViewItemNode {
                                 strongSelf.venueIconNode.setSignal(venueIcon(engine: item.engine, type: type ?? "", flag: flag, background: true))
                             }
                             
-                            if updatedIcon == .stopLiveLocation {
-                                let wavesNode = LiveLocationWavesNode(color: item.presentationData.theme.chat.inputPanel.actionControlForegroundColor)
+                            switch updatedIcon {
+                            case .stopLiveLocation, .extendLiveLocation:
+                                let wavesNode = LiveLocationWavesNode(color: item.presentationData.theme.chat.inputPanel.actionControlForegroundColor, extend: updatedIcon == .extendLiveLocation)
                                 strongSelf.addSubnode(wavesNode)
                                 strongSelf.wavesNode = wavesNode
-                            } else if let wavesNode = strongSelf.wavesNode {
+                            default:
+                                strongSelf.wavesNode?.removeFromSupernode()
                                 strongSelf.wavesNode = nil
-                                wavesNode.removeFromSupernode()
                             }
                             strongSelf.wavesNode?.color = item.presentationData.theme.chat.inputPanel.actionControlForegroundColor
                         }
@@ -349,7 +414,7 @@ final class LocationActionListItemNode: ListViewItemNode {
                                 strongSelf.timerNode = timerNode
                             }
                             let timerSize = CGSize(width: 28.0, height: 28.0)
-                            timerNode.update(backgroundColor: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4), foregroundColor: item.presentationData.theme.list.itemAccentColor, textColor: item.presentationData.theme.list.itemAccentColor, beginTimestamp: beginTimestamp, timeout: timeout, strings: item.presentationData.strings)
+                            timerNode.update(backgroundColor: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4), foregroundColor: item.presentationData.theme.list.itemAccentColor, textColor: item.presentationData.theme.list.itemAccentColor, beginTimestamp: beginTimestamp, timeout: Int32(timeout) == liveLocationIndefinitePeriod ? -1.0 : timeout, strings: item.presentationData.strings)
                             timerNode.frame = CGRect(origin: CGPoint(x: contentSize.width - 16.0 - timerSize.width, y: floorToScreenPixels((contentSize.height - timerSize.height) / 2.0) - 2.0), size: timerSize)
                         } else if let timerNode = strongSelf.timerNode {
                             strongSelf.timerNode = nil
@@ -361,7 +426,7 @@ final class LocationActionListItemNode: ListViewItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5)
     }
     

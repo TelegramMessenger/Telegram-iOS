@@ -1829,10 +1829,10 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         if case .undo = action {
                             let context = item.context
                             var replaceImpl: ((ViewController) -> Void)?
-                            let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .voiceToText, action: {
+                            let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .voiceToText, forceDark: false, action: {
                                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
                                 replaceImpl?(controller)
-                            })
+                            }, dismissed: nil)
                             replaceImpl = { [weak controller] c in
                                 controller?.replace(with: c)
                             }
@@ -1941,10 +1941,10 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "Transcribe", scale: 0.06, colors: [:], title: nil, text: text, customUndoText: nil, timeout: timeout), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
             if case .info = action {
                 var replaceImpl: ((ViewController) -> Void)?
-                let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .voiceToText, action: {
+                let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .voiceToText, forceDark: false, action: {
                     let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
                     replaceImpl?(controller)
-                })
+                }, dismissed: nil)
                 replaceImpl = { [weak controller] c in
                     controller?.replace(with: c)
                 }

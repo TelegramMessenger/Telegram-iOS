@@ -760,7 +760,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         selectedChats: Set(filterData.includePeers.peers),
         additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
         chatListFilters: allFilters
-    )), options: [], filters: [], alwaysEnabled: true, limit: isPremium ? premiumLimit : limit, reachedLimit: { count in
+    )), filters: [], alwaysEnabled: true, limit: isPremium ? premiumLimit : limit, reachedLimit: { count in
         if count >= premiumLimit {
             let limitController = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: min(premiumLimit, count), action: {
                 return true
@@ -913,7 +913,7 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
         selectedChats: Set(filterData.excludePeers),
         additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
         chatListFilters: allFilters
-    )), options: [], filters: [], alwaysEnabled: true, limit: 100))
+    )), filters: [], alwaysEnabled: true, limit: 100))
     controller.navigationPresentation = .modal
     let _ = (controller.result
     |> take(1)
@@ -1579,10 +1579,10 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
         },
         openTagColorPremium: {
             var replaceImpl: ((ViewController) -> Void)?
-            let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .folderTags, action: {
+            let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .folderTags, forceDark: false, action: {
                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .folderTags, forceDark: false, dismissed: nil)
                 replaceImpl?(controller)
-            })
+            }, dismissed: nil)
             replaceImpl = { [weak controller] c in
                 controller?.replace(with: c)
             }

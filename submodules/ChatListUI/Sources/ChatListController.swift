@@ -210,6 +210,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private var sharedOpenStoryProgressDisposable = MetaDisposable()
     
+    var currentTooltipUpdateTimer: Foundation.Timer?
+    
     private var fullScreenEffectView: RippleEffectView?
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -3082,6 +3084,30 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                         })))
                         
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.StoryFeed_ViewAnonymously, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: self.context.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            a(.default)
+                            
+                            guard let self else {
+                                return
+                            }
+                            if self.context.isPremium {
+                                self.requestStealthMode(openStory: { [weak self] presentTooltip in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.openStories(peerId: peer.id, completion: { storyController in
+                                        presentTooltip(storyController)
+                                    })
+                                })
+                            } else {
+                                self.presentStealthModeUpgrade(action: { [weak self] in
+                                    self?.presentUpgradeStoriesScreen()
+                                })
+                            }
+                        })))
+                        
                         let hideText: String
                         if self.location == .chatList(groupId: .archive) {
                             hideText = self.presentationData.strings.StoryFeed_ContextUnarchive
@@ -3970,6 +3996,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     public func openStories(peerId: EnginePeer.Id) {
+        self.openStories(peerId: peerId, completion: { _ in })
+    }
+    
+    public func openStories(peerId: EnginePeer.Id, completion: @escaping (StoryContainerScreen) -> Void = { _ in }) {
         if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
             if navigationBarView.storiesUnlocked {
                 self.shouldFixStorySubscriptionOrder = true
@@ -4072,7 +4102,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     self.sharedOpenStoryProgressDisposable.set(nil)
                                     componentView.storyPeerListView()?.setLoadingItem(peerId: peerId, signal: signal)
                                 }
-                            }
+                            },
+                            completion: completion
                         )
                         
                         return

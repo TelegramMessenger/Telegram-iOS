@@ -338,7 +338,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
             case let .iconItem(theme, strings, icons, isPremium, value):
                 return ThemeSettingsAppIconItem(theme: theme, strings: strings, sectionId: self.section, icons: icons, isPremium: isPremium, currentIconName: value, updated: { icon in
                     arguments.selectAppIcon(icon)
-                })
+                }, tag: ThemeSettingsEntryTag.icon)
             case .powerSaving:
                 return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: presentationData.strings.AppearanceSettings_Animations, label: "", labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openPowerSavingSettings()

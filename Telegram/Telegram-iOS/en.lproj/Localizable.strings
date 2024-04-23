@@ -11896,6 +11896,7 @@ Sorry for the inconvenience.";
 "BusinessLink.ErrorExpired" = "Link Expired";
 
 "WebApp.AlertBiometryAccessText" = "Do you want to allow %@ to use Face ID?";
+"WebApp.AlertBiometryAccessTouchIDText" = "Do you want to allow %@ to use Touch ID?";
 
 "StoryList.SubtitleArchived_1" = "1 archived post";
 "StoryList.SubtitleArchived_any" = "%d archived posts";
@@ -12052,3 +12053,132 @@ Sorry for the inconvenience.";
 
 "Premium.Gift.ContactSelection.SendMessage" = "Send Message";
 "Premium.Gift.ContactSelection.OpenProfile" = "Open Profile";
+
+"Login.EnterWordTitle" = "Enter Word";
+"Login.EnterWordText" = "We've sent you an SMS with a secret word to your phone **%@**.";
+"Login.EnterWordBeginningText" = "We've sent you an SMS with a secret word that starts with **\"%1$@\"** to your phone **%2$@**.";
+"Login.EnterWordPlaceholder" = "Enter Word from SMS";
+
+"Login.EnterPhraseTitle" = "Enter Phrase";
+"Login.EnterPhraseText" = "We've sent you an SMS with a secret phrase to your phone **%@**.";
+"Login.EnterPhraseBeginningText" = "We've sent you an SMS with a secret phrase that starts with **\"%1$@\"** to your phone **%2$@**.";
+"Login.EnterPhrasePlaceholder" = "Enter Phrase from SMS";
+
+"Login.EnterPhraseHint" = "You can copy and paste the phrase here.";
+"Login.BackToWord" = "Back to entering the word";
+"Login.BackToPhrase" = "Back to entering the phrase";
+"Login.BackToCode" = "Back to entering the code";
+
+"Login.WrongPhraseError" = "Incorrect, please try again.";
+"Login.Paste" = "Paste";
+
+"Login.ReturnToWord" = "Return to entering the word";
+"Login.ReturnToPhrase" = "Return to entering the phrase";
+"Login.ReturnToCode" = "Return to entering the code";
+
+"Map.LiveLocationPrivateNewDescription" = "Choose for how long **%@** will see your accurate location, including when the app is closed.";
+"Map.LiveLocationGroupNewDescription" = "Choose for how long people in this chat will see your accurate location, including when the app is closed.";
+
+"Map.LiveLocationExtendDescription" = "For how long do you want to extend sharing your location?";
+
+"Map.LiveLocationForMinutes_1" = "For %@ minute";
+"Map.LiveLocationForMinutes_any" = "For %@ minutes";
+
+"Map.LiveLocationForHours_1" = "For %@ hour";
+"Map.LiveLocationForHours_any" = "For %@ hours";
+
+"Map.LiveLocationIndefinite" = "Until I turn it off";
+
+"Map.TapToAddTime" = "tap to add time";
+"Map.SharingLocation" = "Sharing Location...";
+
+"Channel.AdminLog.Settings" = "Settings";
+
+"ChannelProfile.AboutActionCopy" = "Copy";
+"ChannelProfile.ToastAboutCopied" = "Copied to clipboard.";
+
+"Conversation.ContextMenuBanFull" = "Ban";
+
+"Channel.AdminLog.MessageManyDeleted" = "%1$@ deleted %2$@ from %3$@";
+"Channel.AdminLog.MessageManyDeletedMore" = "%1$@ deleted %2$@ from %3$@  %4$@";
+"Channel.AdminLog.MessageManyDeleted.Messages_1" = "%@ message";
+"Channel.AdminLog.MessageManyDeleted.Messages_any" = "%@ messages";
+"Channel.AdminLog.MessageManyDeleted.ShowAll" = "show all";
+"Channel.AdminLog.MessageManyDeleted.HideAll" = "hide all";
+
+"Shortcut.AppIcon" = "Edit App Icon";
+
+"ReportPeer.BanAndReport" = "Ban and Report";
+
+"ReportPeer.ReportReaction.Text" = "Are you sure you want to report reactions from this user?";
+"ReportPeer.ReportReaction.BanAndReport" = "Ban and Report";
+"ReportPeer.ReportReaction.Report" = "Report Reaction";
+
+"StoryFeed.ViewAnonymously" = "View Anonymously";
+
+"Channel.AdminLogFilter.EventsAdminRights" = "New Admin Rights";
+"Channel.AdminLogFilter.EventsExceptions" = "New Exceptions";
+"Channel.AdminLogFilter.EventsLeavingGroup" = "Members Left the Group";
+"Channel.AdminLogFilter.EventsLeavingChannel" = "Subscribers Removed";
+
+"Channel.AdminLogFilter.RecentActionsTitle" = "Recent Actions";
+"Channel.AdminLogFilter.FilterActionsTypeTitle" = "FILTER ACTIONS BY TYPE";
+"Channel.AdminLogFilter.FilterActionsAdminsTitle" = "FILTER ACTIONS BY ADMINS";
+"Channel.AdminLogFilter.ShowAllAdminsActions" = "Show Actions by All Admins";
+"Channel.AdminLogFilter.ApplyFilter" = "Apply Filter";
+
+"Channel.AdminLogFilter.Section.MembersGroup" = "Members and Admins";
+"Channel.AdminLogFilter.Section.MembersChannel" = "Subscribers and Admins";
+"Channel.AdminLogFilter.Section.SettingsGroup" = "Group Settings";
+"Channel.AdminLogFilter.Section.SettingsChannel" = "Channel Settings";
+"Channel.AdminLogFilter.Section.Messages" = "Messages";
+
+"Premium.Gift.ContactSelection.AddBirthday" = "Add Your Birthday";
+
+"Story.StealthMode.EnableAndOpenAction" = "Enable and Open the Story";
+
+"Channel.AdminLog.ShowMoreMessages_1" = "Show %@ More Message";
+"Channel.AdminLog.ShowMoreMessages_any" = "Show %@ More Messages";
+
+"CreatePoll.OptionCountFooterFormat_1" = "You can add {count} more option.";
+"CreatePoll.OptionCountFooterFormat_any" = "You can add {count} more options.";
+
+"Chat.AdminActionSheet.DeleteTitle_1" = "Delete 1 Message";
+"Chat.AdminActionSheet.DeleteTitle_any" = "Delete %d Messages";
+"Chat.AdminActionSheet.ReportSpam" = "Report Spam";
+"Chat.AdminActionSheet.DeleteAllSingle" = "Delete All from %@";
+"Chat.AdminActionSheet.DeleteAllMultiple" = "Delete All from Users";
+"Chat.AdminActionSheet.BanSingle" = "Ban %@";
+"Chat.AdminActionSheet.BanMultiple" = "Ban Users";
+"Chat.AdminActionSheet.RestrictSingle" = "Ban %@";
+"Chat.AdminActionSheet.RestrictMultiple" = "Ban Users";
+"Chat.AdminActionSheet.RestrictSectionHeader" = "ADDITIONAL ACTIONS";
+"Chat.AdminActionSheet.BanFooterSingle" = "Fully ban this user";
+"Chat.AdminActionSheet.RestrictFooterSingle" = "Partially restrict this user";
+"Chat.AdminActionSheet.BanFooterMultiple" = "Fully ban users";
+"Chat.AdminActionSheet.RestrictFooterMultiple" = "Partially restrict users";
+"Chat.AdminActionSheet.PermissionsSectionHeader" = "WHAT CAN THIS USER DO?";
+"Chat.AdminActionSheet.ActionButton" = "Proceed";
+
+"Chat.AdminAction.ToastMessagesDeletedTitleSingle" = "Message Deleted";
+"Chat.AdminAction.ToastMessagesDeletedTitleMultiple" = "Messages Deleted";
+"Chat.AdminAction.ToastMessagesDeletedTextSingle" = "Message Deleted.";
+"Chat.AdminAction.ToastMessagesDeletedTextMultiple" = "Messages Deleted.";
+"Chat.AdminAction.ToastReportedSpamText_1" = "**1** user reported for spam.";
+"Chat.AdminAction.ToastReportedSpamText_any" = "**%d** users reported for spam.";
+"Chat.AdminAction.ToastBannedText_1" = "**1** user banned.";
+"Chat.AdminAction.ToastBannedText_any" = "**%d** users banned.";
+"Chat.AdminAction.ToastRestrictedText_1" = "**1** user restricted.";
+"Chat.AdminAction.ToastRestrictedText_any" = "**%d** users restricted.";
+
+"Chat.MessageForwardInfo.StoryHeader" = "Forwarded story from";
+"Chat.MessageForwardInfo.ExpiredStoryHeader" = "Expired story from";
+"Chat.MessageForwardInfo.UnavailableStoryHeader" = "Expired story from";
+"Chat.MessageForwardInfo.MessageHeader" = "Forwarded from";
+
+"Chat.NavigationNoTopics" = "You have no unread topics";
+
+"Chat.NextSuggestedChannelSwipeProgress" = "Swipe up to go to the next channel";
+"Chat.NextSuggestedChannelSwipeAction" = "Release to go to the next channel";
+"Chat.NextUnreadTopicSwipeProgress" = "Swipe up to go to the next topic";
+"Chat.NextUnreadTopicSwipeAction" = "Release to go to the next topic";

@@ -12,7 +12,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import ContactListUI
-import CounterContollerTitleView
+import CounterControllerTitleView
 import EditableTokenListNode
 import PremiumUI
 import UndoUI
@@ -35,7 +35,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     private let isPeerEnabled: ((EnginePeer) -> Bool)?
     private let attemptDisabledItemSelection: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
     
-    private let titleView: CounterContollerTitleView
+    private let titleView: CounterControllerTitleView
     
     private var contactsNode: ContactMultiselectionControllerNode {
         return self.displayNode as! ContactMultiselectionControllerNode
@@ -81,7 +81,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     private var limitsConfiguration: LimitsConfiguration?
     private var limitsConfigurationDisposable: Disposable?
     private var initialPeersDisposable: Disposable?
-    private let options: [ContactListAdditionalOption]
+    private let options: Signal<[ContactListAdditionalOption], NoError>
     private let filters: [ContactListFilter]
     private let onlyWriteable: Bool
     private let isGroupInvitation: Bool
@@ -100,7 +100,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         self.limit = params.limit
         self.presentationData = params.updatedPresentationData?.initial ?? params.context.sharedContext.currentPresentationData.with { $0 }
         
-        self.titleView = CounterContollerTitleView(theme: self.presentationData.theme)
+        self.titleView = CounterControllerTitleView(theme: self.presentationData.theme)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -250,7 +250,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             case let .chats(chatsNode):
                 count = chatsNode.currentState.selectedPeerIds.count
             }
-            self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.Compose_NewGroupTitle, counter: "\(count)/\(maxCount)")
+            self.titleView.title = CounterControllerTitle(title: self.presentationData.strings.Compose_NewGroupTitle, counter: "\(count)/\(maxCount)")
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton
@@ -262,23 +262,23 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             if case let .contacts(contactsNode) = self.contactsNode.contentNode {
                 count = contactsNode.selectionState?.selectedPeerIndices.count ?? 0
             }
-            self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.Premium_Gift_ContactSelection_Title, counter: "\(count)/\(maxCount)")
+            self.titleView.title = CounterControllerTitle(title: self.presentationData.strings.Premium_Gift_ContactSelection_Title, counter: "\(count)/\(maxCount)")
         case .requestedUsersSelection:
             let maxCount: Int32 = self.limit ?? 10
             var count = 0
             if case let .contacts(contactsNode) = self.contactsNode.contentNode {
                 count = contactsNode.selectionState?.selectedPeerIndices.count ?? 0
             }
-            self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.RequestPeer_SelectUsers, counter: "\(count)/\(maxCount)")
+            self.titleView.title = CounterControllerTitle(title: self.presentationData.strings.RequestPeer_SelectUsers, counter: "\(count)/\(maxCount)")
         case .channelCreation:
-            self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.GroupInfo_AddParticipantTitle, counter: "")
+            self.titleView.title = CounterControllerTitle(title: self.presentationData.strings.GroupInfo_AddParticipantTitle, counter: "")
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             }
         case .peerSelection:
-            self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder, counter: "")
+            self.titleView.title = CounterControllerTitle(title: self.presentationData.strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder, counter: "")
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton
@@ -286,7 +286,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             }
         case let .chatSelection(chatSelection):
-            self.titleView.title = CounterContollerTitle(title: chatSelection.title, counter: "")
+            self.titleView.title = CounterControllerTitle(title: chatSelection.title, counter: "")
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton
@@ -540,13 +540,13 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     switch strongSelf.mode {
                         case .groupCreation:
                             let maxCount: Int32 = strongSelf.limitsConfiguration?.maxSupergroupMemberCount ?? 5000
-                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Compose_NewGroupTitle, counter: "\(updatedCount)/\(maxCount)")
+                            strongSelf.titleView.title = CounterControllerTitle(title: strongSelf.presentationData.strings.Compose_NewGroupTitle, counter: "\(updatedCount)/\(maxCount)")
                         case .premiumGifting:
                             let maxCount: Int32 = strongSelf.limit ?? 10
-                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Premium_Gift_ContactSelection_Title, counter: "\(updatedCount)/\(maxCount)")
+                            strongSelf.titleView.title = CounterControllerTitle(title: strongSelf.presentationData.strings.Premium_Gift_ContactSelection_Title, counter: "\(updatedCount)/\(maxCount)")
                         case .requestedUsersSelection:
                             let maxCount: Int32 = strongSelf.limit ?? 10
-                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.RequestPeer_SelectUsers, counter: "\(updatedCount)/\(maxCount)")
+                            strongSelf.titleView.title = CounterControllerTitle(title: strongSelf.presentationData.strings.RequestPeer_SelectUsers, counter: "\(updatedCount)/\(maxCount)")
                         case .peerSelection, .channelCreation, .chatSelection:
                             break
                     }

@@ -51,7 +51,7 @@ public struct ListViewItemConfigureNodeFlags: OptionSet {
 }
 
 public final class ListViewItemApply {
-    public let isOnScreen: Bool
+    public private(set) var isOnScreen: Bool
     public let timestamp: Double?
     public private(set) var invertOffsetDirection: Bool = false
     
@@ -62,6 +62,10 @@ public final class ListViewItemApply {
     
     public func setInvertOffsetDirection() {
         self.invertOffsetDirection = true
+    }
+    
+    public func setIsOffscreen() {
+        self.isOnScreen = false
     }
 }
 

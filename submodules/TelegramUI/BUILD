@@ -201,7 +201,7 @@ swift_library(
         "//submodules/QrCode:QrCode",
         "//submodules/WallpaperResources:WallpaperResources",
         "//submodules/AuthorizationUI:AuthorizationUI",
-        "//submodules/CounterContollerTitleView:CounterContollerTitleView",
+        "//submodules/CounterControllerTitleView:CounterControllerTitleView",
         "//submodules/GridMessageSelectionNode:GridMessageSelectionNode",
         "//submodules/InstantPageCache:InstantPageCache",
         "//submodules/PersistentStringHash:PersistentStringHash",
@@ -446,6 +446,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Ads/AdsInfoScreen",
         "//submodules/TelegramUI/Components/Ads/AdsReportScreen",
         "//submodules/TelegramUI/Components/Settings/BotSettingsScreen",
+        "//submodules/TelegramUI/Components/AdminUserActionsSheet",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

@@ -14,7 +14,7 @@ import AccountContext
 import ShareController
 import GalleryUI
 import HexColor
-import CounterContollerTitleView
+import CounterControllerTitleView
 import UndoUI
 import LegacyComponents
 import LegacyMediaPickerUI
@@ -350,8 +350,8 @@ public class WallpaperGalleryController: ViewController {
         self.centralItemAttributesDisposable.add(self.centralItemSubtitle.get().start(next: { [weak self] subtitle in
             if let strongSelf = self {
                 if let subtitle = subtitle {
-                    let titleView = CounterContollerTitleView(theme: strongSelf.presentationData.theme)
-                    titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.WallpaperPreview_Title, counter: subtitle)
+                    let titleView = CounterControllerTitleView(theme: strongSelf.presentationData.theme)
+                    titleView.title = CounterControllerTitle(title: strongSelf.presentationData.strings.WallpaperPreview_Title, counter: subtitle)
                     strongSelf.navigationItem.titleView = titleView
                     strongSelf.title = nil
                 } else {
@@ -527,10 +527,10 @@ public class WallpaperGalleryController: ViewController {
                 if forBoth && !strongSelf.context.isPremium {
                     let context = strongSelf.context
                     var replaceImpl: ((ViewController) -> Void)?
-                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .wallpapers, action: {
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .wallpapers, forceDark: false, action: {
                         let controller = context.sharedContext.makePremiumIntroController(context: context, source: .wallpapers, forceDark: false, dismissed: nil)
                         replaceImpl?(controller)
-                    })
+                    }, dismissed: nil)
                     replaceImpl = { [weak controller] c in
                         controller?.replace(with: c)
                     }

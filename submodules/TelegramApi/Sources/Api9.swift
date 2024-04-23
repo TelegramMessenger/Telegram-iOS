@@ -1,4 +1,318 @@
 public extension Api {
+    enum InputContact: TypeConstructorDescription {
+        case inputPhoneContact(clientId: Int64, phone: String, firstName: String, lastName: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputPhoneContact(let clientId, let phone, let firstName, let lastName):
+                    if boxed {
+                        buffer.appendInt32(-208488460)
+                    }
+                    serializeInt64(clientId, buffer: buffer, boxed: false)
+                    serializeString(phone, buffer: buffer, boxed: false)
+                    serializeString(firstName, buffer: buffer, boxed: false)
+                    serializeString(lastName, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputPhoneContact(let clientId, let phone, let firstName, let lastName):
+                return ("inputPhoneContact", [("clientId", clientId as Any), ("phone", phone as Any), ("firstName", firstName as Any), ("lastName", lastName as Any)])
+    }
+    }
+    
+        public static func parse_inputPhoneContact(_ reader: BufferReader) -> InputContact? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputContact.inputPhoneContact(clientId: _1!, phone: _2!, firstName: _3!, lastName: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    indirect enum InputDialogPeer: TypeConstructorDescription {
+        case inputDialogPeer(peer: Api.InputPeer)
+        case inputDialogPeerFolder(folderId: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputDialogPeer(let peer):
+                    if boxed {
+                        buffer.appendInt32(-55902537)
+                    }
+                    peer.serialize(buffer, true)
+                    break
+                case .inputDialogPeerFolder(let folderId):
+                    if boxed {
+                        buffer.appendInt32(1684014375)
+                    }
+                    serializeInt32(folderId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputDialogPeer(let peer):
+                return ("inputDialogPeer", [("peer", peer as Any)])
+                case .inputDialogPeerFolder(let folderId):
+                return ("inputDialogPeerFolder", [("folderId", folderId as Any)])
+    }
+    }
+    
+        public static func parse_inputDialogPeer(_ reader: BufferReader) -> InputDialogPeer? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputDialogPeer.inputDialogPeer(peer: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputDialogPeerFolder(_ reader: BufferReader) -> InputDialogPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputDialogPeer.inputDialogPeerFolder(folderId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum InputDocument: TypeConstructorDescription {
+        case inputDocument(id: Int64, accessHash: Int64, fileReference: Buffer)
+        case inputDocumentEmpty
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputDocument(let id, let accessHash, let fileReference):
+                    if boxed {
+                        buffer.appendInt32(448771445)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeBytes(fileReference, buffer: buffer, boxed: false)
+                    break
+                case .inputDocumentEmpty:
+                    if boxed {
+                        buffer.appendInt32(1928391342)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputDocument(let id, let accessHash, let fileReference):
+                return ("inputDocument", [("id", id as Any), ("accessHash", accessHash as Any), ("fileReference", fileReference as Any)])
+                case .inputDocumentEmpty:
+                return ("inputDocumentEmpty", [])
+    }
+    }
+    
+        public static func parse_inputDocument(_ reader: BufferReader) -> InputDocument? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputDocument.inputDocument(id: _1!, accessHash: _2!, fileReference: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputDocumentEmpty(_ reader: BufferReader) -> InputDocument? {
+            return Api.InputDocument.inputDocumentEmpty
+        }
+    
+    }
+}
+public extension Api {
+    enum InputEncryptedChat: TypeConstructorDescription {
+        case inputEncryptedChat(chatId: Int32, accessHash: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputEncryptedChat(let chatId, let accessHash):
+                    if boxed {
+                        buffer.appendInt32(-247351839)
+                    }
+                    serializeInt32(chatId, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputEncryptedChat(let chatId, let accessHash):
+                return ("inputEncryptedChat", [("chatId", chatId as Any), ("accessHash", accessHash as Any)])
+    }
+    }
+    
+        public static func parse_inputEncryptedChat(_ reader: BufferReader) -> InputEncryptedChat? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputEncryptedChat.inputEncryptedChat(chatId: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum InputEncryptedFile: TypeConstructorDescription {
+        case inputEncryptedFile(id: Int64, accessHash: Int64)
+        case inputEncryptedFileBigUploaded(id: Int64, parts: Int32, keyFingerprint: Int32)
+        case inputEncryptedFileEmpty
+        case inputEncryptedFileUploaded(id: Int64, parts: Int32, md5Checksum: String, keyFingerprint: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputEncryptedFile(let id, let accessHash):
+                    if boxed {
+                        buffer.appendInt32(1511503333)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+                case .inputEncryptedFileBigUploaded(let id, let parts, let keyFingerprint):
+                    if boxed {
+                        buffer.appendInt32(767652808)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt32(parts, buffer: buffer, boxed: false)
+                    serializeInt32(keyFingerprint, buffer: buffer, boxed: false)
+                    break
+                case .inputEncryptedFileEmpty:
+                    if boxed {
+                        buffer.appendInt32(406307684)
+                    }
+                    
+                    break
+                case .inputEncryptedFileUploaded(let id, let parts, let md5Checksum, let keyFingerprint):
+                    if boxed {
+                        buffer.appendInt32(1690108678)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt32(parts, buffer: buffer, boxed: false)
+                    serializeString(md5Checksum, buffer: buffer, boxed: false)
+                    serializeInt32(keyFingerprint, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputEncryptedFile(let id, let accessHash):
+                return ("inputEncryptedFile", [("id", id as Any), ("accessHash", accessHash as Any)])
+                case .inputEncryptedFileBigUploaded(let id, let parts, let keyFingerprint):
+                return ("inputEncryptedFileBigUploaded", [("id", id as Any), ("parts", parts as Any), ("keyFingerprint", keyFingerprint as Any)])
+                case .inputEncryptedFileEmpty:
+                return ("inputEncryptedFileEmpty", [])
+                case .inputEncryptedFileUploaded(let id, let parts, let md5Checksum, let keyFingerprint):
+                return ("inputEncryptedFileUploaded", [("id", id as Any), ("parts", parts as Any), ("md5Checksum", md5Checksum as Any), ("keyFingerprint", keyFingerprint as Any)])
+    }
+    }
+    
+        public static func parse_inputEncryptedFile(_ reader: BufferReader) -> InputEncryptedFile? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputEncryptedFile.inputEncryptedFile(id: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputEncryptedFileBigUploaded(_ reader: BufferReader) -> InputEncryptedFile? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.InputEncryptedFile.inputEncryptedFileBigUploaded(id: _1!, parts: _2!, keyFingerprint: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputEncryptedFileEmpty(_ reader: BufferReader) -> InputEncryptedFile? {
+            return Api.InputEncryptedFile.inputEncryptedFileEmpty
+        }
+        public static func parse_inputEncryptedFileUploaded(_ reader: BufferReader) -> InputEncryptedFile? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputEncryptedFile.inputEncryptedFileUploaded(id: _1!, parts: _2!, md5Checksum: _3!, keyFingerprint: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputFile: TypeConstructorDescription {
         case inputFile(id: Int64, parts: Int32, name: String, md5Checksum: String)
         case inputFileBig(id: Int64, parts: Int32, name: String)

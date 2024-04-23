@@ -28,7 +28,7 @@ swift_library(
         "//submodules/MergeLists",
         "//submodules/ShareController",
         "//submodules/GalleryUI",
-        "//submodules/CounterContollerTitleView",
+        "//submodules/CounterControllerTitleView",
         "//submodules/LegacyMediaPickerUI",
         "//submodules/TelegramUI/Components/Settings/SettingsThemeWallpaperNode",
         "//submodules/TelegramUI/Components/PremiumLockButtonSubtitleComponent",
