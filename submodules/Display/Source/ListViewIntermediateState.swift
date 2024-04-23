@@ -130,6 +130,7 @@ public struct ListViewDeleteAndInsertOptions: OptionSet {
     public static let AnimateCrossfade = ListViewDeleteAndInsertOptions(rawValue: 256)
     public static let ForceUpdate = ListViewDeleteAndInsertOptions(rawValue: 512)
     public static let AnimateFullTransition = ListViewDeleteAndInsertOptions(rawValue: 1024)
+    public static let InvertOffsetDirection = ListViewDeleteAndInsertOptions(rawValue: 2048)
 }
 
 public struct ListViewUpdateSizeAndInsets {

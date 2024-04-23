@@ -693,11 +693,11 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     open func cancelInsertionAnimations() {
     }
     
-    override open func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
-        if short {
+    override open func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
+        if options.short {
             //self.layer.animateBoundsOriginYAdditive(from: -self.bounds.size.height, to: 0.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
         } else {
-            self.transitionOffset = -self.bounds.size.height * 1.6
+            self.transitionOffset = options.invertOffsetDirection ? self.bounds.size.height * 1.4 : -self.bounds.size.height * 1.6
             self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)
         }
     }

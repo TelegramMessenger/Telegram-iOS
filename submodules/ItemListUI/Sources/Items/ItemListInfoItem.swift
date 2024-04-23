@@ -363,7 +363,7 @@ public class InfoItemNode: ListViewItemNode {
         }
     }
 
-    public override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    public override func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     

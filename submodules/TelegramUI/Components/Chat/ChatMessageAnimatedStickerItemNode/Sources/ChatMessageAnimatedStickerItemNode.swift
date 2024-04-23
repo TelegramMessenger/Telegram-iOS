@@ -1665,14 +1665,24 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 }
                             }
                             strongSelf.addSubnode(actionButtonsNode)
+                            
+                            if animation.isAnimated {
+                                actionButtonsNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                            }
                         } else {
                             if case let .System(duration, _) = animation {
                                 actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
                             }
                         }
                     } else if let actionButtonsNode = strongSelf.actionButtonsNode {
-                        actionButtonsNode.removeFromSupernode()
                         strongSelf.actionButtonsNode = nil
+                        if animation.isAnimated {
+                            actionButtonsNode.layer.animateAlpha(from: actionButtonsNode.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                                actionButtonsNode.removeFromSupernode()
+                            })
+                        } else {
+                            actionButtonsNode.removeFromSupernode()
+                        }
                     }
                     
                     if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
@@ -2620,8 +2630,8 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.layer.removeAllAnimations()
     }
     
-    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
-        super.animateInsertion(currentTimestamp, duration: duration, short: short)
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {
+        super.animateInsertion(currentTimestamp, duration: duration, options: options)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         

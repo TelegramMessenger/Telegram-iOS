@@ -395,7 +395,7 @@ public final class ChatMessageActionButtonsNode: ASDisplayNode {
     public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absolutePosition = (rect, containerSize)
         
-        for button in buttonNodes {
+        for button in self.buttonNodes {
             var buttonFrame = button.frame
             buttonFrame.origin.x += rect.minX
             buttonFrame.origin.y += rect.minY

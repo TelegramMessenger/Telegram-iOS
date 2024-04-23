@@ -2246,7 +2246,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
 
 private let deletedMessagesDisplayedLimit = 4
 
-func chatRecentActionsEntries(entries: [ChannelAdminEventLogEntry], presentationData: ChatPresentationData, expandedDeletedMessages: Set<EngineMessage.Id>) -> [ChatRecentActionsEntry] {
+func chatRecentActionsEntries(entries: [ChannelAdminEventLogEntry], presentationData: ChatPresentationData, expandedDeletedMessages: Set<EngineMessage.Id>, currentDeletedHeaderMessages: inout Set<EngineMessage.Id>) -> [ChatRecentActionsEntry] {
     var result: [ChatRecentActionsEntry] = []
     var deleteMessageEntries: [ChannelAdminEventLogEntry] = []
     
@@ -2264,6 +2264,7 @@ func chatRecentActionsEntries(entries: [ChannelAdminEventLogEntry], presentation
                 }
             }
 
+            currentDeletedHeaderMessages.insert(lastMessageId)
             result.append(ChatRecentActionsEntry(id: ChatRecentActionsEntryId(eventId: lastEntry.event.id, contentIndex: .header), presentationData: presentationData, entry: lastEntry, subEntries: isGroup ? deleteMessageEntries : [], isExpanded: isExpandable ? isExpanded : nil))
             
             deleteMessageEntries = []
@@ -2272,16 +2273,23 @@ func chatRecentActionsEntries(entries: [ChannelAdminEventLogEntry], presentation
     
     for entry in entries.reversed() {
         let currentDeleteMessageEvent = deleteMessageEntries.first?.event
-        var skipAppending = false
-        if case .deleteMessage = entry.event.action {
-            if currentDeleteMessageEvent == nil || (currentDeleteMessageEvent!.peerId == entry.event.peerId && abs(currentDeleteMessageEvent!.date - entry.event.date) < 5) {
+        var skipAppendingGeneralEntry = false
+        if case let .deleteMessage(message) = entry.event.action {
+            var skipAppendingDeletionEntry = false
+            if currentDeleteMessageEvent == nil || (currentDeleteMessageEvent!.peerId == entry.event.peerId && abs(currentDeleteMessageEvent!.date - entry.event.date) < 5 && !currentDeletedHeaderMessages.contains(message.id)) {
             } else {
+                if currentDeletedHeaderMessages.contains(message.id) {
+                    deleteMessageEntries.append(entry)
+                    skipAppendingDeletionEntry = true
+                }
                 appendCurrentDeleteEntries()
             }
-            deleteMessageEntries.append(entry)
-            skipAppending = true
+            if !skipAppendingDeletionEntry {
+                deleteMessageEntries.append(entry)
+            }
+            skipAppendingGeneralEntry = true
         }
-        if !skipAppending {
+        if !skipAppendingGeneralEntry {
             appendCurrentDeleteEntries()
             
             result.append(ChatRecentActionsEntry(id: ChatRecentActionsEntryId(eventId: entry.event.id, contentIndex: .content), presentationData: presentationData, entry: entry, subEntries: [], isExpanded: nil))
@@ -2305,17 +2313,18 @@ struct ChatRecentActionsHistoryTransition {
     let canLoadEarlier: Bool
     let displayingResults: Bool
     let searchResultsState: (String, [MessageIndex])?
+    var synchronous: Bool
     let isEmpty: Bool
 }
 
-func chatRecentActionsHistoryPreparedTransition(from fromEntries: [ChatRecentActionsEntry], to toEntries: [ChatRecentActionsEntry], type: ChannelAdminEventLogUpdateType, canLoadEarlier: Bool, displayingResults: Bool, context: AccountContext, peer: Peer, controllerInteraction: ChatControllerInteraction, chatThemes: [TelegramTheme], searchResultsState: (String, [MessageIndex])?) -> ChatRecentActionsHistoryTransition {
+func chatRecentActionsHistoryPreparedTransition(from fromEntries: [ChatRecentActionsEntry], to toEntries: [ChatRecentActionsEntry], type: ChannelAdminEventLogUpdateType, canLoadEarlier: Bool, displayingResults: Bool, context: AccountContext, peer: Peer, controllerInteraction: ChatControllerInteraction, chatThemes: [TelegramTheme], searchResultsState: (String, [MessageIndex])?, toggledDeletedMessageIds: Set<EngineMessage.Id>) -> ChatRecentActionsHistoryTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdatesReversed(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes), directionHint: nil) }
     
-    return ChatRecentActionsHistoryTransition(filteredEntries: toEntries, type: type, deletions: deletions, insertions: insertions, updates: updates, canLoadEarlier: canLoadEarlier, displayingResults: displayingResults, searchResultsState: searchResultsState, isEmpty: toEntries.isEmpty)
+    return ChatRecentActionsHistoryTransition(filteredEntries: toEntries, type: type, deletions: deletions, insertions: insertions, updates: updates, canLoadEarlier: canLoadEarlier, displayingResults: displayingResults, searchResultsState: searchResultsState, synchronous: !toggledDeletedMessageIds.isEmpty, isEmpty: toEntries.isEmpty)
 }
 
 private extension ExportedInvitation {
