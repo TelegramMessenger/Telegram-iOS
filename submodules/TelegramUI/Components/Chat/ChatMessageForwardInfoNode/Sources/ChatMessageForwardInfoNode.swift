@@ -264,21 +264,20 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                         titleColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
                     }
                     
-                    //TODO:localize
                     if let storyData = storyData {
                         switch storyData.storyType {
                         case .regular:
-                            titleString = PresentationStrings.FormattedString(string: "Forwarded story from", ranges: [])
+                            titleString = PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageForwardInfo_StoryHeader, ranges: [])
                             authorString = peerString
                         case .expired:
-                            titleString = PresentationStrings.FormattedString(string: "Expired story from", ranges: [])
+                            titleString = PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageForwardInfo_ExpiredStoryHeader, ranges: [])
                             authorString = peerString
                         case .unavailable:
-                            titleString = PresentationStrings.FormattedString(string: "Expired story from", ranges: [])
+                            titleString = PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageForwardInfo_UnavailableStoryHeader, ranges: [])
                             authorString = peerString
                         }
                     } else {
-                        titleString = PresentationStrings.FormattedString(string: "Forwarded from", ranges: [])
+                        titleString = PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageForwardInfo_MessageHeader, ranges: [])
                         authorString = peerString
                     }
                 }
@@ -309,7 +308,7 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                         titleString = strings.Message_GenericForwardedPsa(peerString)
                     }
                 } else {
-                    titleString = PresentationStrings.FormattedString(string: "Forwarded from", ranges: [])
+                    titleString = PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageForwardInfo_MessageHeader, ranges: [])
                     authorString = peerString
                 }
             }

@@ -12139,3 +12139,46 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.ShowMoreMessages_1" = "Show %@ More Message";
 "Channel.AdminLog.ShowMoreMessages_any" = "Show %@ More Messages";
+
+"CreatePoll.OptionCountFooterFormat_1" = "You can add {count} more option.";
+"CreatePoll.OptionCountFooterFormat_any" = "You can add {count} more options.";
+
+"Chat.AdminActionSheet.DeleteTitle_1" = "Delete 1 Message";
+"Chat.AdminActionSheet.DeleteTitle_any" = "Delete %d Messages";
+"Chat.AdminActionSheet.ReportSpam" = "Report Spam";
+"Chat.AdminActionSheet.DeleteAllSingle" = "Delete All from %@";
+"Chat.AdminActionSheet.DeleteAllMultiple" = "Delete All from Users";
+"Chat.AdminActionSheet.BanSingle" = "Ban %@";
+"Chat.AdminActionSheet.BanMultiple" = "Ban Users";
+"Chat.AdminActionSheet.RestrictSingle" = "Ban %@";
+"Chat.AdminActionSheet.RestrictMultiple" = "Ban Users";
+"Chat.AdminActionSheet.RestrictSectionHeader" = "ADDITIONAL ACTIONS";
+"Chat.AdminActionSheet.BanFooterSingle" = "Fully ban this user";
+"Chat.AdminActionSheet.RestrictFooterSingle" = "Partially restrict this user";
+"Chat.AdminActionSheet.BanFooterMultiple" = "Fully ban users";
+"Chat.AdminActionSheet.RestrictFooterMultiple" = "Partially restrict users";
+"Chat.AdminActionSheet.PermissionsSectionHeader" = "WHAT CAN THIS USER DO?";
+"Chat.AdminActionSheet.ActionButton" = "Proceed";
+
+"Chat.AdminAction.ToastMessagesDeletedTitleSingle" = "Message Deleted";
+"Chat.AdminAction.ToastMessagesDeletedTitleMultiple" = "Messages Deleted";
+"Chat.AdminAction.ToastMessagesDeletedTextSingle" = "Message Deleted.";
+"Chat.AdminAction.ToastMessagesDeletedTextMultiple" = "Messages Deleted.";
+"Chat.AdminAction.ToastReportedSpamText_1" = "**1** user reported for spam.";
+"Chat.AdminAction.ToastReportedSpamText_any" = "**%d** users reported for spam.";
+"Chat.AdminAction.ToastBannedText_1" = "**1** user banned.";
+"Chat.AdminAction.ToastBannedText_any" = "**%d** users banned.";
+"Chat.AdminAction.ToastRestrictedText_1" = "**1** user restricted.";
+"Chat.AdminAction.ToastRestrictedText_any" = "**%d** users restricted.";
+
+"Chat.MessageForwardInfo.StoryHeader" = "Forwarded story from";
+"Chat.MessageForwardInfo.ExpiredStoryHeader" = "Expired story from";
+"Chat.MessageForwardInfo.UnavailableStoryHeader" = "Expired story from";
+"Chat.MessageForwardInfo.MessageHeader" = "Forwarded from";
+
+"Chat.NavigationNoTopics" = "You have no unread topics";
+
+"Chat.NextSuggestedChannelSwipeProgress" = "Swipe up to go to the next channel";
+"Chat.NextSuggestedChannelSwipeAction" = "Release to go to the next channel";
+"Chat.NextUnreadTopicSwipeProgress" = "Swipe up to go to the next topic";
+"Chat.NextUnreadTopicSwipeAction" = "Release to go to the next topic";

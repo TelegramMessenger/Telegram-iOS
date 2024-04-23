@@ -26,10 +26,9 @@ extension ChatControllerImpl {
             return
         }
         
-        //TODO:localize
-        var title: String? = messageIds.count == 1 ? "Message Deleted" : "Messages Deleted"
+        var title: String? = messageIds.count == 1 ? self.presentationData.strings.Chat_AdminAction_ToastMessagesDeletedTitleSingle : self.presentationData.strings.Chat_AdminAction_ToastMessagesDeletedTitleMultiple
         if !result.deleteAllFromPeers.isEmpty {
-            title = "Messages Deleted"
+            title = self.presentationData.strings.Chat_AdminAction_ToastMessagesDeletedTitleMultiple
         }
         var text: String = ""
         var undoRights: [EnginePeer.Id: InitialBannedRights] = [:]
@@ -38,21 +37,13 @@ extension ChatControllerImpl {
             if !text.isEmpty {
                 text.append("\n")
             }
-            if result.reportSpamPeers.count == 1 {
-                text.append("**1** user reported for spam.")
-            } else {
-                text.append("**\(result.reportSpamPeers.count)** users reported for spam.")
-            }
+            text.append(self.presentationData.strings.Chat_AdminAction_ToastReportedSpamText(Int32(result.reportSpamPeers.count)))
         }
         if !result.banPeers.isEmpty {
             if !text.isEmpty {
                 text.append("\n")
             }
-            if result.banPeers.count == 1 {
-                text.append("**1** user banned.")
-            } else {
-                text.append("**\(result.banPeers.count)** users banned.")
-            }
+            text.append(self.presentationData.strings.Chat_AdminAction_ToastBannedText(Int32(result.banPeers.count)))
             for id in result.banPeers {
                 if let value = initialUserBannedRights[id] {
                     undoRights[id] = value
@@ -63,11 +54,7 @@ extension ChatControllerImpl {
             if !text.isEmpty {
                 text.append("\n")
             }
-            if result.updateBannedRights.count == 1 {
-                text.append("**1** user restricted.")
-            } else {
-                text.append("**\(result.updateBannedRights.count)** users restricted.")
-            }
+            text.append(self.presentationData.strings.Chat_AdminAction_ToastRestrictedText(Int32(result.updateBannedRights.count)))
             for (id, _) in result.updateBannedRights {
                 if let value = initialUserBannedRights[id] {
                     undoRights[id] = value
@@ -97,9 +84,9 @@ extension ChatControllerImpl {
         }
         
         if text.isEmpty {
-            text = messageIds.count == 1 ? "Message Deleted." : "Messages Deleted."
+            text = messageIds.count == 1 ? self.presentationData.strings.Chat_AdminAction_ToastMessagesDeletedTextSingle : self.presentationData.strings.Chat_AdminAction_ToastMessagesDeletedTextMultiple
             if !result.deleteAllFromPeers.isEmpty {
-                text = "Messages Deleted."
+                text = self.presentationData.strings.Chat_AdminAction_ToastMessagesDeletedTextMultiple
             }
             title = nil
         }

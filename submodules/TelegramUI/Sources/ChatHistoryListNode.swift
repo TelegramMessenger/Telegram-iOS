@@ -2243,12 +2243,11 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 switch nextChannelToRead.location {
                 case .same:
                     if let controllerNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode, let chatController = controllerNode.interfaceInteraction?.chatController() as? ChatControllerImpl, chatController.customChatNavigationStack != nil {
-                        //TODO:localize
-                        swipeText = ("Pull up to go to the next channel", [])
-                        releaseText = ("Release to go to the next channel", [])
+                        swipeText = (self.currentPresentationData.strings.Chat_NextSuggestedChannelSwipeProgress, [])
+                        releaseText = (self.currentPresentationData.strings.Chat_NextSuggestedChannelSwipeAction, [])
                     } else if nextChannelToRead.threadData != nil {
-                        swipeText = ("Pull up to go to the next topic", [])
-                        releaseText = ("Release to go to the next topic", [])
+                        swipeText = (self.currentPresentationData.strings.Chat_NextUnreadTopicSwipeProgress, [])
+                        releaseText = (self.currentPresentationData.strings.Chat_NextUnreadTopicSwipeAction, [])
                     } else {
                         swipeText = (self.currentPresentationData.strings.Chat_NextChannelSameLocationSwipeProgress, [])
                         releaseText = (self.currentPresentationData.strings.Chat_NextChannelSameLocationSwipeAction, [])
@@ -2298,6 +2297,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             data: threadData.data
                         )
                     },
+                    isForumThread: self.chatLocation.threadId != nil,
                     unreadCount: self.nextChannelToRead?.unreadCount ?? 0,
                     location: self.nextChannelToRead?.location ?? .same,
                     context: self.context,

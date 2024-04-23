@@ -752,6 +752,7 @@ final class OverscrollContentsComponent: Component {
     let foregroundColor: UIColor
     let peer: EnginePeer?
     let threadData: ChatOverscrollThreadData?
+    let isForumThread: Bool
     let unreadCount: Int
     let location: TelegramEngine.NextUnreadChannelLocation
     let expandOffset: CGFloat
@@ -766,6 +767,7 @@ final class OverscrollContentsComponent: Component {
         foregroundColor: UIColor,
         peer: EnginePeer?,
         threadData: ChatOverscrollThreadData?,
+        isForumThread: Bool,
         unreadCount: Int,
         location: TelegramEngine.NextUnreadChannelLocation,
         expandOffset: CGFloat,
@@ -779,6 +781,7 @@ final class OverscrollContentsComponent: Component {
         self.foregroundColor = foregroundColor
         self.peer = peer
         self.threadData = threadData
+        self.isForumThread = isForumThread
         self.unreadCount = unreadCount
         self.location = location
         self.expandOffset = expandOffset
@@ -802,6 +805,9 @@ final class OverscrollContentsComponent: Component {
             return false
         }
         if lhs.threadData != rhs.threadData {
+            return false
+        }
+        if lhs.isForumThread != rhs.isForumThread {
             return false
         }
         if lhs.unreadCount != rhs.unreadCount {
@@ -965,6 +971,8 @@ final class OverscrollContentsComponent: Component {
                 titleText = threadData.data.info.title
             } else if let peer = component.peer {
                 titleText = peer.compactDisplayTitle
+            } else if component.isForumThread {
+                titleText = component.context.sharedContext.currentPresentationData.with({ $0 }).strings.Chat_NavigationNoTopics
             } else {
                 titleText = component.context.sharedContext.currentPresentationData.with({ $0 }).strings.Chat_NavigationNoChannels
             }
@@ -1083,6 +1091,7 @@ public final class ChatOverscrollControl: CombinedComponent {
     let foregroundColor: UIColor
     let peer: EnginePeer?
     let threadData: ChatOverscrollThreadData?
+    let isForumThread: Bool
     let unreadCount: Int
     let location: TelegramEngine.NextUnreadChannelLocation
     let context: AccountContext
@@ -1097,6 +1106,7 @@ public final class ChatOverscrollControl: CombinedComponent {
         foregroundColor: UIColor,
         peer: EnginePeer?,
         threadData: ChatOverscrollThreadData?,
+        isForumThread: Bool,
         unreadCount: Int,
         location: TelegramEngine.NextUnreadChannelLocation,
         context: AccountContext,
@@ -1110,6 +1120,7 @@ public final class ChatOverscrollControl: CombinedComponent {
         self.foregroundColor = foregroundColor
         self.peer = peer
         self.threadData = threadData
+        self.isForumThread = isForumThread
         self.unreadCount = unreadCount
         self.location = location
         self.context = context
@@ -1131,6 +1142,9 @@ public final class ChatOverscrollControl: CombinedComponent {
             return false
         }
         if lhs.threadData != rhs.threadData {
+            return false
+        }
+        if lhs.isForumThread != rhs.isForumThread {
             return false
         }
         if lhs.unreadCount != rhs.unreadCount {
@@ -1171,6 +1185,7 @@ public final class ChatOverscrollControl: CombinedComponent {
                     foregroundColor: context.component.foregroundColor,
                     peer: context.component.peer,
                     threadData: context.component.threadData,
+                    isForumThread: context.component.isForumThread,
                     unreadCount: context.component.unreadCount,
                     location: context.component.location,
                     expandOffset: context.component.expandDistance,

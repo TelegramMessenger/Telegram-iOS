@@ -601,7 +601,16 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         }
         
         let textSize: CGSize
-        if case .attributedString = self.text, let context = self.context {
+        
+        var isTextWithEntities = false
+        switch self.text {
+        case .attributedString, .entities:
+            isTextWithEntities = true
+        default:
+            break
+        }
+        
+        if isTextWithEntities, let context = self.context {
             textSize = self.textView.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextWithEntitiesComponent(

@@ -1744,7 +1744,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     private var textField: EmojiSearchTextField?
     
     private var tapRecognizer: UITapGestureRecognizer?
-    private(set) var currentPresetSearchTerm: [String]?
+    private(set) var currentPresetSearchTerm: EmojiSearchCategories.Group?
     
     private var params: Params?
     
@@ -2570,7 +2570,7 @@ public final class EmojiPagerContentComponent: Component {
     
     public enum SearchQuery: Equatable {
         case text(value: String, language: String)
-        case category(value: [String])
+        case category(value: EmojiSearchCategories.Group)
     }
     
     public enum ItemContent: Equatable {

@@ -204,9 +204,19 @@ final class ComposePollScreenComponent: Component {
                 }
             }
             
-            var mappedSolution: String?
+            var mappedSolution: (String, [MessageTextEntity])?
             if self.isQuiz && self.quizAnswerTextInputState.text.length != 0 {
-                mappedSolution = self.quizAnswerTextInputState.text.string
+                var solutionTextEntities: [MessageTextEntity] = []
+                for entity in generateChatInputTextEntities(self.quizAnswerTextInputState.text) {
+                    switch entity.type {
+                    case .CustomEmoji:
+                        solutionTextEntities.append(entity)
+                    default:
+                        break
+                    }
+                }
+                
+                mappedSolution = (self.quizAnswerTextInputState.text.string, solutionTextEntities)
             }
             
             var textEntities: [MessageTextEntity] = []
@@ -232,7 +242,7 @@ final class ComposePollScreenComponent: Component {
                     totalVoters: nil,
                     recentVoters: [],
                     solution: mappedSolution.flatMap { mappedSolution in
-                        return TelegramMediaPollResults.Solution(text: mappedSolution, entities: [])
+                        return TelegramMediaPollResults.Solution(text: mappedSolution.0, entities: mappedSolution.1)
                     }
                 ),
                 deadlineTimeout: nil,
@@ -591,11 +601,21 @@ final class ComposePollScreenComponent: Component {
                         }
                         self.environment?.controller()?.presentInGlobalOverlay(c, with: a)
                     },
-                    getNavigationController: { [weak self] in
+                    getNavigationController: { [weak self] () -> NavigationController? in
                         guard let self else {
                             return nil
                         }
-                        return self.environment?.controller()?.navigationController as? NavigationController
+                        guard let controller = self.environment?.controller() as? ComposePollScreen else {
+                            return nil
+                        }
+                        
+                        if let navigationController = controller.navigationController as? NavigationController {
+                            return navigationController
+                        }
+                        if let parentController = controller.parentController() {
+                            return parentController.navigationController as? NavigationController
+                        }
+                        return nil
                     },
                     requestLayout: { [weak self] transition in
                         guard let self else {
@@ -668,14 +688,13 @@ final class ComposePollScreenComponent: Component {
             ))))
             self.resetPollText = nil
             
-            //TODO:localize
             let pollTextSectionSize = self.pollTextSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "QUESTION",
+                            string: environment.strings.CreatePoll_TextHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -696,7 +715,7 @@ final class ComposePollScreenComponent: Component {
                 transition.setFrame(view: pollTextSectionView, frame: pollTextSectionFrame)
                 
                 if let itemView = pollTextSectionView.itemView(id: 0) as? ListComposePollOptionComponent.View {
-                    itemView.updateCustomPlaceholder(value: "Ask a Question", size: itemView.bounds.size, transition: .immediate)
+                    itemView.updateCustomPlaceholder(value: environment.strings.CreatePoll_TextPlaceholder, size: itemView.bounds.size, transition: .immediate)
                 }
             }
             contentHeight += pollTextSectionSize.height
@@ -838,9 +857,9 @@ final class ComposePollScreenComponent: Component {
             for i in 0 ..< pollOptionsSectionReadyItems.count {
                 let placeholder: String
                 if i == pollOptionsSectionReadyItems.count - 1 {
-                    placeholder = "Add an Option"
+                    placeholder = environment.strings.CreatePoll_AddOption
                 } else {
-                    placeholder = "Option"
+                    placeholder = environment.strings.CreatePoll_OptionPlaceholder
                 }
                 
                 if let itemView = pollOptionsSectionReadyItems[i].itemView.contents.view as? ListComposePollOptionComponent.View {
@@ -866,7 +885,7 @@ final class ComposePollScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "POLL OPTIONS",
+                        string: environment.strings.CreatePoll_OptionsHeader,
                         font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                         textColor: environment.theme.list.freeTextColor
                     )),
@@ -917,26 +936,36 @@ final class ComposePollScreenComponent: Component {
             if pollOptionsLimitReached {
                 pollOptionsFooterTransition = pollOptionsFooterTransition.withAnimation(.none)
                 pollOptionsComponent = AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "You have added the maximum number of options.", font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.CreatePoll_AllOptionsAdded, font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor)),
                     maximumNumberOfLines: 0
                 ))
             } else {
+                let remainingCount = 10 - self.pollOptions.count
+                let rawString = environment.strings.CreatePoll_OptionCountFooterFormat(Int32(remainingCount))
+                
                 var pollOptionsFooterItems: [AnimatedTextComponent.Item] = []
-                pollOptionsFooterItems.append(AnimatedTextComponent.Item(
-                    id: 0,
-                    isUnbreakable: true,
-                    content: .text("You can add ")
-                ))
-                pollOptionsFooterItems.append(AnimatedTextComponent.Item(
-                    id: 1,
-                    isUnbreakable: true,
-                    content: .number(10 - self.pollOptions.count, minDigits: 1)
-                ))
-                pollOptionsFooterItems.append(AnimatedTextComponent.Item(
-                    id: 2,
-                    isUnbreakable: true,
-                    content: .text(" more options.")
-                ))
+                if let range = rawString.range(of: "{count}") {
+                    if range.lowerBound != rawString.startIndex {
+                        pollOptionsFooterItems.append(AnimatedTextComponent.Item(
+                            id: 0,
+                            isUnbreakable: true,
+                            content: .text(String(rawString[rawString.startIndex ..< range.lowerBound]))
+                        ))
+                    }
+                    pollOptionsFooterItems.append(AnimatedTextComponent.Item(
+                        id: 1,
+                        isUnbreakable: true,
+                        content: .number(remainingCount, minDigits: 1)
+                    ))
+                    if range.upperBound != rawString.endIndex {
+                        pollOptionsFooterItems.append(AnimatedTextComponent.Item(
+                            id: 2,
+                            isUnbreakable: true,
+                            content: .text(String(rawString[range.upperBound ..< rawString.endIndex]))
+                        ))
+                    }
+                }
+                
                 pollOptionsComponent = AnyComponent(AnimatedTextComponent(
                     font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                     color: environment.theme.list.freeTextColor,
@@ -977,7 +1006,7 @@ final class ComposePollScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Anonymous Voting",
+                            string: environment.strings.CreatePoll_Anonymous,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -998,7 +1027,7 @@ final class ComposePollScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Multiple Answers",
+                            string: environment.strings.CreatePoll_MultipleChoice,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -1022,7 +1051,7 @@ final class ComposePollScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Quiz Mode",
+                            string: environment.strings.CreatePoll_Quiz,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -1049,7 +1078,7 @@ final class ComposePollScreenComponent: Component {
                     header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Polls in Quiz Mode have one correct answer. Users can't revoke their answers.",
+                            string: environment.strings.CreatePoll_QuizInfo,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1078,7 +1107,7 @@ final class ComposePollScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "EXPLANATION",
+                            string: environment.strings.CreatePoll_ExplanationHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1086,7 +1115,7 @@ final class ComposePollScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Users will see this comment after choosing a wrong answer, good for educational purposes.",
+                            string: environment.strings.CreatePoll_ExplanationInfo,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1401,6 +1430,11 @@ final class ComposePollScreenComponent: Component {
                 if sendButtonItem.isEnabled != isValid {
                     sendButtonItem.isEnabled = isValid
                 }
+                
+                let controllerTitle = self.isQuiz ? presentationData.strings.CreatePoll_QuizTitle : presentationData.strings.CreatePoll_Title
+                if controller.title != controllerTitle {
+                    controller.title = controllerTitle
+                }
             }
             
             if let currentEditingTag = self.currentEditingTag, previousEditingTag !== currentEditingTag, self.currentInputMode != .keyboard {
@@ -1450,6 +1484,9 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     }
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in
     }
+    public var parentController: () -> ViewController? = {
+        return nil
+    }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in
     }
     public var updateTabBarVisibility: (Bool, ContainedViewLayoutTransition) -> Void = { _, _ in
@@ -1491,12 +1528,13 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
             completion: completion
         ), navigationBarAppearance: .default, theme: .default)
         
-        //TODO:localize
-        self.title = "New Poll"
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        self.navigationItem.setLeftBarButton(UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
+        self.title = isQuiz == true ? presentationData.strings.CreatePoll_QuizTitle : presentationData.strings.CreatePoll_Title
         
-        let sendButtonItem = UIBarButtonItem(title: "Send", style: .done, target: self, action: #selector(self.sendPressed))
+        self.navigationItem.setLeftBarButton(UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
+        
+        let sendButtonItem = UIBarButtonItem(title: presentationData.strings.CreatePoll_Create, style: .done, target: self, action: #selector(self.sendPressed))
         self.sendButtonItem = sendButtonItem
         self.navigationItem.setRightBarButton(sendButtonItem, animated: false)
         sendButtonItem.isEnabled = false
