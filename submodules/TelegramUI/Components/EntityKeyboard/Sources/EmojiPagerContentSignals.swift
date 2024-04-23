@@ -1658,7 +1658,6 @@ public extension EmojiPagerContentComponent {
         
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
-        //TODO:localize
         let searchCategories: Signal<EmojiSearchCategories?, NoError>
         switch subject {
         case .groupPhotoEmojiSelection, .profilePhotoEmojiSelection:

@@ -972,8 +972,7 @@ final class OverscrollContentsComponent: Component {
             } else if let peer = component.peer {
                 titleText = peer.compactDisplayTitle
             } else if component.isForumThread {
-                //TODO:localize
-                titleText = "You have no unread topics"
+                titleText = component.context.sharedContext.currentPresentationData.with({ $0 }).strings.Chat_NavigationNoTopics
             } else {
                 titleText = component.context.sharedContext.currentPresentationData.with({ $0 }).strings.Chat_NavigationNoChannels
             }

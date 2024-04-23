@@ -651,16 +651,16 @@ private final class AdminUserActionsSheetComponent: Component {
                     selectedPeers = self.optionReportSelectedPeers
                     isExpanded = self.isOptionReportExpanded
                     
-                    title = "Report Spam"
+                    title = environment.strings.Chat_AdminActionSheet_ReportSpam
                 case .deleteAll:
                     sectionId = "delete-all"
                     selectedPeers = self.optionDeleteAllSelectedPeers
                     isExpanded = self.isOptionDeleteAllExpanded
                     
                     if component.peers.count == 1 {
-                        title = "Delete All from \(EnginePeer(component.peers[0].peer).compactDisplayTitle)"
+                        title = environment.strings.Chat_AdminActionSheet_DeleteAllSingle(EnginePeer(component.peers[0].peer).compactDisplayTitle).string
                     } else {
-                        title = "Delete All from Users"
+                        title = environment.strings.Chat_AdminActionSheet_DeleteAllMultiple
                     }
                 case .ban:
                     sectionId = "ban"
@@ -670,11 +670,11 @@ private final class AdminUserActionsSheetComponent: Component {
                     let banTitle: String
                     let restrictTitle: String
                     if component.peers.count == 1 {
-                        banTitle = "Ban \(EnginePeer(component.peers[0].peer).compactDisplayTitle)"
-                        restrictTitle = "Restrict \(EnginePeer(component.peers[0].peer).compactDisplayTitle)"
+                        banTitle = environment.strings.Chat_AdminActionSheet_BanSingle(EnginePeer(component.peers[0].peer).compactDisplayTitle).string
+                        restrictTitle = environment.strings.Chat_AdminActionSheet_RestrictSingle(EnginePeer(component.peers[0].peer).compactDisplayTitle).string
                     } else {
-                        banTitle = "Ban Users"
-                        restrictTitle = "Restrict Users"
+                        banTitle = environment.strings.Chat_AdminActionSheet_BanMultiple
+                        restrictTitle = environment.strings.Chat_AdminActionSheet_RestrictMultiple
                     }
                     title = self.isConfigurationExpanded ? restrictTitle : banTitle
                 }
@@ -870,13 +870,7 @@ private final class AdminUserActionsSheetComponent: Component {
                 )))
             }
             
-            //TODO:localize
-            let titleString: String
-            if component.messageCount == 1 {
-                titleString = "Delete 1 Message?"
-            } else {
-                titleString = "Delete \(component.messageCount) Messages?"
-            }
+            let titleString: String = environment.strings.Chat_AdminActionSheet_DeleteTitle(Int32(component.messageCount))
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -928,7 +922,7 @@ private final class AdminUserActionsSheetComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "ADDITIONAL ACTIONS",
+                            string: environment.strings.Chat_AdminActionSheet_RestrictSectionHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -954,11 +948,11 @@ private final class AdminUserActionsSheetComponent: Component {
             let partiallyRestrictTitle: String
             let fullyBanTitle: String
             if component.peers.count == 1 {
-                partiallyRestrictTitle = "Partially restrict this user"
-                fullyBanTitle = "Fully ban this user"
+                partiallyRestrictTitle = environment.strings.Chat_AdminActionSheet_RestrictFooterSingle
+                fullyBanTitle = environment.strings.Chat_AdminActionSheet_BanFooterSingle
             } else {
-                partiallyRestrictTitle = "Partially restrict users"
-                fullyBanTitle = "Fully ban users"
+                partiallyRestrictTitle = environment.strings.Chat_AdminActionSheet_RestrictFooterMultiple
+                fullyBanTitle = environment.strings.Chat_AdminActionSheet_BanFooterMultiple
             }
             
             let optionsFooterSize = self.optionsFooter.update(
@@ -1029,7 +1023,7 @@ private final class AdminUserActionsSheetComponent: Component {
                 case .sendMessages:
                     itemTitle = AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Send Messages",
+                            string: environment.strings.Channel_BanUser_PermissionSendMessages,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -1041,7 +1035,7 @@ private final class AdminUserActionsSheetComponent: Component {
                         itemTitle = AnyComponent(HStack([
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
-                                    string: "Send Media",
+                                    string: environment.strings.Channel_BanUser_PermissionSendMedia,
                                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                     textColor: environment.theme.list.itemPrimaryTextColor
                                 )),
@@ -1056,7 +1050,7 @@ private final class AdminUserActionsSheetComponent: Component {
                     } else {
                         itemTitle = AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Send Media",
+                                string: environment.strings.Channel_BanUser_PermissionSendMedia,
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                 textColor: environment.theme.list.itemPrimaryTextColor
                             )),
@@ -1068,7 +1062,7 @@ private final class AdminUserActionsSheetComponent: Component {
                 case .addUsers:
                     itemTitle = AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Add Users",
+                            string: environment.strings.Channel_BanUser_PermissionAddMembers,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -1078,7 +1072,7 @@ private final class AdminUserActionsSheetComponent: Component {
                 case .pinMessages:
                     itemTitle = AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Pin Messages",
+                            string: environment.strings.Channel_EditAdmin_PermissionPinMessages,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -1088,7 +1082,7 @@ private final class AdminUserActionsSheetComponent: Component {
                 case .changeInfo:
                     itemTitle = AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Change Chat Info",
+                            string: environment.strings.Channel_BanUser_PermissionChangeGroupInfo,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -1163,23 +1157,23 @@ private final class AdminUserActionsSheetComponent: Component {
                         let mediaItemTitle: String
                         switch possibleMediaItem {
                         case .photos:
-                            mediaItemTitle = "Send Photos"
+                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendPhoto
                         case .videos:
-                            mediaItemTitle = "Send Videos"
+                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendVideo
                         case .stickersAndGifs:
-                            mediaItemTitle = "Send Stickers & GIFs"
+                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendStickersAndGifs
                         case .music:
-                            mediaItemTitle = "Send Music"
+                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendMusic
                         case .files:
-                            mediaItemTitle = "Send Files"
+                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendFile
                         case .voiceMessages:
-                            mediaItemTitle = "Send Voice Messages"
+                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendVoiceMessage
                         case .videoMessages:
-                            mediaItemTitle = "Send Video Messages"
+                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendVideoMessage
                         case .links:
-                            mediaItemTitle = "Embed Links"
+                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionEmbedLinks
                         case .polls:
-                            mediaItemTitle = "Send Polls"
+                            mediaItemTitle = environment.strings.Channel_BanUser_PermissionSendPolls
                         default:
                             continue mediaRightsLoop
                         }
@@ -1244,7 +1238,7 @@ private final class AdminUserActionsSheetComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "WHAT CAN THIS USER DO?",
+                            string: environment.strings.Chat_AdminActionSheet_PermissionsSectionHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1318,7 +1312,7 @@ private final class AdminUserActionsSheetComponent: Component {
                     content: AnyComponentWithIdentity(
                         id: AnyHashable(0),
                         component: AnyComponent(ButtonTextContentComponent(
-                            text: "Proceed",
+                            text: environment.strings.Chat_AdminActionSheet_ActionButton,
                             badge: 0,
                             textColor: environment.theme.list.itemCheckColors.foregroundColor,
                             badgeBackground: environment.theme.list.itemCheckColors.foregroundColor,
