@@ -1966,7 +1966,6 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 let ItemInviteLinks = 102
                 let ItemLinkedChannel = 103
                 let ItemPreHistory = 104
-                let ItemStickerPack = 105
                 let ItemMembers = 106
                 let ItemPermissions = 107
                 let ItemAdmins = 108
@@ -2135,13 +2134,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                             interaction.editingOpenPreHistorySetup()
                         }))
                     }
-                    
-                    if cachedData.flags.contains(.canSetStickerSet) && canEditPeerInfo(context: context, peer: channel, chatLocation: chatLocation, threadData: data.threadData) {
-                        items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStickerPack, label: .text(cachedData.stickerPack?.title ?? presentationData.strings.GroupInfo_SharedMediaNone), text: presentationData.strings.Stickers_GroupStickers, icon: UIImage(bundleImageName: "Settings/Menu/Stickers"), action: {
-                            interaction.editingOpenStickerPackSetup()
-                        }))
-                    }
-                    
+                                        
                     if isCreator, let appConfiguration = data.appConfiguration {
                         var minParticipants = 200
                         if let data = appConfiguration.data, let value = data["forum_upgrade_participants_min"] as? Double {
