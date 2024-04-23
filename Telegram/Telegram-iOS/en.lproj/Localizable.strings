@@ -12134,3 +12134,8 @@ Sorry for the inconvenience.";
 "Channel.AdminLogFilter.Section.Messages" = "Messages";
 
 "Premium.Gift.ContactSelection.AddBirthday" = "Add Your Birthday";
+
+"Story.StealthMode.EnableAndOpenAction" = "Enable and Open the Story";
+
+"Channel.AdminLog.ShowMoreMessages_1" = "Show %@ More Message";
+"Channel.AdminLog.ShowMoreMessages_any" = "Show %@ More Messages";

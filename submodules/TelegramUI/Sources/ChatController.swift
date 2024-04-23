@@ -4409,11 +4409,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.removeAd(opaqueId: adOpaqueId)
                 }
             } else {
+                let context = self.context
                 var replaceImpl: ((ViewController) -> Void)?
-                let controller = PremiumDemoScreen(context: self.context, subject: .noAds, action: {
-                    let controller = PremiumIntroScreen(context: self.context, source: .ads)
+                let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: false, action: {
+                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
                     replaceImpl?(controller)
-                })
+                }, dismissed: nil)
                 replaceImpl = { [weak controller] c in
                     controller?.replace(with: c)
                 }

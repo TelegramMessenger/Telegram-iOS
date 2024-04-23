@@ -588,42 +588,66 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
                 
         func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+            var completed = false
             let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: message, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
-                completionHandler()
+                if !completed {
+                    completed = true
+                    completionHandler()
+                }
             })])
             alertController.dismissed = { byOutsideTap in
                 if byOutsideTap {
-                    completionHandler()
+                    if !completed {
+                        completed = true
+                        completionHandler()
+                    }
                 }
             }
             self.controller?.present(alertController, in: .window(.root))
         }
 
         func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+            var completed = false
             let alertController = textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: message, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
-                completionHandler(false)
+                if !completed {
+                    completed = true
+                    completionHandler(false)
+                }
             }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
-                completionHandler(true)
+                if !completed {
+                    completed = true
+                    completionHandler(true)
+                }
             })])
             alertController.dismissed = { byOutsideTap in
                 if byOutsideTap {
-                    completionHandler(false)
+                    if !completed {
+                        completed = true
+                        completionHandler(false)
+                    }
                 }
             }
             self.controller?.present(alertController, in: .window(.root))
         }
 
         func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+            var completed = false
             let promptController = promptController(sharedContext: self.context.sharedContext, updatedPresentationData: self.controller?.updatedPresentationData, text: prompt, value: defaultText, apply: { value in
-                if let value = value {
-                    completionHandler(value)
-                } else {
-                    completionHandler(nil)
+                if !completed {
+                    completed = true
+                    if let value = value {
+                        completionHandler(value)
+                    } else {
+                        completionHandler(nil)
+                    }
                 }
             })
             promptController.dismissed = { byOutsideTap in
                 if byOutsideTap {
-                    completionHandler(nil)
+                    if !completed {
+                        completed = true
+                        completionHandler(nil)
+                    }
                 }
             }
             self.controller?.present(promptController, in: .window(.root))

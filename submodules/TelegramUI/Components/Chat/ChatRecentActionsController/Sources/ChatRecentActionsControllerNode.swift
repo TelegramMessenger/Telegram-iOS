@@ -651,6 +651,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         let previousView = Atomic<[ChatRecentActionsEntry]?>(value: nil)
         let previousExpandedDeletedMessages = Atomic<Set<EngineMessage.Id>>(value: Set())
+        let previousDeletedHeaderMessages = Atomic<Set<EngineMessage.Id>>(value: Set())
         
         let chatThemes = self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager)
         
@@ -661,7 +662,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             self.expandedDeletedMessagesPromise.get()
         )
         |> mapToQueue { [weak self] update, chatPresentationData, chatThemes, expandedDeletedMessages -> Signal<ChatRecentActionsHistoryTransition, NoError> in
-            let processedView = chatRecentActionsEntries(entries: update.0, presentationData: chatPresentationData, expandedDeletedMessages: expandedDeletedMessages)
+            
+            var deletedHeaderMessages = previousDeletedHeaderMessages.with { $0 }
+            let processedView = chatRecentActionsEntries(entries: update.0, presentationData: chatPresentationData, expandedDeletedMessages: expandedDeletedMessages, currentDeletedHeaderMessages: &deletedHeaderMessages)
+            let _ = previousDeletedHeaderMessages.swap(deletedHeaderMessages)
+            
             let previous = previousView.swap(processedView)
             let previousExpandedDeletedMessages = previousExpandedDeletedMessages.swap(expandedDeletedMessages)
             
@@ -669,6 +674,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             if previousExpandedDeletedMessages.count != expandedDeletedMessages.count {
                 updateType = .generic
             }
+            
+            let toggledDeletedMessageIds = previousExpandedDeletedMessages.symmetricDifference(expandedDeletedMessages)
             
             var searchResultsState: (String, [MessageIndex])?
             if update.3, let query = self?.filter.query {
@@ -679,7 +686,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 searchResultsState = nil
             }
             
-            return .single(chatRecentActionsHistoryPreparedTransition(from: previous ?? [], to: processedView, type: updateType, canLoadEarlier: update.1, displayingResults: update.3, context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes, searchResultsState: searchResultsState))
+            return .single(chatRecentActionsHistoryPreparedTransition(from: previous ?? [], to: processedView, type: updateType, canLoadEarlier: update.1, displayingResults: update.3, context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes, searchResultsState: searchResultsState, toggledDeletedMessageIds: toggledDeletedMessageIds))
         }
         
         let appliedTransition = historyViewTransition |> deliverOnMainQueue |> mapToQueue { [weak self] transition -> Signal<Void, NoError> in
@@ -818,6 +825,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         case .load:
                             break
                     }
+                }
+                if transition.synchronous {
+                    options.insert(.InvertOffsetDirection)
                 }
                 
                 let displayingResults = transition.displayingResults

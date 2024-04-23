@@ -2162,15 +2162,16 @@ extension ChatControllerImpl {
                         }
                         strongSelf.chatDisplayNode.dismissTextInput()
                         
+                        let context = strongSelf.context
                         var replaceImpl: ((ViewController) -> Void)?
-                        let controller = PremiumDemoScreen(context: strongSelf.context, subject: .animatedEmoji, action: {
-                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .animatedEmoji)
+                        let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .animatedEmoji, forceDark: false, action: {
+                            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .animatedEmoji, forceDark: false, dismissed: nil)
                             replaceImpl?(controller)
-                        })
+                        }, dismissed: nil)
                         replaceImpl = { [weak controller] c in
                             controller?.replace(with: c)
                         }
-                        strongSelf.present(controller, in: .window(.root), with: nil)
+                        strongSelf.push(controller)
                     }))
                     
                     return
@@ -4749,10 +4750,10 @@ extension ChatControllerImpl {
                 case .info:
                     let context = self.context
                     var replaceImpl: ((ViewController) -> Void)?
-                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .fasterDownload, action: {
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .fasterDownload, forceDark: false, action: {
                         let controller = context.sharedContext.makePremiumIntroController(context: context, source: .fasterDownload, forceDark: false, dismissed: nil)
                         replaceImpl?(controller)
-                    })
+                    }, dismissed: nil)
                     replaceImpl = { [weak controller] c in
                         controller?.replace(with: c)
                     }

@@ -1579,10 +1579,10 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
         },
         openTagColorPremium: {
             var replaceImpl: ((ViewController) -> Void)?
-            let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .folderTags, action: {
+            let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .folderTags, forceDark: false, action: {
                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .folderTags, forceDark: false, dismissed: nil)
                 replaceImpl?(controller)
-            })
+            }, dismissed: nil)
             replaceImpl = { [weak controller] c in
                 controller?.replace(with: c)
             }
