@@ -518,7 +518,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                                     }))
                                 }
                             case let .category(value):
-                                let resultSignal = component.context.engine.stickers.searchStickers(query: value, scope: [.installed, .remote])
+                                let resultSignal = component.context.engine.stickers.searchStickers(category: value, scope: [.installed, .remote])
                                 |> mapToSignal { files -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                                     var items: [EmojiPagerContentComponent.Item] = []
                                     
@@ -589,13 +589,13 @@ final class BusinessIntroSetupScreenComponent: Component {
                                                 fillWithLoadingPlaceholders: true,
                                                 items: []
                                             )
-                                        ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                                        ], id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                                         if !self.isUpdating {
                                             self.state?.updated(transition: .immediate)
                                         }
                                         return
                                     }
-                                    self.stickerSearchState = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                                    self.stickerSearchState = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                                     version += 1
                                     if !self.isUpdating {
                                         self.state?.updated(transition: .immediate)

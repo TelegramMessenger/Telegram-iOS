@@ -697,7 +697,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             
                             premiumToastCounter += 1
-                            let suggestSavedMessages = premiumToastCounter % 2 == 0
+                            var suggestSavedMessages = premiumToastCounter % 2 == 0
+                            if chatPeerId == nil {
+                                suggestSavedMessages = false
+                            }
                             let text: String
                             let actionTitle: String
                             if suggestSavedMessages {
@@ -1091,7 +1094,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }))
                     }
                 case let .category(value):
-                    let resultSignal = self.context.engine.stickers.searchEmoji(emojiString: value)
+                    let resultSignal = self.context.engine.stickers.searchEmoji(category: value)
                     |> mapToSignal { files, isFinalResult -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                         var items: [EmojiPagerContentComponent.Item] = []
                         
@@ -1105,7 +1108,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             let item = EmojiPagerContentComponent.Item(
                                 animationData: animationData,
                                 content: .animation(animationData),
-                                itemFile: itemFile, subgroupId: nil,
+                                itemFile: itemFile,
+                                subgroupId: nil,
                                 icon: .none,
                                 tintMode: animationData.isTemplate ? .primary : .none
                             )
@@ -1162,10 +1166,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     fillWithLoadingPlaceholders: true,
                                     items: []
                                 )
-                            ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                            ], id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                             return
                         }
-                        self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                        self.emojiSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                         version += 1
                     }))
                 }
@@ -1434,7 +1438,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     strongSelf.stickerSearchDisposable.set(nil)
                     strongSelf.stickerSearchStateValue = EmojiSearchState(result: nil, isSearching: false)
                 case let .category(value):
-                    let resultSignal = strongSelf.context.engine.stickers.searchStickers(query: value, scope: [.installed, .remote])
+                    let resultSignal = strongSelf.context.engine.stickers.searchStickers(category: value, scope: [.installed, .remote])
                     |> mapToSignal { files -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                         var items: [EmojiPagerContentComponent.Item] = []
                         
@@ -1506,10 +1510,10 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     fillWithLoadingPlaceholders: true,
                                     items: []
                                 )
-                            ], id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                            ], id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                             return
                         }
-                        strongSelf.stickerSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value), version: version, isPreset: true), isSearching: false)
+                        strongSelf.stickerSearchStateValue = EmojiSearchState(result: EmojiSearchResult(groups: result.items, id: AnyHashable(value.id), version: version, isPreset: true), isSearching: false)
                         version += 1
                     }))
                 }

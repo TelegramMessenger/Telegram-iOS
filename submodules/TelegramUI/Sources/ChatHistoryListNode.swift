@@ -2298,6 +2298,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             data: threadData.data
                         )
                     },
+                    isForumThread: self.chatLocation.threadId != nil,
                     unreadCount: self.nextChannelToRead?.unreadCount ?? 0,
                     location: self.nextChannelToRead?.location ?? .same,
                     context: self.context,

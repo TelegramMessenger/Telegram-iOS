@@ -204,9 +204,19 @@ final class ComposePollScreenComponent: Component {
                 }
             }
             
-            var mappedSolution: String?
+            var mappedSolution: (String, [MessageTextEntity])?
             if self.isQuiz && self.quizAnswerTextInputState.text.length != 0 {
-                mappedSolution = self.quizAnswerTextInputState.text.string
+                var solutionTextEntities: [MessageTextEntity] = []
+                for entity in generateChatInputTextEntities(self.quizAnswerTextInputState.text) {
+                    switch entity.type {
+                    case .CustomEmoji:
+                        solutionTextEntities.append(entity)
+                    default:
+                        break
+                    }
+                }
+                
+                mappedSolution = (self.quizAnswerTextInputState.text.string, solutionTextEntities)
             }
             
             var textEntities: [MessageTextEntity] = []
@@ -232,7 +242,7 @@ final class ComposePollScreenComponent: Component {
                     totalVoters: nil,
                     recentVoters: [],
                     solution: mappedSolution.flatMap { mappedSolution in
-                        return TelegramMediaPollResults.Solution(text: mappedSolution, entities: [])
+                        return TelegramMediaPollResults.Solution(text: mappedSolution.0, entities: mappedSolution.1)
                     }
                 ),
                 deadlineTimeout: nil,
@@ -591,11 +601,21 @@ final class ComposePollScreenComponent: Component {
                         }
                         self.environment?.controller()?.presentInGlobalOverlay(c, with: a)
                     },
-                    getNavigationController: { [weak self] in
+                    getNavigationController: { [weak self] () -> NavigationController? in
                         guard let self else {
                             return nil
                         }
-                        return self.environment?.controller()?.navigationController as? NavigationController
+                        guard let controller = self.environment?.controller() as? ComposePollScreen else {
+                            return nil
+                        }
+                        
+                        if let navigationController = controller.navigationController as? NavigationController {
+                            return navigationController
+                        }
+                        if let parentController = controller.parentController() {
+                            return parentController.navigationController as? NavigationController
+                        }
+                        return nil
                     },
                     requestLayout: { [weak self] transition in
                         guard let self else {
@@ -1449,6 +1469,9 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     public var requestAttachmentMenuExpansion: () -> Void = {
     }
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in
+    }
+    public var parentController: () -> ViewController? = {
+        return nil
     }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in
     }

@@ -104,7 +104,7 @@ final class EmojiSearchSearchBarComponent: Component {
     let useOpaqueTheme: Bool
     let textInputState: TextInputState
     let categories: EmojiSearchCategories?
-    let searchTermUpdated: ([String]?) -> Void
+    let searchTermUpdated: (EmojiSearchCategories.Group?) -> Void
     let activateTextInput: () -> Void
 
     init(
@@ -115,7 +115,7 @@ final class EmojiSearchSearchBarComponent: Component {
         useOpaqueTheme: Bool,
         textInputState: TextInputState,
         categories: EmojiSearchCategories?,
-        searchTermUpdated: @escaping ([String]?) -> Void,
+        searchTermUpdated: @escaping (EmojiSearchCategories.Group?) -> Void,
         activateTextInput: @escaping () -> Void
     ) {
         self.context = context
@@ -366,7 +366,7 @@ final class EmojiSearchSearchBarComponent: Component {
                             self.componentState?.updated(transition: .easeInOut(duration: 0.2))
                             
                             if let _ = self.selectedItem, let categories = component.categories, let group = categories.groups.first(where: { $0.id == itemId }) {
-                                component.searchTermUpdated(group.identifiers)
+                                component.searchTermUpdated(group)
                                 
                                 if let itemComponentView = itemView.view.view {
                                     var offset = self.scrollView.contentOffset.x

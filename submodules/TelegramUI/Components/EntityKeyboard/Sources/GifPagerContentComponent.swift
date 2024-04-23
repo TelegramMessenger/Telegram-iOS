@@ -1081,7 +1081,7 @@ public final class GifPagerContentComponent: Component {
                         case .text:
                             break
                         case let .category(value):
-                            component.inputInteraction.updateSearchQuery(value)
+                            component.inputInteraction.updateSearchQuery(value.identifiers)
                         }
                     })
                     self.visibleSearchHeader = visibleSearchHeader
