@@ -87,7 +87,7 @@ private enum SettingsActionType: Hashable, CaseIterable {
     var eventFlags: AdminLogEventsFlags {
         switch self {
         case .groupInfo:
-            return [.info, .settings]
+            return [.info, .settings, .forums]
         case .inviteLinks:
             return [.invites]
         case .videoChats:
