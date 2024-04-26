@@ -75,6 +75,7 @@ public final class ListComposePollOptionComponent: Component {
     public let resetText: ResetText?
     public let assumeIsEditing: Bool
     public let characterLimit: Int?
+    public let emptyLineHandling: TextFieldComponent.EmptyLineHandling
     public let returnKeyAction: (() -> Void)?
     public let backspaceKeyAction: (() -> Void)?
     public let selection: Selection?
@@ -90,6 +91,7 @@ public final class ListComposePollOptionComponent: Component {
         resetText: ResetText? = nil,
         assumeIsEditing: Bool = false,
         characterLimit: Int,
+        emptyLineHandling: TextFieldComponent.EmptyLineHandling,
         returnKeyAction: (() -> Void)?,
         backspaceKeyAction: (() -> Void)?,
         selection: Selection?,
@@ -104,6 +106,7 @@ public final class ListComposePollOptionComponent: Component {
         self.resetText = resetText
         self.assumeIsEditing = assumeIsEditing
         self.characterLimit = characterLimit
+        self.emptyLineHandling = emptyLineHandling
         self.returnKeyAction = returnKeyAction
         self.backspaceKeyAction = backspaceKeyAction
         self.selection = selection
@@ -132,6 +135,9 @@ public final class ListComposePollOptionComponent: Component {
             return false
         }
         if lhs.characterLimit != rhs.characterLimit {
+            return false
+        }
+        if lhs.emptyLineHandling != rhs.emptyLineHandling {
             return false
         }
         if lhs.selection != rhs.selection {
@@ -325,7 +331,7 @@ public final class ListComposePollOptionComponent: Component {
                     },
                     isOneLineWhenUnfocused: false,
                     characterLimit: component.characterLimit,
-                    emptyLineHandling: .notAllowed,
+                    emptyLineHandling: component.emptyLineHandling,
                     formatMenuAvailability: .none,
                     returnKeyType: .next,
                     lockedFormatAction: {
