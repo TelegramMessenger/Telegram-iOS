@@ -12158,6 +12158,7 @@ Sorry for the inconvenience.";
 "Chat.AdminActionSheet.BanFooterMultiple" = "Fully ban users";
 "Chat.AdminActionSheet.RestrictFooterMultiple" = "Partially restrict users";
 "Chat.AdminActionSheet.PermissionsSectionHeader" = "WHAT CAN THIS USER DO?";
+"Chat.AdminActionSheet.PermissionsSectionHeaderMultiple" = "WHAT CAN THESE USERS DO?";
 "Chat.AdminActionSheet.ActionButton" = "Proceed";
 
 "Chat.AdminAction.ToastMessagesDeletedTitleSingle" = "Message Deleted";
