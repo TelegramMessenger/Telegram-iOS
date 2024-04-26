@@ -141,7 +141,7 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     sortOrder: presentationData.nameSortOrder,
                     displayOrder: presentationData.nameDisplayOrder,
                     context: context,
-                    peerMode: .peer,
+                    peerMode: .memberList,
                     peer: .peer(peer: EnginePeer(member.peer), chatPeer: EnginePeer(member.peer)),
                     status: .presence(presence, presentationData.dateTimeFormat),
                     rightLabelText: label,
@@ -153,7 +153,7 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     actionIcon: .none,
                     index: nil,
                     header: nil,
-                    action: { _ in
+                    action: member.peer.id == context.account.peerId ? nil : { _ in
                         action(member, .open)
                     },
                     disabledAction: nil,
