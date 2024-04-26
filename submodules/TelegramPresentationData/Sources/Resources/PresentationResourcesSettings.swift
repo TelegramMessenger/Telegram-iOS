@@ -50,7 +50,12 @@ private func renderIcon(name: String, scaleFactor: CGFloat = 1.0, backgroundColo
             }
         } else {
             if let image = UIImage(bundleImageName: name), let cgImage = image.cgImage {
-                let imageSize = CGSize(width: image.size.width * scaleFactor, height: image.size.height * scaleFactor)
+                let imageSize: CGSize
+                if scaleFactor == 1.0 {
+                    imageSize = size
+                } else {
+                    imageSize = CGSize(width: image.size.width * scaleFactor, height: image.size.height * scaleFactor)
+                }
                 context.draw(cgImage, in: CGRect(origin: CGPoint(x: (bounds.width - imageSize.width) * 0.5, y: (bounds.height - imageSize.height) * 0.5), size: imageSize))
             }
         }
