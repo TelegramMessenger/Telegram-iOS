@@ -1410,7 +1410,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     actionButton.action?(item.peer, sourceNode, gesture)
                                 }
                                 let moreButtonSize = moreButtonNode.measure(CGSize(width: 100.0, height: nodeLayout.contentSize.height))
-                                moreButtonNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - params.rightInset - 18.0 - moreButtonSize.width, y:floor((nodeLayout.contentSize.height - moreButtonSize.height) / 2.0)), size: moreButtonSize)
+                                moreButtonNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - params.rightInset - 21.0 - moreButtonSize.width, y:floor((nodeLayout.contentSize.height - moreButtonSize.height) / 2.0)), size: moreButtonSize)
                             } else if let actionButtons = actionButtons {
                                 if strongSelf.actionButtonNodes == nil {
                                     var actionButtonNodes: [HighlightableButtonNode] = []

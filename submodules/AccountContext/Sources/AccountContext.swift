@@ -1050,7 +1050,7 @@ public protocol SharedAccountContext: AnyObject {
     
     var hasGroupCallOnScreen: Signal<Bool, NoError> { get }
     var currentGroupCallController: ViewController? { get }
-    
+        
     func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController?, withChatListController chatListController: ViewController?)
     func beginNewAuth(testingEnvironment: Bool)
 }
@@ -1095,6 +1095,7 @@ public protocol AccountContext: AnyObject {
     var animatedEmojiStickers: Signal<[String: [StickerPackItem]], NoError> { get }
     var animatedEmojiStickersValue: [String: [StickerPackItem]] { get }
     var additionalAnimatedEmojiStickers: Signal<[String: [Int: StickerPackItem]], NoError> { get }
+    var availableReactions: Signal<AvailableReactions?, NoError> { get }
     
     var isPremium: Bool { get }
     var userLimits: EngineConfiguration.UserLimits { get }

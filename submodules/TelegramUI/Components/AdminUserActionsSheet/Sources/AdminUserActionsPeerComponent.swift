@@ -211,11 +211,7 @@ final class AdminUserActionsPeerComponent: Component {
                 } else {
                     clipStyle = .round
                 }
-                /*if peer.id == component.context.account.peerId {
-                    self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, overrideImage: .savedMessagesIcon, clipStyle: clipStyle, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
-                } else*/ do {
-                    self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
-                }
+                self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, clipStyle: clipStyle, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
             }
             
             let avatarTitleSpacing: CGFloat = 5.0

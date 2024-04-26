@@ -137,7 +137,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }
         
         self.loadingNode = ChatLoadingNode(context: context, theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, bubbleCorners: self.presentationData.chatBubbleCorners)
-        self.emptyNode = ChatRecentActionsEmptyNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, chatBubbleCorners: self.presentationData.chatBubbleCorners)
+        self.emptyNode = ChatRecentActionsEmptyNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, chatBubbleCorners: self.presentationData.chatBubbleCorners, hasIcon: true)
         self.emptyNode.alpha = 0.0
                 
         self.chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners)
@@ -654,14 +654,16 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         let previousDeletedHeaderMessages = Atomic<Set<EngineMessage.Id>>(value: Set())
         
         let chatThemes = self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager)
+        let availableReactions: Signal<AvailableReactions?, NoError> = self.context.availableReactions
         
         let historyViewTransition = combineLatest(
             historyViewUpdate,
             self.chatPresentationDataPromise.get(),
             chatThemes,
+            availableReactions,
             self.expandedDeletedMessagesPromise.get()
         )
-        |> mapToQueue { [weak self] update, chatPresentationData, chatThemes, expandedDeletedMessages -> Signal<ChatRecentActionsHistoryTransition, NoError> in
+        |> mapToQueue { [weak self] update, chatPresentationData, chatThemes, availableReactions, expandedDeletedMessages -> Signal<ChatRecentActionsHistoryTransition, NoError> in
             
             var deletedHeaderMessages = previousDeletedHeaderMessages.with { $0 }
             let processedView = chatRecentActionsEntries(entries: update.0, presentationData: chatPresentationData, expandedDeletedMessages: expandedDeletedMessages, currentDeletedHeaderMessages: &deletedHeaderMessages)
@@ -686,7 +688,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 searchResultsState = nil
             }
             
-            return .single(chatRecentActionsHistoryPreparedTransition(from: previous ?? [], to: processedView, type: updateType, canLoadEarlier: update.1, displayingResults: update.3, context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes, searchResultsState: searchResultsState, toggledDeletedMessageIds: toggledDeletedMessageIds))
+            return .single(chatRecentActionsHistoryPreparedTransition(from: previous ?? [], to: processedView, type: updateType, canLoadEarlier: update.1, displayingResults: update.3, context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes, availableReactions: availableReactions, searchResultsState: searchResultsState, toggledDeletedMessageIds: toggledDeletedMessageIds))
         }
         
         let appliedTransition = historyViewTransition |> deliverOnMainQueue |> mapToQueue { [weak self] transition -> Signal<Void, NoError> in

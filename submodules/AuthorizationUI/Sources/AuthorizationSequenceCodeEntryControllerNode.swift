@@ -204,7 +204,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.textField.textField.textContentType = UITextContentType(rawValue: "")
         }
-        self.textField.textField.returnKeyType = .default
+        self.textField.textField.returnKeyType = .done
         self.textField.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.textField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
         self.textField.textField.tintColor = self.theme.list.itemAccentColor
@@ -358,9 +358,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     @objc private func pastePressed() {
         if let text = UIPasteboard.general.string, !text.isEmpty {
-            if checkValidity(text: text) {
+            if checkValidity(text: text, isPaste: true) {
                 self.textField.textField.text = text
-                self.updatePasteVisibility()
+                self.textDidChange()
             }
         }
     }
@@ -1016,17 +1016,22 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             return false
         }
         
+        if string == "\n" {
+            self.proceedPressed()
+            return false
+        }
+        
         var updated = textField.text ?? ""
         updated.replaceSubrange(updated.index(updated.startIndex, offsetBy: range.lowerBound) ..< updated.index(updated.startIndex, offsetBy: range.upperBound), with: string)
         
         if updated.isEmpty {
             return true
         } else {
-            return checkValidity(text: updated) && !updated.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            return checkValidity(text: updated, isPaste: false) && !updated.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
     }
     
-    func checkValidity(text: String) -> Bool {
+    func checkValidity(text: String, isPaste: Bool) -> Bool {
         if let codeType = self.codeType {
             switch codeType {
             case let .word(startsWith):
@@ -1040,7 +1045,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 if let startsWith, !text.isEmpty {
                     let firstWord = text.components(separatedBy: " ").first ?? ""
                     if !firstWord.isEmpty && !startsWith.hasPrefix(firstWord) {
-                        if self.errorTextNode.alpha.isZero, text.count < 4 {
+                        if self.errorTextNode.alpha.isZero, text.count < 4 || isPaste {
                             self.animateError(text: self.strings.Login_WrongPhraseError)
                         }
                         return false

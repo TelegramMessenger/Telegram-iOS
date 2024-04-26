@@ -448,6 +448,10 @@ public final class MediaEditorValues: Codable, Equatable {
         return self.qualityPreset == .sticker
     }
     
+    public var cropValues: (offset: CGPoint, rotation: CGFloat, scale: CGFloat) {
+        return (self.cropOffset, self.cropRotation, self.cropScale)
+    }
+    
     public init(
         peerId: EnginePeer.Id,
         originalDimensions: PixelDimensions,
