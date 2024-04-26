@@ -25,6 +25,7 @@ import TelegramUIPreferences
 import FastBlur
 import MediaEditor
 import StickerPickerScreen
+import ImageObjectSeparation
 
 public struct DrawingResultData {
     public let data: Data?

@@ -47,6 +47,7 @@ import StickerPeekUI
 import StickerPackEditTitleController
 import StickerPickerScreen
 import UIKitRuntimeUtils
+import ImageObjectSeparation
 
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
@@ -2008,7 +2009,7 @@ final class MediaEditorScreenComponent: Component {
                               
                 if let subject = controller.node.subject, case .empty = subject {
                     
-                } else if let canCutout = controller.node.canCutout {
+                } else if case let .known(canCutout, _, hasTransparency) = controller.node.stickerCutoutStatus {
                     if controller.node.isCutout || controller.node.stickerMaskDrawingView?.internalState.canUndo == true {
                         hasUndoButton = true
                     }
@@ -2020,7 +2021,7 @@ final class MediaEditorScreenComponent: Component {
                             hasRestoreButton = true
                         }
                     }
-                    if hasUndoButton || controller.node.hasTransparency {
+                    if hasUndoButton || hasTransparency {
                         hasOutlineButton = true
                     }
                 }
@@ -2537,8 +2538,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var isDismissed = false
         private var isDismissBySwipeSuppressed = false
         
-        fileprivate var canCutout: Bool?
-        fileprivate var hasTransparency = false
+        fileprivate var stickerCutoutStatus: MediaEditor.CutoutStatus = .unknown
+        private var stickerCutoutStatusDisposable: Disposable?
         fileprivate var isCutout = false
         
         private (set) var hasAnyChanges = false
@@ -2807,6 +2808,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.appInForegroundDisposable?.dispose()
             self.playbackPositionDisposable?.dispose()
             self.availableReactionsDisposable?.dispose()
+            self.stickerCutoutStatusDisposable?.dispose()
         }
         
         private func setup(with subject: MediaEditorScreen.Subject) {
@@ -2939,15 +2941,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                     controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                 }
-            }           
-            mediaEditor.canCutoutUpdated = { [weak self] canCutout, hasTransparency in
+            }
+            self.stickerCutoutStatusDisposable = (mediaEditor.cutoutStatus
+            |> deliverOnMainQueue).start(next: { [weak self] cutoutStatus in
                 guard let self else {
                     return
                 }
-                self.canCutout = canCutout
-                self.hasTransparency = hasTransparency
+                self.stickerCutoutStatus = cutoutStatus
                 self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
-            }
+            })
             mediaEditor.maskUpdated = { [weak self] mask, apply in
                 guard let self else {
                     return
@@ -4922,8 +4924,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 }
                             }
                         },
-                        cutoutUndo: { [weak self, weak controller] in
-                            if let self, let controller, let mediaEditor = self.mediaEditor, let stickerMaskDrawingView = self.stickerMaskDrawingView {
+                        cutoutUndo: { [weak self] in
+                            if let self, let mediaEditor = self.mediaEditor, let stickerMaskDrawingView = self.stickerMaskDrawingView {
                                 if self.entitiesView.hasSelection {
                                     self.entitiesView.selectEntity(nil)
                                 }
@@ -4934,12 +4936,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         mediaEditor.setSegmentationMask(drawingImage)
                                     }
                                     
-                                    if self.isDisplayingTool == .cutoutRestore && !stickerMaskDrawingView.internalState.canUndo && !controller.node.isCutout {
+                                    if self.isDisplayingTool == .cutoutRestore && !stickerMaskDrawingView.internalState.canUndo && !self.isCutout {
                                         self.cutoutScreen?.mode = .erase
                                         self.isDisplayingTool = .cutoutErase
                                         self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
                                     }
-                                } else if controller.node.isCutout {
+                                } else if self.isCutout {
                                     let action = { [weak self, weak mediaEditor] in
                                         guard let self, let mediaEditor else {
                                             return

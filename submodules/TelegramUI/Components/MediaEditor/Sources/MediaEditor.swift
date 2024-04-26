@@ -12,6 +12,7 @@ import TelegramPresentationData
 import FastBlur
 import AccountContext
 import ImageTransparency
+import ImageObjectSeparation
 
 public struct MediaEditorPlayerState: Equatable {
     public struct Track: Equatable {
@@ -190,8 +191,27 @@ public final class MediaEditor {
         }
     }
     
-    public private(set) var canCutout: Bool = false
-    public var canCutoutUpdated: (Bool, Bool) -> Void = { _, _ in }
+    public enum CutoutStatus: Equatable {
+        public enum Availability: Equatable {
+            case available
+            case preparing(progress: Float)
+            case unavailable
+        }
+        case unknown
+        case known(canCutout: Bool, availability: Availability, hasTransparency: Bool)
+    }
+        
+    private let cutoutDisposable = MetaDisposable()
+    private var cutoutStatusValue: CutoutStatus = .unknown {
+        didSet {
+            self.cutoutStatusPromise.set(self.cutoutStatusValue)
+        }
+    }
+    private let cutoutStatusPromise = ValuePromise<CutoutStatus>(.unknown)
+    public var cutoutStatus: Signal<CutoutStatus, NoError> {
+        return self.cutoutStatusPromise.get()
+    }
+    
     public var maskUpdated: (UIImage, Bool) -> Void = { _, _ in }
     
     public var classificationUpdated: ([(String, Float)]) -> Void = { _ in }
@@ -482,6 +502,7 @@ public final class MediaEditor {
     }
     
     deinit {
+        self.cutoutDisposable.dispose()
         self.textureSourceDisposable?.dispose()
         self.invalidateTimeObservers()
     }
@@ -726,19 +747,29 @@ public final class MediaEditor {
                     
                     if case .sticker = self.mode {
                         if !imageHasTransparency(image) {
-                            let _ = (cutoutStickerImage(from: image, onlyCheck: true)
-                            |> deliverOnMainQueue).start(next: { [weak self] result in
+                            self.cutoutDisposable.set((cutoutAvailability(context: self.context)
+                            |> mapToSignal { availability -> Signal<MediaEditor.CutoutStatus, NoError> in
+                                switch availability {
+                                case .available:
+                                    return cutoutStickerImage(from: image, context: context, onlyCheck: true)
+                                    |> map { result in
+                                        return .known(canCutout: result != nil, availability: .available, hasTransparency: false)
+                                    }
+                                case let .progress(progress):
+                                    return .single(.known(canCutout: false, availability: .preparing(progress: progress), hasTransparency: false))
+                                case .unavailable:
+                                    return .single(.known(canCutout: false, availability: .unavailable, hasTransparency: false))
+                                }
+                            }
+                            |> deliverOnMainQueue).start(next: { [weak self] status in
                                 guard let self else {
                                     return
                                 }
-                                let canCutout = result != nil
-                                self.canCutout = canCutout
-                                self.canCutoutUpdated(canCutout, false)
-                            })
+                                self.cutoutStatusValue = status
+                            }))
                             self.maskUpdated(image, false)
                         } else {
-                            self.canCutout = false
-                            self.canCutoutUpdated(false, true)
+                            self.cutoutStatusValue = .known(canCutout: false, availability: .unavailable, hasTransparency: true)
                             
                             if let maskImage = generateTintedImage(image: image, color: .white, backgroundColor: .black) {
                                 self.maskUpdated(maskImage, true)
