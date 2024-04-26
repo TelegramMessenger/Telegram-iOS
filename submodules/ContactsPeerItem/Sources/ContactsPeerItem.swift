@@ -67,6 +67,7 @@ public struct ContactsPeerItemEditing: Equatable {
 public enum ContactsPeerItemPeerMode: Equatable {
     case generalSearch(isSavedMessages: Bool)
     case peer
+    case memberList
 }
 
 public enum ContactsPeerItemBadgeType {
@@ -174,7 +175,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let options: [ItemListPeerItemRevealOption]
     let additionalActions: [ContactsPeerItemAction]
     let actionIcon: ContactsPeerItemActionIcon
-    let action: (ContactsPeerItemPeer) -> Void
+    let action: ((ContactsPeerItemPeer) -> Void)?
     let disabledAction: ((ContactsPeerItemPeer) -> Void)?
     let setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)?
     let deletePeer: ((EnginePeer.Id) -> Void)?
@@ -214,7 +215,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         actionIcon: ContactsPeerItemActionIcon = .none,
         index: SortIndex?,
         header: ListViewItemHeader?,
-        action: @escaping (ContactsPeerItemPeer) -> Void,
+        action: ((ContactsPeerItemPeer) -> Void)?,
         disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil,
         setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)? = nil,
         deletePeer: ((EnginePeer.Id) -> Void)? = nil,
@@ -250,7 +251,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.deletePeer = deletePeer
         self.header = header
         self.itemHighlighting = itemHighlighting
-        self.selectable = enabled || disabledAction != nil
+        self.selectable = (enabled && action != nil) || disabledAction != nil
         self.contextAction = contextAction
         self.arrowAction = arrowAction
         self.animationCache = animationCache
@@ -349,7 +350,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     
     public func selected(listView: ListView) {
         if self.enabled {
-            self.action(self.peer)
+            self.action?(self.peer)
         } else {
             listView.clearHighlightAnimated(true)
             self.disabledAction?(self.peer)
@@ -748,7 +749,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             var verifiedIcon: EmojiStatusComponent.Content?
             switch item.peer {
             case let .peer(peer, _):
-                if let peer = peer, peer.id != item.context.account.peerId {
+                if let peer = peer, (peer.id != item.context.account.peerId || item.peerMode == .memberList) {
                     if peer.isScam {
                         credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
                     } else if peer.isFake {
