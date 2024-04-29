@@ -878,7 +878,7 @@ extension ChatControllerImpl {
                             })
                         }
                     }, getCaptionPanelView: { [weak self] in
-                        return self?.getCaptionPanelView()
+                        return self?.getCaptionPanelView(isFile: false)
                     })
                 }
             }, openFileGallery: {
@@ -965,7 +965,7 @@ extension ChatControllerImpl {
                     })
                 }
             }, getCaptionPanelView: { [weak self] in
-                return self?.getCaptionPanelView()
+                return self?.getCaptionPanelView(isFile: false)
             }, present: { [weak self] c, a in
                 self?.present(c, in: .window(.root), with: a)
             })
@@ -1208,7 +1208,7 @@ extension ChatControllerImpl {
             }
         }
         controller.getCaptionPanelView = { [weak self] in
-            return self?.getCaptionPanelView()
+            return self?.getCaptionPanelView(isFile: false)
         }
         controller.legacyCompletion = { signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion in
             completion(signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion)
@@ -1274,7 +1274,7 @@ extension ChatControllerImpl {
                                 })
                             }))
                             controller.getCaptionPanelView = { [weak self] in
-                                return self?.getCaptionPanelView()
+                                return self?.getCaptionPanelView(isFile: fileMode)
                             }
                             strongSelf.effectiveNavigationController?.pushViewController(controller)
                         }
@@ -1309,7 +1309,7 @@ extension ChatControllerImpl {
                             })
                         }
                     }, getCaptionPanelView: { [weak self] in
-                        return self?.getCaptionPanelView()
+                        return self?.getCaptionPanelView(isFile: fileMode)
                     })
                     controller.descriptionGenerator = legacyAssetPickerItemGenerator()
                     controller.completionBlock = { [weak legacyController] signals, silentPosting, scheduleTime in
@@ -1437,7 +1437,7 @@ extension ChatControllerImpl {
                     return true
                 }
                 controller.getCaptionPanelView = { [weak strongSelf] in
-                    return strongSelf?.getCaptionPanelView()
+                    return strongSelf?.getCaptionPanelView(isFile: false)
                 }
                 present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
@@ -1620,12 +1620,12 @@ extension ChatControllerImpl {
         }))
     }
     
-    func getCaptionPanelView() -> TGCaptionPanelView? {
+    func getCaptionPanelView(isFile: Bool) -> TGCaptionPanelView? {
         var isScheduledMessages = false
         if case .scheduledMessages = self.presentationInterfaceState.subject {
             isScheduledMessages = true
         }
-        return self.context.sharedContext.makeGalleryCaptionPanelView(context: self.context, chatLocation: self.presentationInterfaceState.chatLocation, isScheduledMessages: isScheduledMessages, customEmojiAvailable: self.presentationInterfaceState.customEmojiAvailable, present: { [weak self] c in
+        return self.context.sharedContext.makeGalleryCaptionPanelView(context: self.context, chatLocation: self.presentationInterfaceState.chatLocation, isScheduledMessages: isScheduledMessages, isFile: isFile, customEmojiAvailable: self.presentationInterfaceState.customEmojiAvailable, present: { [weak self] c in
             self?.present(c, in: .window(.root))
         }, presentInGlobalOverlay: { [weak self] c in
             guard let self else {
@@ -1719,7 +1719,7 @@ extension ChatControllerImpl {
                     })
                 }
             }, getCaptionPanelView: { [weak self] in
-                return self?.getCaptionPanelView()
+                return self?.getCaptionPanelView(isFile: false)
             }, dismissedWithResult: { [weak self] in
                 self?.attachmentController?.dismiss(animated: false, completion: nil)
             }, finishedTransitionIn: { [weak self] in

@@ -1232,8 +1232,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             if let strongSelf = self {
                                 strongSelf.openPeer(peer: peer)
                             }
-                        }, sendFile: nil,
+                        }, 
+                        sendFile: nil,
                         sendSticker: nil,
+                        sendEmoji: nil,
                         requestMessageActionUrlAuth: nil,
                         joinVoiceChat: nil,
                         present: { c, a in

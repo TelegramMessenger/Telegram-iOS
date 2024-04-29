@@ -126,6 +126,12 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         
         super.init()
         
+        if item.stillAnimation.isCustomTemplateEmoji {
+            if let animationNode = self.staticAnimationNode as? DefaultAnimatedStickerNodeImpl {
+                animationNode.dynamicColor = theme.chat.inputPanel.panelControlAccentColor
+            }
+        }
+        
         if let animateInAnimationNode = self.animateInAnimationNode {
             self.addSubnode(animateInAnimationNode)
         }

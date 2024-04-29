@@ -3377,7 +3377,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 return (sourceView, sourceRect)
             })
             //strongSelf.peekController = controller
-            strongSelf.interfaceInteraction?.presentController(controller, nil)
+            strongSelf.interfaceInteraction?.presentGlobalOverlayController(controller, nil)
             return controller
         }, updateContent: { [weak self] content in
             guard let strongSelf = self else {

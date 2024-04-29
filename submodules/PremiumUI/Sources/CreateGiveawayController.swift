@@ -774,7 +774,7 @@ private func createGiveawayControllerEntries(
         if state.showPrizeDescription {
             entries.append(.prizeDescriptionText(presentationData.theme, presentationData.strings.BoostGift_AdditionalPrizesPlaceholder, state.prizeDescription, state.subscriptions))
            
-            let monthsString = presentationData.strings.BoostGift_AdditionalPrizesInfoForMonths(state.selectedMonths ?? 3)
+            let monthsString = presentationData.strings.BoostGift_AdditionalPrizesInfoForMonths(state.selectedMonths ?? 12)
             if state.prizeDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 let subscriptionsString = presentationData.strings.BoostGift_AdditionalPrizesInfoSubscriptions(state.subscriptions).replacingOccurrences(of: "\(state.subscriptions) ", with: "")
                 prizeDescriptionInfoText = presentationData.strings.BoostGift_AdditionalPrizesInfoOn("\(state.subscriptions)", subscriptionsString, monthsString).string

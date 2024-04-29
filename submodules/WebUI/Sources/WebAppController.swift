@@ -1966,7 +1966,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 let _ = (cachedWebAppTermsPage(context: context)
                 |> deliverOnMainQueue).startStandalone(next: { resolvedUrl in
                     context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: true, openPeer: { peer, navigation in
-                    }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak self] c, arguments in
+                    }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak self] c, arguments in
                         self?.push(c)
                     }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
                 })

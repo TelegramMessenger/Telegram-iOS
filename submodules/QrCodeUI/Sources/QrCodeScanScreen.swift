@@ -915,10 +915,11 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
                     navigationController.setViewControllers(viewControllers, animated: false)
                 }
             }))
-        }, sendFile: nil,
-        sendSticker: { _, _, _ in
-            return false
-        }, requestMessageActionUrlAuth: nil,
+        }, 
+        sendFile: nil,
+        sendSticker: nil,
+        sendEmoji: nil,
+        requestMessageActionUrlAuth: nil,
         joinVoiceChat: { peerId, invite, call in
         }, present: { [weak self] c, a in
             self?.controller?.present(c, in: .window(.root), with: a)

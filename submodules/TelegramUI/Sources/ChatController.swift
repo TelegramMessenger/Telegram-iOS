@@ -1315,7 +1315,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, mode: .draw, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
                                 transitionCompletion()
                             }, getCaptionPanelView: { [weak self] in
-                                return self?.getCaptionPanelView()
+                                return self?.getCaptionPanelView(isFile: false)
                             }, sendMessagesWithSignals: { [weak self] signals, _, _ in
                                 if let strongSelf = self {
                                     strongSelf.enqueueMediaMessages(signals: signals, silentPosting: false)
@@ -3304,7 +3304,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let _ = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState {
                             strongSelf.sendMediaRecording(scheduleTime: time)
                         } else {
-                            strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: time) { [weak self] in
+                            let silentPosting = strongSelf.presentationInterfaceState.interfaceState.silentPosting
+                            strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: time) { [weak self] in
                                 if let strongSelf = self {
                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: strongSelf.presentationInterfaceState.subject != .scheduledMessages, {
                                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
@@ -3732,7 +3733,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
                         let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
                         legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, mode: .draw, initialCaption: inputText, snapshots: [], transitionCompletion: nil, getCaptionPanelView: { [weak self] in
-                            return self?.getCaptionPanelView()
+                            return self?.getCaptionPanelView(isFile: true)
                         }, sendMessagesWithSignals: { [weak self] signals, _, _ in
                             if let strongSelf = self {
                                 strongSelf.interfaceInteraction?.setupEditMessage(messageId, { _ in })
@@ -9740,9 +9741,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 default:
                     break
                 }
-        }, sendFile: nil, sendSticker: { [weak self] f, sourceView, sourceRect in
+        }, sendFile: nil, 
+        sendSticker: { [weak self] f, sourceView, sourceRect in
             return self?.interfaceInteraction?.sendSticker(f, true, sourceView, sourceRect, nil, []) ?? false
-        }, requestMessageActionUrlAuth: { [weak self] subject in
+        }, sendEmoji: { [weak self] text, attribute in
+            guard let self, canSendMessagesToChat(self.presentationInterfaceState) else {
+                return
+            }
+            self.controllerInteraction?.sendEmoji(text, attribute, false)
+        },
+        requestMessageActionUrlAuth: { [weak self] subject in
             if case let .url(url) = subject {
                 self?.controllerInteraction?.requestMessageActionUrlAuth(url, subject)
             }

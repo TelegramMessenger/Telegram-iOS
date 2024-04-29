@@ -101,13 +101,6 @@ public final class ThemeGridController: ViewController {
                 }
             }
         })
-        
-        if case .generic = mode {
-            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
-                self?.activateSearch()
-            })
-            self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
-        }
     }
     
     required public init(coder aDecoder: NSCoder) {
