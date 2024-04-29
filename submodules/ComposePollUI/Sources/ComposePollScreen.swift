@@ -657,6 +657,7 @@ final class ComposePollScreenComponent: Component {
                 },
                 assumeIsEditing: self.inputMediaNodeTargetTag === self.pollTextFieldTag,
                 characterLimit: component.initialData.maxPollTextLength,
+                emptyLineHandling: .allowed,
                 returnKeyAction: { [weak self] in
                     guard let self else {
                         return
@@ -751,6 +752,7 @@ final class ComposePollScreenComponent: Component {
                     },
                     assumeIsEditing: self.inputMediaNodeTargetTag === pollOption.textFieldTag,
                     characterLimit: component.initialData.maxPollOptionLength,
+                    emptyLineHandling: .notAllowed,
                     returnKeyAction: { [weak self] in
                         guard let self else {
                             return
@@ -1132,6 +1134,7 @@ final class ComposePollScreenComponent: Component {
                             },
                             assumeIsEditing: self.inputMediaNodeTargetTag === self.quizAnswerTextInputTag,
                             characterLimit: component.initialData.maxPollTextLength,
+                            emptyLineHandling: .allowed,
                             returnKeyAction: { [weak self] in
                                 guard let self else {
                                     return
@@ -1564,7 +1567,7 @@ public class ComposePollScreen: ViewControllerComponentContainer, AttachmentCont
     
     public static func initialData(context: AccountContext) -> InitialData {
         return InitialData(
-            maxPollTextLength: Int(context.userLimits.maxCaptionLength),
+            maxPollTextLength: Int(255),
             maxPollOptionLength: 100
         )
     }

@@ -12178,7 +12178,7 @@ Sorry for the inconvenience.";
 
 "Chat.NavigationNoTopics" = "You have no unread topics";
 
-"Chat.NextSuggestedChannelSwipeProgress" = "Swipe up to go to the next channel";
+"Chat.NextSuggestedChannelSwipeProgress" = "Pull up to go to the next channel";
 "Chat.NextSuggestedChannelSwipeAction" = "Release to go to the next channel";
-"Chat.NextUnreadTopicSwipeProgress" = "Swipe up to go to the next topic";
+"Chat.NextUnreadTopicSwipeProgress" = "Pull up to go to the next topic";
 "Chat.NextUnreadTopicSwipeAction" = "Release to go to the next topic";

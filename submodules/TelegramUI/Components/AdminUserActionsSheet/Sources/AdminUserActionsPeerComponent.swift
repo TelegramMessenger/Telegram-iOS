@@ -37,6 +37,7 @@ final class AdminUserActionsPeerComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let baseFontSize: CGFloat
     let sideInset: CGFloat
     let title: String
     let peer: EnginePeer?
@@ -47,6 +48,7 @@ final class AdminUserActionsPeerComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        baseFontSize: CGFloat,
         sideInset: CGFloat,
         title: String,
         peer: EnginePeer?,
@@ -56,6 +58,7 @@ final class AdminUserActionsPeerComponent: Component {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.baseFontSize = baseFontSize
         self.sideInset = sideInset
         self.title = title
         self.peer = peer
@@ -71,6 +74,9 @@ final class AdminUserActionsPeerComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.baseFontSize != rhs.baseFontSize {
             return false
         }
         if lhs.sideInset != rhs.sideInset {
@@ -220,7 +226,7 @@ final class AdminUserActionsPeerComponent: Component {
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.title, font: Font.semibold(17.0), textColor: component.theme.list.itemPrimaryTextColor))
+                    text: .plain(NSAttributedString(string: component.title, font: Font.semibold(component.baseFontSize), textColor: component.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: maxTextSize, height: 100.0)

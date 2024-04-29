@@ -759,6 +759,7 @@ private final class RecentActionsSettingsSheetComponent: Component {
                     context: component.context,
                     theme: environment.theme,
                     strings: environment.strings,
+                    baseFontSize: presentationData.listsFontSize.baseDisplaySize,
                     sideInset: 0.0,
                     title: peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
                     peer: peer,

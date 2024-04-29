@@ -527,8 +527,7 @@ private final class AdminUserActionsSheetComponent: Component {
                         break loop
                     case let .member(_, _, adminInfo, banInfo, _):
                         if adminInfo != nil {
-                            allowedParticipantRights = []
-                            allowedMediaRights = []
+                            (allowedParticipantRights, allowedMediaRights) = rightsFromBannedRights([])
                             break loop
                         } else if let banInfo {
                             (peerParticipantRights, peerMediaRights) = rightsFromBannedRights(banInfo.rights.flags)
@@ -825,6 +824,7 @@ private final class AdminUserActionsSheetComponent: Component {
                         context: component.context,
                         theme: environment.theme,
                         strings: environment.strings,
+                        baseFontSize: presentationData.listsFontSize.baseDisplaySize,
                         sideInset: 0.0,
                         title: EnginePeer(peer.peer).displayTitle(strings: environment.strings, displayOrder: .firstLast),
                         peer: EnginePeer(peer.peer),
@@ -1102,6 +1102,7 @@ private final class AdminUserActionsSheetComponent: Component {
                             guard let self else {
                                 return
                             }
+                            
                             switch configItem {
                             case .sendMessages:
                                 if self.participantRights.contains(.sendMessages) {
@@ -1137,12 +1138,20 @@ private final class AdminUserActionsSheetComponent: Component {
                             self.state?.updated(transition: .spring(duration: 0.35))
                         } : nil
                     )),
-                    action: (isEnabled && configItem == .sendMedia) ? { [weak self] _ in
-                        guard let self else {
+                    action: ((isEnabled && configItem == .sendMedia) || !isEnabled) ? { [weak self] _ in
+                        guard let self, let component = self.component else {
                             return
                         }
-                        self.isMediaSectionExpanded = !self.isMediaSectionExpanded
-                        self.state?.updated(transition: .spring(duration: 0.35))
+                        if !isEnabled {
+                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                            self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: environment.strings.GroupPermission_PermissionDisabledByDefault, actions: [
+                                TextAlertAction(type: .defaultAction, title: environment.strings.Common_OK, action: {
+                                })
+                            ]), in: .window(.root))
+                        } else {
+                            self.isMediaSectionExpanded = !self.isMediaSectionExpanded
+                            self.state?.updated(transition: .spring(duration: 0.35))
+                        }
                     } : nil,
                     highlighting: .disabled
                 ))))
@@ -1756,4 +1765,3 @@ private final class OptionsSectionFooterComponent: Component {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
-

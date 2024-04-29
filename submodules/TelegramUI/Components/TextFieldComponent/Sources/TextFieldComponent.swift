@@ -609,31 +609,56 @@ public final class TextFieldComponent: Component {
             }
             
             if let characterLimit = component.characterLimit {
+                let replacementString = text as NSString
                 let string = self.inputState.inputText.string as NSString
-                let updatedString = string.replacingCharacters(in: range, with: text)
-                if (updatedString as NSString).length > characterLimit {
+                let deltaLength = replacementString.length - range.length
+                let resultingLength = string.length + deltaLength
+                if resultingLength > characterLimit {
+                    let availableLength = characterLimit - string.length
+                    if availableLength > 0 {
+                        var insertString = replacementString.substring(to: availableLength)
+                        
+                        switch component.emptyLineHandling {
+                        case .allowed:
+                            break
+                        case .oneConsecutive:
+                            while insertString.range(of: "\n\n") != nil {
+                                if let range = insertString.range(of: "\n\n") {
+                                    insertString.replaceSubrange(range, with: "\n")
+                                }
+                            }
+                        case .notAllowed:
+                            insertString = insertString.replacingOccurrences(of: "\n", with: "")
+                        }
+                        
+                        self.insertText(NSAttributedString(string: insertString))
+                    }
                     return false
                 }
             }
-            switch component.emptyLineHandling {
-            case .allowed:
-                break
-            case .oneConsecutive:
-                let string = self.inputState.inputText.string as NSString
-                let updatedString = string.replacingCharacters(in: range, with: text)
-                if updatedString.range(of: "\n\n") != nil {
-                    return false
-                }
-            case .notAllowed:
-                if (range.length == 0 && text == "\n"), let returnKeyAction = component.returnKeyAction {
-                    returnKeyAction()
-                    return false
-                }
-                
-                let string = self.inputState.inputText.string as NSString
-                let updatedString = string.replacingCharacters(in: range, with: text)
-                if updatedString.range(of: "\n") != nil {
-                    return false
+            if text.count != 0 {
+                switch component.emptyLineHandling {
+                case .allowed:
+                    break
+                case .oneConsecutive:
+                    let string = self.inputState.inputText.string as NSString
+                    let updatedString = string.replacingCharacters(in: range, with: text)
+                    if updatedString.range(of: "\n\n") != nil {
+                        return false
+                    }
+                case .notAllowed:
+                    if (range.length == 0 && text == "\n"), let returnKeyAction = component.returnKeyAction {
+                        returnKeyAction()
+                        return false
+                    }
+                    
+                    if text.range(of: "\n") != nil {
+                        let updatedText = text.replacingOccurrences(of: "\n", with: "")
+                        if !updatedText.isEmpty {
+                            self.insertText(NSAttributedString(string: updatedText))
+                        }
+                        return false
+                    }
                 }
             }
             

@@ -100,7 +100,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
         presentationData: ChatListPresentationData,
         filter: ChatListNodePeersFilter,
         key: ChatListSearchPaneKey,
-        peerSelected: @escaping (EnginePeer, Int64?) -> Void,
+        peerSelected: @escaping (EnginePeer, Int64?, Bool) -> Void,
         disabledPeerSelected: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void,
         peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?,
         clearRecentlySearchedPeers: @escaping () -> Void,
@@ -114,7 +114,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
         switch self {
             case let .topPeers(peers, theme, strings):
                 return ChatListRecentPeersListItem(theme: theme, strings: strings, context: context, peers: peers, peerSelected: { peer in
-                    peerSelected(peer, nil)
+                    peerSelected(peer, nil, false)
                 }, peerContextAction: { peer, node, gesture, location in
                     if let peerContextAction = peerContextAction {
                         peerContextAction(peer, .recentPeers, node, gesture, location)
@@ -267,7 +267,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     header: header,
                     action: { _ in
                         if let chatPeer = peer.peer.peers[peer.peer.peerId] {
-                            peerSelected(EnginePeer(chatPeer), nil)
+                            peerSelected(EnginePeer(chatPeer), nil, section == .recommendedChannels)
                         }
                     },
                     disabledAction: { _ in
@@ -969,7 +969,7 @@ private func chatListSearchContainerPreparedRecentTransition(
     presentationData: ChatListPresentationData,
     filter: ChatListNodePeersFilter,
     key: ChatListSearchPaneKey,
-    peerSelected: @escaping (EnginePeer, Int64?) -> Void,
+    peerSelected: @escaping (EnginePeer, Int64?, Bool) -> Void,
     disabledPeerSelected: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void,
     peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?,
     clearRecentlySearchedPeers: @escaping () -> Void,
@@ -1790,7 +1790,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     |> then(
                         context.engine.contacts.searchRemotePeers(query: query)
                         |> map { ($0.0, $0.1, false) }
-                        |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                        |> delay(0.4, queue: Queue.concurrentDefaultQueue())
                     )
                 )
             } else if let query = query, case .channels = key {
@@ -1799,7 +1799,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     |> then(
                         context.engine.contacts.searchRemotePeers(query: query, scope: .channels)
                         |> map { ($0.0, $0.1, false) }
-                        |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                        |> delay(0.4, queue: Queue.concurrentDefaultQueue())
                     )
                 )
             } else {
@@ -3183,19 +3183,19 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 }
                 
-                let transition = chatListSearchContainerPreparedRecentTransition(from: previousRecentItems?.entries ?? [], to: recentItems.entries, forceUpdateAll: forceUpdateAll, context: context, presentationData: presentationData, filter: peersFilter, key: key, peerSelected: { peer, threadId in
+                let transition = chatListSearchContainerPreparedRecentTransition(from: previousRecentItems?.entries ?? [], to: recentItems.entries, forceUpdateAll: forceUpdateAll, context: context, presentationData: presentationData, filter: peersFilter, key: key, peerSelected: { peer, threadId, isRecommended in
                     guard let self else {
                         return
                     }
                     
                     if case .channels = key {
                         if let navigationController = self.navigationController {
-                            var customChatNavigationStack: [EnginePeer.Id] = []
-                            if let entries = previousRecentItemsValue.with({ $0 })?.entries {
-                                for entry in entries {
-                                    if case let .peer(_, peer, _, _, _, _, _, _, _, _, _) = entry {
-                                        customChatNavigationStack.append(peer.peer.peerId)
-                                    }
+                            var customChatNavigationStack: [EnginePeer.Id]?
+                            if isRecommended {
+                                if let recommendedChannelOrder = previousRecentItemsValue.with({ $0 })?.recommendedChannelOrder {
+                                    var customChatNavigationStackValue: [EnginePeer.Id] = []
+                                    customChatNavigationStackValue.append(contentsOf: recommendedChannelOrder)
+                                    customChatNavigationStack = customChatNavigationStackValue
                                 }
                             }
                             
