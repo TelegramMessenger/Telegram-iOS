@@ -227,8 +227,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         default:
                             break
                     }
-                }, sendFile: nil,
+                }, 
+                sendFile: nil,
                 sendSticker: nil,
+                sendEmoji: nil,
                 requestMessageActionUrlAuth: nil,
                 joinVoiceChat: { peerId, invite, call in
                     

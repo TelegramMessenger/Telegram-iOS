@@ -2320,7 +2320,7 @@ final class StoryItemSetContainerSendMessage {
             return nil
         }
         //TODO:self.presentationInterfaceState.customEmojiAvailable
-        return component.context.sharedContext.makeGalleryCaptionPanelView(context: component.context, chatLocation: .peer(id: peer.id), isScheduledMessages: false, customEmojiAvailable: true, present: { [weak view] c in
+        return component.context.sharedContext.makeGalleryCaptionPanelView(context: component.context, chatLocation: .peer(id: peer.id), isScheduledMessages: false, isFile: false, customEmojiAvailable: true, present: { [weak view] c in
             guard let view else {
                 return
             }
@@ -2717,6 +2717,7 @@ final class StoryItemSetContainerSendMessage {
             },
             sendFile: nil,
             sendSticker: nil,
+            sendEmoji: nil,
             requestMessageActionUrlAuth: nil,
             joinVoiceChat: nil,
             present: { [weak view] c, a in

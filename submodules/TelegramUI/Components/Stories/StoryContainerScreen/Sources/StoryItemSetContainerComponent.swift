@@ -4338,6 +4338,7 @@ public final class StoryItemSetContainerComponent: Component {
                                                 },
                                                 sendFile: nil,
                                                 sendSticker: nil,
+                                                sendEmoji: nil,
                                                 requestMessageActionUrlAuth: nil,
                                                 joinVoiceChat: nil,
                                                 present: { _, _ in

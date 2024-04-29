@@ -24,6 +24,7 @@ import MoreButtonNode
 import Camera
 import CameraScreen
 import MediaEditor
+import ImageObjectSeparation
 
 final class MediaPickerInteraction {
     let downloadManager: AssetDownloadManager
@@ -1941,11 +1942,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         self.updateSelectionState(count: Int32(selectionContext.count()))
         
-//        self.longTapWithTabBar = { [weak self] in
-//            if let self, self.groupsController == nil {
-//                self.presentSearch(activateOnDisplay: false)
-//            }
-//        }
+
+        if case let .assets(_, mode) = self.subject, case .createSticker = mode {
+            let _ = cutoutAvailability(context: context).startStandalone()
+        }
     }
     
     required init(coder aDecoder: NSCoder) {

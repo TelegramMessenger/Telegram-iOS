@@ -50,8 +50,10 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                 default:
                     break
             }
-        }, sendFile: nil,
+        },
+        sendFile: nil,
         sendSticker: nil,
+        sendEmoji: nil,
         requestMessageActionUrlAuth: nil,
         joinVoiceChat: nil,
         present: presentImpl, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
@@ -95,7 +97,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                         if let navigationController = controller.navigationController as? NavigationController {
                             openResolvedUrlImpl(result, context: context, urlContext: peerId.flatMap { .chat(peerId: $0, message: nil, updatedPresentationData: nil) } ?? .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigateToPeer in
                                 openResolvedPeerImpl(peer, navigateToPeer)
-                            }, sendFile: nil, sendSticker: nil, joinVoiceChat: nil, present: { c, a in }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
+                            }, sendFile: nil, sendSticker: nil, sendEmoji: nil, joinVoiceChat: nil, present: { c, a in }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
                         }
                     default:
                         break

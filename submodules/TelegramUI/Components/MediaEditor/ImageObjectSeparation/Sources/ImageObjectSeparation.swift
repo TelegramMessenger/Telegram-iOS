@@ -38,11 +38,7 @@ public func cutoutAvailability(context: AccountContext) -> Signal<CutoutAvailabi
         return .single(.available)
     } else if #available(iOS 14.0, *) {
         let compiledModelPath = modelPath()
-        
-        #if DEBUG
-//        try? FileManager.default.removeItem(atPath: compiledModelPath)
-        #endif
-        
+                
         if FileManager.default.fileExists(atPath: compiledModelPath) {
             return .single(.available)
         }
@@ -77,10 +73,10 @@ public func cutoutAvailability(context: AccountContext) -> Signal<CutoutAvailabi
                         case progress(Float)
                         case failed
                     }
-                    
+                                        
                     let fetchStatus = Signal<FetchStatus, NoError> { subscriber in
                         let fetchedDisposable = fetchedData.start()
-                        let thumbnailDisposable = context.account.postbox.mediaBox.resourceData(file.resource, attemptSynchronously: false).start(next: { next in
+                        let resourceDataDisposable = context.account.postbox.mediaBox.resourceData(file.resource, attemptSynchronously: false).start(next: { next in
                             if next.complete {
                                 SSZipArchive.unzipFile(atPath: next.path, toDestination: NSTemporaryDirectory())
                                 subscriber.putNext(.completed(compiledModelPath))
@@ -97,15 +93,14 @@ public func cutoutAvailability(context: AccountContext) -> Signal<CutoutAvailabi
                         })
                         return ActionDisposable {
                             fetchedDisposable.dispose()
-                            thumbnailDisposable.dispose()
+                            resourceDataDisposable.dispose()
                             progressDisposable.dispose()
                         }
                     }
                     return fetchStatus
                     |> mapToSignal { status -> Signal<CutoutAvailability, NoError> in
                         switch status {
-                        case let .completed(path):
-                            let _ = path
+                        case .completed:
                             return .single(.available)
                         case let .progress(progress):
                             return .single(.progress(progress))

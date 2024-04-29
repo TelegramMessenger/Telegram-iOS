@@ -952,15 +952,13 @@ private final class StickerPackContainer: ASDisplayNode {
             }
             
             let content = StickerPreviewPeekContent(context: context, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: isLocked, menu: menuItems, openPremiumIntro: { [weak self] in
-                guard let self else {
+                guard let strongSelf = self else {
                     return
                 }
-                guard let controller = self.controller else {
-                    return
-                }
-                
-                let premiumController = PremiumIntroScreen(context: context, source: .stickers)
-                controller.push(premiumController)
+                let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                let navigationController = strongSelf.controller?.parentNavigationController
+                strongSelf.controller?.dismiss(animated: false, completion: nil)
+                navigationController?.pushViewController(controller)
             })
             
             return (strongSelf.view, itemLayer.convert(itemLayer.bounds, to: strongSelf.view.layer), content)
@@ -1986,7 +1984,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     actionAreaBottomInset = 2.0
                 }
             }
-            if let (info, _, isInstalled) = self.currentStickerPack, isInstalled, (!info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)) {
+            if let (info, _, isInstalled) = self.currentStickerPack, isInstalled, (!info.flags.contains(.isCreator) || info.flags.contains(.isEmoji)) {
                 buttonHeight = 42.0
                 actionAreaTopInset = 1.0
                 actionAreaBottomInset = 2.0
