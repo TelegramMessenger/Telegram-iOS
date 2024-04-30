@@ -446,7 +446,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         var messageMedia = message.media
                         var hasDice = false
                         
-                        if hideNames {
+                        if hideNames || options.hideCaptions {
                             for media in message.media {
                                 if options.hideCaptions {
                                     if media is TelegramMediaImage || media is TelegramMediaFile {

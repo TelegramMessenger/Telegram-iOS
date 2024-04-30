@@ -135,10 +135,7 @@ final class StickerCutoutOutlineView: UIView {
     private func animateBump(path: BezierPath) {
         let boundingBox = path.path.cgPath.boundingBox
         let pathCenter = CGPoint(x: boundingBox.midX, y: boundingBox.midY)
-        
-//        let originalPosition = self.imageLayer.position
-//        let originalAnchorPoint = self.imageLayer.anchorPoint
-        
+                
         let layerPathCenter = self.imageLayer.convert(pathCenter, from: self.imageLayer.superlayer)
         self.imageLayer.anchorPoint = CGPoint(x: layerPathCenter.x / layer.bounds.width, y: layerPathCenter.y / layer.bounds.height)
         self.imageLayer.position = layerPathCenter

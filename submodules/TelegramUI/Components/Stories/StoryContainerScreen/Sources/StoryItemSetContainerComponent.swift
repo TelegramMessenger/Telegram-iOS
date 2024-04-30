@@ -4231,7 +4231,7 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                             switch action {
                             case let .url(url, concealed):
-                                let _ = openUserGeneratedUrl(context: component.context, peerId: component.slice.peer.id, url: url, concealed: concealed, skipUrlAuth: false, skipConcealedAlert: false, present: { [weak self] c in
+                                let _ = openUserGeneratedUrl(context: component.context, peerId: component.slice.peer.id, url: url, concealed: concealed, skipUrlAuth: false, skipConcealedAlert: false, forceDark: true, present: { [weak self] c in
                                     guard let self, let component = self.component, let controller = component.controller() else {
                                         return
                                     }
@@ -4241,6 +4241,12 @@ public final class StoryItemSetContainerComponent: Component {
                                         return
                                     }
                                     self.sendMessageContext.openResolved(view: self, result: resolved, forceExternal: false, concealed: concealed)
+                                }, alertDisplayUpdated: { [weak self] alertController in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.sendMessageContext.statusController = alertController
+                                    self.updateIsProgressPaused()
                                 })
                             case let .textMention(value):
                                 self.sendMessageContext.openPeerMention(view: self, name: value)
@@ -4376,6 +4382,12 @@ public final class StoryItemSetContainerComponent: Component {
                 let captionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentFrame.height - captionSize.height), size: captionSize)
                 if let captionItemView = captionItem.view.view {
                     if captionItemView.superview == nil {
+                        if case .regular = component.metrics.widthClass {
+                            self.topContentGradientView.layer.cornerRadius = 12.0
+                            self.topContentGradientView.clipsToBounds = true
+                            captionItemView.layer.cornerRadius = 12.0
+                            captionItemView.clipsToBounds = true
+                        }
                         self.controlsContainerView.insertSubview(captionItemView, aboveSubview: self.contentDimView)
                     }
                     captionItemTransition.setFrame(view: captionItemView, frame: captionFrame)

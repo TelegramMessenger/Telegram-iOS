@@ -473,9 +473,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 if let statusBarHeight = layout.statusBarHeight {
                     containerTopInset += statusBarHeight
                 }
-                
-                let effectiveStatusBarHeight: CGFloat? = nil
-                
+                                
                 var safeInsets = layout.safeInsets
                 safeInsets.left += overflowInset
                 safeInsets.right += overflowInset
@@ -487,7 +485,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 var additionalInsets = layout.additionalInsets
                 additionalInsets.bottom = topInset
                 
-                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width + overflowInset * 2.0, height: layout.size.height - containerTopInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: intrinsicInsets.left, bottom: intrinsicInsets.bottom, right: intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: safeInsets.bottom, right: safeInsets.right), additionalInsets: additionalInsets, statusBarHeight: effectiveStatusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
+                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width + overflowInset * 2.0, height: layout.size.height - containerTopInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: intrinsicInsets.left, bottom: intrinsicInsets.bottom, right: intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: safeInsets.bottom, right: safeInsets.right), additionalInsets: additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
                 let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: containerTopInset - coveredByModalTransition * 10.0), size: containerLayout.size)
                 let maxScale: CGFloat = (containerLayout.size.width - 16.0 * 2.0) / containerLayout.size.width
                 containerScale = 1.0 * (1.0 - coveredByModalTransition) + maxScale * coveredByModalTransition

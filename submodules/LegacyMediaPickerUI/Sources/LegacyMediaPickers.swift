@@ -758,10 +758,20 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                         fileAttributes.append(.Animated)
                                     }
                                 }
+                                
+                                if estimatedSize > 10 * 1024 * 1024 {
+                                    fileAttributes.append(.hintFileIsLarge)
+                                }
+                            } else {
+                                if case let .asset(asset) = data, let phAsset = asset.backingAsset, let resource = PHAssetResource.assetResources(for: phAsset).last, let sizeValue = resource.value(forKey: "fileSize") as? CLong, sizeValue > 0 {
+                                    let size = Int64(bitPattern: UInt64(sizeValue))
+                                    
+                                    if size > 10 * 1024 * 1024 {
+                                        fileAttributes.append(.hintFileIsLarge)
+                                    }
+                                }
                             }
-                            if estimatedSize > 10 * 1024 * 1024 {
-                                fileAttributes.append(.hintFileIsLarge)
-                            }
+                            
                             
                             var attributes: [MessageAttribute] = []
                             

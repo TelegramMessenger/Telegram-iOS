@@ -2846,7 +2846,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     c.dismiss(completion: {
                         if let strongSelf = self, let currentPeer = strongSelf.data?.peer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                             if let channel = currentPeer as? TelegramChannel, channel.flags.contains(.isForum), let threadId = message.threadId {
-                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, keepStack: .default).startStandalone()
+                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .default).startStandalone()
                             } else {
                                 let targetLocation: NavigateToChatControllerParams.Location
                                 if case let .replyThread(message) = strongSelf.chatLocation {
@@ -3008,7 +3008,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             c.dismiss(completion: {
                                 if let strongSelf = self, let currentPeer = strongSelf.data?.peer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                                     if let channel = currentPeer as? TelegramChannel, channel.flags.contains(.isForum), let threadId = message.threadId {
-                                        let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, keepStack: .default).startStandalone()
+                                        let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .default).startStandalone()
                                     } else {
                                         let targetLocation: NavigateToChatControllerParams.Location
                                         if case let .replyThread(message) = strongSelf.chatLocation {
@@ -4251,7 +4251,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.controller?.present(emojiStatusSelectionController, in: .window(.root))
             }
         } else {
-            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, isMyProfile: self.isMyProfile, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder)
+            if peerId == context.account.peerId {
+                self.privacySettings.set(.single(nil) |> then(context.engine.privacy.requestAccountPrivacySettings() |> map(Optional.init)))
+            } else {
+                self.privacySettings.set(.single(nil))
+            }
+            
+            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, isMyProfile: self.isMyProfile, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, privacySettings: self.privacySettings.get())
                        
             var previousTimestamp: Double?
             self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, emojiStatusFileAndPack, white in

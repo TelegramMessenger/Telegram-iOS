@@ -1607,6 +1607,7 @@ public extension EmojiPagerContentComponent {
         hasTrending: Bool,
         forceHasPremium: Bool,
         hasEdit: Bool = false,
+        hasAdd: Bool = false,
         searchIsPlaceholderOnly: Bool = true,
         subject: StickersSubject = .chatStickers,
         hideBackground: Bool = false
@@ -1890,7 +1891,7 @@ public extension EmojiPagerContentComponent {
                     }
                 }
                 
-                if hasEdit && !addedCreateStickerButton, let groupIndex = itemGroupIndexById[groupId] {
+                if hasAdd && !addedCreateStickerButton, let groupIndex = itemGroupIndexById[groupId] {
                     let resultItem = EmojiPagerContentComponent.Item(
                         animationData: nil,
                         content: .icon(.add),

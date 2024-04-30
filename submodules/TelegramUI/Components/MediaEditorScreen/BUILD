@@ -59,6 +59,7 @@ swift_library(
         "//submodules/TelegramUI/Components/StickerPickerScreen",
         "//submodules/UIKitRuntimeUtils",
         "//submodules/TelegramUI/Components/MediaEditor/ImageObjectSeparation",
+        "//submodules/Components/HierarchyTrackingLayer",
     ],
     visibility = [
         "//visibility:public",

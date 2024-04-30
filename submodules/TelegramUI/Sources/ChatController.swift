@@ -180,8 +180,12 @@ func isTopmostChatController(_ controller: ChatControllerImpl) -> Bool {
     if let _ = controller.navigationController {
         var hasOther = false
         controller.window?.forEachController({ c in
-            if c is ChatControllerImpl && controller !== c {
-                hasOther = true
+            if c is ChatControllerImpl {
+                if controller !== c {
+                    hasOther = true
+                } else {
+                    hasOther = false
+                }
             }
         })
         if hasOther {
@@ -1702,7 +1706,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.navigateToMessage(from: nil, to: .id(id, NavigateToMessageParams(timestamp: nil, quote: nil)), forceInCurrentChat: false)
         }, navigateToThreadMessage: { [weak self] peerId, threadId, messageId in
             if let context = self?.context, let navigationController = self?.effectiveNavigationController {
-                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, keepStack: .always).startStandalone()
+                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always).startStandalone()
             }
         }, tapMessage: nil, clickThroughMessage: { [weak self] in
             self?.chatDisplayNode.dismissInput()
@@ -3646,6 +3650,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return (chatTextInputAddMentionAttribute(current, peer: peer), inputMode)
                             }
                         }, delay: true)
+                    })))
+                }
+                if !isChannel {
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuSearchMessages, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        f(.dismissWithoutContent)
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.activateSearch(domain: .member(peer._asPeer()))
                     })))
                 }
                 

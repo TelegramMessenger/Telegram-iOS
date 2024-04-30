@@ -1257,6 +1257,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 let editorController = context.sharedContext.makeStickerEditorScreen(
                     context: context,
                     source: result,
+                    intro: false,
                     transitionArguments: transitionView.flatMap { ($0, transitionRect, transitionImage) },
                     completion: { file, emoji, commit in
                         dismissImpl?()
@@ -1361,6 +1362,7 @@ private final class StickerPackContainer: ASDisplayNode {
         let controller = context.sharedContext.makeStickerEditorScreen(
             context: context,
             source: (initialFile, emoji),
+            intro: false,
             transitionArguments: nil,
             completion: { file, emoji, commit in
                 let sticker = ImportSticker(

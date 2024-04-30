@@ -239,6 +239,13 @@ public final class ChatInlineSearchResultsListComponent: Component {
             super.init(frame: frame)
             
             self.addSubnode(self.listNode)
+            
+            self.listNode.beganInteractiveDragging = { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.window?.endEditing(true)
+            }
         }
         
         required public init?(coder: NSCoder) {
