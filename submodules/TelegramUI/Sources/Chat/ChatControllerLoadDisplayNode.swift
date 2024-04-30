@@ -1219,7 +1219,7 @@ extension ChatControllerImpl {
                 
                 let transformedMessages: [EnqueueMessage]
                 if let silentPosting = silentPosting {
-                    transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting)
+                    transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting, scheduleTime: scheduleTime)
                 } else if let scheduleTime = scheduleTime {
                     transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: scheduleTime)
                 } else {

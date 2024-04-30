@@ -21,6 +21,9 @@ swift_library(
         "//submodules/TextFormat:TextFormat",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
         "//submodules/TelegramUI/Components/Chat/ChatInputTextNode",
+        "//submodules/TelegramUI/Components/EntityKeyboard",
+        "//submodules/ReactionSelectionNode",
+        "//submodules/Components/ReactionButtonListComponent",
     ],
     visibility = [
         "//visibility:public",

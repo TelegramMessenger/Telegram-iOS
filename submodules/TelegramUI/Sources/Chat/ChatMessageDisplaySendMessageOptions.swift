@@ -9,6 +9,8 @@ import TelegramCore
 import TelegramNotices
 import ChatSendMessageActionUI
 import AccountContext
+import TopMessageReactions
+import ReactionSelectionNode
 
 func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, node: ASDisplayNode, gesture: ContextGesture) {
     guard let peerId = selfController.chatLocation.peerId, let textInputView = selfController.chatDisplayNode.textInputView(), let layout = selfController.validLayout else {
@@ -28,9 +30,19 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
         hasEntityKeyboard = true
     }
     
-    let _ = (selfController.context.account.viewTracker.peerView(peerId)
-    |> take(1)
-    |> deliverOnMainQueue).startStandalone(next: { [weak selfController] peerView in
+    let effectItems: Signal<[ReactionItem]?, NoError>
+    if peerId != selfController.context.account.peerId && peerId.namespace == Namespaces.Peer.CloudUser {
+        effectItems = effectMessageReactions(context: selfController.context)
+        |> map(Optional.init)
+    } else {
+        effectItems = .single(nil)
+    }
+    
+    let _ = (combineLatest(
+        selfController.context.account.viewTracker.peerView(peerId) |> take(1),
+        effectItems
+    )
+    |> deliverOnMainQueue).startStandalone(next: { [weak selfController] peerView, effectItems in
         guard let selfController, let peer = peerViewMainPeer(peerView) else {
             return
         }
@@ -79,7 +91,7 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
                 return
             }
             selfController.controllerInteraction?.scheduleCurrentMessage()
-        })
+        }, reactionItems: effectItems)
         controller.emojiViewProvider = selfController.chatDisplayNode.textInputPanelNode?.emojiViewProvider
         selfController.sendMessageActionsController = controller
         if layout.isNonExclusive {
