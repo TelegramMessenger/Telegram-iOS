@@ -4382,6 +4382,12 @@ public final class StoryItemSetContainerComponent: Component {
                 let captionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentFrame.height - captionSize.height), size: captionSize)
                 if let captionItemView = captionItem.view.view {
                     if captionItemView.superview == nil {
+                        if case .regular = component.metrics.widthClass {
+                            self.topContentGradientView.layer.cornerRadius = 12.0
+                            self.topContentGradientView.clipsToBounds = true
+                            captionItemView.layer.cornerRadius = 12.0
+                            captionItemView.clipsToBounds = true
+                        }
                         self.controlsContainerView.insertSubview(captionItemView, aboveSubview: self.contentDimView)
                     }
                     captionItemTransition.setFrame(view: captionItemView, frame: captionFrame)
