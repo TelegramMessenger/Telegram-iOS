@@ -4060,7 +4060,6 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.textNode.textNode.alpha = 0.0
                             strongSelf.authorNode.alpha = 0.0
                             strongSelf.compoundHighlightingNode?.alpha = 0.0
-                            strongSelf.dustNode?.alpha = 0.0
                             strongSelf.forwardedIconNode.alpha = 0.0
                             
                             if animated || animateContent {
@@ -4072,13 +4071,13 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.forwardedIconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                             }
                         }
+                        strongSelf.dustNode?.alpha = 0.0
                     } else {
                         if !strongSelf.inputActivitiesNode.alpha.isZero {
                             strongSelf.inputActivitiesNode.alpha = 0.0
                             strongSelf.textNode.textNode.alpha = 1.0
                             strongSelf.authorNode.alpha = 1.0
                             strongSelf.compoundHighlightingNode?.alpha = 1.0
-                            strongSelf.dustNode?.alpha = 1.0
                             strongSelf.forwardedIconNode.alpha = 1.0
                             if animated || animateContent {
                                 strongSelf.inputActivitiesNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { value in
@@ -4095,6 +4094,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.inputActivitiesNode.removeFromSupernode()
                             }
                         }
+                        strongSelf.dustNode?.alpha = 1.0
                     }
                     if let inputActivitiesSize = inputActivitiesSize {
                         let inputActivitiesFrame = CGRect(origin: CGPoint(x: contentRect.minX, y: authorNodeFrame.minY + UIScreenPixel), size: inputActivitiesSize)

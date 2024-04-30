@@ -304,7 +304,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, navigateToMessageStandalone: { _ in
         }, navigateToThreadMessage: { [weak self] peerId, threadId, _ in
             if let context = self?.context, let navigationController = self?.getNavigationController() {
-                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).startStandalone()
+                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always).startStandalone()
             }
         }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in return false
         }, requestMessageActionCallback: { [weak self] messageId, _, _, _ in
@@ -1181,7 +1181,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         }
                     case let .replyThread(messageId):
                         if let navigationController = strongSelf.getNavigationController() {
-                            let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).startStandalone()
+                            let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .always).startStandalone()
                         }
                     case let .stickerPack(name, type):
                         let _ = type

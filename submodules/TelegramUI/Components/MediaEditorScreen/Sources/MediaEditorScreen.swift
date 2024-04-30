@@ -2410,6 +2410,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             case generic
             case addingToPack
             case editing
+            case businessIntro
         }
         
         case storyEditor
@@ -6494,6 +6495,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         var file = stickerFile(resource: resource, thumbnailResource: thumbnailResource, size: Int64(0), dimensions: PixelDimensions(image.size), duration: self.preferredStickerDuration(), isVideo: isVideo)
         
         var menuItems: [ContextMenuItem] = []
+        var hasEmojiSelection = true
         if case let .stickerEditor(mode) = self.mode {
             switch mode {
             case .generic:
@@ -6662,6 +6664,24 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.uploadSticker(file, action: .upload)
                     })
                 })))
+            case .businessIntro:
+                hasEmojiSelection = false
+                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_SetAsIntroSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
+                    guard let self else {
+                        return
+                    }
+                    f(.default)
+                    
+                    let _ = (imagesReady.get()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.uploadSticker(file, action: .upload)
+                    })
+                })))
             }
         }
         
@@ -6682,14 +6702,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 theme: presentationData.theme,
                 strings: presentationData.strings,
                 item: .portal(portalView),
-                isCreating: true,
+                isCreating: hasEmojiSelection,
                 selectedEmoji: self.stickerSelectedEmoji,
                 selectedEmojiUpdated: { [weak self] selectedEmoji in
                     if let self {
                         self.stickerSelectedEmoji = selectedEmoji
                     }
                 },
-                recommendedEmoji: stickerRecommendedEmoji,
+                recommendedEmoji: self.stickerRecommendedEmoji,
                 menu: menuItems,
                 openPremiumIntro: {}
             ), 
@@ -6936,7 +6956,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             case .addToStickerPack, .createStickerPack:
                                 if let (packReference, packTitle) = packReferenceAndTitle, let navigationController = self.navigationController as? NavigationController {
                                     Queue.mainQueue().after(0.2) {
-                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker)
+                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker, actionPerformed: nil)
                                         (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                         
                                         Queue.mainQueue().after(0.1) {

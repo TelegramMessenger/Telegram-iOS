@@ -1715,7 +1715,9 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                 return false
             })
             if let resultItemNode = resultItemNode {
-                controller.ensureItemNodeVisible(resultItemNode)
+                Queue.mainQueue().after(0.1) {
+                    controller.ensureItemNodeVisible(resultItemNode, atTop: true)
+                }
             }
         })
     }

@@ -2187,6 +2187,12 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                 continue
             }
             itemNode.layer.animateAlpha(from: itemNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            if let selectionView = itemNode.selectionView {
+                selectionView.layer.animateAlpha(from: selectionView.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            }
+            if let selectionTintView = itemNode.selectionTintView {
+                selectionTintView.layer.animateAlpha(from: selectionTintView.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            }
         }
         
         if let titleLabelView = self.titleLabelView {

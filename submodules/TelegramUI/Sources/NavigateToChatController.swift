@@ -354,7 +354,7 @@ public func isOverlayControllerForChatNotificationOverlayPresentation(_ controll
     return false
 }
 
-public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?, navigationController: NavigationController, activateInput: ChatControllerActivateInput?, keepStack: NavigateToChatKeepStack) -> Signal<Never, NoError> {
+public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?, navigationController: NavigationController, activateInput: ChatControllerActivateInput?, scrollToEndIfExists: Bool, keepStack: NavigateToChatKeepStack) -> Signal<Never, NoError> {
     return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: messageId, preload: false)
     |> deliverOnMainQueue
     |> beforeNext { [weak context, weak navigationController] result in
@@ -375,7 +375,9 @@ public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePee
                 chatLocationContextHolder: result.contextHolder,
                 subject: messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil) },
                 activateInput: actualActivateInput,
-                keepStack: keepStack
+                keepStack: keepStack,
+                scrollToEndIfExists: scrollToEndIfExists,
+                animated: !scrollToEndIfExists
             )
         )
     }

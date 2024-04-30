@@ -4231,7 +4231,7 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                             switch action {
                             case let .url(url, concealed):
-                                let _ = openUserGeneratedUrl(context: component.context, peerId: component.slice.peer.id, url: url, concealed: concealed, skipUrlAuth: false, skipConcealedAlert: false, present: { [weak self] c in
+                                let _ = openUserGeneratedUrl(context: component.context, peerId: component.slice.peer.id, url: url, concealed: concealed, skipUrlAuth: false, skipConcealedAlert: false, forceDark: true, present: { [weak self] c in
                                     guard let self, let component = self.component, let controller = component.controller() else {
                                         return
                                     }
@@ -4241,6 +4241,12 @@ public final class StoryItemSetContainerComponent: Component {
                                         return
                                     }
                                     self.sendMessageContext.openResolved(view: self, result: resolved, forceExternal: false, concealed: concealed)
+                                }, alertDisplayUpdated: { [weak self] alertController in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.sendMessageContext.statusController = alertController
+                                    self.updateIsProgressPaused()
                                 })
                             case let .textMention(value):
                                 self.sendMessageContext.openPeerMention(view: self, name: value)

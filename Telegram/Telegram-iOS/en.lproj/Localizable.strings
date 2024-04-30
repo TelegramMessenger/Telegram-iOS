@@ -5630,6 +5630,7 @@ Sorry for the inconvenience.";
 "Conversation.ContextMenuOpenProfile" = "Open Profile";
 "Conversation.ContextMenuSendMessage" = "Send Message";
 "Conversation.ContextMenuMention" = "Mention";
+"Conversation.ContextMenuSearchMessages" = "Search Messages";
 
 "Conversation.ContextMenuOpenChannelProfile" = "Open Profile";
 "Conversation.ContextMenuOpenChannel" = "Open Channel";
@@ -12047,6 +12048,7 @@ Sorry for the inconvenience.";
 "MediaEditor.CreateNewPack" = "New Sticker Set";
 "MediaEditor.ReplaceSticker" = "Replace Sticker";
 "MediaEditor.AddToStickerPack" = "Add to Sticker Set";
+"MediaEditor.SetAsIntroSticker" = "Set as Greeting Sticker";
 
 "MediaEditor.NewStickerPack.Title" = "New Sticker Set";
 "MediaEditor.NewStickerPack.Text" = "Choose a name for your sticker set.";
@@ -12182,3 +12184,9 @@ Sorry for the inconvenience.";
 "Chat.NextSuggestedChannelSwipeAction" = "Release to go to the next channel";
 "Chat.NextUnreadTopicSwipeProgress" = "Pull up to go to the next topic";
 "Chat.NextUnreadTopicSwipeAction" = "Release to go to the next topic";
+
+"EmojiPacksSettings.ArchivedPacks" = "Archived Stickers";
+"EmojiPacksSettings.ArchivedPacks.Info" = "You can have up to 200 sticker sets installed.\nUnused stickers are archived when you add more.";
+
+"EmojiPacks.UnarchiveEmojiPacksConfirmation_1" = "Unarchive %@ Pack";
+"EmojiPacks.UnarchiveEmojiPacksConfirmation_any" = "Unarchive %@ Packs";

@@ -1805,7 +1805,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         }
                     },
                     tapAction: { _, _ in
-                        shareLink(link)
+                        if !link.isEmpty {
+                            shareLink(link)
+                        }
                     }
                 ),
                 environment: {},
@@ -3161,6 +3163,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         let bottomSeparator = Child(Rectangle.self)
         let button = Child(SolidRoundedButtonComponent.self)
         
+        var updatedInstalled: Bool?
+        
         return { context in
             let environment = context.environment[EnvironmentType.self].value
             let state = context.state
@@ -3368,8 +3372,15 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         if let emojiFile = state?.emojiFile, let controller = environment?.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
                             for attribute in emojiFile.attributes {
                                 if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
-                                    let controller = accountContext.sharedContext.makeStickerPackScreen(context: accountContext, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: loadedEmojiPack.flatMap { [$0] } ?? [], isEditing: false, expandIfNeeded: false, parentNavigationController: navigationController, sendSticker: { _, _, _ in
+                                    var loadedPack: LoadedStickerPack?
+                                    if let loadedEmojiPack, case let .result(info, items, installed) = loadedEmojiPack {
+                                        loadedPack = .result(info: info, items: items, installed: updatedInstalled ?? installed)
+                                    }
+                                    
+                                    let controller = accountContext.sharedContext.makeStickerPackScreen(context: accountContext, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: loadedPack.flatMap { [$0] } ?? [], isEditing: false, expandIfNeeded: false, parentNavigationController: navigationController, sendSticker: { _, _, _ in
                                         return false
+                                    }, actionPerformed: { added in
+                                        updatedInstalled = added
                                     })
                                     presentController(controller)
                                     break

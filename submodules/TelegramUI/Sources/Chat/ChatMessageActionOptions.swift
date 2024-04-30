@@ -149,13 +149,14 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
             for media in message.media {
                 if let media = media as? TelegramMediaFile, media.isMusic {
                     isMusic = true
+                    if !message.text.isEmpty {
+                        hasCaptions = true
+                    }
                 } else if media is TelegramMediaDice {
                     isDice = true
-                } else {
+                } else if media is TelegramMediaImage || media is TelegramMediaFile {
                     if !message.text.isEmpty {
-                        if media is TelegramMediaImage || media is TelegramMediaFile {
-                            hasCaptions = true
-                        }
+                        hasCaptions = true
                     }
                 }
             }

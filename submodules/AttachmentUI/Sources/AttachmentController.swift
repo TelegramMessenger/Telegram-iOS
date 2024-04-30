@@ -691,7 +691,7 @@ public class AttachmentController: ViewController {
             } else {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
                 
-                let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+                let targetPosition = self.container.position
                 let startPosition = targetPosition.offsetBy(dx: 0.0, dy: layout.size.height)
                 
                 self.container.position = startPosition
