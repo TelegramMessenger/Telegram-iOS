@@ -143,6 +143,8 @@ genrule(
 minimum_os_version = "12.0"
 minimum_watchos_version="9.0"
 
+notificationServiceExtensionVersion = "v1"
+
 empty_languages = [
     "ar",
     "be",
@@ -1712,31 +1714,12 @@ plist_fragment(
         </dict>
     </dict>
     """.format(
-        telegram_bundle_id = telegram_bundle_id,
+        telegram_bundle_id = telegram_bundle_id
     )
 )
 
-'''genrule(
-    name = "SetMinOsVersionNotificationServiceExtension",
-    cmd_bash =
-"""
-    name=NotificationServiceExtension.appex
-    cat $(location PatchMinOSVersion.source.sh) | sed -e "s/<<<MIN_OS_VERSION>>>/10\\.0/g" | sed -e "s/<<<NAME>>>/$$name/g" > $(location SetMinOsVersionNotificationServiceExtension.sh)
-""",
-    srcs = [
-        "PatchMinOSVersion.source.sh",
-    ],
-    outs = [
-        "SetMinOsVersionNotificationServiceExtension.sh",
-    ],
-    executable = True,
-    visibility = [
-        "//visibility:public",
-    ]
-)'''
-
 ios_extension(
-    name = "NotificationServiceExtension",
+    name = "NotificationServiceExtension" + notificationServiceExtensionVersion,
     bundle_id = "{telegram_bundle_id}.NotificationService".format(
         telegram_bundle_id = telegram_bundle_id,
     ),
@@ -1752,7 +1735,6 @@ ios_extension(
         ":AppNameInfoPlist",
     ],
     minimum_os_version = minimum_os_version, # maintain the same minimum OS version across extensions
-    #ipa_post_processor = ":SetMinOsVersionNotificationServiceExtension",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:NotificationService.mobileprovision",
@@ -1997,7 +1979,7 @@ ios_application(
         "//conditions:default": [
             ":ShareExtension",
             ":NotificationContentExtension",
-            ":NotificationServiceExtension",
+            ":NotificationServiceExtension" + notificationServiceExtensionVersion,
             ":IntentsExtension",
             ":WidgetExtension",
             ":BroadcastUploadExtension",

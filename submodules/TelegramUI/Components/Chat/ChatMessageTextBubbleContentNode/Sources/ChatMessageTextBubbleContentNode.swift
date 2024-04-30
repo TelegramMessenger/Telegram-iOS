@@ -930,6 +930,12 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return ChatMessageBubbleContentTapAction(content: .copy(pre))
             } else if let code = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Code)] as? String {
                 return ChatMessageBubbleContentTapAction(content: .copy(code))
+            } else if let _ = attributes[NSAttributedString.Key(rawValue: "Attribute__Blockquote")] {
+                if let text = self.textNode.textNode.attributeSubstring(name: "Attribute__Blockquote", index: index) {
+                    return ChatMessageBubbleContentTapAction(content: .copy(text.1))
+                } else {
+                    return ChatMessageBubbleContentTapAction(content: .none)
+                }
             } else if let emoji = attributes[NSAttributedString.Key(rawValue: ChatTextInputAttributes.customEmoji.rawValue)] as? ChatTextInputTextCustomEmojiAttribute, let file = emoji.file {
                 return ChatMessageBubbleContentTapAction(content: .customEmoji(file))
             } else {
