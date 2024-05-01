@@ -419,3 +419,45 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
         return result
     }
 }
+
+public func effectMessageReactions(context: AccountContext) -> Signal<[ReactionItem], NoError> {
+    return context.engine.stickers.availableReactions()
+    |> take(1)
+    |> map { availableReactions -> [ReactionItem] in
+        guard let availableReactions else {
+            return []
+        }
+        
+        var result: [ReactionItem] = []
+        var existingIds = Set<MessageReaction.Reaction>()
+        
+        for reaction in availableReactions.reactions {
+            guard let centerAnimation = reaction.centerAnimation else {
+                continue
+            }
+            guard let aroundAnimation = reaction.aroundAnimation else {
+                continue
+            }
+            if !reaction.isEnabled {
+                continue
+            }
+            if existingIds.contains(reaction.value) {
+                continue
+            }
+            existingIds.insert(reaction.value)
+            
+            result.append(ReactionItem(
+                reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                appearAnimation: reaction.appearAnimation,
+                stillAnimation: reaction.selectAnimation,
+                listAnimation: centerAnimation,
+                largeListAnimation: reaction.activateAnimation,
+                applicationAnimation: aroundAnimation,
+                largeApplicationAnimation: reaction.effectAnimation,
+                isCustom: false
+            ))
+        }
+
+        return result
+    }
+}

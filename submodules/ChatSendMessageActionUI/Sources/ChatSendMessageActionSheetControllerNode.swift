@@ -11,6 +11,9 @@ import ContextUI
 import TextFormat
 import EmojiTextAttachmentView
 import ChatInputTextNode
+import ReactionSelectionNode
+import EntityKeyboard
+import ReactionButtonListComponent
 
 private let leftInset: CGFloat = 16.0
 private let rightInset: CGFloat = 16.0
@@ -177,11 +180,16 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     
     private let messageClipNode: ASDisplayNode
     private let messageBackgroundNode: ASImageNode
+    private let messageEffectAnchorView: UIView
     private let fromMessageTextScrollView: UIScrollView
     private let fromMessageTextNode: ChatInputTextNode
     private let toMessageTextScrollView: UIScrollView
     private let toMessageTextNode: ChatInputTextNode
+    private var messageEffectReactionIcon: ReactionIconView?
     private let scrollNode: ASScrollNode
+    
+    private var selectedMessageEffect: (reaction: MessageReaction.Reaction, file: TelegramMediaFile)?
+    private var reactionContextNode: ReactionContextNode?
     
     private var fromCustomEmojiContainerView: CustomEmojiContainerView?
     private var toCustomEmojiContainerView: CustomEmojiContainerView?
@@ -196,7 +204,10 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     
     private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     
-    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputView: UITextView, attachment: Bool, canSendWhenOnline: Bool, forwardedCount: Int?, hasEntityKeyboard: Bool, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, send: (() -> Void)?, sendSilently: (() -> Void)?, sendWhenOnline: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
+    private let messageEffectDisposable = MetaDisposable()
+    private var standaloneReactionAnimation: StandaloneReactionAnimation?
+    
+    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputView: UITextView, attachment: Bool, canSendWhenOnline: Bool, forwardedCount: Int?, hasEntityKeyboard: Bool, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, send: (() -> Void)?, sendSilently: (() -> Void)?, sendWhenOnline: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?, reactionItems: [ReactionItem]?) {
         self.context = context
         self.presentationData = presentationData
         self.sourceSendButton = sourceSendButton
@@ -226,6 +237,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.messageClipNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
         self.messageBackgroundNode = ASImageNode()
         self.messageBackgroundNode.isUserInteractionEnabled = true
+        self.messageEffectAnchorView = UIView()
         self.fromMessageTextNode = ChatInputTextNode(disableTiling: true)
         self.fromMessageTextNode.textView.isScrollEnabled = false
         self.fromMessageTextNode.isUserInteractionEnabled = false
@@ -237,6 +249,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.toMessageTextScrollView = UIScrollView()
         self.toMessageTextScrollView.alpha = 0.0
         self.toMessageTextScrollView.isUserInteractionEnabled = false
+        self.toMessageTextScrollView.clipsToBounds = false
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
@@ -326,6 +339,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.addSubnode(self.sendButtonNode)
         self.scrollNode.addSubnode(self.messageClipNode)
         self.messageClipNode.addSubnode(self.messageBackgroundNode)
+        self.messageClipNode.view.addSubview(self.messageEffectAnchorView)
         self.messageClipNode.view.addSubview(self.fromMessageTextScrollView)
         self.fromMessageTextScrollView.addSubview(self.fromMessageTextNode.view)
         self.messageClipNode.view.addSubview(self.toMessageTextScrollView)
@@ -364,6 +378,210 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 }
             }
         }
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        if let reactionItems, !reactionItems.isEmpty {
+            //TODO:localize
+            let reactionContextNode = ReactionContextNode(
+                context: context,
+                animationCache: context.animationCache,
+                presentationData: presentationData,
+                items: reactionItems.map(ReactionContextItem.reaction),
+                selectedItems: Set(),
+                title: "Add an animated effect",
+                reactionsLocked: false,
+                alwaysAllowPremiumReactions: false,
+                allPresetReactionsAreAvailable: true,
+                getEmojiContent: { animationCache, animationRenderer in
+                    let mappedReactionItems: [EmojiComponentReactionItem] = reactionItems.map { reaction -> EmojiComponentReactionItem in
+                        return EmojiComponentReactionItem(reaction: reaction.reaction.rawValue, file: reaction.stillAnimation)
+                    }
+                    
+                    return EmojiPagerContentComponent.emojiInputData(
+                        context: context,
+                        animationCache: animationCache,
+                        animationRenderer: animationRenderer,
+                        isStandalone: false,
+                        subject: .reaction(onlyTop: false),
+                        hasTrending: false,
+                        topReactionItems: mappedReactionItems,
+                        areUnicodeEmojiEnabled: false,
+                        areCustomEmojiEnabled: true,
+                        chatPeerId: context.account.peerId,
+                        selectedItems: Set(),
+                        hasSearch: false,
+                        premiumIfSavedMessages: false
+                    )
+                },
+                isExpandedUpdated: { [weak self] transition in
+                    guard let self else {
+                        return
+                    }
+                    self.update(transition: transition)
+                },
+                requestLayout: { [weak self] transition in
+                    guard let self else {
+                        return
+                    }
+                    self.update(transition: transition)
+                },
+                requestUpdateOverlayWantsToBeBelowKeyboard: { [weak self] transition in
+                    guard let self else {
+                        return
+                    }
+                    self.update(transition: transition)
+                }
+            )
+            reactionContextNode.reactionSelected = { [weak self] updateReaction, _ in
+                guard let self, let reactionContextNode = self.reactionContextNode else {
+                    return
+                }
+                
+                let reactionItem: Signal<ReactionItem?, NoError>
+                switch updateReaction.reaction {
+                case .builtin:
+                    reactionItem = context.engine.stickers.availableReactions()
+                    |> take(1)
+                    |> map { availableReactions -> ReactionItem? in
+                        guard let availableReactions else {
+                            return nil
+                        }
+                        for reaction in availableReactions.reactions {
+                            guard let centerAnimation = reaction.centerAnimation else {
+                                continue
+                            }
+                            guard let aroundAnimation = reaction.aroundAnimation else {
+                                continue
+                            }
+                            if reaction.value == updateReaction.reaction {
+                                return ReactionItem(
+                                    reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                                    appearAnimation: reaction.appearAnimation,
+                                    stillAnimation: reaction.selectAnimation,
+                                    listAnimation: centerAnimation,
+                                    largeListAnimation: reaction.activateAnimation,
+                                    applicationAnimation: aroundAnimation,
+                                    largeApplicationAnimation: reaction.effectAnimation,
+                                    isCustom: false
+                                )
+                            }
+                        }
+                        return nil
+                    }
+                case .custom:
+                    switch updateReaction {
+                    case let .custom(_, file):
+                        if let itemFile = file {
+                            reactionItem = .single(ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: updateReaction.reaction),
+                                appearAnimation: itemFile,
+                                stillAnimation: itemFile,
+                                listAnimation: itemFile,
+                                largeListAnimation: itemFile,
+                                applicationAnimation: nil,
+                                largeApplicationAnimation: nil,
+                                isCustom: true
+                            ))
+                        } else {
+                            reactionItem = .single(nil)
+                        }
+                    default:
+                        reactionItem = .single(nil)
+                    }
+                }
+                
+                self.messageEffectDisposable.set((combineLatest(
+                    reactionItem,
+                    ReactionContextNode.randomGenericReactionEffect(context: context)
+                )
+                |> deliverOnMainQueue).startStrict(next: { [weak self] reactionItem, path in
+                    guard let self else {
+                        return
+                    }
+                    guard let reactionItem else {
+                        return
+                    }
+                    
+                    if let selectedMessageEffect = self.selectedMessageEffect {
+                        if selectedMessageEffect.reaction == updateReaction.reaction {
+                            self.selectedMessageEffect = nil
+                            reactionContextNode.selectedItems = Set([])
+                            
+                            if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                                self.standaloneReactionAnimation = nil
+                                standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { [weak standaloneReactionAnimation] _ in
+                                    standaloneReactionAnimation?.removeFromSupernode()
+                                })
+                            }
+                            
+                            self.update(transition: .animated(duration: 0.2, curve: .easeInOut))
+                            return
+                        } else {
+                            self.selectedMessageEffect = (reaction: updateReaction.reaction, file: reactionItem.listAnimation)
+                            reactionContextNode.selectedItems = Set([AnyHashable(updateReaction.reaction)])
+                            self.update(transition: .animated(duration: 0.2, curve: .easeInOut))
+                        }
+                    } else {
+                        self.selectedMessageEffect = (reaction: updateReaction.reaction, file: reactionItem.listAnimation)
+                        reactionContextNode.selectedItems = Set([AnyHashable(updateReaction.reaction)])
+                        self.update(transition: .animated(duration: 0.2, curve: .easeInOut))
+                    }
+                    
+                    guard let messageEffectReactionIcon = self.messageEffectReactionIcon else {
+                        return
+                    }
+                    
+                    if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                        self.standaloneReactionAnimation = nil
+                        standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { [weak standaloneReactionAnimation] _ in
+                            standaloneReactionAnimation?.removeFromSupernode()
+                        })
+                    }
+                    
+                    let genericReactionEffect = path
+                    
+                    let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: genericReactionEffect)
+                    standaloneReactionAnimation.frame = self.bounds
+                    self.standaloneReactionAnimation = standaloneReactionAnimation
+                    self.addSubnode(standaloneReactionAnimation)
+                    
+                    standaloneReactionAnimation.animateReactionSelection(
+                        context: context,
+                        theme: self.presentationData.theme,
+                        animationCache: context.animationCache,
+                        reaction: reactionItem,
+                        avatarPeers: [],
+                        playHaptic: true,
+                        isLarge: true,
+                        playCenterReaction: false,
+                        targetView: messageEffectReactionIcon,
+                        addStandaloneReactionAnimation: { standaloneReactionAnimation in
+                            /*guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                            standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
+                            strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)*/
+                        },
+                        completion: { [weak standaloneReactionAnimation] in
+                            standaloneReactionAnimation?.removeFromSupernode()
+                        }
+                    )
+                }))
+            }
+            reactionContextNode.displayTail = true
+            reactionContextNode.forceTailToRight = false
+            reactionContextNode.forceDark = false
+            self.reactionContextNode = reactionContextNode
+            self.addSubnode(reactionContextNode)
+        }
+        
+        self.update(transition: .immediate)
+    }
+    
+    deinit {
+        self.messageEffectDisposable.dispose()
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -541,12 +759,16 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.fromMessageTextScrollView.layer.animatePosition(from: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         self.toMessageTextScrollView.layer.animatePosition(from: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         
-        let contentOffset = CGPoint(x:  self.sendButtonFrame.midX - self.contentContainerNode.frame.midX, y:  self.sendButtonFrame.midY - self.contentContainerNode.frame.midY)
+        let contentOffset = CGPoint(x: self.sendButtonFrame.midX - self.contentContainerNode.frame.midX, y:  self.sendButtonFrame.midY - self.contentContainerNode.frame.midY)
     
         let springDuration: Double = 0.42
         let springDamping: CGFloat = 104.0
         self.contentContainerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
         self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+        
+        if let reactionContextNode = self.reactionContextNode {
+            reactionContextNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: -clipDelta)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+        }
         
         Queue.mainQueue().after(0.01, {
             if self.animateInputField {
@@ -662,6 +884,19 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             }
             self.fromMessageTextScrollView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
             self.toMessageTextScrollView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            
+            if let reactionContextNode = self.reactionContextNode {
+                reactionContextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -clipDelta), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                reactionContextNode.animateOut(to: nil, animatingOutToReaction: false)
+            }
+            
+            if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                self.standaloneReactionAnimation = nil
+                standaloneReactionAnimation.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -clipDelta), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { [weak standaloneReactionAnimation] _ in
+                    standaloneReactionAnimation?.removeFromSupernode()
+                })
+            }
         } else {
             completedBubble = true
         }
@@ -675,6 +910,12 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if let layout = self.validLayout {
             self.containerLayoutUpdated(layout, transition: .immediate)
+        }
+    }
+    
+    private func update(transition: ContainedViewLayoutTransition) {
+        if let validLayout = self.validLayout {
+            self.containerLayoutUpdated(validLayout, transition: transition)
         }
     }
     
@@ -712,12 +953,12 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         if initialSendButtonFrame.width > initialSendButtonFrame.height * 1.2 {
             contentOrigin = CGPoint(x: layout.size.width - contentSize.width - layout.safeInsets.right - 5.0, y: initialSendButtonFrame.minY - contentSize.height)
         } else {
-            contentOrigin = CGPoint(x: layout.size.width - sideInset - contentSize.width - layout.safeInsets.right, y: layout.size.height - 6.0 - insets.bottom - contentSize.height)
+            contentOrigin = CGPoint(x: layout.size.width - sideInset - contentSize.width - layout.safeInsets.right, y: layout.size.height - 6.0 - insets.bottom - contentSize.height - 6.0)
         }
         if inputHeight > 70.0 && !layout.isNonExclusive && self.animateInputField {
             contentOrigin.y += menuHeightWithInset
         }
-        contentOrigin.y = min(contentOrigin.y + contentOffset, layout.size.height - 6.0 - layout.intrinsicInsets.bottom - contentSize.height)
+        contentOrigin.y = min(contentOrigin.y + contentOffset, layout.size.height - 6.0 - layout.intrinsicInsets.bottom - contentSize.height - 6.0)
         
         transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: contentOrigin, size: contentSize))
         var nextY: CGFloat = 0.0
@@ -776,6 +1017,8 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         backgroundFrame.size.height += messageHeightAddition
         transition.updateFrame(node: self.messageBackgroundNode, frame: backgroundFrame)
         
+        transition.updateFrame(view: self.messageEffectAnchorView, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX - 20.0, y: backgroundFrame.maxY - 10.0), size: CGSize(width: 1.0, height: 1.0)))
+        
         var textFrame = self.textFieldFrame
         textFrame.origin = CGPoint(x: 13.0, y: 6.0 - UIScreenPixel)
         textFrame.size.height = self.textInputView.contentSize.height
@@ -803,6 +1046,53 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.toMessageTextScrollView.frame = textFrame
         self.toMessageTextNode.frame = CGRect(origin: CGPoint(), size: textFrame.size)
         self.toMessageTextNode.updateLayout(size: textFrame.size)
+        
+        if let selectedMessageEffect = self.selectedMessageEffect {
+            let messageEffectReactionIcon: ReactionIconView
+            var iconTransition = transition
+            var animateIn = false
+            if let current = self.messageEffectReactionIcon {
+                messageEffectReactionIcon = current
+            } else {
+                iconTransition = .immediate
+                animateIn = true
+                messageEffectReactionIcon = ReactionIconView(frame: CGRect())
+                self.messageEffectReactionIcon = messageEffectReactionIcon
+                self.toMessageTextScrollView.addSubview(messageEffectReactionIcon)
+            }
+            
+            let iconSize = CGSize(width: 10.0, height: 10.0)
+            messageEffectReactionIcon.update(size: iconSize, context: self.context, file: selectedMessageEffect.file, fileId: selectedMessageEffect.file.fileId.id, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer, tintColor: nil, placeholderColor: self.presentationData.theme.chat.message.stickerPlaceholderColor.withWallpaper, animateIdle: false, reaction: selectedMessageEffect.reaction, transition: iconTransition)
+            
+            let iconFrame = CGRect(origin: CGPoint(x: self.toMessageTextNode.frame.minX + messageFrame.width - 30.0 + 2.0 - iconSize.width, y: self.toMessageTextNode.frame.maxY - 6.0 - iconSize.height), size: iconSize)
+            iconTransition.updateFrame(view: messageEffectReactionIcon, frame: iconFrame)
+            if animateIn && transition.isAnimated {
+                transition.animateTransformScale(view: messageEffectReactionIcon, from: 0.001)
+                messageEffectReactionIcon.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            }
+        } else if let messageEffectReactionIcon = self.messageEffectReactionIcon {
+            self.messageEffectReactionIcon = nil
+            
+            transition.updateTransformScale(layer: messageEffectReactionIcon.layer, scale: 0.001)
+            transition.updateAlpha(layer: messageEffectReactionIcon.layer, alpha: 0.0, completion: { [weak messageEffectReactionIcon] _ in
+                messageEffectReactionIcon?.removeFromSuperview()
+            })
+        }
+        
+        if let reactionContextNode = self.reactionContextNode {
+            let isFirstTime = reactionContextNode.bounds.isEmpty
+            
+            let size = layout.size
+            var reactionsAnchorRect = messageFrame
+            reactionsAnchorRect.origin.y = layout.size.height - reactionsAnchorRect.maxY
+            reactionsAnchorRect.origin.y -= 1.0
+            transition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
+            reactionContextNode.updateLayout(size: size, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, centerAligned: false, isCoveredByInput: false, isAnimatingOut: false, transition: transition)
+            reactionContextNode.updateIsIntersectingContent(isIntersectingContent: false, transition: .immediate)
+            if isFirstTime {
+                reactionContextNode.animateIn(from: reactionsAnchorRect)
+            }
+        }
     }
     
     @objc private func dimTapGesture(_ recognizer: UITapGestureRecognizer) {

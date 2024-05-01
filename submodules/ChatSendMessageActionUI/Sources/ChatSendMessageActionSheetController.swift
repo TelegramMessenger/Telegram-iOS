@@ -8,6 +8,7 @@ import AccountContext
 import ContextUI
 import TelegramCore
 import TextFormat
+import ReactionSelectionNode
 
 public final class ChatSendMessageActionSheetController: ViewController {
     public enum SendMode {
@@ -34,6 +35,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
     private let completion: () -> Void
     private let sendMessage: (SendMode) -> Void
     private let schedule: () -> Void
+    private let reactionItems: [ReactionItem]?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -46,7 +48,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
     
     public var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id?, isScheduledMessages: Bool = false, forwardMessageIds: [EngineMessage.Id]?, hasEntityKeyboard: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputView: UITextView, attachment: Bool = false, canSendWhenOnline: Bool, completion: @escaping () -> Void, sendMessage: @escaping (SendMode) -> Void, schedule: @escaping () -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id?, isScheduledMessages: Bool = false, forwardMessageIds: [EngineMessage.Id]?, hasEntityKeyboard: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputView: UITextView, attachment: Bool = false, canSendWhenOnline: Bool, completion: @escaping () -> Void, sendMessage: @escaping (SendMode) -> Void, schedule: @escaping () -> Void, reactionItems: [ReactionItem]? = nil) {
         self.context = context
         self.peerId = peerId
         self.isScheduledMessages = isScheduledMessages
@@ -60,6 +62,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
         self.completion = completion
         self.sendMessage = sendMessage
         self.schedule = schedule
+        self.reactionItems = reactionItems
         
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
@@ -121,7 +124,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
             self?.dismiss(cancel: false)
         }, cancel: { [weak self] in
             self?.dismiss(cancel: true)
-        })
+        }, reactionItems: self.reactionItems)
         self.displayNodeDidLoad()
     }
     

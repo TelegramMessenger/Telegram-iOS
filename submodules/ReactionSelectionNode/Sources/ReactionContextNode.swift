@@ -2972,13 +2972,13 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         self.isUserInteractionEnabled = false
     }
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
-        self.animateReactionSelection(context: context, theme: theme, animationCache: animationCache, reaction: reaction, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, forceSmallEffectAnimation: forceSmallEffectAnimation, hideCenterAnimation: hideCenterAnimation, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
+        self.animateReactionSelection(context: context, theme: theme, animationCache: animationCache, reaction: reaction, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, playCenterReaction: playCenterReaction, forceSmallEffectAnimation: forceSmallEffectAnimation, hideCenterAnimation: hideCenterAnimation, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
     }
         
     public var currentDismissAnimation: (() -> Void)?
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
         guard let sourceSnapshotView = targetView.snapshotContentTree() else {
             completion()
             return
@@ -2990,28 +2990,36 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         
         self.targetView = targetView
         
-        let itemNode: ReactionNode
-        if let currentItemNode = currentItemNode {
-            itemNode = currentItemNode
+        let itemNode: ReactionNode?
+        if playCenterReaction {
+            if let currentItemNode = currentItemNode {
+                itemNode = currentItemNode
+            } else {
+                let animationRenderer = MultiAnimationRendererImpl()
+                itemNode = ReactionNode(context: context, theme: theme, item: reaction, animationCache: animationCache, animationRenderer: animationRenderer, loopIdle: false, isLocked: false)
+            }
+            self.itemNode = itemNode
         } else {
-            let animationRenderer = MultiAnimationRendererImpl()
-            itemNode = ReactionNode(context: context, theme: theme, item: reaction, animationCache: animationCache, animationRenderer: animationRenderer, loopIdle: false, isLocked: false)
+            itemNode = nil
         }
-        self.itemNode = itemNode
         
         let switchToInlineImmediately: Bool
-        if itemNode.item.listAnimation.isVideoEmoji || itemNode.item.listAnimation.isVideoSticker || itemNode.item.listAnimation.isAnimatedSticker || itemNode.item.listAnimation.isStaticEmoji {
-            switch itemNode.item.reaction.rawValue {
-            case .builtin:
+        if let itemNode {
+            if itemNode.item.listAnimation.isVideoEmoji || itemNode.item.listAnimation.isVideoSticker || itemNode.item.listAnimation.isAnimatedSticker || itemNode.item.listAnimation.isStaticEmoji {
+                switch itemNode.item.reaction.rawValue {
+                case .builtin:
+                    switchToInlineImmediately = false
+                case .custom:
+                    switchToInlineImmediately = true
+                }
+            } else {
                 switchToInlineImmediately = false
-            case .custom:
-                switchToInlineImmediately = true
             }
         } else {
             switchToInlineImmediately = false
         }
         
-        if !forceSmallEffectAnimation && !switchToInlineImmediately && !hideCenterAnimation {
+        if let itemNode, !forceSmallEffectAnimation, !switchToInlineImmediately, !hideCenterAnimation {
             if let targetView = targetView as? ReactionIconView, !isLarge {
                 self.itemNodeIsEmbedded = true
                 targetView.addSubnode(itemNode)
@@ -3020,28 +3028,27 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             }
         }
         
-        itemNode.expandedAnimationDidBegin = { [weak self, weak targetView] in
-            guard let strongSelf = self, let targetView = targetView else {
-                return
+        if let itemNode {
+            itemNode.expandedAnimationDidBegin = { [weak self, weak targetView] in
+                guard let strongSelf = self, let targetView = targetView else {
+                    return
+                }
+                if let targetView = targetView as? ReactionIconView, !isLarge {
+                    strongSelf.itemNodeIsEmbedded = true
+                    
+                    targetView.updateIsAnimationHidden(isAnimationHidden: true, transition: .immediate)
+                } else {
+                    targetView.isHidden = true
+                }
             }
-            if let targetView = targetView as? ReactionIconView, !isLarge {
-                strongSelf.itemNodeIsEmbedded = true
-                
-                targetView.updateIsAnimationHidden(isAnimationHidden: true, transition: .immediate)
-            } else {
-                targetView.isHidden = true
-            }
+            
+            itemNode.isExtracted = true
         }
-                
-        itemNode.isExtracted = true
         
         var selfTargetBounds = targetView.bounds
         if let targetView = targetView as? ReactionIconView, let iconFrame = targetView.iconFrame {
             selfTargetBounds = iconFrame
         }
-        /*if case .builtin = itemNode.item.reaction.rawValue {
-            selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.5, dy: -selfTargetBounds.height * 0.5)
-        }*/
         
         let selfTargetRect = self.view.convert(selfTargetBounds, from: targetView)
         
@@ -3070,21 +3077,23 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             })
         }
         
-        if self.itemNodeIsEmbedded {
-            itemNode.frame = selfTargetBounds
-        } else {
-            itemNode.frame = expandedFrame
+        if let itemNode {
+            if self.itemNodeIsEmbedded {
+                itemNode.frame = selfTargetBounds
+            } else {
+                itemNode.frame = expandedFrame
+                
+                itemNode.layer.animateSpring(from: (selfTargetRect.width / expandedFrame.width) as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.7)
+            }
             
-            itemNode.layer.animateSpring(from: (selfTargetRect.width / expandedFrame.width) as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.7)
+            itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, largeExpanded: isLarge, isPreviewing: false, transition: .immediate)
         }
-        
-        itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, largeExpanded: isLarge, isPreviewing: false, transition: .immediate)
         
         let additionalAnimation: TelegramMediaFile?
         if isLarge && !forceSmallEffectAnimation {
-            additionalAnimation = itemNode.item.largeApplicationAnimation
+            additionalAnimation = reaction.largeApplicationAnimation
         } else {
-            additionalAnimation = itemNode.item.applicationAnimation
+            additionalAnimation = reaction.applicationAnimation
         }
         
         let additionalAnimationNode: AnimatedStickerNode?
@@ -3105,15 +3114,13 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                 }
             }
             
-            var additionalCachePathPrefix: String?
-            additionalCachePathPrefix = itemNode.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(additionalAnimation.resource.id)
-            additionalCachePathPrefix = nil
+            let additionalCachePathPrefix: String? = nil
             
-            additionalAnimationNodeValue.setup(source: AnimatedStickerResourceSource(account: itemNode.context.account, resource: additionalAnimation.resource), width: Int(effectFrame.width * 1.33), height: Int(effectFrame.height * 1.33), playbackMode: .once, mode: .direct(cachePathPrefix: additionalCachePathPrefix))
+            additionalAnimationNodeValue.setup(source: AnimatedStickerResourceSource(account: context.account, resource: additionalAnimation.resource), width: Int(effectFrame.width * 1.33), height: Int(effectFrame.height * 1.33), playbackMode: .once, mode: .direct(cachePathPrefix: additionalCachePathPrefix))
             additionalAnimationNodeValue.frame = effectFrame
             additionalAnimationNodeValue.updateLayout(size: effectFrame.size)
             self.addSubnode(additionalAnimationNodeValue)
-        } else if itemNode.item.isCustom {
+        } else if reaction.isCustom {
             var effectURL: URL?
             if let genericReactionEffect = self.genericReactionEffect {
                 effectURL = URL(fileURLWithPath: genericReactionEffect)
@@ -3163,18 +3170,18 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                 
                 genericAnimationView = view
                 
-                let animationCache = itemNode.context.animationCache
-                let animationRenderer = itemNode.context.animationRenderer
+                let animationCache = context.animationCache
+                let animationRenderer = context.animationRenderer
                 
                 for i in 1 ... 7 {
                     let allLayers = view.allLayers(forKeypath: AnimationKeypath(keypath: "placeholder_\(i)"))
                     for animationLayer in allLayers {
                         let baseItemLayer = InlineStickerItemLayer(
-                            context: itemNode.context,
+                            context: context,
                             userLocation: .other,
                             attemptSynchronousLoad: false,
-                            emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
-                            file: itemNode.item.listAnimation,
+                            emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: reaction.listAnimation.fileId.id, file: reaction.listAnimation),
+                            file: reaction.listAnimation,
                             cache: animationCache,
                             renderer: animationRenderer,
                             placeholderColor: UIColor(white: 0.0, alpha: 0.0),
@@ -3262,15 +3269,6 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                     return
                 }
                 
-                /*if switchToInlineImmediately {
-                    targetView.updateIsAnimationHidden(isAnimationHidden: false, transition: .immediate)
-                    itemNode.isHidden = true
-                } else {
-                    targetView.updateIsAnimationHidden(isAnimationHidden: true, transition: .immediate)
-                    targetView.addSubnode(itemNode)
-                    itemNode.frame = selfTargetBounds
-                }*/
-                
                 if forceSmallEffectAnimation {
                     if let additionalAnimationNode = additionalAnimationNode {
                         additionalAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak additionalAnimationNode] _ in
@@ -3281,7 +3279,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                     mainAnimationCompleted = true
                     intermediateCompletion()
                 } else {
-                    if isLarge {
+                    if isLarge, let itemNode {
                         let genericReactionEffect = strongSelf.genericReactionEffect
                         strongSelf.animateFromItemNodeToReaction(itemNode: itemNode, targetView: targetView, hideNode: true, completion: {
                             if let addStandaloneReactionAnimation = addStandaloneReactionAnimation {
@@ -3290,10 +3288,10 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                                 addStandaloneReactionAnimation(standaloneReactionAnimation)
                                 
                                 standaloneReactionAnimation.animateReactionSelection(
-                                    context: itemNode.context,
-                                    theme: itemNode.context.sharedContext.currentPresentationData.with({ $0 }).theme,
+                                    context: context,
+                                    theme: context.sharedContext.currentPresentationData.with({ $0 }).theme,
                                     animationCache: animationCache,
-                                    reaction: itemNode.item,
+                                    reaction: reaction,
                                     avatarPeers: avatarPeers,
                                     playHaptic: false,
                                     isLarge: false,
@@ -3337,10 +3335,8 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         }
         
         if forceSmallEffectAnimation {
-            //itemNode.mainAnimationCompletion = {
-                mainAnimationCompleted = true
-                maybeBeginDismissAnimation()
-            //}
+            mainAnimationCompleted = true
+            maybeBeginDismissAnimation()
         }
                 
         if let additionalAnimationNode = additionalAnimationNode {
