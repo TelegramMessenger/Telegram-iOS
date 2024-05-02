@@ -105,7 +105,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     let hideAllAdditionalInfo = item.presentationData.isPreview
     
     var hasSeparateCommentsButton = false
-    
+        
     outer: for (message, itemAttributes) in item.content {
         for attribute in message.attributes {
             if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
@@ -1327,7 +1327,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
     }
     
-    private static func beginLayout(selfReference: Weak<ChatMessageBubbleItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool,
+    private static func beginLayout(
+        selfReference: Weak<ChatMessageBubbleItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool,
         currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))],
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         viaMeasureLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
@@ -2084,8 +2085,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             maximumNodeWidth = size.width
             
+            var hasText = false
+            for contentItem in contentNodeMessagesAndClasses {
+                if let _ = contentItem.1 as? ChatMessageTextBubbleContentNode.Type {
+                    hasText = true
+                }
+            }
+                        
             if case .customChatContents = item.associatedData.subject {
-            } else if mosaicRange.upperBound == contentPropertiesAndLayouts.count || contentPropertiesAndLayouts[contentPropertiesAndLayouts.count - 1].3.isAttachment {
+            } else if (mosaicRange.upperBound == contentPropertiesAndLayouts.count || contentPropertiesAndLayouts[contentPropertiesAndLayouts.count - 1].3.isAttachment) && !hasText {
                 let message = item.content.firstMessage
                 
                 var edited = false

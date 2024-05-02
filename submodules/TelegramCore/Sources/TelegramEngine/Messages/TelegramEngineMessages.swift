@@ -504,8 +504,12 @@ public extension TelegramEngine {
             return EngineMessageReactionListContext(account: self.account, message: message, readStats: readStats, reaction: reaction)
         }
         
-        public func translate(text: String, toLang: String) -> Signal<String?, TranslationError> {
-            return _internal_translate(network: self.account.network, text: text, toLang: toLang)
+        public func translate(text: String, toLang: String, entities: [MessageTextEntity] = []) -> Signal<(String, [MessageTextEntity])?, TranslationError> {
+            return _internal_translate(network: self.account.network, text: text, toLang: toLang, entities: entities)
+        }
+        
+        public func translate(texts: [(String, [MessageTextEntity])], toLang: String) -> Signal<[(String, [MessageTextEntity])], TranslationError> {
+            return _internal_translate_texts(network: self.account.network, texts: texts, toLang: toLang)
         }
         
         public func translateMessages(messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, TranslationError> {
