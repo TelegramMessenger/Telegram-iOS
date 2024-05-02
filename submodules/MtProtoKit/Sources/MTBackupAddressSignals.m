@@ -1,6 +1,7 @@
 #import <MtProtoKit/MTBackupAddressSignals.h>
 
 #import <MtProtoKit/MTSignal.h>
+#import <MtProtoKit/MTAtomic.h>
 #import <MtProtoKit/MTQueue.h>
 #import <MtProtoKit/MTHttpRequestOperation.h>
 #import <MtProtoKit/MTEncryption.h>
@@ -276,6 +277,15 @@ static NSString *makeRandomPadding() {
     return [[MTSignal mergeSignals:signals] take:1];
 }
 
+MTAtomic *sharedFetchConfigKeychains() {
+    static MTAtomic *value = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        value = [[MTAtomic alloc] initWithValue:[[NSMutableDictionary alloc] init]];
+    });
+    return value;
+}
+
 + (MTSignal *)fetchConfigFromAddress:(MTBackupDatacenterAddress *)address currentContext:(MTContext *)currentContext mainDatacenterId:(NSInteger)mainDatacenterId {
     MTApiEnvironment *apiEnvironment = [currentContext.apiEnvironment copy];
     
@@ -299,17 +309,17 @@ static NSString *makeRandomPadding() {
     NSInteger authTokenMasterDatacenterId = 0;
     NSNumber *requiredAuthToken = nil;
     bool allowUnboundEphemeralKeys = true;
-    if (address.datacenterId != 0) {
-        authTokenMasterDatacenterId = mainDatacenterId;
-        requiredAuthToken = @(address.datacenterId);
-        MTTemporaryKeychain *tempKeychain = [[MTTemporaryKeychain alloc] init];
-        [MTContext copyAuthInfoFrom:currentContext.keychain toTempKeychain:tempKeychain];
-        context.keychain = tempKeychain;
-        allowUnboundEphemeralKeys = false;
-    } else {
-        MTTemporaryKeychain *tempKeychain = [[MTTemporaryKeychain alloc] init];
-        context.keychain = tempKeychain;
-    }
+    NSString *keychainKey = [NSString stringWithFormat:@"%d:%@:%d", (int)address.datacenterId, address.ip, (int)address.port];
+    MTTemporaryKeychain *tempKeychain = [sharedFetchConfigKeychains() with:^(NSMutableDictionary *dict) {
+        if (dict[keychainKey] != nil) {
+            return (MTTemporaryKeychain *)dict[keychainKey];
+        } else {
+            MTTemporaryKeychain *keychain = [[MTTemporaryKeychain alloc] init];
+            dict[keychainKey] = keychain;
+            return keychain;
+        }
+    }];
+    context.keychain = tempKeychain;
     
     MTProto *mtProto = [[MTProto alloc] initWithContext:context datacenterId:address.datacenterId usageCalculationInfo:nil requiredAuthToken:requiredAuthToken authTokenMasterDatacenterId:authTokenMasterDatacenterId];
     mtProto.useTempAuthKeys = true;
