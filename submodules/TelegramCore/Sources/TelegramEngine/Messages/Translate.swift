@@ -171,7 +171,7 @@ func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id
                             let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
                             var attributes = currentMessage.attributes.filter { !($0 is TranslationMessageAttribute) }
                             var attrOptions: [TranslationMessageAttribute.Additional] = []
-                            for (i, option) in poll.0.options.enumerated() {
+                            for (i, _) in poll.0.options.enumerated() {
                                 let translated = result[i + 1]
                                 attrOptions.append(.init(text: translated.0, entities: translated.1))
                             }
