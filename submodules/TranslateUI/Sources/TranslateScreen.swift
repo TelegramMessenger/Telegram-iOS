@@ -102,7 +102,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.translatedText = text
+                strongSelf.translatedText = text?.0
                 strongSelf.updated(transition: .immediate)
             }, error: { error in
                 
@@ -127,7 +127,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.translatedText = text
+                strongSelf.translatedText = text?.0
                 strongSelf.updated(transition: .immediate)
             }, error: { error in
                 
