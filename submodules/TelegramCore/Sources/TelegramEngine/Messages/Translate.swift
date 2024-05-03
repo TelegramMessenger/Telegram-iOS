@@ -111,6 +111,9 @@ func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id
             for option in poll.options {
                 texts.append((option.text, option.entities))
             }
+            if let solution = poll.results.solution {
+                texts.append((solution.text, solution.entities))
+            }
             return _internal_translate_texts(network: account.network, texts: texts, toLang: toLang)
         }
         
@@ -175,7 +178,15 @@ func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id
                                 let translated = result[i + 1]
                                 attrOptions.append(.init(text: translated.0, entities: translated.1))
                             }
-                            let updatedAttribute: TranslationMessageAttribute = TranslationMessageAttribute(text: result[0].0, entities: result[0].1, additional: attrOptions, toLang: toLang)
+                            
+                            let solution: TranslationMessageAttribute.Additional?
+                            if result.count > 1 + poll.0.options.count {
+                                solution = .init(text: result[result.count - 1].0, entities: result[result.count - 1].1)
+                            } else {
+                                solution = nil
+                            }
+                            
+                            let updatedAttribute: TranslationMessageAttribute = TranslationMessageAttribute(text: result[0].0, entities: result[0].1, additional: attrOptions, pollSolution: solution, toLang: toLang)
                             attributes.append(updatedAttribute)
                             
                             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
