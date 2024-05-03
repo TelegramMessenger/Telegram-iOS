@@ -2474,22 +2474,30 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             guard message.adAttribute == nil && message.id.namespace == Namespaces.Message.Cloud else {
                                 continue
                             }
-                            if !message.text.isEmpty && message.author?.id != self.context.account.peerId {
-                                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
-                                } else {
-                                    messageIdsToTranslate.append(message.id)
-                                }
+                            guard message.author?.id != self.context.account.peerId else {
+                                continue
+                            }
+                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
+                                continue
+                            }
+                            if !message.text.isEmpty {
+                                messageIdsToTranslate.append(message.id)
+                            } else if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
+                                messageIdsToTranslate.append(message.id)
                             }
                         case let .MessageGroupEntry(_, messages, _):
                             for (message, _, _, _, _) in messages {
                                 guard message.adAttribute == nil && message.id.namespace == Namespaces.Message.Cloud else {
                                     continue
                                 }
-                                if !message.text.isEmpty && message.author?.id != self.context.account.peerId {
-                                    if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
-                                    } else {
-                                        messageIdsToTranslate.append(message.id)
-                                    }
+                                guard message.author?.id != self.context.account.peerId else {
+                                    continue
+                                }
+                                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
+                                    continue
+                                }
+                                if !message.text.isEmpty {
+                                    messageIdsToTranslate.append(message.id)
                                 }
                             }
                         default:
