@@ -493,7 +493,7 @@ public final class CallListController: TelegramBaseController {
         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Calls_StartNewCall, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] c, f in
-            c.dismiss(completion: { [weak self] in
+            c?.dismiss(completion: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }

@@ -1,4 +1,52 @@
 public extension Api.messages {
+    indirect enum InvitedUsers: TypeConstructorDescription {
+        case invitedUsers(updates: Api.Updates, missingInvitees: [Api.MissingInvitee])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .invitedUsers(let updates, let missingInvitees):
+                    if boxed {
+                        buffer.appendInt32(2136862630)
+                    }
+                    updates.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(missingInvitees.count))
+                    for item in missingInvitees {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .invitedUsers(let updates, let missingInvitees):
+                return ("invitedUsers", [("updates", updates as Any), ("missingInvitees", missingInvitees as Any)])
+    }
+    }
+    
+        public static func parse_invitedUsers(_ reader: BufferReader) -> InvitedUsers? {
+            var _1: Api.Updates?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Updates
+            }
+            var _2: [Api.MissingInvitee]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MissingInvitee.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.InvitedUsers.invitedUsers(updates: _1!, missingInvitees: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum MessageEditData: TypeConstructorDescription {
         case messageEditData(flags: Int32)
     

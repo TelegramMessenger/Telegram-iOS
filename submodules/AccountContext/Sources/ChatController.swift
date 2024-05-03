@@ -44,6 +44,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let currentlyPlayingMessageId: EngineMessage.Index?
     public let isCopyProtectionEnabled: Bool
     public let availableReactions: AvailableReactions?
+    public let availableMessageEffects: AvailableMessageEffects?
     public let savedMessageTags: SavedMessageTags?
     public let defaultReaction: MessageReaction.Reaction?
     public let isPremium: Bool
@@ -75,6 +76,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         currentlyPlayingMessageId: EngineMessage.Index? = nil,
         isCopyProtectionEnabled: Bool = false,
         availableReactions: AvailableReactions?,
+        availableMessageEffects: AvailableMessageEffects?,
         savedMessageTags: SavedMessageTags?,
         defaultReaction: MessageReaction.Reaction?,
         isPremium: Bool,
@@ -105,6 +107,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.currentlyPlayingMessageId = currentlyPlayingMessageId
         self.isCopyProtectionEnabled = isCopyProtectionEnabled
         self.availableReactions = availableReactions
+        self.availableMessageEffects = availableMessageEffects
         self.savedMessageTags = savedMessageTags
         self.defaultReaction = defaultReaction
         self.isPremium = isPremium

@@ -476,7 +476,7 @@ extension ChatControllerImpl {
         self.updateDownButtonVisibility()
     }
     
-    func sendMediaRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, viewOnce: Bool = false) {
+    func sendMediaRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, viewOnce: Bool = false, messageEffect: ChatSendMessageEffect? = nil) {
         self.chatDisplayNode.updateRecordedMediaDeleted(false)
         
         guard let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState else {

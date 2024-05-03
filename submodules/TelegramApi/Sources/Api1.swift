@@ -651,6 +651,62 @@ public extension Api {
     }
 }
 public extension Api {
+    enum AvailableEffect: TypeConstructorDescription {
+        case availableEffect(flags: Int32, id: Int64, emoticon: String, staticIconId: Int64?, effectStickerId: Int64, effectAnimationId: Int64?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .availableEffect(let flags, let id, let emoticon, let staticIconId, let effectStickerId, let effectAnimationId):
+                    if boxed {
+                        buffer.appendInt32(-1815879042)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(staticIconId!, buffer: buffer, boxed: false)}
+                    serializeInt64(effectStickerId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt64(effectAnimationId!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .availableEffect(let flags, let id, let emoticon, let staticIconId, let effectStickerId, let effectAnimationId):
+                return ("availableEffect", [("flags", flags as Any), ("id", id as Any), ("emoticon", emoticon as Any), ("staticIconId", staticIconId as Any), ("effectStickerId", effectStickerId as Any), ("effectAnimationId", effectAnimationId as Any)])
+    }
+    }
+    
+        public static func parse_availableEffect(_ reader: BufferReader) -> AvailableEffect? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt64() }
+            var _5: Int64?
+            _5 = reader.readInt64()
+            var _6: Int64?
+            if Int(_1!) & Int(1 << 1) != 0 {_6 = reader.readInt64() }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.AvailableEffect.availableEffect(flags: _1!, id: _2!, emoticon: _3!, staticIconId: _4, effectStickerId: _5!, effectAnimationId: _6)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum AvailableReaction: TypeConstructorDescription {
         case availableReaction(flags: Int32, reaction: String, title: String, staticIcon: Api.Document, appearAnimation: Api.Document, selectAnimation: Api.Document, activateAnimation: Api.Document, effectAnimation: Api.Document, aroundAnimation: Api.Document?, centerIcon: Api.Document?)
     
@@ -1132,46 +1188,6 @@ public extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.BotBusinessConnection.botBusinessConnection(flags: _1!, connectionId: _2!, userId: _3!, dcId: _4!, date: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum BotCommand: TypeConstructorDescription {
-        case botCommand(command: String, description: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .botCommand(let command, let description):
-                    if boxed {
-                        buffer.appendInt32(-1032140601)
-                    }
-                    serializeString(command, buffer: buffer, boxed: false)
-                    serializeString(description, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .botCommand(let command, let description):
-                return ("botCommand", [("command", command as Any), ("description", description as Any)])
-    }
-    }
-    
-        public static func parse_botCommand(_ reader: BufferReader) -> BotCommand? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: String?
-            _2 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.BotCommand.botCommand(command: _1!, description: _2!)
             }
             else {
                 return nil

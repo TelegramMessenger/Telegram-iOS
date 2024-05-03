@@ -724,6 +724,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 reactionPeers: dateReactionsAndPeers.peers,
                                 displayAllReactionPeers: message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                                 areReactionsTags: message.areReactionsTags(accountPeerId: context.account.peerId),
+                                messageEffect: message.messageEffect(availableMessageEffects: associatedData.availableMessageEffects),
                                 replyCount: dateReplies,
                                 isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
                                 hasAutoremove: message.isSelfExpiring,
@@ -1706,6 +1707,24 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             return result
         }
         if let result = self.contentInstantVideo?.dateAndStatusNode.reactionView(value: value) {
+            return result
+        }
+        return nil
+    }
+    
+    public func messageEffectTargetView() -> UIView? {
+        if let statusNode = self.statusNode, !statusNode.isHidden {
+            if let result = statusNode.messageEffectTargetView() {
+                return result
+            }
+        }
+        if let result = self.contentFile?.dateAndStatusNode.messageEffectTargetView() {
+            return result
+        }
+        if let result = self.contentMedia?.dateAndStatusNode.messageEffectTargetView() {
+            return result
+        }
+        if let result = self.contentInstantVideo?.dateAndStatusNode.messageEffectTargetView() {
             return result
         }
         return nil

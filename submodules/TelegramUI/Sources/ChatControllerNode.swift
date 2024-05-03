@@ -3821,7 +3821,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, completion: @escaping () -> Void = {}) {
+    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, messageEffect: ChatSendMessageEffect? = nil, completion: @escaping () -> Void = {}) {
         if let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             self.historyNode.justSentTextMessage = true
             
@@ -4028,6 +4028,14 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         break
                     case .businessLinkSetup:
                         postEmptyMessages = true
+                    }
+                }
+                
+                if !messages.isEmpty, let messageEffect {
+                    messages[0] = messages[0].withUpdatedAttributes { attributes in
+                        var attributes = attributes
+                        attributes.append(EffectMessageAttribute(id: messageEffect.id))
+                        return attributes
                     }
                 }
                 

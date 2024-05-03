@@ -145,4 +145,11 @@ public final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContent
         }
         return nil
     }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        if let statusNode = self.contentNode.statusNode, !statusNode.isHidden {
+            return statusNode.messageEffectTargetView()
+        }
+        return nil
+    }
 }

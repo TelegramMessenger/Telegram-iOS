@@ -1165,6 +1165,74 @@ public extension Api.messages {
     }
 }
 public extension Api.messages {
+    enum AvailableEffects: TypeConstructorDescription {
+        case availableEffects(hash: Int32, effects: [Api.AvailableEffect], documents: [Api.Document])
+        case availableEffectsNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .availableEffects(let hash, let effects, let documents):
+                    if boxed {
+                        buffer.appendInt32(-1109696146)
+                    }
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(effects.count))
+                    for item in effects {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(documents.count))
+                    for item in documents {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .availableEffectsNotModified:
+                    if boxed {
+                        buffer.appendInt32(-772957605)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .availableEffects(let hash, let effects, let documents):
+                return ("availableEffects", [("hash", hash as Any), ("effects", effects as Any), ("documents", documents as Any)])
+                case .availableEffectsNotModified:
+                return ("availableEffectsNotModified", [])
+    }
+    }
+    
+        public static func parse_availableEffects(_ reader: BufferReader) -> AvailableEffects? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.AvailableEffect]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.AvailableEffect.self)
+            }
+            var _3: [Api.Document]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.messages.AvailableEffects.availableEffects(hash: _1!, effects: _2!, documents: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_availableEffectsNotModified(_ reader: BufferReader) -> AvailableEffects? {
+            return Api.messages.AvailableEffects.availableEffectsNotModified
+        }
+    
+    }
+}
+public extension Api.messages {
     enum AvailableReactions: TypeConstructorDescription {
         case availableReactions(hash: Int32, reactions: [Api.AvailableReaction])
         case availableReactionsNotModified
@@ -1218,48 +1286,6 @@ public extension Api.messages {
         }
         public static func parse_availableReactionsNotModified(_ reader: BufferReader) -> AvailableReactions? {
             return Api.messages.AvailableReactions.availableReactionsNotModified
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum BotApp: TypeConstructorDescription {
-        case botApp(flags: Int32, app: Api.BotApp)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .botApp(let flags, let app):
-                    if boxed {
-                        buffer.appendInt32(-347034123)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    app.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .botApp(let flags, let app):
-                return ("botApp", [("flags", flags as Any), ("app", app as Any)])
-    }
-    }
-    
-        public static func parse_botApp(_ reader: BufferReader) -> BotApp? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.BotApp?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.BotApp
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.BotApp.botApp(flags: _1!, app: _2!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

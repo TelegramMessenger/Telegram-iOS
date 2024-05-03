@@ -433,6 +433,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
     private var availableReactionsDisposable: Disposable?
     
     public let alwaysAllowPremiumReactions: Bool
+    private var hideExpandedTopPanel: Bool = false
     private var hasPremium: Bool?
     private var hasPremiumDisposable: Disposable?
     
@@ -660,6 +661,8 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                     return
                 }
                 
+                strongSelf.hideExpandedTopPanel = emojiContent.panelItemGroups.isEmpty
+                
                 var emojiContent = emojiContent
                 if let emojiSearchResult = emojiSearchState.result {
                     var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
@@ -702,7 +705,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                     var hideTopPanel = false
                     if strongSelf.isReactionSearchActive {
                         hideTopPanel = true
-                    } else if strongSelf.alwaysAllowPremiumReactions {
+                    } else if strongSelf.alwaysAllowPremiumReactions || strongSelf.hideExpandedTopPanel {
                         hideTopPanel = true
                     }
                     
@@ -717,7 +720,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                             backgroundColor: .clear,
                             separatorColor: strongSelf.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5),
                             hideTopPanel: hideTopPanel,
-                            disableTopPanel: strongSelf.alwaysAllowPremiumReactions,
+                            disableTopPanel: strongSelf.alwaysAllowPremiumReactions || strongSelf.hideExpandedTopPanel,
                             hideTopPanelUpdated: { hideTopPanel, transition in
                                 guard let strongSelf = self else {
                                     return
@@ -1193,7 +1196,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
             }
             var baseNextFrame = CGRect(origin: CGPoint(x: self.scrollNode.view.bounds.width - expandItemSize - 9.0, y: self.contentTopInset + containerHeight - contentHeight + floor((contentHeight - expandItemSize) / 2.0)), size: CGSize(width: expandItemSize, height: expandItemSize + self.extensionDistance))
             if self.isExpanded {
-                if self.alwaysAllowPremiumReactions {
+                if self.alwaysAllowPremiumReactions || self.hideExpandedTopPanel {
                 } else {
                     baseNextFrame.origin.y += 46.0 + 54.0 - 4.0
                 }
@@ -1322,7 +1325,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         
         var scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: actualBackgroundFrame.size)
         if self.isExpanded {
-            if self.alwaysAllowPremiumReactions {
+            if self.alwaysAllowPremiumReactions || self.hideExpandedTopPanel {
                 scrollFrame.origin.y += 0.0
             } else {
                 scrollFrame.origin.y += 46.0 + 54.0 - 4.0
@@ -1347,7 +1350,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         self.updateScrolling(transition: transition)
         
         self.emojiContentLayout = EmojiPagerContentComponent.CustomLayout(
-            topPanelAlwaysHidden: self.alwaysAllowPremiumReactions,
+            topPanelAlwaysHidden: self.alwaysAllowPremiumReactions || self.hideExpandedTopPanel,
             itemsPerRow: itemCount,
             itemSize: itemSize,
             sideInset: sideInset,
@@ -1377,7 +1380,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                 var hideTopPanel = false
                 if self.isReactionSearchActive {
                     hideTopPanel = true
-                } else if self.alwaysAllowPremiumReactions {
+                } else if self.alwaysAllowPremiumReactions || self.hideExpandedTopPanel {
                     hideTopPanel = true
                 }
                 
@@ -1603,7 +1606,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         if !self.didInitializeEmojiContentHeight {
             self.didInitializeEmojiContentHeight = true
             
-            if emojiContent.contentItemGroups.count == 1 {
+            if emojiContent.contentItemGroups.count == 1 && emojiContent.contentItemGroups[0].title == nil {
                 let itemCount = emojiContent.contentItemGroups[0].items.count
                 let numRows = (itemCount + (emojiContentLayout.itemsPerRow - 1)) / emojiContentLayout.itemsPerRow
                 let proposedHeight: CGFloat = CGFloat(numRows) * emojiContentLayout.itemSize + CGFloat(numRows - 1) * emojiContentLayout.itemSpacing + emojiContentLayout.itemSpacing * 2.0 + 5.0
@@ -2972,13 +2975,13 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         self.isUserInteractionEnabled = false
     }
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
-        self.animateReactionSelection(context: context, theme: theme, animationCache: animationCache, reaction: reaction, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, playCenterReaction: playCenterReaction, forceSmallEffectAnimation: forceSmallEffectAnimation, hideCenterAnimation: hideCenterAnimation, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, customEffectResource: MediaResource? = nil, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
+        self.animateReactionSelection(context: context, theme: theme, animationCache: animationCache, reaction: reaction, customEffectResource: customEffectResource, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, playCenterReaction: playCenterReaction, forceSmallEffectAnimation: forceSmallEffectAnimation, hideCenterAnimation: hideCenterAnimation, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
     }
         
     public var currentDismissAnimation: (() -> Void)?
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, animationCache: AnimationCache, reaction: ReactionItem, customEffectResource: MediaResource? = nil, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, playCenterReaction: Bool = true, forceSmallEffectAnimation: Bool = false, hideCenterAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
         guard let sourceSnapshotView = targetView.snapshotContentTree() else {
             completion()
             return
@@ -3089,17 +3092,20 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, largeExpanded: isLarge, isPreviewing: false, transition: .immediate)
         }
         
-        let additionalAnimation: TelegramMediaFile?
+        var additionalAnimationResource: MediaResource?
         if isLarge && !forceSmallEffectAnimation {
-            additionalAnimation = reaction.largeApplicationAnimation
+            additionalAnimationResource = reaction.largeApplicationAnimation?.resource
         } else {
-            additionalAnimation = reaction.applicationAnimation
+            additionalAnimationResource = reaction.applicationAnimation?.resource
+        }
+        if additionalAnimationResource == nil, let customEffectResource {
+            additionalAnimationResource = customEffectResource
         }
         
         let additionalAnimationNode: AnimatedStickerNode?
         var genericAnimationView: AnimationView?
         
-        if let additionalAnimation = additionalAnimation {
+        if let additionalAnimationResource {
             let additionalAnimationNodeValue: AnimatedStickerNode
             if self.useDirectRendering {
                 additionalAnimationNodeValue = DirectAnimatedStickerNode()
@@ -3116,7 +3122,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             
             let additionalCachePathPrefix: String? = nil
             
-            additionalAnimationNodeValue.setup(source: AnimatedStickerResourceSource(account: context.account, resource: additionalAnimation.resource), width: Int(effectFrame.width * 1.33), height: Int(effectFrame.height * 1.33), playbackMode: .once, mode: .direct(cachePathPrefix: additionalCachePathPrefix))
+            additionalAnimationNodeValue.setup(source: AnimatedStickerResourceSource(account: context.account, resource: additionalAnimationResource), width: Int(effectFrame.width * 1.33), height: Int(effectFrame.height * 1.33), playbackMode: .once, mode: .direct(cachePathPrefix: additionalCachePathPrefix))
             additionalAnimationNodeValue.frame = effectFrame
             additionalAnimationNodeValue.updateLayout(size: effectFrame.size)
             self.addSubnode(additionalAnimationNodeValue)

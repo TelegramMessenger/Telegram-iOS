@@ -115,6 +115,14 @@ public struct OpenMessageParams {
     }
 }
 
+public final class ChatSendMessageEffect {
+    public let id: Int64
+    
+    public init(id: Int64) {
+        self.id = id
+    }
+}
+
 public final class ChatControllerInteraction: ChatControllerInteractionProtocol {
     public enum OpenPeerSource {
         case `default`
@@ -154,7 +162,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let tapMessage: ((Message) -> Void)?
     public let clickThroughMessage: () -> Void
     public let toggleMessagesSelection: ([MessageId], Bool) -> Void
-    public let sendCurrentMessage: (Bool) -> Void
+    public let sendCurrentMessage: (Bool, ChatSendMessageEffect?) -> Void
     public let sendMessage: (String) -> Void
     public let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
     public let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void
@@ -279,7 +287,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         tapMessage: ((Message) -> Void)?,
         clickThroughMessage: @escaping () -> Void,
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
-        sendCurrentMessage: @escaping (Bool) -> Void,
+        sendCurrentMessage: @escaping (Bool, ChatSendMessageEffect?) -> Void,
         sendMessage: @escaping (String) -> Void,
         sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
         sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void,

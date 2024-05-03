@@ -6562,7 +6562,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     contextItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
                     }, iconPosition: .left, action: { c, _ in
-                        c.popItems()
+                        c?.popItems()
                     })))
                     
                     contextItems.append(.separator)
@@ -6623,7 +6623,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         tipSignal: nil,
                         dismissed: nil
                     )
-                    c.pushItems(items: .single(items))
+                    c?.pushItems(items: .single(items))
                 })))
             case .editing:
                 menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_ReplaceSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in

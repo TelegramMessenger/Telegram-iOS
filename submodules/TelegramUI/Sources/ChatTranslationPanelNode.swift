@@ -298,7 +298,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
                     }
                 }
                           
-                c.pushItems(items: .single(ContextController.Items(
+                c?.pushItems(items: .single(ContextController.Items(
                     content: .custom(
                         TranslationLanguagesContextMenuContent(
                             context: self.context,
@@ -322,7 +322,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
             items.append(.action(ContextMenuActionItem(text: doNotTranslateTitle, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] c, _ in
-                c.dismiss(completion: nil)
+                c?.dismiss(completion: nil)
                 
                 self?.interfaceInteraction?.addDoNotTranslateLanguage(translationState.fromLang)
             })))
@@ -330,7 +330,7 @@ final class ChatTranslationPanelNode: ASDisplayNode {
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_Translation_Hide, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] c, _ in
-                c.dismiss(completion: nil)
+                c?.dismiss(completion: nil)
                 
                 self?.interfaceInteraction?.hideTranslationPanel()
             })))

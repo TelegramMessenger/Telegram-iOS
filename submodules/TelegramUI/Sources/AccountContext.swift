@@ -241,6 +241,19 @@ public final class AccountContextImpl: AccountContext {
         return availableReactionsValue.get()
     }
     
+    private var availableMessageEffectsValue: Promise<AvailableMessageEffects?>?
+    public var availableMessageEffects: Signal<AvailableMessageEffects?, NoError> {
+        let availableMessageEffectsValue: Promise<AvailableMessageEffects?>
+        if let current = self.availableMessageEffectsValue {
+            availableMessageEffectsValue = current
+        } else {
+            availableMessageEffectsValue = Promise<AvailableMessageEffects?>()
+            self.availableMessageEffectsValue = availableMessageEffectsValue
+            availableMessageEffectsValue.set(self.engine.stickers.availableMessageEffects())
+        }
+        return availableMessageEffectsValue.get()
+    }
+    
     private var userLimitsConfigurationDisposable: Disposable?
     public private(set) var userLimits: EngineConfiguration.UserLimits
     

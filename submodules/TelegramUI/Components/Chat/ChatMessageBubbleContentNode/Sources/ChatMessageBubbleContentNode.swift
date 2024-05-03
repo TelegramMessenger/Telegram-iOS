@@ -295,6 +295,10 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
         return nil
     }
     
+    open func messageEffectTargetView() -> UIView? {
+        return nil
+    }
+    
     open func targetForStoryTransition(id: StoryId) -> UIView? {
         return nil
     }

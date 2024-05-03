@@ -133,7 +133,7 @@ private func sendFirebaseAuthorizationCode(accountManager: AccountManager<Telegr
     //auth.requestFirebaseSms#89464b50 flags:# phone_number:string phone_code_hash:string safety_net_token:flags.0?string ios_push_secret:flags.1?string = Bool;
     var flags: Int32 = 0
     flags |= 1 << 1
-    return account.network.request(Api.functions.auth.requestFirebaseSms(flags: flags, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, safetyNetToken: nil, iosPushSecret: firebaseSecret))
+    return account.network.request(Api.functions.auth.requestFirebaseSms(flags: flags, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, playIntegrityToken: nil, iosPushSecret: firebaseSecret))
     |> mapError { _ -> SendFirebaseAuthorizationCodeError in
         return .generic
     }

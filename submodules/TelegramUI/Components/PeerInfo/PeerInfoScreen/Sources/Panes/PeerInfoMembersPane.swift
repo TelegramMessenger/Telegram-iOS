@@ -396,7 +396,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.GroupInfo_ActionPromote, icon: { _ in
                     return nil
                 }, action: { c, _ in
-                    c.dismiss(completion: {
+                    c?.dismiss(completion: {
                         action(member, .promote)
                     })
                 })))
@@ -406,7 +406,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.GroupInfo_ActionRestrict, icon: { _ in
                         return nil
                     }, action: { c, _ in
-                        c.dismiss(completion: {
+                        c?.dismiss(completion: {
                             action(member, .restrict)
                         })
                     })))
@@ -414,7 +414,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Delete, textColor: .destructive, icon: { _ in
                     return nil
                 }, action: { c, _ in
-                    c.dismiss(completion: {
+                    c?.dismiss(completion: {
                         action(member, .remove)
                     })
                 })))

@@ -539,7 +539,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         }
         
         items.append(.action(ContextMenuActionItem(text: title, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: iconName), color: theme.contextMenu.primaryColor) }, action: { [weak controller] c, _ in
-            c.dismiss(completion: {
+            c?.dismiss(completion: {
                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> deliverOnMainQueue).start(next: { peer in
                     guard let peer = peer, let navigationController = controller?.navigationController as? NavigationController else {

@@ -1704,7 +1704,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                             items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
                             }, action: { [weak self] c, _ in
-                                c.dismiss(completion: {
+                                c?.dismiss(completion: {
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -2517,7 +2517,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                c.setItems(strongSelf.contextMenuDisplayAsItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+                                c?.setItems(strongSelf.contextMenuDisplayAsItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
                             })))
                             items.append(.separator)
                             break
@@ -2550,7 +2550,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                         guard let strongSelf = self else {
                             return
                         }
-                        c.setItems(strongSelf.contextMenuAudioItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+                        c?.setItems(strongSelf.contextMenuAudioItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
                     })))
                 }
 
@@ -2587,7 +2587,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                             guard let strongSelf = self else {
                                 return
                             }
-                            c.setItems(strongSelf.contextMenuPermissionItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+                            c?.setItems(strongSelf.contextMenuPermissionItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
                         })))
                     }
                 }
@@ -2865,7 +2865,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 guard let strongSelf = self else {
                     return
                 }
-                c.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+                c?.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
             })))
             return .single(items)
         }
@@ -2960,7 +2960,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     guard let strongSelf = self else {
                         return
                     }
-                    c.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+                    c?.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
                 })))
                 return items
             }
@@ -3006,7 +3006,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     guard let strongSelf = self else {
                         return
                     }
-                    c.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+                    c?.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
                 })))
             }
             return .single(items)
