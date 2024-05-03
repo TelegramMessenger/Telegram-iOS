@@ -126,13 +126,22 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
                         }
                     }
                 }
-                if !message.text.isEmpty && message.author?.id != context.account.peerId {
-                    if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
-                    } else {
-                        if !messageIdsSet.contains(messageId) {
-                            messageIdsToTranslate.append(messageId)
-                            messageIdsSet.insert(messageId)
-                        }
+                guard message.author?.id != context.account.peerId else {
+                    continue
+                }
+                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
+                    continue
+                }
+                
+                if !message.text.isEmpty {
+                    if !messageIdsSet.contains(messageId) {
+                        messageIdsToTranslate.append(messageId)
+                        messageIdsSet.insert(messageId)
+                    }
+                } else if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
+                    if !messageIdsSet.contains(messageId) {
+                        messageIdsToTranslate.append(messageId)
+                        messageIdsSet.insert(messageId)
                     }
                 }
             } else {

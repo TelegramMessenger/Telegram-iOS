@@ -547,18 +547,18 @@ final class QuickReplySetupScreenComponent: Component {
         }
         
         func openQuickReplyChat(shortcut: String?, shortcutId: Int32?) {
-            guard let component = self.component, let environment = self.environment else {
+            guard let component = self.component, let environment = self.environment, let controller = self.environment?.controller() as? QuickReplySetupScreen else {
                 return
             }
-            
-            if case let .select(completion) = component.mode {
-                if let shortcutId {
-                    completion(shortcutId)
-                }
-                return
-            }
+        
+            self.contentListNode?.clearHighlightAnimated(true)
             
             if let shortcut {
+                if let shortcutId, case let .select(completion) = component.mode {
+                    completion(shortcutId)
+                    return
+                }
+                    
                 let shortcutType: ChatQuickReplyShortcutType
                 if shortcut == "hello" {
                     shortcutType = .greeting
@@ -581,7 +581,12 @@ final class QuickReplySetupScreenComponent: Component {
                     mode: .standard(.default)
                 )
                 chatController.navigationPresentation = .modal
-                self.environment?.controller()?.push(chatController)
+                
+                if controller.navigationController != nil {
+                    controller.push(chatController)
+                } else if let attachmentContainer = controller.parentController() {
+                    attachmentContainer.push(chatController)
+                }
             } else {
                 var completion: ((String?) -> Void)?
                 let alertController = quickReplyNameAlertController(
@@ -619,8 +624,6 @@ final class QuickReplySetupScreenComponent: Component {
                 }
                 self.environment?.controller()?.present(alertController, in: .window(.root))
             }
-            
-            self.contentListNode?.clearHighlightAnimated(true)
         }
         
         func openEditShortcut(id: Int32, currentValue: String) {
@@ -1172,13 +1175,8 @@ final class QuickReplySetupScreenComponent: Component {
             
             var entries: [ContentEntry] = []
             if let shortcutMessageList = self.shortcutMessageList, let accountPeer = self.accountPeer {
-                switch component.mode {
-                case .manage:
-                    if self.searchQuery.isEmpty {
-                        entries.append(.add)
-                    }
-                case .select:
-                    break
+                if self.searchQuery.isEmpty {
+                    entries.append(.add)
                 }
                 for item in shortcutMessageList.items {
                     if !self.searchQuery.isEmpty {

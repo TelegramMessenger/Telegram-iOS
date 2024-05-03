@@ -2711,6 +2711,10 @@ final class StoryItemSetContainerSendMessage {
                     if let navigationController = controller.navigationController as? NavigationController {
                         component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), attachBotStart: attachBotStart))
                     }
+                case let .withBotApp(botAppStart):
+                    if let navigationController = controller.navigationController as? NavigationController {
+                        component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), botAppStart: botAppStart))
+                    }
                 default:
                     break
                 }
