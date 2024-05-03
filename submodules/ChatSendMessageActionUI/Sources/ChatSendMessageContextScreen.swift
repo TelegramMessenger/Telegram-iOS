@@ -133,6 +133,8 @@ final class ChatSendMessageContextScreenComponent: Component {
         private var appliedAnimationState: PresentationAnimationState = .initial
         private var animateOutToEmpty: Bool = false
         
+        private var initializationDisplayLink: SharedDisplayLinkDriver.Link?
+        
         override init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
             
@@ -675,14 +677,12 @@ final class ChatSendMessageContextScreenComponent: Component {
             }
             
             if let reactionContextNode = self.reactionContextNode {
-                let isFirstTime = reactionContextNode.bounds.isEmpty
-                
                 let size = availableSize
                 let reactionsAnchorRect = messageItemFrame
                 transition.setFrame(view: reactionContextNode.view, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
                 reactionContextNode.updateLayout(size: size, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, centerAligned: false, isCoveredByInput: false, isAnimatingOut: false, transition: transition.containedViewLayoutTransition)
                 reactionContextNode.updateIsIntersectingContent(isIntersectingContent: false, transition: .immediate)
-                if isFirstTime {
+                if self.presentationAnimationState.key == .animatedIn && previousAnimationState.key == .initial {
                     reactionContextNode.animateIn(from: reactionsAnchorRect)
                 } else if self.presentationAnimationState.key == .animatedOut && previousAnimationState.key == .animatedIn {
                     reactionContextNode.animateOut(to: nil, animatingOutToReaction: false)
@@ -706,8 +706,22 @@ final class ChatSendMessageContextScreenComponent: Component {
             let backgroundAlpha: CGFloat
             switch self.presentationAnimationState {
             case .animatedIn:
-                component.textInputView.isHidden = true
-                component.sourceSendButton.isHidden = true
+                if previousAnimationState.key == .initial && self.initializationDisplayLink == nil {
+                    self.initializationDisplayLink = SharedDisplayLinkDriver.shared.add({ [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        
+                        self.initializationDisplayLink?.invalidate()
+                        self.initializationDisplayLink = nil
+                        
+                        guard let component = self.component else {
+                            return
+                        }
+                        component.textInputView.isHidden = true
+                        component.sourceSendButton.isHidden = true
+                    })
+                }
                 
                 backgroundAlpha = 1.0
             case .animatedOut:

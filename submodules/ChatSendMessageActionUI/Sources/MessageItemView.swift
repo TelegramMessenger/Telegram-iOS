@@ -211,7 +211,7 @@ final class MessageItemView: UIView {
                 placeholderColor: presentationData.theme.chat.message.stickerPlaceholderColor.withWallpaper,
                 text: .plain(textString),
                 maximumNumberOfLines: 0,
-                lineSpacing: 0.12,
+                lineSpacing: 0.0,
                 cutout: textCutout,
                 insets: UIEdgeInsets()
             )),
