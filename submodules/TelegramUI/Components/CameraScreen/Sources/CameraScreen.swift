@@ -229,7 +229,8 @@ private final class CameraScreenComponent: CombinedComponent {
         private let getController: () -> CameraScreen?
         
         private var resultDisposable = MetaDisposable()
-                
+        private var audioCaptureDisposable = MetaDisposable()
+        
         private var mediaAssetsContext: MediaAssetsContext?
         fileprivate var lastGalleryAsset: PHAsset?
         private var lastGalleryAssetsDisposable: Disposable?
@@ -283,6 +284,10 @@ private final class CameraScreenComponent: CombinedComponent {
         deinit {
             self.lastGalleryAssetsDisposable?.dispose()
             self.resultDisposable.dispose()
+            self.audioCaptureDisposable.dispose()
+            if #available(iOS 13.0, *) {
+                try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(false)
+            }
         }
         
         func setupRecentAssetSubscription() {
@@ -663,9 +668,22 @@ private final class CameraScreenComponent: CombinedComponent {
                 }))
             }
             
+            let startCapturingSound = {
+                self.audioCaptureDisposable.set(self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .record(speaker: false, video: true, withOthers: true), activate: { _ in
+                    if #available(iOS 13.0, *) {
+                        try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
+                    }
+                    camera.attachAudio()
+                    startRecording()
+                }, deactivate: { _ in
+                    return .single(Void())
+                })
+                )
+            }
+            
             controller.updateCameraState({ $0.updatedRecording(pressing ? .holding : .handsFree).updatedDuration(0.0) }, transition: .spring(duration: 0.4))
             
-            startRecording()
+            startCapturingSound()
         }
         
         func stopVideoRecording() {
@@ -696,6 +714,10 @@ private final class CameraScreenComponent: CombinedComponent {
                 self.isTransitioning = false
                 self.updated(transition: .immediate)
             })
+            self.audioCaptureDisposable.dispose()
+            if #available(iOS 13.0, *) {
+                try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(false)
+            }
             
             controller.updateCameraState({ $0.updatedRecording(.none).updatedDuration(0.0) }, transition: .spring(duration: 0.4))
             
@@ -1770,7 +1792,7 @@ public class CameraScreen: ViewController {
                         preset: .hd1920x1080,
                         position: self.cameraState.position,
                         isDualEnabled: self.cameraState.isDualCameraEnabled,
-                        audio: true,
+                        audio: false,
                         photo: true,
                         metadata: false
                     ),
@@ -2789,8 +2811,6 @@ public class CameraScreen: ViewController {
     public var transitionedIn: () -> Void = {}
     public var transitionedOut: () -> Void = {}
     
-    private var audioSessionDisposable: Disposable?
-    
     private let postingAvailabilityPromise = Promise<StoriesUploadAvailability>()
     private var postingAvailabilityDisposable: Disposable?
     
@@ -2835,8 +2855,6 @@ public class CameraScreen: ViewController {
         
         self.navigationPresentation = .flatModal
         
-        self.requestAudioSession()
-        
         if case .story = mode {
             self.postingAvailabilityPromise.set(self.context.engine.messages.checkStoriesUploadAvailability(target: .myStories))
         }
@@ -2847,11 +2865,7 @@ public class CameraScreen: ViewController {
     }
     
     deinit {
-        self.audioSessionDisposable?.dispose()
         self.postingAvailabilityDisposable?.dispose()
-        if #available(iOS 13.0, *) {
-            try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(false)
-        }
     }
 
     override public func loadDisplayNode() {
@@ -2915,16 +2929,6 @@ public class CameraScreen: ViewController {
                 }
             })
         }
-    }
-    
-    private func requestAudioSession() {
-        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .record(speaker: false, video: true, withOthers: true), activate: { _ in
-            if #available(iOS 13.0, *) {
-                try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
-            }
-        }, deactivate: { _ in
-            return .single(Void())
-        })
     }
     
     private var galleryController: ViewController?
