@@ -3431,6 +3431,18 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         credibilityIconView?.removeFromSuperview()
                     })
                 }
+                if let boostBadgeNode = strongSelf.boostBadgeNode {
+                    strongSelf.boostBadgeNode = nil
+                    boostBadgeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak boostBadgeNode] _ in
+                        boostBadgeNode?.removeFromSupernode()
+                    })
+                }
+                if let boostIconNode = strongSelf.boostIconNode {
+                    strongSelf.boostIconNode = nil
+                    boostIconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak boostIconNode] _ in
+                        boostIconNode?.removeFromSuperview()
+                    })
+                }
             } else {
                 strongSelf.nameNode?.removeFromSupernode()
                 strongSelf.nameNode = nil
@@ -3438,19 +3450,23 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.adminBadgeNode = nil
                 strongSelf.credibilityIconView?.removeFromSuperview()
                 strongSelf.credibilityIconView = nil
-                strongSelf.nameButtonNode?.removeFromSupernode()
-                strongSelf.nameButtonNode = nil
-                strongSelf.nameHighlightNode?.removeFromSupernode()
-                strongSelf.nameHighlightNode = nil
-                strongSelf.credibilityButtonNode?.removeFromSupernode()
-                strongSelf.credibilityButtonNode = nil
-                strongSelf.credibilityHighlightNode?.removeFromSupernode()
-                strongSelf.credibilityHighlightNode = nil
-                strongSelf.boostButtonNode?.removeFromSupernode()
-                strongSelf.boostButtonNode = nil
-                strongSelf.boostHighlightNode?.removeFromSupernode()
-                strongSelf.boostHighlightNode = nil
+                strongSelf.boostBadgeNode?.removeFromSupernode()
+                strongSelf.boostBadgeNode = nil
+                strongSelf.boostIconNode?.removeFromSuperview()
+                strongSelf.boostIconNode = nil
             }
+            strongSelf.nameButtonNode?.removeFromSupernode()
+            strongSelf.nameButtonNode = nil
+            strongSelf.nameHighlightNode?.removeFromSupernode()
+            strongSelf.nameHighlightNode = nil
+            strongSelf.credibilityButtonNode?.removeFromSupernode()
+            strongSelf.credibilityButtonNode = nil
+            strongSelf.credibilityHighlightNode?.removeFromSupernode()
+            strongSelf.credibilityHighlightNode = nil
+            strongSelf.boostButtonNode?.removeFromSupernode()
+            strongSelf.boostButtonNode = nil
+            strongSelf.boostHighlightNode?.removeFromSupernode()
+            strongSelf.boostHighlightNode = nil
         }
             
         let timingFunction = kCAMediaTimingFunctionSpring        
