@@ -11,6 +11,13 @@ import ChatSendMessageActionUI
 import AccountContext
 import TopMessageReactions
 import ReactionSelectionNode
+import ChatControllerInteraction
+
+extension ChatSendMessageEffect {
+    convenience init(_ effect: ChatSendMessageActionSheetController.MessageEffect) {
+        self.init(id: effect.id)
+    }
+}
 
 func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, node: ASDisplayNode, gesture: ContextGesture) {
     guard let peerId = selfController.chatLocation.peerId, let textInputView = selfController.chatDisplayNode.textInputView(), let layout = selfController.validLayout else {
@@ -61,22 +68,22 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
             let _ = ApplicationSpecificNotice.incrementSendWhenOnlineTip(accountManager: selfController.context.sharedContext.accountManager, count: 4).startStandalone()
         }
         
-        let controller = ChatSendMessageActionSheetController(context: selfController.context, updatedPresentationData: selfController.updatedPresentationData, peerId: selfController.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: selfController.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputView: textInputView, canSendWhenOnline: sendWhenOnlineAvailable, completion: { [weak selfController] in
+        let controller = makeChatSendMessageActionSheetController(context: selfController.context, updatedPresentationData: selfController.updatedPresentationData, peerId: selfController.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: selfController.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputView: textInputView, emojiViewProvider: selfController.chatDisplayNode.textInputPanelNode?.emojiViewProvider, wallpaperBackgroundNode: selfController.chatDisplayNode.backgroundNode, canSendWhenOnline: sendWhenOnlineAvailable, completion: { [weak selfController] in
             guard let selfController else {
                 return
             }
             selfController.supportedOrientations = previousSupportedOrientations
-        }, sendMessage: { [weak selfController] mode in
+        }, sendMessage: { [weak selfController] mode, messageEffect in
             guard let selfController else {
                 return
             }
             switch mode {
             case .generic:
-                selfController.controllerInteraction?.sendCurrentMessage(false)
+                selfController.controllerInteraction?.sendCurrentMessage(false, messageEffect.flatMap(ChatSendMessageEffect.init))
             case .silently:
-                selfController.controllerInteraction?.sendCurrentMessage(true)
+                selfController.controllerInteraction?.sendCurrentMessage(true, messageEffect.flatMap(ChatSendMessageEffect.init))
             case .whenOnline:
-                selfController.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp) { [weak selfController] in
+                selfController.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp, messageEffect: messageEffect.flatMap(ChatSendMessageEffect.init)) { [weak selfController] in
                     guard let selfController else {
                         return
                     }
@@ -86,13 +93,12 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
                     selfController.openScheduledMessages()
                 }
             }
-        }, schedule: { [weak selfController] in
+        }, schedule: { [weak selfController] messageEffect in
             guard let selfController else {
                 return
             }
             selfController.controllerInteraction?.scheduleCurrentMessage()
         }, reactionItems: effectItems)
-        controller.emojiViewProvider = selfController.chatDisplayNode.textInputPanelNode?.emojiViewProvider
         selfController.sendMessageActionsController = controller
         if layout.isNonExclusive {
             selfController.present(controller, in: .window(.root))

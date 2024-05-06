@@ -101,11 +101,11 @@ public struct ContextMenuActionBadge: Equatable {
 
 public final class ContextMenuActionItem {
     public final class Action {
-        public let controller: ContextControllerProtocol
+        public let controller: ContextControllerProtocol?
         public let dismissWithResult: (ContextMenuActionResult) -> Void
         public let updateAction: (AnyHashable, ContextMenuActionItem) -> Void
 
-        init(controller: ContextControllerProtocol, dismissWithResult: @escaping (ContextMenuActionResult) -> Void, updateAction: @escaping (AnyHashable, ContextMenuActionItem) -> Void) {
+        init(controller: ContextControllerProtocol?, dismissWithResult: @escaping (ContextMenuActionResult) -> Void, updateAction: @escaping (AnyHashable, ContextMenuActionItem) -> Void) {
             self.controller = controller
             self.dismissWithResult = dismissWithResult
             self.updateAction = updateAction
@@ -155,7 +155,7 @@ public final class ContextMenuActionItem {
         iconAnimation: IconAnimation? = nil,
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         textLinkAction: @escaping () -> Void = {},
-        action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?
+        action: ((ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void)?
     ) {
         self.init(
             id: id,

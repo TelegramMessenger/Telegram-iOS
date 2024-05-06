@@ -749,4 +749,8 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         return self.contentNode.reactionTargetView(value: value)
     }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        return self.contentNode.messageEffectTargetView()
+    }
 }

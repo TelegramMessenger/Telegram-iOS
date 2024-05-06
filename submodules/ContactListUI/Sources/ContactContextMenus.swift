@@ -34,7 +34,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
             items.append(.action(ContextMenuActionItem(text: strings.StoryFeed_ContextOpenProfile, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
             }, action: { c, _ in
-                c.dismiss(completion: {
+                c?.dismiss(completion: {
                     let _ = (context.engine.data.get(
                         TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
                     )

@@ -9,13 +9,28 @@ import ContextUI
 import TelegramCore
 import TextFormat
 import ReactionSelectionNode
+import WallpaperBackgroundNode
 
-public final class ChatSendMessageActionSheetController: ViewController {
-    public enum SendMode {
-        case generic
-        case silently
-        case whenOnline
+public enum ChatSendMessageActionSheetControllerSendMode {
+    case generic
+    case silently
+    case whenOnline
+}
+
+public final class ChatSendMessageActionSheetControllerMessageEffect {
+    public let id: Int64
+    
+    public init(id: Int64) {
+        self.id = id
     }
+}
+
+public protocol ChatSendMessageActionSheetController: ViewController {
+    typealias SendMode = ChatSendMessageActionSheetControllerSendMode
+    typealias MessageEffect = ChatSendMessageActionSheetControllerMessageEffect
+}
+
+private final class ChatSendMessageActionSheetControllerImpl: ViewController, ChatSendMessageActionSheetController {
     private var controllerNode: ChatSendMessageActionSheetControllerNode {
         return self.displayNode as! ChatSendMessageActionSheetControllerNode
     }
@@ -33,8 +48,8 @@ public final class ChatSendMessageActionSheetController: ViewController {
     private let attachment: Bool
     private let canSendWhenOnline: Bool
     private let completion: () -> Void
-    private let sendMessage: (SendMode) -> Void
-    private let schedule: () -> Void
+    private let sendMessage: (SendMode, MessageEffect?) -> Void
+    private let schedule: (MessageEffect?) -> Void
     private let reactionItems: [ReactionItem]?
     
     private var presentationData: PresentationData
@@ -46,9 +61,9 @@ public final class ChatSendMessageActionSheetController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
     
-    public var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
+    private let emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id?, isScheduledMessages: Bool = false, forwardMessageIds: [EngineMessage.Id]?, hasEntityKeyboard: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputView: UITextView, attachment: Bool = false, canSendWhenOnline: Bool, completion: @escaping () -> Void, sendMessage: @escaping (SendMode) -> Void, schedule: @escaping () -> Void, reactionItems: [ReactionItem]? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id?, isScheduledMessages: Bool = false, forwardMessageIds: [EngineMessage.Id]?, hasEntityKeyboard: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputView: UITextView, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, attachment: Bool = false, canSendWhenOnline: Bool, completion: @escaping () -> Void, sendMessage: @escaping (SendMode, MessageEffect?) -> Void, schedule: @escaping (MessageEffect?) -> Void, reactionItems: [ReactionItem]? = nil) {
         self.context = context
         self.peerId = peerId
         self.isScheduledMessages = isScheduledMessages
@@ -57,6 +72,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
         self.gesture = gesture
         self.sourceSendButton = sourceSendButton
         self.textInputView = textInputView
+        self.emojiViewProvider = emojiViewProvider
         self.attachment = attachment
         self.canSendWhenOnline = canSendWhenOnline
         self.completion = completion
@@ -111,16 +127,32 @@ public final class ChatSendMessageActionSheetController: ViewController {
         }
         
         self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputView: self.textInputView, attachment: self.attachment, canSendWhenOnline: self.canSendWhenOnline, forwardedCount: forwardedCount, hasEntityKeyboard: self.hasEntityKeyboard, emojiViewProvider: self.emojiViewProvider, send: { [weak self] in
-            self?.sendMessage(.generic)
+            var messageEffect: MessageEffect?
+            if let selectedEffect = self?.controllerNode.selectedMessageEffect {
+                messageEffect = MessageEffect(id: selectedEffect.id)
+            }
+            self?.sendMessage(.generic, messageEffect)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in
-            self?.sendMessage(.silently)
+            var messageEffect: MessageEffect?
+            if let selectedEffect = self?.controllerNode.selectedMessageEffect {
+                messageEffect = MessageEffect(id: selectedEffect.id)
+            }
+            self?.sendMessage(.silently, messageEffect)
             self?.dismiss(cancel: false)
         }, sendWhenOnline: { [weak self] in
-            self?.sendMessage(.whenOnline)
+            var messageEffect: MessageEffect?
+            if let selectedEffect = self?.controllerNode.selectedMessageEffect {
+                messageEffect = MessageEffect(id: selectedEffect.id)
+            }
+            self?.sendMessage(.whenOnline, messageEffect)
             self?.dismiss(cancel: false)
         }, schedule: !canSchedule ? nil : { [weak self] in
-            self?.schedule()
+            var messageEffect: MessageEffect?
+            if let selectedEffect = self?.controllerNode.selectedMessageEffect {
+                messageEffect = MessageEffect(id: selectedEffect.id)
+            }
+            self?.schedule(messageEffect)
             self?.dismiss(cancel: false)
         }, cancel: { [weak self] in
             self?.dismiss(cancel: true)
@@ -159,4 +191,65 @@ public final class ChatSendMessageActionSheetController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
     }
+}
+
+public func makeChatSendMessageActionSheetController(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    peerId: EnginePeer.Id?,
+    isScheduledMessages: Bool = false,
+    forwardMessageIds: [EngineMessage.Id]?,
+    hasEntityKeyboard: Bool,
+    gesture: ContextGesture,
+    sourceSendButton: ASDisplayNode,
+    textInputView: UITextView,
+    emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?,
+    wallpaperBackgroundNode: WallpaperBackgroundNode? = nil,
+    attachment: Bool = false,
+    canSendWhenOnline: Bool,
+    completion: @escaping () -> Void,
+    sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void,
+    schedule: @escaping (ChatSendMessageActionSheetController.MessageEffect?) -> Void,
+    reactionItems: [ReactionItem]? = nil
+) -> ChatSendMessageActionSheetController {
+    if textInputView.text.isEmpty {
+        return ChatSendMessageActionSheetControllerImpl(
+            context: context,
+            updatedPresentationData: updatedPresentationData,
+            peerId: peerId,
+            isScheduledMessages: isScheduledMessages,
+            forwardMessageIds: forwardMessageIds,
+            hasEntityKeyboard: hasEntityKeyboard,
+            gesture: gesture,
+            sourceSendButton: sourceSendButton,
+            textInputView: textInputView,
+            emojiViewProvider: emojiViewProvider,
+            attachment: attachment,
+            canSendWhenOnline: canSendWhenOnline,
+            completion: completion,
+            sendMessage: sendMessage,
+            schedule: schedule,
+            reactionItems: reactionItems
+        )
+    }
+    
+    return ChatSendMessageContextScreen(
+        context: context,
+        updatedPresentationData: updatedPresentationData,
+        peerId: peerId,
+        isScheduledMessages: isScheduledMessages,
+        forwardMessageIds: forwardMessageIds,
+        hasEntityKeyboard: hasEntityKeyboard,
+        gesture: gesture,
+        sourceSendButton: sourceSendButton,
+        textInputView: textInputView,
+        emojiViewProvider: emojiViewProvider,
+        wallpaperBackgroundNode: wallpaperBackgroundNode,
+        attachment: attachment,
+        canSendWhenOnline: canSendWhenOnline,
+        completion: completion,
+        sendMessage: sendMessage,
+        schedule: schedule,
+        reactionItems: reactionItems
+    )
 }

@@ -458,6 +458,13 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
         return nil
     }
     
+    override public func messageEffectTargetView() -> UIView? {
+        if !self.interactiveVideoNode.dateAndStatusNode.isHidden {
+            return self.interactiveVideoNode.dateAndStatusNode.messageEffectTargetView()
+        }
+        return nil
+    }
+    
     override public func targetForStoryTransition(id: StoryId) -> UIView? {
         return self.interactiveVideoNode.targetForStoryTransition(id: id)
     }

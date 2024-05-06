@@ -1731,12 +1731,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: text as NSString)
                 })
             }
-        }, sendCurrentMessage: { [weak self] silentPosting in
+        }, sendCurrentMessage: { [weak self] silentPosting, messageEffect in
             if let strongSelf = self {
                 if let _ = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState {
-                    strongSelf.sendMediaRecording(silentPosting: silentPosting)
+                    strongSelf.sendMediaRecording(silentPosting: silentPosting, messageEffect: messageEffect)
                 } else {
-                    strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting)
+                    strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, messageEffect: messageEffect)
                 }
             }
         }, sendMessage: { [weak self] text in
@@ -3306,10 +3306,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
                     if let strongSelf = self {
                         if let _ = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState {
-                            strongSelf.sendMediaRecording(scheduleTime: time)
+                            strongSelf.sendMediaRecording(scheduleTime: time, messageEffect: nil)
                         } else {
                             let silentPosting = strongSelf.presentationInterfaceState.interfaceState.silentPosting
-                            strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: time) { [weak self] in
+                            strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: time, messageEffect: nil) { [weak self] in
                                 if let strongSelf = self {
                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: strongSelf.presentationInterfaceState.subject != .scheduledMessages, {
                                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
@@ -9180,122 +9180,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }))
-    }
-    
-    func displayPasteMenu(_ subjects: [MediaPickerScreen.Subject.Media]) {
-        let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
-            let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self)
-            return entry ?? GeneratedMediaStoreSettings.defaultSettings
-        }
-        |> deliverOnMainQueue).startStandalone(next: { [weak self] settings in
-            if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                strongSelf.chatDisplayNode.dismissInput()                
-                let controller = mediaPasteboardScreen(
-                    context: strongSelf.context,
-                    updatedPresentationData: strongSelf.updatedPresentationData,
-                    peer: EnginePeer(peer),
-                    subjects: subjects,
-                    presentMediaPicker: { [weak self] subject, saveEditedPhotos, bannedSendPhotos, bannedSendVideos, present in
-                        if let strongSelf = self {
-                            strongSelf.presentMediaPicker(subject: subject, saveEditedPhotos: saveEditedPhotos, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, present: present, updateMediaPickerContext: { _ in }, completion: { [weak self] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
-                                self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
-                            })
-                        }
-                    },
-                    getSourceRect: nil
-                )
-                controller.navigationPresentation = .flatModal
-                strongSelf.push(controller)
-            }
-        })
-    }
-    
-    func enqueueGifData(_ data: Data) {
-        self.enqueueMediaMessageDisposable.set((legacyEnqueueGifMessage(account: self.context.account, data: data) |> deliverOnMainQueue).startStrict(next: { [weak self] message in
-            if let strongSelf = self {
-                let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
-                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                    if let strongSelf = self {
-                        strongSelf.chatDisplayNode.collapseInput()
-                        
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil) }
-                        })
-                    }
-                }, nil)
-                strongSelf.sendMessages([message].map { $0.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel) })
-            }
-        }))
-    }
-    
-    func enqueueVideoData(_ data: Data) {
-        self.enqueueMediaMessageDisposable.set((legacyEnqueueGifMessage(account: self.context.account, data: data) |> deliverOnMainQueue).startStrict(next: { [weak self] message in
-            if let strongSelf = self {
-                let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
-                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                    if let strongSelf = self {
-                        strongSelf.chatDisplayNode.collapseInput()
-                        
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil) }
-                        })
-                    }
-                }, nil)
-                strongSelf.sendMessages([message].map { $0.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel) })
-            }
-        }))
-    }
-    
-    func enqueueStickerImage(_ image: UIImage, isMemoji: Bool) {
-        let size = image.size.aspectFitted(CGSize(width: 512.0, height: 512.0))
-        self.enqueueMediaMessageDisposable.set((convertToWebP(image: image, targetSize: size, targetBoundingSize: size, quality: 0.9) |> deliverOnMainQueue).startStrict(next: { [weak self] data in
-            if let strongSelf = self, !data.isEmpty {
-                let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                
-                var fileAttributes: [TelegramMediaFileAttribute] = []
-                fileAttributes.append(.FileName(fileName: "sticker.webp"))
-                fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
-                fileAttributes.append(.ImageSize(size: PixelDimensions(size)))
-                
-                let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/webp", size: Int64(data.count), attributes: fileAttributes)
-                let message = EnqueueMessage.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), threadId: strongSelf.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
-                
-                let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
-                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                    if let strongSelf = self {
-                        strongSelf.chatDisplayNode.collapseInput()
-                        
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil) }
-                        })
-                    }
-                }, nil)
-                strongSelf.sendMessages([message].map { $0.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel) })
-            }
-        }))
-    }
-    
-    func enqueueStickerFile(_ file: TelegramMediaFile) {
-        let message = EnqueueMessage.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), threadId: self.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
-        
-        let replyMessageSubject = self.presentationInterfaceState.interfaceState.replyMessageSubject
-        self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
-            if let strongSelf = self {
-                strongSelf.chatDisplayNode.collapseInput()
-                
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil) }
-                })
-            }
-        }, nil)
-        self.sendMessages([message].map { $0.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel) })
-        
-        Queue.mainQueue().after(3.0) {
-            if let message = self.chatDisplayNode.historyNode.lastVisbleMesssage(), let file = message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile, file.isSticker {
-                self.context.engine.stickers.addRecentlyUsedSticker(fileReference: .message(message: MessageReference(message), media: file))
-            }
-        }
     }
     
     func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false, silentPosting: Bool = false, resetTextInputState: Bool = true) {

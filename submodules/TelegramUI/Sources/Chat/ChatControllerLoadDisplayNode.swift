@@ -3055,13 +3055,13 @@ extension ChatControllerImpl {
                             } else {
                                 var contextItems: [ContextMenuItem] = []
                                 contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessagesFor(EnginePeer(peer).compactDisplayTitle).string, textColor: .primary, icon: { _ in nil }, action: { c, _ in
-                                    c.dismiss(completion: {
+                                    c?.dismiss(completion: {
                                         pinAction(true, false)
                                     })
                                 })))
                                 
                                 contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessagesForMe, textColor: .primary, icon: { _ in nil }, action: { c, _ in
-                                    c.dismiss(completion: {
+                                    c?.dismiss(completion: {
                                         pinAction(true, true)
                                     })
                                 })))
@@ -3074,13 +3074,13 @@ extension ChatControllerImpl {
                                 var contextItems: [ContextMenuItem] = []
                                 
                                 contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessageAlert_PinAndNotifyMembers, textColor: .primary, icon: { _ in nil }, action: { c, _ in
-                                    c.dismiss(completion: {
+                                    c?.dismiss(completion: {
                                         pinAction(true, false)
                                     })
                                 })))
                                 
                                 contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessageAlert_OnlyPin, textColor: .primary, icon: { _ in nil }, action: { c, _ in
-                                    c.dismiss(completion: {
+                                    c?.dismiss(completion: {
                                         pinAction(false, false)
                                     })
                                 })))

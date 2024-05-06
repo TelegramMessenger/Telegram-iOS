@@ -1,4 +1,46 @@
 public extension Api.messages {
+    enum BotApp: TypeConstructorDescription {
+        case botApp(flags: Int32, app: Api.BotApp)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .botApp(let flags, let app):
+                    if boxed {
+                        buffer.appendInt32(-347034123)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    app.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botApp(let flags, let app):
+                return ("botApp", [("flags", flags as Any), ("app", app as Any)])
+    }
+    }
+    
+        public static func parse_botApp(_ reader: BufferReader) -> BotApp? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.BotApp?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.BotApp
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.BotApp.botApp(flags: _1!, app: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum BotCallbackAnswer: TypeConstructorDescription {
         case botCallbackAnswer(flags: Int32, message: String?, url: String?, cacheTime: Int32)
     
@@ -1424,54 +1466,6 @@ public extension Api.messages {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.messages.InactiveChats.inactiveChats(dates: _1!, chats: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.messages {
-    indirect enum InvitedUsers: TypeConstructorDescription {
-        case invitedUsers(updates: Api.Updates, missingInvitees: [Api.MissingInvitee])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .invitedUsers(let updates, let missingInvitees):
-                    if boxed {
-                        buffer.appendInt32(2136862630)
-                    }
-                    updates.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(missingInvitees.count))
-                    for item in missingInvitees {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .invitedUsers(let updates, let missingInvitees):
-                return ("invitedUsers", [("updates", updates as Any), ("missingInvitees", missingInvitees as Any)])
-    }
-    }
-    
-        public static func parse_invitedUsers(_ reader: BufferReader) -> InvitedUsers? {
-            var _1: Api.Updates?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Updates
-            }
-            var _2: [Api.MissingInvitee]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MissingInvitee.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.InvitedUsers.invitedUsers(updates: _1!, missingInvitees: _2!)
             }
             else {
                 return nil
