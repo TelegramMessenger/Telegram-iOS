@@ -84,13 +84,18 @@ func _internal_translate_texts(network: Network, texts: [(String, [MessageTextEn
     }
 }
 
-
-func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, TranslationError> {
-    guard let peerId = messageIds.first?.peerId else {
-        return .never()
+func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Never, TranslationError> {
+    var signals: [Signal<Void, TranslationError>] = []
+    for (peerId, messageIds) in messagesIdsGroupedByPeerId(messageIds) {
+        signals.append(_internal_translateMessagesByPeerId(account: account, peerId: peerId, messageIds: messageIds, toLang: toLang))
     }
+    return combineLatest(signals)
+    |> ignoreValues
+}
+
+private func _internal_translateMessagesByPeerId(account: Account, peerId: EnginePeer.Id, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, TranslationError> {
     return account.postbox.transaction { transaction -> (Api.InputPeer?, [Message]) in
-        return (transaction.getPeer(peerId).flatMap(apiInputPeer), messageIds.compactMap({ transaction.getMessage($0)  }))
+        return (transaction.getPeer(peerId).flatMap(apiInputPeer), messageIds.compactMap({ transaction.getMessage($0) }))
     }
     |> castError(TranslationError.self)
     |> mapToSignal { (inputPeer, messages) -> Signal<Void, TranslationError> in

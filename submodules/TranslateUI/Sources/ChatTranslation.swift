@@ -109,8 +109,8 @@ public func updateChatTranslationStateInteractively(engine: TelegramEngine, peer
 @available(iOS 12.0, *)
 private let languageRecognizer = NLLanguageRecognizer()
 
-public func translateMessageIds(context: AccountContext, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, NoError> {
-    return context.account.postbox.transaction { transaction -> Signal<Void, NoError> in
+public func translateMessageIds(context: AccountContext, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Never, NoError> {
+    return context.account.postbox.transaction { transaction -> Signal<Never, NoError> in
         var messageIdsToTranslate: [EngineMessage.Id] = []
         var messageIdsSet = Set<EngineMessage.Id>()
         for messageId in messageIds {
@@ -152,7 +152,7 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
             }
         }
         return context.engine.messages.translateMessages(messageIds: messageIdsToTranslate, toLang: toLang)
-        |> `catch` { _ -> Signal<Void, NoError> in
+        |> `catch` { _ -> Signal<Never, NoError> in
             return .complete()
         }
     } |> switchToLatest
