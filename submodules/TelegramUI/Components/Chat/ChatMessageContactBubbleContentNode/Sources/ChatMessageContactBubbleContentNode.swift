@@ -295,6 +295,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                         areReactionsTags: item.topMessage.areReactionsTags(accountPeerId: item.context.account.peerId),
+                        messageEffect: item.message.messageEffect(availableMessageEffects: item.associatedData.availableMessageEffects),
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
@@ -569,6 +570,13 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionView(value: value)
+        }
+        return nil
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        if !self.dateAndStatusNode.isHidden {
+            return self.dateAndStatusNode.messageEffectTargetView()
         }
         return nil
     }

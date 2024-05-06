@@ -570,7 +570,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                                 .action(ContextMenuActionItem(text: self.presentationData.strings.Common_Back, icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
                                                 }, iconPosition: .left, action: { c ,f in
-                                                    c.popItems()
+                                                    c?.popItems()
                                                 })),
                                                 .separator,
                                                 .action(ContextMenuActionItem(text: self.presentationData.strings.Stickers_Delete_ForEveryone, textColor: .destructive, icon: { _ in return nil }, action: { [weak self] _ ,f in
@@ -591,7 +591,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                                     }
                                                 }))
                                             ]
-                                            c.pushItems(items: .single(ContextController.Items(content: .list(contextItems))))
+                                            c?.pushItems(items: .single(ContextController.Items(content: .list(contextItems))))
                                         }
                                     })))
                                 }
@@ -1162,7 +1162,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                 self?.togglePackInstalled()
                             }))
                         ]
-                        c.setItems(.single(ContextController.Items(content: .list(contextItems))), minHeight: nil, animated: true)
+                        c?.setItems(.single(ContextController.Items(content: .list(contextItems))), minHeight: nil, animated: true)
                     } else {
                         f(.default)
                         self.presentDeletePack()

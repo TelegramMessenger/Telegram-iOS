@@ -85,7 +85,7 @@ extension ChatControllerImpl {
                         a(.default)
                         return
                     }
-                    c.dismiss(completion: { [weak self] in
+                    c?.dismiss(completion: { [weak self] in
                         guard let self else {
                             return
                         }

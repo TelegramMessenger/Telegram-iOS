@@ -421,40 +421,33 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
 }
 
 public func effectMessageReactions(context: AccountContext) -> Signal<[ReactionItem], NoError> {
-    return context.engine.stickers.availableReactions()
+    return context.engine.stickers.availableMessageEffects()
     |> take(1)
-    |> map { availableReactions -> [ReactionItem] in
-        guard let availableReactions else {
+    |> map { availableMessageEffects -> [ReactionItem] in
+        guard let availableMessageEffects else {
             return []
         }
         
         var result: [ReactionItem] = []
-        var existingIds = Set<MessageReaction.Reaction>()
+        var existingIds = Set<Int64>()
         
-        for reaction in availableReactions.reactions {
-            guard let centerAnimation = reaction.centerAnimation else {
+        for messageEffect in availableMessageEffects.messageEffects {
+            if existingIds.contains(messageEffect.id) {
                 continue
             }
-            guard let aroundAnimation = reaction.aroundAnimation else {
-                continue
-            }
-            if !reaction.isEnabled {
-                continue
-            }
-            if existingIds.contains(reaction.value) {
-                continue
-            }
-            existingIds.insert(reaction.value)
+            existingIds.insert(messageEffect.id)
+            
+            let mainFile: TelegramMediaFile = messageEffect.effectSticker
             
             result.append(ReactionItem(
-                reaction: ReactionItem.Reaction(rawValue: reaction.value),
-                appearAnimation: reaction.appearAnimation,
-                stillAnimation: reaction.selectAnimation,
-                listAnimation: centerAnimation,
-                largeListAnimation: reaction.activateAnimation,
-                applicationAnimation: aroundAnimation,
-                largeApplicationAnimation: reaction.effectAnimation,
-                isCustom: false
+                reaction: ReactionItem.Reaction(rawValue: .custom(messageEffect.id)),
+                appearAnimation: mainFile,
+                stillAnimation: mainFile,
+                listAnimation: mainFile,
+                largeListAnimation: mainFile,
+                applicationAnimation: nil,
+                largeApplicationAnimation: nil,
+                isCustom: true
             ))
         }
 

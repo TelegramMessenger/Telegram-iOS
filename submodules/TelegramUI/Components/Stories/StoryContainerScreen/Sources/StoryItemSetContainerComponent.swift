@@ -6169,7 +6169,7 @@ public final class StoryItemSetContainerComponent: Component {
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
             }, iconPosition: .left, action: { c, _ in
-                c.popItems()
+                c?.popItems()
             })))
 
             items.append(.custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: baseRate, valueChanged: { [weak self] newValue, done in
@@ -6260,11 +6260,11 @@ public final class StoryItemSetContainerComponent: Component {
                         return optionsRateImage(rate: speedIconText, isLarge: false, color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] c, _ in
                         guard let self else {
-                            c.dismiss(completion: nil)
+                            c?.dismiss(completion: nil)
                             return
                         }
 
-                        c.pushItems(items: self.contextMenuSpeedItems(value: baseRatePromise) |> map { ContextController.Items(content: .list($0)) })
+                        c?.pushItems(items: self.contextMenuSpeedItems(value: baseRatePromise) |> map { ContextController.Items(content: .list($0)) })
                     })))
                     items.append(.separator)
                 }
@@ -6476,11 +6476,11 @@ public final class StoryItemSetContainerComponent: Component {
                         return optionsRateImage(rate: speedIconText, isLarge: false, color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] c, _ in
                         guard let self else {
-                            c.dismiss(completion: nil)
+                            c?.dismiss(completion: nil)
                             return
                         }
 
-                        c.pushItems(items: self.contextMenuSpeedItems(value: baseRatePromise) |> map { ContextController.Items(content: .list($0)) })
+                        c?.pushItems(items: self.contextMenuSpeedItems(value: baseRatePromise) |> map { ContextController.Items(content: .list($0)) })
                     })))
                     items.append(.separator)
                 }
@@ -6791,11 +6791,11 @@ public final class StoryItemSetContainerComponent: Component {
                         return optionsRateImage(rate: speedIconText, isLarge: false, color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] c, _ in
                         guard let self else {
-                            c.dismiss(completion: nil)
+                            c?.dismiss(completion: nil)
                             return
                         }
 
-                        c.pushItems(items: self.contextMenuSpeedItems(value: baseRatePromise) |> map { ContextController.Items(content: .list($0)) })
+                        c?.pushItems(items: self.contextMenuSpeedItems(value: baseRatePromise) |> map { ContextController.Items(content: .list($0)) })
                     })))
                     items.append(.separator)
                 }

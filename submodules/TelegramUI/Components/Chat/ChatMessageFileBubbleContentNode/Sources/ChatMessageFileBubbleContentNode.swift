@@ -249,4 +249,11 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         }
         return nil
     }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        if !self.interactiveFileNode.dateAndStatusNode.isHidden {
+            return self.interactiveFileNode.dateAndStatusNode.messageEffectTargetView()
+        }
+        return nil
+    }
 }

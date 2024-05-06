@@ -1731,12 +1731,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: text as NSString)
                 })
             }
-        }, sendCurrentMessage: { [weak self] silentPosting in
+        }, sendCurrentMessage: { [weak self] silentPosting, messageEffect in
             if let strongSelf = self {
                 if let _ = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState {
-                    strongSelf.sendMediaRecording(silentPosting: silentPosting)
+                    strongSelf.sendMediaRecording(silentPosting: silentPosting, messageEffect: messageEffect)
                 } else {
-                    strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting)
+                    strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, messageEffect: messageEffect)
                 }
             }
         }, sendMessage: { [weak self] text in
@@ -3306,10 +3306,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
                     if let strongSelf = self {
                         if let _ = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState {
-                            strongSelf.sendMediaRecording(scheduleTime: time)
+                            strongSelf.sendMediaRecording(scheduleTime: time, messageEffect: nil)
                         } else {
                             let silentPosting = strongSelf.presentationInterfaceState.interfaceState.silentPosting
-                            strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: time) { [weak self] in
+                            strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: time, messageEffect: nil) { [weak self] in
                                 if let strongSelf = self {
                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: strongSelf.presentationInterfaceState.subject != .scheduledMessages, {
                                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }

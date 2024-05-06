@@ -1859,7 +1859,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 }
                 
                 /*items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Edit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                 c.dismiss(completion: {
+                 c?.dismiss(completion: {
                  guard let self else {
                  return
                  }
@@ -1872,7 +1872,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             
             if !item.isForwardingDisabled, case .everyone = item.privacy?.base {
                 items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Forward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                    c.dismiss(completion: {
+                    c?.dismiss(completion: {
                         guard let self else {
                             return
                         }
@@ -1914,7 +1914,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             
             if canManage {
                 items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
-                    c.dismiss(completion: {
+                    c?.dismiss(completion: {
                         guard let self else {
                             return
                         }

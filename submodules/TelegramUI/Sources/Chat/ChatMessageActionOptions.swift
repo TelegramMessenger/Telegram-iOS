@@ -354,7 +354,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                             subItems.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Common_Back, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
                             }, iconPosition: .left, action: { c, _ in
-                                c.popItems()
+                                c?.popItems()
                             })))
                             subItems.append(.separator)
                             
@@ -379,7 +379,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                                 f(.default)
                             })))
                             
-                            c.pushItems(items: .single(ContextController.Items(content: .list(subItems), dismissed: { [weak contentNode] in
+                            c?.pushItems(items: .single(ContextController.Items(content: .list(subItems), dismissed: { [weak contentNode] in
                                 guard let contentNode else {
                                     return
                                 }

@@ -1,11 +1,10 @@
 import Postbox
 
 public class TranslationMessageAttribute: MessageAttribute, Equatable {
-    
     public struct Additional : PostboxCoding, Equatable {
-        
         public let text: String
         public let entities: [MessageTextEntity]
+        
         public init(text: String, entities: [MessageTextEntity]) {
             self.text = text
             self.entities = entities
@@ -19,9 +18,7 @@ public class TranslationMessageAttribute: MessageAttribute, Equatable {
         public func encode(_ encoder: PostboxEncoder) {
             encoder.encodeString(self.text, forKey: "text")
             encoder.encodeObjectArray(self.entities, forKey: "entities")
-        }
-        
-        
+        } 
     }
     
     public let text: String
@@ -30,6 +27,7 @@ public class TranslationMessageAttribute: MessageAttribute, Equatable {
 
     public let additional:[Additional]
     public let pollSolution: Additional?
+
     
     public var associatedPeerIds: [PeerId] {
         return []

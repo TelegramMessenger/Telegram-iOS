@@ -334,6 +334,7 @@ private func extractAssociatedData(
     currentlyPlayingMessageId: MessageIndex?,
     isCopyProtectionEnabled: Bool,
     availableReactions: AvailableReactions?,
+    availableMessageEffects: AvailableMessageEffects?,
     savedMessageTags: SavedMessageTags?,
     defaultReaction: MessageReaction.Reaction?,
     isPremium: Bool,
@@ -402,7 +403,7 @@ private func extractAssociatedData(
         automaticDownloadPeerId = message.peerId
     }
     
-    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadPeerId: automaticDownloadPeerId, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, savedMessageTags: savedMessageTags, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, topicAuthorId: topicAuthorId, hasBots: hasBots, translateToLanguage: translateToLanguage, maxReadStoryId: maxReadStoryId, recommendedChannels: recommendedChannels, audioTranscriptionTrial: audioTranscriptionTrial, chatThemes: chatThemes, deviceContactsNumbers: deviceContactsNumbers, isInline: isInline)
+    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadPeerId: automaticDownloadPeerId, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, availableMessageEffects: availableMessageEffects, savedMessageTags: savedMessageTags, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, topicAuthorId: topicAuthorId, hasBots: hasBots, translateToLanguage: translateToLanguage, maxReadStoryId: maxReadStoryId, recommendedChannels: recommendedChannels, audioTranscriptionTrial: audioTranscriptionTrial, chatThemes: chatThemes, deviceContactsNumbers: deviceContactsNumbers, isInline: isInline)
 }
 
 private extension ChatHistoryLocationInput {
@@ -1459,6 +1460,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         }
         
         let availableReactions: Signal<AvailableReactions?, NoError> = (context as! AccountContextImpl).availableReactions
+        let availableMessageEffects: Signal<AvailableMessageEffects?, NoError> = (context as! AccountContextImpl).availableMessageEffects
+        
         let savedMessageTags: Signal<SavedMessageTags?, NoError>
         if chatLocation.peerId == self.context.account.peerId {
             savedMessageTags = context.engine.stickers.savedMessageTagData()
@@ -1570,6 +1573,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             customChannelDiscussionReadState,
             customThreadOutgoingReadState,
             availableReactions,
+            availableMessageEffects,
             savedMessageTags,
             defaultReaction,
             accountPeer,
@@ -1582,7 +1586,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             audioTranscriptionTrial,
             chatThemes,
             deviceContactsNumbers
-        ).startStrict(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, savedMessageTags, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, translationState, maxReadStoryId, recommendedChannels, audioTranscriptionTrial, chatThemes, deviceContactsNumbers in
+        ).startStrict(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, availableMessageEffects, savedMessageTags, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, translationState, maxReadStoryId, recommendedChannels, audioTranscriptionTrial, chatThemes, deviceContactsNumbers in
             let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId, chatHasBots, allAdMessages) = promises
             
             func applyHole() {
@@ -1801,7 +1805,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     translateToLanguage = languageCode
                 }
                 
-                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageIdAndType?.0, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, savedMessageTags: savedMessageTags, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots, translateToLanguage: translateToLanguage, maxReadStoryId: maxReadStoryId, recommendedChannels: recommendedChannels, audioTranscriptionTrial: audioTranscriptionTrial, chatThemes: chatThemes, deviceContactsNumbers: deviceContactsNumbers, isInline: !rotated)
+                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageIdAndType?.0, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, availableMessageEffects: availableMessageEffects, savedMessageTags: savedMessageTags, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots, translateToLanguage: translateToLanguage, maxReadStoryId: maxReadStoryId, recommendedChannels: recommendedChannels, audioTranscriptionTrial: audioTranscriptionTrial, chatThemes: chatThemes, deviceContactsNumbers: deviceContactsNumbers, isInline: !rotated)
                 
                 var includeEmbeddedSavedChatInfo = false
                 if case let .replyThread(message) = chatLocation, message.peerId == context.account.peerId, !rotated {
@@ -2474,22 +2478,30 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             guard message.adAttribute == nil && message.id.namespace == Namespaces.Message.Cloud else {
                                 continue
                             }
-                            if !message.text.isEmpty && message.author?.id != self.context.account.peerId {
-                                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
-                                } else {
-                                    messageIdsToTranslate.append(message.id)
-                                }
+                            guard message.author?.id != self.context.account.peerId else {
+                                continue
+                            }
+                            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
+                                continue
+                            }
+                            if !message.text.isEmpty {
+                                messageIdsToTranslate.append(message.id)
+                            } else if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
+                                messageIdsToTranslate.append(message.id)
                             }
                         case let .MessageGroupEntry(_, messages, _):
                             for (message, _, _, _, _) in messages {
                                 guard message.adAttribute == nil && message.id.namespace == Namespaces.Message.Cloud else {
                                     continue
                                 }
-                                if !message.text.isEmpty && message.author?.id != self.context.account.peerId {
-                                    if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
-                                    } else {
-                                        messageIdsToTranslate.append(message.id)
-                                    }
+                                guard message.author?.id != self.context.account.peerId else {
+                                    continue
+                                }
+                                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
+                                    continue
+                                }
+                                if !message.text.isEmpty {
+                                    messageIdsToTranslate.append(message.id)
                                 }
                             }
                         default:
@@ -3528,12 +3540,18 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                                 
                                                 if let currentRange = strongSelf.controllerInteraction.unreadMessageRange[rangeKey] {
                                                     if currentRange.upperBound < (updatedIncomingId + 1) {
-                                                        strongSelf.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: peerId, namespace: namespace)] = currentRange.lowerBound ..< (updatedIncomingId + 1)
-                                                        unreadMessageRangeUpdated = true
+                                                        let updatedRange = currentRange.lowerBound ..< (updatedIncomingId + 1)
+                                                        if strongSelf.controllerInteraction.unreadMessageRange[rangeKey] != updatedRange {
+                                                            strongSelf.controllerInteraction.unreadMessageRange[rangeKey] = updatedRange
+                                                            unreadMessageRangeUpdated = true
+                                                        }
                                                     }
                                                 } else {
-                                                    strongSelf.controllerInteraction.unreadMessageRange[rangeKey] = (previousIncomingId + 1) ..< (updatedIncomingId + 1)
-                                                    unreadMessageRangeUpdated = true
+                                                    let updatedRange = (previousIncomingId + 1) ..< (updatedIncomingId + 1)
+                                                    if strongSelf.controllerInteraction.unreadMessageRange[rangeKey] != updatedRange {
+                                                        strongSelf.controllerInteraction.unreadMessageRange[rangeKey] = updatedRange
+                                                        unreadMessageRangeUpdated = true
+                                                    }
                                                 }
                                             }
                                         case .indexBased:
@@ -3545,6 +3563,33 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 }
                             }
                             //print("Read from \(previousPeerReadState) up to \(updatedPeerReadState)")
+                        }
+                    }
+                } else if case let .peer(peerId) = strongSelf.chatLocation, case let .peer(updatedReadStates) = transition.historyView.originalView.transientReadStates {
+                    if let updatedPeerReadState = updatedReadStates[peerId] {
+                        for (namespace, updatedState) in updatedPeerReadState.states {
+                            switch updatedState {
+                            case let .idBased(updatedIncomingId, _, _, _, _):
+                                let rangeKey = UnreadMessageRangeKey(peerId: peerId, namespace: namespace)
+                                
+                                if let currentRange = strongSelf.controllerInteraction.unreadMessageRange[rangeKey] {
+                                    if currentRange.upperBound < (updatedIncomingId + 1) {
+                                        let updatedRange = currentRange.lowerBound ..< (updatedIncomingId + 1)
+                                        if strongSelf.controllerInteraction.unreadMessageRange[rangeKey] != updatedRange {
+                                            strongSelf.controllerInteraction.unreadMessageRange[rangeKey] = updatedRange
+                                            unreadMessageRangeUpdated = true
+                                        }
+                                    }
+                                } else {
+                                    let updatedRange = (updatedIncomingId + 1) ..< (Int32.max - 1)
+                                    if strongSelf.controllerInteraction.unreadMessageRange[rangeKey] != updatedRange {
+                                        strongSelf.controllerInteraction.unreadMessageRange[rangeKey] = updatedRange
+                                        unreadMessageRangeUpdated = true
+                                    }
+                                }
+                            case .indexBased:
+                                break
+                            }
                         }
                     }
                 }

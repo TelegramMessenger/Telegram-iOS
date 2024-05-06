@@ -510,4 +510,11 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         }
         return nil
     }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        if !self.interactiveImageNode.dateAndStatusNode.isHidden {
+            return self.interactiveImageNode.dateAndStatusNode.messageEffectTargetView()
+        }
+        return nil
+    }
 }

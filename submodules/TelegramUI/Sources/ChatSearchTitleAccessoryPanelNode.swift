@@ -680,7 +680,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                             return
                         }
                         
-                        c.dismiss(completion: { [weak self] in
+                        c?.dismiss(completion: { [weak self] in
                             guard let self, let item = self.items.first(where: { $0.reaction == reaction }) else {
                                 return
                             }

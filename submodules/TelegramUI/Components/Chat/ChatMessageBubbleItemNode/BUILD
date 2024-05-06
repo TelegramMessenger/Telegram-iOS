@@ -81,6 +81,9 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageGiveawayBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageJoinedChannelBubbleContentNode",
         "//submodules/UIKitRuntimeUtils",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageTransitionNode",
+        "//submodules/AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode",
     ],
     visibility = [
         "//visibility:public",

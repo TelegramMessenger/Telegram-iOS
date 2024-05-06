@@ -1912,7 +1912,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Settings, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in
-                    c.dismiss(completion: nil)
+                    c?.dismiss(completion: nil)
                     
                     if let strongSelf = self {
                         strongSelf.controllerNode.sendSettingsButtonEvent()
@@ -1924,7 +1924,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_OpenBot, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Bots"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in
-                    c.dismiss(completion: nil)
+                    c?.dismiss(completion: nil)
                     
                     guard let strongSelf = self else {
                         return
@@ -1948,7 +1948,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_ReloadPage, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reload"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] c, _ in
-                c.dismiss(completion: nil)
+                c?.dismiss(completion: nil)
                 
                 self?.controllerNode.webView?.reload()
             })))
@@ -1956,7 +1956,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_TermsOfUse, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] c, _ in
-                c.dismiss(completion: nil)
+                c?.dismiss(completion: nil)
                 
                 guard let self, let navigationController = self.getNavigationController() else {
                     return
@@ -1976,7 +1976,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_RemoveBot, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                 }, action: { [weak self] c, _ in
-                    c.dismiss(completion: nil)
+                    c?.dismiss(completion: nil)
                     
                     if let strongSelf = self {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }

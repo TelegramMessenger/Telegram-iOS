@@ -70,6 +70,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1163561432] = { return Api.AutoDownloadSettings.parse_autoDownloadSettings($0) }
     dict[-2124403385] = { return Api.AutoSaveException.parse_autoSaveException($0) }
     dict[-934791986] = { return Api.AutoSaveSettings.parse_autoSaveSettings($0) }
+    dict[-1815879042] = { return Api.AvailableEffect.parse_availableEffect($0) }
     dict[-1065882623] = { return Api.AvailableReaction.parse_availableReaction($0) }
     dict[-177732982] = { return Api.BankCardOpenUrl.parse_bankCardOpenUrl($0) }
     dict[1527845466] = { return Api.BaseTheme.parse_baseThemeArctic($0) }
@@ -512,7 +513,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[340088945] = { return Api.MediaArea.parse_mediaAreaSuggestedReaction($0) }
     dict[-1098720356] = { return Api.MediaArea.parse_mediaAreaVenue($0) }
     dict[64088654] = { return Api.MediaAreaCoordinates.parse_mediaAreaCoordinates($0) }
-    dict[592953125] = { return Api.Message.parse_message($0) }
+    dict[-1109353426] = { return Api.Message.parse_message($0) }
     dict[-1868117372] = { return Api.Message.parse_messageEmpty($0) }
     dict[721967202] = { return Api.Message.parse_messageService($0) }
     dict[-872240531] = { return Api.MessageAction.parse_messageActionBoostApply($0) }
@@ -928,7 +929,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-997782967] = { return Api.Update.parse_updateBotStopped($0) }
     dict[-2095595325] = { return Api.Update.parse_updateBotWebhookJSON($0) }
     dict[-1684914010] = { return Api.Update.parse_updateBotWebhookJSONQuery($0) }
-    dict[1550177112] = { return Api.Update.parse_updateBroadcastRevenueTransactions($0) }
+    dict[-539401739] = { return Api.Update.parse_updateBroadcastRevenueTransactions($0) }
     dict[1666927625] = { return Api.Update.parse_updateChannel($0) }
     dict[-1304443240] = { return Api.Update.parse_updateChannelAvailableMessages($0) }
     dict[-761649164] = { return Api.Update.parse_updateChannelMessageForwards($0) }
@@ -1204,6 +1205,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-843329861] = { return Api.messages.AllStickers.parse_allStickers($0) }
     dict[-395967805] = { return Api.messages.AllStickers.parse_allStickersNotModified($0) }
     dict[1338747336] = { return Api.messages.ArchivedStickers.parse_archivedStickers($0) }
+    dict[-1109696146] = { return Api.messages.AvailableEffects.parse_availableEffects($0) }
+    dict[-772957605] = { return Api.messages.AvailableEffects.parse_availableEffectsNotModified($0) }
     dict[1989032621] = { return Api.messages.AvailableReactions.parse_availableReactions($0) }
     dict[-1626924713] = { return Api.messages.AvailableReactions.parse_availableReactionsNotModified($0) }
     dict[-347034123] = { return Api.messages.BotApp.parse_botApp($0) }
@@ -1362,7 +1365,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
@@ -1427,6 +1430,8 @@ public extension Api {
             case let _1 as Api.AutoSaveException:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.AutoSaveSettings:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.AvailableEffect:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.AvailableReaction:
                 _1.serialize(buffer, boxed)
@@ -2179,6 +2184,8 @@ public extension Api {
             case let _1 as Api.messages.AllStickers:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.ArchivedStickers:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.AvailableEffects:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.AvailableReactions:
                 _1.serialize(buffer, boxed)

@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Display
 import TelegramCore
+import Postbox
 import TelegramPresentationData
 import AccountContext
 import AppBundle
@@ -186,9 +187,10 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     private let toMessageTextScrollView: UIScrollView
     private let toMessageTextNode: ChatInputTextNode
     private var messageEffectReactionIcon: ReactionIconView?
+    private var messageEffectReactionText: ImmediateTextView?
     private let scrollNode: ASScrollNode
     
-    private var selectedMessageEffect: (reaction: MessageReaction.Reaction, file: TelegramMediaFile)?
+    private(set) var selectedMessageEffect: (id: Int64, effect: AvailableMessageEffects.MessageEffect)?
     private var reactionContextNode: ReactionContextNode?
     
     private var fromCustomEmojiContainerView: CustomEmojiContainerView?
@@ -380,7 +382,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        
         if let reactionItems, !reactionItems.isEmpty {
             //TODO:localize
             let reactionContextNode = ReactionContextNode(
@@ -394,24 +395,12 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 alwaysAllowPremiumReactions: false,
                 allPresetReactionsAreAvailable: true,
                 getEmojiContent: { animationCache, animationRenderer in
-                    let mappedReactionItems: [EmojiComponentReactionItem] = reactionItems.map { reaction -> EmojiComponentReactionItem in
-                        return EmojiComponentReactionItem(reaction: reaction.reaction.rawValue, file: reaction.stillAnimation)
-                    }
-                    
-                    return EmojiPagerContentComponent.emojiInputData(
+                    return EmojiPagerContentComponent.messageEffectsInputData(
                         context: context,
                         animationCache: animationCache,
                         animationRenderer: animationRenderer,
-                        isStandalone: false,
-                        subject: .reaction(onlyTop: false),
-                        hasTrending: false,
-                        topReactionItems: mappedReactionItems,
-                        areUnicodeEmojiEnabled: false,
-                        areCustomEmojiEnabled: true,
-                        chatPeerId: context.account.peerId,
-                        selectedItems: Set(),
-                        hasSearch: false,
-                        premiumIfSavedMessages: false
+                        hasSearch: true,
+                        hideBackground: false
                     )
                 },
                 isExpandedUpdated: { [weak self] transition in
@@ -438,73 +427,51 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                     return
                 }
                 
-                let reactionItem: Signal<ReactionItem?, NoError>
-                switch updateReaction.reaction {
-                case .builtin:
-                    reactionItem = context.engine.stickers.availableReactions()
-                    |> take(1)
-                    |> map { availableReactions -> ReactionItem? in
-                        guard let availableReactions else {
-                            return nil
-                        }
-                        for reaction in availableReactions.reactions {
-                            guard let centerAnimation = reaction.centerAnimation else {
-                                continue
-                            }
-                            guard let aroundAnimation = reaction.aroundAnimation else {
-                                continue
-                            }
-                            if reaction.value == updateReaction.reaction {
-                                return ReactionItem(
-                                    reaction: ReactionItem.Reaction(rawValue: reaction.value),
-                                    appearAnimation: reaction.appearAnimation,
-                                    stillAnimation: reaction.selectAnimation,
-                                    listAnimation: centerAnimation,
-                                    largeListAnimation: reaction.activateAnimation,
-                                    applicationAnimation: aroundAnimation,
-                                    largeApplicationAnimation: reaction.effectAnimation,
-                                    isCustom: false
-                                )
-                            }
-                        }
+                guard case let .custom(sourceEffectId, _) = updateReaction else {
+                    return
+                }
+                
+                let messageEffect: Signal<AvailableMessageEffects.MessageEffect?, NoError>
+                messageEffect = context.engine.stickers.availableMessageEffects()
+                |> take(1)
+                |> map { availableMessageEffects -> AvailableMessageEffects.MessageEffect? in
+                    guard let availableMessageEffects else {
                         return nil
                     }
-                case .custom:
-                    switch updateReaction {
-                    case let .custom(_, file):
-                        if let itemFile = file {
-                            reactionItem = .single(ReactionItem(
-                                reaction: ReactionItem.Reaction(rawValue: updateReaction.reaction),
-                                appearAnimation: itemFile,
-                                stillAnimation: itemFile,
-                                listAnimation: itemFile,
-                                largeListAnimation: itemFile,
-                                applicationAnimation: nil,
-                                largeApplicationAnimation: nil,
-                                isCustom: true
-                            ))
-                        } else {
-                            reactionItem = .single(nil)
+                    for messageEffect in availableMessageEffects.messageEffects {
+                        if messageEffect.id == sourceEffectId || messageEffect.effectSticker.fileId.id == sourceEffectId {
+                            return messageEffect
                         }
-                    default:
-                        reactionItem = .single(nil)
                     }
+                    return nil
                 }
                 
                 self.messageEffectDisposable.set((combineLatest(
-                    reactionItem,
+                    messageEffect,
                     ReactionContextNode.randomGenericReactionEffect(context: context)
                 )
-                |> deliverOnMainQueue).startStrict(next: { [weak self] reactionItem, path in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] messageEffect, path in
                     guard let self else {
                         return
                     }
-                    guard let reactionItem else {
+                    guard let messageEffect else {
                         return
                     }
+                    let effectId = messageEffect.id
+                    
+                    let reactionItem = ReactionItem(
+                        reaction: ReactionItem.Reaction(rawValue: updateReaction.reaction),
+                        appearAnimation: messageEffect.effectSticker,
+                        stillAnimation: messageEffect.effectSticker,
+                        listAnimation: messageEffect.effectSticker,
+                        largeListAnimation: messageEffect.effectSticker,
+                        applicationAnimation: nil,
+                        largeApplicationAnimation: nil,
+                        isCustom: true
+                    )
                     
                     if let selectedMessageEffect = self.selectedMessageEffect {
-                        if selectedMessageEffect.reaction == updateReaction.reaction {
+                        if selectedMessageEffect.id == effectId {
                             self.selectedMessageEffect = nil
                             reactionContextNode.selectedItems = Set([])
                             
@@ -518,17 +485,17 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                             self.update(transition: .animated(duration: 0.2, curve: .easeInOut))
                             return
                         } else {
-                            self.selectedMessageEffect = (reaction: updateReaction.reaction, file: reactionItem.listAnimation)
+                            self.selectedMessageEffect = (id: effectId, effect: messageEffect)
                             reactionContextNode.selectedItems = Set([AnyHashable(updateReaction.reaction)])
                             self.update(transition: .animated(duration: 0.2, curve: .easeInOut))
                         }
                     } else {
-                        self.selectedMessageEffect = (reaction: updateReaction.reaction, file: reactionItem.listAnimation)
+                        self.selectedMessageEffect = (id: effectId, effect: messageEffect)
                         reactionContextNode.selectedItems = Set([AnyHashable(updateReaction.reaction)])
                         self.update(transition: .animated(duration: 0.2, curve: .easeInOut))
                     }
                     
-                    guard let messageEffectReactionIcon = self.messageEffectReactionIcon else {
+                    guard let targetView = self.messageEffectReactionIcon ?? self.messageEffectReactionText else {
                         return
                     }
                     
@@ -546,16 +513,27 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                     self.standaloneReactionAnimation = standaloneReactionAnimation
                     self.addSubnode(standaloneReactionAnimation)
                     
+                    var customEffectResource: MediaResource?
+                    if let effectAnimation = messageEffect.effectAnimation {
+                        customEffectResource = effectAnimation.resource
+                    } else {
+                        let effectSticker = messageEffect.effectSticker
+                        if let effectFile = effectSticker.videoThumbnails.first {
+                            customEffectResource = effectFile.resource
+                        }
+                    }
+                    
                     standaloneReactionAnimation.animateReactionSelection(
                         context: context,
                         theme: self.presentationData.theme,
                         animationCache: context.animationCache,
                         reaction: reactionItem,
+                        customEffectResource: customEffectResource,
                         avatarPeers: [],
                         playHaptic: true,
                         isLarge: true,
                         playCenterReaction: false,
-                        targetView: messageEffectReactionIcon,
+                        targetView: targetView,
                         addStandaloneReactionAnimation: { standaloneReactionAnimation in
                             /*guard let strongSelf = self else {
                                 return
@@ -899,6 +877,9 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             }
         } else {
             completedBubble = true
+            if let reactionContextNode = self.reactionContextNode {
+                reactionContextNode.animateOut(to: nil, animatingOutToReaction: false)
+            }
         }
         
         let contentOffset = CGPoint(x:  self.sendButtonFrame.midX - self.contentContainerNode.frame.midX, y:  self.sendButtonFrame.midY - self.contentContainerNode.frame.midY)
@@ -1048,35 +1029,89 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.toMessageTextNode.updateLayout(size: textFrame.size)
         
         if let selectedMessageEffect = self.selectedMessageEffect {
-            let messageEffectReactionIcon: ReactionIconView
-            var iconTransition = transition
-            var animateIn = false
-            if let current = self.messageEffectReactionIcon {
-                messageEffectReactionIcon = current
+            if let iconFile = selectedMessageEffect.effect.staticIcon {
+                let messageEffectReactionIcon: ReactionIconView
+                var iconTransition = transition
+                var animateIn = false
+                if let current = self.messageEffectReactionIcon {
+                    messageEffectReactionIcon = current
+                } else {
+                    iconTransition = .immediate
+                    animateIn = true
+                    messageEffectReactionIcon = ReactionIconView(frame: CGRect())
+                    self.messageEffectReactionIcon = messageEffectReactionIcon
+                    self.toMessageTextScrollView.addSubview(messageEffectReactionIcon)
+                }
+                
+                let iconSize = CGSize(width: 10.0, height: 10.0)
+                messageEffectReactionIcon.update(size: iconSize, context: self.context, file: iconFile, fileId: iconFile.fileId.id, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer, tintColor: nil, placeholderColor: self.presentationData.theme.chat.message.stickerPlaceholderColor.withWallpaper, animateIdle: false, reaction: .custom(selectedMessageEffect.id), transition: iconTransition)
+                
+                let iconFrame = CGRect(origin: CGPoint(x: self.toMessageTextNode.frame.minX + messageFrame.width - 30.0 + 2.0 - iconSize.width, y: self.toMessageTextNode.frame.maxY - 6.0 - iconSize.height), size: iconSize)
+                iconTransition.updateFrame(view: messageEffectReactionIcon, frame: iconFrame)
+                if animateIn && transition.isAnimated {
+                    transition.animateTransformScale(view: messageEffectReactionIcon, from: 0.001)
+                    messageEffectReactionIcon.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                }
+                
+                if let messageEffectReactionText = self.messageEffectReactionText {
+                    self.messageEffectReactionText = nil
+                    
+                    transition.updateTransformScale(layer: messageEffectReactionText.layer, scale: 0.001)
+                    transition.updateAlpha(layer: messageEffectReactionText.layer, alpha: 0.0, completion: { [weak messageEffectReactionText] _ in
+                        messageEffectReactionText?.removeFromSuperview()
+                    })
+                }
             } else {
-                iconTransition = .immediate
-                animateIn = true
-                messageEffectReactionIcon = ReactionIconView(frame: CGRect())
-                self.messageEffectReactionIcon = messageEffectReactionIcon
-                self.toMessageTextScrollView.addSubview(messageEffectReactionIcon)
+                let messageEffectReactionText: ImmediateTextView
+                var iconTransition = transition
+                var animateIn = false
+                if let current = self.messageEffectReactionText {
+                    messageEffectReactionText = current
+                } else {
+                    iconTransition = .immediate
+                    animateIn = true
+                    messageEffectReactionText = ImmediateTextView()
+                    self.messageEffectReactionText = messageEffectReactionText
+                    self.toMessageTextScrollView.addSubview(messageEffectReactionText)
+                }
+                
+                let iconSize = CGSize(width: 10.0, height: 10.0)
+                messageEffectReactionText.attributedText = NSAttributedString(string: selectedMessageEffect.effect.emoticon, font: Font.regular(9.0), textColor: .black)
+                let textSize = messageEffectReactionText.updateLayout(CGSize(width: 100.0, height: 100.0))
+                
+                let iconFrame = CGRect(origin: CGPoint(x: self.toMessageTextNode.frame.minX + messageFrame.width - 30.0 + 2.0 - iconSize.width + floorToScreenPixels((iconSize.width - textSize.width) * 0.5), y: self.toMessageTextNode.frame.maxY - 6.0 - iconSize.height + floorToScreenPixels((iconSize.height - textSize.height) * 0.5)), size: textSize)
+                iconTransition.updateFrame(view: messageEffectReactionText, frame: iconFrame)
+                if animateIn && transition.isAnimated {
+                    transition.animateTransformScale(view: messageEffectReactionText, from: 0.001)
+                    messageEffectReactionText.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                }
+                
+                if let messageEffectReactionIcon = self.messageEffectReactionIcon {
+                    self.messageEffectReactionIcon = nil
+                    
+                    transition.updateTransformScale(layer: messageEffectReactionIcon.layer, scale: 0.001)
+                    transition.updateAlpha(layer: messageEffectReactionIcon.layer, alpha: 0.0, completion: { [weak messageEffectReactionIcon] _ in
+                        messageEffectReactionIcon?.removeFromSuperview()
+                    })
+                }
             }
-            
-            let iconSize = CGSize(width: 10.0, height: 10.0)
-            messageEffectReactionIcon.update(size: iconSize, context: self.context, file: selectedMessageEffect.file, fileId: selectedMessageEffect.file.fileId.id, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer, tintColor: nil, placeholderColor: self.presentationData.theme.chat.message.stickerPlaceholderColor.withWallpaper, animateIdle: false, reaction: selectedMessageEffect.reaction, transition: iconTransition)
-            
-            let iconFrame = CGRect(origin: CGPoint(x: self.toMessageTextNode.frame.minX + messageFrame.width - 30.0 + 2.0 - iconSize.width, y: self.toMessageTextNode.frame.maxY - 6.0 - iconSize.height), size: iconSize)
-            iconTransition.updateFrame(view: messageEffectReactionIcon, frame: iconFrame)
-            if animateIn && transition.isAnimated {
-                transition.animateTransformScale(view: messageEffectReactionIcon, from: 0.001)
-                messageEffectReactionIcon.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        } else {
+            if let messageEffectReactionIcon = self.messageEffectReactionIcon {
+                self.messageEffectReactionIcon = nil
+                
+                transition.updateTransformScale(layer: messageEffectReactionIcon.layer, scale: 0.001)
+                transition.updateAlpha(layer: messageEffectReactionIcon.layer, alpha: 0.0, completion: { [weak messageEffectReactionIcon] _ in
+                    messageEffectReactionIcon?.removeFromSuperview()
+                })
             }
-        } else if let messageEffectReactionIcon = self.messageEffectReactionIcon {
-            self.messageEffectReactionIcon = nil
-            
-            transition.updateTransformScale(layer: messageEffectReactionIcon.layer, scale: 0.001)
-            transition.updateAlpha(layer: messageEffectReactionIcon.layer, alpha: 0.0, completion: { [weak messageEffectReactionIcon] _ in
-                messageEffectReactionIcon?.removeFromSuperview()
-            })
+            if let messageEffectReactionText = self.messageEffectReactionText {
+                self.messageEffectReactionText = nil
+                
+                transition.updateTransformScale(layer: messageEffectReactionText.layer, scale: 0.001)
+                transition.updateAlpha(layer: messageEffectReactionText.layer, alpha: 0.0, completion: { [weak messageEffectReactionText] _ in
+                    messageEffectReactionText?.removeFromSuperview()
+                })
+            }
         }
         
         if let reactionContextNode = self.reactionContextNode {

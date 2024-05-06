@@ -71,6 +71,9 @@ import ChatMessageGiftBubbleContentNode
 import ChatMessageGiveawayBubbleContentNode
 import ChatMessageJoinedChannelBubbleContentNode
 import UIKitRuntimeUtils
+import ChatMessageTransitionNode
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 private struct BubbleItemAttributes {
     var isAttachment: Bool
@@ -601,6 +604,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var appliedForwardInfo: (Peer?, String?)?
     private var disablesComments = true
     
+    private var wasPending: Bool = false
+    private var didChangeFromPendingToSent: Bool = false
+    
     private var authorNameColor: UIColor?
     
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
@@ -641,6 +647,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         containerSize: credibilityIconView.bounds.size
                     )
                 }
+                
+                self.updateVisibility()
             }
         }
     }
@@ -1152,7 +1160,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             return .waitForSingleTap
                     }
                 }
+                
                 if !strongSelf.backgroundNode.frame.contains(point) {
+                    return .waitForDoubleTap
+                }
+                
+                if strongSelf.currentMessageEffect() != nil {
                     return .waitForDoubleTap
                 }
             }
@@ -2161,6 +2174,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     reactionPeers: dateReactionsAndPeers.peers,
                     displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                     areReactionsTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId),
+                    messageEffect: item.message.messageEffect(availableMessageEffects: item.associatedData.availableMessageEffects),
                     replyCount: dateReplies,
                     isPinned: message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                     hasAutoremove: message.isSelfExpiring,
@@ -2996,6 +3010,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     ) -> Void {
         guard let strongSelf = selfReference.value else {
             return
+        }
+        
+        if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal || item.message.id.namespace == Namespaces.Message.QuickReplyLocal {
+            strongSelf.wasPending = true
+        }
+        if strongSelf.wasPending && (item.message.id.namespace != Namespaces.Message.Local && item.message.id.namespace != Namespaces.Message.ScheduledLocal && item.message.id.namespace != Namespaces.Message.QuickReplyLocal) {
+            strongSelf.didChangeFromPendingToSent = true
         }
         
         let themeUpdated = strongSelf.appliedItem?.presentationData.theme.theme !== item.presentationData.theme.theme
@@ -4216,6 +4237,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         strongSelf.updateSearchTextHighlightState()
         
+        strongSelf.updateVisibility()
+        
         if let (_, f) = strongSelf.awaitingAppliedReaction {
             strongSelf.awaitingAppliedReaction = nil
             
@@ -4650,6 +4673,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 item.controllerInteraction.displayEmojiPackTooltip(file, item.message)
                             })
                         }
+                    }
+                }
+                if self.currentMessageEffect() != nil {
+                    if self.backgroundNode.frame.contains(location) {
+                        return .action(InternalBubbleTapAction.Action({ [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.playMessageEffect(force: true)
+                        }, contextMenuOnLongPress: true))
                     }
                 }
                 return nil
@@ -5541,6 +5574,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         for contentNode in self.contentNodes {
             contentNode.unreadMessageRangeUpdated()
         }
+        
+        self.updateVisibility()
     }
     
     public func animateQuizInvalidOptionSelected() {
@@ -5725,5 +5760,179 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         }
         return false
+    }
+    
+    private var forceStopAnimations: Bool = false
+    private var playedPremiumStickerAnimation: Bool = false
+    private var additionalAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
+    
+    private func playPremiumStickerAnimation(effect: AvailableMessageEffects.MessageEffect, force: Bool) {
+        if self.playedPremiumStickerAnimation && !force {
+            return
+        }
+        self.playedPremiumStickerAnimation = true
+        
+        if let effectAnimation = effect.effectAnimation {
+            self.playEffectAnimation(resource: effectAnimation.resource, isStickerEffect: true)
+        } else {
+            let effectSticker = effect.effectSticker
+            if let effectFile = effectSticker.videoThumbnails.first {
+                self.playEffectAnimation(resource: effectFile.resource, isStickerEffect: true)
+            }
+        }
+    }
+    
+    private func playEffectAnimation(resource: MediaResource, isStickerEffect: Bool = false) {
+        guard let item = self.item else {
+            return
+        }
+        guard let transitionNode = item.controllerInteraction.getMessageTransitionNode() as? ChatMessageTransitionNode else {
+            return
+        }
+        
+        let source = AnimatedStickerResourceSource(account: item.context.account, resource: resource, fitzModifier: nil)
+        
+        let animationSize = CGSize(width: 180.0, height: 180.0)
+        let animationNodeFrame: CGRect
+        
+        var messageEffectView: UIView?
+        for contentNode in self.contentNodes {
+            if let result = contentNode.messageEffectTargetView() {
+                messageEffectView = result
+                break
+            }
+        }
+        if messageEffectView == nil {
+            if let mosaicStatusNode = self.mosaicStatusNode, let result = mosaicStatusNode.messageEffectTargetView() {
+                messageEffectView = result
+            }
+        }
+        
+        if let messageEffectView {
+            animationNodeFrame = animationSize.centered(around: messageEffectView.convert(messageEffectView.bounds, to: self.view).center)
+        } else {
+            animationNodeFrame = animationSize.centered(around: self.backgroundNode.frame.center)
+        }
+        
+        if self.additionalAnimationNodes.count >= 4 {
+            return
+        }
+        
+        let incomingMessage = item.message.effectivelyIncoming(item.context.account.peerId)
+
+        do {
+            let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
+            let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
+            additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 1.6), height: Int(animationSize.height * 1.6), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
+            var animationFrame: CGRect
+            if isStickerEffect {
+                let scale: CGFloat = 0.245
+                let offsetScale: CGFloat = 0.5
+                animationFrame = animationNodeFrame.offsetBy(dx: incomingMessage ? animationNodeFrame.width * offsetScale : -animationNodeFrame.width * offsetScale, dy: -25.0).insetBy(dx: -animationNodeFrame.width * scale, dy: -animationNodeFrame.height * scale)
+            } else {
+                animationFrame = animationNodeFrame.insetBy(dx: -animationNodeFrame.width, dy: -animationNodeFrame.height)
+                    .offsetBy(dx: incomingMessage ? animationNodeFrame.width - 10.0 : -animationNodeFrame.width + 10.0, dy: 0.0)
+                animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
+            }
+                        
+            animationFrame = animationFrame.offsetBy(dx: 0.0, dy: self.insets.top)
+            additionalAnimationNode.frame = animationFrame
+            if incomingMessage {
+                additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+            }
+
+            let decorationNode = transitionNode.add(decorationView: additionalAnimationNode.view, itemNode: self)
+            additionalAnimationNode.completed = { [weak self, weak decorationNode, weak transitionNode] _ in
+                guard let decorationNode = decorationNode else {
+                    return
+                }
+                self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
+                transitionNode?.remove(decorationNode: decorationNode)
+            }
+            additionalAnimationNode.isPlayingChanged = { [weak self, weak decorationNode, weak transitionNode] isPlaying in
+                if !isPlaying {
+                    guard let decorationNode = decorationNode else {
+                        return
+                    }
+                    self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
+                    transitionNode?.remove(decorationNode: decorationNode)
+                }
+            }
+
+            self.additionalAnimationNodes.append(decorationNode)
+
+            additionalAnimationNode.visibility = true
+        }
+    }
+    
+    private func removeAdditionalAnimations() {
+        for decorationNode in self.additionalAnimationNodes {
+            if let additionalAnimationNode = decorationNode.contentView.asyncdisplaykit_node as? AnimatedStickerNode {
+                additionalAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak additionalAnimationNode] _ in
+                    additionalAnimationNode?.visibility = false
+                })
+            }
+        }
+    }
+    
+    private func currentMessageEffect() -> AvailableMessageEffects.MessageEffect? {
+        guard let item = self.item else {
+            return nil
+        }
+        var messageEffect: AvailableMessageEffects.MessageEffect?
+        for attribute in item.message.attributes {
+            if let attribute = attribute as? EffectMessageAttribute {
+                if let availableMessageEffects = item.associatedData.availableMessageEffects {
+                    for effect in availableMessageEffects.messageEffects {
+                        if effect.id == attribute.id {
+                            messageEffect = effect
+                            break
+                        }
+                    }
+                }
+                break
+            }
+        }
+        return messageEffect
+    }
+    
+    private func playMessageEffect(force: Bool) {
+        if let messageEffect = self.currentMessageEffect() {
+            self.playPremiumStickerAnimation(effect: messageEffect, force: force)
+        }
+    }
+    
+    private func updateVisibility() {
+        guard let item = self.item else {
+            return
+        }
+        
+        let isPlaying = self.visibilityStatus == true && !self.forceStopAnimations
+        if !isPlaying {
+            self.removeAdditionalAnimations()
+        }
+        
+        var alreadySeen = true
+        if item.message.flags.contains(.Incoming) {
+            if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
+                if unreadRange.contains(item.message.id.id) {
+                    if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                        alreadySeen = false
+                    }
+                }
+            }
+        } else {
+            if self.didChangeFromPendingToSent {
+                if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                    alreadySeen = false
+                }
+            }
+        }
+        
+        if !alreadySeen {
+            item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
+            
+            self.playMessageEffect(force: false)
+        }
     }
 }
