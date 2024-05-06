@@ -33,6 +33,7 @@ import ShareController
 import UndoUI
 import PlainButtonComponent
 import ComponentDisplayAdapters
+import MediaEditorScreen
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white
@@ -1266,6 +1267,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         
     private let listDisposable = MetaDisposable()
     private var hiddenMediaDisposable: Disposable?
+    private let updateDisposable = MetaDisposable()
     
     private var numberOfItemsToRequest: Int = 50
     private var isRequestingView: Bool = false
@@ -1765,6 +1767,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         self.hiddenMediaDisposable?.dispose()
         self.animationTimer?.invalidate()
         self.presentationDataDisposable?.dispose()
+        self.updateDisposable.dispose()
     }
 
     public func loadHole(anchor: SparseItemGrid.HoleAnchor, at location: SparseItemGrid.HoleLocation) -> Signal<Never, NoError> {
@@ -1858,16 +1861,54 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     })))
                 }
                 
-                /*items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Edit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                 c.dismiss(completion: {
-                 guard let self else {
-                 return
-                 }
-                 let _ = self
-                 
-                 
-                 })
-                 })))*/
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Edit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                    c.dismiss(completion: {
+                        guard let self else {
+                            return
+                        }
+                        let _ = (self.context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)
+                        )
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                            guard let self, let peer else {
+                                return
+                            }
+                            
+                            var foundItemLayer: SparseItemGridLayer?
+                            var sourceImage: UIImage?
+                            self.itemGrid.forEachVisibleItem { gridItem in
+                                guard let itemLayer = gridItem.layer as? ItemLayer else {
+                                    return
+                                }
+                                if let listItem = itemLayer.item, listItem.story.id == item.id {
+                                    foundItemLayer = itemLayer
+                                    if let contents = itemLayer.contents, CFGetTypeID(contents as CFTypeRef) == CGImage.typeID {
+                                        sourceImage = UIImage(cgImage: contents as! CGImage)
+                                    }
+                                }
+                            }
+                            
+                            guard let controller = MediaEditorScreen.makeEditStoryController(
+                                context: self.context,
+                                peer: peer,
+                                storyItem: item,
+                                videoPlaybackPosition: nil,
+                                repost: false,
+                                transitionIn: .gallery(MediaEditorScreen.TransitionIn.GalleryTransitionIn(sourceView: self.itemGrid.view, sourceRect: foundItemLayer?.frame ?? .zero, sourceImage: sourceImage)),
+                                transitionOut: MediaEditorScreen.TransitionOut(destinationView: self.itemGrid.view, destinationRect: foundItemLayer?.frame ?? .zero, destinationCornerRadius: 0.0),
+                                update: { [weak self] disposable in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.updateDisposable.set(disposable)
+                                }
+                            ) else {
+                                return
+                            }
+                            self.parentController?.push(controller)
+                        })
+                    })
+                })))
             }
             
             if !item.isForwardingDisabled, case .everyone = item.privacy?.base {
@@ -1880,7 +1921,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         let _ = (self.context.engine.data.get(
                             TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)
                         )
-                                 |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
                             guard let self else {
                                 return
                             }

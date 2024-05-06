@@ -3109,6 +3109,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if controller.isEmbeddedEditor == true {
                 mediaEditor.onFirstDisplay = { [weak self] in
                     if let self {
+                        if let transitionInView = self.transitionInView  {
+                            self.transitionInView = nil
+                            transitionInView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak transitionInView] _ in
+                                transitionInView?.removeFromSuperview()
+                            })
+                        }
+                        
                         if effectiveSubject.isPhoto {
                             self.previewContainerView.layer.allowsGroupOpacity = true
                             self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
@@ -3765,6 +3772,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             if let transitionOut = controller.transitionOut(finished, isNew), let destinationView = transitionOut.destinationView {
                 var destinationTransitionView: UIView?
+                var destinationTransitionRect: CGRect = .zero
                 if !finished {
                     if let transitionIn = controller.transitionIn, case let .gallery(galleryTransitionIn) = transitionIn, let sourceImage = galleryTransitionIn.sourceImage, isNew != true {
                         let sourceSuperView = galleryTransitionIn.sourceView?.superview?.superview
@@ -3774,6 +3782,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         destinationTransitionOutView.frame = self.previewContainerView.convert(self.previewContainerView.bounds, to: sourceSuperView)
                         sourceSuperView?.addSubview(destinationTransitionOutView)
                         destinationTransitionView = destinationTransitionOutView
+                        destinationTransitionRect = galleryTransitionIn.sourceRect
                     }
                     if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                         view.animateOut(to: .gallery)
@@ -3853,7 +3862,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let destinationTransitionView {
                     self.previewContainerView.layer.allowsGroupOpacity = true
                     self.previewContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
-                    destinationTransitionView.layer.animateFrame(from: destinationTransitionView.frame, to: destinationView.convert(destinationView.bounds, to: destinationTransitionView.superview), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak destinationTransitionView] _ in
+                    destinationTransitionView.layer.animateFrame(from: destinationTransitionView.frame, to: destinationView.convert(destinationTransitionRect, to: destinationTransitionView.superview), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak destinationTransitionView] _ in
                         destinationTransitionView?.removeFromSuperview()
                     })
                 }
