@@ -483,3 +483,37 @@ func deserializeNode(buffer: ReadBuffer) -> LottieRenderNode {
         mask: mask
     )
 }
+
+struct SerializedFrameMapping {
+    var size: CGSize = CGSize()
+    var frameCount: Int = 0
+    var framesPerSecond: Int = 0
+    var frameRanges: [Int: Range<Int>] = [:]
+}
+
+func serializeFrameMapping(buffer: WriteBuffer, frameMapping: SerializedFrameMapping) {
+    buffer.write(size: frameMapping.size)
+    buffer.write(uInt32: UInt32(frameMapping.frameCount))
+    buffer.write(uInt32: UInt32(frameMapping.framesPerSecond))
+    for (frame, range) in frameMapping.frameRanges.sorted(by: { $0.key < $1.key }) {
+        buffer.write(uInt32: UInt32(frame))
+        buffer.write(uInt32: UInt32(range.lowerBound))
+        buffer.write(uInt32: UInt32(range.upperBound))
+    }
+}
+
+func deserializeFrameMapping(buffer: ReadBuffer) -> SerializedFrameMapping {
+    var frameMapping = SerializedFrameMapping()
+    
+    frameMapping.size = buffer.readSize()
+    frameMapping.frameCount = Int(buffer.readUInt32())
+    frameMapping.framesPerSecond = Int(buffer.readUInt32())
+    for _ in 0 ..< frameMapping.frameCount {
+        let frame = Int(buffer.readUInt32())
+        let lowerBound = Int(buffer.readUInt32())
+        let upperBound = Int(buffer.readUInt32())
+        frameMapping.frameRanges[frame] = lowerBound ..< upperBound
+    }
+    
+    return frameMapping
+}

@@ -332,7 +332,6 @@ typedef struct
 
 fragment ColorOut stroke_fragment_shader(
     StrokeVertexOut in [[stage_in]],
-    ShapeOut colorIn,
     device const float4 &color [[buffer(0)]]
 ) {
     ColorOut out;

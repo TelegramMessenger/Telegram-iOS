@@ -52,16 +52,203 @@ private func generateTexture(device: MTLDevice, sideSize: Int, msaaSampleCount: 
     return device.makeTexture(descriptor: textureDescriptor)!
 }
 
+private final class AnimationCacheState {
+    static let shared = AnimationCacheState()
+    
+    private final class QueuedTask {
+        let path: String
+        let cachePath: String
+        var isRunning: Bool
+        
+        init(path: String, cachePath: String) {
+            self.path = path
+            self.cachePath = cachePath
+            self.isRunning = false
+        }
+    }
+    
+    private final class Impl {
+        private let queue: Queue
+        private var queuedTasks: [QueuedTask] = []
+        private var finishedTasks: [String] = []
+        
+        init(queue: Queue) {
+            self.queue = queue
+        }
+        
+        func enqueue(path: String, cachePath: String) {
+            if self.finishedTasks.contains(path) {
+                return
+            }
+            if self.queuedTasks.contains(where: { $0.path == path }) {
+                return
+            }
+            self.queuedTasks.append(QueuedTask(path: path, cachePath: cachePath))
+            while self.queuedTasks.count > 4 {
+                if let index = self.queuedTasks.firstIndex(where: { !$0.isRunning }) {
+                    self.queuedTasks.remove(at: index)
+                } else {
+                    break
+                }
+            }
+            self.update()
+        }
+        
+        private func update() {
+            while true {
+                var runningTaskCount = 0
+                for task in self.queuedTasks {
+                    if task.isRunning {
+                        runningTaskCount += 1
+                    }
+                }
+                if runningTaskCount >= 2 {
+                    break
+                }
+                guard let index = self.queuedTasks.firstIndex(where: { !$0.isRunning }) else {
+                    break
+                }
+                self.run(task: self.queuedTasks[index])
+            }
+        }
+        
+        private func run(task: QueuedTask) {
+            task.isRunning = true
+            let path = task.path
+            let cachePath = task.cachePath
+            let queue = self.queue
+            Queue.concurrentDefaultQueue().async { [weak self, weak task] in
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                    let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
+                    if let lottieAnimation = LottieAnimation(data: decompressedData) {
+                        let animationContainer = LottieAnimationContainer(animation: lottieAnimation)
+                        
+                        let startTime = CFAbsoluteTimeGetCurrent()
+                        
+                        let buffer = WriteBuffer()
+                        var frameMapping = SerializedFrameMapping()
+                        frameMapping.size = animationContainer.animation.size
+                        frameMapping.frameCount = animationContainer.animation.frameCount
+                        frameMapping.framesPerSecond = animationContainer.animation.framesPerSecond
+                        for i in 0 ..< frameMapping.frameCount {
+                            frameMapping.frameRanges[i] = 0 ..< 1
+                        }
+                        serializeFrameMapping(buffer: buffer, frameMapping: frameMapping)
+                        
+                        for i in 0 ..< animationContainer.animation.frameCount {
+                            animationContainer.update(i)
+                            let frameRangeStart = buffer.length
+                            serializeNode(buffer: buffer, node: animationContainer.getCurrentRenderTree(for: CGSize(width: 512.0, height: 512.0)))
+                            let frameRangeEnd = buffer.length
+                            frameMapping.frameRanges[i] = frameRangeStart ..< frameRangeEnd
+                        }
+                        
+                        let previousLength = buffer.length
+                        buffer.length = 0
+                        serializeFrameMapping(buffer: buffer, frameMapping: frameMapping)
+                        buffer.length = previousLength
+                        
+                        buffer.trim()
+                        let deltaTime = (CFAbsoluteTimeGetCurrent() - startTime)
+                        let zippedData = TGGZipData(buffer.data, 1.0)
+                        print("Serialized in \(deltaTime * 1000.0) size: \(zippedData.count / (1 * 1024 * 1024)) MB")
+                        
+                        let _ = try? zippedData.write(to: URL(fileURLWithPath: cachePath), options: .atomic)
+                    }
+                }
+                
+                queue.async {
+                    guard let self, let task else {
+                        return
+                    }
+                    self.finishedTasks.append(task.path)
+                    guard let index = self.queuedTasks.firstIndex(where: { $0 === task }) else {
+                        return
+                    }
+                    self.queuedTasks.remove(at: index)
+                    self.update()
+                }
+            }
+        }
+    }
+    
+    private let queue = Queue(name: "AnimationCacheState", qos: .default)
+    private let impl: QueueLocalObject<Impl>
+    
+    init() {
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return Impl(queue: queue)
+        })
+    }
+    
+    func enqueue(path: String, cachePath: String) {
+        self.impl.with { impl in
+            impl.enqueue(path: path, cachePath: cachePath)
+        }
+    }
+}
+
 final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
-    private var animationContainer: LottieAnimationContainer?
+    enum Content {
+        case serialized(frameMapping: SerializedFrameMapping, data: Data)
+        case animation(LottieAnimationContainer)
+        
+        var size: CGSize {
+            switch self {
+            case let .serialized(frameMapping, _):
+                return frameMapping.size
+            case let .animation(animation):
+                return animation.animation.size
+            }
+        }
+        
+        var frameCount: Int {
+            switch self {
+            case let .serialized(frameMapping, _):
+                return frameMapping.frameCount
+            case let .animation(animation):
+                return animation.animation.frameCount
+            }
+        }
+        
+        var framesPerSecond: Int {
+            switch self {
+            case let .serialized(frameMapping, _):
+                return frameMapping.framesPerSecond
+            case let .animation(animation):
+                return animation.animation.framesPerSecond
+            }
+        }
+        
+        func updateAndGetRenderNode(frameIndex: Int) -> LottieRenderNode? {
+            switch self {
+            case let .serialized(frameMapping, data):
+                guard let frameRange = frameMapping.frameRanges[frameIndex] else {
+                    return nil
+                }
+                if frameRange.lowerBound < 0 || frameRange.upperBound > data.count {
+                    return nil
+                }
+                return deserializeNode(buffer: ReadBuffer(data: data.subdata(in: frameRange)))
+            case let .animation(animation):
+                animation.update(frameIndex)
+                return animation.getCurrentRenderTree(for: CGSize(width: 512.0, height: 512.0))
+            }
+        }
+    }
+    
+    private var content: Content?
     var frameIndex: Int = 0
     
     var internalData: MetalEngineSubjectInternalData?
     
+    private let msaaSampleCount = 4
     private var renderBufferHeap: MTLHeap?
     private var offscreenHeap: MTLHeap?
     
     private var multisampleTextureQueue: [MTLTexture] = []
+    private var outTextureQueue: [MTLTexture] = []
     
     private let currentBezierIndicesBuffer = PathRenderBuffer()
     private let currentBuffer = PathRenderBuffer()
@@ -70,7 +257,7 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         let pathRenderContext: PathRenderContext
         
         init?(device: MTLDevice) {
-            guard let pathRenderContext = PathRenderContext(device: device, msaaSampleCount: 1) else {
+            guard let pathRenderContext = PathRenderContext(device: device, msaaSampleCount: 4) else {
                 return nil
             }
             self.pathRenderContext = pathRenderContext
@@ -99,21 +286,8 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         }
     }
     
-    init(animationContainer: LottieAnimationContainer) {
-        self.animationContainer = animationContainer
-        
-        #if DEBUG && false
-        let startTime = CFAbsoluteTimeGetCurrent()
-        let buffer = WriteBuffer()
-        for i in 0 ..< animationContainer.animation.frameCount {
-            animationContainer.update(i)
-            serializeNode(buffer: buffer, node: animationContainer.getCurrentRenderTree(for: CGSize(width: 512.0, height: 512.0)))
-        }
-        buffer.trim()
-        let deltaTime = (CFAbsoluteTimeGetCurrent() - startTime)
-        let zippedData = TGGZipData(buffer.data, 1.0)
-        print("Serialized in \(deltaTime * 1000.0) size: \(zippedData.count / (1 * 1024 * 1024)) MB")
-        #endif
+    init(content: Content) {
+        self.content = content
         
         super.init()
         
@@ -200,14 +374,17 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         }
         
         let size = CGSize(width: 800.0, height: 800.0)
-        let msaaSampleCount = 1
+        let msaaSampleCount = self.msaaSampleCount
         
         let renderSpec = RenderLayerSpec(size: RenderSize(width: Int(size.width), height: Int(size.height)))
         
-        guard let animationContainer = self.animationContainer else {
+        guard let content = self.content else {
             return
         }
-        animationContainer.update(self.frameIndex)
+        
+        guard let node = content.updateAndGetRenderNode(frameIndex: self.frameIndex) else {
+            return
+        }
         
         func defaultTransformForSize(_ size: CGSize) -> CATransform3D {
             var transform = CATransform3DIdentity
@@ -222,7 +399,7 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         let canvasSize = size
         var transform = defaultTransformForSize(canvasSize)
         
-        concat(CATransform3DMakeScale(canvasSize.width / animationContainer.animation.size.width, canvasSize.height / animationContainer.animation.size.height, 1.0))
+        concat(CATransform3DMakeScale(canvasSize.width / content.size.width, canvasSize.height / content.size.height, 1.0))
         
         var transformStack: [CATransform3D] = []
         
@@ -392,21 +569,20 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         
         self.currentBuffer.reset()
         self.currentBezierIndicesBuffer.reset()
-        let frameState = PathFrameState(width: Int(size.width), height: Int(size.height), msaaSampleCount: 1, buffer: self.currentBuffer, bezierDataBuffer: self.currentBezierIndicesBuffer)
+        let frameState = PathFrameState(width: Int(size.width), height: Int(size.height), msaaSampleCount: self.msaaSampleCount, buffer: self.currentBuffer, bezierDataBuffer: self.currentBezierIndicesBuffer)
         
-        let node = animationContainer.getCurrentRenderTree(for: CGSize(width: 512.0, height: 512.0))
         renderNode(frameState: frameState, node: node, globalSize: canvasSize, parentAlpha: 1.0)
         
         final class ComputeOutput {
             let pathRenderContext: PathRenderContext
             let renderBufferHeap: MTLHeap
-            let multisampleTexture: MTLTexture
+            let outTexture: MTLTexture
             let takenMultisampleTextures: [MTLTexture]
             
-            init(pathRenderContext: PathRenderContext, renderBufferHeap: MTLHeap, multisampleTexture: MTLTexture, takenMultisampleTextures: [MTLTexture]) {
+            init(pathRenderContext: PathRenderContext, renderBufferHeap: MTLHeap, outTexture: MTLTexture, takenMultisampleTextures: [MTLTexture]) {
                 self.pathRenderContext = pathRenderContext
                 self.renderBufferHeap = renderBufferHeap
-                self.multisampleTexture = multisampleTexture
+                self.outTexture = outTexture
                 self.takenMultisampleTextures = takenMultisampleTextures
             }
         }
@@ -446,14 +622,21 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             if !self.multisampleTextureQueue.isEmpty {
                 multisampleTexture = self.multisampleTextureQueue.removeFirst()
             } else {
-                multisampleTexture = generateTexture(device: MetalEngine.shared.device, sideSize: Int(size.width), msaaSampleCount: 1)
+                multisampleTexture = generateTexture(device: MetalEngine.shared.device, sideSize: Int(size.width), msaaSampleCount: msaaSampleCount)
             }
             
             let tempTexture: MTLTexture
             if !self.multisampleTextureQueue.isEmpty {
                 tempTexture = self.multisampleTextureQueue.removeFirst()
             } else {
-                tempTexture = generateTexture(device: MetalEngine.shared.device, sideSize: Int(size.width), msaaSampleCount: 1)
+                tempTexture = generateTexture(device: MetalEngine.shared.device, sideSize: Int(size.width), msaaSampleCount: msaaSampleCount)
+            }
+            
+            let outTexture: MTLTexture
+            if !self.outTextureQueue.isEmpty {
+                outTexture = self.outTextureQueue.removeFirst()
+            } else {
+                outTexture = generateTexture(device: MetalEngine.shared.device, sideSize: Int(size.width), msaaSampleCount: 1)
             }
             
             let renderPassDescriptor = MTLRenderPassDescriptor()
@@ -461,9 +644,8 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             if msaaSampleCount == 1 {
                 renderPassDescriptor.colorAttachments[0].storeAction = .store
             } else {
-                //renderPassDescriptor.colorAttachments[0].resolveTexture = self.currentDrawable?.texture
+                renderPassDescriptor.colorAttachments[0].resolveTexture = outTexture
                 renderPassDescriptor.colorAttachments[0].storeAction = .multisampleResolve
-                preconditionFailure()
             }
             renderPassDescriptor.colorAttachments[0].loadAction = .clear
             renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
@@ -513,11 +695,13 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             
             renderEncoder.endEncoding()
             
+            let takenMultisampleTextures: [MTLTexture] = [multisampleTexture, tempTexture]
+            
             return ComputeOutput(
                 pathRenderContext: state.pathRenderContext,
                 renderBufferHeap: renderBufferHeap,
-                multisampleTexture: multisampleTexture,
-                takenMultisampleTextures: [multisampleTexture, tempTexture]
+                outTexture: outTexture,
+                takenMultisampleTextures: takenMultisampleTextures
             )
         })
         
@@ -531,10 +715,11 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width), Float(effectiveRect.height))
             encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
             
-            encoder.setFragmentTexture(computeOutput.multisampleTexture, index: 0)
+            encoder.setFragmentTexture(computeOutput.outTexture, index: 0)
             encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
             
             let takenMultisampleTextures = computeOutput.takenMultisampleTextures
+            let outTexture = computeOutput.outTexture
             customCompletion = {
                 guard let self else {
                     return
@@ -542,6 +727,7 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
                 for texture in takenMultisampleTextures {
                     self.multisampleTextureQueue.append(texture)
                 }
+                self.outTextureQueue.append(outTexture)
             }
         })
         
@@ -563,7 +749,7 @@ public final class LottieMetalAnimatedStickerNode: ASDisplayNode, AnimatedSticke
     public var playToCompletionOnStop: Bool = false
     
     private var layoutSize: CGSize?
-    private var lottieInstance: LottieAnimationContainer?
+    private var lottieContent: LottieContentLayer.Content?
     private var renderLayer: LottieContentLayer?
     
     private var displayLinkSubscription: SharedDisplayLinkDriver.Link?
@@ -583,8 +769,8 @@ public final class LottieMetalAnimatedStickerNode: ASDisplayNode, AnimatedSticke
     }
     public var currentFrameCount: Int {
         get {
-            if let lottieInstance = self.lottieInstance {
-                return Int(lottieInstance.animation.frameCount)
+            if let lottieContent = self.lottieContent {
+                return Int(lottieContent.frameCount)
             } else {
                 return 0
             }
@@ -656,51 +842,85 @@ public final class LottieMetalAnimatedStickerNode: ASDisplayNode, AnimatedSticke
         self.playbackSize = CGSize(width: CGFloat(width), height: CGFloat(height))
         self.playbackMode = playbackMode
         
+        var cachePathPrefix: String?
+        if case let .direct(cachePathPrefixValue) = mode {
+            cachePathPrefix = cachePathPrefixValue
+        }
+        
         self.sourceDisposable = (source.directDataPath(attemptSynchronously: false)
         |> filter { $0 != nil }
         |> take(1)
         |> deliverOnMainQueue).startStrict(next: { [weak self] path in
-            guard let self, let path = path else {
-                return
-            }
-            
-            if source.isVideo {
-            } else {
-                guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+            Queue.concurrentDefaultQueue().async {
+                guard let path else {
                     return
                 }
                 
-                let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
-                guard let lottieAnimation = LottieAnimation(data: decompressedData) else {
-                    print("Could not load sticker data")
-                    return
+                var serializedFrames: (SerializedFrameMapping, Data)?
+                var cachePathValue: String?
+                if let cachePathPrefix {
+                    let cachePath = cachePathPrefix + "-metal1"
+                    cachePathValue = cachePath
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: cachePath), options: .mappedIfSafe) {
+                        if let unzippedData = TGGUnzipData(data, 32 * 1024 * 1024) {
+                            let serializedFrameMapping = deserializeFrameMapping(buffer: ReadBuffer(data: unzippedData))
+                            serializedFrames = (serializedFrameMapping, unzippedData)
+                        }
+                    }
                 }
-                let lottieInstance = LottieAnimationContainer(animation: lottieAnimation)
-                self.setupPlayback(lottieInstance: lottieInstance)
+                
+                let content: LottieContentLayer.Content
+                if let serializedFrames {
+                    content = .serialized(frameMapping: serializedFrames.0, data: serializedFrames.1)
+                } else {
+                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+                        return
+                    }
+                    let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
+                    guard let lottieAnimation = LottieAnimation(data: decompressedData) else {
+                        print("Could not load sticker data")
+                        return
+                    }
+                    
+                    let lottieInstance = LottieAnimationContainer(animation: lottieAnimation)
+                    
+                    if let cachePathValue {
+                        AnimationCacheState.shared.enqueue(path: path, cachePath: cachePathValue)
+                    }
+                    
+                    content = .animation(lottieInstance)
+                }
+                
+                Queue.mainQueue().async {
+                    guard let self else {
+                        return
+                    }
+                    self.setupPlayback(lottieContent: content, cachePathPrefix: cachePathPrefix)
+                }
             }
         }).strict()
     }
     
     private func updatePlayback() {
-        let isPlaying = self.visibility && self.lottieInstance != nil
+        let isPlaying = self.visibility && self.lottieContent != nil
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             self.isPlayingChanged(self.isPlaying)
         }
         
-        if isPlaying, let lottieInstance = self.lottieInstance {
+        if isPlaying, let lottieContent = self.lottieContent {
             if self.displayLinkSubscription == nil {
                 let fps: Int
-                if lottieInstance.animation.framesPerSecond == 30 {
+                if lottieContent.framesPerSecond == 30 {
                     fps = 30
                 } else {
                     fps = 60
                 }
                 self.displayLinkSubscription = SharedDisplayLinkDriver.shared.add(framesPerSecond: .fps(fps), { [weak self] deltaTime in
-                    guard let self, let lottieInstance = self.lottieInstance, let renderLayer = self.renderLayer else {
+                    guard let self, let lottieContent = self.lottieContent, let renderLayer = self.renderLayer else {
                         return
                     }
-                    if renderLayer.frameIndex == lottieInstance.animation.frameCount - 1 {
+                    if renderLayer.frameIndex == lottieContent.frameCount - 1 {
                         switch self.playbackMode {
                         case .loop:
                             self.completed(false)
@@ -726,7 +946,7 @@ public final class LottieMetalAnimatedStickerNode: ASDisplayNode, AnimatedSticke
                         }
                     }
                     
-                    self.frameIndex = (self.frameIndex + 1) % lottieInstance.animation.frameCount
+                    self.frameIndex = (self.frameIndex + 1) % lottieContent.frameCount
                     renderLayer.frameIndex = self.frameIndex
                     renderLayer.setNeedsUpdate()
                 })
@@ -738,54 +958,10 @@ public final class LottieMetalAnimatedStickerNode: ASDisplayNode, AnimatedSticke
         }
     }
     
-    private func advanceFrameIfPossible() {
-        /*var frameCount: Int?
-        if let lottieInstance = self.lottieInstance {
-            frameCount = Int(lottieInstance.frameCount)
-        } else if let videoSource = self.videoSource {
-            frameCount = Int(videoSource.frameCount)
-        }
-        guard let frameCount = frameCount else {
-            return
-        }
+    private func setupPlayback(lottieContent: LottieContentLayer.Content, cachePathPrefix: String?) {
+        self.lottieContent = lottieContent
         
-        if self.frameIndex == frameCount - 1 {
-            switch self.playbackMode {
-            case .loop:
-                self.completed(false)
-            case let .count(count):
-                if count <= 1 {
-                    if !self.didComplete {
-                        self.didComplete = true
-                        self.completed(true)
-                    }
-                    return
-                } else {
-                    self.playbackMode = .count(count - 1)
-                    self.completed(false)
-                }
-            case .once:
-                if !self.didComplete {
-                    self.didComplete = true
-                    self.completed(true)
-                }
-                return
-            case .still:
-                break
-            }
-        }
-        
-        let nextFrameIndex = (self.frameIndex + 1) % frameCount
-        self.frameIndex = nextFrameIndex
-        
-        self.updateFrameImageIfNeeded()
-        self.updateLoadFrameTasks()*/
-    }
-    
-    private func setupPlayback(lottieInstance: LottieAnimationContainer) {
-        self.lottieInstance = lottieInstance
-        
-        let renderLayer = LottieContentLayer(animationContainer: lottieInstance)
+        let renderLayer = LottieContentLayer(content: lottieContent)
         self.renderLayer = renderLayer
         if let layoutSize = self.layoutSize {
             renderLayer.frame = CGRect(origin: CGPoint(), size: layoutSize)

@@ -586,8 +586,9 @@ final class ChatSendMessageContextScreenComponent: Component {
                             standaloneReactionAnimation.updateLayout(size: effectFrame.size)
                             self.addSubnode(standaloneReactionAnimation)
                             
+                            let pathPrefix = component.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(customEffectResource.id)
                             let source = AnimatedStickerResourceSource(account: component.context.account, resource: customEffectResource, fitzModifier: nil)
-                            standaloneReactionAnimation.setup(source: source, width: Int(effectSize.width), height: Int(effectSize.height), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                            standaloneReactionAnimation.setup(source: source, width: Int(effectSize.width), height: Int(effectSize.height), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
                             standaloneReactionAnimation.completed = { [weak self, weak standaloneReactionAnimation] _ in
                                 guard let self else {
                                     return

@@ -5826,11 +5826,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             let additionalAnimationNode = LottieMetalAnimatedStickerNode()
             additionalAnimationNode.updateLayout(size: animationSize)
-            additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 1.6), height: Int(animationSize.height * 1.6), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
+            additionalAnimationNode.setup(source: source, width: Int(animationSize.width), height: Int(animationSize.height), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
             var animationFrame: CGRect
             if isStickerEffect {
-                let offsetScale: CGFloat = 0.5
-                animationFrame = animationNodeFrame.offsetBy(dx: incomingMessage ? animationNodeFrame.width * offsetScale : -animationNodeFrame.width * offsetScale, dy: -25.0)
+                let offsetScale: CGFloat = 0.3
+                animationFrame = animationNodeFrame.offsetBy(dx: incomingMessage ? animationNodeFrame.width * offsetScale : -animationNodeFrame.width * offsetScale, dy: -10.0)
             } else {
                 animationFrame = animationNodeFrame.insetBy(dx: -animationNodeFrame.width, dy: -animationNodeFrame.height)
                     .offsetBy(dx: incomingMessage ? animationNodeFrame.width - 10.0 : -animationNodeFrame.width + 10.0, dy: 0.0)
