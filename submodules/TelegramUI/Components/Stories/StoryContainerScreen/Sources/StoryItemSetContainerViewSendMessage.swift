@@ -1159,7 +1159,7 @@ final class StoryItemSetContainerSendMessage {
         controller.present(shareController, in: .window(.root))
     }
     
-    func performTranslateTextAction(view: StoryItemSetContainerComponent.View, text: String) {
+    func performTranslateTextAction(view: StoryItemSetContainerComponent.View, text: String, entities: [MessageTextEntity]) {
         guard let component = view.component else {
             return
         }
@@ -1190,7 +1190,7 @@ final class StoryItemSetContainerSendMessage {
             
             let _ = ApplicationSpecificNotice.incrementTranslationSuggestion(accountManager: component.context.sharedContext.accountManager, timestamp: Int32(Date().timeIntervalSince1970)).start()
             
-            let translateController = TranslateScreen(context: component.context, forceTheme: defaultDarkPresentationTheme, text: text, canCopy: true, fromLanguage: language, ignoredLanguages: translationSettings.ignoredLanguages)
+            let translateController = TranslateScreen(context: component.context, forceTheme: defaultDarkPresentationTheme, text: text, entities: entities, canCopy: true, fromLanguage: language, ignoredLanguages: translationSettings.ignoredLanguages)
             translateController.pushController = { [weak view] c in
                 guard let view, let component = view.component else {
                     return

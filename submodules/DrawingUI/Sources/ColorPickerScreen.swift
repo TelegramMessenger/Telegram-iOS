@@ -591,11 +591,15 @@ final class ColorGridComponent: Component {
             else {
                 return nil
             }
-            let row = Int(point.y / size.height * 10.0)
-            let col = Int(point.x / size.width * 12.0)
+            let row = max(0, min(10, Int(point.y / size.height * 10.0)))
+            let col = max(0, min(12, Int(point.x / size.width * 12.0)))
             
             let index = row * 12 + col
-            return DrawingColor(rgb: palleteColors[index])
+            if index < palleteColors.count {
+                return DrawingColor(rgb: palleteColors[index])
+            } else {
+                return DrawingColor(rgb: 0x000000)
+            }
         }
         
         @objc func handlePress(_ gestureRecognizer: UILongPressGestureRecognizer) {

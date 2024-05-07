@@ -84,13 +84,18 @@ func _internal_translate_texts(network: Network, texts: [(String, [MessageTextEn
     }
 }
 
-
-func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, TranslationError> {
-    guard let peerId = messageIds.first?.peerId else {
-        return .never()
+func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Never, TranslationError> {
+    var signals: [Signal<Void, TranslationError>] = []
+    for (peerId, messageIds) in messagesIdsGroupedByPeerId(messageIds) {
+        signals.append(_internal_translateMessagesByPeerId(account: account, peerId: peerId, messageIds: messageIds, toLang: toLang))
     }
+    return combineLatest(signals)
+    |> ignoreValues
+}
+
+private func _internal_translateMessagesByPeerId(account: Account, peerId: EnginePeer.Id, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, TranslationError> {
     return account.postbox.transaction { transaction -> (Api.InputPeer?, [Message]) in
-        return (transaction.getPeer(peerId).flatMap(apiInputPeer), messageIds.compactMap({ transaction.getMessage($0)  }))
+        return (transaction.getPeer(peerId).flatMap(apiInputPeer), messageIds.compactMap({ transaction.getMessage($0) }))
     }
     |> castError(TranslationError.self)
     |> mapToSignal { (inputPeer, messages) -> Signal<Void, TranslationError> in
@@ -110,6 +115,9 @@ func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id
             texts.append((poll.text, poll.textEntities))
             for option in poll.options {
                 texts.append((option.text, option.entities))
+            }
+            if let solution = poll.results.solution {
+                texts.append((solution.text, solution.entities))
             }
             return _internal_translate_texts(network: account.network, texts: texts, toLang: toLang)
         }
@@ -167,20 +175,34 @@ func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id
                 if !pollResults.isEmpty {
                     for (i, poll) in polls.enumerated() {
                         let result = pollResults[i]
-                        transaction.updateMessage(poll.1, update: { currentMessage in
-                            let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
-                            var attributes = currentMessage.attributes.filter { !($0 is TranslationMessageAttribute) }
-                            var attrOptions: [TranslationMessageAttribute.Additional] = []
-                            for (i, _) in poll.0.options.enumerated() {
-                                let translated = result[i + 1]
-                                attrOptions.append(.init(text: translated.0, entities: translated.1))
-                            }
-                            let updatedAttribute: TranslationMessageAttribute = TranslationMessageAttribute(text: result[0].0, entities: result[0].1, additional: attrOptions, toLang: toLang)
-                            attributes.append(updatedAttribute)
-                            
-                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
-                        })
-
+                        if !result.isEmpty {
+                            transaction.updateMessage(poll.1, update: { currentMessage in
+                                let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                                var attributes = currentMessage.attributes.filter { !($0 is TranslationMessageAttribute) }
+                                var attrOptions: [TranslationMessageAttribute.Additional] = []
+                                for (i, _) in poll.0.options.enumerated() {
+                                    var translated = result.count > i + 1 ? result[i + 1] : (poll.0.options[i].text, poll.0.options[i].entities)
+                                    if translated.0.isEmpty {
+                                        translated = (poll.0.options[i].text, poll.0.options[i].entities)
+                                    }
+                                    attrOptions.append(.init(text: translated.0, entities: translated.1))
+                                }
+                                
+                                let solution: TranslationMessageAttribute.Additional?
+                                if result.count > 1 + poll.0.options.count, !result[result.count - 1].0.isEmpty {
+                                    solution = .init(text: result[result.count - 1].0, entities: result[result.count - 1].1)
+                                } else {
+                                    solution = nil
+                                }
+                                
+                                let title = result[0].0.isEmpty ? (poll.0.text, poll.0.textEntities) : result[0]
+                                
+                                let updatedAttribute: TranslationMessageAttribute = TranslationMessageAttribute(text: title.0, entities: title.1, additional: attrOptions, pollSolution: solution, toLang: toLang)
+                                attributes.append(updatedAttribute)
+                                
+                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                            })
+                        }
                     }
                 }
             }

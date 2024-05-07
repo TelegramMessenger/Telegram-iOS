@@ -251,9 +251,46 @@ func openResolvedUrlImpl(
             navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, sourceLocation: InstantPageSourceLocation(userLocation: .other, peerType: .channel), anchor: anchor))
         case let .join(link):
             dismissInput()
-            present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
-                openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))
-            }, parentNavigationController: navigationController), nil)
+        
+            if let progress {
+                let progressSignal = Signal<Never, NoError> { subscriber in
+                    progress.set(.single(true))
+                    return ActionDisposable {
+                        Queue.mainQueue().async() {
+                            progress.set(.single(false))
+                        }
+                    }
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(0.1, queue: Queue.mainQueue())
+                let progressDisposable = progressSignal.startStrict()
+                
+                var signal = context.engine.peers.joinLinkInformation(link)
+                signal = signal
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+            
+                let _ = (signal
+                |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] resolvedState in
+                    switch resolvedState {
+                    case let .alreadyJoined(peer):
+                        openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                    case let .peek(peer, deadline):
+                        openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: ChatPeekTimeout(deadline: deadline, linkData: link)))
+                    default:
+                        present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
+                            openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))
+                        }, parentNavigationController: navigationController, resolvedState: resolvedState), nil)
+                    }
+                })
+            } else {
+                present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
+                    openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))
+                }, parentNavigationController: navigationController), nil)
+            }
         case let .localization(identifier):
             dismissInput()
             present(LanguageLinkPreviewController(context: context, identifier: identifier), nil)

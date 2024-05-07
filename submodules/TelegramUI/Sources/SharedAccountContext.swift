@@ -1759,7 +1759,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
         }, openWebView: { _, _, _, _ in
-        }, activateAdAction: { _ in
+        }, activateAdAction: { _, _ in
         }, openRequestedPeerSelection: { _, _, _, _ in
         }, saveMediaToFiles: { _ in
         }, openNoAdsDemo: {
