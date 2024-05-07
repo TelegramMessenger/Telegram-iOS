@@ -43,8 +43,8 @@ public:
         std::shared_ptr<AssetLibrary> assetLibrary_,
         std::optional<std::vector<Marker>> markers_,
         std::optional<std::vector<FitzModifier>> fitzModifiers_,
-        std::optional<json11::Json> meta_,
-        std::optional<json11::Json> comps_
+        std::optional<lottiejson11::Json> meta_,
+        std::optional<lottiejson11::Json> comps_
     ) :
     startFrame(startFrame_),
     endFrame(endFrame_),
@@ -75,7 +75,7 @@ public:
     Animation(const Animation&) = delete;
     Animation& operator=(Animation&) = delete;
     
-    static std::shared_ptr<Animation> fromJson(json11::Json::object const &json) noexcept(false) {
+    static std::shared_ptr<Animation> fromJson(lottiejson11::Json::object const &json) noexcept(false) {
         auto name = getOptionalString(json, "nm");
         auto version = getString(json, "v");
         
@@ -168,14 +168,14 @@ public:
         );
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::object result;
         
         if (name.has_value()) {
             result.insert(std::make_pair("nm", name.value()));
         }
         
-        result.insert(std::make_pair("v", json11::Json(version)));
+        result.insert(std::make_pair("v", lottiejson11::Json(version)));
         
         if (tgs.has_value()) {
             result.insert(std::make_pair("tgs", tgs.value()));
@@ -184,34 +184,34 @@ public:
         if (type.has_value()) {
             switch (type.value()) {
                 case CoordinateSpace::Type2d:
-                    result.insert(std::make_pair("ddd", json11::Json(0)));
+                    result.insert(std::make_pair("ddd", lottiejson11::Json(0)));
                     break;
                 case CoordinateSpace::Type3d:
-                    result.insert(std::make_pair("ddd", json11::Json(1)));
+                    result.insert(std::make_pair("ddd", lottiejson11::Json(1)));
                     break;
             }
         }
         
-        result.insert(std::make_pair("ip", json11::Json(startFrame)));
-        result.insert(std::make_pair("op", json11::Json(endFrame)));
-        result.insert(std::make_pair("fr", json11::Json(framerate)));
-        result.insert(std::make_pair("w", json11::Json(width)));
-        result.insert(std::make_pair("h", json11::Json(height)));
+        result.insert(std::make_pair("ip", lottiejson11::Json(startFrame)));
+        result.insert(std::make_pair("op", lottiejson11::Json(endFrame)));
+        result.insert(std::make_pair("fr", lottiejson11::Json(framerate)));
+        result.insert(std::make_pair("w", lottiejson11::Json(width)));
+        result.insert(std::make_pair("h", lottiejson11::Json(height)));
         
-        json11::Json::array layersArray;
+        lottiejson11::Json::array layersArray;
         for (const auto &layer : layers) {
-            json11::Json::object layerJson;
+            lottiejson11::Json::object layerJson;
             layer->toJson(layerJson);
             layersArray.push_back(layerJson);
         }
-        result.insert(std::make_pair("layers", json11::Json(layersArray)));
+        result.insert(std::make_pair("layers", lottiejson11::Json(layersArray)));
         
         if (glyphs.has_value()) {
-            json11::Json::array glyphArray;
+            lottiejson11::Json::array glyphArray;
             for (const auto &glyph : glyphs.value()) {
                 glyphArray.push_back(glyph->toJson());
             }
-            result.insert(std::make_pair("chars", json11::Json(glyphArray)));
+            result.insert(std::make_pair("chars", lottiejson11::Json(glyphArray)));
         }
         
         if (fonts.has_value()) {
@@ -223,19 +223,19 @@ public:
         }
         
         if (markers.has_value()) {
-            json11::Json::array markerArray;
+            lottiejson11::Json::array markerArray;
             for (const auto &marker : markers.value()) {
                 markerArray.push_back(marker.toJson());
             }
-            result.insert(std::make_pair("markers", json11::Json(markerArray)));
+            result.insert(std::make_pair("markers", lottiejson11::Json(markerArray)));
         }
         
         if (fitzModifiers.has_value()) {
-            json11::Json::array fitzModifierArray;
+            lottiejson11::Json::array fitzModifierArray;
             for (const auto &fitzModifier : fitzModifiers.value()) {
                 fitzModifierArray.push_back(fitzModifier.toJson());
             }
-            result.insert(std::make_pair("fitz", json11::Json(fitzModifierArray)));
+            result.insert(std::make_pair("fitz", lottiejson11::Json(fitzModifierArray)));
         }
         
         if (meta.has_value()) {
@@ -305,8 +305,8 @@ public:
     
     std::optional<std::vector<FitzModifier>> fitzModifiers;
     
-    std::optional<json11::Json> meta;
-    std::optional<json11::Json> comps;
+    std::optional<lottiejson11::Json> meta;
+    std::optional<lottiejson11::Json> comps;
 };
 
 }

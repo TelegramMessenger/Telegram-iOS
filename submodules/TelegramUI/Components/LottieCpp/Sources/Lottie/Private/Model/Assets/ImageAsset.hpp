@@ -23,7 +23,7 @@ public:
     
     virtual ~ImageAsset() = default;
     
-    explicit ImageAsset(json11::Json::object const &json) noexcept(false) :
+    explicit ImageAsset(lottiejson11::Json::object const &json) noexcept(false) :
     Asset(json) {
         name = getString(json, "p");
         directory = getString(json, "u");
@@ -34,7 +34,7 @@ public:
         _t = getOptionalString(json, "t");
     }
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         Asset::toJson(json);
         
         json.insert(std::make_pair("p", name));

@@ -7,7 +7,7 @@ namespace lottie {
 
 class FitzModifier {
 public:
-    explicit FitzModifier(json11::Json::object const &json) noexcept(false) {
+    explicit FitzModifier(lottiejson11::Json::object const &json) noexcept(false) {
         original = getInt(json, "o");
         type12 = getOptionalInt(json, "f12");
         type3 = getOptionalInt(json, "f3");
@@ -16,8 +16,8 @@ public:
         type6 = getOptionalInt(json, "f6");
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::object result;
         
         result.insert(std::make_pair("o", (double)original));
         if (type12.has_value()) {

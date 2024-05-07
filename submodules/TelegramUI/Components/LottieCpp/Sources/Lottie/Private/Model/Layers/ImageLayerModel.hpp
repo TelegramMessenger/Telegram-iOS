@@ -9,7 +9,7 @@ namespace lottie {
 /// A layer that holds an image.
 class ImageLayerModel: public LayerModel {
 public:
-    explicit ImageLayerModel(json11::Json::object const &json) noexcept(false) :
+    explicit ImageLayerModel(lottiejson11::Json::object const &json) noexcept(false) :
     LayerModel(json) {
         referenceID = getString(json, "refId");
         
@@ -18,7 +18,7 @@ public:
     
     virtual ~ImageLayerModel() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         LayerModel::toJson(json);
         
         json.insert(std::make_pair("refId", referenceID));

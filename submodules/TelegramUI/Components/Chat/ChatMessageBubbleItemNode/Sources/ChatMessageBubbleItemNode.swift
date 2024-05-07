@@ -5793,7 +5793,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         let source = AnimatedStickerResourceSource(account: item.context.account, resource: resource, fitzModifier: nil)
         
-        let animationSize = CGSize(width: 180.0, height: 180.0)
+        let animationSize = CGSize(width: 380.0, height: 380.0)
         let animationNodeFrame: CGRect
         
         var messageEffectView: UIView?
@@ -5825,18 +5825,18 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
             
             let additionalAnimationNode = LottieMetalAnimatedStickerNode()
+            additionalAnimationNode.updateLayout(size: animationSize)
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 1.6), height: Int(animationSize.height * 1.6), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
             var animationFrame: CGRect
             if isStickerEffect {
-                let scale: CGFloat = 0.245
                 let offsetScale: CGFloat = 0.5
-                animationFrame = animationNodeFrame.offsetBy(dx: incomingMessage ? animationNodeFrame.width * offsetScale : -animationNodeFrame.width * offsetScale, dy: -25.0).insetBy(dx: -animationNodeFrame.width * scale, dy: -animationNodeFrame.height * scale)
+                animationFrame = animationNodeFrame.offsetBy(dx: incomingMessage ? animationNodeFrame.width * offsetScale : -animationNodeFrame.width * offsetScale, dy: -25.0)
             } else {
                 animationFrame = animationNodeFrame.insetBy(dx: -animationNodeFrame.width, dy: -animationNodeFrame.height)
                     .offsetBy(dx: incomingMessage ? animationNodeFrame.width - 10.0 : -animationNodeFrame.width + 10.0, dy: 0.0)
                 animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
             }
-                        
+            
             animationFrame = animationFrame.offsetBy(dx: 0.0, dy: self.insets.top)
             additionalAnimationNode.frame = animationFrame
             if incomingMessage {

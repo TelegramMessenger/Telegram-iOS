@@ -48,7 +48,7 @@ public:
     textFrameSize(textFrameSize_) {
     }
     
-    explicit TextDocument(json11::Json const &jsonAny) noexcept(false) :
+    explicit TextDocument(lottiejson11::Json const &jsonAny) noexcept(false) :
     text(""),
     fontSize(0.0),
     fontFamily(""),
@@ -59,7 +59,7 @@ public:
             throw LottieParsingException();
         }
         
-        json11::Json::object const &json = jsonAny.object_items();
+        lottiejson11::Json::object const &json = jsonAny.object_items();
         
         text = getString(json, "t");
         fontSize = getDouble(json, "s");
@@ -103,8 +103,8 @@ public:
         }
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::object result;
         
         result.insert(std::make_pair("t", text));
         result.insert(std::make_pair("s", fontSize));

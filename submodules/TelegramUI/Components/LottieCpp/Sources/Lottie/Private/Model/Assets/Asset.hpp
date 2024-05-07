@@ -14,7 +14,7 @@ public:
     id(id_) {
     }
     
-    explicit Asset(json11::Json::object const &json) noexcept(false) {
+    explicit Asset(lottiejson11::Json::object const &json) noexcept(false) {
         auto idData = getAny(json, "id");
         if (idData.is_string()) {
             id = idData.string_value();
@@ -30,7 +30,7 @@ public:
     Asset(const Asset&) = delete;
     Asset& operator=(Asset&) = delete;
     
-    virtual void toJson(json11::Json::object &json) const {
+    virtual void toJson(lottiejson11::Json::object &json) const {
         json.insert(std::make_pair("id", id));
         
         if (objectName.has_value()) {

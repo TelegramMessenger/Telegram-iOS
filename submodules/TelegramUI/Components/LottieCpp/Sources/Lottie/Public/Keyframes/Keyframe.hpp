@@ -149,7 +149,7 @@ public:
     spatialOutTangent(spatialOutTangent_) {
     }
     
-    explicit KeyframeData(json11::Json const &json) noexcept(false) {
+    explicit KeyframeData(lottiejson11::Json const &json) noexcept(false) {
         if (!json.is_object()) {
             throw LottieParsingException();
         }
@@ -186,8 +186,8 @@ public:
         }
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::object result;
         
         if (startValue.has_value()) {
             result.insert(std::make_pair("s", startValue->toJson()));
@@ -240,7 +240,7 @@ public:
     /// The spacial out tangent of the vector.
     std::optional<Vector3D> spatialOutTangent;
     
-    std::optional<json11::Json> nData;
+    std::optional<lottiejson11::Json> nData;
     
     bool isHold() const {
         if (hold.has_value()) {

@@ -17,7 +17,7 @@ enum class PathDirection: int {
 /// An item that define an ellipse shape
 class Ellipse: public ShapeItem {
 public:
-    explicit Ellipse(json11::Json::object const &json) noexcept(false) :
+    explicit Ellipse(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json),
     position(KeyframeGroup<Vector3D>(Vector3D(0.0, 0.0, 0.0))),
     size(KeyframeGroup<Vector3D>(Vector3D(0.0, 0.0, 0.0))) {
@@ -43,7 +43,7 @@ public:
     
     virtual ~Ellipse() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
         if (direction.has_value()) {

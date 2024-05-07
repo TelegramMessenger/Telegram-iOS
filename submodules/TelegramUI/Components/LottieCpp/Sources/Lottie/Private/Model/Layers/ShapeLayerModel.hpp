@@ -12,7 +12,7 @@ namespace lottie {
 /// A layer that holds vector shape objects.
 class ShapeLayerModel: public LayerModel {
 public:
-    ShapeLayerModel(json11::Json::object const &json) noexcept(false) :
+    ShapeLayerModel(lottiejson11::Json::object const &json) noexcept(false) :
     LayerModel(json) {
         auto shapeItemsData = getObjectArray(json, "shapes");
         for (const auto &shapeItemData : shapeItemsData) {
@@ -22,12 +22,12 @@ public:
     
     virtual ~ShapeLayerModel() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         LayerModel::toJson(json);
         
-        json11::Json::array shapeItemArray;
+        lottiejson11::Json::array shapeItemArray;
         for (const auto &item : items) {
-            json11::Json::object itemJson;
+            lottiejson11::Json::object itemJson;
             item->toJson(itemJson);
             shapeItemArray.push_back(itemJson);
         }

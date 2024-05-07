@@ -2,7 +2,7 @@
 
 namespace lottie {
 
-LayerType parseLayerType(json11::Json::object const &json, std::string const &key) {
+LayerType parseLayerType(lottiejson11::Json::object const &json, std::string const &key) {
     if (const auto layerTypeValue = getOptionalInt(json, "ty")) {
         switch (layerTypeValue.value()) {
             case 0:

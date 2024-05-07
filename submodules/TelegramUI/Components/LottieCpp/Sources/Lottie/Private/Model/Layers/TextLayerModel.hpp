@@ -12,7 +12,7 @@ namespace lottie {
 /// A layer that holds text.
 class TextLayerModel: public LayerModel {
 public:
-    TextLayerModel(json11::Json::object const &json) :
+    TextLayerModel(lottiejson11::Json::object const &json) :
     LayerModel(json),
     text(KeyframeGroup<TextDocument>(TextDocument(
         "",
@@ -46,10 +46,10 @@ public:
     
     virtual ~TextLayerModel() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         LayerModel::toJson(json);
         
-        json11::Json::object textContainer;
+        lottiejson11::Json::object textContainer;
         textContainer.insert(std::make_pair("d", text.toJson()));
         if (_extraM.has_value()) {
             textContainer.insert(std::make_pair("m", _extraM.value()));
@@ -57,7 +57,7 @@ public:
         if (_extraP.has_value()) {
             textContainer.insert(std::make_pair("p", _extraP.value()));
         }
-        json11::Json::array animatorArray;
+        lottiejson11::Json::array animatorArray;
         for (const auto &animator : animators) {
             animatorArray.push_back(animator->toJson());
         }
@@ -73,9 +73,9 @@ public:
     /// Text animators
     std::vector<std::shared_ptr<TextAnimator>> animators;
     
-    std::optional<json11::Json> _extraM;
-    std::optional<json11::Json> _extraP;
-    std::optional<json11::Json> _extraA;
+    std::optional<lottiejson11::Json> _extraM;
+    std::optional<lottiejson11::Json> _extraP;
+    std::optional<lottiejson11::Json> _extraA;
 };
 
 }

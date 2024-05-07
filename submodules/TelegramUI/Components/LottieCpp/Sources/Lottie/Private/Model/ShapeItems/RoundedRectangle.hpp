@@ -11,7 +11,7 @@ namespace lottie {
 /// An item that define an ellipse shape
 class RoundedRectangle: public ShapeItem {
 public:
-    explicit RoundedRectangle(json11::Json::object const &json) noexcept(false) :
+    explicit RoundedRectangle(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json),
     cornerRadius(KeyframeGroup<Vector1D>(Vector1D(0.0))) {
         if (const auto directionRawValue = getOptionalInt(json, "d")) {
@@ -42,7 +42,7 @@ public:
     
     virtual ~RoundedRectangle() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
         if (direction.has_value()) {

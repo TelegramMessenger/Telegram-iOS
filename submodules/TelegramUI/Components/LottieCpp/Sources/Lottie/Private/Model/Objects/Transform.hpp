@@ -43,7 +43,7 @@ public:
     _rotationZ(rotationZ_) {
     }
     
-    explicit Transform(json11::Json::object const &json) noexcept(false) {
+    explicit Transform(lottiejson11::Json::object const &json) noexcept(false) {
         // AnchorPoint
         if (const auto anchorPointDictionary = getOptionalObject(json, "a")) {
             _anchorPoint = KeyframeGroup<Vector3D>(anchorPointDictionary.value());
@@ -112,8 +112,8 @@ public:
         _extraSk = getOptionalAny(json, "sk");
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::object result;
         
         if (_anchorPoint.has_value()) {
             result.insert(std::make_pair("a", _anchorPoint->toJson()));
@@ -139,7 +139,7 @@ public:
                 result.insert(std::make_pair("p", _position->toJson()));
                 break;
             case PositionInternalRepresentation::NestedXY:
-                json11::Json::object nestedPosition;
+                lottiejson11::Json::object nestedPosition;
                 assert(_positionX.has_value());
                 assert(_positionY.has_value());
                 assert(!_position.has_value());
@@ -258,8 +258,8 @@ private:
     
     std::optional<bool> _extra_positionS;
     std::optional<std::string> _extraTy;
-    std::optional<json11::Json> _extraSa;
-    std::optional<json11::Json> _extraSk;
+    std::optional<lottiejson11::Json> _extraSa;
+    std::optional<lottiejson11::Json> _extraSk;
 };
 
 }

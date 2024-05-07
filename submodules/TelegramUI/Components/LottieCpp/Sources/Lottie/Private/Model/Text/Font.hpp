@@ -22,7 +22,7 @@ public:
     ascent(ascent_) {
     }
     
-    explicit Font(json11::Json::object const &json) noexcept(false) {
+    explicit Font(lottiejson11::Json::object const &json) noexcept(false) {
         name = getString(json, "fName");
         familyName = getString(json, "fFamily");
         path = getOptionalString(json, "fPath");
@@ -33,8 +33,8 @@ public:
         origin = getOptionalInt(json, "origin");
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::object result;
         
         result.insert(std::make_pair("fName", name));
         result.insert(std::make_pair("fFamily", familyName));
@@ -74,7 +74,7 @@ public:
     fonts(fonts_) {
     }
     
-    explicit FontList(json11::Json::object const &json) noexcept(false) {
+    explicit FontList(lottiejson11::Json::object const &json) noexcept(false) {
         if (const auto fontsData = getOptionalObjectArray(json, "list")) {
             for (const auto &fontData : fontsData.value()) {
                 fonts.emplace_back(fontData);
@@ -82,14 +82,14 @@ public:
         }
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::array fontArray;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::array fontArray;
         
         for (const auto &font : fonts) {
             fontArray.push_back(font.toJson());
         }
         
-        json11::Json::object result;
+        lottiejson11::Json::object result;
         result.insert(std::make_pair("list", fontArray));
         return result;
     }

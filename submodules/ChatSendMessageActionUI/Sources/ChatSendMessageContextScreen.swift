@@ -16,6 +16,8 @@ import ComponentDisplayAdapters
 import WallpaperBackgroundNode
 import ReactionSelectionNode
 import EntityKeyboard
+import LottieMetal
+import TelegramAnimatedStickerNode
 
 func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIView) -> CGRect {
     let sourceWindowFrame = fromView.convert(frame, to: nil)
@@ -127,7 +129,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         
         private let messageEffectDisposable = MetaDisposable()
         private var selectedMessageEffect: AvailableMessageEffects.MessageEffect?
-        private var standaloneReactionAnimation: StandaloneReactionAnimation?
+        private var standaloneReactionAnimation: LottieMetalAnimatedStickerNode?
         
         private var presentationAnimationState: PresentationAnimationState = .initial
         private var appliedAnimationState: PresentationAnimationState = .initial
@@ -509,24 +511,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                             ReactionContextNode.randomGenericReactionEffect(context: component.context)
                         )
                         |> deliverOnMainQueue).startStrict(next: { [weak self] messageEffect, path in
-                            guard let self, let component = self.component, let environment = self.environment else {
+                            guard let self, let component = self.component else {
                                 return
                             }
                             guard let messageEffect else {
                                 return
                             }
                             let effectId = messageEffect.id
-                            
-                            let reactionItem = ReactionItem(
-                                reaction: ReactionItem.Reaction(rawValue: updateReaction.reaction),
-                                appearAnimation: messageEffect.effectSticker,
-                                stillAnimation: messageEffect.effectSticker,
-                                listAnimation: messageEffect.effectSticker,
-                                largeListAnimation: messageEffect.effectSticker,
-                                applicationAnimation: nil,
-                                largeApplicationAnimation: nil,
-                                isCustom: true
-                            )
                             
                             if let selectedMessageEffect = self.selectedMessageEffect {
                                 if selectedMessageEffect.id == effectId {
@@ -570,12 +561,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                                 })
                             }
                             
-                            let genericReactionEffect = path
-                            
-                            let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: genericReactionEffect)
-                            standaloneReactionAnimation.frame = self.bounds
-                            self.standaloneReactionAnimation = standaloneReactionAnimation
-                            self.addSubnode(standaloneReactionAnimation)
+                            let _ = path
                             
                             var customEffectResource: MediaResource?
                             if let effectAnimation = messageEffect.effectAnimation {
@@ -586,24 +572,34 @@ final class ChatSendMessageContextScreenComponent: Component {
                                     customEffectResource = effectFile.resource
                                 }
                             }
+                            guard let customEffectResource else {
+                                return
+                            }
                             
-                            standaloneReactionAnimation.animateReactionSelection(
-                                context: component.context,
-                                theme: environment.theme,
-                                animationCache: component.context.animationCache,
-                                reaction: reactionItem,
-                                customEffectResource: customEffectResource,
-                                avatarPeers: [],
-                                playHaptic: true,
-                                isLarge: true,
-                                playCenterReaction: false,
-                                targetView: targetView,
-                                addStandaloneReactionAnimation: { _ in
-                                },
-                                completion: { [weak standaloneReactionAnimation] in
-                                    standaloneReactionAnimation?.removeFromSupernode()
+                            let standaloneReactionAnimation = LottieMetalAnimatedStickerNode()
+                            standaloneReactionAnimation.isUserInteractionEnabled = false
+                            let effectSize = CGSize(width: 380.0, height: 380.0)
+                            var effectFrame = effectSize.centered(around: targetView.convert(targetView.bounds.center, to: self))
+                            effectFrame.origin.x -= effectFrame.width * 0.3
+                            self.standaloneReactionAnimation = standaloneReactionAnimation
+                            standaloneReactionAnimation.frame = effectFrame
+                            standaloneReactionAnimation.updateLayout(size: effectFrame.size)
+                            self.addSubnode(standaloneReactionAnimation)
+                            
+                            let source = AnimatedStickerResourceSource(account: component.context.account, resource: customEffectResource, fitzModifier: nil)
+                            standaloneReactionAnimation.setup(source: source, width: Int(effectSize.width), height: Int(effectSize.height), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                            standaloneReactionAnimation.completed = { [weak self, weak standaloneReactionAnimation] _ in
+                                guard let self else {
+                                    return
                                 }
-                            )
+                                if let standaloneReactionAnimation {
+                                    standaloneReactionAnimation.removeFromSupernode()
+                                    if self.standaloneReactionAnimation === standaloneReactionAnimation {
+                                        self.standaloneReactionAnimation = nil
+                                    }
+                                }
+                            }
+                            standaloneReactionAnimation.visibility = true
                         }))
                     }
                     reactionContextNode.displayTail = true

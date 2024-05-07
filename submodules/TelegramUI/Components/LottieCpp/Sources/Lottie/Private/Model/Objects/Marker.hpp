@@ -18,14 +18,14 @@ public:
     frameTime(frameTime_) {
     }
     
-    explicit Marker(json11::Json::object const &json) noexcept(false) {
+    explicit Marker(lottiejson11::Json::object const &json) noexcept(false) {
         name = getString(json, "cm");
         frameTime = getDouble(json, "tm");
         dr = getOptionalInt(json, "dr");
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::object result;
         
         result.insert(std::make_pair("cm", name));
         result.insert(std::make_pair("tm", frameTime));

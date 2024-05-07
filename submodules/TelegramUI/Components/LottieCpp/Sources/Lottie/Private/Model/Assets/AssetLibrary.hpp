@@ -22,7 +22,7 @@ public:
     precompAssets(precompAssets_) {
     }
     
-    explicit AssetLibrary(json11::Json const &json) noexcept(false) {
+    explicit AssetLibrary(lottiejson11::Json const &json) noexcept(false) {
         if (!json.is_array()) {
             throw LottieParsingException();
         }
@@ -45,11 +45,11 @@ public:
         }
     }
     
-    json11::Json::array toJson() const {
-        json11::Json::array result;
+    lottiejson11::Json::array toJson() const {
+        lottiejson11::Json::array result;
         
         for (const auto &asset : assetList) {
-            json11::Json::object assetJson;
+            lottiejson11::Json::object assetJson;
             asset->toJson(assetJson);
             result.push_back(assetJson);
         }

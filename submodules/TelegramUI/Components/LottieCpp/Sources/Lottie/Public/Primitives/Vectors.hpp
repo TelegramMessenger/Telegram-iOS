@@ -18,7 +18,7 @@ struct Vector1D {
     value(value_) {
     }
     
-    explicit Vector1D(json11::Json const &json) noexcept(false) {
+    explicit Vector1D(lottiejson11::Json const &json) noexcept(false) {
         if (json.is_number()) {
             value = json.number_value();
         } else if (json.is_array()) {
@@ -34,8 +34,8 @@ struct Vector1D {
         }
     }
     
-    json11::Json toJson() const {
-            return json11::Json(value);
+    lottiejson11::Json toJson() const {
+            return lottiejson11::Json(value);
     }
     
     double value;
@@ -68,7 +68,7 @@ struct Vector2D {
     y(y_) {
     }
     
-    explicit Vector2D(json11::Json const &json) noexcept(false) {
+    explicit Vector2D(lottiejson11::Json const &json) noexcept(false) {
         x = 0.0;
         y = 0.0;
         
@@ -121,13 +121,13 @@ struct Vector2D {
         }
     }
     
-    json11::Json toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json toJson() const {
+        lottiejson11::Json::object result;
         
         result.insert(std::make_pair("x", x));
         result.insert(std::make_pair("y", y));
         
-        return json11::Json(result);
+        return lottiejson11::Json(result);
     }
     
     double x;
@@ -200,7 +200,7 @@ struct Vector3D {
     z(z_) {
     }
     
-    explicit Vector3D(json11::Json const &json) noexcept(false) {
+    explicit Vector3D(lottiejson11::Json const &json) noexcept(false) {
         if (!json.is_array()) {
             throw LottieParsingException();
         }
@@ -236,14 +236,14 @@ struct Vector3D {
         }
     }
     
-    json11::Json toJson() const {
-        json11::Json::array result;
+    lottiejson11::Json toJson() const {
+        lottiejson11::Json::array result;
         
-        result.push_back(json11::Json(x));
-        result.push_back(json11::Json(y));
-        result.push_back(json11::Json(z));
+        result.push_back(lottiejson11::Json(x));
+        result.push_back(lottiejson11::Json(y));
+        result.push_back(lottiejson11::Json(z));
         
-        return json11::Json(result);
+        return lottiejson11::Json(result);
     }
     
     double x = 0.0;

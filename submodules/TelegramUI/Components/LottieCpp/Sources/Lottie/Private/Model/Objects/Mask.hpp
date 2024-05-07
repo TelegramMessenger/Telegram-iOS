@@ -19,7 +19,7 @@ enum class MaskMode {
 
 class Mask {
 public:
-    explicit Mask(json11::Json::object const &json) noexcept(false) :
+    explicit Mask(lottiejson11::Json::object const &json) noexcept(false) :
     opacity(KeyframeGroup<Vector1D>(Vector1D(100.0))),
     shape(KeyframeGroup<BezierPath>(BezierPath())),
     inverted(false),
@@ -61,8 +61,8 @@ public:
         name = getOptionalString(json, "nm");
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::object result;
         
         if (_mode.has_value()) {
             switch (_mode.value()) {

@@ -15,6 +15,7 @@ objc_library(
     copts = [
         "-Werror",
         "-I{}/Sources".format(package_name()),
+        "-O2",
     ],
     hdrs = glob([
         "PublicHeaders/**/*.h",

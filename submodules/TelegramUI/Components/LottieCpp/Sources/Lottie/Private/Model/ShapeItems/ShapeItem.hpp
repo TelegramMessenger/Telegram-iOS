@@ -27,13 +27,13 @@ enum class ShapeType {
 /// An item belonging to a Shape Layer
 class ShapeItem {
 public:
-    ShapeItem(json11::Json const &jsonAny) noexcept(false) :
+    ShapeItem(lottiejson11::Json const &jsonAny) noexcept(false) :
     type(ShapeType::Ellipse) {
         if (!jsonAny.is_object()) {
             throw LottieParsingException();
         }
         
-        json11::Json::object const &json = jsonAny.object_items();
+        lottiejson11::Json::object const &json = jsonAny.object_items();
         
         name = getOptionalString(json, "nm");
         matchName = getOptionalString(json, "mn");
@@ -106,7 +106,7 @@ public:
     ShapeItem(const ShapeItem&) = delete;
     ShapeItem& operator=(ShapeItem&) = delete;
     
-    virtual void toJson(json11::Json::object &json) const {
+    virtual void toJson(lottiejson11::Json::object &json) const {
         if (name.has_value()) {
             json.insert(std::make_pair("nm", name.value()));
         }
@@ -202,7 +202,7 @@ public:
     std::optional<std::string> layerClass;
 };
 
-std::shared_ptr<ShapeItem> parseShapeItem(json11::Json::object const &json) noexcept(false);
+std::shared_ptr<ShapeItem> parseShapeItem(lottiejson11::Json::object const &json) noexcept(false);
 
 }
 

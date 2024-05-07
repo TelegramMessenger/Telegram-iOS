@@ -62,7 +62,7 @@ struct Color {
         a = a_ / denominatorValue;
     }
     
-    explicit Color(json11::Json const &jsonAny) noexcept(false) :
+    explicit Color(lottiejson11::Json const &jsonAny) noexcept(false) :
     r(0.0), g(0.0), b(0.0), a(0.0) {
         if (!jsonAny.is_array()) {
             throw LottieParsingException();
@@ -125,13 +125,13 @@ struct Color {
         a = a1;
     }
     
-    json11::Json toJson() const {
-        json11::Json::array result;
+    lottiejson11::Json toJson() const {
+        lottiejson11::Json::array result;
         
-        result.push_back(json11::Json(r));
-        result.push_back(json11::Json(g));
-        result.push_back(json11::Json(b));
-        result.push_back(json11::Json(a));
+        result.push_back(lottiejson11::Json(r));
+        result.push_back(lottiejson11::Json(g));
+        result.push_back(lottiejson11::Json(b));
+        result.push_back(lottiejson11::Json(a));
         
         return result;
     }

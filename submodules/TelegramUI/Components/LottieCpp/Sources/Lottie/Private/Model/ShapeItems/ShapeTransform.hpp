@@ -10,7 +10,7 @@ namespace lottie {
 /// An item that define a shape transform
 class ShapeTransform: public ShapeItem {
 public:
-    explicit ShapeTransform(json11::Json::object const &json) noexcept(false) :
+    explicit ShapeTransform(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json) {
         if (const auto anchorData = getOptionalObject(json, "a")) {
             anchor = KeyframeGroup<Vector3D>(anchorData.value());
@@ -37,7 +37,7 @@ public:
     
     virtual ~ShapeTransform() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
         if (anchor.has_value()) {

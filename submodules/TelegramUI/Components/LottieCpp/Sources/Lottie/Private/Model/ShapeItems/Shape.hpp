@@ -13,7 +13,7 @@ namespace lottie {
 /// An item that defines an custom shape
 class Shape: public ShapeItem {
 public:
-    explicit Shape(json11::Json::object const &json) noexcept(false) :
+    explicit Shape(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json),
     path(KeyframeGroup<BezierPath>(getObject(json, "ks"))) {
         if (const auto directionRawValue = getOptionalInt(json, "d")) {
@@ -35,7 +35,7 @@ public:
     
     virtual ~Shape() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
         json.insert(std::make_pair("ks", path.toJson()));

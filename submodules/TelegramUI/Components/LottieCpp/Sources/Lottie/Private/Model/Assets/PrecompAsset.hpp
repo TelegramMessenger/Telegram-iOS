@@ -21,7 +21,7 @@ public:
     
     virtual ~PrecompAsset() = default;
     
-    explicit PrecompAsset(json11::Json::object const &json) noexcept(false) :
+    explicit PrecompAsset(lottiejson11::Json::object const &json) noexcept(false) :
     Asset(json) {
         frameRate = getOptionalDouble(json, "fr");
         
@@ -36,12 +36,12 @@ public:
         }
     }
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         Asset::toJson(json);
         
-        json11::Json::array layerArray;
+        lottiejson11::Json::array layerArray;
         for (const auto &layer : layers) {
-            json11::Json::object layerJson;
+            lottiejson11::Json::object layerJson;
             layer->toJson(layerJson);
             layerArray.push_back(layerJson);
         }

@@ -10,7 +10,7 @@ namespace lottie {
 /// An item that define a repeater
 class Repeater: public ShapeItem {
 public:
-    explicit Repeater(json11::Json::object const &json) noexcept(false) :
+    explicit Repeater(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json) {
         if (const auto copiesData = getOptionalObject(json, "c")) {
             copies = KeyframeGroup<Vector1D>(copiesData.value());
@@ -39,7 +39,7 @@ public:
     
     virtual ~Repeater() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
         if (copies.has_value()) {
@@ -49,7 +49,7 @@ public:
             json.insert(std::make_pair("o", offset->toJson()));
         }
         
-        json11::Json::object transformContainer;
+        lottiejson11::Json::object transformContainer;
         if (startOpacity.has_value()) {
             json.insert(std::make_pair("so", startOpacity->toJson()));
         }

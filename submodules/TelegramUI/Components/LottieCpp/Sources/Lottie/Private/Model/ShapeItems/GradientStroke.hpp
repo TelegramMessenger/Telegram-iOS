@@ -13,7 +13,7 @@ namespace lottie {
 /// An item that define a gradient stroke
 class GradientStroke: public ShapeItem {
 public:
-    explicit GradientStroke(json11::Json::object const &json) noexcept(false) :
+    explicit GradientStroke(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json),
     opacity(KeyframeGroup<Vector1D>(Vector1D(100.0))),
     startPoint(KeyframeGroup<Vector3D>(Vector3D(0.0, 0.0, 0.0))),
@@ -109,7 +109,7 @@ public:
     
     virtual ~GradientStroke() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
         json.insert(std::make_pair("o", opacity.toJson()));
@@ -133,13 +133,13 @@ public:
             json.insert(std::make_pair("ml", miterLimit.value()));
         }
         
-        json11::Json::object colorsContainer;
+        lottiejson11::Json::object colorsContainer;
         colorsContainer.insert(std::make_pair("p", numberOfColors));
         colorsContainer.insert(std::make_pair("k", colors.toJson()));
         json.insert(std::make_pair("g", colorsContainer));
         
         if (dashPattern.has_value()) {
-            json11::Json::array dashElements;
+            lottiejson11::Json::array dashElements;
             for (const auto &dashElement : dashPattern.value()) {
                 dashElements.push_back(dashElement.toJson());
             }

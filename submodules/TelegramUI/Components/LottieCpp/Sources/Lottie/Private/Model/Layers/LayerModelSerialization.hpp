@@ -7,7 +7,7 @@
 
 namespace lottie {
 
-std::shared_ptr<LayerModel> parseLayerModel(json11::Json::object const &json) noexcept(false);
+std::shared_ptr<LayerModel> parseLayerModel(lottiejson11::Json::object const &json) noexcept(false);
 
 }
 

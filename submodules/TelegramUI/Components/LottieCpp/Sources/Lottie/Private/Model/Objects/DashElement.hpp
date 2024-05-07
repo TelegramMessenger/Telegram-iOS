@@ -23,7 +23,7 @@ public:
     value(value_) {
     }
     
-    explicit DashElement(json11::Json::object const &json) noexcept(false) :
+    explicit DashElement(lottiejson11::Json::object const &json) noexcept(false) :
     type(DashElementType::Offset),
     value(KeyframeGroup<Vector1D>(Vector1D(0.0))) {
         auto typeRawValue = getString(json, "n");
@@ -42,8 +42,8 @@ public:
         name = getOptionalString(json, "nm");
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::object result;
         
         switch (type) {
             case DashElementType::Offset:

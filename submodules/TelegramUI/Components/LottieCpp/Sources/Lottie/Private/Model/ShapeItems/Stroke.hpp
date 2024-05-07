@@ -15,7 +15,7 @@ namespace lottie {
 /// An item that define an ellipse shape
 class Stroke: public ShapeItem {
 public:
-    explicit Stroke(json11::Json::object const &json) noexcept(false) :
+    explicit Stroke(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json),
     opacity(KeyframeGroup<Vector1D>(Vector1D(100.0))),
     color(KeyframeGroup<Color>(Color(0.0, 0.0, 0.0, 0.0))),
@@ -81,7 +81,7 @@ public:
     
     virtual ~Stroke() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
         json.insert(std::make_pair("o", opacity.toJson()));
@@ -96,7 +96,7 @@ public:
         }
         
         if (dashPattern.has_value()) {
-            json11::Json::array dashElements;
+            lottiejson11::Json::array dashElements;
             for (const auto &dashElement : dashPattern.value()) {
                 dashElements.push_back(dashElement.toJson());
             }
@@ -134,7 +134,7 @@ public:
     std::optional<std::vector<DashElement>> dashPattern;
     
     std::optional<bool> fillEnabled;
-    std::optional<json11::Json> ml2;
+    std::optional<lottiejson11::Json> ml2;
 };
 
 }

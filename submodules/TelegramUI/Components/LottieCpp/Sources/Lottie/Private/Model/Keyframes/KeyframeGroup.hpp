@@ -27,7 +27,7 @@ public:
     isSingle(false) {
     }
     
-    KeyframeGroup(json11::Json::object const &json) noexcept(false) {
+    KeyframeGroup(lottiejson11::Json::object const &json) noexcept(false) {
         isAnimated = getOptionalInt(json, "a");
         expression = getOptionalAny(json, "x");
         expressionIndex = getOptionalInt(json, "ix");
@@ -101,15 +101,15 @@ public:
         }
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::object result;
         
         assert(!keyframes.empty());
         
         if (keyframes.size() == 1 && isSingle) {
             result.insert(std::make_pair("k", keyframes[0].value.toJson()));
         } else {
-            json11::Json::array containerData;
+            lottiejson11::Json::array containerData;
             
             for (const auto &keyframe : rawKeyframeData) {
                 containerData.push_back(keyframe.toJson());
@@ -138,7 +138,7 @@ public:
     std::vector<Keyframe<T>> keyframes;
     std::optional<int> isAnimated;
     
-    std::optional<json11::Json> expression;
+    std::optional<lottiejson11::Json> expression;
     std::optional<int> expressionIndex;
     std::vector<KeyframeData<T>> rawKeyframeData;
     bool isSingle = false;

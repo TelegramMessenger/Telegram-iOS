@@ -13,7 +13,7 @@ namespace lottie {
 /// A layer that holds another animation composition.
 class PreCompLayerModel: public LayerModel {
 public:
-    PreCompLayerModel(json11::Json::object const &json) :
+    PreCompLayerModel(lottiejson11::Json::object const &json) :
     LayerModel(json) {
         referenceID = getString(json, "refId");
         if (const auto timeRemappingData = getOptionalObject(json, "tm")) {
@@ -25,7 +25,7 @@ public:
     
     virtual ~PreCompLayerModel() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         LayerModel::toJson(json);
         
         json.insert(std::make_pair("refId", referenceID));

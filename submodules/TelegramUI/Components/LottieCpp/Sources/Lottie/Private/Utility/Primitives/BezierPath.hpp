@@ -32,9 +32,9 @@ public:
     closed(false) {
     }
     
-    explicit BezierPathContents(json11::Json const &jsonAny) noexcept(false) :
+    explicit BezierPathContents(lottiejson11::Json const &jsonAny) noexcept(false) :
     elements({}) {
-        json11::Json::object const *json = nullptr;
+        lottiejson11::Json::object const *json = nullptr;
         if (jsonAny.is_object()) {
             json = &jsonAny.object_items();
         } else if (jsonAny.is_array()) {
@@ -97,12 +97,12 @@ public:
     BezierPathContents(const BezierPathContents&) = delete;
     BezierPathContents& operator=(BezierPathContents&) = delete;
     
-    json11::Json toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json toJson() const {
+        lottiejson11::Json::object result;
         
-        json11::Json::array vertices;
-        json11::Json::array inPoints;
-        json11::Json::array outPoints;
+        lottiejson11::Json::array vertices;
+        lottiejson11::Json::array inPoints;
+        lottiejson11::Json::array outPoints;
         
         for (const auto &element : elements) {
             vertices.push_back(element.vertex.point.toJson());
@@ -118,7 +118,7 @@ public:
             result.insert(std::make_pair("c", closed.value()));
         }
         
-        return json11::Json(result);
+        return lottiejson11::Json(result);
     }
     
     std::shared_ptr<CGPath> cgPath() const {
@@ -445,11 +445,11 @@ public:
     _contents(std::make_shared<BezierPathContents>()) {
     }
     
-    explicit BezierPath(json11::Json const &jsonAny) noexcept(false) :
+    explicit BezierPath(lottiejson11::Json const &jsonAny) noexcept(false) :
     _contents(std::make_shared<BezierPathContents>(jsonAny)) {
     }
     
-    json11::Json toJson() const {
+    lottiejson11::Json toJson() const {
         return _contents->toJson();
     }
     

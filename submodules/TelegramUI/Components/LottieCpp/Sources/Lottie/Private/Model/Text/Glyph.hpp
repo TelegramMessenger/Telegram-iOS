@@ -27,7 +27,7 @@ public:
     shapes(shapes_) {
     }
     
-    explicit Glyph(json11::Json::object const &json) noexcept(false) :
+    explicit Glyph(lottiejson11::Json::object const &json) noexcept(false) :
     character(""),
     fontSize(0.0),
     fontFamily(""),
@@ -52,8 +52,8 @@ public:
         }
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::object result;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::object result;
         
         result.insert(std::make_pair("ch", character));
         result.insert(std::make_pair("size", fontSize));
@@ -62,13 +62,13 @@ public:
         result.insert(std::make_pair("w", width));
         
         if (internalHasData || shapes.has_value()) {
-            json11::Json::object shapeContainer;
+            lottiejson11::Json::object shapeContainer;
             
             if (shapes.has_value()) {
-                json11::Json::array shapeArray;
+                lottiejson11::Json::array shapeArray;
                 
                 for (const auto &shape : shapes.value()) {
-                    json11::Json::object shapeJson;
+                    lottiejson11::Json::object shapeJson;
                     shape->toJson(shapeJson);
                     shapeArray.push_back(shapeJson);
                 }

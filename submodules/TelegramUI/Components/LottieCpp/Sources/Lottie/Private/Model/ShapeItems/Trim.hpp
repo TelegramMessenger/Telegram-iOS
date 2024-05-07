@@ -16,7 +16,7 @@ enum class TrimType: int {
 /// An item that defines trim
 class Trim: public ShapeItem {
 public:
-    explicit Trim(json11::Json::object const &json) noexcept(false) :
+    explicit Trim(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json),
     start(KeyframeGroup<Vector1D>(Vector1D(0.0))),
     end(KeyframeGroup<Vector1D>(Vector1D(0.0))),
@@ -41,7 +41,7 @@ public:
     
     virtual ~Trim() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
         json.insert(std::make_pair("s", start.toJson()));

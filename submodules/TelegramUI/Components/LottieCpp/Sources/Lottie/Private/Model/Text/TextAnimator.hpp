@@ -41,18 +41,18 @@ public:
     tracking(tracking_) {
     }
     
-    explicit TextAnimator(json11::Json const &jsonAny) {
+    explicit TextAnimator(lottiejson11::Json const &jsonAny) {
         if (!jsonAny.is_object()) {
             throw LottieParsingException();
         }
-        json11::Json::object const &json = jsonAny.object_items();
+        lottiejson11::Json::object const &json = jsonAny.object_items();
         
         if (const auto nameData = getOptionalString(json, "nm")) {
             name = nameData.value();
         }
         _extraS = getOptionalAny(json, "s");
         
-        json11::Json::object const &animatorContainer = getObject(json, "a");
+        lottiejson11::Json::object const &animatorContainer = getObject(json, "a");
         
         if (const auto fillColorData = getOptionalObject(animatorContainer, "fc")) {
             fillColor = KeyframeGroup<Color>(fillColorData.value());
@@ -89,8 +89,8 @@ public:
         }
     }
     
-    json11::Json::object toJson() const {
-        json11::Json::object animatorContainer;
+    lottiejson11::Json::object toJson() const {
+        lottiejson11::Json::object animatorContainer;
         
         if (fillColor.has_value()) {
             animatorContainer.insert(std::make_pair("fc", fillColor->toJson()));
@@ -126,7 +126,7 @@ public:
             animatorContainer.insert(std::make_pair("o", opacity->toJson()));
         }
         
-        json11::Json::object result;
+        lottiejson11::Json::object result;
         result.insert(std::make_pair("a", animatorContainer));
         
         if (name.has_value()) {
@@ -175,7 +175,7 @@ public:
     /// Tracking
     std::optional<KeyframeGroup<Vector1D>> tracking;
     
-    std::optional<json11::Json> _extraS;
+    std::optional<lottiejson11::Json> _extraS;
 };
 
 }

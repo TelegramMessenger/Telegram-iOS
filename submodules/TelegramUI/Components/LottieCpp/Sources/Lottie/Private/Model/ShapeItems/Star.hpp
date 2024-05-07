@@ -19,7 +19,7 @@ enum class StarType: int {
 /// An item that define a star shape
 class Star: public ShapeItem {
 public:
-    explicit Star(json11::Json::object const &json) noexcept(false) :
+    explicit Star(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json),
     position(KeyframeGroup<Vector3D>(Vector3D(0.0, 0.0, 0.0))),
     outerRadius(KeyframeGroup<Vector1D>(Vector1D(0.0))),
@@ -75,7 +75,7 @@ public:
     
     virtual ~Star() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
         if (direction.has_value()) {

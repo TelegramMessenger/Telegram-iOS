@@ -26,7 +26,7 @@ const char* LottieParsingException::what() const throw() {
     return "Lottie parsing exception";
 }
 
-json11::Json getAny(json11::Json::object const &object, std::string const &key) noexcept(false) {
+lottiejson11::Json getAny(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         throw LottieParsingException();
@@ -34,7 +34,7 @@ json11::Json getAny(json11::Json::object const &object, std::string const &key) 
     return value->second;
 }
 
-std::optional<json11::Json> getOptionalAny(json11::Json::object const &object, std::string const &key) noexcept(false) {
+std::optional<lottiejson11::Json> getOptionalAny(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         return std::nullopt;
@@ -42,7 +42,7 @@ std::optional<json11::Json> getOptionalAny(json11::Json::object const &object, s
     return value->second;
 }
 
-json11::Json::object getObject(json11::Json::object const &object, std::string const &key) noexcept(false) {
+lottiejson11::Json::object getObject(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         throw LottieParsingException();
@@ -53,7 +53,7 @@ json11::Json::object getObject(json11::Json::object const &object, std::string c
     return value->second.object_items();
 }
 
-std::optional<json11::Json::object> getOptionalObject(json11::Json::object const &object, std::string const &key) noexcept(false) {
+std::optional<lottiejson11::Json::object> getOptionalObject(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         return std::nullopt;
@@ -64,7 +64,7 @@ std::optional<json11::Json::object> getOptionalObject(json11::Json::object const
     return value->second.object_items();
 }
 
-std::vector<json11::Json::object> getObjectArray(json11::Json::object const &object, std::string const &key) noexcept(false) {
+std::vector<lottiejson11::Json::object> getObjectArray(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         throw LottieParsingException();
@@ -73,7 +73,7 @@ std::vector<json11::Json::object> getObjectArray(json11::Json::object const &obj
         throw LottieParsingException();
     }
     
-    std::vector<json11::Json::object> result;
+    std::vector<lottiejson11::Json::object> result;
     for (const auto &item : value->second.array_items()) {
         if (!item.is_object()) {
             throw LottieParsingException();
@@ -84,7 +84,7 @@ std::vector<json11::Json::object> getObjectArray(json11::Json::object const &obj
     return result;
 }
 
-std::optional<std::vector<json11::Json::object>> getOptionalObjectArray(json11::Json::object const &object, std::string const &key) noexcept(false) {
+std::optional<std::vector<lottiejson11::Json::object>> getOptionalObjectArray(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         return std::nullopt;
@@ -93,7 +93,7 @@ std::optional<std::vector<json11::Json::object>> getOptionalObjectArray(json11::
         throw LottieParsingException();
     }
     
-    std::vector<json11::Json::object> result;
+    std::vector<lottiejson11::Json::object> result;
     for (const auto &item : value->second.array_items()) {
         if (!item.is_object()) {
             throw LottieParsingException();
@@ -104,7 +104,7 @@ std::optional<std::vector<json11::Json::object>> getOptionalObjectArray(json11::
     return result;
 }
 
-std::vector<json11::Json> getAnyArray(json11::Json::object const &object, std::string const &key) noexcept(false) {
+std::vector<lottiejson11::Json> getAnyArray(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         throw LottieParsingException();
@@ -116,7 +116,7 @@ std::vector<json11::Json> getAnyArray(json11::Json::object const &object, std::s
     return value->second.array_items();
 }
 
-std::optional<std::vector<json11::Json>> getOptionalAnyArray(json11::Json::object const &object, std::string const &key) noexcept(false) {
+std::optional<std::vector<lottiejson11::Json>> getOptionalAnyArray(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         throw std::nullopt;
@@ -128,7 +128,7 @@ std::optional<std::vector<json11::Json>> getOptionalAnyArray(json11::Json::objec
     return value->second.array_items();
 }
 
-std::string getString(json11::Json::object const &object, std::string const &key) noexcept(false) {
+std::string getString(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         throw LottieParsingException();
@@ -139,7 +139,7 @@ std::string getString(json11::Json::object const &object, std::string const &key
     return value->second.string_value();
 }
 
-std::optional<std::string> getOptionalString(json11::Json::object const &object, std::string const &key) noexcept(false) {
+std::optional<std::string> getOptionalString(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         return std::nullopt;
@@ -150,7 +150,7 @@ std::optional<std::string> getOptionalString(json11::Json::object const &object,
     return value->second.string_value();
 }
 
-int32_t getInt(json11::Json::object const &object, std::string const &key) noexcept(false) {
+int32_t getInt(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         throw LottieParsingException();
@@ -161,7 +161,7 @@ int32_t getInt(json11::Json::object const &object, std::string const &key) noexc
     return value->second.int_value();
 }
 
-std::optional<int32_t> getOptionalInt(json11::Json::object const &object, std::string const &key) noexcept(false) {
+std::optional<int32_t> getOptionalInt(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         return std::nullopt;
@@ -172,7 +172,7 @@ std::optional<int32_t> getOptionalInt(json11::Json::object const &object, std::s
     return value->second.int_value();
 }
 
-double getDouble(json11::Json::object const &object, std::string const &key) noexcept(false) {
+double getDouble(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         throw LottieParsingException();
@@ -183,7 +183,7 @@ double getDouble(json11::Json::object const &object, std::string const &key) noe
     return value->second.number_value();
 }
 
-std::optional<double> getOptionalDouble(json11::Json::object const &object, std::string const &key) noexcept(false) {
+std::optional<double> getOptionalDouble(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         return std::nullopt;
@@ -194,7 +194,7 @@ std::optional<double> getOptionalDouble(json11::Json::object const &object, std:
     return value->second.number_value();
 }
 
-bool getBool(json11::Json::object const &object, std::string const &key) noexcept(false) {
+bool getBool(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         throw LottieParsingException();
@@ -205,7 +205,7 @@ bool getBool(json11::Json::object const &object, std::string const &key) noexcep
     return value->second.bool_value();
 }
 
-std::optional<bool> getOptionalBool(json11::Json::object const &object, std::string const &key) noexcept(false) {
+std::optional<bool> getOptionalBool(lottiejson11::Json::object const &object, std::string const &key) noexcept(false) {
     auto value = object.find(key);
     if (value == object.end()) {
         return std::nullopt;

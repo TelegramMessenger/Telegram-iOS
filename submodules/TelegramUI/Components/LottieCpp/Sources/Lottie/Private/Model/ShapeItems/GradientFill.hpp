@@ -17,7 +17,7 @@ enum class GradientType: int {
 /// An item that define a gradient fill
 class GradientFill: public ShapeItem {
 public:
-    explicit GradientFill(json11::Json::object const &json) noexcept(false) :
+    explicit GradientFill(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json),
     opacity(KeyframeGroup<Vector1D>(Vector1D(100.0))),
     startPoint(KeyframeGroup<Vector3D>(Vector3D(0.0, 0.0, 0.0))),
@@ -60,7 +60,7 @@ public:
     
     virtual ~GradientFill() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
         json.insert(std::make_pair("o", opacity.toJson()));
@@ -75,7 +75,7 @@ public:
             json.insert(std::make_pair("a", highlightAngle->toJson()));
         }
         
-        json11::Json::object colorsContainer;
+        lottiejson11::Json::object colorsContainer;
         colorsContainer.insert(std::make_pair("p", numberOfColors));
         colorsContainer.insert(std::make_pair("k", colors.toJson()));
         json.insert(std::make_pair("g", colorsContainer));

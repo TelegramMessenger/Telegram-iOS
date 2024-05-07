@@ -21,7 +21,7 @@ enum class LayerType {
     Text
 };
 
-LayerType parseLayerType(json11::Json::object const &json, std::string const &key);
+LayerType parseLayerType(lottiejson11::Json::object const &json, std::string const &key);
 int serializeLayerType(LayerType value);
 
 enum class MatteType: int {
@@ -53,7 +53,7 @@ enum class BlendMode: int {
 /// A base top container for shapes, images, and other view objects.
 class LayerModel {
 public:
-    explicit LayerModel(json11::Json::object const &json) noexcept(false) {
+    explicit LayerModel(lottiejson11::Json::object const &json) noexcept(false) {
         name = getOptionalString(json, "nm");
         index = getOptionalInt(json, "ind");
         
@@ -179,7 +179,7 @@ public:
     
     virtual ~LayerModel() = default;
     
-    virtual void toJson(json11::Json::object &json) const {
+    virtual void toJson(lottiejson11::Json::object &json) const {
         if (name.has_value()) {
             json.insert(std::make_pair("nm", name.value()));
         }
@@ -219,7 +219,7 @@ public:
         }
         
         if (masks.has_value()) {
-            json11::Json::array maskArray;
+            lottiejson11::Json::array maskArray;
             for (const auto &mask : masks.value()) {
                 maskArray.push_back(mask->toJson());
             }
@@ -308,9 +308,9 @@ public:
     
     std::optional<bool> hasMask;
     std::optional<int> td;
-    std::optional<json11::Json> effectsData;
+    std::optional<lottiejson11::Json> effectsData;
     std::optional<std::string> layerClass;
-    std::optional<json11::Json> _extraHidden;
+    std::optional<lottiejson11::Json> _extraHidden;
 };
 
 }

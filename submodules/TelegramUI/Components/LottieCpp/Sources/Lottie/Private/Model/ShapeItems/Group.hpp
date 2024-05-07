@@ -12,7 +12,7 @@ namespace lottie {
 /// An item that define an ellipse shape
 class Group: public ShapeItem {
 public:
-    explicit Group(json11::Json::object const &json) noexcept(false) :
+    explicit Group(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json) {
         auto itemsData = getObjectArray(json, "it");
         for (const auto &itemData : itemsData) {
@@ -24,12 +24,12 @@ public:
     
     virtual ~Group() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
-        json11::Json::array itemArray;
+        lottiejson11::Json::array itemArray;
         for (const auto &item : items) {
-            json11::Json::object itemJson;
+            lottiejson11::Json::object itemJson;
             item->toJson(itemJson);
             itemArray.push_back(itemJson);
         }

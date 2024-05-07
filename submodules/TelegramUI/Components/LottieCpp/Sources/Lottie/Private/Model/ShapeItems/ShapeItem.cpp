@@ -17,7 +17,7 @@
 
 namespace lottie {
 
-std::shared_ptr<ShapeItem> parseShapeItem(json11::Json::object const &json) noexcept(false) {
+std::shared_ptr<ShapeItem> parseShapeItem(lottiejson11::Json::object const &json) noexcept(false) {
     auto typeRawValue = getString(json, "ty");
     if (typeRawValue == "el") {
         return std::make_shared<Ellipse>(json);

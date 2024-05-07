@@ -17,7 +17,7 @@
     self = [super init];
     if (self != nil) {
         std::string errorText;
-        auto json = json11::Json::parse(std::string((uint8_t const *)data.bytes, ((uint8_t const *)data.bytes) + data.length), errorText);
+        auto json = lottiejson11::Json::parse(std::string((uint8_t const *)data.bytes, ((uint8_t const *)data.bytes) + data.length), errorText);
         if (!json.is_object()) {
             return nil;
         }
@@ -35,13 +35,17 @@
     return (NSInteger)(_animation->endFrame - _animation->startFrame);
 }
 
+- (NSInteger)framesPerSecond {
+    return (NSInteger)(_animation->framerate);
+}
+
 - (CGSize)size {
     return CGSizeMake(_animation->width, _animation->height);
 }
 
 - (NSData * _Nonnull)toJson {
-    json11::Json::object json = _animation->toJson();
-    std::string jsonString = json11::Json(json).dump();
+    lottiejson11::Json::object json = _animation->toJson();
+    std::string jsonString = lottiejson11::Json(json).dump();
     return [[NSData alloc] initWithBytes:jsonString.data() length:jsonString.size()];
 }
 

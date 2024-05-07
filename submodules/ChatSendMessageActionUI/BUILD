@@ -32,6 +32,8 @@ swift_library(
         "//submodules/WallpaperBackgroundNode",
         "//submodules/Components/MultilineTextWithEntitiesComponent",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/TelegramUI/Components/LottieMetal",
+        "//submodules/TelegramAnimatedStickerNode",
     ],
     visibility = [
         "//visibility:public",

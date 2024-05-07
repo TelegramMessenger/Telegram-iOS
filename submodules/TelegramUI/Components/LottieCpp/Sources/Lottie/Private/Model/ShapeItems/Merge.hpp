@@ -18,7 +18,7 @@ enum class MergeMode: int {
 /// An item that define an ellipse shape
 class Merge: public ShapeItem {
 public:
-    explicit Merge(json11::Json::object const &json) noexcept(false) :
+    explicit Merge(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json),
     mode(MergeMode::None) {
         auto modeRawValue = getInt(json, "mm");
@@ -48,7 +48,7 @@ public:
     
     virtual ~Merge() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
         json.insert(std::make_pair("mm", (int)mode));

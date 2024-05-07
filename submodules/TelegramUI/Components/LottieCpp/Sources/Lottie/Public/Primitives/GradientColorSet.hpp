@@ -11,7 +11,7 @@ struct GradientColorSet {
     GradientColorSet() {
     }
     
-    explicit GradientColorSet(json11::Json const &jsonAny) noexcept(false) {
+    explicit GradientColorSet(lottiejson11::Json const &jsonAny) noexcept(false) {
         if (!jsonAny.is_array()) {
             throw LottieParsingException();
         }
@@ -24,8 +24,8 @@ struct GradientColorSet {
         }
     }
     
-    json11::Json toJson() const {
-        json11::Json::array result;
+    lottiejson11::Json toJson() const {
+        lottiejson11::Json::array result;
         
         for (auto value : colors) {
             result.push_back(value);

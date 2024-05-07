@@ -1,4 +1,4 @@
-#include <LottieCpp/LottieRenderTree.h>
+#include "LottieRenderTree.h"
 #include "LottieRenderTreeInternal.h"
 
 #include "Lottie/Public/Primitives/CGPath.hpp"
@@ -15,6 +15,7 @@ namespace {
 
 @interface LottiePath () {
     std::vector<lottie::BezierPath> _paths;
+    NSData *_customData;
 }
 
 @end
@@ -29,83 +30,128 @@ namespace {
     return self;
 }
 
-/*- (instancetype _Nonnull)initWithCGPath:(CGPathRef _Nonnull)cgPath {
+- (instancetype _Nonnull)initWithCustomData:(NSData * _Nonnull)customData __attribute__((objc_direct)) {
     self = [super init];
     if (self != nil) {
-        CGMutablePathRef mutableCopy = CGPathCreateMutableCopy(cgPath);
-        _path = std::make_shared<lottie::CGPathCocoaImpl>(mutableCopy);
-        CFRelease(mutableCopy);
+        _customData = customData;
     }
     return self;
-}*/
-
-- (CGRect)boundingBox {
-    lottie::CGRect result = bezierPathsBoundingBox(_paths);
-    return CGRectMake(result.x, result.y, result.width, result.height);
 }
 
 - (void)enumerateItems:(void (^ _Nonnull)(LottiePathItem * _Nonnull))iterate {
     LottiePathItem item;
     
-    for (const auto &path : _paths) {
-        std::optional<lottie::PathElement> previousElement;
-        for (const auto &element : path.elements()) {
-            if (previousElement.has_value()) {
-                if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
+    if (_customData != nil) {
+        int dataOffset = 0;
+        int dataLength = (int)_customData.length;
+        uint8_t const *dataBytes = (uint8_t const *)_customData.bytes;
+        while (dataOffset < dataLength) {
+            uint8_t itemType = dataBytes[dataOffset];
+            dataOffset += 1;
+            
+            switch (itemType) {
+                case 0: {
+                    Float32 px;
+                    memcpy(&px, dataBytes + dataOffset, 4);
+                    dataOffset += 4;
+                    
+                    Float32 py;
+                    memcpy(&py, dataBytes + dataOffset, 4);
+                    dataOffset += 4;
+                    
+                    item.type = LottiePathItemTypeMoveTo;
+                    item.points[0] = CGPointMake(px, py);
+                    iterate(&item);
+                    
+                    break;
+                }
+                case 1: {
+                    Float32 px;
+                    memcpy(&px, dataBytes + dataOffset, 4);
+                    dataOffset += 4;
+                    
+                    Float32 py;
+                    memcpy(&py, dataBytes + dataOffset, 4);
+                    dataOffset += 4;
+                    
                     item.type = LottiePathItemTypeLineTo;
+                    item.points[0] = CGPointMake(px, py);
+                    iterate(&item);
+                    
+                    break;
+                }
+                case 2: {
+                    Float32 p1x;
+                    memcpy(&p1x, dataBytes + dataOffset, 4);
+                    dataOffset += 4;
+                    
+                    Float32 p1y;
+                    memcpy(&p1y, dataBytes + dataOffset, 4);
+                    dataOffset += 4;
+                    
+                    Float32 p2x;
+                    memcpy(&p2x, dataBytes + dataOffset, 4);
+                    dataOffset += 4;
+                    
+                    Float32 p2y;
+                    memcpy(&p2y, dataBytes + dataOffset, 4);
+                    dataOffset += 4;
+                    
+                    Float32 px;
+                    memcpy(&px, dataBytes + dataOffset, 4);
+                    dataOffset += 4;
+                    
+                    Float32 py;
+                    memcpy(&py, dataBytes + dataOffset, 4);
+                    dataOffset += 4;
+                    
+                    item.type = LottiePathItemTypeCurveTo;
+                    item.points[0] = CGPointMake(p1x, p1y);
+                    item.points[1] = CGPointMake(p2x, p2y);
+                    item.points[2] = CGPointMake(px, py);
+                    iterate(&item);
+                    
+                    break;
+                }
+                case 3: {
+                    item.type = LottiePathItemTypeClose;
+                    iterate(&item);
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+        }
+    } else {
+        for (const auto &path : _paths) {
+            std::optional<lottie::PathElement> previousElement;
+            for (const auto &element : path.elements()) {
+                if (previousElement.has_value()) {
+                    if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
+                        item.type = LottiePathItemTypeLineTo;
+                        item.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                        iterate(&item);
+                    } else {
+                        item.type = LottiePathItemTypeCurveTo;
+                        item.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                        item.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
+                        item.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
+                        iterate(&item);
+                    }
+                } else {
+                    item.type = LottiePathItemTypeMoveTo;
                     item.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
                     iterate(&item);
-                } else {
-                    item.type = LottiePathItemTypeCurveTo;
-                    item.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                    item.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
-                    item.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
-                    iterate(&item);
                 }
-            } else {
-                item.type = LottiePathItemTypeMoveTo;
-                item.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                iterate(&item);
+                previousElement = element;
             }
-            previousElement = element;
-        }
-        if (path.closed().value_or(true)) {
-            item.type = LottiePathItemTypeClose;
-            iterate(&item);
-        }
-    }
-    
-    /*_path->enumerate([iterate](lottie::CGPathItem const &element) {
-        LottiePathItem item;
-        
-        switch (element.type) {
-            case lottie::CGPathItem::Type::MoveTo: {
-                item.type = LottiePathItemTypeMoveTo;
-                item.points[0] = CGPointMake(element.points[0].x, element.points[0].y);
-                iterate(&item);
-                break;
-            }
-            case lottie::CGPathItem::Type::LineTo: {
-                item.type = LottiePathItemTypeLineTo;
-                item.points[0] = CGPointMake(element.points[0].x, element.points[0].y);
-                iterate(&item);
-                break;
-            }
-            case lottie::CGPathItem::Type::CurveTo: {
-                item.type = LottiePathItemTypeCurveTo;
-                item.points[0] = CGPointMake(element.points[0].x, element.points[0].y);
-                item.points[1] = CGPointMake(element.points[1].x, element.points[1].y);
-                item.points[2] = CGPointMake(element.points[2].x, element.points[2].y);
-                iterate(&item);
-                break;
-            }
-            case lottie::CGPathItem::Type::Close: {
+            if (path.closed().value_or(true)) {
                 item.type = LottiePathItemTypeClose;
                 iterate(&item);
-                break;
             }
         }
-    });*/
+    }
 }
 
 @end
@@ -155,6 +201,15 @@ static LottieColor lottieColorFromColor(lottie::Color color) {
     return self;
 }
 
+- (instancetype _Nonnull)initWithColor:(LottieColor)color opacity:(CGFloat)opacity {
+    self = [super init];
+    if (self != nil) {
+        _color = color;
+        _opacity = opacity;
+    }
+    return self;
+}
+
 @end
 
 @implementation LottieRenderContentGradientShading
@@ -183,6 +238,18 @@ static LottieColor lottieColorFromColor(lottie::Color color) {
         
         _start = CGPointMake(gradientShading->start.x, gradientShading->start.y);
         _end = CGPointMake(gradientShading->end.x, gradientShading->end.y);
+    }
+    return self;
+}
+
+- (instancetype _Nonnull)initWithOpacity:(CGFloat)opacity gradientType:(LottieGradientType)gradientType colorStops:(NSArray<LottieColorStop *> * _Nonnull)colorStops start:(CGPoint)start end:(CGPoint)end __attribute__((objc_direct)) {
+    self = [super init];
+    if (self != nil) {
+        _opacity = opacity;
+        _gradientType = gradientType;
+        _colorStops = colorStops;
+        _start = start;
+        _end = end;
     }
     return self;
 }
@@ -218,6 +285,15 @@ static LottieColor lottieColorFromColor(lottie::Color color) {
                 break;
             }
         }
+    }
+    return self;
+}
+
+- (instancetype _Nonnull)initWithShading:(LottieRenderContentShading * _Nonnull)shading fillRule:(LottieFillRule)fillRule __attribute__((objc_direct)) {
+    self = [super init];
+    if (self != nil) {
+        _shading = shading;
+        _fillRule = fillRule;
     }
     return self;
 }
@@ -298,6 +374,20 @@ static LottieColor lottieColorFromColor(lottie::Color color) {
     return self;
 }
 
+- (instancetype _Nonnull)initWithShading:(LottieRenderContentShading * _Nonnull)shading lineWidth:(CGFloat)lineWidth lineJoin:(CGLineJoin)lineJoin lineCap:(CGLineCap)lineCap miterLimit:(CGFloat)miterLimit dashPhase:(CGFloat)dashPhase dashPattern:(NSArray<NSNumber *> * _Nullable)dashPattern __attribute__((objc_direct)) {
+    self = [super init];
+    if (self != nil) {
+        _shading = shading;
+        _lineWidth = lineWidth;
+        _lineJoin = lineJoin;
+        _lineCap = lineCap;
+        _miterLimit = miterLimit;
+        _dashPhase = dashPhase;
+        _dashPattern = dashPattern;
+    }
+    return self;
+}
+
 @end
 
 @implementation LottieRenderContent
@@ -316,9 +406,39 @@ static LottieColor lottieColorFromColor(lottie::Color color) {
     return self;
 }
 
+- (instancetype _Nonnull)initWithPath:(LottiePath * _Nonnull)path stroke:(LottieRenderContentStroke * _Nullable)stroke fill:(LottieRenderContentFill * _Nullable)fill __attribute__((objc_direct)) {
+    self = [super init];
+    if (self != nil) {
+        _path = path;
+        _stroke = stroke;
+        _fill = fill;
+    }
+    return self;
+}
+
 @end
 
 @implementation LottieRenderNode
+
+- (instancetype _Nonnull)initWithPosition:(CGPoint)position bounds:(CGRect)bounds transform:(CATransform3D)transform opacity:(CGFloat)opacity masksToBounds:(bool)masksToBounds isHidden:(bool)isHidden globalRect:(CGRect)globalRect globalTransform:(CATransform3D)globalTransform renderContent:(LottieRenderContent * _Nullable)renderContent hasSimpleContents:(bool)hasSimpleContents isInvertedMatte:(bool)isInvertedMatte subnodes:(NSArray<LottieRenderNode *> * _Nonnull)subnodes mask:(LottieRenderNode * _Nullable)mask __attribute__((objc_direct)) {
+    self = [super init];
+    if (self != nil) {
+        _position = position;
+        _bounds = bounds;
+        _transform = transform;
+        _opacity = opacity;
+        _masksToBounds = masksToBounds;
+        _isHidden = isHidden;
+        _globalRect = globalRect;
+        _globalTransform= globalTransform;
+        _renderContent = renderContent;
+        _hasSimpleContents = hasSimpleContents;
+        _isInvertedMatte = isInvertedMatte;
+        _subnodes = subnodes;
+        _mask = mask;
+    }
+    return self;
+}
 
 @end
 

@@ -321,13 +321,6 @@ static std::shared_ptr<OutputRenderNode> convertRenderTree(std::shared_ptr<Rende
     Vector2D localTranslation(node->position().x + -node->bounds().x, node->position().y + -node->bounds().y);
     CATransform3D localTransform = node->transform();
     localTransform = localTransform.translated(localTranslation);
-    //if (localTransform.isIdentity()) {
-    //    localTransform.m41 += localTranslation.x;
-    //    localTransform.m42 += localTranslation.y;
-    //} else {
-    //    localTransform.m41 += localTranslation.x;
-    //    localTransform.m42 += localTranslation.y;
-    //}
     
     currentTransform = localTransform * currentTransform;
     
@@ -553,8 +546,6 @@ static std::shared_ptr<OutputRenderNode> convertRenderTree(std::shared_ptr<Rende
     if (!renderNode) {
         return nil;
     }
-    
-    //processRenderTree(renderNode, lottie::Vector2D((int)size.width, (int)size.height), lottie::CATransform3D::identity().scaled(lottie::Vector2D(size.width / (double)_animation.size.width, size.height / (double)_animation.size.height)), false, *_bezierPathsBoundingBoxContext.get());
     
     auto node = convertRenderTree(renderNode, lottie::Vector2D((int)size.width, (int)size.height), lottie::CATransform3D::identity().scaled(lottie::Vector2D(size.width / (double)_animation.size.width, size.height / (double)_animation.size.height)), false, *_bezierPathsBoundingBoxContext.get());
     

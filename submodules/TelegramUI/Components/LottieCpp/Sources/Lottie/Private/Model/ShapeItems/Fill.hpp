@@ -17,7 +17,7 @@ enum class FillRule: int {
 
 class Fill: public ShapeItem {
 public:
-    explicit Fill(json11::Json::object const &json) noexcept(false) :
+    explicit Fill(lottiejson11::Json::object const &json) noexcept(false) :
     ShapeItem(json),
     opacity(KeyframeGroup<Vector1D>(Vector1D(0.0))),
     color(KeyframeGroup<Color>(Color(0.0, 0.0, 0.0, 0.0))) {
@@ -45,7 +45,7 @@ public:
     
     virtual ~Fill() = default;
     
-    virtual void toJson(json11::Json::object &json) const override {
+    virtual void toJson(lottiejson11::Json::object &json) const override {
         ShapeItem::toJson(json);
         
         json.insert(std::make_pair("o", opacity.toJson()));
