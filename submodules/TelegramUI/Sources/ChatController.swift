@@ -4095,12 +4095,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.present(controller, in: .window(.root))
                 }
             })
-        }, activateAdAction: { [weak self] messageId in
+        }, activateAdAction: { [weak self] messageId, progress in
             guard let self, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId), let adAttribute = message.adAttribute else {
                 return
             }
             self.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId)
-            self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: adAttribute.url, concealed: false, external: true))
+            self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: adAttribute.url, concealed: false, external: true, progress: progress))
         }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId, maxQuantity in
             guard let self else {
                 return

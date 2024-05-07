@@ -755,7 +755,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
                 self.controllerInteraction?.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)
             } else if let peer = self.peer {
                 if let adMessageId = self.adMessageId {
-                    self.controllerInteraction?.activateAdAction(adMessageId)
+                    self.controllerInteraction?.activateAdAction(adMessageId, nil)
                 } else {
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         self.controllerInteraction?.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, .default)
