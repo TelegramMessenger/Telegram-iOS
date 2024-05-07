@@ -84,6 +84,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageTransitionNode",
         "//submodules/AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode",
+        "//submodules/TelegramUI/Components/LottieMetal",
     ],
     visibility = [
         "//visibility:public",

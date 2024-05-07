@@ -74,6 +74,7 @@ import UIKitRuntimeUtils
 import ChatMessageTransitionNode
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import LottieMetal
 
 private struct BubbleItemAttributes {
     var isAttachment: Bool
@@ -5822,7 +5823,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
 
         do {
             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
-            let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
+            
+            let additionalAnimationNode = LottieMetalAnimatedStickerNode()
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 1.6), height: Int(animationSize.height * 1.6), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
             var animationFrame: CGRect
             if isStickerEffect {
