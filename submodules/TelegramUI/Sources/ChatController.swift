@@ -9699,7 +9699,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let disposable = openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
-                self?.openResolved(result: resolved, sourceMessageId: message?.id, forceExternal: forceExternal, concealed: concealed, commit: commit)
+                self?.openResolved(result: resolved, sourceMessageId: message?.id, progress: progress, forceExternal: forceExternal, concealed: concealed, commit: commit)
             }, progress: progress)
             self.navigationActionDisposable.set(disposable)
         }, performAction: true)
