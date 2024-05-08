@@ -1295,19 +1295,6 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
     }
     
     if (!_renderTreeNode) {
-        _renderTreeNode = std::make_shared<RenderTreeNode>(
-            CGRect(0.0, 0.0, 0.0, 0.0),
-            Vector2D(0.0, 0.0),
-            CATransform3D::identity(),
-            1.0,
-            false,
-            false,
-            nullptr,
-            std::vector<std::shared_ptr<RenderTreeNode>>(),
-            nullptr,
-            false
-        );
-        
         std::vector<std::shared_ptr<RenderTreeNode>> renderTreeValue;
         renderTreeValue.push_back(_contentTree->itemTree->renderTree());
         
@@ -1323,15 +1310,39 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
             nullptr,
             false
         );
+        
+        std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
+        subnodes.push_back(_contentsTreeNode);
+        
+        std::shared_ptr<RenderTreeNode> maskNode;
+        bool invertMask = false;
+        if (_matteLayer) {
+            maskNode = _matteLayer->renderTreeNode();
+            if (maskNode && _matteType.has_value() && _matteType.value() == MatteType::Invert) {
+                invertMask = true;
+            }
+        }
+        
+        _renderTreeNode = std::make_shared<RenderTreeNode>(
+            CGRect(0.0, 0.0, 0.0, 0.0),
+            Vector2D(0.0, 0.0),
+            CATransform3D::identity(),
+            1.0,
+            false,
+            false,
+            nullptr,
+            subnodes,
+            maskNode,
+            invertMask
+        );
     }
     
-    std::shared_ptr<RenderTreeNode> maskNode;
-    bool invertMask = false;
+    return _renderTreeNode;
+}
+
+void ShapeCompositionLayer::updateRenderTree() {
     if (_matteLayer) {
-        maskNode = _matteLayer->renderTreeNode();
-        if (maskNode && _matteType.has_value() && _matteType.value() == MatteType::Invert) {
-            invertMask = true;
-        }
+        _matteLayer->updateRenderTree();
     }
     
     _contentsTreeNode->_bounds = _contentsLayer->bounds();
@@ -1340,9 +1351,6 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
     _contentsTreeNode->_alpha = _contentsLayer->opacity();
     _contentsTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
     _contentsTreeNode->_isHidden = _contentsLayer->isHidden();
-    
-    std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
-    subnodes.push_back(_contentsTreeNode);
     
     assert(position() == Vector2D::Zero());
     assert(transform().isIdentity());
@@ -1359,14 +1367,6 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
     _renderTreeNode->_alpha = opacity();
     _renderTreeNode->_masksToBounds = masksToBounds();
     _renderTreeNode->_isHidden = isHidden();
-    _renderTreeNode->_subnodes = subnodes;
-    _renderTreeNode->_mask = maskNode;
-    _renderTreeNode->_invertMask = invertMask;
-    
-    return _renderTreeNode;
-}
-
-void ShapeCompositionLayer::updateRenderTree() {
 }
 
 }

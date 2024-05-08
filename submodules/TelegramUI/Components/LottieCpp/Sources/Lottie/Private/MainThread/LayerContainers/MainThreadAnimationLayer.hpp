@@ -219,38 +219,43 @@ public:
     }
     
     virtual std::shared_ptr<RenderTreeNode> renderTreeNode() {
-        std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
-        for (const auto &animationLayer : _animationLayers) {
-            bool found = false;
-            for (const auto &sublayer : sublayers()) {
-                if (animationLayer == sublayer) {
-                    found = true;
-                    break;
+        if (!_renderTreeNode) {
+            std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
+            for (const auto &animationLayer : _animationLayers) {
+                bool found = false;
+                for (const auto &sublayer : sublayers()) {
+                    if (animationLayer == sublayer) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) {
+                    auto node = animationLayer->renderTreeNode();
+                    if (node) {
+                        subnodes.push_back(node);
+                    }
                 }
             }
-            if (found) {
-                auto node = animationLayer->renderTreeNode();
-                if (node) {
-                    subnodes.push_back(node);
-                }
-            }
+            _renderTreeNode = std::make_shared<RenderTreeNode>(
+                bounds(),
+                position(),
+                CATransform3D::identity(),
+                1.0,
+                false,
+                false,
+                nullptr,
+                subnodes,
+                nullptr,
+                false
+            );
         }
         
-        return std::make_shared<RenderTreeNode>(
-            bounds(),
-            position(),
-            CATransform3D::identity(),
-            1.0,
-            false,
-            false,
-            nullptr,
-            subnodes,
-            nullptr,
-            false
-        );
+        updateRenderTree();
+        
+        return _renderTreeNode;
     }
     
-    virtual void updateRenderTree() {
+    void updateRenderTree() {
         for (const auto &animationLayer : _animationLayers) {
             bool found = false;
             for (const auto &sublayer : sublayers()) {
@@ -282,6 +287,8 @@ private:
     std::shared_ptr<LayerImageProvider> _layerImageProvider;
     std::shared_ptr<LayerTextProvider> _layerTextProvider;
     std::shared_ptr<LayerFontProvider> _layerFontProvider;
+    
+    std::shared_ptr<RenderTreeNode> _renderTreeNode;
 };
 
 }

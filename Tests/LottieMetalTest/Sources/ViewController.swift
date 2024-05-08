@@ -77,7 +77,8 @@ private final class ReferenceCompareTest {
                 let _ = await cacheReferenceAnimation(baseCachePath: baseCachePath, width: sizeMapping[fileName] ?? defaultSize, path: filePath, name: fileName)
             }
             
-            var continueFromName: String? = "5138957708585599529.json"
+            var continueFromName: String?
+            //continueFromName = "1258816259754282.json"
             
             let _ = await processAnimationFolderAsync(basePath: bundlePath, path: "", stopOnFailure: true, process: { path, name, alwaysDraw in
                 if let continueFromNameValue = continueFromName {
