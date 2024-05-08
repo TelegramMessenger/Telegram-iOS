@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "lottiejson11.hpp"
+#include <LottieCpp/lottiejson11.hpp>
 #include <cassert>
 #include <cmath>
 #include <cstdlib>

@@ -19,7 +19,7 @@ class BlankImageProvider: public AnimationImageProvider {
 public:
     virtual ~BlankImageProvider() = default;
     
-    std::shared_ptr<CGImage> imageForAsset(ImageAsset const &asset) {
+    std::shared_ptr<Image> imageForAsset(ImageAsset const &asset) {
         return nullptr;
     }
 };

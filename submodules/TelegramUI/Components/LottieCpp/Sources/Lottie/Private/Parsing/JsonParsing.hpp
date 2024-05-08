@@ -1,7 +1,7 @@
 #ifndef JsonParsing_hpp
 #define JsonParsing_hpp
 
-#include "lottiejson11/lottiejson11.hpp"
+#include <LottieCpp/lottiejson11.hpp>
 
 #include <exception>
 #include <string>

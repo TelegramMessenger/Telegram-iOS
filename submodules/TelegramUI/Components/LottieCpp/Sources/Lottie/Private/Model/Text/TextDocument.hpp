@@ -1,7 +1,7 @@
 #ifndef TextDocument_hpp
 #define TextDocument_hpp
 
-#include "Lottie/Public/Primitives/Vectors.hpp"
+#include <LottieCpp/Vectors.h>
 #include "Lottie/Public/Primitives/Color.hpp"
 #include "Lottie/Private/Parsing/JsonParsing.hpp"
 

@@ -2,7 +2,7 @@
 #define Keyframe_hpp
 
 #include "Lottie/Public/Primitives/AnimationTime.hpp"
-#include "Lottie/Public/Primitives/Vectors.hpp"
+#include <LottieCpp/Vectors.h>
 #include "Lottie/Public/Keyframes/Interpolatable.hpp"
 #include "Lottie/Public/Keyframes/ValueInterpolators.hpp"
 

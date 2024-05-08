@@ -1,11 +1,11 @@
 #include "LottieRenderTree.h"
 #include "LottieRenderTreeInternal.h"
 
-#include "Lottie/Public/Primitives/CGPath.hpp"
-#include "Lottie/Public/Primitives/CGPathCocoa.h"
+#include <LottieCpp/CGPath.h>
+#include <LottieCpp/CGPathCocoa.h>
 #include "Lottie/Public/Primitives/Color.hpp"
 #include "Lottie/Public/Primitives/CALayer.hpp"
-#include "Lottie/Public/Primitives/VectorsCocoa.h"
+#include <LottieCpp/VectorsCocoa.h>
 
 #include "RenderNode.hpp"
 

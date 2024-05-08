@@ -1,7 +1,7 @@
 #ifndef NodeOutput_hpp
 #define NodeOutput_hpp
 
-#include "Lottie/Public/Primitives/CGPath.hpp"
+#include <LottieCpp/CGPath.h>
 
 #include <memory>
 

@@ -1,4 +1,4 @@
-#include "CGPath.hpp"
+#include <LottieCpp/CGPath.h>
 
 #include <cassert>
 

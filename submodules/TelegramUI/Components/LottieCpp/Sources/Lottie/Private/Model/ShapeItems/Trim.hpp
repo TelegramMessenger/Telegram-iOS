@@ -3,7 +3,7 @@
 
 #include "Lottie/Private/Model/ShapeItems/ShapeItem.hpp"
 #include "Lottie/Private/Model/Keyframes/KeyframeGroup.hpp"
-#include "Lottie/Public/Primitives/Vectors.hpp"
+#include <LottieCpp/Vectors.h>
 #include "Lottie/Private/Parsing/JsonParsing.hpp"
 
 namespace lottie {

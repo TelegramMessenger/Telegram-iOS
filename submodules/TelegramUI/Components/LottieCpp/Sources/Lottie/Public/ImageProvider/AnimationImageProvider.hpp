@@ -8,7 +8,7 @@ namespace lottie {
 
 class AnimationImageProvider {
 public:
-    virtual std::shared_ptr<CGImage> imageForAsset(ImageAsset const &imageAsset) = 0;
+    virtual std::shared_ptr<Image> imageForAsset(ImageAsset const &imageAsset) = 0;
 };
 
 }

@@ -97,214 +97,6 @@ struct RenderNodeDesc {
     }
 };
 
-/*static std::optional<RenderNodeDesc> processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vector2D const &globalSize, CATransform3D const &parentTransform, bool isInvertedMask, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
-    if (node->isHidden() || node->alpha() == 0.0f) {
-        return std::nullopt;
-    }
-    
-    if (node->masksToBounds()) {
-        if (node->bounds().empty()) {
-            return std::nullopt;
-        }
-    }
-    
-    auto currentTransform = parentTransform;
-    
-    Vector2D localTranslation(node->position().x + -node->bounds().x, node->position().y + -node->bounds().y);
-    CATransform3D localTransform = node->transform();
-    if (localTransform.isIdentity()) {
-        currentTransform.m41 += localTranslation.x;
-        currentTransform.m42 += localTranslation.y;
-        
-        localTransform.m41 += localTranslation.x;
-        localTransform.m42 += localTranslation.y;
-    } else {
-        localTransform.m41 += localTranslation.x;
-        localTransform.m42 += localTranslation.y;
-        
-        currentTransform = localTransform * currentTransform;
-    }
-    
-    if (!currentTransform.isInvertible()) {
-        return std::nullopt;
-    }
-    
-    std::optional<CGRect> effectiveLocalBounds;
-    
-    double alpha = node->alpha();
-    
-    if (node->content()) {
-        RenderTreeNodeContent *shapeContent = node->content().get();
-        
-        CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, shapeContent->paths);
-        
-        if (shapeContent->stroke) {
-            shapeBounds = shapeBounds.insetBy(-shapeContent->stroke->lineWidth / 2.0, -shapeContent->stroke->lineWidth / 2.0);
-            effectiveLocalBounds = shapeBounds;
-            
-            switch (shapeContent->stroke->shading->type()) {
-                case RenderTreeNodeContent::ShadingType::Solid: {
-                    RenderTreeNodeContent::SolidShading *solidShading = (RenderTreeNodeContent::SolidShading *)shapeContent->stroke->shading.get();
-                    
-                    alpha *= solidShading->opacity;
-                    
-                    break;
-                }
-                case RenderTreeNodeContent::ShadingType::Gradient: {
-                    
-                    break;
-                }
-                default:
-                    break;
-            }
-        } else if (shapeContent->fill) {
-            effectiveLocalBounds = shapeBounds;
-            
-            switch (shapeContent->fill->shading->type()) {
-                case RenderTreeNodeContent::ShadingType::Solid: {
-                    RenderTreeNodeContent::SolidShading *solidShading = (RenderTreeNodeContent::SolidShading *)shapeContent->fill->shading.get();
-                    
-                    alpha *= solidShading->opacity;
-                    
-                    break;
-                }
-                case RenderTreeNodeContent::ShadingType::Gradient: {
-                    RenderTreeNodeContent::GradientShading *gradientShading = (RenderTreeNodeContent::GradientShading *)shapeContent->fill->shading.get();
-                    
-                    alpha *= gradientShading->opacity;
-                    
-                    break;
-                }
-                default:
-                    break;
-            }
-        }
-    }
-    
-    bool isInvertedMatte = isInvertedMask;
-    if (isInvertedMatte) {
-        effectiveLocalBounds = node->bounds();
-    }
-    
-    if (effectiveLocalBounds && effectiveLocalBounds->empty()) {
-        effectiveLocalBounds = std::nullopt;
-    }
-    
-    std::optional<CGRect> effectiveLocalRect;
-    if (effectiveLocalBounds.has_value()) {
-        effectiveLocalRect = effectiveLocalBounds;
-    }
-    
-    std::vector<std::shared_ptr<OutputRenderNode>> subnodes;
-    std::optional<CGRect> subnodesGlobalRect;
-    bool masksToBounds = node->masksToBounds();
-    
-    int drawContentDescendants = 0;
-    
-    for (const auto &item : node->subnodes()) {
-        if (const auto subnode = processRenderTree(item, globalSize, currentTransform, false, bezierPathsBoundingBoxContext)) {
-            drawContentDescendants += subnode->drawContentDescendants;
-            
-            if (subnode->renderContent) {
-                drawContentDescendants += 1;
-            }
-            
-            if (!subnode->localRect.empty()) {
-                if (effectiveLocalRect.has_value()) {
-                    effectiveLocalRect = effectiveLocalRect->unionWith(subnode->localRect);
-                } else {
-                    effectiveLocalRect = subnode->localRect;
-                }
-            }
-            
-            if (subnodesGlobalRect) {
-                subnodesGlobalRect = subnodesGlobalRect->unionWith(subnode->globalRect);
-            } else {
-                subnodesGlobalRect = subnode->globalRect;
-            }
-        }
-    }
-    
-    if (masksToBounds && effectiveLocalRect.has_value()) {
-        if (node->bounds().contains(effectiveLocalRect.value())) {
-            masksToBounds = false;
-        }
-    }
-    
-    std::optional<CGRect> fuzzyGlobalRect;
-    
-    if (effectiveLocalBounds) {
-        CGRect effectiveGlobalBounds = effectiveLocalBounds->applyingTransform(currentTransform);
-        if (fuzzyGlobalRect) {
-            fuzzyGlobalRect = fuzzyGlobalRect->unionWith(effectiveGlobalBounds);
-        } else {
-            fuzzyGlobalRect = effectiveGlobalBounds;
-        }
-    }
-    
-    if (subnodesGlobalRect) {
-        if (fuzzyGlobalRect) {
-            fuzzyGlobalRect = fuzzyGlobalRect->unionWith(subnodesGlobalRect.value());
-        } else {
-            fuzzyGlobalRect = subnodesGlobalRect;
-        }
-    }
-    
-    if (!fuzzyGlobalRect) {
-        return std::nullopt;
-    }
-    
-    CGRect globalRect(
-        std::floor(fuzzyGlobalRect->x),
-        std::floor(fuzzyGlobalRect->y),
-        std::ceil(fuzzyGlobalRect->width + fuzzyGlobalRect->x - floor(fuzzyGlobalRect->x)),
-        std::ceil(fuzzyGlobalRect->height + fuzzyGlobalRect->y - floor(fuzzyGlobalRect->y))
-    );
-    
-    if (!CGRect(0.0, 0.0, globalSize.x, globalSize.y).intersects(globalRect)) {
-        return std::nullopt;
-    }
-    
-    if (masksToBounds && effectiveLocalBounds) {
-        CGRect effectiveGlobalBounds = effectiveLocalBounds->applyingTransform(currentTransform);
-        if (effectiveGlobalBounds.contains(CGRect(0.0, 0.0, globalSize.x, globalSize.y))) {
-            masksToBounds = false;
-        }
-    }
-    
-    std::optional<RenderNodeDesc> maskNode;
-    if (node->mask()) {
-        if (const auto maskNodeValue = processRenderTree(node->mask(), globalSize, currentTransform, node->invertMask(), bezierPathsBoundingBoxContext)) {
-            if (!maskNodeValue->globalRect.intersects(globalRect)) {
-                return std::nullopt;
-            }
-            maskNode = maskNodeValue;
-        } else {
-            return std::nullopt;
-        }
-    }
-    
-    CGRect localRect = effectiveLocalRect.value_or(CGRect(0.0, 0.0, 0.0, 0.0)).applyingTransform(localTransform);
-    
-    return RenderNodeDesc(
-        RenderNodeDesc::LayerParams(
-            node->bounds(),
-            node->position(),
-            node->transform(),
-            alpha,
-            masksToBounds,
-            node->isHidden()
-        ),
-        globalRect,
-        localRect,
-        currentTransform,
-        effectiveLocalBounds.has_value(),
-        node->content() != nullptr,
-        drawContentDescendants,
-        isInvertedMatte
-    );
-}*/
-
 static std::shared_ptr<OutputRenderNode> convertRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vector2D const &globalSize, CATransform3D const &parentTransform, bool isInvertedMask, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
     if (node->isHidden() || node->alpha() == 0.0f) {
         return nullptr;
@@ -508,6 +300,209 @@ static std::shared_ptr<OutputRenderNode> convertRenderTree(std::shared_ptr<Rende
     );
 }
 
+/*static void visitRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vector2D const &globalSize, CATransform3D const &parentTransform, bool isInvertedMask, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+    if (node->isHidden() || node->alpha() == 0.0f) {
+        return nullptr;
+    }
+    
+    if (node->masksToBounds()) {
+        if (node->bounds().empty()) {
+            return nullptr;
+        }
+    }
+    
+    auto currentTransform = parentTransform;
+    
+    Vector2D localTranslation(node->position().x - node->bounds().x, node->position().y - node->bounds().y);
+    CATransform3D localTransform = node->transform();
+    localTransform = localTransform.translated(localTranslation);
+    
+    currentTransform = localTransform * currentTransform;
+    
+    if (!currentTransform.isInvertible()) {
+        return nullptr;
+    }
+    
+    std::optional<CGRect> effectiveLocalBounds;
+    
+    double alpha = node->alpha();
+    
+    if (node->content()) {
+        RenderTreeNodeContent *shapeContent = node->content().get();
+        
+        CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, shapeContent->paths);
+        
+        if (shapeContent->stroke) {
+            shapeBounds = shapeBounds.insetBy(-shapeContent->stroke->lineWidth / 2.0, -shapeContent->stroke->lineWidth / 2.0);
+            effectiveLocalBounds = shapeBounds;
+            
+            switch (shapeContent->stroke->shading->type()) {
+                case RenderTreeNodeContent::ShadingType::Solid: {
+                    RenderTreeNodeContent::SolidShading *solidShading = (RenderTreeNodeContent::SolidShading *)shapeContent->stroke->shading.get();
+                    
+                    alpha *= solidShading->opacity;
+                    
+                    break;
+                }
+                case RenderTreeNodeContent::ShadingType::Gradient: {
+                    
+                    break;
+                }
+                default:
+                    break;
+            }
+        } else if (shapeContent->fill) {
+            effectiveLocalBounds = shapeBounds;
+            
+            switch (shapeContent->fill->shading->type()) {
+                case RenderTreeNodeContent::ShadingType::Solid: {
+                    RenderTreeNodeContent::SolidShading *solidShading = (RenderTreeNodeContent::SolidShading *)shapeContent->fill->shading.get();
+                    
+                    alpha *= solidShading->opacity;
+                    
+                    break;
+                }
+                case RenderTreeNodeContent::ShadingType::Gradient: {
+                    RenderTreeNodeContent::GradientShading *gradientShading = (RenderTreeNodeContent::GradientShading *)shapeContent->fill->shading.get();
+                    
+                    alpha *= gradientShading->opacity;
+                    
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+    }
+    
+    bool isInvertedMatte = isInvertedMask;
+    if (isInvertedMatte) {
+        effectiveLocalBounds = node->bounds();
+    }
+    
+    if (effectiveLocalBounds && effectiveLocalBounds->empty()) {
+        effectiveLocalBounds = std::nullopt;
+    }
+    
+    std::optional<CGRect> effectiveLocalRect;
+    if (effectiveLocalBounds.has_value()) {
+        effectiveLocalRect = effectiveLocalBounds;
+    }
+    
+    std::vector<std::shared_ptr<OutputRenderNode>> subnodes;
+    std::optional<CGRect> subnodesGlobalRect;
+    bool masksToBounds = node->masksToBounds();
+    
+    int drawContentDescendants = 0;
+    
+    for (const auto &item : node->subnodes()) {
+        if (const auto subnode = convertRenderTree(item, globalSize, currentTransform, false, bezierPathsBoundingBoxContext)) {
+            subnodes.push_back(subnode);
+            
+            drawContentDescendants += subnode->drawContentDescendants;
+            
+            if (subnode->renderContent) {
+                drawContentDescendants += 1;
+            }
+            
+            if (!subnode->localRect.empty()) {
+                if (effectiveLocalRect.has_value()) {
+                    effectiveLocalRect = effectiveLocalRect->unionWith(subnode->localRect);
+                } else {
+                    effectiveLocalRect = subnode->localRect;
+                }
+            }
+            
+            if (subnodesGlobalRect) {
+                subnodesGlobalRect = subnodesGlobalRect->unionWith(subnode->globalRect);
+            } else {
+                subnodesGlobalRect = subnode->globalRect;
+            }
+        }
+    }
+    
+    if (masksToBounds && effectiveLocalRect.has_value()) {
+        if (node->bounds().contains(effectiveLocalRect.value())) {
+            masksToBounds = false;
+        }
+    }
+    
+    std::optional<CGRect> fuzzyGlobalRect;
+    
+    if (effectiveLocalBounds) {
+        CGRect effectiveGlobalBounds = effectiveLocalBounds->applyingTransform(currentTransform);
+        if (fuzzyGlobalRect) {
+            fuzzyGlobalRect = fuzzyGlobalRect->unionWith(effectiveGlobalBounds);
+        } else {
+            fuzzyGlobalRect = effectiveGlobalBounds;
+        }
+    }
+    
+    if (subnodesGlobalRect) {
+        if (fuzzyGlobalRect) {
+            fuzzyGlobalRect = fuzzyGlobalRect->unionWith(subnodesGlobalRect.value());
+        } else {
+            fuzzyGlobalRect = subnodesGlobalRect;
+        }
+    }
+    
+    if (!fuzzyGlobalRect) {
+        return nullptr;
+    }
+    
+    CGRect globalRect(
+        std::floor(fuzzyGlobalRect->x),
+        std::floor(fuzzyGlobalRect->y),
+        std::ceil(fuzzyGlobalRect->width + fuzzyGlobalRect->x - floor(fuzzyGlobalRect->x)),
+        std::ceil(fuzzyGlobalRect->height + fuzzyGlobalRect->y - floor(fuzzyGlobalRect->y))
+    );
+    
+    if (!CGRect(0.0, 0.0, globalSize.x, globalSize.y).intersects(globalRect)) {
+        return nullptr;
+    }
+    
+    if (masksToBounds && effectiveLocalBounds) {
+        CGRect effectiveGlobalBounds = effectiveLocalBounds->applyingTransform(currentTransform);
+        if (effectiveGlobalBounds.contains(CGRect(0.0, 0.0, globalSize.x, globalSize.y))) {
+            masksToBounds = false;
+        }
+    }
+    
+    std::shared_ptr<OutputRenderNode> maskNode;
+    if (node->mask()) {
+        if (const auto maskNodeValue = convertRenderTree(node->mask(), globalSize, currentTransform, node->invertMask(), bezierPathsBoundingBoxContext)) {
+            if (!maskNodeValue->globalRect.intersects(globalRect)) {
+                return nullptr;
+            }
+            maskNode = maskNodeValue;
+        } else {
+            return nullptr;
+        }
+    }
+    
+    CGRect localRect = effectiveLocalRect.value_or(CGRect(0.0, 0.0, 0.0, 0.0)).applyingTransform(localTransform);
+    
+    return std::make_shared<OutputRenderNode>(
+        OutputRenderNode::LayerParams(
+            node->bounds(),
+            node->position(),
+            node->transform(),
+            alpha,
+            masksToBounds,
+            node->isHidden()
+        ),
+        globalRect,
+        localRect,
+        currentTransform,
+        effectiveLocalBounds.has_value(),
+        node->content(),
+        drawContentDescendants,
+        isInvertedMatte,
+        subnodes,
+        maskNode
+    );
+}*/
+
 }
 
 @interface LottieAnimationContainer () {
@@ -541,9 +536,13 @@ static std::shared_ptr<OutputRenderNode> convertRenderTree(std::shared_ptr<Rende
     _layer->setCurrentFrame(frame);
 }
 
-- (LottieRenderNode * _Nonnull)getCurrentRenderTreeForSize:(CGSize)size {
+- (LottieRenderNode * _Nullable)getCurrentRenderTreeForSize:(CGSize)size {
     auto renderNode = _layer->renderTreeNode();
     if (!renderNode) {
+        return nil;
+    }
+    
+    if (size.width < 0.0) {
         return nil;
     }
     

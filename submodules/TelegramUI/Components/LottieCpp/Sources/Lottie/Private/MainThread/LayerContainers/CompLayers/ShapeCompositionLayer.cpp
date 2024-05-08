@@ -1307,22 +1307,6 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
     std::vector<std::shared_ptr<RenderTreeNode>> renderTreeValue;
     renderTreeValue.push_back(_contentTree->itemTree->renderTree());
     
-    //printf("Name: %s\n", keypathName().c_str());
-    /*if (!maskNode && keypathName().find("Shape Layer 3") != -1) {
-        return std::make_shared<RenderTreeNode>(
-            bounds(),
-            _contentsLayer->position(),
-            _contentsLayer->transform(),
-            _contentsLayer->opacity(),
-            _contentsLayer->masksToBounds(),
-            _contentsLayer->isHidden(),
-            nullptr,
-            renderTreeValue,
-            nullptr,
-            false
-        );
-    }*/
-    
     std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
     subnodes.push_back(std::make_shared<RenderTreeNode>(
         _contentsLayer->bounds(),

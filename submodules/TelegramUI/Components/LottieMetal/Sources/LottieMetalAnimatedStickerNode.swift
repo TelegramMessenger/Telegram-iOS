@@ -138,9 +138,11 @@ private final class AnimationCacheState {
                         for i in 0 ..< animationContainer.animation.frameCount {
                             animationContainer.update(i)
                             let frameRangeStart = buffer.length
-                            serializeNode(buffer: buffer, node: animationContainer.getCurrentRenderTree(for: CGSize(width: 512.0, height: 512.0)))
-                            let frameRangeEnd = buffer.length
-                            frameMapping.frameRanges[i] = frameRangeStart ..< frameRangeEnd
+                            if let node = animationContainer.getCurrentRenderTree(for: CGSize(width: 512.0, height: 512.0)) {
+                                serializeNode(buffer: buffer, node: node)
+                                let frameRangeEnd = buffer.length
+                                frameMapping.frameRanges[i] = frameRangeStart ..< frameRangeEnd
+                            }
                         }
                         
                         let previousLength = buffer.length
@@ -189,7 +191,7 @@ private final class AnimationCacheState {
     }
 }
 
-final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
+public final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     enum Content {
         case serialized(frameMapping: SerializedFrameMapping, data: Data)
         case animation(LottieAnimationContainer)
@@ -239,9 +241,9 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     }
     
     private var content: Content?
-    var frameIndex: Int = 0
+    public var frameIndex: Int = 0
     
-    var internalData: MetalEngineSubjectInternalData?
+    public var internalData: MetalEngineSubjectInternalData?
     
     private let msaaSampleCount = 4
     private var renderBufferHeap: MTLHeap?
@@ -294,11 +296,19 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         self.isOpaque = false
     }
     
-    override init(layer: Any) {
+    public init(animation: LottieAnimationContainer) {
+        self.content = .animation(animation)
+        
+        super.init()
+        
+        self.isOpaque = false
+    }
+    
+    override public init(layer: Any) {
         super.init(layer: layer)
     }
     
-    required init?(coder: NSCoder) {
+    required public init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -368,7 +378,7 @@ final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         frameState.add(stroke: strokeState)
     }
     
-    func update(context: MetalEngineSubjectContext) {
+    public func update(context: MetalEngineSubjectContext) {
         if self.bounds.isEmpty {
             return
         }

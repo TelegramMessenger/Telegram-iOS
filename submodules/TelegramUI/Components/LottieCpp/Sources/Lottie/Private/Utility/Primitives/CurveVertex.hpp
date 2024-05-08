@@ -1,8 +1,8 @@
 #ifndef CurveVertex_hpp
 #define CurveVertex_hpp
 
-#include "Lottie/Public/Primitives/Vectors.hpp"
-#include "Lottie/Public/Primitives/CGPath.hpp"
+#include <LottieCpp/Vectors.h>
+#include <LottieCpp/CGPath.h>
 
 #include <math.h>
 

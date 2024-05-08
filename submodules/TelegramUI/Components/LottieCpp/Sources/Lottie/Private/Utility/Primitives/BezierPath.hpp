@@ -4,7 +4,7 @@
 #include "Lottie/Private/Utility/Primitives/CurveVertex.hpp"
 #include "Lottie/Private/Utility/Primitives/PathElement.hpp"
 #include "Lottie/Private/Parsing/JsonParsing.hpp"
-#include "Lottie/Public/Primitives/CGPath.hpp"
+#include <LottieCpp/CGPath.h>
 
 #include <vector>
 
@@ -63,9 +63,9 @@ public:
         }
         
         /// Create first point
-        Vector2D firstPoint(vertexContainer[0]);
-        Vector2D firstInPoint(inPointsContainer[0]);
-        Vector2D firstOutPoint(outPointsContainer[0]);
+        Vector2D firstPoint = Vector2D(vertexContainer[0]);
+        Vector2D firstInPoint = Vector2D(inPointsContainer[0]);
+        Vector2D firstOutPoint = Vector2D(outPointsContainer[0]);
         CurveVertex firstVertex = CurveVertex::relative(
             firstPoint,
             firstInPoint,
@@ -75,9 +75,9 @@ public:
         elements.push_back(previousElement);
         
         for (size_t i = 1; i < vertexContainer.size(); i++) {
-            Vector2D point(vertexContainer[i]);
-            Vector2D inPoint(inPointsContainer[i]);
-            Vector2D outPoint(outPointsContainer[i]);
+            Vector2D point = Vector2D(vertexContainer[i]);
+            Vector2D inPoint = Vector2D(inPointsContainer[i]);
+            Vector2D outPoint = Vector2D(outPointsContainer[i]);
             CurveVertex vertex = CurveVertex::relative(
                 point,
                 inPoint,

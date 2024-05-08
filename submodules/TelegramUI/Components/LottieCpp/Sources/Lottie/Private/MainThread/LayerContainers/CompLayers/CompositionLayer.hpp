@@ -1,7 +1,7 @@
 #ifndef CompositionLayer_hpp
 #define CompositionLayer_hpp
 
-#include "Lottie/Public/Primitives/Vectors.hpp"
+#include <LottieCpp/Vectors.h>
 #include "Lottie/Public/Primitives/CALayer.hpp"
 #include "Lottie/Private/MainThread/NodeRenderSystem/NodeProperties/Protocols/KeypathSearchable.hpp"
 #include "Lottie/Private/Model/Layers/LayerModel.hpp"
@@ -24,12 +24,8 @@ public:
     void setup();
     
     std::shared_ptr<CompositionLayer> _inputMatte;
-    //let wrapperLayer = CALayer()
     
     virtual void frameUpdated(double frame) override;
-    /*virtual bool implementsDraw() const override;
-    virtual void draw(std::shared_ptr<CGContext> const &context) override;*/
-    //virtual std::shared_ptr<RenderableItem> renderableItem() override;
     
     virtual bool isInvertedMatte() const override {
         return true;

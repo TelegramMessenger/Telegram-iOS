@@ -3,10 +3,12 @@
 
 #import <Foundation/Foundation.h>
 
-#ifdef __cplusplus
+#import <LottieCpp/LottieAnimation.h>
+#import <LottieCpp/LottieAnimationContainer.h>
+#import <LottieCpp/LottieRenderTree.h>
+#import <LottieCpp/CGPath.h>
+#import <LottieCpp/CGPathCocoa.h>
+#import <LottieCpp/Vectors.h>
+#import <LottieCpp/VectorsCocoa.h>
 
-
-
-#endif
-
-#endif /* DctHuffman_h */
+#endif /* LottieCpp_h */

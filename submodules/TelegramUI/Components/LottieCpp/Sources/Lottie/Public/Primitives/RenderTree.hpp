@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include "Lottie/Public/Primitives/Vectors.hpp"
+#include <LottieCpp/Vectors.h>
 #include "Lottie/Public/Primitives/CALayer.hpp"
 
 namespace lottie {

@@ -6,6 +6,12 @@
 
 namespace lottie {
 
+class Image {
+public:
+    Image() {
+    }
+};
+
 class ImageAsset: public Asset {
 public:
     ImageAsset(

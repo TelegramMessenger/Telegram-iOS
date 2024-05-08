@@ -1,7 +1,7 @@
 #ifndef LayerModelSerialization_hpp
 #define LayerModelSerialization_hpp
 
-#include "lottiejson11/lottiejson11.hpp"
+#include <LottieCpp/lottiejson11.hpp>
 #include "Lottie/Private/Parsing/JsonParsing.hpp"
 #include "Lottie/Private/Model/Layers/LayerModel.hpp"
 

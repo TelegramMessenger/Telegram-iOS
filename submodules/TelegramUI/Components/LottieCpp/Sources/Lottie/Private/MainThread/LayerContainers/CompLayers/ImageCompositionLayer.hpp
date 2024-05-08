@@ -2,6 +2,7 @@
 #define ImageCompositionLayer_hpp
 
 #include "Lottie/Private/MainThread/LayerContainers/CompLayers/CompositionLayer.hpp"
+#include "Lottie/Private/Model/Assets/ImageAsset.hpp"
 #include "Lottie/Private/Model/Layers/ImageLayerModel.hpp"
 
 namespace lottie {
@@ -15,12 +16,12 @@ public:
         contentsLayer()->setMasksToBounds(true);
     }
     
-    std::shared_ptr<CGImage> image() {
+    std::shared_ptr<Image> image() {
         return _image;
     }
-    void setImage(std::shared_ptr<CGImage> image) {
+    void setImage(std::shared_ptr<Image> image) {
         _image = image;
-        contentsLayer()->setContents(image);
+        //contentsLayer()->setContents(image);
     }
     
     std::string const &imageReferenceID() {
@@ -34,7 +35,7 @@ public:
     
 private:
     std::string _imageReferenceID;
-    std::shared_ptr<CGImage> _image;
+    std::shared_ptr<Image> _image;
 };
 
 }

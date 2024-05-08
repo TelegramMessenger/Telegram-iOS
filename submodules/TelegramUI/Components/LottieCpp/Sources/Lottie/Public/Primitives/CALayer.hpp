@@ -2,8 +2,8 @@
 #define CALayer_hpp
 
 #include "Lottie/Public/Primitives/Color.hpp"
-#include "Lottie/Public/Primitives/Vectors.hpp"
-#include "Lottie/Public/Primitives/CGPath.hpp"
+#include <LottieCpp/Vectors.h>
+#include <LottieCpp/CGPath.h>
 #include "Lottie/Private/Model/ShapeItems/Fill.hpp"
 #include "Lottie/Private/Model/Layers/LayerModel.hpp"
 #include "Lottie/Public/Primitives/DrawingAttributes.hpp"
@@ -14,68 +14,6 @@
 #include <functional>
 
 namespace lottie {
-
-enum class CGBlendMode {
-    Normal,
-    DestinationIn,
-    DestinationOut
-};
-
-class CGImage {
-public:
-    virtual ~CGImage() = default;
-};
-
-class CGGradient {
-public:
-    CGGradient(std::vector<Color> const &colors, std::vector<double> const &locations) :
-    _colors(colors),
-    _locations(locations) {
-        assert(_colors.size() == _locations.size());
-    }
-    
-    std::vector<Color> const &colors() const {
-        return _colors;
-    }
-    
-    std::vector<double> const &locations() const {
-        return _locations;
-    }
-    
-private:
-    std::vector<Color> _colors;
-    std::vector<double> _locations;
-};
-
-class CGContext {
-public:
-    virtual ~CGContext() = default;
-    
-    virtual int width() const = 0;
-    virtual int height() const = 0;
-    
-    virtual std::shared_ptr<CGContext> makeLayer(int width, int height) = 0;
-    
-    virtual void saveState() = 0;
-    virtual void restoreState() = 0;
-    
-    virtual void fillPath(std::shared_ptr<CGPath> const &path, FillRule fillRule, Color const &color) = 0;
-    virtual void linearGradientFillPath(std::shared_ptr<CGPath> const &path, FillRule fillRule, CGGradient const &gradient, Vector2D const &start, Vector2D const &end) = 0;
-    virtual void radialGradientFillPath(std::shared_ptr<CGPath> const &path, FillRule fillRule, CGGradient const &gradient, Vector2D const &startCenter, double startRadius, Vector2D const &endCenter, double endRadius) = 0;
-    
-    virtual void strokePath(std::shared_ptr<CGPath> const &path, double lineWidth, LineJoin lineJoin, LineCap lineCap, double dashPhase, std::vector<double> const &dashPattern, Color const &color) = 0;
-    virtual void linearGradientStrokePath(std::shared_ptr<CGPath> const &path, double lineWidth, LineJoin lineJoin, LineCap lineCap, double dashPhase, std::vector<double> const &dashPattern, CGGradient const &gradient, Vector2D const &start, Vector2D const &end) = 0;
-    virtual void radialGradientStrokePath(std::shared_ptr<CGPath> const &path, double lineWidth, LineJoin lineJoin, LineCap lineCap, double dashPhase, std::vector<double> const &dashPattern, CGGradient const &gradient, Vector2D const &startCenter, double startRadius, Vector2D const &endCenter, double endRadius) = 0;
-    
-    virtual void fill(CGRect const &rect, Color const &fillColor) = 0;
-    virtual void setBlendMode(CGBlendMode blendMode) = 0;
-    
-    virtual void setAlpha(double alpha) = 0;
-    
-    virtual void concatenate(CATransform3D const &transform) = 0;
-    
-    virtual void draw(std::shared_ptr<CGContext> const &other, CGRect const &rect) = 0;
-};
 
 class RenderableItem {
 public:
@@ -544,9 +482,6 @@ public:
         return false;
     }
     
-    virtual void draw(std::shared_ptr<CGContext> const &context) {
-    }
-    
     virtual std::shared_ptr<RenderableItem> renderableItem() {
         return nullptr;
     }
@@ -615,13 +550,6 @@ public:
         _compositingFilter = compositingFilter;
     }
     
-    std::shared_ptr<CGImage> const &contents() const {
-        return _contents;
-    }
-    void setContents(std::shared_ptr<CGImage> contents) {
-        _contents = contents;
-    }
-    
 protected:
     template <typename Derived>
     std::shared_ptr<Derived> shared_from_base() {
@@ -651,7 +579,6 @@ private:
     std::shared_ptr<CALayer> _mask;
     bool _masksToBounds = false;
     std::optional<BlendMode> _compositingFilter;
-    std::shared_ptr<CGImage> _contents;
 };
 
 class CAShapeLayer: public CALayer {
@@ -738,12 +665,6 @@ public:
             return CGRect(0.0, 0.0, 0.0, 0.0);
         }
     }
-    
-    /*virtual bool implementsDraw() const override {
-        return true;
-    }
-    
-    virtual void draw(std::shared_ptr<CGContext> const &context) override;*/
     
     std::shared_ptr<RenderableItem> renderableItem() override;
     

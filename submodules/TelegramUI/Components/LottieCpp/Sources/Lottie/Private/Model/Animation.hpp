@@ -10,7 +10,7 @@
 #include "Lottie/Private/Model/Assets/AssetLibrary.hpp"
 #include "Lottie/Private/Model/Objects/FitzModifier.hpp"
 
-#include "lottiejson11/lottiejson11.hpp"
+#include <LottieCpp/lottiejson11.hpp>
 #include "Lottie/Private/Parsing/JsonParsing.hpp"
 #include "Lottie/Private/Model/Layers/LayerModelSerialization.hpp"
 

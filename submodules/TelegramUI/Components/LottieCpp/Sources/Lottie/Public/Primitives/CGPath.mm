@@ -1,6 +1,6 @@
-#include "CGPath.hpp"
-#include "Lottie/Public/Primitives/CGPathCocoa.h"
+#include <LottieCpp/CGPath.h>
 
+#include <LottieCpp/CGPathCocoa.h>
 #import <QuartzCore/QuartzCore.h>
 
 namespace {

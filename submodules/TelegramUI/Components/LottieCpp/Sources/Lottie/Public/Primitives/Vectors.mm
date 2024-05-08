@@ -1,7 +1,7 @@
-#include "Vectors.hpp"
+#include <LottieCpp/Vectors.h>
+#include <LottieCpp/VectorsCocoa.h>
 
-#include "VectorsCocoa.h"
-
+#include "Lottie/Private/Parsing/JsonParsing.hpp"
 #include "Lottie/Public/Keyframes/Interpolatable.hpp"
 
 #include <math.h>
@@ -11,6 +11,134 @@
 #import <simd/simd.h>
 
 namespace lottie {
+
+Vector1D::Vector1D(lottiejson11::Json const &json) noexcept(false) {
+    if (json.is_number()) {
+        value = json.number_value();
+    } else if (json.is_array()) {
+        if (json.array_items().empty()) {
+            throw LottieParsingException();
+        }
+        if (!json.array_items()[0].is_number()) {
+            throw LottieParsingException();
+        }
+        value = json.array_items()[0].number_value();
+    } else {
+        throw LottieParsingException();
+    }
+}
+
+lottiejson11::Json Vector1D::toJson() const {
+    return lottiejson11::Json(value);
+}
+
+Vector2D::Vector2D(lottiejson11::Json const &json) noexcept(false) {
+    x = 0.0;
+    y = 0.0;
+    
+    if (json.is_array()) {
+        int index = 0;
+        
+        if (json.array_items().size() > index) {
+            if (!json.array_items()[index].is_number()) {
+                throw LottieParsingException();
+            }
+            x = json.array_items()[index].number_value();
+            index++;
+        }
+        
+        if (json.array_items().size() > index) {
+            if (!json.array_items()[index].is_number()) {
+                throw LottieParsingException();
+            }
+            y = json.array_items()[index].number_value();
+            index++;
+        }
+    } else if (json.is_object()) {
+        auto xAny = getAny(json.object_items(), "x");
+        if (xAny.is_number()) {
+            x = xAny.number_value();
+        } else if (xAny.is_array()) {
+            if (xAny.array_items().empty()) {
+                throw LottieParsingException();
+            }
+            if (!xAny.array_items()[0].is_number()) {
+                throw LottieParsingException();
+            }
+            x = xAny.array_items()[0].number_value();
+        }
+        
+        auto yAny = getAny(json.object_items(), "y");
+        if (yAny.is_number()) {
+            y = yAny.number_value();
+        } else if (yAny.is_array()) {
+            if (yAny.array_items().empty()) {
+                throw LottieParsingException();
+            }
+            if (!yAny.array_items()[0].is_number()) {
+                throw LottieParsingException();
+            }
+            y = yAny.array_items()[0].number_value();
+        }
+    } else {
+        throw LottieParsingException();
+    }
+}
+
+lottiejson11::Json Vector2D::toJson() const {
+    lottiejson11::Json::object result;
+    
+    result.insert(std::make_pair("x", x));
+    result.insert(std::make_pair("y", y));
+    
+    return lottiejson11::Json(result);
+}
+
+Vector3D::Vector3D(lottiejson11::Json const &json) noexcept(false) {
+    if (!json.is_array()) {
+        throw LottieParsingException();
+    }
+    
+    int index = 0;
+    
+    x = 0.0;
+    y = 0.0;
+    z = 0.0;
+    
+    if (json.array_items().size() > index) {
+        if (!json.array_items()[index].is_number()) {
+            throw LottieParsingException();
+        }
+        x = json.array_items()[index].number_value();
+        index++;
+    }
+    
+    if (json.array_items().size() > index) {
+        if (!json.array_items()[index].is_number()) {
+            throw LottieParsingException();
+        }
+        y = json.array_items()[index].number_value();
+        index++;
+    }
+    
+    if (json.array_items().size() > index) {
+        if (!json.array_items()[index].is_number()) {
+            throw LottieParsingException();
+        }
+        z = json.array_items()[index].number_value();
+        index++;
+    }
+}
+
+lottiejson11::Json Vector3D::toJson() const {
+    lottiejson11::Json::array result;
+    
+    result.push_back(lottiejson11::Json(x));
+    result.push_back(lottiejson11::Json(y));
+    result.push_back(lottiejson11::Json(z));
+    
+    return lottiejson11::Json(result);
+}
 
 CATransform3D CATransform3D::_identity = CATransform3D(
     1.0, 0.0, 0.0, 0.0,

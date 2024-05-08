@@ -1,7 +1,7 @@
 #ifndef ValueInterpolators_hpp
 #define ValueInterpolators_hpp
 
-#include "Lottie/Public/Primitives/Vectors.hpp"
+#include <LottieCpp/Vectors.h>
 #include "Lottie/Public/Primitives/Color.hpp"
 #include "Lottie/Private/Utility/Primitives/BezierPath.hpp"
 #include "Lottie/Private/Model/Text/TextDocument.hpp"
