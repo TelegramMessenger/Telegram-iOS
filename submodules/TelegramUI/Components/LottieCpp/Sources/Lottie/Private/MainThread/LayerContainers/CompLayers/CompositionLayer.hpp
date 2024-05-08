@@ -89,7 +89,13 @@ public:
     
     void displayWithFrame(double frame, bool forceUpdates) {
         _transformNode->updateTree(frame, forceUpdates);
+        
         bool layerVisible = isInRangeOrEqual(frame, _inFrame, _outFrame);
+        
+        _contentsLayer->setTransform(_transformNode->globalTransform());
+        _contentsLayer->setOpacity(_transformNode->opacity());
+        _contentsLayer->setIsHidden(!layerVisible);
+        
         /// Only update contents if current time is within the layers time bounds.
         if (layerVisible) {
             displayContentsWithFrame(frame, forceUpdates);
@@ -97,9 +103,6 @@ public:
                 _maskLayer->updateWithFrame(frame, forceUpdates);
             }
         }
-        _contentsLayer->setTransform(_transformNode->globalTransform());
-        _contentsLayer->setOpacity(_transformNode->opacity());
-        _contentsLayer->setIsHidden(!layerVisible);
         
         if (const auto delegate = _layerDelegate.lock()) {
             delegate->frameUpdated(frame);
@@ -168,6 +171,9 @@ public:
         return nullptr;
     }
     
+    virtual void updateRenderTree() {
+    }
+    
 public:
     std::shared_ptr<LayerTransformNode> const transformNode() const {
         return _transformNode;
@@ -192,8 +198,6 @@ private:
     // MARK: Keypath Searchable
     
     std::string _keypathName;
-    
-    //std::shared_ptr<RenderTreeNode> _renderTree;
     
 public:
     virtual bool isImageCompositionLayer() const {

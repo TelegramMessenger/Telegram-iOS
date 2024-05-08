@@ -18,12 +18,16 @@ public:
     
     virtual void displayContentsWithFrame(double frame, bool forceUpdates) override;
     virtual std::shared_ptr<RenderTreeNode> renderTreeNode() override;
+    virtual void updateRenderTree() override;
     
 private:
     std::shared_ptr<ShapeLayerPresentationTree> _contentTree;
     
     AnimationFrameTime _frameTime = 0.0;
     bool _frameTimeInitialized = false;
+    
+    std::shared_ptr<RenderTreeNode> _renderTreeNode;
+    std::shared_ptr<RenderTreeNode> _contentsTreeNode;
 };
 
 }

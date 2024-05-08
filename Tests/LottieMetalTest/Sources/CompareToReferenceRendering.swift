@@ -256,9 +256,10 @@ func processAnimationFolderAsync(basePath: String, path: String, stopOnFailure: 
     return await processAnimationFolderItems(items: items, countPerBucket: 1, stopOnFailure: stopOnFailure, process: process)
 }
 
+@available(iOS 13.0, *)
 func processAnimationFolderParallel(basePath: String, path: String, stopOnFailure: Bool, process: @escaping (String, String, Bool) async -> Bool) async -> Bool {
     let items = buildAnimationFolderItems(basePath: basePath, path: path)
-    return await processAnimationFolderItems(items: items, countPerBucket: 16, stopOnFailure: stopOnFailure, process: process)
+    return await processAnimationFolderItemsParallel(items: items, stopOnFailure: stopOnFailure, process: process)
 }
 
 func cacheReferenceFolderPath(baseCachePath: String, width: Int, name: String) -> String {

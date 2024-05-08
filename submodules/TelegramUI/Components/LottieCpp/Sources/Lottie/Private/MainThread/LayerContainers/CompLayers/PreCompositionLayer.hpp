@@ -101,6 +101,34 @@ public:
     }
     
     virtual std::shared_ptr<RenderTreeNode> renderTreeNode() override {
+        if (!_renderTreeNode) {
+            _renderTreeNode = std::make_shared<RenderTreeNode>(
+                CGRect(0.0, 0.0, 0.0, 0.0),
+                Vector2D(0.0, 0.0),
+                CATransform3D::identity(),
+                1.0,
+                false,
+                false,
+                nullptr,
+                std::vector<std::shared_ptr<RenderTreeNode>>(),
+                nullptr,
+                false
+            );
+            
+            _contentsTreeNode = std::make_shared<RenderTreeNode>(
+                CGRect(0.0, 0.0, 0.0, 0.0),
+                Vector2D(0.0, 0.0),
+                CATransform3D::identity(),
+                1.0,
+                false,
+                false,
+                nullptr,
+                std::vector<std::shared_ptr<RenderTreeNode>>(),
+                nullptr,
+                false
+            );
+        }
+        
         if (_contentsLayer->isHidden()) {
             return nullptr;
         }
@@ -121,7 +149,17 @@ public:
         }
         
         std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
-        subnodes.push_back(std::make_shared<RenderTreeNode>(
+        
+        _contentsTreeNode->_bounds = _contentsLayer->bounds();
+        _contentsTreeNode->_position = _contentsLayer->position();
+        _contentsTreeNode->_transform = _contentsLayer->transform();
+        _contentsTreeNode->_alpha = _contentsLayer->opacity();
+        _contentsTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
+        _contentsTreeNode->_isHidden = _contentsLayer->isHidden();
+        _contentsTreeNode->_subnodes = renderTreeValue;
+        
+        subnodes.push_back(_contentsTreeNode);
+        /*subnodes.push_back(std::make_shared<RenderTreeNode>(
             _contentsLayer->bounds(),
             _contentsLayer->position(),
             _contentsLayer->transform(),
@@ -132,7 +170,7 @@ public:
             renderTreeValue,
             nullptr,
             false
-        ));
+        ));*/
         
         assert(opacity() == 1.0);
         assert(!isHidden());
@@ -140,18 +178,17 @@ public:
         assert(transform().isIdentity());
         assert(position() == Vector2D::Zero());
         
-        return std::make_shared<RenderTreeNode>(
-            bounds(),
-            position(),
-            transform(),
-            opacity(),
-            masksToBounds(),
-            isHidden(),
-            nullptr,
-            subnodes,
-            maskNode,
-            invertMask
-        );
+        _renderTreeNode->_bounds = bounds();
+        _renderTreeNode->_position = position();
+        _renderTreeNode->_transform = transform();
+        _renderTreeNode->_alpha = opacity();
+        _renderTreeNode->_masksToBounds = masksToBounds();
+        _renderTreeNode->_isHidden = isHidden();
+        _renderTreeNode->_subnodes = subnodes;
+        _renderTreeNode->_mask = maskNode;
+        _renderTreeNode->_invertMask = invertMask;
+        
+        return _renderTreeNode;
     }
     
     std::shared_ptr<RenderTreeNode> renderTree() {
@@ -188,11 +225,33 @@ public:
         );
     }
     
+    virtual void updateRenderTree() override {
+        if (_matteLayer) {
+            _matteLayer->updateRenderTree();
+        }
+        
+        for (const auto &animationLayer : _animationLayers) {
+            bool found = false;
+            for (const auto &sublayer : contentsLayer()->sublayers()) {
+                if (animationLayer == sublayer) {
+                    found = true;
+                    break;
+                }
+            }
+            if (found) {
+                animationLayer->updateRenderTree();
+            }
+        }
+    }
+    
 private:
     double _frameRate = 0.0;
     std::shared_ptr<NodeProperty<Vector1D>> _remappingNode;
     
     std::vector<std::shared_ptr<CompositionLayer>> _animationLayers;
+    
+    std::shared_ptr<RenderTreeNode> _renderTreeNode;
+    std::shared_ptr<RenderTreeNode> _contentsTreeNode;
 };
 
 }

@@ -79,7 +79,7 @@ private final class ReferenceCompareTest {
             
             var continueFromName: String? = "5138957708585599529.json"
             
-            let _ = await processAnimationFolderParallel(basePath: bundlePath, path: "", stopOnFailure: true, process: { path, name, alwaysDraw in
+            let _ = await processAnimationFolderAsync(basePath: bundlePath, path: "", stopOnFailure: true, process: { path, name, alwaysDraw in
                 if let continueFromNameValue = continueFromName {
                     if continueFromNameValue == name {
                         continueFromName = nil

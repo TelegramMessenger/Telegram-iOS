@@ -250,6 +250,21 @@ public:
         );
     }
     
+    virtual void updateRenderTree() {
+        for (const auto &animationLayer : _animationLayers) {
+            bool found = false;
+            for (const auto &sublayer : sublayers()) {
+                if (animationLayer == sublayer) {
+                    found = true;
+                    break;
+                }
+            }
+            if (found) {
+                animationLayer->updateRenderTree();
+            }
+        }
+    }
+    
 private:
     // MARK: Internal
     

@@ -23,12 +23,6 @@ public:
         _textProvider = textProvider;
         _fontProvider = fontProvider;
         
-        //_contentsLayer->addSublayer(_textLayer);
-        
-        assert(false);
-        //self.textLayer.masksToBounds = false
-        //self.textLayer.isGeometryFlipped = true
-        
         if (_rootNode) {
             _childKeypaths.push_back(rootNode);
         }
@@ -67,42 +61,6 @@ public:
         if (_rootNode) {
             _rootNode->rebuildOutputs(frame);
         }
-        
-        assert(false);
-        /*// Get Text Attributes
-        let text = textDocument.value(frame: frame) as! TextDocument
-        let strokeColor = rootNode?.textOutputNode.strokeColor ?? text.strokeColorData?.cgColorValue
-        let strokeWidth = rootNode?.textOutputNode.strokeWidth ?? CGFloat(text.strokeWidth ?? 0)
-        let tracking = (CGFloat(text.fontSize) * (rootNode?.textOutputNode.tracking ?? CGFloat(text.tracking))) / 1000.0
-        let matrix = rootNode?.textOutputNode.xform ?? CATransform3DIdentity
-        let textString = textProvider.textFor(keypathName: keypathName, sourceText: text.text)
-        let ctFont = fontProvider.fontFor(family: text.fontFamily, size: CGFloat(text.fontSize))
-        
-        // Set all of the text layer options
-        textLayer.text = textString
-        textLayer.font = ctFont
-        textLayer.alignment = text.justification.textAlignment
-        textLayer.lineHeight = CGFloat(text.lineHeight)
-        textLayer.tracking = tracking
-        
-        if let fillColor = rootNode?.textOutputNode.fillColor {
-            textLayer.fillColor = fillColor
-        } else if let fillColor = text.fillColorData?.cgColorValue {
-            textLayer.fillColor = fillColor
-        } else {
-            textLayer.fillColor = nil
-        }
-        
-        textLayer.preferredSize = text.textFrameSize?.sizeValue
-        textLayer.strokeOnTop = text.strokeOverFill ?? false
-        textLayer.strokeWidth = strokeWidth
-        textLayer.strokeColor = strokeColor
-        textLayer.sizeToFit()
-        
-        textLayer.opacity = Float(rootNode?.textOutputNode.opacity ?? 1)
-        textLayer.transform = CATransform3DIdentity
-        textLayer.position = text.textFramePosition?.pointValue ?? CGPoint.zero
-        textLayer.transform = matrix*/
     }
     
 public:
@@ -114,7 +72,6 @@ private:
     std::shared_ptr<TextAnimatorNode> _rootNode;
     std::shared_ptr<KeyframeInterpolator<TextDocument>> _textDocument;
     
-    //std::shared_ptr<CoreTextRenderLayer> _textLayer;
     std::shared_ptr<AnimationTextProvider> _textProvider;
     std::shared_ptr<AnimationFontProvider> _fontProvider;
 };
