@@ -2,6 +2,7 @@
 
 #import "Canvas.h"
 #import "CoreGraphicsCanvasImpl.h"
+#import "ThorVGCanvasImpl.h"
 
 #include <LottieCpp/RenderTreeNode.h>
 
@@ -506,8 +507,6 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
     
     processRenderTree(renderNode, lottie::Vector2D((int)size.width, (int)size.height), lottie::CATransform3D::identity().scaled(lottie::Vector2D(size.width / (double)animation.size.width, size.height / (double)animation.size.height)), false, *_bezierPathsBoundingBoxContext.get());
     
-    //LottieRenderNode *lottieNode = [_animationContainer getCurrentRenderTreeForSize:size];
-    
     if (useReferenceRendering) {
         auto context = std::make_shared<lottieRendering::CanvasImpl>((int)size.width, (int)size.height);
         
@@ -520,6 +519,13 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
         
         return [[UIImage alloc] initWithCGImage:std::static_pointer_cast<lottieRendering::ImageImpl>(image)->nativeImage()];
     } else {
+        /*auto context = std::make_shared<lottieRendering::ThorVGCanvasImpl>((int)size.width, (int)size.height);
+        
+        CGPoint scale = CGPointMake(size.width / (CGFloat)animation.size.width, size.height / (CGFloat)animation.size.height);
+        context->concatenate(lottie::CATransform3D::makeScale(scale.x, scale.y, 1.0));
+        
+        renderLottieRenderNode(renderNode, context, lottie::Vector2D(context->width(), context->height()), 1.0);*/
+        
         return nil;
     }
 }

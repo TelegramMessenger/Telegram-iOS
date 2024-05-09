@@ -34,7 +34,7 @@ struct PathSplitResult {
 /// We don't do this however, as it would effectively double the memory footprint
 /// of path data.
 ///
-struct PathElement {
+struct __attribute__((packed)) PathElement {
     /// Initializes a new path with length of 0
     explicit PathElement(CurveVertex const &vertex_) :
     vertex(vertex_) {
