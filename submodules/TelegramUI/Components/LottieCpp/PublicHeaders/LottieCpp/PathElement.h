@@ -1,7 +1,9 @@
-#ifndef PathElement_hpp
-#define PathElement_hpp
+#ifndef PathElement_h
+#define PathElement_h
 
-#include "Lottie/Private/Utility/Primitives/CurveVertex.hpp"
+#ifdef __cplusplus
+
+#include <LottieCpp/CurveVertex.h>
 
 namespace lottie {
 
@@ -87,4 +89,6 @@ struct PathElement {
 
 }
 
-#endif /* PathElement_hpp */
+#endif
+
+#endif /* PathElement_h */

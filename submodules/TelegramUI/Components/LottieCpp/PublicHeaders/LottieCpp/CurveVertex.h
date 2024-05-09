@@ -1,5 +1,7 @@
-#ifndef CurveVertex_hpp
-#define CurveVertex_hpp
+#ifndef CurveVertex_h
+#define CurveVertex_h
+
+#ifdef __cplusplus
 
 #include <LottieCpp/Vectors.h>
 #include <LottieCpp/CGPath.h>
@@ -193,5 +195,7 @@ public:
 };
 
 }
+
+#endif
 
 #endif /* CurveVertex_hpp */

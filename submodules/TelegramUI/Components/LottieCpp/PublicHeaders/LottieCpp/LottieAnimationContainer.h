@@ -1,9 +1,21 @@
 #ifndef LottieAnimationContainer_h
 #define LottieAnimationContainer_h
 
+#ifdef __cplusplus
+
 #import "LottieAnimation.h"
 #import "LottieRenderTree.h"
 #import "LottieAnimationContainer.h"
+
+#include <memory>
+
+namespace lottie {
+
+class RenderTreeNode;
+
+}
+
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,6 +29,10 @@ extern "C" {
 
 - (void)update:(NSInteger)frame;
 - (LottieRenderNode * _Nullable)getCurrentRenderTreeForSize:(CGSize)size;
+
+#ifdef __cplusplus
+- (std::shared_ptr<lottie::RenderTreeNode>)internalGetRootRenderTreeNode;
+#endif
 
 @end
 

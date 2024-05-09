@@ -2,7 +2,7 @@
 #define TextDocument_hpp
 
 #include <LottieCpp/Vectors.h>
-#include "Lottie/Public/Primitives/Color.hpp"
+#import <LottieCpp/Color.h>
 #include "Lottie/Private/Parsing/JsonParsing.hpp"
 
 #include <string>

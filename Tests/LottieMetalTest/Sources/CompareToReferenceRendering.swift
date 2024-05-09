@@ -79,6 +79,8 @@ func processDrawAnimation(baseCachePath: String, path: String, name: String, siz
         let _ = await cacheReferenceAnimation(baseCachePath: baseCachePath, width: Int(size.width), path: path, name: name)
     }
     
+    let renderer = SoftwareLottieRenderer(animationContainer: layer)
+    
     for i in 0 ..< min(100000, animation.frameCount) {
         let frameResult = autoreleasepool {
             let frameIndex = i % animation.frameCount
@@ -87,7 +89,7 @@ func processDrawAnimation(baseCachePath: String, path: String, name: String, siz
             let referenceImage = decompressImageFrame(data: referenceImageData)
             
             layer.update(frameIndex)
-            let image = renderLottieAnimationContainer(layer, size, true)!
+            let image = renderer.render(for: size, useReferenceRendering: true)!
             
             if let diffImage = areImagesEqual(image, referenceImage) {
                 updateImage(diffImage, referenceImage)

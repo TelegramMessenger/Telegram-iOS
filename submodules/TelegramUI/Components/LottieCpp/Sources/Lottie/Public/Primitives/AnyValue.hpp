@@ -2,8 +2,8 @@
 #define AnyValue_hpp
 
 #include <LottieCpp/Vectors.h>
-#include "Lottie/Public/Primitives/Color.hpp"
-#include "Lottie/Private/Utility/Primitives/BezierPath.hpp"
+#import <LottieCpp/Color.h>
+#include <LottieCpp/BezierPath.h>
 #include "Lottie/Private/Model/Text/TextDocument.hpp"
 #include "Lottie/Private/Model/ShapeItems/GradientFill.hpp"
 #include "Lottie/Private/Model/Objects/DashElement.hpp"

@@ -50,6 +50,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include <string>
 #include <vector>
 #include <map>
@@ -230,3 +232,5 @@ protected:
 };
 
 } // namespace lottiejson11
+
+#endif

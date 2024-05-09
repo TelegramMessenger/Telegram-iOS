@@ -2,7 +2,7 @@
 #define TextAnimator_hpp
 
 #include <LottieCpp/Vectors.h>
-#include "Lottie/Public/Primitives/Color.hpp"
+#import <LottieCpp/Color.h>
 #include "Lottie/Private/Model/Keyframes/KeyframeGroup.hpp"
 #include "Lottie/Private/Parsing/JsonParsing.hpp"
 

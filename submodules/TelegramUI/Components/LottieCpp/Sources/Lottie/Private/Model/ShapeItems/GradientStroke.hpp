@@ -6,7 +6,7 @@
 #include "Lottie/Private/Model/Keyframes/KeyframeGroup.hpp"
 #include "Lottie/Private/Model/Objects/DashElement.hpp"
 #include "Lottie/Private/Parsing/JsonParsing.hpp"
-#include "Lottie/Public/Primitives/DrawingAttributes.hpp"
+#include <LottieCpp/ShapeAttributes.h>
 
 namespace lottie {
 

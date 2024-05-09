@@ -1,7 +1,7 @@
 #ifndef CompoundBezierPath_hpp
 #define CompoundBezierPath_hpp
 
-#include "Lottie/Private/Utility/Primitives/BezierPath.hpp"
+#include <LottieCpp/BezierPath.h>
 
 namespace lottie {
 

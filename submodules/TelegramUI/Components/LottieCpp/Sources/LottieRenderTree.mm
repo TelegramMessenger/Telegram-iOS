@@ -3,7 +3,7 @@
 
 #include <LottieCpp/CGPath.h>
 #include <LottieCpp/CGPathCocoa.h>
-#include "Lottie/Public/Primitives/Color.hpp"
+#import <LottieCpp/Color.h>
 #include "Lottie/Public/Primitives/CALayer.hpp"
 #include <LottieCpp/VectorsCocoa.h>
 
