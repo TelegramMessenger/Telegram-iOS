@@ -484,14 +484,14 @@ func deserializeNode(buffer: ReadBuffer) -> LottieRenderNode {
     )
 }
 
-struct SerializedFrameMapping {
+public struct SerializedLottieMetalFrameMapping {
     var size: CGSize = CGSize()
     var frameCount: Int = 0
     var framesPerSecond: Int = 0
     var frameRanges: [Int: Range<Int>] = [:]
 }
 
-func serializeFrameMapping(buffer: WriteBuffer, frameMapping: SerializedFrameMapping) {
+func serializeFrameMapping(buffer: WriteBuffer, frameMapping: SerializedLottieMetalFrameMapping) {
     buffer.write(size: frameMapping.size)
     buffer.write(uInt32: UInt32(frameMapping.frameCount))
     buffer.write(uInt32: UInt32(frameMapping.framesPerSecond))
@@ -502,8 +502,8 @@ func serializeFrameMapping(buffer: WriteBuffer, frameMapping: SerializedFrameMap
     }
 }
 
-func deserializeFrameMapping(buffer: ReadBuffer) -> SerializedFrameMapping {
-    var frameMapping = SerializedFrameMapping()
+func deserializeFrameMapping(buffer: ReadBuffer) -> SerializedLottieMetalFrameMapping {
+    var frameMapping = SerializedLottieMetalFrameMapping()
     
     frameMapping.size = buffer.readSize()
     frameMapping.frameCount = Int(buffer.readUInt32())

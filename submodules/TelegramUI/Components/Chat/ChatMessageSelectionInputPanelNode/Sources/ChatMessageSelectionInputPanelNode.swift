@@ -257,7 +257,7 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                 context: context,
                 animationCache: context.animationCache,
                 presentationData: presentationData,
-                items: reactionItems.map(ReactionContextItem.reaction),
+                items: reactionItems.map { ReactionContextItem.reaction(item: $0, icon: .none) },
                 selectedItems: actions.editTags,
                 title: actions.editTags.isEmpty ? presentationData.strings.Chat_ReactionSelectionTitleAddTag : presentationData.strings.Chat_ReactionSelectionTitleEditTag,
                 reactionsLocked: false,

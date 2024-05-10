@@ -45,11 +45,22 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
         effectItems = .single(nil)
     }
     
+    let availableMessageEffects = selfController.context.availableMessageEffects |> take(1)
+    let hasPremium = selfController.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: selfController.context.account.peerId))
+    |> map { peer -> Bool in
+        guard case let .user(user) = peer else {
+            return false
+        }
+        return user.isPremium
+    }
+    
     let _ = (combineLatest(
         selfController.context.account.viewTracker.peerView(peerId) |> take(1),
-        effectItems
+        effectItems,
+        availableMessageEffects,
+        hasPremium
     )
-    |> deliverOnMainQueue).startStandalone(next: { [weak selfController] peerView, effectItems in
+    |> deliverOnMainQueue).startStandalone(next: { [weak selfController] peerView, effectItems, availableMessageEffects, hasPremium in
         guard let selfController, let peer = peerViewMainPeer(peerView) else {
             return
         }
@@ -98,7 +109,7 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
                 return
             }
             selfController.controllerInteraction?.scheduleCurrentMessage()
-        }, reactionItems: effectItems)
+        }, reactionItems: effectItems, availableMessageEffects: availableMessageEffects, isPremium: hasPremium)
         selfController.sendMessageActionsController = controller
         if layout.isNonExclusive {
             selfController.present(controller, in: .window(.root))

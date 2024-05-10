@@ -15,7 +15,6 @@ objc_library(
     copts = [
         "-Werror",
         "-I{}/Sources".format(package_name()),
-        "-O2",
     ],
     hdrs = glob([
         "PublicHeaders/**/*.h",
@@ -31,4 +30,19 @@ objc_library(
     visibility = [
         "//visibility:public",
     ],
+)
+
+cc_library(
+    name = "LottieCppBinding",
+    srcs = [],
+    hdrs = glob([
+        "PublicHeaders/**/*.h",
+    ]),
+    includes = [
+        "PublicHeaders",
+    ],
+    copts = [],
+    visibility = ["//visibility:public"],
+    linkstatic = 1,
+    tags = ["swift_module=LottieCppBinding"],
 )

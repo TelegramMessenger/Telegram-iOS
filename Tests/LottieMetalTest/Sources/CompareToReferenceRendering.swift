@@ -161,6 +161,7 @@ func buildAnimationFolderItems(basePath: String, path: String) -> [(String, Stri
     return result
 }
 
+@available (iOS 13.0, *)
 private func processAnimationFolderItems(items: [(String, String)], countPerBucket: Int, stopOnFailure: Bool, process: @escaping (String, String, Bool) async -> Bool) async -> Bool {
     let bucketCount = items.count / countPerBucket
     var buckets: [[(String, String)]] = []
@@ -253,6 +254,7 @@ private func processAnimationFolderItemsParallel(items: [(String, String)], stop
     return result
 }
 
+@available (iOS 13.0, *)
 func processAnimationFolderAsync(basePath: String, path: String, stopOnFailure: Bool, process: @escaping (String, String, Bool) async -> Bool) async -> Bool {
     let items = buildAnimationFolderItems(basePath: basePath, path: path)
     return await processAnimationFolderItems(items: items, countPerBucket: 1, stopOnFailure: stopOnFailure, process: process)

@@ -156,7 +156,7 @@ private extension AvailableMessageEffects.MessageEffect {
                 return nil
             }
             
-            let isPremium = (flags & (1 << 3)) != 0
+            let isPremium = (flags & (1 << 2)) != 0
             self.init(
                 id: id,
                 isPremium: isPremium,
@@ -239,7 +239,7 @@ func managedSynchronizeAvailableMessageEffects(postbox: Postbox, network: Networ
                         break
                     }
                     
-                    var signals: [Signal<Never, NoError>] = []
+                    /*var signals: [Signal<Never, NoError>] = []
                     
                     if let availableMessageEffects = _internal_cachedAvailableMessageEffects(transaction: transaction) {
                         var resources: [MediaResource] = []
@@ -271,7 +271,9 @@ func managedSynchronizeAvailableMessageEffects(postbox: Postbox, network: Networ
                     }
                     
                     return combineLatest(signals)
-                    |> ignoreValues
+                    |> ignoreValues*/
+                    
+                    return .complete()
                 }
                 |> switchToLatest
             })

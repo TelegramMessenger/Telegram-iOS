@@ -110,6 +110,8 @@ public final class ViewController: UIViewController {
     override public func viewDidLoad() {
         super.viewDidLoad()
         
+        SharedDisplayLinkDriver.shared.updateForegroundState(true)
+        
         let bundlePath = Bundle.main.path(forResource: "TestDataBundle", ofType: "bundle")!
         let filePath = bundlePath + "/fireworks.json"
         
@@ -117,12 +119,15 @@ public final class ViewController: UIViewController {
         
         self.view.layer.addSublayer(MetalEngine.shared.rootLayer)
         
-        if "".isEmpty {
+        if !"".isEmpty {
             if #available(iOS 13.0, *) {
                 self.test = ReferenceCompareTest(view: self.view)
             }
-        } else if !"".isEmpty {
-            let animationData = try! Data(contentsOf: URL(fileURLWithPath: filePath))
+        } else if "".isEmpty {
+            let cachedAnimation = cacheLottieMetalAnimation(path: filePath)!
+            let animation = parseCachedLottieMetalAnimation(data: cachedAnimation)!
+            
+            /*let animationData = try! Data(contentsOf: URL(fileURLWithPath: filePath))
             
             var startTime = CFAbsoluteTimeGetCurrent()
             let animation = LottieAnimation(data: animationData)!
@@ -131,9 +136,9 @@ public final class ViewController: UIViewController {
             startTime = CFAbsoluteTimeGetCurrent()
             let animationContainer = LottieAnimationContainer(animation: animation)
             animationContainer.update(0)
-            print("Build time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+            print("Build time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")*/
             
-            let lottieLayer = LottieContentLayer(animation: animationContainer)
+            let lottieLayer = LottieContentLayer(content: animation)
             lottieLayer.frame = CGRect(origin: CGPoint(x: 10.0, y: 50.0), size: CGSize(width: 256.0, height: 256.0))
             self.view.layer.addSublayer(lottieLayer)
             lottieLayer.setNeedsUpdate()
@@ -162,7 +167,7 @@ public final class ViewController: UIViewController {
                 var frameIndex = 0
                 while true {
                     animationContainer.update(frameIndex)
-                    let _ = animationRenderer.render(for: CGSize(width: CGFloat(performanceFrameSize), height: CGFloat(performanceFrameSize)), useReferenceRendering: false)
+                    //let _ = animationRenderer.render(for: CGSize(width: CGFloat(performanceFrameSize), height: CGFloat(performanceFrameSize)), useReferenceRendering: false)
                     frameIndex = (frameIndex + 1) % animationContainer.animation.frameCount
                     numUpdates += 1
                     let timestamp = CFAbsoluteTimeGetCurrent()

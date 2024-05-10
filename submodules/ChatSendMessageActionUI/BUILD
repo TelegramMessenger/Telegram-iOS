@@ -33,7 +33,10 @@ swift_library(
         "//submodules/Components/MultilineTextWithEntitiesComponent",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/TelegramUI/Components/LottieMetal",
+        "//submodules/AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode",
+        "//submodules/ActivityIndicator",
+        "//submodules/UndoUI",
     ],
     visibility = [
         "//visibility:public",

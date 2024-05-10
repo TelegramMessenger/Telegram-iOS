@@ -17,6 +17,7 @@ import WallpaperBackgroundNode
 import MultilineTextWithEntitiesComponent
 import ReactionButtonListComponent
 import MultilineTextComponent
+import ChatInputTextNode
 
 private final class EffectIcon: Component {
     enum Content: Equatable {
@@ -135,7 +136,8 @@ final class MessageItemView: UIView {
     private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
     private let backgroundNode: ChatMessageBackground
     
-    private let text = ComponentView<Empty>()
+    private let textClippingContainer: UIView
+    private var textNode: ChatInputTextNode?
     
     private var effectIcon: ComponentView<Empty>?
     var effectIconView: UIView? {
@@ -150,10 +152,15 @@ final class MessageItemView: UIView {
         self.backgroundNode = ChatMessageBackground()
         self.backgroundNode.backdropNode = self.backgroundWallpaperNode
         
+        self.textClippingContainer = UIView()
+        self.textClippingContainer.clipsToBounds = true
+        
         super.init(frame: frame)
         
         self.addSubview(self.backgroundWallpaperNode.view)
         self.addSubview(self.backgroundNode.view)
+        
+        self.addSubview(self.textClippingContainer)
     }
     
     required init(coder: NSCoder) {
@@ -165,9 +172,11 @@ final class MessageItemView: UIView {
         presentationData: PresentationData,
         backgroundNode: WallpaperBackgroundNode?,
         textString: NSAttributedString,
+        sourceTextInputView: ChatInputTextView?,
         textInsets: UIEdgeInsets,
         explicitBackgroundSize: CGSize?,
         maxTextWidth: CGFloat,
+        maxTextHeight: CGFloat,
         effect: AvailableMessageEffects.MessageEffect?,
         transition: Transition
     ) -> CGSize {
@@ -201,33 +210,84 @@ final class MessageItemView: UIView {
         if let effectIconSize {
             textCutout = TextNodeCutout(bottomRight: CGSize(width: effectIconSize.width + 4.0, height: effectIconSize.height))
         }
+        let _ = textCutout
         
-        let textSize = self.text.update(
-            transition: .immediate,
-            component: AnyComponent(MultilineTextWithEntitiesComponent(
-                context: context,
-                animationCache: context.animationCache,
-                animationRenderer: context.animationRenderer,
-                placeholderColor: presentationData.theme.chat.message.stickerPlaceholderColor.withWallpaper,
-                text: .plain(textString),
-                maximumNumberOfLines: 0,
-                lineSpacing: 0.0,
-                cutout: textCutout,
-                insets: UIEdgeInsets()
-            )),
-            environment: {},
-            containerSize: CGSize(width: maxTextWidth, height: 20000.0)
+        let textNode: ChatInputTextNode
+        if let current = self.textNode {
+            textNode = current
+        } else {
+            textNode = ChatInputTextNode(disableTiling: true)
+            textNode.textView.isScrollEnabled = false
+            textNode.isUserInteractionEnabled = false
+            self.textNode = textNode
+            self.textClippingContainer.addSubview(textNode.view)
+            
+            if let sourceTextInputView {
+                textNode.textView.defaultTextContainerInset = sourceTextInputView.defaultTextContainerInset
+            }
+            
+            let messageAttributedText = NSMutableAttributedString(attributedString: textString)
+            messageAttributedText.addAttribute(NSAttributedString.Key.foregroundColor, value: presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (messageAttributedText.string as NSString).length))
+            textNode.attributedText = messageAttributedText
+        }
+        
+        let mainColor = presentationData.theme.chat.message.outgoing.accentControlColor
+        let mappedLineStyle: ChatInputTextView.Theme.Quote.LineStyle
+        if let sourceTextInputView, let textTheme = sourceTextInputView.theme {
+            switch textTheme.quote.lineStyle {
+            case .solid:
+                mappedLineStyle = .solid(color: mainColor)
+            case .doubleDashed:
+                mappedLineStyle = .doubleDashed(mainColor: mainColor, secondaryColor: .clear)
+            case .tripleDashed:
+                mappedLineStyle = .tripleDashed(mainColor: mainColor, secondaryColor: .clear, tertiaryColor: .clear)
+            }
+        } else {
+            mappedLineStyle = .solid(color: mainColor)
+        }
+        
+        textNode.textView.theme = ChatInputTextView.Theme(
+            quote: ChatInputTextView.Theme.Quote(
+                background: mainColor.withMultipliedAlpha(0.1),
+                foreground: mainColor,
+                lineStyle: mappedLineStyle,
+                codeBackground: mainColor.withMultipliedAlpha(0.1),
+                codeForeground: mainColor
+            )
         )
         
-        let size = CGSize(width: textSize.width + textInsets.left + textInsets.right, height: textSize.height + textInsets.top + textInsets.bottom)
+        let textPositioningInsets = UIEdgeInsets(top: -5.0, left: 0.0, bottom: -4.0, right: -4.0)
         
-        let textFrame = CGRect(origin: CGPoint(x: textInsets.left, y: textInsets.top), size: textSize)
-        if let textView = self.text.view {
-            if textView.superview == nil {
-                self.addSubview(textView)
-            }
-            textView.frame = textFrame
+        var currentRightInset: CGFloat = 0.0
+        if let sourceTextInputView {
+            currentRightInset = sourceTextInputView.currentRightInset
         }
+        let textHeight = textNode.textHeightForWidth(maxTextWidth, rightInset: currentRightInset)
+        textNode.updateLayout(size: CGSize(width: maxTextWidth, height: textHeight))
+        
+        let textBoundingRect = textNode.textView.currentTextBoundingRect().integral
+        let lastLineBoundingRect = textNode.textView.lastLineBoundingRect().integral
+        
+        let textWidth = textBoundingRect.width
+        let textSize = CGSize(width: textWidth, height: textHeight)
+        
+        var positionedTextSize = CGSize(width: textSize.width + textPositioningInsets.left + textPositioningInsets.right, height: textSize.height + textPositioningInsets.top + textPositioningInsets.bottom)
+        
+        let effectInset: CGFloat = 12.0
+        if effect != nil, lastLineBoundingRect.width > textSize.width - effectInset {
+            if lastLineBoundingRect != textBoundingRect {
+                positionedTextSize.height += 11.0
+            } else {
+                positionedTextSize.width += effectInset
+            }
+        }
+        let unclippedPositionedTextHeight = positionedTextSize.height - (textPositioningInsets.top + textPositioningInsets.bottom)
+        
+        positionedTextSize.height = min(positionedTextSize.height, maxTextHeight)
+        
+        let size = CGSize(width: positionedTextSize.width + textInsets.left + textInsets.right, height: positionedTextSize.height + textInsets.top + textInsets.bottom)
+        
+        let textFrame = CGRect(origin: CGPoint(x: textInsets.left, y: textInsets.top), size: positionedTextSize)
         
         let chatTheme: ChatPresentationThemeData
         if let current = self.chatTheme, current.theme === presentationData.theme {
@@ -259,6 +319,21 @@ final class MessageItemView: UIView {
         
         let previousSize = self.currentSize
         self.currentSize = backgroundSize
+        
+        let textClippingContainerFrame = CGRect(origin: CGPoint(x: 1.0, y: 1.0), size: CGSize(width: backgroundSize.width - 1.0 - 7.0, height: backgroundSize.height - 1.0 - 1.0))
+        
+        var textClippingContainerBounds = CGRect(origin: CGPoint(), size: textClippingContainerFrame.size)
+        if explicitBackgroundSize != nil, let sourceTextInputView {
+            textClippingContainerBounds.origin.y = sourceTextInputView.contentOffset.y
+        } else {
+            textClippingContainerBounds.origin.y = unclippedPositionedTextHeight - backgroundSize.height + 4.0
+            textClippingContainerBounds.origin.y = max(0.0, textClippingContainerBounds.origin.y)
+        }
+        
+        transition.setPosition(view: self.textClippingContainer, position: textClippingContainerFrame.center)
+        transition.setBounds(view: self.textClippingContainer, bounds: textClippingContainerBounds)
+        
+        textNode.view.frame = CGRect(origin: CGPoint(x: textFrame.minX + textPositioningInsets.left - textClippingContainerFrame.minX, y: textFrame.minY + textPositioningInsets.top - textClippingContainerFrame.minY), size: CGSize(width: maxTextWidth, height: textHeight))
         
         if let effectIcon = self.effectIcon, let effectIconSize {
             if let effectIconView = effectIcon.view {

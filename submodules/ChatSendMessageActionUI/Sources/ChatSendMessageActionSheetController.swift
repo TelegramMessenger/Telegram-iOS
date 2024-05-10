@@ -210,7 +210,9 @@ public func makeChatSendMessageActionSheetController(
     completion: @escaping () -> Void,
     sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void,
     schedule: @escaping (ChatSendMessageActionSheetController.MessageEffect?) -> Void,
-    reactionItems: [ReactionItem]? = nil
+    reactionItems: [ReactionItem]? = nil,
+    availableMessageEffects: AvailableMessageEffects? = nil,
+    isPremium: Bool = false
 ) -> ChatSendMessageActionSheetController {
     if textInputView.text.isEmpty {
         return ChatSendMessageActionSheetControllerImpl(
@@ -229,7 +231,7 @@ public func makeChatSendMessageActionSheetController(
             completion: completion,
             sendMessage: sendMessage,
             schedule: schedule,
-            reactionItems: reactionItems
+            reactionItems: nil
         )
     }
     
@@ -250,6 +252,8 @@ public func makeChatSendMessageActionSheetController(
         completion: completion,
         sendMessage: sendMessage,
         schedule: schedule,
-        reactionItems: reactionItems
+        reactionItems: reactionItems,
+        availableMessageEffects: availableMessageEffects,
+        isPremium: isPremium
     )
 }

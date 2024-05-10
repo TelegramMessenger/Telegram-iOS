@@ -178,15 +178,6 @@ public:
             }
         } else {
             batchInterpolate(value.elements(), to.elements(), resultPath, amount);
-            
-            /*for (int i = 0; i < elementCount; i++) {
-                const auto &fromVertex = value.elements()[i].vertex;
-                const auto &toVertex = to.elements()[i].vertex;
-                
-                auto vertex = ValueInterpolator<CurveVertex>::interpolate(fromVertex, toVertex, amount);
-                
-                resultPath.updateVertex(vertex, i, false);
-            }*/
         }
     }
 };

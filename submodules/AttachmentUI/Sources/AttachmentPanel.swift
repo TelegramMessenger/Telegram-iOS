@@ -21,6 +21,8 @@ import ShimmerEffect
 import TextFormat
 import LegacyMessageInputPanel
 import LegacyMessageInputPanelInputView
+import ReactionSelectionNode
+import TopMessageReactions
 
 private let buttonSize = CGSize(width: 88.0, height: 49.0)
 private let smallButtonWidth: CGFloat = 69.0
@@ -926,9 +928,31 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
             if case .media = strongSelf.presentationInterfaceState.inputMode {
                 hasEntityKeyboard = true
             }
-            let _ = (strongSelf.context.account.viewTracker.peerView(peerId)
-            |> take(1)
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] peerView in
+            
+            let effectItems: Signal<[ReactionItem]?, NoError>
+            if strongSelf.presentationInterfaceState.chatLocation.peerId != strongSelf.context.account.peerId && strongSelf.presentationInterfaceState.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser {
+                effectItems = effectMessageReactions(context: strongSelf.context)
+                |> map(Optional.init)
+            } else {
+                effectItems = .single(nil)
+            }
+            
+            let availableMessageEffects = strongSelf.context.availableMessageEffects |> take(1)
+            let hasPremium = strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId))
+            |> map { peer -> Bool in
+                guard case let .user(user) = peer else {
+                    return false
+                }
+                return user.isPremium
+            }
+            
+            let _ = (combineLatest(
+                strongSelf.context.account.viewTracker.peerView(peerId) |> take(1),
+                effectItems,
+                availableMessageEffects,
+                hasPremium
+            )
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] peerView, effectItems, availableMessageEffects, hasPremium in
                 guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
                     return
                 }
@@ -955,7 +979,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                     }
                 }, schedule: { [weak textInputPanelNode] _ in
                     textInputPanelNode?.sendMessage(.schedule)
-                })
+                }, reactionItems: effectItems, availableMessageEffects: availableMessageEffects, isPremium: hasPremium)
                 strongSelf.presentInGlobalOverlay(controller)
             })
         }, openScheduledMessages: {
