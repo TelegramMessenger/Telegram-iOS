@@ -550,8 +550,8 @@ final class MediaReferenceRevalidationContext {
         return self.genericItem(key: .savedStickers, background: background, request: { next, error in
             let loadSavedStickers: Signal<[TelegramMediaFile], NoError> = postbox.transaction { transaction -> [TelegramMediaFile] in
                 return transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudSavedStickers).compactMap({ item -> TelegramMediaFile? in
-                    if let contents = item.contents.get(RecentMediaItem.self) {
-                        let file = contents.media
+                    if let contents = item.contents.get(SavedStickerItem.self) {
+                        let file = contents.file
                         return file
                     }
                     return nil
