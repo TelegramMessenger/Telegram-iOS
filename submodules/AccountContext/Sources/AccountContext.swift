@@ -1068,6 +1068,29 @@ public protocol AccountGroupCallContext: AnyObject {
 public protocol AccountGroupCallContextCache: AnyObject {
 }
 
+public final class ChatSendMessageActionSheetControllerMessageEffect {
+    public let id: Int64
+    
+    public init(id: Int64) {
+        self.id = id
+    }
+}
+
+public enum ChatSendMessageActionSheetControllerSendMode {
+    case generic
+    case silently
+    case whenOnline
+}
+
+public protocol ChatSendMessageActionSheetControllerSourceSendButtonNode: ASDisplayNode {
+    func makeCustomContents() -> UIView?
+}
+
+public protocol ChatSendMessageActionSheetController: ViewController {
+    typealias SendMode = ChatSendMessageActionSheetControllerSendMode
+    typealias MessageEffect = ChatSendMessageActionSheetControllerMessageEffect
+}
+
 public protocol AccountContext: AnyObject {
     var sharedContext: SharedAccountContext { get }
     var account: Account { get }

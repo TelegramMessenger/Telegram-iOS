@@ -1556,14 +1556,14 @@ final class StoryItemSetContainerSendMessage {
                                 completion(controller, mediaPickerContext)
                             }, updateMediaPickerContext: { [weak attachmentController] mediaPickerContext in
                                 attachmentController?.mediaPickerContext = mediaPickerContext
-                            }, completion: { [weak self, weak view] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
+                            }, completion: { [weak self, weak view] signals, silentPosting, scheduleTime, messageEffect, getAnimatedTransitionSource, completion in
                                 guard let self, let view else {
                                     return
                                 }
                                 if !inputText.string.isEmpty {
                                     self.clearInputText(view: view)
                                 }
-                                self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                                self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, messageEffect: messageEffect, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                             }
                         )
                     case .file:
@@ -1875,7 +1875,7 @@ final class StoryItemSetContainerSendMessage {
         bannedSendVideos: (Int32, Bool)?,
         present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void,
         updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void,
-        completion: @escaping ([Any], Bool, Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void
+        completion: @escaping ([Any], Bool, Int32?, ChatSendMessageActionSheetController.MessageEffect?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void
     ) {
         guard let component = view.component else {
             return
@@ -1936,8 +1936,8 @@ final class StoryItemSetContainerSendMessage {
             }
             return self.getCaptionPanelView(view: view, peer: peer, mediaPicker: controller)
         }
-        controller.legacyCompletion = { signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion in
-            completion(signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion)
+        controller.legacyCompletion = { signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion in
+            completion(signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion)
         }
         present(controller, mediaPickerContext)
     }
@@ -2240,14 +2240,14 @@ final class StoryItemSetContainerSendMessage {
                             present(controller, mediaPickerContext)
                         },
                         updateMediaPickerContext: { _ in },
-                        completion: { [weak self, weak view] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
+                        completion: { [weak self, weak view] signals, silentPosting, scheduleTime, messageEffect, getAnimatedTransitionSource, completion in
                             guard let self, let view else {
                                 return
                             }
                             if !inputText.string.isEmpty {
                                 self.clearInputText(view: view)
                             }
-                            self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                            self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, messageEffect: messageEffect, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                         }
                     )
                 }
@@ -2569,7 +2569,7 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    private func enqueueMediaMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyToMessageId: EngineMessage.Id?, replyToStoryId: StoryId?, signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
+    private func enqueueMediaMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyToMessageId: EngineMessage.Id?, replyToStoryId: StoryId?, signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, messageEffect: ChatSendMessageActionSheetController.MessageEffect? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
         guard let component = view.component else {
             return
         }
@@ -2618,6 +2618,13 @@ final class StoryItemSetContainerSendMessage {
                                 uniqueIds.append(uniqueId)
                                 addedTransitions[index] = (correlationId, uniqueIds, completion)
                             }
+                        }
+                    }
+                    if let messageEffect {
+                        message = message.withUpdatedAttributes { attributes in
+                            var attributes = attributes
+                            attributes.append(EffectMessageAttribute(id: messageEffect.id))
+                            return attributes
                         }
                     }
                     mappedMessages.append(message)

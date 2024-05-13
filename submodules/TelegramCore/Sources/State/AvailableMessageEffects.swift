@@ -3,10 +3,6 @@ import TelegramApi
 import Postbox
 import SwiftSignalKit
 
-/*
- availableEffect flags:# premium_required:flags.3?true id:long emoticon:string static_icon_id:flags.0?long effect_sticker_id:flags.1?long effect_animation_id:flags.2?long = AvailableEffect;
- */
-
 public final class AvailableMessageEffects: Equatable, Codable {
     public final class MessageEffect: Equatable, Codable {
         private enum CodingKeys: String, CodingKey {

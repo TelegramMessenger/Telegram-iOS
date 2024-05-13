@@ -97,10 +97,12 @@ private final class EffectIcon: Component {
                     textView = ComponentView()
                     self.textView = textView
                 }
+                let textInsets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0)
                 let textSize = textView.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: text, font: Font.regular(10.0), textColor: .black))
+                        text: .plain(NSAttributedString(string: text, font: Font.regular(10.0), textColor: .black)),
+                        insets: textInsets
                     )),
                     environment: {},
                     containerSize: CGSize(width: 100.0, height: 100.0)
@@ -138,11 +140,18 @@ final class MessageItemView: UIView {
     
     private let textClippingContainer: UIView
     private var textNode: ChatInputTextNode?
+    private var customEmojiContainerView: CustomEmojiContainerView?
+    private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
+    
+    private var mediaPreviewClippingView: UIView?
+    private var mediaPreview: ChatSendMessageContextScreenMediaPreview?
     
     private var effectIcon: ComponentView<Empty>?
     var effectIconView: UIView? {
         return self.effectIcon?.view
     }
+    
+    private var effectIconBackgroundView: UIImageView?
     
     private var chatTheme: ChatPresentationThemeData?
     private var currentSize: CGSize?
@@ -167,19 +176,36 @@ final class MessageItemView: UIView {
         preconditionFailure()
     }
     
+    func animateIn(transition: Transition) {
+        if let mediaPreview = self.mediaPreview {
+            mediaPreview.animateIn(transition: transition)
+        }
+    }
+    
+    func animateOut(transition: Transition) {
+        if let mediaPreview = self.mediaPreview {
+            mediaPreview.animateOut(transition: transition)
+        }
+    }
+    
     func update(
         context: AccountContext,
         presentationData: PresentationData,
         backgroundNode: WallpaperBackgroundNode?,
         textString: NSAttributedString,
         sourceTextInputView: ChatInputTextView?,
+        emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?,
+        sourceMediaPreview: ChatSendMessageContextScreenMediaPreview?,
         textInsets: UIEdgeInsets,
         explicitBackgroundSize: CGSize?,
         maxTextWidth: CGFloat,
         maxTextHeight: CGFloat,
+        containerSize: CGSize,
         effect: AvailableMessageEffects.MessageEffect?,
         transition: Transition
     ) -> CGSize {
+        self.emojiViewProvider = emojiViewProvider
+        
         var effectIconSize: CGSize?
         if let effect {
             let effectIcon: ComponentView<Empty>
@@ -206,89 +232,6 @@ final class MessageItemView: UIView {
             )
         }
         
-        var textCutout: TextNodeCutout?
-        if let effectIconSize {
-            textCutout = TextNodeCutout(bottomRight: CGSize(width: effectIconSize.width + 4.0, height: effectIconSize.height))
-        }
-        let _ = textCutout
-        
-        let textNode: ChatInputTextNode
-        if let current = self.textNode {
-            textNode = current
-        } else {
-            textNode = ChatInputTextNode(disableTiling: true)
-            textNode.textView.isScrollEnabled = false
-            textNode.isUserInteractionEnabled = false
-            self.textNode = textNode
-            self.textClippingContainer.addSubview(textNode.view)
-            
-            if let sourceTextInputView {
-                textNode.textView.defaultTextContainerInset = sourceTextInputView.defaultTextContainerInset
-            }
-            
-            let messageAttributedText = NSMutableAttributedString(attributedString: textString)
-            messageAttributedText.addAttribute(NSAttributedString.Key.foregroundColor, value: presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (messageAttributedText.string as NSString).length))
-            textNode.attributedText = messageAttributedText
-        }
-        
-        let mainColor = presentationData.theme.chat.message.outgoing.accentControlColor
-        let mappedLineStyle: ChatInputTextView.Theme.Quote.LineStyle
-        if let sourceTextInputView, let textTheme = sourceTextInputView.theme {
-            switch textTheme.quote.lineStyle {
-            case .solid:
-                mappedLineStyle = .solid(color: mainColor)
-            case .doubleDashed:
-                mappedLineStyle = .doubleDashed(mainColor: mainColor, secondaryColor: .clear)
-            case .tripleDashed:
-                mappedLineStyle = .tripleDashed(mainColor: mainColor, secondaryColor: .clear, tertiaryColor: .clear)
-            }
-        } else {
-            mappedLineStyle = .solid(color: mainColor)
-        }
-        
-        textNode.textView.theme = ChatInputTextView.Theme(
-            quote: ChatInputTextView.Theme.Quote(
-                background: mainColor.withMultipliedAlpha(0.1),
-                foreground: mainColor,
-                lineStyle: mappedLineStyle,
-                codeBackground: mainColor.withMultipliedAlpha(0.1),
-                codeForeground: mainColor
-            )
-        )
-        
-        let textPositioningInsets = UIEdgeInsets(top: -5.0, left: 0.0, bottom: -4.0, right: -4.0)
-        
-        var currentRightInset: CGFloat = 0.0
-        if let sourceTextInputView {
-            currentRightInset = sourceTextInputView.currentRightInset
-        }
-        let textHeight = textNode.textHeightForWidth(maxTextWidth, rightInset: currentRightInset)
-        textNode.updateLayout(size: CGSize(width: maxTextWidth, height: textHeight))
-        
-        let textBoundingRect = textNode.textView.currentTextBoundingRect().integral
-        let lastLineBoundingRect = textNode.textView.lastLineBoundingRect().integral
-        
-        let textWidth = textBoundingRect.width
-        let textSize = CGSize(width: textWidth, height: textHeight)
-        
-        var positionedTextSize = CGSize(width: textSize.width + textPositioningInsets.left + textPositioningInsets.right, height: textSize.height + textPositioningInsets.top + textPositioningInsets.bottom)
-        
-        let effectInset: CGFloat = 12.0
-        if effect != nil, lastLineBoundingRect.width > textSize.width - effectInset {
-            if lastLineBoundingRect != textBoundingRect {
-                positionedTextSize.height += 11.0
-            } else {
-                positionedTextSize.width += effectInset
-            }
-        }
-        let unclippedPositionedTextHeight = positionedTextSize.height - (textPositioningInsets.top + textPositioningInsets.bottom)
-        
-        positionedTextSize.height = min(positionedTextSize.height, maxTextHeight)
-        
-        let size = CGSize(width: positionedTextSize.width + textInsets.left + textInsets.right, height: positionedTextSize.height + textInsets.top + textInsets.bottom)
-        
-        let textFrame = CGRect(origin: CGPoint(x: textInsets.left, y: textInsets.top), size: positionedTextSize)
-        
         let chatTheme: ChatPresentationThemeData
         if let current = self.chatTheme, current.theme === presentationData.theme {
             chatTheme = current
@@ -305,89 +248,329 @@ final class MessageItemView: UIView {
             maskMode: true,
             backgroundNode: backgroundNode
         )
-        self.backgroundNode.setType(
-            type: .outgoing(.None),
-            highlighted: false,
-            graphics: themeGraphics,
-            maskMode: true,
-            hasWallpaper: true,
-            transition: transition.containedViewLayoutTransition,
-            backgroundNode: backgroundNode
-        )
         
-        let backgroundSize = explicitBackgroundSize ?? size
-        
-        let previousSize = self.currentSize
-        self.currentSize = backgroundSize
-        
-        let textClippingContainerFrame = CGRect(origin: CGPoint(x: 1.0, y: 1.0), size: CGSize(width: backgroundSize.width - 1.0 - 7.0, height: backgroundSize.height - 1.0 - 1.0))
-        
-        var textClippingContainerBounds = CGRect(origin: CGPoint(), size: textClippingContainerFrame.size)
-        if explicitBackgroundSize != nil, let sourceTextInputView {
-            textClippingContainerBounds.origin.y = sourceTextInputView.contentOffset.y
-        } else {
-            textClippingContainerBounds.origin.y = unclippedPositionedTextHeight - backgroundSize.height + 4.0
-            textClippingContainerBounds.origin.y = max(0.0, textClippingContainerBounds.origin.y)
-        }
-        
-        transition.setPosition(view: self.textClippingContainer, position: textClippingContainerFrame.center)
-        transition.setBounds(view: self.textClippingContainer, bounds: textClippingContainerBounds)
-        
-        textNode.view.frame = CGRect(origin: CGPoint(x: textFrame.minX + textPositioningInsets.left - textClippingContainerFrame.minX, y: textFrame.minY + textPositioningInsets.top - textClippingContainerFrame.minY), size: CGSize(width: maxTextWidth, height: textHeight))
-        
-        if let effectIcon = self.effectIcon, let effectIconSize {
-            if let effectIconView = effectIcon.view {
-                var animateIn = false
-                if effectIconView.superview == nil {
-                    animateIn = true
-                    self.addSubview(effectIconView)
-                }
-                let effectIconFrame = CGRect(origin: CGPoint(x: backgroundSize.width - textInsets.right + 2.0 -  effectIconSize.width, y: backgroundSize.height - textInsets.bottom - 2.0 - effectIconSize.height), size: effectIconSize)
-                if animateIn {
-                    if let previousSize {
-                        let previousEffectIconFrame = CGRect(origin: CGPoint(x: previousSize.width - textInsets.right + 2.0 - effectIconSize.width, y: previousSize.height - textInsets.bottom - 2.0 - effectIconSize.height), size: effectIconSize)
-                        effectIconView.frame = previousEffectIconFrame
-                    } else {
-                        effectIconView.frame = effectIconFrame
-                    }
-                    transition.animateAlpha(view: effectIconView, from: 0.0, to: 1.0)
-                    if !transition.animation.isImmediate {
-                        effectIconView.layer.animateSpring(from: 0.001 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
-                    }
-                }
-                
-                transition.setFrame(view: effectIconView, frame: effectIconFrame)
+        if let sourceMediaPreview {
+            let mediaPreviewClippingView: UIView
+            if let current = self.mediaPreviewClippingView {
+                mediaPreviewClippingView = current
+            } else {
+                mediaPreviewClippingView = UIView()
+                mediaPreviewClippingView.layer.anchorPoint = CGPoint()
+                mediaPreviewClippingView.clipsToBounds = true
+                mediaPreviewClippingView.isUserInteractionEnabled = false
+                self.mediaPreviewClippingView = mediaPreviewClippingView
+                self.addSubview(mediaPreviewClippingView)
             }
-        } else {
-            if let effectIcon = self.effectIcon {
-                self.effectIcon = nil
+            
+            if self.mediaPreview !== sourceMediaPreview {
+                self.mediaPreview?.view.removeFromSuperview()
+                self.mediaPreview = nil
                 
+                self.mediaPreview = sourceMediaPreview
+                if let mediaPreview = self.mediaPreview {
+                    mediaPreviewClippingView.addSubview(mediaPreview.view)
+                }
+            }
+            
+            let mediaPreviewSize = sourceMediaPreview.update(containerSize: containerSize, transition: transition)
+            
+            let backgroundSize = CGSize(width: mediaPreviewSize.width + 7.0, height: mediaPreviewSize.height)
+            
+            let mediaPreviewFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: mediaPreviewSize)
+            transition.setFrame(view: sourceMediaPreview.view, frame: mediaPreviewFrame)
+            
+            if let effectIcon = self.effectIcon, let effectIconSize {
                 if let effectIconView = effectIcon.view {
-                    let effectIconSize = effectIconView.bounds.size
-                    let effectIconFrame = CGRect(origin: CGPoint(x: backgroundSize.width - textInsets.right -  effectIconSize.width, y: backgroundSize.height - textInsets.bottom - effectIconSize.height), size: effectIconSize)
+                    var animateIn = false
+                    if effectIconView.superview == nil {
+                        animateIn = true
+                        self.addSubview(effectIconView)
+                    }
+                    
+                    let effectIconBackgroundView: UIImageView
+                    if let current = self.effectIconBackgroundView {
+                        effectIconBackgroundView = current
+                    } else {
+                        effectIconBackgroundView = UIImageView()
+                        self.effectIconBackgroundView = effectIconBackgroundView
+                        self.insertSubview(effectIconBackgroundView, belowSubview: effectIconView)
+                    }
+                    effectIconBackgroundView.backgroundColor = presentationData.theme.chat.message.mediaDateAndStatusFillColor
+                    
+                    let effectIconBackgroundSize = CGSize(width: effectIconSize.width + 8.0 * 2.0, height: 18.0)
+                    let effectIconBackgroundFrame = CGRect(origin: CGPoint(x: mediaPreviewFrame.maxX - effectIconBackgroundSize.width - 6.0, y: mediaPreviewFrame.maxY - effectIconBackgroundSize.height - 6.0), size: effectIconBackgroundSize)
+                    
+                    let effectIconFrame = CGRect(origin: CGPoint(x: effectIconBackgroundFrame.minX + floor((effectIconBackgroundFrame.width - effectIconSize.width) * 0.5), y: effectIconBackgroundFrame.minY + floor((effectIconBackgroundFrame.height - effectIconSize.height) * 0.5)), size: effectIconSize)
+                    
+                    if animateIn {
+                        effectIconView.frame = effectIconFrame
+                        
+                        effectIconBackgroundView.frame = effectIconBackgroundFrame
+                        effectIconBackgroundView.layer.cornerRadius = effectIconBackgroundFrame.height * 0.5
+                        
+                        transition.animateAlpha(view: effectIconView, from: 0.0, to: 1.0)
+                        if !transition.animation.isImmediate {
+                            effectIconView.layer.animateSpring(from: 0.001 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+                        }
+                        
+                        transition.animateAlpha(view: effectIconBackgroundView, from: 0.0, to: 1.0)
+                    }
+                    
                     transition.setFrame(view: effectIconView, frame: effectIconFrame)
-                    transition.setScale(view: effectIconView, scale: 0.001)
-                    transition.setAlpha(view: effectIconView, alpha: 0.0, completion: { [weak effectIconView] _ in
-                        effectIconView?.removeFromSuperview()
+                    
+                    transition.setFrame(view: effectIconBackgroundView, frame: effectIconBackgroundFrame)
+                    transition.setCornerRadius(layer: effectIconBackgroundView.layer, cornerRadius: effectIconBackgroundFrame.height * 0.5)
+                }
+            } else {
+                if let effectIcon = self.effectIcon {
+                    self.effectIcon = nil
+                    
+                    if let effectIconView = effectIcon.view {
+                        transition.setScale(view: effectIconView, scale: 0.001)
+                        transition.setAlpha(view: effectIconView, alpha: 0.0, completion: { [weak effectIconView] _ in
+                            effectIconView?.removeFromSuperview()
+                        })
+                    }
+                }
+                if let effectIconBackgroundView = self.effectIconBackgroundView {
+                    self.effectIconBackgroundView = nil
+                    transition.setAlpha(view: effectIconBackgroundView, alpha: 0.0, completion: { [weak effectIconBackgroundView] _ in
+                        effectIconBackgroundView?.removeFromSuperview()
                     })
                 }
             }
-        }
-        
-        let backgroundAlpha: CGFloat
-        if explicitBackgroundSize != nil {
-            backgroundAlpha = 0.0
+            
+            return backgroundSize
         } else {
-            backgroundAlpha = 1.0
+            let textNode: ChatInputTextNode
+            if let current = self.textNode {
+                textNode = current
+            } else {
+                textNode = ChatInputTextNode(disableTiling: true)
+                textNode.textView.isScrollEnabled = false
+                textNode.isUserInteractionEnabled = false
+                self.textNode = textNode
+                self.textClippingContainer.addSubview(textNode.view)
+                
+                if let sourceTextInputView {
+                    textNode.textView.defaultTextContainerInset = sourceTextInputView.defaultTextContainerInset
+                }
+                
+                let messageAttributedText = NSMutableAttributedString(attributedString: textString)
+                //messageAttributedText.addAttribute(NSAttributedString.Key.foregroundColor, value: presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (messageAttributedText.string as NSString).length))
+                textNode.attributedText = messageAttributedText
+            }
+            
+            let mainColor = presentationData.theme.chat.message.outgoing.accentControlColor
+            let mappedLineStyle: ChatInputTextView.Theme.Quote.LineStyle
+            if let sourceTextInputView, let textTheme = sourceTextInputView.theme {
+                switch textTheme.quote.lineStyle {
+                case .solid:
+                    mappedLineStyle = .solid(color: mainColor)
+                case .doubleDashed:
+                    mappedLineStyle = .doubleDashed(mainColor: mainColor, secondaryColor: .clear)
+                case .tripleDashed:
+                    mappedLineStyle = .tripleDashed(mainColor: mainColor, secondaryColor: .clear, tertiaryColor: .clear)
+                }
+            } else {
+                mappedLineStyle = .solid(color: mainColor)
+            }
+            
+            textNode.textView.theme = ChatInputTextView.Theme(
+                quote: ChatInputTextView.Theme.Quote(
+                    background: mainColor.withMultipliedAlpha(0.1),
+                    foreground: mainColor,
+                    lineStyle: mappedLineStyle,
+                    codeBackground: mainColor.withMultipliedAlpha(0.1),
+                    codeForeground: mainColor
+                )
+            )
+            
+            let textPositioningInsets = UIEdgeInsets(top: -5.0, left: 0.0, bottom: -4.0, right: -4.0)
+            
+            var currentRightInset: CGFloat = 0.0
+            if let sourceTextInputView {
+                currentRightInset = sourceTextInputView.currentRightInset
+            }
+            let textHeight = textNode.textHeightForWidth(maxTextWidth, rightInset: currentRightInset)
+            textNode.updateLayout(size: CGSize(width: maxTextWidth, height: textHeight))
+            
+            let textBoundingRect = textNode.textView.currentTextBoundingRect().integral
+            let lastLineBoundingRect = textNode.textView.lastLineBoundingRect().integral
+            
+            let textWidth = textBoundingRect.width
+            let textSize = CGSize(width: textWidth, height: textHeight)
+            
+            var positionedTextSize = CGSize(width: textSize.width + textPositioningInsets.left + textPositioningInsets.right, height: textSize.height + textPositioningInsets.top + textPositioningInsets.bottom)
+            
+            let effectInset: CGFloat = 12.0
+            if effect != nil, lastLineBoundingRect.width > textSize.width - effectInset {
+                if lastLineBoundingRect != textBoundingRect {
+                    positionedTextSize.height += 11.0
+                } else {
+                    positionedTextSize.width += effectInset
+                }
+            }
+            let unclippedPositionedTextHeight = positionedTextSize.height - (textPositioningInsets.top + textPositioningInsets.bottom)
+            
+            positionedTextSize.height = min(positionedTextSize.height, maxTextHeight)
+            
+            let size = CGSize(width: positionedTextSize.width + textInsets.left + textInsets.right, height: positionedTextSize.height + textInsets.top + textInsets.bottom)
+            
+            let textFrame = CGRect(origin: CGPoint(x: textInsets.left, y: textInsets.top), size: positionedTextSize)
+            
+            self.backgroundNode.setType(
+                type: .outgoing(.None),
+                highlighted: false,
+                graphics: themeGraphics,
+                maskMode: true,
+                hasWallpaper: true,
+                transition: transition.containedViewLayoutTransition,
+                backgroundNode: backgroundNode
+            )
+            
+            let backgroundSize = explicitBackgroundSize ?? size
+            
+            let previousSize = self.currentSize
+            self.currentSize = backgroundSize
+            
+            let textClippingContainerFrame = CGRect(origin: CGPoint(x: 1.0, y: 1.0), size: CGSize(width: backgroundSize.width - 1.0 - 7.0, height: backgroundSize.height - 1.0 - 1.0))
+            
+            var textClippingContainerBounds = CGRect(origin: CGPoint(), size: textClippingContainerFrame.size)
+            if explicitBackgroundSize != nil, let sourceTextInputView {
+                textClippingContainerBounds.origin.y = sourceTextInputView.contentOffset.y
+            } else {
+                textClippingContainerBounds.origin.y = unclippedPositionedTextHeight - backgroundSize.height + 4.0
+                textClippingContainerBounds.origin.y = max(0.0, textClippingContainerBounds.origin.y)
+            }
+            
+            transition.setPosition(view: self.textClippingContainer, position: textClippingContainerFrame.center)
+            transition.setBounds(view: self.textClippingContainer, bounds: textClippingContainerBounds)
+            
+            textNode.view.frame = CGRect(origin: CGPoint(x: textFrame.minX + textPositioningInsets.left - textClippingContainerFrame.minX, y: textFrame.minY + textPositioningInsets.top - textClippingContainerFrame.minY), size: CGSize(width: maxTextWidth, height: textHeight))
+            self.updateTextContents()
+            
+            if let effectIcon = self.effectIcon, let effectIconSize {
+                if let effectIconView = effectIcon.view {
+                    var animateIn = false
+                    if effectIconView.superview == nil {
+                        animateIn = true
+                        self.addSubview(effectIconView)
+                    }
+                    let effectIconFrame = CGRect(origin: CGPoint(x: backgroundSize.width - textInsets.right + 2.0 -  effectIconSize.width, y: backgroundSize.height - textInsets.bottom - 2.0 - effectIconSize.height), size: effectIconSize)
+                    if animateIn {
+                        if let previousSize {
+                            let previousEffectIconFrame = CGRect(origin: CGPoint(x: previousSize.width - textInsets.right + 2.0 - effectIconSize.width, y: previousSize.height - textInsets.bottom - 2.0 - effectIconSize.height), size: effectIconSize)
+                            effectIconView.frame = previousEffectIconFrame
+                        } else {
+                            effectIconView.frame = effectIconFrame
+                        }
+                        transition.animateAlpha(view: effectIconView, from: 0.0, to: 1.0)
+                        if !transition.animation.isImmediate {
+                            effectIconView.layer.animateSpring(from: 0.001 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+                        }
+                    }
+                    
+                    transition.setFrame(view: effectIconView, frame: effectIconFrame)
+                }
+            } else {
+                if let effectIcon = self.effectIcon {
+                    self.effectIcon = nil
+                    
+                    if let effectIconView = effectIcon.view {
+                        let effectIconSize = effectIconView.bounds.size
+                        let effectIconFrame = CGRect(origin: CGPoint(x: backgroundSize.width - textInsets.right -  effectIconSize.width, y: backgroundSize.height - textInsets.bottom - effectIconSize.height), size: effectIconSize)
+                        transition.setFrame(view: effectIconView, frame: effectIconFrame)
+                        transition.setScale(view: effectIconView, scale: 0.001)
+                        transition.setAlpha(view: effectIconView, alpha: 0.0, completion: { [weak effectIconView] _ in
+                            effectIconView?.removeFromSuperview()
+                        })
+                    }
+                }
+            }
+            
+            let backgroundAlpha: CGFloat
+            if explicitBackgroundSize != nil {
+                backgroundAlpha = 0.0
+            } else {
+                backgroundAlpha = 1.0
+            }
+            
+            transition.setFrame(view: self.backgroundWallpaperNode.view, frame: CGRect(origin: CGPoint(), size: backgroundSize))
+            transition.setAlpha(view: self.backgroundWallpaperNode.view, alpha: backgroundAlpha)
+            self.backgroundWallpaperNode.updateFrame(CGRect(origin: CGPoint(), size: backgroundSize), transition: transition.containedViewLayoutTransition)
+            transition.setFrame(view: self.backgroundNode.view, frame: CGRect(origin: CGPoint(), size: backgroundSize))
+            transition.setAlpha(view: self.backgroundNode.view, alpha: backgroundAlpha)
+            self.backgroundNode.updateLayout(size: backgroundSize, transition: transition.containedViewLayoutTransition)
+            
+            return backgroundSize
+        }
+    }
+    
+    func updateClippingRect(
+        sourceMediaPreview: ChatSendMessageContextScreenMediaPreview?,
+        isAnimatedIn: Bool,
+        localFrame: CGRect,
+        containerSize: CGSize,
+        transition: Transition
+    ) {
+        if let mediaPreviewClippingView = self.mediaPreviewClippingView, let sourceMediaPreview {
+            let clippingFrame: CGRect
+            if !isAnimatedIn, let globalClippingRect = sourceMediaPreview.globalClippingRect {
+                clippingFrame = self.convert(globalClippingRect, from: nil)
+            } else {
+                clippingFrame = CGRect(origin: CGPoint(x: -localFrame.minX, y: -localFrame.minY), size: containerSize)
+            }
+            
+            transition.setPosition(view: mediaPreviewClippingView, position: clippingFrame.origin)
+            transition.setBounds(view: mediaPreviewClippingView, bounds: CGRect(origin: CGPoint(x: clippingFrame.minX, y: clippingFrame.minY), size: clippingFrame.size))
+        }
+    }
+    
+    private func updateTextContents() {
+        guard let textInputNode = self.textNode else {
+            return
         }
         
-        transition.setFrame(view: self.backgroundWallpaperNode.view, frame: CGRect(origin: CGPoint(), size: backgroundSize))
-        transition.setAlpha(view: self.backgroundWallpaperNode.view, alpha: backgroundAlpha)
-        self.backgroundWallpaperNode.updateFrame(CGRect(origin: CGPoint(), size: backgroundSize), transition: transition.containedViewLayoutTransition)
-        transition.setFrame(view: self.backgroundNode.view, frame: CGRect(origin: CGPoint(), size: backgroundSize))
-        transition.setAlpha(view: self.backgroundNode.view, alpha: backgroundAlpha)
-        self.backgroundNode.updateLayout(size: backgroundSize, transition: transition.containedViewLayoutTransition)
+        var customEmojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)] = []
         
-        return backgroundSize
+        if let attributedText = textInputNode.attributedText {
+            let beginning = textInputNode.textView.beginningOfDocument
+            attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, range, _ in
+                if let value = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
+                    if let start = textInputNode.textView.position(from: beginning, offset: range.location), let end = textInputNode.textView.position(from: start, offset: range.length), let textRange = textInputNode.textView.textRange(from: start, to: end) {
+                        let textRects = textInputNode.textView.selectionRects(for: textRange)
+                        for textRect in textRects {
+                            customEmojiRects.append((textRect.rect, value))
+                            break
+                        }
+                    }
+                }
+            })
+        }
+        
+        if !customEmojiRects.isEmpty {
+            let customEmojiContainerView: CustomEmojiContainerView
+            if let current = self.customEmojiContainerView {
+                customEmojiContainerView = current
+            } else {
+                customEmojiContainerView = CustomEmojiContainerView(emojiViewProvider: { [weak self] emoji in
+                    guard let self, let emojiViewProvider = self.emojiViewProvider else {
+                        return nil
+                    }
+                    return emojiViewProvider(emoji)
+                })
+                customEmojiContainerView.isUserInteractionEnabled = false
+                textInputNode.textView.addSubview(customEmojiContainerView)
+                self.customEmojiContainerView = customEmojiContainerView
+            }
+            
+            customEmojiContainerView.update(emojiRects: customEmojiRects)
+        } else {
+            if let customEmojiContainerView = self.customEmojiContainerView {
+                customEmojiContainerView.removeFromSuperview()
+                self.customEmojiContainerView = nil
+            }
+        }
     }
 }

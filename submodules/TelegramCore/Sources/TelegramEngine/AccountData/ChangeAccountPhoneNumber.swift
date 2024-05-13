@@ -79,7 +79,7 @@ func _internal_requestChangeAccountPhoneNumberVerification(account: Account, pho
 }
 
 func _internal_requestNextChangeAccountPhoneNumberVerification(account: Account, phoneNumber: String, phoneCodeHash: String) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
-    return account.network.request(Api.functions.auth.resendCode(phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash), automaticFloodWait: false)
+    return account.network.request(Api.functions.auth.resendCode(flags: 0, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, reason: nil), automaticFloodWait: false)
         |> mapError { error -> RequestChangeAccountPhoneNumberVerificationError in
             if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                 return .limitExceeded

@@ -133,7 +133,7 @@ private func sendFirebaseAuthorizationCode(accountManager: AccountManager<Telegr
     //auth.requestFirebaseSms#89464b50 flags:# phone_number:string phone_code_hash:string safety_net_token:flags.0?string ios_push_secret:flags.1?string = Bool;
     var flags: Int32 = 0
     flags |= 1 << 1
-    return account.network.request(Api.functions.auth.requestFirebaseSms(flags: flags, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, playIntegrityToken: nil, iosPushSecret: firebaseSecret))
+    return account.network.request(Api.functions.auth.requestFirebaseSms(flags: flags, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, safetyNetToken: nil, playIntegrityToken: nil, iosPushSecret: firebaseSecret))
     |> mapError { _ -> SendFirebaseAuthorizationCodeError in
         return .generic
     }
@@ -275,7 +275,7 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                             parsedNextType = AuthorizationCodeNextType(apiType: nextType)
                         }
                         
-                        if case let .sentCodeTypeFirebaseSms(_, _, receipt, pushTimeout, _) = type {
+                        if case let .sentCodeTypeFirebaseSms(_, _, _, receipt, pushTimeout, _) = type {
                             return firebaseSecretStream
                             |> map { mapping -> String? in
                                 guard let receipt = receipt else {
@@ -395,7 +395,7 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
 }
 
 private func internalResendAuthorizationCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, number: String, apiId: Int32, apiHash: String, hash: String, syncContacts: Bool, firebaseSecretStream: Signal<[String: String], NoError>) -> Signal<SendAuthorizationCodeResult, AuthorizationCodeRequestError> {
-    return account.network.request(Api.functions.auth.resendCode(phoneNumber: number, phoneCodeHash: hash), automaticFloodWait: false)
+    return account.network.request(Api.functions.auth.resendCode(flags: 0, phoneNumber: number, phoneCodeHash: hash, reason: nil), automaticFloodWait: false)
     |> mapError { error -> AuthorizationCodeRequestError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .limitExceeded
@@ -421,7 +421,7 @@ private func internalResendAuthorizationCode(accountManager: AccountManager<Tele
                     parsedNextType = AuthorizationCodeNextType(apiType: nextType)
                 }
                 
-                if case let .sentCodeTypeFirebaseSms(_, _, receipt, pushTimeout, _) = type {
+                if case let .sentCodeTypeFirebaseSms(_, _, _, receipt, pushTimeout, _) = type {
                     return firebaseSecretStream
                     |> map { mapping -> String? in
                         guard let receipt = receipt else {
@@ -520,7 +520,7 @@ public func resendAuthorizationCode(accountManager: AccountManager<TelegramAccou
             switch state.contents {
                 case let .confirmationCodeEntry(number, type, hash, _, nextType, syncContacts, previousCodeEntryValue, _):
                     if nextType != nil {
-                        return account.network.request(Api.functions.auth.resendCode(phoneNumber: number, phoneCodeHash: hash), automaticFloodWait: false)
+                        return account.network.request(Api.functions.auth.resendCode(flags: 0, phoneNumber: number, phoneCodeHash: hash, reason: nil), automaticFloodWait: false)
                         |> mapError { error -> AuthorizationCodeRequestError in
                             if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                                 return .limitExceeded
@@ -563,7 +563,7 @@ public func resendAuthorizationCode(accountManager: AccountManager<TelegramAccou
                                         parsedNextType = AuthorizationCodeNextType(apiType: nextType)
                                     }
                                     
-                                    if case let .sentCodeTypeFirebaseSms(_, _, receipt, pushTimeout, _) = newType {
+                                    if case let .sentCodeTypeFirebaseSms(_, _, _, receipt, pushTimeout, _) = newType {
                                         return firebaseSecretStream
                                         |> map { mapping -> String? in
                                             guard let receipt = receipt else {

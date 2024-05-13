@@ -35,14 +35,14 @@ final class WebSearchControllerInteraction {
     let setSearchQuery: (String) -> Void
     let deleteRecentQuery: (String) -> Void
     let toggleSelection: (ChatContextResult, Bool) -> Bool
-    let sendSelected: (ChatContextResult?, Bool, Int32?) -> Void
-    let schedule: () -> Void
+    let sendSelected: (ChatContextResult?, Bool, Int32?, ChatSendMessageActionSheetController.MessageEffect?) -> Void
+    let schedule: (ChatSendMessageActionSheetController.MessageEffect?) -> Void
     let avatarCompleted: (UIImage) -> Void
     let selectionState: TGMediaSelectionContext?
     let editingState: TGMediaEditingContext
     var hiddenMediaId: String?
     
-    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Bool, sendSelected: @escaping (ChatContextResult?, Bool, Int32?) -> Void, schedule: @escaping () -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
+    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Bool, sendSelected: @escaping (ChatContextResult?, Bool, Int32?, ChatSendMessageActionSheetController.MessageEffect?) -> Void, schedule: @escaping (ChatSendMessageActionSheetController.MessageEffect?) -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
         self.openResult = openResult
         self.setSearchQuery = setSearchQuery
         self.deleteRecentQuery = deleteRecentQuery
@@ -254,7 +254,7 @@ public final class WebSearchController: ViewController {
             } else {
                 return false
             }
-        }, sendSelected: { [weak self] current, silently, scheduleTime in
+        }, sendSelected: { [weak self] current, silently, scheduleTime, messageEffect in
             if let selectionState = selectionState, let results = self?.controllerNode.currentExternalResults {
                 if let current = current {
                     let currentItem = LegacyWebSearchItem(result: current)
@@ -264,10 +264,10 @@ public final class WebSearchController: ViewController {
                     sendSelected(results, selectionState, editingState, false)
                 }
             }
-        }, schedule: { [weak self] in
+        }, schedule: { [weak self] messageEffect in
             if let strongSelf = self {
                 strongSelf.presentSchedulePicker(false, { [weak self] time in
-                    self?.controllerInteraction?.sendSelected(nil, false, time)
+                    self?.controllerInteraction?.sendSelected(nil, false, time, nil)
                 })
             }
         }, avatarCompleted: { result in
@@ -606,12 +606,12 @@ public class WebSearchPickerContext: AttachmentMediaPickerContext {
         self.interaction?.editingState.setForcedCaption(caption, skipUpdate: true)
     }
     
-    public func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
-        self.interaction?.sendSelected(nil, mode == .silently, nil)
+    public func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, messageEffect: ChatSendMessageActionSheetController.MessageEffect?) {
+        self.interaction?.sendSelected(nil, mode == .silently, nil, messageEffect)
     }
     
-    public func schedule() {
-        self.interaction?.schedule()
+    public func schedule(messageEffect: ChatSendMessageActionSheetController.MessageEffect?) {
+        self.interaction?.schedule(messageEffect)
     }
     
     public func mainButtonAction() {

@@ -229,6 +229,15 @@ public:
     CGRect bounds;
 };
 
+class RenderTreeNodeContentItem {
+public:
+    RenderTreeNodeContentItem() {
+    }
+    
+public:
+    std::vector<std::shared_ptr<RenderTreeNodeContentItem>> subItems;
+};
+
 class RenderTreeNodeContent {
 public:
     enum class ShadingType {

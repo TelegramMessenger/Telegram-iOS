@@ -47,6 +47,9 @@ swift_library(
         "//submodules/RadialStatusNode",
         "//submodules/Camera",
         "//submodules/TelegramUI/Components/MediaEditor/ImageObjectSeparation",
+        "//submodules/ChatSendMessageActionUI",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/ComponentDisplayAdapters",
     ],
     visibility = [
         "//visibility:public",

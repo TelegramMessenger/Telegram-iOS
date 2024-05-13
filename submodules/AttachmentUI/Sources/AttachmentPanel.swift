@@ -728,10 +728,12 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
 
     var beganTextEditing: () -> Void = {}
     var textUpdated: (NSAttributedString) -> Void = { _ in }
-    var sendMessagePressed: (AttachmentTextInputPanelSendMode) -> Void = { _ in }
+    var sendMessagePressed: (AttachmentTextInputPanelSendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void = { _, _ in }
     var requestLayout: () -> Void = {}
     var present: (ViewController) -> Void = { _ in }
     var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
+    
+    var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)?
     
     var mainButtonPressed: () -> Void = { }
     
@@ -967,20 +969,56 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                     sendWhenOnlineAvailable = false
                 }
                 
-                let controller = makeChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputView: textInputNode.textView, emojiViewProvider: textInputPanelNode.emojiViewProvider, attachment: true, canSendWhenOnline: sendWhenOnlineAvailable, completion: {
-                }, sendMessage: { [weak textInputPanelNode] mode, _ in
-                    switch mode {
-                    case .generic:
-                        textInputPanelNode?.sendMessage(.generic)
-                    case .silently:
-                        textInputPanelNode?.sendMessage(.silent)
-                    case .whenOnline:
-                        textInputPanelNode?.sendMessage(.whenOnline)
+                let mediaPreview = strongSelf.getCurrentSendMessageContextMediaPreview?()
+                let isReady: Signal<Bool, NoError>
+                if let mediaPreview {
+                    isReady = mediaPreview.isReady
+                    |> filter { $0 }
+                    |> take(1)
+                    |> timeout(0.5, queue: .mainQueue(), alternate: .single(true))
+                } else {
+                    isReady = .single(true)
+                }
+                
+                let _ = (isReady
+                |> deliverOnMainQueue).start(next: { [weak strongSelf] _ in
+                    guard let strongSelf else {
+                        return
                     }
-                }, schedule: { [weak textInputPanelNode] _ in
-                    textInputPanelNode?.sendMessage(.schedule)
-                }, reactionItems: effectItems, availableMessageEffects: availableMessageEffects, isPremium: hasPremium)
-                strongSelf.presentInGlobalOverlay(controller)
+                    
+                    let controller = makeChatSendMessageActionSheetController(
+                        context: strongSelf.context,
+                        peerId: strongSelf.presentationInterfaceState.chatLocation.peerId,
+                        forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds,
+                        hasEntityKeyboard: hasEntityKeyboard,
+                        gesture: gesture,
+                        sourceSendButton: node,
+                        textInputView: textInputNode.textView,
+                        mediaPreview: mediaPreview,
+                        emojiViewProvider: textInputPanelNode.emojiViewProvider,
+                        attachment: true,
+                        canSendWhenOnline: sendWhenOnlineAvailable,
+                        completion: {
+                        },
+                        sendMessage: { [weak textInputPanelNode] mode, messageEffect in
+                            switch mode {
+                            case .generic:
+                                textInputPanelNode?.sendMessage(.generic, messageEffect)
+                            case .silently:
+                                textInputPanelNode?.sendMessage(.silent, messageEffect)
+                            case .whenOnline:
+                                textInputPanelNode?.sendMessage(.whenOnline, messageEffect)
+                            }
+                        },
+                        schedule: { [weak textInputPanelNode] messageEffect in
+                            textInputPanelNode?.sendMessage(.schedule, messageEffect)
+                        },
+                        reactionItems: effectItems,
+                        availableMessageEffects: availableMessageEffects,
+                        isPremium: hasPremium
+                    )
+                    strongSelf.presentInGlobalOverlay(controller)
+                })
             })
         }, openScheduledMessages: {
         }, openPeersNearby: {
@@ -1249,9 +1287,9 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                 }
             }, makeEntityInputView: self.makeEntityInputView)
             textInputPanelNode.interfaceInteraction = self.interfaceInteraction
-            textInputPanelNode.sendMessage = { [weak self] mode in
+            textInputPanelNode.sendMessage = { [weak self] mode, messageEffect in
                 if let strongSelf = self {
-                    strongSelf.sendMessagePressed(mode)
+                    strongSelf.sendMessagePressed(mode, messageEffect)
                 }
             }
             textInputPanelNode.focusUpdated = { [weak self] focus in

@@ -1036,7 +1036,7 @@ public:
         }
         
     public:
-        void renderChildren(AnimationFrameTime frameTime, std::optional<TrimParams> parentTrim) {
+        void updateChildren(AnimationFrameTime frameTime, std::optional<TrimParams> parentTrim) {
             CATransform3D containerTransform = CATransform3D::identity();
             double containerOpacity = 1.0;
             if (transform) {
@@ -1111,7 +1111,7 @@ public:
                         }
                     }
                     
-                    subItems[i]->renderChildren(frameTime, childTrim);
+                    subItems[i]->updateChildren(frameTime, childTrim);
                 }
             }
         }
@@ -1284,14 +1284,14 @@ CompositionLayer(solidLayer, Vector2D::Zero()) {
 void ShapeCompositionLayer::displayContentsWithFrame(double frame, bool forceUpdates) {
     _frameTime = frame;
     _frameTimeInitialized = true;
-    _contentTree->itemTree->renderChildren(_frameTime, std::nullopt);
+    _contentTree->itemTree->updateChildren(_frameTime, std::nullopt);
 }
 
 std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
     if (!_frameTimeInitialized) {
         _frameTime = 0.0;
         _frameTimeInitialized = true;
-        _contentTree->itemTree->renderChildren(_frameTime, std::nullopt);
+        _contentTree->itemTree->updateChildren(_frameTime, std::nullopt);
     }
     
     if (!_renderTreeNode) {

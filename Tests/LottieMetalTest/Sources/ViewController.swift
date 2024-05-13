@@ -123,7 +123,7 @@ public final class ViewController: UIViewController {
             if #available(iOS 13.0, *) {
                 self.test = ReferenceCompareTest(view: self.view)
             }
-        } else if "".isEmpty {
+        } else if !"".isEmpty {
             let cachedAnimation = cacheLottieMetalAnimation(path: filePath)!
             let animation = parseCachedLottieMetalAnimation(data: cachedAnimation)!
             

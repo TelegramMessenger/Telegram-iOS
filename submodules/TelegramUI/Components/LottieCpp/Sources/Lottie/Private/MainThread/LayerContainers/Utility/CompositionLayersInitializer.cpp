@@ -19,7 +19,6 @@ std::vector<std::shared_ptr<CompositionLayer>> initializeCompositionLayers(
     std::vector<std::shared_ptr<CompositionLayer>> compositionLayers;
     std::map<int, std::shared_ptr<CompositionLayer>> layerMap;
     
-    /// Organize the assets into a dictionary of [ID : ImageAsset]
     std::vector<std::shared_ptr<LayerModel>> childLayers;
     
     for (const auto &layer : layers) {

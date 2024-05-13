@@ -24,6 +24,9 @@ final class SendButton: HighlightTrackingButton {
     private let iconView: UIImageView
     private var activityIndicator: ActivityIndicator?
     
+    private var didProcessSourceCustomContent: Bool = false
+    private var sourceCustomContentView: UIView?
+    
     override init(frame: CGRect) {
         self.containerView = UIView()
         self.containerView.isUserInteractionEnabled = false
@@ -50,12 +53,14 @@ final class SendButton: HighlightTrackingButton {
         context: AccountContext,
         presentationData: PresentationData,
         backgroundNode: WallpaperBackgroundNode?,
+        sourceSendButton: ASDisplayNode,
+        isAnimatedIn: Bool,
         isLoadingEffectAnimation: Bool,
         size: CGSize,
         transition: Transition
     ) {
-        let innerSize = CGSize(width: 33.0, height: 33.0)
-        transition.setFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: floor((size.width - innerSize.width) * 0.5), y: floor((size.height - innerSize.height) * 0.5)), size: innerSize))
+        let innerSize = CGSize(width: size.width - 5.5 * 2.0, height: 33.0)
+        transition.setFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - innerSize.width) * 0.5), y: floorToScreenPixels((size.height - innerSize.height) * 0.5)), size: innerSize))
         transition.setCornerRadius(layer: self.containerView.layer, cornerRadius: innerSize.height * 0.5)
         
         if self.window != nil {
@@ -71,7 +76,7 @@ final class SendButton: HighlightTrackingButton {
             transition.setFrame(view: backgroundContent.view, frame: CGRect(origin: CGPoint(), size: innerSize))
         }
         
-        if [.day, .night].contains(presentationData.theme.referenceTheme.baseTheme) && !presentationData.theme.chat.message.outgoing.bubble.withWallpaper.hasSingleFillColor {
+        if backgroundNode != nil && [.day, .night].contains(presentationData.theme.referenceTheme.baseTheme) && !presentationData.theme.chat.message.outgoing.bubble.withWallpaper.hasSingleFillColor {
             self.backgroundContent?.isHidden = false
             self.backgroundLayer.isHidden = true
         } else {
@@ -79,18 +84,44 @@ final class SendButton: HighlightTrackingButton {
             self.backgroundLayer.isHidden = false
         }
         
-        self.backgroundLayer.backgroundColor = presentationData.theme.list.itemAccentColor.cgColor
+        self.backgroundLayer.backgroundColor = presentationData.theme.chat.inputPanel.actionControlFillColor.cgColor
         transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: CGPoint(), size: innerSize))
+        
+        if !self.didProcessSourceCustomContent {
+            self.didProcessSourceCustomContent = true
+            
+            if let sourceSendButton = sourceSendButton as? ChatSendMessageActionSheetControllerSourceSendButtonNode {
+                if let sourceCustomContentView = sourceSendButton.makeCustomContents() {
+                    self.sourceCustomContentView = sourceCustomContentView
+                    self.iconView.superview?.insertSubview(sourceCustomContentView, belowSubview: self.iconView)
+                }
+            }
+        }
         
         if self.iconView.image == nil {
             self.iconView.image = PresentationResourcesChat.chatInputPanelSendIconImage(presentationData.theme)
         }
         
+        if let sourceCustomContentView = self.sourceCustomContentView {
+            let sourceCustomContentSize = sourceCustomContentView.bounds.size
+            let sourceCustomContentFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((innerSize.width - sourceCustomContentSize.width) * 0.5) + UIScreenPixel, y: floorToScreenPixels((innerSize.height - sourceCustomContentSize.height) * 0.5)), size: sourceCustomContentSize)
+            transition.setPosition(view: sourceCustomContentView, position: sourceCustomContentFrame.center)
+            transition.setBounds(view: sourceCustomContentView, bounds: CGRect(origin: CGPoint(), size: sourceCustomContentFrame.size))
+            transition.setAlpha(view: sourceCustomContentView, alpha: isAnimatedIn ? 0.0 : 1.0)
+        }
+        
         if let icon = self.iconView.image {
-            let iconFrame = CGRect(origin: CGPoint(x: floor((innerSize.width - icon.size.width) * 0.5), y: floor((innerSize.height - icon.size.height) * 0.5)), size: icon.size)
+            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((innerSize.width - icon.size.width) * 0.5) - UIScreenPixel, y: floorToScreenPixels((innerSize.height - icon.size.height) * 0.5)), size: icon.size)
             transition.setPosition(view: self.iconView, position: iconFrame.center)
             transition.setBounds(view: self.iconView, bounds: CGRect(origin: CGPoint(), size: iconFrame.size))
-            transition.setAlpha(view: self.iconView, alpha: isLoadingEffectAnimation ? 0.0 : 1.0)
+            
+            let iconViewAlpha: CGFloat
+            if (self.sourceCustomContentView != nil && !isAnimatedIn) || isLoadingEffectAnimation {
+                iconViewAlpha = 0.0
+            } else {
+                iconViewAlpha = 1.0
+            }
+            transition.setAlpha(view: self.iconView, alpha: iconViewAlpha)
             transition.setScale(view: self.iconView, scale: isLoadingEffectAnimation ? 0.001 : 1.0)
         }
         

@@ -32,10 +32,21 @@ func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIView) -> 
     return targetWindowFrame
 }
 
+public protocol ChatSendMessageContextScreenMediaPreview: AnyObject {
+    var isReady: Signal<Bool, NoError> { get }
+    var view: UIView { get }
+    var globalClippingRect: CGRect? { get }
+    
+    func animateIn(transition: Transition)
+    func animateOut(transition: Transition)
+    func update(containerSize: CGSize, transition: Transition) -> CGSize
+}
+
 final class ChatSendMessageContextScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     let peerId: EnginePeer.Id?
     let isScheduledMessages: Bool
     let forwardMessageIds: [EngineMessage.Id]?
@@ -43,6 +54,7 @@ final class ChatSendMessageContextScreenComponent: Component {
     let gesture: ContextGesture
     let sourceSendButton: ASDisplayNode
     let textInputView: UITextView
+    let mediaPreview: ChatSendMessageContextScreenMediaPreview?
     let emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     let wallpaperBackgroundNode: WallpaperBackgroundNode?
     let attachment: Bool
@@ -56,6 +68,7 @@ final class ChatSendMessageContextScreenComponent: Component {
 
     init(
         context: AccountContext,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
         peerId: EnginePeer.Id?,
         isScheduledMessages: Bool,
         forwardMessageIds: [EngineMessage.Id]?,
@@ -63,6 +76,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         gesture: ContextGesture,
         sourceSendButton: ASDisplayNode,
         textInputView: UITextView,
+        mediaPreview: ChatSendMessageContextScreenMediaPreview?,
         emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?,
         wallpaperBackgroundNode: WallpaperBackgroundNode?,
         attachment: Bool,
@@ -75,6 +89,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         isPremium: Bool
     ) {
         self.context = context
+        self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId
         self.isScheduledMessages = isScheduledMessages
         self.forwardMessageIds = forwardMessageIds
@@ -82,6 +97,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         self.gesture = gesture
         self.sourceSendButton = sourceSendButton
         self.textInputView = textInputView
+        self.mediaPreview = mediaPreview
         self.emojiViewProvider = emojiViewProvider
         self.wallpaperBackgroundNode = wallpaperBackgroundNode
         self.attachment = attachment
@@ -141,6 +157,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         private var standaloneReactionAnimation: AnimatedStickerNode?
         
         private var isLoadingEffectAnimation: Bool = false
+        private var isLoadingEffectAnimationTimerDisposable: Disposable?
         private var loadEffectAnimationDisposable: Disposable?
         
         private var presentationAnimationState: PresentationAnimationState = .initial
@@ -177,6 +194,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         deinit {
             self.messageEffectDisposable.dispose()
             self.loadEffectAnimationDisposable?.dispose()
+            self.isLoadingEffectAnimationTimerDisposable?.dispose()
         }
         
         @objc private func onBackgroundTap(_ recognizer: UITapGestureRecognizer) {
@@ -196,6 +214,8 @@ final class ChatSendMessageContextScreenComponent: Component {
         
         func animateIn() {
             if case .initial = self.presentationAnimationState {
+                HapticFeedback().impact()
+                
                 self.presentationAnimationState = .animatedIn
                 self.state?.updated(transition: .spring(duration: 0.42))
             }
@@ -270,7 +290,7 @@ final class ChatSendMessageContextScreenComponent: Component {
             self.environment = environment
             self.state = state
             
-            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+            let presentationData = component.updatedPresentationData?.initial ?? component.context.sharedContext.currentPresentationData.with({ $0 })
             
             if themeUpdated {
                 self.backgroundView.updateColor(
@@ -297,15 +317,6 @@ final class ChatSendMessageContextScreenComponent: Component {
             }
             
             let sourceSendButtonFrame = convertFrame(component.sourceSendButton.bounds, from: component.sourceSendButton.view, to: self)
-            
-            sendButton.update(
-                context: component.context,
-                presentationData: presentationData,
-                backgroundNode: component.wallpaperBackgroundNode,
-                isLoadingEffectAnimation: self.isLoadingEffectAnimation,
-                size: sourceSendButtonFrame.size,
-                transition: transition
-            )
             
             let sendButtonScale: CGFloat
             switch self.presentationAnimationState {
@@ -389,7 +400,8 @@ final class ChatSendMessageContextScreenComponent: Component {
                             guard let self, let component = self.component else {
                                 return
                             }
-                            component.schedule(nil)
+                            self.animateOutToEmpty = true
+                            component.schedule(self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.MessageEffect(id: $0.id) }))
                             self.environment?.controller()?.dismiss()
                         }
                     )))
@@ -476,10 +488,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                 backgroundNode: component.wallpaperBackgroundNode,
                 textString: textString,
                 sourceTextInputView: component.textInputView as? ChatInputTextView,
+                emojiViewProvider: component.emojiViewProvider,
+                sourceMediaPreview: component.mediaPreview,
                 textInsets: messageTextInsets,
                 explicitBackgroundSize: explicitMessageBackgroundSize,
                 maxTextWidth: localSourceTextInputViewFrame.width,
                 maxTextHeight: maxTextHeight,
+                containerSize: CGSize(width: availableSize.width - 16.0 - 40.0, height: availableSize.height),
                 effect: self.presentationAnimationState.key == .animatedIn ? self.selectedMessageEffect : nil,
                 transition: transition
             )
@@ -586,6 +601,8 @@ final class ChatSendMessageContextScreenComponent: Component {
                                     self.selectedMessageEffect = nil
                                     reactionContextNode.selectedItems = Set([])
                                     self.loadEffectAnimationDisposable?.dispose()
+                                    self.isLoadingEffectAnimationTimerDisposable?.dispose()
+                                    self.isLoadingEffectAnimationTimerDisposable = nil
                                     self.isLoadingEffectAnimation = false
                                     
                                     if let standaloneReactionAnimation = self.standaloneReactionAnimation {
@@ -619,10 +636,16 @@ final class ChatSendMessageContextScreenComponent: Component {
                             }
                             
                             self.loadEffectAnimationDisposable?.dispose()
-                            self.isLoadingEffectAnimation = true
-                            if !self.isUpdating {
-                                self.state?.updated(transition: .easeInOut(duration: 0.2))
-                            }
+                            self.isLoadingEffectAnimationTimerDisposable?.dispose()
+                            self.isLoadingEffectAnimationTimerDisposable = (Signal<Never, NoError>.complete() |> delay(0.2, queue: .mainQueue()) |> deliverOnMainQueue).startStrict(completed: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.isLoadingEffectAnimation = true
+                                if !self.isUpdating {
+                                    self.state?.updated(transition: .easeInOut(duration: 0.2))
+                                }
+                            })
                             
                             if let standaloneReactionAnimation = self.standaloneReactionAnimation {
                                 self.standaloneReactionAnimation = nil
@@ -666,9 +689,9 @@ final class ChatSendMessageContextScreenComponent: Component {
                                     dataDisposabke.dispose()
                                 }
                             }
-                            #if DEBUG
+                            /*#if DEBUG
                             loadEffectAnimationSignal = loadEffectAnimationSignal |> delay(1.0, queue: .mainQueue())
-                            #endif
+                            #endif*/
                             
                             self.loadEffectAnimationDisposable = (loadEffectAnimationSignal
                             |> deliverOnMainQueue).start(completed: { [weak self] in
@@ -676,6 +699,8 @@ final class ChatSendMessageContextScreenComponent: Component {
                                     return
                                 }
                                 
+                                self.isLoadingEffectAnimationTimerDisposable?.dispose()
+                                self.isLoadingEffectAnimationTimerDisposable = nil
                                 self.isLoadingEffectAnimation = false
                                 
                                 guard let targetView = self.messageItemView?.effectIconView else {
@@ -689,7 +714,11 @@ final class ChatSendMessageContextScreenComponent: Component {
                                 #if targetEnvironment(simulator)
                                 standaloneReactionAnimation = DirectAnimatedStickerNode()
                                 #else
-                                standaloneReactionAnimation = LottieMetalAnimatedStickerNode()
+                                if "".isEmpty {
+                                    standaloneReactionAnimation = DirectAnimatedStickerNode()
+                                } else {
+                                    standaloneReactionAnimation = LottieMetalAnimatedStickerNode()
+                                }
                                 #endif
                                 
                                 standaloneReactionAnimation.isUserInteractionEnabled = false
@@ -728,7 +757,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                             return
                         }
                         //TODO:localize
-                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                        let presentationData = component.updatedPresentationData?.initial ?? component.context.sharedContext.currentPresentationData.with({ $0 })
                         self.environment?.controller()?.present(UndoOverlayController(
                             presentationData: presentationData,
                             content: .premiumPaywall(
@@ -764,9 +793,11 @@ final class ChatSendMessageContextScreenComponent: Component {
                 }
             }
             
-            let sourceActionsStackFrame = CGRect(origin: CGPoint(x: sourceSendButtonFrame.minX + 1.0 - actionsStackSize.width, y: sourceMessageItemFrame.maxY + messageActionsSpacing), size: actionsStackSize)
+            let sendButtonSize = CGSize(width: min(sourceSendButtonFrame.width, 44.0), height: sourceSendButtonFrame.height)
+            var readySendButtonFrame = CGRect(origin: CGPoint(x: sourceSendButtonFrame.maxX - sendButtonSize.width, y: sourceSendButtonFrame.minY), size: sendButtonSize)
             
-            var readySendButtonFrame = CGRect(origin: CGPoint(x: sourceSendButtonFrame.minX, y: sourceSendButtonFrame.minY), size: sourceSendButtonFrame.size)
+            let sourceActionsStackFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 1.0 - actionsStackSize.width, y: sourceMessageItemFrame.maxY + messageActionsSpacing), size: actionsStackSize)
+            
             var readyMessageItemFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 8.0 - messageItemSize.width, y: readySendButtonFrame.maxY - 6.0 - messageItemSize.height), size: messageItemSize)
             var readyActionsStackFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 1.0 - actionsStackSize.width, y: readyMessageItemFrame.maxY + messageActionsSpacing), size: actionsStackSize)
             
@@ -789,8 +820,13 @@ final class ChatSendMessageContextScreenComponent: Component {
             let sendButtonFrame: CGRect
             switch self.presentationAnimationState {
             case .initial:
-                messageItemFrame = sourceMessageItemFrame
-                actionsStackFrame = sourceActionsStackFrame
+                if component.mediaPreview != nil {
+                    messageItemFrame = readyMessageItemFrame
+                    actionsStackFrame = readyActionsStackFrame
+                } else {
+                    messageItemFrame = sourceMessageItemFrame
+                    actionsStackFrame = sourceActionsStackFrame
+                }
                 sendButtonFrame = sourceSendButtonFrame
             case .animatedOut:
                 if self.animateOutToEmpty {
@@ -798,8 +834,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                     actionsStackFrame = readyActionsStackFrame
                     sendButtonFrame = readySendButtonFrame
                 } else {
-                    messageItemFrame = sourceMessageItemFrame
-                    actionsStackFrame = sourceActionsStackFrame
+                    if component.mediaPreview != nil {
+                        messageItemFrame = readyMessageItemFrame
+                        actionsStackFrame = readyActionsStackFrame
+                    } else {
+                        messageItemFrame = sourceMessageItemFrame
+                        actionsStackFrame = sourceActionsStackFrame
+                    }
                     sendButtonFrame = sourceSendButtonFrame
                 }
             case .animatedIn:
@@ -809,6 +850,13 @@ final class ChatSendMessageContextScreenComponent: Component {
             }
             
             transition.setFrame(view: messageItemView, frame: messageItemFrame)
+            messageItemView.updateClippingRect(
+                sourceMediaPreview: component.mediaPreview,
+                isAnimatedIn: self.presentationAnimationState.key == .animatedIn,
+                localFrame: messageItemFrame,
+                containerSize: availableSize,
+                transition: transition
+            )
             
             transition.setPosition(view: actionsStackNode.view, position: CGPoint(x: actionsStackFrame.maxX, y: actionsStackFrame.minY))
             transition.setBounds(view: actionsStackNode.view, bounds: CGRect(origin: CGPoint(), size: actionsStackFrame.size))
@@ -820,9 +868,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                     transition.setAlpha(view: actionsStackNode.view, alpha: 1.0)
                     Transition.immediate.setScale(view: actionsStackNode.view, scale: 1.0)
                     actionsStackNode.layer.animateSpring(from: 0.001 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.42, damping: 104.0)
+                    
+                    messageItemView.animateIn(transition: transition)
                 case .animatedOut:
                     transition.setAlpha(view: actionsStackNode.view, alpha: 0.0)
                     transition.setScale(view: actionsStackNode.view, scale: 0.001)
+                    
+                    messageItemView.animateOut(transition: transition)
                 }
             } else {
                 switch self.presentationAnimationState {
@@ -837,7 +889,11 @@ final class ChatSendMessageContextScreenComponent: Component {
             
             if let reactionContextNode = self.reactionContextNode {
                 let size = availableSize
-                let reactionsAnchorRect = messageItemFrame
+                var reactionsAnchorRect = messageItemFrame
+                if component.mediaPreview != nil {
+                    reactionsAnchorRect.size.width += 100.0
+                    reactionsAnchorRect.origin.x -= 4.0
+                }
                 transition.setFrame(view: reactionContextNode.view, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
                 reactionContextNode.updateLayout(size: size, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, centerAligned: false, isCoveredByInput: false, isAnimatingOut: false, transition: transition.containedViewLayoutTransition)
                 reactionContextNode.updateIsIntersectingContent(isIntersectingContent: false, transition: .immediate)
@@ -856,6 +912,16 @@ final class ChatSendMessageContextScreenComponent: Component {
                 }
             }
             
+            sendButton.update(
+                context: component.context,
+                presentationData: presentationData,
+                backgroundNode: component.wallpaperBackgroundNode,
+                sourceSendButton: component.sourceSendButton,
+                isAnimatedIn: self.presentationAnimationState.key == .animatedIn,
+                isLoadingEffectAnimation: self.isLoadingEffectAnimation,
+                size: sendButtonFrame.size,
+                transition: transition
+            )
             transition.setPosition(view: sendButton, position: sendButtonFrame.center)
             transition.setBounds(view: sendButton, bounds: CGRect(origin: CGPoint(), size: sendButtonFrame.size))
             transition.setScale(view: sendButton, scale: sendButtonScale)
@@ -866,21 +932,32 @@ final class ChatSendMessageContextScreenComponent: Component {
             let backgroundAlpha: CGFloat
             switch self.presentationAnimationState {
             case .animatedIn:
-                if previousAnimationState.key == .initial && self.initializationDisplayLink == nil {
-                    self.initializationDisplayLink = SharedDisplayLinkDriver.shared.add({ [weak self] _ in
-                        guard let self else {
-                            return
+                if previousAnimationState.key == .initial {
+                    if environment.inputHeight != 0.0 {
+                        if self.initializationDisplayLink == nil {
+                            self.initializationDisplayLink = SharedDisplayLinkDriver.shared.add({ [weak self] _ in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                self.initializationDisplayLink?.invalidate()
+                                self.initializationDisplayLink = nil
+                                
+                                guard let component = self.component else {
+                                    return
+                                }
+                                if component.mediaPreview == nil {
+                                    component.textInputView.isHidden = true
+                                }
+                                component.sourceSendButton.isHidden = true
+                            })
                         }
-                        
-                        self.initializationDisplayLink?.invalidate()
-                        self.initializationDisplayLink = nil
-                        
-                        guard let component = self.component else {
-                            return
+                    } else {
+                        if component.mediaPreview == nil {
+                            component.textInputView.isHidden = true
                         }
-                        component.textInputView.isHidden = true
                         component.sourceSendButton.isHidden = true
-                    })
+                    }
                 }
                 
                 backgroundAlpha = 1.0
@@ -888,7 +965,9 @@ final class ChatSendMessageContextScreenComponent: Component {
                 backgroundAlpha = 0.0
                 
                 if self.animateOutToEmpty {
-                    component.textInputView.isHidden = false
+                    if component.mediaPreview == nil {
+                        component.textInputView.isHidden = false
+                    }
                     component.sourceSendButton.isHidden = false
                     
                     transition.setAlpha(view: sendButton, alpha: 0.0)
@@ -906,7 +985,9 @@ final class ChatSendMessageContextScreenComponent: Component {
                 }
                 if case let .animatedOut(completion) = self.presentationAnimationState {
                     if let component = self.component, !self.animateOutToEmpty {
-                        component.textInputView.isHidden = false
+                        if component.mediaPreview == nil {
+                            component.textInputView.isHidden = false
+                        }
                         component.sourceSendButton.isHidden = false
                     }
                     completion()
@@ -950,6 +1031,7 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
         gesture: ContextGesture,
         sourceSendButton: ASDisplayNode,
         textInputView: UITextView,
+        mediaPreview: ChatSendMessageContextScreenMediaPreview?,
         emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?,
         wallpaperBackgroundNode: WallpaperBackgroundNode?,
         attachment: Bool,
@@ -967,6 +1049,7 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
             context: context,
             component: ChatSendMessageContextScreenComponent(
                 context: context,
+                updatedPresentationData: updatedPresentationData,
                 peerId: peerId,
                 isScheduledMessages: isScheduledMessages,
                 forwardMessageIds: forwardMessageIds,
@@ -974,6 +1057,7 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
                 gesture: gesture,
                 sourceSendButton: sourceSendButton,
                 textInputView: textInputView,
+                mediaPreview: mediaPreview,
                 emojiViewProvider: emojiViewProvider,
                 wallpaperBackgroundNode: wallpaperBackgroundNode,
                 attachment: attachment,
@@ -987,18 +1071,12 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .none,
-            presentationMode: .default
+            presentationMode: .default,
+            updatedPresentationData: updatedPresentationData
         )
         
         self.lockOrientation = true
         self.blocksBackgroundWhenInOverlay = true
-        
-        /*gesture.externalEnded = { [weak self] _ in
-            guard let self else {
-                return
-            }
-            self.dismiss()
-        }*/
     }
     
     required public init(coder aDecoder: NSCoder) {
