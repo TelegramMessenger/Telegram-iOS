@@ -511,6 +511,9 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
     private let persistentItems: Bool
     private let isExternalPreview: Bool
     var globalClippingRect: CGRect?
+    var layoutType: ChatSendMessageContextScreenMediaPreviewLayoutType {
+        return .message
+    }
     
     fileprivate var wallpaperBackgroundNode: WallpaperBackgroundNode?
     private let scrollNode: ASScrollNode
@@ -656,7 +659,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
     }
     
     func animateOut(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
-        if let wallpaperBackgroundNode = self.wallpaperBackgroundNode{
+        if let wallpaperBackgroundNode = self.wallpaperBackgroundNode {
             wallpaperBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak self] _ in
                 completion()
                 
@@ -712,6 +715,10 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
             bottomNode.layer.animateAlpha(from: bottomNode.alpha, to: 0.0, duration: 0.15, removeOnCompletion: false)
             transition.animatePositionAdditive(layer: bottomNode.layer, offset: CGPoint(), to: CGPoint(x: 0.0, y: 30.0), removeOnCompletion: false)
         }
+    }
+    
+    func animateOutOnSend(transition: Transition) {
+        transition.setAlpha(view: self.view, alpha: 0.0)
     }
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {

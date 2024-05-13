@@ -32,13 +32,20 @@ func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIView) -> 
     return targetWindowFrame
 }
 
+public enum ChatSendMessageContextScreenMediaPreviewLayoutType {
+    case message
+    case videoMessage
+}
+
 public protocol ChatSendMessageContextScreenMediaPreview: AnyObject {
     var isReady: Signal<Bool, NoError> { get }
     var view: UIView { get }
     var globalClippingRect: CGRect? { get }
+    var layoutType: ChatSendMessageContextScreenMediaPreviewLayoutType { get }
     
     func animateIn(transition: Transition)
     func animateOut(transition: Transition)
+    func animateOutOnSend(transition: Transition)
     func update(containerSize: CGSize, transition: Transition) -> CGSize
 }
 
@@ -482,6 +489,18 @@ final class ChatSendMessageContextScreenComponent: Component {
                 maxTextHeight -= environment.safeInsets.bottom
             }
             
+            let messageItemViewContainerSize: CGSize
+            if let mediaPreview = component.mediaPreview {
+                switch mediaPreview.layoutType {
+                case .message:
+                    messageItemViewContainerSize = CGSize(width: availableSize.width - 16.0 - 40.0, height: availableSize.height)
+                case .videoMessage:
+                    messageItemViewContainerSize = CGSize(width: availableSize.width, height: availableSize.height)
+                }
+            } else {
+                messageItemViewContainerSize = CGSize(width: availableSize.width - 16.0 - 40.0, height: availableSize.height)
+            }
+            
             let messageItemSize = messageItemView.update(
                 context: component.context,
                 presentationData: presentationData,
@@ -494,7 +513,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                 explicitBackgroundSize: explicitMessageBackgroundSize,
                 maxTextWidth: localSourceTextInputViewFrame.width,
                 maxTextHeight: maxTextHeight,
-                containerSize: CGSize(width: availableSize.width - 16.0 - 40.0, height: availableSize.height),
+                containerSize: messageItemViewContainerSize,
                 effect: self.presentationAnimationState.key == .animatedIn ? self.selectedMessageEffect : nil,
                 transition: transition
             )
@@ -799,6 +818,15 @@ final class ChatSendMessageContextScreenComponent: Component {
             let sourceActionsStackFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 1.0 - actionsStackSize.width, y: sourceMessageItemFrame.maxY + messageActionsSpacing), size: actionsStackSize)
             
             var readyMessageItemFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 8.0 - messageItemSize.width, y: readySendButtonFrame.maxY - 6.0 - messageItemSize.height), size: messageItemSize)
+            if let mediaPreview = component.mediaPreview {
+                switch mediaPreview.layoutType {
+                case .message:
+                    break
+                case .videoMessage:
+                    readyMessageItemFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - messageItemSize.width) * 0.5), y: readySendButtonFrame.maxY - 6.0 - messageItemSize.height), size: messageItemSize)
+                }
+            }
+            
             var readyActionsStackFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 1.0 - actionsStackSize.width, y: readyMessageItemFrame.maxY + messageActionsSpacing), size: actionsStackSize)
             
             let bottomOverflow = readyActionsStackFrame.maxY - (availableSize.height - environment.safeInsets.bottom)
@@ -874,7 +902,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                     transition.setAlpha(view: actionsStackNode.view, alpha: 0.0)
                     transition.setScale(view: actionsStackNode.view, scale: 0.001)
                     
-                    messageItemView.animateOut(transition: transition)
+                    messageItemView.animateOut(toEmpty: self.animateOutToEmpty, transition: transition)
                 }
             } else {
                 switch self.presentationAnimationState {

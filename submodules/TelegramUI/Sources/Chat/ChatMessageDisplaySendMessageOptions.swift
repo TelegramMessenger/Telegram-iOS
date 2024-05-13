@@ -79,37 +79,61 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
             let _ = ApplicationSpecificNotice.incrementSendWhenOnlineTip(accountManager: selfController.context.sharedContext.accountManager, count: 4).startStandalone()
         }
         
-        let controller = makeChatSendMessageActionSheetController(context: selfController.context, updatedPresentationData: selfController.updatedPresentationData, peerId: selfController.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: selfController.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputView: textInputView, emojiViewProvider: selfController.chatDisplayNode.textInputPanelNode?.emojiViewProvider, wallpaperBackgroundNode: selfController.chatDisplayNode.backgroundNode, canSendWhenOnline: sendWhenOnlineAvailable, completion: { [weak selfController] in
-            guard let selfController else {
-                return
-            }
-            selfController.supportedOrientations = previousSupportedOrientations
-        }, sendMessage: { [weak selfController] mode, messageEffect in
-            guard let selfController else {
-                return
-            }
-            switch mode {
-            case .generic:
-                selfController.controllerInteraction?.sendCurrentMessage(false, messageEffect.flatMap(ChatSendMessageEffect.init))
-            case .silently:
-                selfController.controllerInteraction?.sendCurrentMessage(true, messageEffect.flatMap(ChatSendMessageEffect.init))
-            case .whenOnline:
-                selfController.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp, messageEffect: messageEffect.flatMap(ChatSendMessageEffect.init)) { [weak selfController] in
-                    guard let selfController else {
-                        return
-                    }
-                    selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: selfController.presentationInterfaceState.subject != .scheduledMessages, {
-                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
-                    })
-                    selfController.openScheduledMessages()
+        var mediaPreview: ChatSendMessageContextScreenMediaPreview?
+        if let videoRecorderValue = selfController.videoRecorderValue {
+            mediaPreview = videoRecorderValue.makeSendMessageContextPreview()
+        }
+        
+        let controller = makeChatSendMessageActionSheetController(
+            context: selfController.context,
+            updatedPresentationData: selfController.updatedPresentationData,
+            peerId: selfController.presentationInterfaceState.chatLocation.peerId,
+            forwardMessageIds: selfController.presentationInterfaceState.interfaceState.forwardMessageIds,
+            hasEntityKeyboard: hasEntityKeyboard,
+            gesture: gesture,
+            sourceSendButton: node,
+            textInputView: textInputView,
+            mediaPreview: mediaPreview,
+            emojiViewProvider: selfController.chatDisplayNode.textInputPanelNode?.emojiViewProvider,
+            wallpaperBackgroundNode: selfController.chatDisplayNode.backgroundNode,
+            canSendWhenOnline: sendWhenOnlineAvailable,
+            completion: { [weak selfController] in
+                guard let selfController else {
+                    return
                 }
-            }
-        }, schedule: { [weak selfController] messageEffect in
-            guard let selfController else {
-                return
-            }
-            selfController.controllerInteraction?.scheduleCurrentMessage()
-        }, reactionItems: effectItems, availableMessageEffects: availableMessageEffects, isPremium: hasPremium)
+                selfController.supportedOrientations = previousSupportedOrientations
+            },
+            sendMessage: { [weak selfController] mode, messageEffect in
+                guard let selfController else {
+                    return
+                }
+                switch mode {
+                case .generic:
+                    selfController.controllerInteraction?.sendCurrentMessage(false, messageEffect.flatMap(ChatSendMessageEffect.init))
+                case .silently:
+                    selfController.controllerInteraction?.sendCurrentMessage(true, messageEffect.flatMap(ChatSendMessageEffect.init))
+                case .whenOnline:
+                    selfController.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp, messageEffect: messageEffect.flatMap(ChatSendMessageEffect.init)) { [weak selfController] in
+                        guard let selfController else {
+                            return
+                        }
+                        selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: selfController.presentationInterfaceState.subject != .scheduledMessages, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
+                        })
+                        selfController.openScheduledMessages()
+                    }
+                }
+            },
+            schedule: { [weak selfController] messageEffect in
+                guard let selfController else {
+                    return
+                }
+                selfController.controllerInteraction?.scheduleCurrentMessage()
+            },
+            reactionItems: effectItems,
+            availableMessageEffects: availableMessageEffects,
+            isPremium: hasPremium
+        )
         selfController.sendMessageActionsController = controller
         if layout.isNonExclusive {
             selfController.present(controller, in: .window(.root))

@@ -166,6 +166,8 @@ final class MessageItemView: UIView {
         
         super.init(frame: frame)
         
+        self.isUserInteractionEnabled = false
+        
         self.addSubview(self.backgroundWallpaperNode.view)
         self.addSubview(self.backgroundNode.view)
         
@@ -182,9 +184,13 @@ final class MessageItemView: UIView {
         }
     }
     
-    func animateOut(transition: Transition) {
+    func animateOut(toEmpty: Bool, transition: Transition) {
         if let mediaPreview = self.mediaPreview {
-            mediaPreview.animateOut(transition: transition)
+            if toEmpty {
+                mediaPreview.animateOutOnSend(transition: transition)
+            } else {
+                mediaPreview.animateOut(transition: transition)
+            }
         }
     }
     
@@ -274,9 +280,16 @@ final class MessageItemView: UIView {
             
             let mediaPreviewSize = sourceMediaPreview.update(containerSize: containerSize, transition: transition)
             
-            let backgroundSize = CGSize(width: mediaPreviewSize.width + 7.0, height: mediaPreviewSize.height)
+            var backgroundSize = CGSize(width: mediaPreviewSize.width, height: mediaPreviewSize.height)
+            let mediaPreviewFrame: CGRect
+            switch sourceMediaPreview.layoutType {
+            case .message:
+                backgroundSize.width += 7.0
+                mediaPreviewFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: mediaPreviewSize)
+            case .videoMessage:
+                mediaPreviewFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: mediaPreviewSize)
+            }
             
-            let mediaPreviewFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: mediaPreviewSize)
             transition.setFrame(view: sourceMediaPreview.view, frame: mediaPreviewFrame)
             
             if let effectIcon = self.effectIcon, let effectIconSize {
@@ -295,10 +308,21 @@ final class MessageItemView: UIView {
                         self.effectIconBackgroundView = effectIconBackgroundView
                         self.insertSubview(effectIconBackgroundView, belowSubview: effectIconView)
                     }
-                    effectIconBackgroundView.backgroundColor = presentationData.theme.chat.message.mediaDateAndStatusFillColor
                     
                     let effectIconBackgroundSize = CGSize(width: effectIconSize.width + 8.0 * 2.0, height: 18.0)
-                    let effectIconBackgroundFrame = CGRect(origin: CGPoint(x: mediaPreviewFrame.maxX - effectIconBackgroundSize.width - 6.0, y: mediaPreviewFrame.maxY - effectIconBackgroundSize.height - 6.0), size: effectIconBackgroundSize)
+                    
+                    let effectIconBackgroundFrame: CGRect
+                    switch sourceMediaPreview.layoutType {
+                    case .message:
+                        effectIconBackgroundFrame = CGRect(origin: CGPoint(x: mediaPreviewFrame.maxX - effectIconBackgroundSize.width - 6.0, y: mediaPreviewFrame.maxY - effectIconBackgroundSize.height - 6.0), size: effectIconBackgroundSize)
+                        effectIconBackgroundView.backgroundColor = presentationData.theme.chat.message.mediaDateAndStatusFillColor
+                    case .videoMessage:
+                        effectIconBackgroundFrame = CGRect(origin: CGPoint(x: mediaPreviewFrame.maxX - effectIconBackgroundSize.width - 34.0, y: mediaPreviewFrame.maxY - effectIconBackgroundSize.height - 6.0), size: effectIconBackgroundSize)
+                        
+                        let serviceMessageColors = serviceMessageColorComponents(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
+                        
+                        effectIconBackgroundView.backgroundColor = serviceMessageColors.dateFillStatic
+                    }
                     
                     let effectIconFrame = CGRect(origin: CGPoint(x: effectIconBackgroundFrame.minX + floor((effectIconBackgroundFrame.width - effectIconSize.width) * 0.5), y: effectIconBackgroundFrame.minY + floor((effectIconBackgroundFrame.height - effectIconSize.height) * 0.5)), size: effectIconSize)
                     
