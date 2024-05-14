@@ -37,6 +37,7 @@ swift_library(
         "//submodules/TelegramAnimatedStickerNode",
         "//submodules/ActivityIndicator",
         "//submodules/UndoUI",
+        "//submodules/RadialStatusNode",
     ],
     visibility = [
         "//visibility:public",

@@ -16,13 +16,14 @@ import ChatMessageBackground
 import WallpaperBackgroundNode
 import AppBundle
 import ActivityIndicator
+import RadialStatusNode
 
 final class SendButton: HighlightTrackingButton {
     private let containerView: UIView
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     private let backgroundLayer: SimpleLayer
     private let iconView: UIImageView
-    private var activityIndicator: ActivityIndicator?
+    private var activityIndicator: RadialStatusNode?
     
     private var didProcessSourceCustomContent: Bool = false
     private var sourceCustomContentView: UIView?
@@ -127,12 +128,23 @@ final class SendButton: HighlightTrackingButton {
         
         if isLoadingEffectAnimation {
             var animateIn = false
-            let activityIndicator: ActivityIndicator
+            let activityIndicator: RadialStatusNode
             if let current = self.activityIndicator {
                 activityIndicator = current
             } else {
                 animateIn = true
-                activityIndicator = ActivityIndicator(type: .custom(presentationData.theme.list.itemCheckColors.foregroundColor, 18.0, 2.0, true))
+                activityIndicator = RadialStatusNode(
+                    backgroundNodeColor: .clear,
+                    enableBlur: false,
+                    isPreview: false
+                )
+                activityIndicator.transitionToState(.progress(
+                    color: presentationData.theme.list.itemCheckColors.foregroundColor,
+                    lineWidth: 2.0,
+                    value: nil,
+                    cancelEnabled: false,
+                    animateRotation: true
+                ))
                 self.activityIndicator = activityIndicator
                 self.containerView.addSubview(activityIndicator.view)
             }
