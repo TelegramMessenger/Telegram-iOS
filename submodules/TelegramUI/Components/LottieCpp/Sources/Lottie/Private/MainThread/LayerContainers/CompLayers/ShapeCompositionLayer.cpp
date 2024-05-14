@@ -925,11 +925,13 @@ public:
         std::shared_ptr<RenderTreeNode> _renderTree;
         
     private:
-        std::vector<TransformedPath> collectPaths(size_t subItemLimit, CATransform3D parentTransform) {
+        std::vector<TransformedPath> collectPaths(size_t subItemLimit, CATransform3D const &parentTransform, bool skipApplyTransform) {
             std::vector<TransformedPath> mappedPaths;
             
             CATransform3D effectiveTransform = parentTransform;
-            CATransform3D effectiveChildTransform = parentTransform;
+            if (!skipApplyTransform && isGroup && transform) {
+                effectiveTransform = transform->transform() * effectiveTransform;
+            }
             
             size_t maxSubitem = std::min(subItems.size(), subItemLimit);
             
@@ -939,22 +941,13 @@ public:
             
             for (size_t i = 0; i < maxSubitem; i++) {
                 auto &subItem = subItems[i];
-                CATransform3D subItemTransform = effectiveChildTransform;
-                
-                if (subItem->isGroup && subItem->transform) {
-                    //update?
-                    //subItem->transform->update(frameTime);
-                    subItemTransform = subItem->transform->transform() * subItemTransform;
-                }
                 
                 std::optional<TrimParams> currentTrim;
                 if (!trims.empty()) {
-                    //update?
-                    //trims[0]->update(frameTime);
                     currentTrim = trims[0]->trimParams();
                 }
                 
-                auto subItemPaths = subItem->collectPaths(INT32_MAX, subItemTransform);
+                auto subItemPaths = subItem->collectPaths(INT32_MAX, effectiveTransform, false);
                 
                 if (currentTrim) {
                     CompoundBezierPath tempPath;
@@ -1104,7 +1097,7 @@ public:
                 }
                 
                 CompoundBezierPath compoundPath;
-                auto paths = collectPaths(shadingVariant.subItemLimit, CATransform3D::identity());
+                auto paths = collectPaths(shadingVariant.subItemLimit, CATransform3D::identity(), true);
                 for (const auto &path : paths) {
                     compoundPath.appendPath(path.path.copyUsingTransform(path.transform));
                 }

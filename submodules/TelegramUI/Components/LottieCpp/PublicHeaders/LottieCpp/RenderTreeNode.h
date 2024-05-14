@@ -344,7 +344,9 @@ public:
     
 public:
     bool isGroup = false;
+    CATransform3D transform = CATransform3D::identity();
     std::vector<std::shared_ptr<RenderTreeNodeContentShadingVariant>> shadings;
+    std::vector<std::shared_ptr<RenderTreeNodeContentItem>> subItems;
 };
 
 class RenderTreeNodeContentShadingVariant {
@@ -358,7 +360,6 @@ public:
     std::optional<std::vector<BezierPath>> explicitPath;
     
     size_t subItemLimit = 0;
-    bool isGroup = false;
 };
 
 class ProcessedRenderTreeNodeData {
