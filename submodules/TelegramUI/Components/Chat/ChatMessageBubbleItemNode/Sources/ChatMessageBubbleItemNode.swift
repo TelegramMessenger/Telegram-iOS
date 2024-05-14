@@ -3980,6 +3980,17 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             let absoluteOrigin = mosaicStatusOrigin.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
             statusNodeAnimation.animator.updateFrame(layer: mosaicStatusNode.layer, frame: CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size), completion: nil)
+            
+            if item.message.messageEffect(availableMessageEffects: item.associatedData.availableMessageEffects) != nil {
+                mosaicStatusNode.pressed = { [weak strongSelf] in
+                    guard let strongSelf, let item = strongSelf.item else {
+                        return
+                    }
+                    item.controllerInteraction.playMessageEffect(item.message)
+                }
+            } else {
+                mosaicStatusNode.pressed = nil
+            }
         } else if let mosaicStatusNode = strongSelf.mosaicStatusNode {
             strongSelf.mosaicStatusNode = nil
             mosaicStatusNode.removeFromSupernode()
@@ -4882,6 +4893,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         if !self.backgroundNode.frame.contains(point) {
             if let actionButtonsNode = self.actionButtonsNode, let result = actionButtonsNode.hitTest(self.view.convert(point, to: actionButtonsNode.view), with: event) {
+                return result
+            }
+        }
+        
+        if let mosaicStatusNode = self.mosaicStatusNode {
+            if let result = mosaicStatusNode.hitTest(self.view.convert(point, to: mosaicStatusNode.view), with: event) {
                 return result
             }
         }
@@ -5927,6 +5944,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if let messageEffect = self.currentMessageEffect() {
             self.playPremiumStickerAnimation(effect: messageEffect, force: force)
         }
+    }
+    
+    override public func playMessageEffect() {
+        self.playMessageEffect(force: true)
     }
     
     private func updateVisibility() {

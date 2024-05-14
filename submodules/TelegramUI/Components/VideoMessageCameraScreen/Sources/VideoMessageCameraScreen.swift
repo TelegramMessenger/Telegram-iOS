@@ -28,6 +28,7 @@ import ImageCompression
 import LegacyMediaPickerUI
 import TelegramAudio
 import ChatSendMessageActionUI
+import ChatControllerInteraction
 
 struct CameraState: Equatable {
     enum Recording: Equatable {
@@ -1467,7 +1468,7 @@ public class VideoMessageCameraScreen: ViewController {
     fileprivate var didSend = false
     fileprivate var lastActionTimestamp: Double?
     fileprivate var isSendingImmediately = false
-    public func sendVideoRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil) {
+    public func sendVideoRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, messageEffect: ChatSendMessageEffect? = nil) {
         guard !self.didSend else {
             return
         }
@@ -1613,10 +1614,12 @@ public class VideoMessageCameraScreen: ViewController {
 
                 let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.FileName(fileName: "video.mp4"), .Video(duration: finalDuration, size: video.dimensions, flags: [.instantRoundVideo], preloadSize: nil)])
                 
-                
                 var attributes: [MessageAttribute] = []
                 if self.cameraState.isViewOnceEnabled {
                     attributes.append(AutoremoveTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil))
+                }
+                if let messageEffect {
+                    attributes.append(EffectMessageAttribute(id: messageEffect.id))
                 }
         
                 self.completion(.message(

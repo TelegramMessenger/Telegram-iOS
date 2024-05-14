@@ -1769,6 +1769,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, openRecommendedChannelContextMenu: { _, _, _ in
         }, openGroupBoostInfo: { _, _ in
         }, openStickerEditor: {
+        }, playMessageEffect: { _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {

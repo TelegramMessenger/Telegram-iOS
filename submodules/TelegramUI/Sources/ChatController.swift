@@ -4629,6 +4629,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.openStickerEditor()
+        }, playMessageEffect: { [weak self] message in
+            guard let self else {
+                return
+            }
+            self.playMessageEffect(message: message)
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)

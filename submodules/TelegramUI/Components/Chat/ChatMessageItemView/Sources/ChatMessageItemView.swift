@@ -887,4 +887,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     open func contentFrame() -> CGRect {
         return self.bounds
     }
+    
+    open func playMessageEffect() {
+    }
 }

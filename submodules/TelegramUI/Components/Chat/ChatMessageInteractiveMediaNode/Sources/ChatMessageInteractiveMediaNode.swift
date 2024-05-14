@@ -456,6 +456,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     public var activateLocalContent: (InteractiveMediaNodeActivateContent) -> Void = { _ in }
     public var activatePinch: ((PinchSourceContainerNode) -> Void)?
     public var updateMessageReaction: ((Message, ChatControllerInteractionReaction, Bool, ContextExtractedContentContainingView?) -> Void)?
+    public var playMessageEffect: ((Message) -> Void)?
         
     override public init() {
         self.pinchContainerNode = PinchSourceContainerNode()
@@ -635,6 +636,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     break
             }
         }
+    }
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        return result
     }
     
     @objc private func imageTap(_ recognizer: UITapGestureRecognizer) {
@@ -857,6 +863,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
 
             var statusSize = CGSize()
             var statusApply: ((ListViewItemUpdateAnimation) -> Void)?
+            
+            let messageEffect = message.messageEffect(availableMessageEffects: associatedData.availableMessageEffects)
 
             if let dateAndStatus = dateAndStatus {
                 let statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
@@ -874,7 +882,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     reactionPeers: dateAndStatus.dateReactionPeers,
                     displayAllReactionPeers: message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                     areReactionsTags: message.areReactionsTags(accountPeerId: context.account.peerId),
-                    messageEffect: message.messageEffect(availableMessageEffects: associatedData.availableMessageEffects),
+                    messageEffect: messageEffect,
                     replyCount: dateAndStatus.dateReplies,
                     isPinned: dateAndStatus.isPinned,
                     hasAutoremove: message.isSelfExpiring,
@@ -1465,8 +1473,20 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     transition.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
                                     statusApply(transition)
                                 }
+                                
+                                if messageEffect != nil {
+                                    strongSelf.dateAndStatusNode.pressed = { [weak strongSelf] in
+                                        guard let strongSelf, let message = strongSelf.message else {
+                                            return
+                                        }
+                                        strongSelf.playMessageEffect?(message)
+                                    }
+                                } else {
+                                    strongSelf.dateAndStatusNode.pressed = nil
+                                }
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()
+                                strongSelf.dateAndStatusNode.pressed = nil
                             }
                             
                             if let statusNode = strongSelf.statusNode {
