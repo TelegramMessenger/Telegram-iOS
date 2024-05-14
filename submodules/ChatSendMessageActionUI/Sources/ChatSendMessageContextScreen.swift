@@ -168,6 +168,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         private var isLoadingEffectAnimationTimerDisposable: Disposable?
         private var loadEffectAnimationDisposable: Disposable?
         
+        private var animateInTimestamp: Double?
         private var presentationAnimationState: PresentationAnimationState = .initial
         private var appliedAnimationState: PresentationAnimationState = .initial
         private var animateOutToEmpty: Bool = false
@@ -224,6 +225,8 @@ final class ChatSendMessageContextScreenComponent: Component {
             if case .initial = self.presentationAnimationState {
                 HapticFeedback().impact()
                 
+                self.animateInTimestamp = CFAbsoluteTimeGetCurrent()
+                
                 self.presentationAnimationState = .animatedIn
                 self.state?.updated(transition: .spring(duration: 0.42))
             }
@@ -279,10 +282,18 @@ final class ChatSendMessageContextScreenComponent: Component {
                     guard let self, let actionsStackNode = self.actionsStackNode else {
                         return
                     }
+                    guard let animateInTimestamp = self.animateInTimestamp, animateInTimestamp < CFAbsoluteTimeGetCurrent() - 0.35 else {
+                        return
+                    }
+                    
                     actionsStackNode.highlightGestureMoved(location: actionsStackNode.view.convert(location, from: view))
                 }
                 component.gesture.externalEnded = { [weak self] viewAndLocation in
                     guard let self, let actionsStackNode = self.actionsStackNode else {
+                        return
+                    }
+                    guard let animateInTimestamp = self.animateInTimestamp, animateInTimestamp < CFAbsoluteTimeGetCurrent() - 0.35 else {
+                        actionsStackNode.highlightGestureFinished(performAction: false)
                         return
                     }
                     if let (view, location) = viewAndLocation {
