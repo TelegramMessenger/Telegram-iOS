@@ -38,55 +38,27 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
     
     double alpha = node->alpha();
     
-    /*if (node->_contentItem) {
+    if (node->_contentItem) {
         RenderTreeNodeContentItem *contentItem = node->_contentItem.get();
         for (const auto &shadingVariant : contentItem->shadings) {
+            CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, shadingVariant->explicitPath.value());
             if (shadingVariant->stroke) {
-                CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, shadingVariant->explicitPath.value());
                 shapeBounds = shapeBounds.insetBy(-shadingVariant->stroke->lineWidth / 2.0, -shadingVariant->stroke->lineWidth / 2.0);
-                effectiveLocalBounds = shapeBounds;
-                
-                switch (shadingVariant->stroke->shading->type()) {
-                    case RenderTreeNodeContent::ShadingType::Solid: {
-                        RenderTreeNodeContent::SolidShading *solidShading = (RenderTreeNodeContent::SolidShading *)shadingVariant->stroke->shading.get();
-                        
-                        alpha *= solidShading->opacity;
-                        
-                        break;
-                    }
-                    case RenderTreeNodeContent::ShadingType::Gradient: {
-                        
-                        break;
-                    }
-                    default:
-                        break;
+                if (effectiveLocalBounds) {
+                    effectiveLocalBounds = effectiveLocalBounds->unionWith(shapeBounds);
+                } else {
+                    effectiveLocalBounds = shapeBounds;
                 }
             } else if (shadingVariant->fill) {
-                CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, shadingVariant->explicitPath.value());
-                effectiveLocalBounds = shapeBounds;
-                
-                switch (shadingVariant->fill->shading->type()) {
-                    case RenderTreeNodeContent::ShadingType::Solid: {
-                        RenderTreeNodeContent::SolidShading *solidShading = (RenderTreeNodeContent::SolidShading *)shadingVariant->fill->shading.get();
-                        
-                        alpha *= solidShading->opacity;
-                        
-                        break;
-                    }
-                    case RenderTreeNodeContent::ShadingType::Gradient: {
-                        RenderTreeNodeContent::GradientShading *gradientShading = (RenderTreeNodeContent::GradientShading *)shadingVariant->fill->shading.get();
-                        
-                        alpha *= gradientShading->opacity;
-                        
-                        break;
-                    }
-                    default:
-                        break;
+                if (effectiveLocalBounds) {
+                    effectiveLocalBounds = effectiveLocalBounds->unionWith(shapeBounds);
+                } else {
+                    effectiveLocalBounds = shapeBounds;
                 }
             }
         }
-    }*/
-    if (node->content()) {
+    }
+    /*if (node->content()) {
         RenderTreeNodeContent *shapeContent = node->content().get();
         
         CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, shapeContent->paths);
@@ -94,45 +66,10 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
         if (shapeContent->stroke) {
             shapeBounds = shapeBounds.insetBy(-shapeContent->stroke->lineWidth / 2.0, -shapeContent->stroke->lineWidth / 2.0);
             effectiveLocalBounds = shapeBounds;
-            
-            /*switch (shapeContent->stroke->shading->type()) {
-                case RenderTreeNodeContent::ShadingType::Solid: {
-                    RenderTreeNodeContent::SolidShading *solidShading = (RenderTreeNodeContent::SolidShading *)shapeContent->stroke->shading.get();
-                    
-                    alpha *= solidShading->opacity;
-                    
-                    break;
-                }
-                case RenderTreeNodeContent::ShadingType::Gradient: {
-                    
-                    break;
-                }
-                default:
-                    break;
-            }*/
         } else if (shapeContent->fill) {
             effectiveLocalBounds = shapeBounds;
-            
-            /*switch (shapeContent->fill->shading->type()) {
-                case RenderTreeNodeContent::ShadingType::Solid: {
-                    RenderTreeNodeContent::SolidShading *solidShading = (RenderTreeNodeContent::SolidShading *)shapeContent->fill->shading.get();
-                    
-                    alpha *= solidShading->opacity;
-                    
-                    break;
-                }
-                case RenderTreeNodeContent::ShadingType::Gradient: {
-                    RenderTreeNodeContent::GradientShading *gradientShading = (RenderTreeNodeContent::GradientShading *)shapeContent->fill->shading.get();
-                    
-                    alpha *= gradientShading->opacity;
-                    
-                    break;
-                }
-                default:
-                    break;
-            }*/
         }
-    }
+    }*/
     
     bool isInvertedMatte = isInvertedMask;
     if (isInvertedMatte) {

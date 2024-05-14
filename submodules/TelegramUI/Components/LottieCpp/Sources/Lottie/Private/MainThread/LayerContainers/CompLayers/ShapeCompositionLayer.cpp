@@ -1011,7 +1011,7 @@ public:
                         false
                     );
                     shadingVariant.renderTree = shadingRenderTree;
-                    _renderTree->_subnodes.push_back(shadingRenderTree);
+                    //_renderTree->_subnodes.push_back(shadingRenderTree);
                     
                     auto itemShadingVariant = std::make_shared<RenderTreeNodeContentShadingVariant>();
                     if (shadingVariant.fill) {
