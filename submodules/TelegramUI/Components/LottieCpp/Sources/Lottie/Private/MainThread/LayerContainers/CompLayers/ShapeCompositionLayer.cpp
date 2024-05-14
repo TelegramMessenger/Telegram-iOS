@@ -25,7 +25,7 @@ public:
         ~FillOutput() = default;
         
         virtual void update(AnimationFrameTime frameTime) = 0;
-        virtual std::shared_ptr<RenderTreeNodeContent::Fill> fill() = 0;
+        virtual std::shared_ptr<RenderTreeNodeContentItem::Fill> fill() = 0;
     };
     
     class SolidFillOutput : public FillOutput {
@@ -34,6 +34,11 @@ public:
         rule(fill.fillRule.value_or(FillRule::NonZeroWinding)),
         color(fill.color.keyframes),
         opacity(fill.opacity.keyframes) {
+            auto solid = std::make_shared<RenderTreeNodeContentItem::SolidShading>(Color(0.0, 0.0, 0.0, 0.0), 0.0);
+            _fill = std::make_shared<RenderTreeNodeContentItem::Fill>(
+                solid,
+                rule
+            );
         }
         
         virtual ~SolidFillOutput() = default;
@@ -51,16 +56,14 @@ public:
                 opacityValue = opacity.value(frameTime).value;
             }
             
-            if (!_fill || hasUpdates) {
-                auto solid = std::make_shared<RenderTreeNodeContent::SolidShading>(colorValue, opacityValue * 0.01);
-                _fill = std::make_shared<RenderTreeNodeContent::Fill>(
-                    solid,
-                    rule
-                );
+            if (hasUpdates) {
+                RenderTreeNodeContentItem::SolidShading *solid = (RenderTreeNodeContentItem::SolidShading *)_fill->shading.get();
+                solid->color = colorValue;
+                solid->opacity = opacityValue * 0.01;
             }
         }
         
-        virtual std::shared_ptr<RenderTreeNodeContent::Fill> fill() override {
+        virtual std::shared_ptr<RenderTreeNodeContentItem::Fill> fill() override {
             return _fill;
         }
         
@@ -73,7 +76,7 @@ public:
         KeyframeInterpolator<Vector1D> opacity;
         double opacityValue = 0.0;
         
-        std::shared_ptr<RenderTreeNodeContent::Fill> _fill;
+        std::shared_ptr<RenderTreeNodeContentItem::Fill> _fill;
     };
     
     class GradientFillOutput : public FillOutput {
@@ -86,6 +89,18 @@ public:
         startPoint(gradientFill.startPoint.keyframes),
         endPoint(gradientFill.endPoint.keyframes),
         opacity(gradientFill.opacity.keyframes) {
+            auto gradient = std::make_shared<RenderTreeNodeContentItem::GradientShading>(
+                0.0,
+                gradientType,
+                std::vector<Color>(),
+                std::vector<double>(),
+                Vector2D(0.0, 0.0),
+                Vector2D(0.0, 0.0)
+            );
+            _fill = std::make_shared<RenderTreeNodeContentItem::Fill>(
+                gradient,
+                rule
+            );
         }
         
         virtual ~GradientFillOutput() = default;
@@ -113,27 +128,21 @@ public:
                 opacityValue = opacity.value(frameTime).value;
             }
             
-            if (!_fill || hasUpdates) {
+            if (hasUpdates) {
                 std::vector<Color> colors;
                 std::vector<double> locations;
                 getGradientParameters(numberOfColors, colorsValue, colors, locations);
                 
-                auto gradient = std::make_shared<RenderTreeNodeContent::GradientShading>(
-                    opacityValue * 0.01,
-                    gradientType,
-                    colors,
-                    locations,
-                    Vector2D(startPointValue.x, startPointValue.y),
-                    Vector2D(endPointValue.x, endPointValue.y)
-                );
-                _fill = std::make_shared<RenderTreeNodeContent::Fill>(
-                    gradient,
-                    rule
-                );
+                RenderTreeNodeContentItem::GradientShading *gradient = ((RenderTreeNodeContentItem::GradientShading *)_fill->shading.get());
+                gradient->opacity = opacityValue * 0.01;
+                gradient->colors = colors;
+                gradient->locations = locations;
+                gradient->start = Vector2D(startPointValue.x, startPointValue.y);
+                gradient->end = Vector2D(endPointValue.x, endPointValue.y);
             }
         }
         
-        virtual std::shared_ptr<RenderTreeNodeContent::Fill> fill() override {
+        virtual std::shared_ptr<RenderTreeNodeContentItem::Fill> fill() override {
             return _fill;
         }
         
@@ -154,7 +163,7 @@ public:
         KeyframeInterpolator<Vector1D> opacity;
         double opacityValue = 0.0;
         
-        std::shared_ptr<RenderTreeNodeContent::Fill> _fill;
+        std::shared_ptr<RenderTreeNodeContentItem::Fill> _fill;
     };
     
     class StrokeOutput {
@@ -164,7 +173,7 @@ public:
         ~StrokeOutput() = default;
         
         virtual void update(AnimationFrameTime frameTime) = 0;
-        virtual std::shared_ptr<RenderTreeNodeContent::Stroke> stroke() = 0;
+        virtual std::shared_ptr<RenderTreeNodeContentItem::Stroke> stroke() = 0;
     };
     
     class SolidStrokeOutput : public StrokeOutput {
@@ -184,6 +193,17 @@ public:
                     dashPhase = std::make_unique<KeyframeInterpolator<Vector1D>>(dashConfiguration.dashPhase);
                 }
             }
+            
+            auto solid = std::make_shared<RenderTreeNodeContentItem::SolidShading>(Color(0.0, 0.0, 0.0, 0.0), 0.0);
+            _stroke = std::make_shared<RenderTreeNodeContentItem::Stroke>(
+                solid,
+                0.0,
+                lineJoin,
+                lineCap,
+                miterLimit,
+                0.0,
+                std::vector<double>()
+            );
         }
         
         virtual ~SolidStrokeOutput() = default;
@@ -220,7 +240,7 @@ public:
                 }
             }
             
-            if (!_stroke || hasUpdates) {
+            if (hasUpdates) {
                 bool hasNonZeroDashes = false;
                 if (!dashPatternValue.values.empty()) {
                     for (const auto &value : dashPatternValue.values) {
@@ -231,20 +251,17 @@ public:
                     }
                 }
                 
-                auto solid = std::make_shared<RenderTreeNodeContent::SolidShading>(colorValue, opacityValue * 0.01);
-                _stroke = std::make_shared<RenderTreeNodeContent::Stroke>(
-                    solid,
-                    widthValue,
-                    lineJoin,
-                    lineCap,
-                    miterLimit,
-                    hasNonZeroDashes ? dashPhaseValue : 0.0,
-                    hasNonZeroDashes ? dashPatternValue.values : std::vector<double>()
-                );
+                RenderTreeNodeContentItem::SolidShading *solid = (RenderTreeNodeContentItem::SolidShading *)_stroke->shading.get();
+                solid->color = colorValue;
+                solid->opacity = opacityValue * 0.01;
+                
+                _stroke->lineWidth = widthValue;
+                _stroke->dashPhase = hasNonZeroDashes ? dashPhaseValue : 0.0;
+                _stroke->dashPattern = hasNonZeroDashes ? dashPatternValue.values : std::vector<double>();
             }
         }
         
-        virtual std::shared_ptr<RenderTreeNodeContent::Stroke> stroke() override {
+        virtual std::shared_ptr<RenderTreeNodeContentItem::Stroke> stroke() override {
             return _stroke;
         }
         
@@ -268,7 +285,7 @@ public:
         std::unique_ptr<KeyframeInterpolator<Vector1D>> dashPhase;
         double dashPhaseValue = 0.0;
         
-        std::shared_ptr<RenderTreeNodeContent::Stroke> _stroke;
+        std::shared_ptr<RenderTreeNodeContentItem::Stroke> _stroke;
     };
     
     class GradientStrokeOutput : public StrokeOutput {
@@ -292,6 +309,24 @@ public:
                     dashPhase = std::make_unique<KeyframeInterpolator<Vector1D>>(dashConfiguration.dashPhase);
                 }
             }
+            
+            auto gradient = std::make_shared<RenderTreeNodeContentItem::GradientShading>(
+                0.0,
+                gradientType,
+                std::vector<Color>(),
+                std::vector<double>(),
+                Vector2D(0.0, 0.0),
+                Vector2D(0.0, 0.0)
+            );
+            _stroke = std::make_shared<RenderTreeNodeContentItem::Stroke>(
+                gradient,
+                0.0,
+                lineJoin,
+                lineCap,
+                miterLimit,
+                0.0,
+                std::vector<double>()
+            );
         }
         
         virtual ~GradientStrokeOutput() = default;
@@ -338,7 +373,7 @@ public:
                 }
             }
             
-            if (!_stroke || hasUpdates) {
+            if (hasUpdates) {
                 bool hasNonZeroDashes = false;
                 if (!dashPatternValue.values.empty()) {
                     for (const auto &value : dashPatternValue.values) {
@@ -353,27 +388,20 @@ public:
                 std::vector<double> locations;
                 getGradientParameters(numberOfColors, colorsValue, colors, locations);
                 
-                auto gradient = std::make_shared<RenderTreeNodeContent::GradientShading>(
-                    opacityValue * 0.01,
-                    gradientType,
-                    colors,
-                    locations,
-                    Vector2D(startPointValue.x, startPointValue.y),
-                    Vector2D(endPointValue.x, endPointValue.y)
-                );
-                _stroke = std::make_shared<RenderTreeNodeContent::Stroke>(
-                    gradient,
-                    widthValue,
-                    lineJoin,
-                    lineCap,
-                    miterLimit,
-                    hasNonZeroDashes ? dashPhaseValue : 0.0,
-                    hasNonZeroDashes ? dashPatternValue.values : std::vector<double>()
-                );
+                RenderTreeNodeContentItem::GradientShading *gradient = ((RenderTreeNodeContentItem::GradientShading *)_stroke->shading.get());
+                gradient->opacity = opacityValue * 0.01;
+                gradient->colors = colors;
+                gradient->locations = locations;
+                gradient->start = Vector2D(startPointValue.x, startPointValue.y);
+                gradient->end = Vector2D(endPointValue.x, endPointValue.y);
+                
+                _stroke->lineWidth = widthValue;
+                _stroke->dashPhase = hasNonZeroDashes ? dashPhaseValue : 0.0;
+                _stroke->dashPattern = hasNonZeroDashes ? dashPatternValue.values : std::vector<double>();
             }
         }
         
-        virtual std::shared_ptr<RenderTreeNodeContent::Stroke> stroke() override {
+        virtual std::shared_ptr<RenderTreeNodeContentItem::Stroke> stroke() override {
             return _stroke;
         }
         
@@ -406,7 +434,7 @@ public:
         std::unique_ptr<KeyframeInterpolator<Vector1D>> dashPhase;
         double dashPhaseValue = 0.0;
         
-        std::shared_ptr<RenderTreeNodeContent::Stroke> _stroke;
+        std::shared_ptr<RenderTreeNodeContentItem::Stroke> _stroke;
     };
     
     struct TrimParams {
@@ -478,8 +506,6 @@ public:
         std::shared_ptr<FillOutput> fill;
         std::shared_ptr<StrokeOutput> stroke;
         size_t subItemLimit = 0;
-        
-        std::shared_ptr<RenderTreeNode> renderTree;
     };
     
     struct TransformedPath {
@@ -981,7 +1007,6 @@ public:
                 1.0,
                 false,
                 false,
-                nullptr,
                 std::vector<std::shared_ptr<RenderTreeNode>>(),
                 nullptr,
                 false
@@ -998,38 +1023,12 @@ public:
                         continue;
                     }
                     
-                    auto shadingRenderTree = std::make_shared<RenderTreeNode>(
-                        CGRect(0.0, 0.0, 0.0, 0.0),
-                        Vector2D(0.0, 0.0),
-                        CATransform3D::identity(),
-                        1.0,
-                        false,
-                        false,
-                        nullptr,
-                        std::vector<std::shared_ptr<RenderTreeNode>>(),
-                        nullptr,
-                        false
-                    );
-                    shadingVariant.renderTree = shadingRenderTree;
-                    //_renderTree->_subnodes.push_back(shadingRenderTree);
-                    
                     auto itemShadingVariant = std::make_shared<RenderTreeNodeContentShadingVariant>();
                     if (shadingVariant.fill) {
-                        itemShadingVariant->fill = std::make_shared<RenderTreeNodeContent::Fill>(
-                            nullptr,
-                            FillRule::NonZeroWinding
-                        );
+                        itemShadingVariant->fill = shadingVariant.fill->fill();
                     }
                     if (shadingVariant.stroke) {
-                        itemShadingVariant->stroke = std::make_shared<RenderTreeNodeContent::Stroke>(
-                            nullptr,
-                            0.0,
-                            LineJoin::Bevel,
-                            LineCap::Round,
-                            0.0,
-                            0.0,
-                            std::vector<double>()
-                        );
+                        itemShadingVariant->stroke = shadingVariant.stroke->stroke();
                     }
                     itemShadingVariant->subItemLimit = shadingVariant.subItemLimit;
                     
@@ -1052,7 +1051,6 @@ public:
                         1.0,
                         false,
                         false,
-                        nullptr,
                         subItemNodes,
                         nullptr,
                         false
@@ -1126,28 +1124,6 @@ public:
                     resultPaths.push_back(path);
                 }
                 
-                std::shared_ptr<RenderTreeNodeContent> content;
-                
-                std::shared_ptr<RenderTreeNodeContent::Fill> fill;
-                if (shadingVariant.fill) {
-                    fill = shadingVariant.fill->fill();
-                }
-                
-                std::shared_ptr<RenderTreeNodeContent::Stroke> stroke;
-                if (shadingVariant.stroke) {
-                    stroke = shadingVariant.stroke->stroke();
-                }
-                
-                content = std::make_shared<RenderTreeNodeContent>(
-                    resultPaths,
-                    stroke,
-                    fill
-                );
-                
-                shadingVariant.renderTree->_content = content;
-                
-                _renderTree->_contentItem->shadings[i]->stroke = stroke;
-                _renderTree->_contentItem->shadings[i]->fill = fill;
                 _renderTree->_contentItem->shadings[i]->explicitPath = resultPaths;
             }
             
@@ -1358,7 +1334,6 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
             1.0,
             false,
             false,
-            nullptr,
             renderTreeValue,
             nullptr,
             false
@@ -1383,7 +1358,6 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
             1.0,
             false,
             false,
-            nullptr,
             subnodes,
             maskNode,
             invertMask

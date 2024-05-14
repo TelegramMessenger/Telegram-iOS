@@ -109,7 +109,6 @@ public:
                 1.0,
                 false,
                 false,
-                nullptr,
                 std::vector<std::shared_ptr<RenderTreeNode>>(),
                 nullptr,
                 false
@@ -134,7 +133,6 @@ public:
                 1.0,
                 false,
                 false,
-                nullptr,
                 subnodes,
                 maskNode,
                 invertMask
@@ -165,7 +163,6 @@ public:
                 1.0,
                 false,
                 false,
-                nullptr,
                 renderTreeSubnodes,
                 nullptr,
                 false

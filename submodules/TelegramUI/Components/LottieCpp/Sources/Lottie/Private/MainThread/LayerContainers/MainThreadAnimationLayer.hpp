@@ -243,7 +243,6 @@ public:
                 1.0,
                 false,
                 false,
-                nullptr,
                 subnodes,
                 nullptr,
                 false

@@ -231,9 +231,9 @@ public:
     CGRect bounds;
 };
 
-class RenderTreeNodeContentItem;
+class RenderTreeNodeContentShadingVariant;
 
-class RenderTreeNodeContent {
+class RenderTreeNodeContentItem {
 public:
     enum class ShadingType {
         Solid,
@@ -339,20 +339,12 @@ public:
     };
     
 public:
-    RenderTreeNodeContent(
-        std::vector<BezierPath> paths_,
-        std::shared_ptr<Stroke> stroke_,
-        std::shared_ptr<Fill> fill_
-    ) :
-    paths(paths_),
-    stroke(stroke_),
-    fill(fill_) {
+    RenderTreeNodeContentItem() {
     }
     
 public:
-    std::vector<BezierPath> paths;
-    std::shared_ptr<Stroke> stroke;
-    std::shared_ptr<Fill> fill;
+    bool isGroup = false;
+    std::vector<std::shared_ptr<RenderTreeNodeContentShadingVariant>> shadings;
 };
 
 class RenderTreeNodeContentShadingVariant {
@@ -361,22 +353,12 @@ public:
     }
     
 public:
-    std::shared_ptr<RenderTreeNodeContent::Stroke> stroke;
-    std::shared_ptr<RenderTreeNodeContent::Fill> fill;
+    std::shared_ptr<RenderTreeNodeContentItem::Stroke> stroke;
+    std::shared_ptr<RenderTreeNodeContentItem::Fill> fill;
     std::optional<std::vector<BezierPath>> explicitPath;
     
     size_t subItemLimit = 0;
     bool isGroup = false;
-};
-
-class RenderTreeNodeContentItem {
-public:
-    RenderTreeNodeContentItem() {
-    }
-    
-public:
-    bool isGroup = false;
-    std::vector<std::shared_ptr<RenderTreeNodeContentShadingVariant>> shadings;
 };
 
 class ProcessedRenderTreeNodeData {
@@ -468,7 +450,6 @@ public:
         double alpha_,
         bool masksToBounds_,
         bool isHidden_,
-        std::shared_ptr<RenderTreeNodeContent> content_,
         std::vector<std::shared_ptr<RenderTreeNode>> subnodes_,
         std::shared_ptr<RenderTreeNode> mask_,
         bool invertMask_
@@ -479,7 +460,6 @@ public:
     _alpha(alpha_),
     _masksToBounds(masksToBounds_),
     _isHidden(isHidden_),
-    _content(content_),
     _subnodes(subnodes_),
     _mask(mask_),
     _invertMask(invertMask_) {
@@ -513,10 +493,6 @@ public:
         return _isHidden;
     }
     
-    std::shared_ptr<RenderTreeNodeContent> const &content() const {
-        return _content;
-    }
-    
     std::vector<std::shared_ptr<RenderTreeNode>> const &subnodes() const {
         return _subnodes;
     }
@@ -536,7 +512,6 @@ public:
     double _alpha = 1.0;
     bool _masksToBounds = false;
     bool _isHidden = false;
-    std::shared_ptr<RenderTreeNodeContent> _content;
     std::shared_ptr<RenderTreeNodeContentItem> _contentItem;
     std::vector<std::shared_ptr<RenderTreeNode>> _subnodes;
     std::shared_ptr<RenderTreeNode> _mask;

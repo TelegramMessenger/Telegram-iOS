@@ -58,18 +58,6 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
             }
         }
     }
-    /*if (node->content()) {
-        RenderTreeNodeContent *shapeContent = node->content().get();
-        
-        CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, shapeContent->paths);
-        
-        if (shapeContent->stroke) {
-            shapeBounds = shapeBounds.insetBy(-shapeContent->stroke->lineWidth / 2.0, -shapeContent->stroke->lineWidth / 2.0);
-            effectiveLocalBounds = shapeBounds;
-        } else if (shapeContent->fill) {
-            effectiveLocalBounds = shapeBounds;
-        }
-    }*/
     
     bool isInvertedMatte = isInvertedMask;
     if (isInvertedMatte) {
@@ -95,7 +83,7 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
         if (item->renderData.isValid) {
             drawContentDescendants += item->renderData.drawContentDescendants;
             
-            if (item->content() || item->_contentItem) {
+            if (item->_contentItem) {
                 drawContentDescendants += 1;
             }
             
@@ -200,167 +188,6 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
 
 namespace {
 
-static void drawLottieRenderableItem(std::shared_ptr<lottieRendering::Canvas> context, std::shared_ptr<lottie::RenderTreeNodeContent> item) {
-    if (item->paths.empty()) {
-        return;
-    }
-    
-    std::shared_ptr<lottie::CGPath> path = lottie::CGPath::makePath();
-    
-    const auto iterate = [&](LottiePathItem const *pathItem) {
-        switch (pathItem->type) {
-            case LottiePathItemTypeMoveTo: {
-                path->moveTo(lottie::Vector2D(pathItem->points[0].x, pathItem->points[0].y));
-                break;
-            }
-            case LottiePathItemTypeLineTo: {
-                path->addLineTo(lottie::Vector2D(pathItem->points[0].x, pathItem->points[0].y));
-                break;
-            }
-            case LottiePathItemTypeCurveTo: {
-                path->addCurveTo(lottie::Vector2D(pathItem->points[2].x, pathItem->points[2].y), lottie::Vector2D(pathItem->points[0].x, pathItem->points[0].y), lottie::Vector2D(pathItem->points[1].x, pathItem->points[1].y));
-                break;
-            }
-            case LottiePathItemTypeClose: {
-                path->closeSubpath();
-                break;
-            }
-            default: {
-                break;
-            }
-        }
-    };
-    
-    LottiePathItem pathItem;
-    for (const auto &path : item->paths) {
-        std::optional<lottie::PathElement> previousElement;
-        for (const auto &element : path.elements()) {
-            if (previousElement.has_value()) {
-                if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
-                    pathItem.type = LottiePathItemTypeLineTo;
-                    pathItem.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                    iterate(&pathItem);
-                } else {
-                    pathItem.type = LottiePathItemTypeCurveTo;
-                    pathItem.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                    pathItem.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
-                    pathItem.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
-                    iterate(&pathItem);
-                }
-            } else {
-                pathItem.type = LottiePathItemTypeMoveTo;
-                pathItem.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                iterate(&pathItem);
-            }
-            previousElement = element;
-        }
-        if (path.closed().value_or(true)) {
-            pathItem.type = LottiePathItemTypeClose;
-            iterate(&pathItem);
-        }
-    }
-    
-    if (item->stroke) {
-        if (item->stroke->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Solid) {
-            lottie::RenderTreeNodeContent::SolidShading *solidShading = (lottie::RenderTreeNodeContent::SolidShading *)item->stroke->shading.get();
-            
-            lottieRendering::LineJoin lineJoin = lottieRendering::LineJoin::Bevel;
-            switch (item->stroke->lineJoin) {
-                case lottie::LineJoin::Bevel: {
-                    lineJoin = lottieRendering::LineJoin::Bevel;
-                    break;
-                }
-                case lottie::LineJoin::Round: {
-                    lineJoin = lottieRendering::LineJoin::Round;
-                    break;
-                }
-                case lottie::LineJoin::Miter: {
-                    lineJoin = lottieRendering::LineJoin::Miter;
-                    break;
-                }
-                default: {
-                    break;
-                }
-            }
-            
-            lottieRendering::LineCap lineCap = lottieRendering::LineCap::Square;
-            switch (item->stroke->lineCap) {
-                case lottie::LineCap::Butt: {
-                    lineCap = lottieRendering::LineCap::Butt;
-                    break;
-                }
-                case lottie::LineCap::Round: {
-                    lineCap = lottieRendering::LineCap::Round;
-                    break;
-                }
-                case lottie::LineCap::Square: {
-                    lineCap = lottieRendering::LineCap::Square;
-                    break;
-                }
-                default: {
-                    break;
-                }
-            }
-            
-            std::vector<double> dashPattern;
-            if (!item->stroke->dashPattern.empty()) {
-                dashPattern = item->stroke->dashPattern;
-            }
-            
-            context->strokePath(path, item->stroke->lineWidth, lineJoin, lineCap, item->stroke->dashPhase, dashPattern, lottieRendering::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity));
-        } else if (item->stroke->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Gradient) {
-            //TODO:gradient stroke
-        }
-    } else if (item->fill) {
-        lottieRendering::FillRule rule = lottieRendering::FillRule::NonZeroWinding;
-        switch (item->fill->rule) {
-            case lottie::FillRule::EvenOdd: {
-                rule = lottieRendering::FillRule::EvenOdd;
-                break;
-            }
-            case lottie::FillRule::NonZeroWinding: {
-                rule = lottieRendering::FillRule::NonZeroWinding;
-                break;
-            }
-            default: {
-                break;
-            }
-        }
-        
-        if (item->fill->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Solid) {
-            lottie::RenderTreeNodeContent::SolidShading *solidShading = (lottie::RenderTreeNodeContent::SolidShading *)item->fill->shading.get();
-            context->fillPath(path, rule, lottieRendering::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity));
-        } else if (item->fill->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Gradient) {
-            lottie::RenderTreeNodeContent::GradientShading *gradientShading = (lottie::RenderTreeNodeContent::GradientShading *)item->fill->shading.get();
-            
-            std::vector<lottieRendering::Color> colors;
-            std::vector<double> locations;
-            for (const auto &color : gradientShading->colors) {
-                colors.push_back(lottieRendering::Color(color.r, color.g, color.b, color.a * gradientShading->opacity));
-            }
-            locations = gradientShading->locations;
-            
-            lottieRendering::Gradient gradient(colors, locations);
-            lottie::Vector2D start(gradientShading->start.x, gradientShading->start.y);
-            lottie::Vector2D end(gradientShading->end.x, gradientShading->end.y);
-            
-            switch (gradientShading->gradientType) {
-                case lottie::GradientType::Linear: {
-                    context->linearGradientFillPath(path, rule, gradient, start, end);
-                    break;
-                }
-                case lottie::GradientType::Radial: {
-                    context->radialGradientFillPath(path, rule, gradient, start, 0.0, start, start.distanceTo(end));
-                    break;
-                }
-                default: {
-                    break;
-                }
-            }
-        }
-    }
-}
-
 static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> context, std::shared_ptr<lottie::RenderTreeNodeContentItem> item) {
     if (item->shadings.empty()) {
         return;
@@ -427,8 +254,8 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> conte
         }
         
         if (shading->stroke) {
-            if (shading->stroke->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Solid) {
-                lottie::RenderTreeNodeContent::SolidShading *solidShading = (lottie::RenderTreeNodeContent::SolidShading *)shading->stroke->shading.get();
+            if (shading->stroke->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Solid) {
+                lottie::RenderTreeNodeContentItem::SolidShading *solidShading = (lottie::RenderTreeNodeContentItem::SolidShading *)shading->stroke->shading.get();
                 
                 if (solidShading->opacity != 0.0) {
                     lottieRendering::LineJoin lineJoin = lottieRendering::LineJoin::Bevel;
@@ -475,7 +302,7 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> conte
                     }
                     
                     context->strokePath(path, shading->stroke->lineWidth, lineJoin, lineCap, shading->stroke->dashPhase, dashPattern, lottieRendering::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity));
-                } else if (shading->stroke->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Gradient) {
+                } else if (shading->stroke->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Gradient) {
                     //TODO:gradient stroke
                 }
             }
@@ -495,13 +322,13 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> conte
                 }
             }
             
-            if (shading->fill->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Solid) {
-                lottie::RenderTreeNodeContent::SolidShading *solidShading = (lottie::RenderTreeNodeContent::SolidShading *)shading->fill->shading.get();
+            if (shading->fill->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Solid) {
+                lottie::RenderTreeNodeContentItem::SolidShading *solidShading = (lottie::RenderTreeNodeContentItem::SolidShading *)shading->fill->shading.get();
                 if (solidShading->opacity != 0.0) {
                     context->fillPath(path, rule, lottieRendering::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity));
                 }
-            } else if (shading->fill->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Gradient) {
-                lottie::RenderTreeNodeContent::GradientShading *gradientShading = (lottie::RenderTreeNodeContent::GradientShading *)shading->fill->shading.get();
+            } else if (shading->fill->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Gradient) {
+                lottie::RenderTreeNodeContentItem::GradientShading *gradientShading = (lottie::RenderTreeNodeContentItem::GradientShading *)shading->fill->shading.get();
                 
                 if (gradientShading->opacity != 0.0) {
                     std::vector<lottieRendering::Color> colors;
@@ -600,10 +427,7 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
     
     currentContext->setAlpha(renderAlpha);
     
-    if (node->content() && (int64_t)"" < 0) {
-        drawLottieRenderableItem(currentContext, node->content());
-    }
-    if (node->_contentItem) {//} && (int64_t)"" < 0) {
+    if (node->_contentItem) {
         drawLottieContentItem(currentContext, node->_contentItem);
     }
     

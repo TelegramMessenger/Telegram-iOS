@@ -1,13 +1,10 @@
 #include "LottieRenderTree.h"
-#include "LottieRenderTreeInternal.h"
 
 #include <LottieCpp/CGPath.h>
 #include <LottieCpp/CGPathCocoa.h>
 #import <LottieCpp/Color.h>
 #include "Lottie/Public/Primitives/CALayer.hpp"
 #include <LottieCpp/VectorsCocoa.h>
-
-#include "RenderNode.hpp"
 
 namespace {
 
@@ -192,7 +189,7 @@ static LottieColor lottieColorFromColor(lottie::Color color) {
 
 @implementation LottieRenderContentSolidShading
 
-- (instancetype _Nonnull)initWithSolidShading:(lottie::RenderTreeNodeContent::SolidShading *)solidShading __attribute__((objc_direct)) {
+- (instancetype _Nonnull)initWithSolidShading:(lottie::RenderTreeNodeContentItem::SolidShading *)solidShading __attribute__((objc_direct)) {
     self = [super init];
     if (self != nil) {
         _color = lottieColorFromColor(solidShading->color);
@@ -214,7 +211,7 @@ static LottieColor lottieColorFromColor(lottie::Color color) {
 
 @implementation LottieRenderContentGradientShading
 
-- (instancetype _Nonnull)initWithGradientShading:(lottie::RenderTreeNodeContent::GradientShading *)gradientShading __attribute__((objc_direct)) {
+- (instancetype _Nonnull)initWithGradientShading:(lottie::RenderTreeNodeContentItem::GradientShading *)gradientShading __attribute__((objc_direct)) {
     self = [super init];
     if (self != nil) {
         _opacity = gradientShading->opacity;
@@ -258,16 +255,16 @@ static LottieColor lottieColorFromColor(lottie::Color color) {
 
 @implementation LottieRenderContentFill
 
-- (instancetype _Nonnull)initWithFill:(std::shared_ptr<lottie::RenderTreeNodeContent::Fill> const &)fill __attribute__((objc_direct)) {
+- (instancetype _Nonnull)initWithFill:(std::shared_ptr<lottie::RenderTreeNodeContentItem::Fill> const &)fill __attribute__((objc_direct)) {
     self = [super init];
     if (self != nil) {
         switch (fill->shading->type()) {
-            case lottie::RenderTreeNodeContent::ShadingType::Solid: {
-                _shading = [[LottieRenderContentSolidShading alloc] initWithSolidShading:(lottie::RenderTreeNodeContent::SolidShading *)fill->shading.get()];
+            case lottie::RenderTreeNodeContentItem::ShadingType::Solid: {
+                _shading = [[LottieRenderContentSolidShading alloc] initWithSolidShading:(lottie::RenderTreeNodeContentItem::SolidShading *)fill->shading.get()];
                 break;
             }
-            case lottie::RenderTreeNodeContent::ShadingType::Gradient: {
-                _shading = [[LottieRenderContentGradientShading alloc] initWithGradientShading:(lottie::RenderTreeNodeContent::GradientShading *)fill->shading.get()];
+            case lottie::RenderTreeNodeContentItem::ShadingType::Gradient: {
+                _shading = [[LottieRenderContentGradientShading alloc] initWithGradientShading:(lottie::RenderTreeNodeContentItem::GradientShading *)fill->shading.get()];
                 break;
             }
             default: {
@@ -302,16 +299,16 @@ static LottieColor lottieColorFromColor(lottie::Color color) {
 
 @implementation LottieRenderContentStroke
 
-- (instancetype _Nonnull)initWithStroke:(std::shared_ptr<lottie::RenderTreeNodeContent::Stroke> const &)stroke __attribute__((objc_direct)) {
+- (instancetype _Nonnull)initWithStroke:(std::shared_ptr<lottie::RenderTreeNodeContentItem::Stroke> const &)stroke __attribute__((objc_direct)) {
     self = [super init];
     if (self != nil) {
         switch (stroke->shading->type()) {
-            case lottie::RenderTreeNodeContent::ShadingType::Solid: {
-                _shading = [[LottieRenderContentSolidShading alloc] initWithSolidShading:(lottie::RenderTreeNodeContent::SolidShading *)stroke->shading.get()];
+            case lottie::RenderTreeNodeContentItem::ShadingType::Solid: {
+                _shading = [[LottieRenderContentSolidShading alloc] initWithSolidShading:(lottie::RenderTreeNodeContentItem::SolidShading *)stroke->shading.get()];
                 break;
             }
-            case lottie::RenderTreeNodeContent::ShadingType::Gradient: {
-                _shading = [[LottieRenderContentGradientShading alloc] initWithGradientShading:(lottie::RenderTreeNodeContent::GradientShading *)stroke->shading.get()];
+            case lottie::RenderTreeNodeContentItem::ShadingType::Gradient: {
+                _shading = [[LottieRenderContentGradientShading alloc] initWithGradientShading:(lottie::RenderTreeNodeContentItem::GradientShading *)stroke->shading.get()];
                 break;
             }
             default: {
@@ -392,20 +389,6 @@ static LottieColor lottieColorFromColor(lottie::Color color) {
 
 @implementation LottieRenderContent
 
-- (instancetype _Nonnull)initWithRenderContent:(std::shared_ptr<lottie::RenderTreeNodeContent> const &)content __attribute__((objc_direct)) {
-    self = [super init];
-    if (self != nil) {
-        _path = [[LottiePath alloc] initWithPaths:content->paths];
-        if (content->stroke) {
-            _stroke = [[LottieRenderContentStroke alloc] initWithStroke:content->stroke];
-        }
-        if (content->fill) {
-            _fill = [[LottieRenderContentFill alloc] initWithFill:content->fill];
-        }
-    }
-    return self;
-}
-
 - (instancetype _Nonnull)initWithPath:(LottiePath * _Nonnull)path stroke:(LottieRenderContentStroke * _Nullable)stroke fill:(LottieRenderContentFill * _Nullable)fill __attribute__((objc_direct)) {
     self = [super init];
     if (self != nil) {
@@ -436,53 +419,6 @@ static LottieColor lottieColorFromColor(lottie::Color color) {
         _isInvertedMatte = isInvertedMatte;
         _subnodes = subnodes;
         _mask = mask;
-    }
-    return self;
-}
-
-@end
-
-@implementation LottieRenderNode (Internal)
-
-- (instancetype _Nonnull)initWithRenderNode:(std::shared_ptr<lottie::OutputRenderNode> const &)renderNode __attribute__((objc_direct)) {
-    self = [super init];
-    if (self != nil) {
-        auto position = renderNode->layer.position();
-        _position = CGPointMake(position.x, position.y);
-        
-        auto bounds = renderNode->layer.bounds();
-        _bounds = CGRectMake(bounds.x, bounds.y, bounds.width, bounds.height);
-        
-        _transform = lottie::nativeTransform(renderNode->layer.transform());
-        _opacity = renderNode->layer.opacity();
-        _masksToBounds = renderNode->layer.masksToBounds();
-        _isHidden = renderNode->layer.isHidden();
-        
-        auto globalRect = renderNode->globalRect;
-        _globalRect = CGRectMake(globalRect.x, globalRect.y, globalRect.width, globalRect.height);
-        
-        _globalTransform = lottie::nativeTransform(renderNode->globalTransform);
-        
-        if (renderNode->renderContent) {
-            _renderContent = [[LottieRenderContent alloc] initWithRenderContent:renderNode->renderContent];
-        }
-        
-        _hasSimpleContents = renderNode->drawContentDescendants <= 1;
-        _isInvertedMatte = renderNode->isInvertedMatte;
-        
-        if (!renderNode->subnodes.empty()) {
-            NSMutableArray<LottieRenderNode *> *subnodes = [[NSMutableArray alloc] init];
-            for (const auto &subnode : renderNode->subnodes) {
-                [subnodes addObject:[[LottieRenderNode alloc] initWithRenderNode:subnode]];
-            }
-            _subnodes = subnodes;
-        } else {
-            _subnodes = [[NSArray alloc] init];
-        }
-        
-        if (renderNode->mask) {
-            _mask = [[LottieRenderNode alloc] initWithRenderNode:renderNode->mask];
-        }
     }
     return self;
 }
