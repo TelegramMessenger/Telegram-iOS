@@ -686,6 +686,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
     private let context: AccountContext
     private let isScheduledMessages: Bool
     private var presentationData: PresentationData
+    private var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private var presentationDataDisposable: Disposable?
     
     private var iconDisposables: [MediaId: Disposable] = [:]
@@ -739,6 +740,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
     
     init(context: AccountContext, chatLocation: ChatLocation?, isScheduledMessages: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
         self.context = context
+        self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.isScheduledMessages = isScheduledMessages
         
@@ -988,6 +990,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                     
                     let controller = makeChatSendMessageActionSheetController(
                         context: strongSelf.context,
+                        updatedPresentationData: strongSelf.updatedPresentationData,
                         peerId: strongSelf.presentationInterfaceState.chatLocation.peerId,
                         forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds,
                         hasEntityKeyboard: hasEntityKeyboard,
