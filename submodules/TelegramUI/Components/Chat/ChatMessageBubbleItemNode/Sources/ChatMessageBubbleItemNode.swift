@@ -5844,7 +5844,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             #if targetEnvironment(simulator)
             additionalAnimationNode = DirectAnimatedStickerNode()
             #else
-            additionalAnimationNode = LottieMetalAnimatedStickerNode()
+            if "".isEmpty {
+                additionalAnimationNode = DirectAnimatedStickerNode()
+            } else {
+                additionalAnimationNode = LottieMetalAnimatedStickerNode()
+            }
             #endif
             additionalAnimationNode.updateLayout(size: animationSize)
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width), height: Int(animationSize.height), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))

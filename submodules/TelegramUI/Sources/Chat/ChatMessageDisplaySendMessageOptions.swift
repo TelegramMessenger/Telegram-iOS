@@ -12,6 +12,7 @@ import AccountContext
 import TopMessageReactions
 import ReactionSelectionNode
 import ChatControllerInteraction
+import ChatSendAudioMessageContextPreview
 
 extension ChatSendMessageEffect {
     convenience init(_ effect: ChatSendMessageActionSheetController.MessageEffect) {
@@ -82,6 +83,16 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
         var mediaPreview: ChatSendMessageContextScreenMediaPreview?
         if let videoRecorderValue = selfController.videoRecorderValue {
             mediaPreview = videoRecorderValue.makeSendMessageContextPreview()
+        }
+        if let mediaDraftState = selfController.presentationInterfaceState.interfaceState.mediaDraftState {
+            if case let .audio(audio) = mediaDraftState {
+                mediaPreview = ChatSendAudioMessageContextPreview(
+                    context: selfController.context,
+                    presentationData: selfController.presentationData,
+                    wallpaperBackgroundNode: selfController.chatDisplayNode.backgroundNode,
+                    waveform: audio.waveform
+                )
+            }
         }
         
         let controller = makeChatSendMessageActionSheetController(

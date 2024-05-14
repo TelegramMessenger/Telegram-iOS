@@ -283,7 +283,7 @@ final class MessageItemView: UIView {
             var backgroundSize = CGSize(width: mediaPreviewSize.width, height: mediaPreviewSize.height)
             let mediaPreviewFrame: CGRect
             switch sourceMediaPreview.layoutType {
-            case .message:
+            case .message, .media:
                 backgroundSize.width += 7.0
                 mediaPreviewFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: mediaPreviewSize)
             case .videoMessage:
@@ -314,6 +314,9 @@ final class MessageItemView: UIView {
                     let effectIconBackgroundFrame: CGRect
                     switch sourceMediaPreview.layoutType {
                     case .message:
+                        effectIconBackgroundFrame = CGRect(origin: CGPoint(x: mediaPreviewFrame.maxX - effectIconBackgroundSize.width - 3.0, y: mediaPreviewFrame.maxY - effectIconBackgroundSize.height - 4.0), size: effectIconBackgroundSize)
+                        effectIconBackgroundView.backgroundColor = nil
+                    case .media:
                         effectIconBackgroundFrame = CGRect(origin: CGPoint(x: mediaPreviewFrame.maxX - effectIconBackgroundSize.width - 6.0, y: mediaPreviewFrame.maxY - effectIconBackgroundSize.height - 6.0), size: effectIconBackgroundSize)
                         effectIconBackgroundView.backgroundColor = presentationData.theme.chat.message.mediaDateAndStatusFillColor
                     case .videoMessage:

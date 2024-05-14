@@ -34,6 +34,7 @@ func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIView) -> 
 
 public enum ChatSendMessageContextScreenMediaPreviewLayoutType {
     case message
+    case media
     case videoMessage
 }
 
@@ -492,7 +493,7 @@ final class ChatSendMessageContextScreenComponent: Component {
             let messageItemViewContainerSize: CGSize
             if let mediaPreview = component.mediaPreview {
                 switch mediaPreview.layoutType {
-                case .message:
+                case .message, .media:
                     messageItemViewContainerSize = CGSize(width: availableSize.width - 16.0 - 40.0, height: availableSize.height)
                 case .videoMessage:
                     messageItemViewContainerSize = CGSize(width: availableSize.width, height: availableSize.height)
@@ -820,7 +821,7 @@ final class ChatSendMessageContextScreenComponent: Component {
             var readyMessageItemFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 8.0 - messageItemSize.width, y: readySendButtonFrame.maxY - 6.0 - messageItemSize.height), size: messageItemSize)
             if let mediaPreview = component.mediaPreview {
                 switch mediaPreview.layoutType {
-                case .message:
+                case .message, .media:
                     break
                 case .videoMessage:
                     readyMessageItemFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - messageItemSize.width) * 0.5), y: readySendButtonFrame.maxY - 6.0 - messageItemSize.height), size: messageItemSize)

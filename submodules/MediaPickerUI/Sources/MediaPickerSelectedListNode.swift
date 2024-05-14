@@ -512,7 +512,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
     private let isExternalPreview: Bool
     var globalClippingRect: CGRect?
     var layoutType: ChatSendMessageContextScreenMediaPreviewLayoutType {
-        return .message
+        return .media
     }
     
     fileprivate var wallpaperBackgroundNode: WallpaperBackgroundNode?
