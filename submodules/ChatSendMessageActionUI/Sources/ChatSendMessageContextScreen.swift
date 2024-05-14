@@ -474,22 +474,6 @@ final class ChatSendMessageContextScreenComponent: Component {
             
             let messageTextInsets = sourceMessageTextInsets
             
-            var maxTextHeight: CGFloat = availableSize.height - 8.0
-            if let reactionItems = component.reactionItems, !reactionItems.isEmpty {
-                if let reactionContextNode = self.reactionContextNode, reactionContextNode.isExpanded {
-                    maxTextHeight -= 300.0 + 8.0
-                } else {
-                    maxTextHeight -= 60.0 + 14.0
-                }
-            }
-            maxTextHeight -= environment.statusBarHeight + 14.0
-            if environment.inputHeight != 0.0 {
-                maxTextHeight -= environment.inputHeight
-            } else {
-                maxTextHeight -= actionsStackSize.height
-                maxTextHeight -= environment.safeInsets.bottom
-            }
-            
             let messageItemViewContainerSize: CGSize
             if let mediaPreview = component.mediaPreview {
                 switch mediaPreview.layoutType {
@@ -513,7 +497,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                 textInsets: messageTextInsets,
                 explicitBackgroundSize: explicitMessageBackgroundSize,
                 maxTextWidth: localSourceTextInputViewFrame.width,
-                maxTextHeight: maxTextHeight,
+                maxTextHeight: 20000.0,
                 containerSize: messageItemViewContainerSize,
                 effect: self.presentationAnimationState.key == .animatedIn ? self.selectedMessageEffect : nil,
                 transition: transition
@@ -844,6 +828,23 @@ final class ChatSendMessageContextScreenComponent: Component {
                 readySendButtonFrame.origin.y -= inputCoverOverflow
             }
             
+            if let mediaPreview = component.mediaPreview {
+                switch mediaPreview.layoutType {
+                case .message, .media:
+                    break
+                case .videoMessage:
+                    let buttonActionsOffset: CGFloat = 5.0
+                    
+                    let actionsStackAdjustmentY = sourceSendButtonFrame.maxY - buttonActionsOffset - readyActionsStackFrame.maxY
+                    if abs(actionsStackAdjustmentY) < 10.0 {
+                        readyActionsStackFrame.origin.y += actionsStackAdjustmentY
+                        readyMessageItemFrame.origin.y += actionsStackAdjustmentY
+                    }
+                    
+                    readySendButtonFrame.origin.y = readyActionsStackFrame.maxY + buttonActionsOffset - readySendButtonFrame.height
+                }
+            }
+            
             let messageItemFrame: CGRect
             let actionsStackFrame: CGRect
             let sendButtonFrame: CGRect
@@ -917,15 +918,33 @@ final class ChatSendMessageContextScreenComponent: Component {
             }
             
             if let reactionContextNode = self.reactionContextNode {
+                let reactionContextY = environment.statusBarHeight
                 let size = availableSize
                 var reactionsAnchorRect = messageItemFrame
-                if component.mediaPreview != nil {
-                    reactionsAnchorRect.size.width += 100.0
-                    reactionsAnchorRect.origin.x -= 4.0
+                if let mediaPreview = component.mediaPreview {
+                    switch mediaPreview.layoutType {
+                    case .message, .media:
+                        reactionsAnchorRect.size.width += 100.0
+                        reactionsAnchorRect.origin.x -= 4.0
+                    case .videoMessage:
+                        reactionsAnchorRect.size.width += 100.0
+                        reactionsAnchorRect.origin.x = reactionsAnchorRect.midX - 130.0
+                    }
                 }
-                transition.setFrame(view: reactionContextNode.view, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size))
+                reactionsAnchorRect.origin.y -= reactionContextY
+                var isIntersectingContent = false
+                if reactionContextNode.isExpanded {
+                    if messageItemFrame.minY <= reactionContextY + 50.0 + 4.0 {
+                        isIntersectingContent = true
+                    }
+                } else {
+                    if messageItemFrame.minY <= reactionContextY + 300.0 + 4.0 {
+                        isIntersectingContent = true
+                    }
+                }
+                transition.setFrame(view: reactionContextNode.view, frame: CGRect(origin: CGPoint(x: 0.0, y: reactionContextY), size: CGSize(width: availableSize.width, height: availableSize.height - reactionContextY)))
                 reactionContextNode.updateLayout(size: size, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, centerAligned: false, isCoveredByInput: false, isAnimatingOut: false, transition: transition.containedViewLayoutTransition)
-                reactionContextNode.updateIsIntersectingContent(isIntersectingContent: false, transition: .immediate)
+                reactionContextNode.updateIsIntersectingContent(isIntersectingContent: isIntersectingContent, transition: transition.containedViewLayoutTransition)
                 if self.presentationAnimationState.key == .animatedIn && previousAnimationState.key == .initial {
                     reactionContextNode.animateIn(from: reactionsAnchorRect)
                 } else if self.presentationAnimationState.key == .animatedOut && previousAnimationState.key == .animatedIn {
