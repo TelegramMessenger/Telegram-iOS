@@ -9,6 +9,8 @@
 #include <LottieCpp/ShapeAttributes.h>
 #include <LottieCpp/BezierPath.h>
 
+#include <optional>
+
 namespace lottie {
 
 class RenderableItem {
@@ -229,14 +231,7 @@ public:
     CGRect bounds;
 };
 
-class RenderTreeNodeContentItem {
-public:
-    RenderTreeNodeContentItem() {
-    }
-    
-public:
-    std::vector<std::shared_ptr<RenderTreeNodeContentItem>> subItems;
-};
+class RenderTreeNodeContentItem;
 
 class RenderTreeNodeContent {
 public:
@@ -358,6 +353,30 @@ public:
     std::vector<BezierPath> paths;
     std::shared_ptr<Stroke> stroke;
     std::shared_ptr<Fill> fill;
+};
+
+class RenderTreeNodeContentShadingVariant {
+public:
+    RenderTreeNodeContentShadingVariant() {
+    }
+    
+public:
+    std::shared_ptr<RenderTreeNodeContent::Stroke> stroke;
+    std::shared_ptr<RenderTreeNodeContent::Fill> fill;
+    std::optional<std::vector<BezierPath>> explicitPath;
+    
+    size_t subItemLimit = 0;
+    bool isGroup = false;
+};
+
+class RenderTreeNodeContentItem {
+public:
+    RenderTreeNodeContentItem() {
+    }
+    
+public:
+    bool isGroup = false;
+    std::vector<std::shared_ptr<RenderTreeNodeContentShadingVariant>> shadings;
 };
 
 class ProcessedRenderTreeNodeData {
@@ -518,6 +537,7 @@ public:
     bool _masksToBounds = false;
     bool _isHidden = false;
     std::shared_ptr<RenderTreeNodeContent> _content;
+    std::shared_ptr<RenderTreeNodeContentItem> _contentItem;
     std::vector<std::shared_ptr<RenderTreeNode>> _subnodes;
     std::shared_ptr<RenderTreeNode> _mask;
     bool _invertMask = false;

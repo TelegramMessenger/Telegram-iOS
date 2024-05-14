@@ -1072,6 +1072,8 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
     private var processedDidAppear: Bool = false
     private var processedDidDisappear: Bool = false
     
+    private var isActiveDisposable: Disposable?
+    
     override public var overlayWantsToBeBelowKeyboard: Bool {
         if let componentView = self.node.hostView.componentView as? ChatSendMessageContextScreenComponent.View {
             return componentView.wantsToBeBelowKeyboard()
@@ -1136,6 +1138,16 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
         
         self.lockOrientation = true
         self.blocksBackgroundWhenInOverlay = true
+        
+        self.isActiveDisposable = (context.sharedContext.applicationBindings.applicationInForeground
+        |> filter { !$0 }
+        |> take(1)
+        |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.dismiss()
+        })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -1143,6 +1155,7 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
     }
     
     deinit {
+        self.isActiveDisposable?.dispose()
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

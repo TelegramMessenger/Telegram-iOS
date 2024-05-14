@@ -38,6 +38,54 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
     
     double alpha = node->alpha();
     
+    /*if (node->_contentItem) {
+        RenderTreeNodeContentItem *contentItem = node->_contentItem.get();
+        for (const auto &shadingVariant : contentItem->shadings) {
+            if (shadingVariant->stroke) {
+                CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, shadingVariant->explicitPath.value());
+                shapeBounds = shapeBounds.insetBy(-shadingVariant->stroke->lineWidth / 2.0, -shadingVariant->stroke->lineWidth / 2.0);
+                effectiveLocalBounds = shapeBounds;
+                
+                switch (shadingVariant->stroke->shading->type()) {
+                    case RenderTreeNodeContent::ShadingType::Solid: {
+                        RenderTreeNodeContent::SolidShading *solidShading = (RenderTreeNodeContent::SolidShading *)shadingVariant->stroke->shading.get();
+                        
+                        alpha *= solidShading->opacity;
+                        
+                        break;
+                    }
+                    case RenderTreeNodeContent::ShadingType::Gradient: {
+                        
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            } else if (shadingVariant->fill) {
+                CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, shadingVariant->explicitPath.value());
+                effectiveLocalBounds = shapeBounds;
+                
+                switch (shadingVariant->fill->shading->type()) {
+                    case RenderTreeNodeContent::ShadingType::Solid: {
+                        RenderTreeNodeContent::SolidShading *solidShading = (RenderTreeNodeContent::SolidShading *)shadingVariant->fill->shading.get();
+                        
+                        alpha *= solidShading->opacity;
+                        
+                        break;
+                    }
+                    case RenderTreeNodeContent::ShadingType::Gradient: {
+                        RenderTreeNodeContent::GradientShading *gradientShading = (RenderTreeNodeContent::GradientShading *)shadingVariant->fill->shading.get();
+                        
+                        alpha *= gradientShading->opacity;
+                        
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            }
+        }
+    }*/
     if (node->content()) {
         RenderTreeNodeContent *shapeContent = node->content().get();
         
@@ -47,7 +95,7 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
             shapeBounds = shapeBounds.insetBy(-shapeContent->stroke->lineWidth / 2.0, -shapeContent->stroke->lineWidth / 2.0);
             effectiveLocalBounds = shapeBounds;
             
-            switch (shapeContent->stroke->shading->type()) {
+            /*switch (shapeContent->stroke->shading->type()) {
                 case RenderTreeNodeContent::ShadingType::Solid: {
                     RenderTreeNodeContent::SolidShading *solidShading = (RenderTreeNodeContent::SolidShading *)shapeContent->stroke->shading.get();
                     
@@ -61,11 +109,11 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
                 }
                 default:
                     break;
-            }
+            }*/
         } else if (shapeContent->fill) {
             effectiveLocalBounds = shapeBounds;
             
-            switch (shapeContent->fill->shading->type()) {
+            /*switch (shapeContent->fill->shading->type()) {
                 case RenderTreeNodeContent::ShadingType::Solid: {
                     RenderTreeNodeContent::SolidShading *solidShading = (RenderTreeNodeContent::SolidShading *)shapeContent->fill->shading.get();
                     
@@ -82,7 +130,7 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
                 }
                 default:
                     break;
-            }
+            }*/
         }
     }
     
@@ -110,7 +158,7 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
         if (item->renderData.isValid) {
             drawContentDescendants += item->renderData.drawContentDescendants;
             
-            if (item->content()) {
+            if (item->content() || item->_contentItem) {
                 drawContentDescendants += 1;
             }
             
@@ -322,7 +370,7 @@ static void drawLottieRenderableItem(std::shared_ptr<lottieRendering::Canvas> co
                 dashPattern = item->stroke->dashPattern;
             }
             
-            context->strokePath(path, item->stroke->lineWidth, lineJoin, lineCap, item->stroke->dashPhase, dashPattern, lottieRendering::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a));
+            context->strokePath(path, item->stroke->lineWidth, lineJoin, lineCap, item->stroke->dashPhase, dashPattern, lottieRendering::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity));
         } else if (item->stroke->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Gradient) {
             //TODO:gradient stroke
         }
@@ -344,14 +392,14 @@ static void drawLottieRenderableItem(std::shared_ptr<lottieRendering::Canvas> co
         
         if (item->fill->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Solid) {
             lottie::RenderTreeNodeContent::SolidShading *solidShading = (lottie::RenderTreeNodeContent::SolidShading *)item->fill->shading.get();
-            context->fillPath(path, rule, lottieRendering::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a));
+            context->fillPath(path, rule, lottieRendering::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity));
         } else if (item->fill->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Gradient) {
             lottie::RenderTreeNodeContent::GradientShading *gradientShading = (lottie::RenderTreeNodeContent::GradientShading *)item->fill->shading.get();
             
             std::vector<lottieRendering::Color> colors;
             std::vector<double> locations;
             for (const auto &color : gradientShading->colors) {
-                colors.push_back(lottieRendering::Color(color.r, color.g, color.b, color.a));
+                colors.push_back(lottieRendering::Color(color.r, color.g, color.b, color.a * gradientShading->opacity));
             }
             locations = gradientShading->locations;
             
@@ -370,6 +418,179 @@ static void drawLottieRenderableItem(std::shared_ptr<lottieRendering::Canvas> co
                 }
                 default: {
                     break;
+                }
+            }
+        }
+    }
+}
+
+static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> context, std::shared_ptr<lottie::RenderTreeNodeContentItem> item) {
+    if (item->shadings.empty()) {
+        return;
+    }
+    
+    for (const auto &shading : item->shadings) {
+        if (shading->explicitPath->empty()) {
+            continue;
+        }
+        
+        std::shared_ptr<lottie::CGPath> path = lottie::CGPath::makePath();
+        
+        const auto iterate = [&](LottiePathItem const *pathItem) {
+            switch (pathItem->type) {
+                case LottiePathItemTypeMoveTo: {
+                    path->moveTo(lottie::Vector2D(pathItem->points[0].x, pathItem->points[0].y));
+                    break;
+                }
+                case LottiePathItemTypeLineTo: {
+                    path->addLineTo(lottie::Vector2D(pathItem->points[0].x, pathItem->points[0].y));
+                    break;
+                }
+                case LottiePathItemTypeCurveTo: {
+                    path->addCurveTo(lottie::Vector2D(pathItem->points[2].x, pathItem->points[2].y), lottie::Vector2D(pathItem->points[0].x, pathItem->points[0].y), lottie::Vector2D(pathItem->points[1].x, pathItem->points[1].y));
+                    break;
+                }
+                case LottiePathItemTypeClose: {
+                    path->closeSubpath();
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+        };
+        
+        LottiePathItem pathItem;
+        for (const auto &path : shading->explicitPath.value()) {
+            std::optional<lottie::PathElement> previousElement;
+            for (const auto &element : path.elements()) {
+                if (previousElement.has_value()) {
+                    if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
+                        pathItem.type = LottiePathItemTypeLineTo;
+                        pathItem.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                        iterate(&pathItem);
+                    } else {
+                        pathItem.type = LottiePathItemTypeCurveTo;
+                        pathItem.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                        pathItem.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
+                        pathItem.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
+                        iterate(&pathItem);
+                    }
+                } else {
+                    pathItem.type = LottiePathItemTypeMoveTo;
+                    pathItem.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                    iterate(&pathItem);
+                }
+                previousElement = element;
+            }
+            if (path.closed().value_or(true)) {
+                pathItem.type = LottiePathItemTypeClose;
+                iterate(&pathItem);
+            }
+        }
+        
+        if (shading->stroke) {
+            if (shading->stroke->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Solid) {
+                lottie::RenderTreeNodeContent::SolidShading *solidShading = (lottie::RenderTreeNodeContent::SolidShading *)shading->stroke->shading.get();
+                
+                if (solidShading->opacity != 0.0) {
+                    lottieRendering::LineJoin lineJoin = lottieRendering::LineJoin::Bevel;
+                    switch (shading->stroke->lineJoin) {
+                        case lottie::LineJoin::Bevel: {
+                            lineJoin = lottieRendering::LineJoin::Bevel;
+                            break;
+                        }
+                        case lottie::LineJoin::Round: {
+                            lineJoin = lottieRendering::LineJoin::Round;
+                            break;
+                        }
+                        case lottie::LineJoin::Miter: {
+                            lineJoin = lottieRendering::LineJoin::Miter;
+                            break;
+                        }
+                        default: {
+                            break;
+                        }
+                    }
+                    
+                    lottieRendering::LineCap lineCap = lottieRendering::LineCap::Square;
+                    switch (shading->stroke->lineCap) {
+                        case lottie::LineCap::Butt: {
+                            lineCap = lottieRendering::LineCap::Butt;
+                            break;
+                        }
+                        case lottie::LineCap::Round: {
+                            lineCap = lottieRendering::LineCap::Round;
+                            break;
+                        }
+                        case lottie::LineCap::Square: {
+                            lineCap = lottieRendering::LineCap::Square;
+                            break;
+                        }
+                        default: {
+                            break;
+                        }
+                    }
+                    
+                    std::vector<double> dashPattern;
+                    if (!shading->stroke->dashPattern.empty()) {
+                        dashPattern = shading->stroke->dashPattern;
+                    }
+                    
+                    context->strokePath(path, shading->stroke->lineWidth, lineJoin, lineCap, shading->stroke->dashPhase, dashPattern, lottieRendering::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity));
+                } else if (shading->stroke->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Gradient) {
+                    //TODO:gradient stroke
+                }
+            }
+        } else if (shading->fill) {
+            lottieRendering::FillRule rule = lottieRendering::FillRule::NonZeroWinding;
+            switch (shading->fill->rule) {
+                case lottie::FillRule::EvenOdd: {
+                    rule = lottieRendering::FillRule::EvenOdd;
+                    break;
+                }
+                case lottie::FillRule::NonZeroWinding: {
+                    rule = lottieRendering::FillRule::NonZeroWinding;
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+            
+            if (shading->fill->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Solid) {
+                lottie::RenderTreeNodeContent::SolidShading *solidShading = (lottie::RenderTreeNodeContent::SolidShading *)shading->fill->shading.get();
+                if (solidShading->opacity != 0.0) {
+                    context->fillPath(path, rule, lottieRendering::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity));
+                }
+            } else if (shading->fill->shading->type() == lottie::RenderTreeNodeContent::ShadingType::Gradient) {
+                lottie::RenderTreeNodeContent::GradientShading *gradientShading = (lottie::RenderTreeNodeContent::GradientShading *)shading->fill->shading.get();
+                
+                if (gradientShading->opacity != 0.0) {
+                    std::vector<lottieRendering::Color> colors;
+                    std::vector<double> locations;
+                    for (const auto &color : gradientShading->colors) {
+                        colors.push_back(lottieRendering::Color(color.r, color.g, color.b, color.a * gradientShading->opacity));
+                    }
+                    locations = gradientShading->locations;
+                    
+                    lottieRendering::Gradient gradient(colors, locations);
+                    lottie::Vector2D start(gradientShading->start.x, gradientShading->start.y);
+                    lottie::Vector2D end(gradientShading->end.x, gradientShading->end.y);
+                    
+                    switch (gradientShading->gradientType) {
+                        case lottie::GradientType::Linear: {
+                            context->linearGradientFillPath(path, rule, gradient, start, end);
+                            break;
+                        }
+                        case lottie::GradientType::Radial: {
+                            context->radialGradientFillPath(path, rule, gradient, start, 0.0, start, start.distanceTo(end));
+                            break;
+                        }
+                        default: {
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -442,8 +663,11 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
     
     currentContext->setAlpha(renderAlpha);
     
-    if (node->content()) {
+    if (node->content() && (int64_t)"" < 0) {
         drawLottieRenderableItem(currentContext, node->content());
+    }
+    if (node->_contentItem) {//} && (int64_t)"" < 0) {
+        drawLottieContentItem(currentContext, node->_contentItem);
     }
     
     if (node->renderData.isInvertedMatte) {

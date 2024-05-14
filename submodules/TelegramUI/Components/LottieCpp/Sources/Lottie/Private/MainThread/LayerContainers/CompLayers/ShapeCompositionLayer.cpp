@@ -899,7 +899,7 @@ public:
         std::shared_ptr<RenderTreeNode> _renderTree;
         
     private:
-        std::vector<TransformedPath> collectPaths(AnimationFrameTime frameTime, size_t subItemLimit, CATransform3D parentTransform) {
+        std::vector<TransformedPath> collectPaths(size_t subItemLimit, CATransform3D parentTransform) {
             std::vector<TransformedPath> mappedPaths;
             
             CATransform3D effectiveTransform = parentTransform;
@@ -908,7 +908,6 @@ public:
             size_t maxSubitem = std::min(subItems.size(), subItemLimit);
             
             if (path) {
-                path->update(frameTime);
                 mappedPaths.emplace_back(*(path->currentPath()), effectiveTransform);
             }
             
@@ -917,17 +916,19 @@ public:
                 CATransform3D subItemTransform = effectiveChildTransform;
                 
                 if (subItem->isGroup && subItem->transform) {
-                    subItem->transform->update(frameTime);
+                    //update?
+                    //subItem->transform->update(frameTime);
                     subItemTransform = subItem->transform->transform() * subItemTransform;
                 }
                 
                 std::optional<TrimParams> currentTrim;
                 if (!trims.empty()) {
-                    trims[0]->update(frameTime);
+                    //update?
+                    //trims[0]->update(frameTime);
                     currentTrim = trims[0]->trimParams();
                 }
                 
-                auto subItemPaths = subItem->collectPaths(frameTime, INT32_MAX, subItemTransform);
+                auto subItemPaths = subItem->collectPaths(INT32_MAX, subItemTransform);
                 
                 if (currentTrim) {
                     CompoundBezierPath tempPath;
@@ -986,6 +987,9 @@ public:
                 false
             );
             
+            _renderTree->_contentItem = std::make_shared<RenderTreeNodeContentItem>();
+            _renderTree->_contentItem->isGroup = isGroup;
+            
             if (!shadings.empty()) {
                 for (int i = 0; i < shadings.size(); i++) {
                     auto &shadingVariant = shadings[i];
@@ -1008,6 +1012,28 @@ public:
                     );
                     shadingVariant.renderTree = shadingRenderTree;
                     _renderTree->_subnodes.push_back(shadingRenderTree);
+                    
+                    auto itemShadingVariant = std::make_shared<RenderTreeNodeContentShadingVariant>();
+                    if (shadingVariant.fill) {
+                        itemShadingVariant->fill = std::make_shared<RenderTreeNodeContent::Fill>(
+                            nullptr,
+                            FillRule::NonZeroWinding
+                        );
+                    }
+                    if (shadingVariant.stroke) {
+                        itemShadingVariant->stroke = std::make_shared<RenderTreeNodeContent::Stroke>(
+                            nullptr,
+                            0.0,
+                            LineJoin::Bevel,
+                            LineCap::Round,
+                            0.0,
+                            0.0,
+                            std::vector<double>()
+                        );
+                    }
+                    itemShadingVariant->subItemLimit = shadingVariant.subItemLimit;
+                    
+                    _renderTree->_contentItem->shadings.push_back(itemShadingVariant);
                 }
             }
             
@@ -1036,11 +1062,36 @@ public:
         }
         
     public:
-        void updateChildren(AnimationFrameTime frameTime, std::optional<TrimParams> parentTrim) {
+        void updateFrame(AnimationFrameTime frameTime) {
+            if (transform) {
+                transform->update(frameTime);
+            }
+            
+            if (path) {
+                path->update(frameTime);
+            }
+            for (const auto &trim : trims) {
+                trim->update(frameTime);
+            }
+            
+            for (const auto &shadingVariant : shadings) {
+                if (shadingVariant.fill) {
+                    shadingVariant.fill->update(frameTime);
+                }
+                if (shadingVariant.stroke) {
+                    shadingVariant.stroke->update(frameTime);
+                }
+            }
+            
+            for (const auto &subItem : subItems) {
+                subItem->updateFrame(frameTime);
+            }
+        }
+        
+        void updateChildren(std::optional<TrimParams> parentTrim) {
             CATransform3D containerTransform = CATransform3D::identity();
             double containerOpacity = 1.0;
             if (transform) {
-                transform->update(frameTime);
                 containerTransform = transform->transform();
                 containerOpacity = transform->opacity();
             }
@@ -1055,7 +1106,7 @@ public:
                 }
                 
                 CompoundBezierPath compoundPath;
-                auto paths = collectPaths(frameTime, shadingVariant.subItemLimit, CATransform3D::identity());
+                auto paths = collectPaths(shadingVariant.subItemLimit, CATransform3D::identity());
                 for (const auto &path : paths) {
                     compoundPath.appendPath(path.path.copyUsingTransform(path.transform));
                 }
@@ -1079,13 +1130,11 @@ public:
                 
                 std::shared_ptr<RenderTreeNodeContent::Fill> fill;
                 if (shadingVariant.fill) {
-                    shadingVariant.fill->update(frameTime);
                     fill = shadingVariant.fill->fill();
                 }
                 
                 std::shared_ptr<RenderTreeNodeContent::Stroke> stroke;
                 if (shadingVariant.stroke) {
-                    shadingVariant.stroke->update(frameTime);
                     stroke = shadingVariant.stroke->stroke();
                 }
                 
@@ -1096,14 +1145,16 @@ public:
                 );
                 
                 shadingVariant.renderTree->_content = content;
+                
+                _renderTree->_contentItem->shadings[i]->stroke = stroke;
+                _renderTree->_contentItem->shadings[i]->fill = fill;
+                _renderTree->_contentItem->shadings[i]->explicitPath = resultPaths;
             }
             
             if (isGroup && !subItems.empty()) {
                 for (int i = (int)subItems.size() - 1; i >= 0; i--) {
                     std::optional<TrimParams> childTrim = parentTrim;
                     for (const auto &trim : trims) {
-                        trim->update(frameTime);
-                        
                         if (i < (int)trim->trimParams().subItemLimit) {
                             //TODO:allow combination
                             //assert(!parentTrim);
@@ -1111,7 +1162,7 @@ public:
                         }
                     }
                     
-                    subItems[i]->updateChildren(frameTime, childTrim);
+                    subItems[i]->updateChildren(childTrim);
                 }
             }
         }
@@ -1284,14 +1335,16 @@ CompositionLayer(solidLayer, Vector2D::Zero()) {
 void ShapeCompositionLayer::displayContentsWithFrame(double frame, bool forceUpdates) {
     _frameTime = frame;
     _frameTimeInitialized = true;
-    _contentTree->itemTree->updateChildren(_frameTime, std::nullopt);
+    _contentTree->itemTree->updateFrame(_frameTime);
+    _contentTree->itemTree->updateChildren(std::nullopt);
 }
 
 std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
     if (!_frameTimeInitialized) {
         _frameTime = 0.0;
         _frameTimeInitialized = true;
-        _contentTree->itemTree->updateChildren(_frameTime, std::nullopt);
+        _contentTree->itemTree->updateFrame(_frameTime);
+        _contentTree->itemTree->updateChildren(std::nullopt);
     }
     
     if (!_renderTreeNode) {

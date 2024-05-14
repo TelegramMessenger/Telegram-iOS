@@ -103,6 +103,11 @@ func processDrawAnimation(baseCachePath: String, path: String, name: String, siz
                 return true
             }
         }
+        
+        /*if #available(iOS 16.0, *) {
+            try? await Task.sleep(for: .seconds(0.1))
+        }*/
+        
         if !frameResult {
             return false
         }
