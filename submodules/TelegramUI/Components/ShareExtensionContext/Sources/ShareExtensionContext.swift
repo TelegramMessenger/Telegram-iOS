@@ -385,6 +385,7 @@ public class ShareRootControllerImpl {
                 voipMaxLayer: 0,
                 voipVersions: [],
                 appData: .single(nil),
+                externalRequestVerificationStream: .never(),
                 autolockDeadine: .single(nil),
                 encryptionProvider: OpenSSLEncryptionProvider(),
                 deviceModelName: nil,

@@ -129,11 +129,10 @@ enum SendFirebaseAuthorizationCodeError {
     case generic
 }
 
-private func sendFirebaseAuthorizationCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, phoneCodeHash: String, timeout: Int32?, firebaseSecret: String, syncContacts: Bool) -> Signal<Bool, SendFirebaseAuthorizationCodeError> {
-    //auth.requestFirebaseSms#89464b50 flags:# phone_number:string phone_code_hash:string safety_net_token:flags.0?string ios_push_secret:flags.1?string = Bool;
+func sendFirebaseAuthorizationCode(network: Network, phoneNumber: String, apiId: Int32, apiHash: String, phoneCodeHash: String, timeout: Int32?, firebaseSecret: String) -> Signal<Bool, SendFirebaseAuthorizationCodeError> {
     var flags: Int32 = 0
     flags |= 1 << 1
-    return account.network.request(Api.functions.auth.requestFirebaseSms(flags: flags, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, safetyNetToken: nil, playIntegrityToken: nil, iosPushSecret: firebaseSecret))
+    return network.request(Api.functions.auth.requestFirebaseSms(flags: flags, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, safetyNetToken: nil, playIntegrityToken: nil, iosPushSecret: firebaseSecret))
     |> mapError { _ -> SendFirebaseAuthorizationCodeError in
         return .generic
     }
@@ -295,10 +294,10 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                             |> castError(AuthorizationCodeRequestError.self)
                             |> mapToSignal { firebaseSecret -> Signal<SendAuthorizationCodeResult, AuthorizationCodeRequestError> in
                                 guard let firebaseSecret = firebaseSecret else {
-                                    return internalResendAuthorizationCode(accountManager: accountManager, account: account, number: phoneNumber, apiId: apiId, apiHash: apiHash, hash: phoneCodeHash, syncContacts: syncContacts, firebaseSecretStream: firebaseSecretStream)
+                                    return internalResendAuthorizationCode(accountManager: accountManager, account: account, number: phoneNumber, apiId: apiId, apiHash: apiHash, hash: phoneCodeHash, syncContacts: syncContacts, firebaseSecretStream: firebaseSecretStream, reason: .firebasePushTimeout)
                                 }
                                 
-                                return sendFirebaseAuthorizationCode(accountManager: accountManager, account: account, phoneNumber: phoneNumber, apiId: apiId, apiHash: apiHash, phoneCodeHash: phoneCodeHash, timeout: codeTimeout, firebaseSecret: firebaseSecret, syncContacts: syncContacts)
+                                return sendFirebaseAuthorizationCode(network: account.network, phoneNumber: phoneNumber, apiId: apiId, apiHash: apiHash, phoneCodeHash: phoneCodeHash, timeout: codeTimeout, firebaseSecret: firebaseSecret)
                                 |> `catch` { _ -> Signal<Bool, SendFirebaseAuthorizationCodeError> in
                                     return .single(false)
                                 }
@@ -332,7 +331,7 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                                         }
                                         |> castError(AuthorizationCodeRequestError.self)
                                     } else {
-                                        return internalResendAuthorizationCode(accountManager: accountManager, account: account, number: phoneNumber, apiId: apiId, apiHash: apiHash, hash: phoneCodeHash, syncContacts: syncContacts, firebaseSecretStream: firebaseSecretStream)
+                                        return internalResendAuthorizationCode(accountManager: accountManager, account: account, number: phoneNumber, apiId: apiId, apiHash: apiHash, hash: phoneCodeHash, syncContacts: syncContacts, firebaseSecretStream: firebaseSecretStream, reason: .firebaseSendCodeError)
                                     }
                                 }
                             }
@@ -394,8 +393,20 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
     }
 }
 
-private func internalResendAuthorizationCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, number: String, apiId: Int32, apiHash: String, hash: String, syncContacts: Bool, firebaseSecretStream: Signal<[String: String], NoError>) -> Signal<SendAuthorizationCodeResult, AuthorizationCodeRequestError> {
-    return account.network.request(Api.functions.auth.resendCode(flags: 0, phoneNumber: number, phoneCodeHash: hash, reason: nil), automaticFloodWait: false)
+enum ResendAuthorizationCodeReason: String {
+    case firebasePushTimeout = "FIREBASE_PUSH_TIMEOUT"
+    case firebaseSendCodeError = "FIREBASE_SEND_CODE_ERROR"
+}
+
+private func internalResendAuthorizationCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, number: String, apiId: Int32, apiHash: String, hash: String, syncContacts: Bool, firebaseSecretStream: Signal<[String: String], NoError>, reason: ResendAuthorizationCodeReason?) -> Signal<SendAuthorizationCodeResult, AuthorizationCodeRequestError> {
+    var flags: Int32 = 0
+    var mappedReason: String?
+    if let reason {
+        flags |= 1 << 0
+        mappedReason = reason.rawValue
+    }
+    
+    return account.network.request(Api.functions.auth.resendCode(flags: flags, phoneNumber: number, phoneCodeHash: hash, reason: mappedReason), automaticFloodWait: false)
     |> mapError { error -> AuthorizationCodeRequestError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .limitExceeded
@@ -441,10 +452,10 @@ private func internalResendAuthorizationCode(accountManager: AccountManager<Tele
                     |> castError(AuthorizationCodeRequestError.self)
                     |> mapToSignal { firebaseSecret -> Signal<SendAuthorizationCodeResult, AuthorizationCodeRequestError> in
                         guard let firebaseSecret = firebaseSecret else {
-                            return internalResendAuthorizationCode(accountManager: accountManager, account: account, number: number, apiId: apiId, apiHash: apiHash, hash: phoneCodeHash, syncContacts: syncContacts, firebaseSecretStream: firebaseSecretStream)
+                            return internalResendAuthorizationCode(accountManager: accountManager, account: account, number: number, apiId: apiId, apiHash: apiHash, hash: phoneCodeHash, syncContacts: syncContacts, firebaseSecretStream: firebaseSecretStream, reason: .firebasePushTimeout)
                         }
                         
-                        return sendFirebaseAuthorizationCode(accountManager: accountManager, account: account, phoneNumber: number, apiId: apiId, apiHash: apiHash, phoneCodeHash: phoneCodeHash, timeout: codeTimeout, firebaseSecret: firebaseSecret, syncContacts: syncContacts)
+                        return sendFirebaseAuthorizationCode(network: account.network, phoneNumber: number, apiId: apiId, apiHash: apiHash, phoneCodeHash: phoneCodeHash, timeout: codeTimeout, firebaseSecret: firebaseSecret)
                         |> `catch` { _ -> Signal<Bool, SendFirebaseAuthorizationCodeError> in
                             return .single(false)
                         }
@@ -478,7 +489,7 @@ private func internalResendAuthorizationCode(accountManager: AccountManager<Tele
                                 }
                                 |> castError(AuthorizationCodeRequestError.self)
                             } else {
-                                return internalResendAuthorizationCode(accountManager: accountManager, account: account, number: number, apiId: apiId, apiHash: apiHash, hash: phoneCodeHash, syncContacts: syncContacts, firebaseSecretStream: firebaseSecretStream)
+                                return internalResendAuthorizationCode(accountManager: accountManager, account: account, number: number, apiId: apiId, apiHash: apiHash, hash: phoneCodeHash, syncContacts: syncContacts, firebaseSecretStream: firebaseSecretStream, reason: .firebaseSendCodeError)
                             }
                         }
                     }
@@ -583,10 +594,10 @@ public func resendAuthorizationCode(accountManager: AccountManager<TelegramAccou
                                         |> castError(AuthorizationCodeRequestError.self)
                                         |> mapToSignal { firebaseSecret -> Signal<SendAuthorizationCodeResult, AuthorizationCodeRequestError> in
                                             guard let firebaseSecret = firebaseSecret else {
-                                                return internalResendAuthorizationCode(accountManager: accountManager, account: account, number: number, apiId: apiId, apiHash: apiHash, hash: phoneCodeHash, syncContacts: syncContacts, firebaseSecretStream: firebaseSecretStream)
+                                                return internalResendAuthorizationCode(accountManager: accountManager, account: account, number: number, apiId: apiId, apiHash: apiHash, hash: phoneCodeHash, syncContacts: syncContacts, firebaseSecretStream: firebaseSecretStream, reason: .firebasePushTimeout)
                                             }
                                             
-                                            return sendFirebaseAuthorizationCode(accountManager: accountManager, account: account, phoneNumber: number, apiId: apiId, apiHash: apiHash, phoneCodeHash: phoneCodeHash, timeout: codeTimeout, firebaseSecret: firebaseSecret, syncContacts: syncContacts)
+                                            return sendFirebaseAuthorizationCode(network: account.network, phoneNumber: number, apiId: apiId, apiHash: apiHash, phoneCodeHash: phoneCodeHash, timeout: codeTimeout, firebaseSecret: firebaseSecret)
                                             |> `catch` { _ -> Signal<Bool, SendFirebaseAuthorizationCodeError> in
                                                 return .single(false)
                                             }
@@ -602,7 +613,7 @@ public func resendAuthorizationCode(accountManager: AccountManager<TelegramAccou
                                                     }
                                                     |> castError(AuthorizationCodeRequestError.self)
                                                 } else {
-                                                    return internalResendAuthorizationCode(accountManager: accountManager, account: account, number: number, apiId: apiId, apiHash: apiHash, hash: phoneCodeHash, syncContacts: syncContacts, firebaseSecretStream: firebaseSecretStream)
+                                                    return internalResendAuthorizationCode(accountManager: accountManager, account: account, number: number, apiId: apiId, apiHash: apiHash, hash: phoneCodeHash, syncContacts: syncContacts, firebaseSecretStream: firebaseSecretStream, reason: .firebaseSendCodeError)
                                                 }
                                             }
                                         }

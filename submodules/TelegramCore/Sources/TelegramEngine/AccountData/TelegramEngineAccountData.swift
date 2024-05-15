@@ -15,12 +15,12 @@ public extension TelegramEngine {
 		    return _internal_acceptTermsOfService(account: self.account, id: id)
 		}
 
-        public func requestChangeAccountPhoneNumberVerification(phoneNumber: String, pushNotificationConfiguration: AuthorizationCodePushNotificationConfiguration?, firebaseSecretStream: Signal<[String: String], NoError>) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
-            return _internal_requestChangeAccountPhoneNumberVerification(account: self.account, phoneNumber: phoneNumber, pushNotificationConfiguration: pushNotificationConfiguration, firebaseSecretStream: firebaseSecretStream)
+        public func requestChangeAccountPhoneNumberVerification(apiId: Int32, apiHash: String, phoneNumber: String, pushNotificationConfiguration: AuthorizationCodePushNotificationConfiguration?, firebaseSecretStream: Signal<[String: String], NoError>) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
+            return _internal_requestChangeAccountPhoneNumberVerification(account: self.account, apiId: apiId, apiHash: apiHash, phoneNumber: phoneNumber, pushNotificationConfiguration: pushNotificationConfiguration, firebaseSecretStream: firebaseSecretStream)
         }
 
-        public func requestNextChangeAccountPhoneNumberVerification(phoneNumber: String, phoneCodeHash: String) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
-            return _internal_requestNextChangeAccountPhoneNumberVerification(account: self.account, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash)
+        public func requestNextChangeAccountPhoneNumberVerification(phoneNumber: String, phoneCodeHash: String, apiId: Int32, apiHash: String, firebaseSecretStream: Signal<[String: String], NoError>) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
+            return _internal_requestNextChangeAccountPhoneNumberVerification(account: self.account, phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, apiId: apiId, apiHash: apiHash, firebaseSecretStream: firebaseSecretStream)
         }
 
         public func requestChangeAccountPhoneNumber(phoneNumber: String, phoneCodeHash: String, phoneCode: String) -> Signal<Void, ChangeAccountPhoneNumberError> {

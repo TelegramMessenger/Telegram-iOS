@@ -36,7 +36,13 @@ public func ChangePhoneNumberController(context: AccountContext) -> ViewControll
             authorizationPushConfiguration
             |> castError(RequestChangeAccountPhoneNumberVerificationError.self)
             |> mapToSignal { authorizationPushConfiguration in
-                return context.engine.accountData.requestChangeAccountPhoneNumberVerification(phoneNumber: phoneNumber, pushNotificationConfiguration: authorizationPushConfiguration, firebaseSecretStream: context.sharedContext.firebaseSecretStream)
+                return context.engine.accountData.requestChangeAccountPhoneNumberVerification(
+                    apiId: context.sharedContext.networkArguments.apiId,
+                    apiHash: context.sharedContext.networkArguments.apiHash,
+                    phoneNumber: phoneNumber,
+                    pushNotificationConfiguration: authorizationPushConfiguration,
+                    firebaseSecretStream: context.sharedContext.firebaseSecretStream
+                )
             }
         |> deliverOnMainQueue).start(next: { [weak controller] next in
             controller?.inProgress = false
