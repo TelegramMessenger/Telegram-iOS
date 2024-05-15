@@ -309,11 +309,11 @@ extension ChatControllerImpl {
                         completion(controller, mediaPickerContext)
                     }, updateMediaPickerContext: { [weak attachmentController] mediaPickerContext in
                         attachmentController?.mediaPickerContext = mediaPickerContext
-                    }, completion: { [weak self] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
+                    }, completion: { [weak self] signals, silentPosting, scheduleTime, messageEffect, getAnimatedTransitionSource, completion in
                         if !inputText.string.isEmpty {
                             self?.clearInputText()
                         }
-                        self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                        self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, messageEffect: messageEffect, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                     })
                 case .file:
                     strongSelf.controllerNavigationDisposable.set(nil)
@@ -1137,7 +1137,7 @@ extension ChatControllerImpl {
         self.present(actionSheet, in: .window(.root))
     }
     
-    func presentMediaPicker(subject: MediaPickerScreen.Subject = .assets(nil, .default), saveEditedPhotos: Bool, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
+    func presentMediaPicker(subject: MediaPickerScreen.Subject = .assets(nil, .default), saveEditedPhotos: Bool, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?, ChatSendMessageActionSheetController.MessageEffect?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
         var isScheduledMessages = false
         if case .scheduledMessages = self.presentationInterfaceState.subject {
             isScheduledMessages = true
@@ -1211,8 +1211,8 @@ extension ChatControllerImpl {
         controller.getCaptionPanelView = { [weak self] in
             return self?.getCaptionPanelView(isFile: false)
         }
-        controller.legacyCompletion = { signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion in
-            completion(signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion)
+        controller.legacyCompletion = { signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion in
+            completion(signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion)
         }
         present(controller, mediaPickerContext)
     }

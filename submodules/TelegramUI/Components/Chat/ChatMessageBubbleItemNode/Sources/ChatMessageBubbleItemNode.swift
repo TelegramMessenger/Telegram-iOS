@@ -633,6 +633,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 self.visibilityStatus = self.visibility != .none
+                
+                self.updateVisibility()
             }
         }
     }
@@ -648,8 +650,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         containerSize: credibilityIconView.bounds.size
                     )
                 }
-                
-                self.updateVisibility()
             }
         }
     }
@@ -3980,6 +3980,17 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             let absoluteOrigin = mosaicStatusOrigin.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
             statusNodeAnimation.animator.updateFrame(layer: mosaicStatusNode.layer, frame: CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size), completion: nil)
+            
+            if item.message.messageEffect(availableMessageEffects: item.associatedData.availableMessageEffects) != nil {
+                mosaicStatusNode.pressed = { [weak strongSelf] in
+                    guard let strongSelf, let item = strongSelf.item else {
+                        return
+                    }
+                    item.controllerInteraction.playMessageEffect(item.message)
+                }
+            } else {
+                mosaicStatusNode.pressed = nil
+            }
         } else if let mosaicStatusNode = strongSelf.mosaicStatusNode {
             strongSelf.mosaicStatusNode = nil
             mosaicStatusNode.removeFromSupernode()
@@ -4939,6 +4950,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         }
         
+        if let mosaicStatusNode = self.mosaicStatusNode {
+            if let result = mosaicStatusNode.hitTest(self.view.convert(point, to: mosaicStatusNode.view), with: event) {
+                return result
+            }
+        }
+        
         for contentNode in self.contentNodes {
             if let result = contentNode.hitTest(self.view.convert(point, to: contentNode.view), with: event) {
                 return result
@@ -5893,7 +5910,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         do {
             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
             
-            let additionalAnimationNode = LottieMetalAnimatedStickerNode()
+            let additionalAnimationNode: AnimatedStickerNode
+            #if targetEnvironment(simulator)
+            additionalAnimationNode = DirectAnimatedStickerNode()
+            #else
+            if "".isEmpty {
+                additionalAnimationNode = DirectAnimatedStickerNode()
+            } else {
+                additionalAnimationNode = LottieMetalAnimatedStickerNode()
+            }
+            #endif
             additionalAnimationNode.updateLayout(size: animationSize)
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width), height: Int(animationSize.height), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
             var animationFrame: CGRect
@@ -5973,37 +5999,55 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
     }
     
+    override public func playMessageEffect() {
+        self.playMessageEffect(force: true)
+    }
+    
     private func updateVisibility() {
         guard let item = self.item else {
             return
         }
         
-        let isPlaying = self.visibilityStatus == true && !self.forceStopAnimations
+        var isPlaying = true
+        if case let .visible(_, subRect) = self.visibility {
+            if subRect.minY > 32.0 {
+                isPlaying = false
+            }
+        } else {
+            isPlaying = false
+        }
+        
+        if self.forceStopAnimations {
+            isPlaying = false
+        }
+        
         if !isPlaying {
             self.removeAdditionalAnimations()
         }
         
-        var alreadySeen = true
-        if item.message.flags.contains(.Incoming) {
-            if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
-                if unreadRange.contains(item.message.id.id) {
+        if isPlaying {
+            var alreadySeen = true
+            if item.message.flags.contains(.Incoming) {
+                if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
+                    if unreadRange.contains(item.message.id.id) {
+                        if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                            alreadySeen = false
+                        }
+                    }
+                }
+            } else {
+                if self.didChangeFromPendingToSent {
                     if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
                         alreadySeen = false
                     }
                 }
             }
-        } else {
-            if self.didChangeFromPendingToSent {
-                if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
-                    alreadySeen = false
-                }
-            }
-        }
-        
-        if !alreadySeen {
-            item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
             
-            self.playMessageEffect(force: false)
+            if !alreadySeen {
+                item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
+                
+                self.playMessageEffect(force: false)
+            }
         }
     }
 }

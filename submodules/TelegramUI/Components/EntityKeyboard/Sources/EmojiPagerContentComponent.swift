@@ -602,14 +602,23 @@ private class PassthroughShapeLayer: CAShapeLayer {
     }
 }
 
+private let itemBadgeTextFont: UIFont = {
+    return Font.regular(10.0)
+}()
+
 private final class PremiumBadgeView: UIView {
+    private let context: AccountContext
+    
     private var badge: EmojiPagerContentComponent.View.ItemLayer.Badge?
     
     let contentLayer: SimpleLayer
     private let overlayColorLayer: SimpleLayer
     private let iconLayer: SimpleLayer
+    private var customFileLayer: InlineFileIconLayer?
     
-    init() {
+    init(context: AccountContext) {
+        self.context = context
+        
         self.contentLayer = SimpleLayer()
         self.contentLayer.contentsGravity = .resize
         self.contentLayer.masksToBounds = true
@@ -641,6 +650,47 @@ private final class PremiumBadgeView: UIView {
                 self.iconLayer.contents = featuredBadgeIcon?.cgImage
             case .locked:
                 self.iconLayer.contents = lockedBadgeIcon?.cgImage
+            case let .text(text):
+                let string = NSAttributedString(string: text, font: itemBadgeTextFont)
+                let size = CGSize(width: 12.0, height: 12.0)
+                let stringBounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+                let image = generateImage(size, rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    UIGraphicsPushContext(context)
+                    string.draw(at: CGPoint(x: floor((size.width - stringBounds.width) * 0.5), y: floor((size.height - stringBounds.height) * 0.5)))
+                    UIGraphicsPopContext()
+                })
+                self.iconLayer.contents = image?.cgImage
+            case .customFile:
+                self.iconLayer.contents = nil
+            }
+            
+            if case let .customFile(customFile) = badge {
+                let customFileLayer: InlineFileIconLayer
+                if let current = self.customFileLayer {
+                    customFileLayer = current
+                } else {
+                    customFileLayer = InlineFileIconLayer(
+                        context: self.context,
+                        userLocation: .other,
+                        attemptSynchronousLoad: false,
+                        file: customFile,
+                        cache: self.context.animationCache,
+                        renderer: self.context.animationRenderer,
+                        unique: false,
+                        placeholderColor: .clear,
+                        pointSize: CGSize(width: 18.0, height: 18.0),
+                        dynamicColor: nil
+                    )
+                    self.customFileLayer = customFileLayer
+                    self.layer.addSublayer(customFileLayer)
+                }
+                let _ = customFileLayer
+            } else {
+                if let customFileLayer = self.customFileLayer {
+                    self.customFileLayer = nil
+                    customFileLayer.removeFromSuperlayer()
+                }
             }
         }
         
@@ -652,6 +702,17 @@ private final class PremiumBadgeView: UIView {
             iconInset = 0.0
         case .locked:
             iconInset = 0.0
+        case .text, .customFile:
+            iconInset = 0.0
+        }
+        
+        switch badge {
+        case .text, .customFile:
+            self.contentLayer.isHidden = true
+            self.overlayColorLayer.isHidden = true
+        default:
+            self.contentLayer.isHidden = false
+            self.overlayColorLayer.isHidden = false
         }
         
         self.overlayColorLayer.backgroundColor = backgroundColor.cgColor
@@ -663,6 +724,11 @@ private final class PremiumBadgeView: UIView {
         transition.setCornerRadius(layer: self.overlayColorLayer, cornerRadius: min(size.width / 2.0, size.height / 2.0))
         
         transition.setFrame(layer: self.iconLayer, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: iconInset, dy: iconInset))
+        
+        if let customFileLayer = self.customFileLayer {
+            let iconSize = CGSize(width: 18.0, height: 18.0)
+            transition.setFrame(layer: customFileLayer, frame: CGRect(origin: CGPoint(), size: iconSize))
+        }
     }
 }
 
@@ -2608,6 +2674,8 @@ public final class EmojiPagerContentComponent: Component {
             case none
             case locked
             case premium
+            case text(String)
+            case customFile(TelegramMediaFile)
         }
         
         public enum TintMode: Equatable {
@@ -3448,13 +3516,16 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
             
-            enum Badge {
+            enum Badge: Equatable {
                 case premium
                 case locked
                 case featured
+                case text(String)
+                case customFile(TelegramMediaFile)
             }
             
             public let item: Item
+            private let context: AccountContext
             
             private var content: ItemContent
             private var theme: PresentationTheme?
@@ -3566,6 +3637,7 @@ public final class EmojiPagerContentComponent: Component {
                 onUpdateDisplayPlaceholder: @escaping (Bool, Double) -> Void
             ) {
                 self.item = item
+                self.context = context
                 self.content = content
                 self.placeholderColor = placeholderColor
                 self.onUpdateDisplayPlaceholder = onUpdateDisplayPlaceholder
@@ -3717,6 +3789,7 @@ public final class EmojiPagerContentComponent: Component {
                     preconditionFailure()
                 }
                 
+                self.context = layer.context
                 self.item = layer.item
                 
                 self.content = layer.content
@@ -3837,7 +3910,7 @@ public final class EmojiPagerContentComponent: Component {
                             premiumBadgeView = current
                         } else {
                             badgeTransition = .immediate
-                            premiumBadgeView = PremiumBadgeView()
+                            premiumBadgeView = PremiumBadgeView(context: self.context)
                             self.premiumBadgeView = premiumBadgeView
                             self.addSublayer(premiumBadgeView.layer)
                         }
@@ -6202,6 +6275,10 @@ public final class EmojiPagerContentComponent: Component {
                                 badge = .locked
                             case .premium:
                                 badge = .premium
+                            case let .text(value):
+                                badge = .text(value)
+                            case let .customFile(customFile):
+                                badge = .customFile(customFile)
                             }
                         }
                         

@@ -1340,7 +1340,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: messages.values.filter { messageIds.contains($0.id) })
             
             let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true, selectForumThreads: true))
-            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode, forwardOptions in
+            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode, forwardOptions, _ in
                 guard let strongSelf = self, let strongController = peerSelectionController else {
                     return
                 }

@@ -1309,6 +1309,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     }
                                     controllerInteraction.activateMessagePinch(sourceNode)
                                 }
+                                contentMedia.playMessageEffect = { [weak controllerInteraction] message in
+                                    guard let controllerInteraction else {
+                                        return
+                                    }
+                                    controllerInteraction.playMessageEffect(message)
+                                }
                                 contentMedia.activateLocalContent = { [weak self] mode in
                                     guard let self else {
                                         return

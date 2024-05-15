@@ -27,8 +27,8 @@ extension ChatControllerImpl {
                     subjects: subjects,
                     presentMediaPicker: { [weak self] subject, saveEditedPhotos, bannedSendPhotos, bannedSendVideos, present in
                         if let strongSelf = self {
-                            strongSelf.presentMediaPicker(subject: subject, saveEditedPhotos: saveEditedPhotos, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, present: present, updateMediaPickerContext: { _ in }, completion: { [weak self] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
-                                self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                            strongSelf.presentMediaPicker(subject: subject, saveEditedPhotos: saveEditedPhotos, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, present: present, updateMediaPickerContext: { _ in }, completion: { [weak self] signals, silentPosting, scheduleTime, messageEffect, getAnimatedTransitionSource, completion in
+                                self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, messageEffect: messageEffect, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                             })
                         }
                     },

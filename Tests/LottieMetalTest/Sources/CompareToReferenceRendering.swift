@@ -79,6 +79,8 @@ func processDrawAnimation(baseCachePath: String, path: String, name: String, siz
         let _ = await cacheReferenceAnimation(baseCachePath: baseCachePath, width: Int(size.width), path: path, name: name)
     }
     
+    let renderer = SoftwareLottieRenderer(animationContainer: layer)
+    
     for i in 0 ..< min(100000, animation.frameCount) {
         let frameResult = autoreleasepool {
             let frameIndex = i % animation.frameCount
@@ -87,7 +89,7 @@ func processDrawAnimation(baseCachePath: String, path: String, name: String, siz
             let referenceImage = decompressImageFrame(data: referenceImageData)
             
             layer.update(frameIndex)
-            let image = renderLottieAnimationContainer(layer, size, true)!
+            let image = renderer.render(for: size, useReferenceRendering: true)!
             
             if let diffImage = areImagesEqual(image, referenceImage) {
                 updateImage(diffImage, referenceImage)
@@ -101,6 +103,11 @@ func processDrawAnimation(baseCachePath: String, path: String, name: String, siz
                 return true
             }
         }
+        
+        /*if #available(iOS 16.0, *) {
+            try? await Task.sleep(for: .seconds(0.1))
+        }*/
+        
         if !frameResult {
             return false
         }
@@ -159,6 +166,7 @@ func buildAnimationFolderItems(basePath: String, path: String) -> [(String, Stri
     return result
 }
 
+@available (iOS 13.0, *)
 private func processAnimationFolderItems(items: [(String, String)], countPerBucket: Int, stopOnFailure: Bool, process: @escaping (String, String, Bool) async -> Bool) async -> Bool {
     let bucketCount = items.count / countPerBucket
     var buckets: [[(String, String)]] = []
@@ -251,14 +259,16 @@ private func processAnimationFolderItemsParallel(items: [(String, String)], stop
     return result
 }
 
+@available (iOS 13.0, *)
 func processAnimationFolderAsync(basePath: String, path: String, stopOnFailure: Bool, process: @escaping (String, String, Bool) async -> Bool) async -> Bool {
     let items = buildAnimationFolderItems(basePath: basePath, path: path)
     return await processAnimationFolderItems(items: items, countPerBucket: 1, stopOnFailure: stopOnFailure, process: process)
 }
 
+@available(iOS 13.0, *)
 func processAnimationFolderParallel(basePath: String, path: String, stopOnFailure: Bool, process: @escaping (String, String, Bool) async -> Bool) async -> Bool {
     let items = buildAnimationFolderItems(basePath: basePath, path: path)
-    return await processAnimationFolderItems(items: items, countPerBucket: 16, stopOnFailure: stopOnFailure, process: process)
+    return await processAnimationFolderItemsParallel(items: items, stopOnFailure: stopOnFailure, process: process)
 }
 
 func cacheReferenceFolderPath(baseCachePath: String, width: Int, name: String) -> String {

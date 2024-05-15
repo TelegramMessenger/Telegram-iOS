@@ -2061,15 +2061,16 @@ public extension Api.functions.auth {
                 }
 }
 public extension Api.functions.auth {
-                static func requestFirebaseSms(flags: Int32, phoneNumber: String, phoneCodeHash: String, playIntegrityToken: String?, iosPushSecret: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func requestFirebaseSms(flags: Int32, phoneNumber: String, phoneCodeHash: String, safetyNetToken: String?, playIntegrityToken: String?, iosPushSecret: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1940588736)
+                    buffer.appendInt32(-1908857314)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(phoneNumber, buffer: buffer, boxed: false)
                     serializeString(phoneCodeHash, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(playIntegrityToken!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(safetyNetToken!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(playIntegrityToken!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(iosPushSecret!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "auth.requestFirebaseSms", parameters: [("flags", String(describing: flags)), ("phoneNumber", String(describing: phoneNumber)), ("phoneCodeHash", String(describing: phoneCodeHash)), ("playIntegrityToken", String(describing: playIntegrityToken)), ("iosPushSecret", String(describing: iosPushSecret))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "auth.requestFirebaseSms", parameters: [("flags", String(describing: flags)), ("phoneNumber", String(describing: phoneNumber)), ("phoneCodeHash", String(describing: phoneCodeHash)), ("safetyNetToken", String(describing: safetyNetToken)), ("playIntegrityToken", String(describing: playIntegrityToken)), ("iosPushSecret", String(describing: iosPushSecret))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -2095,12 +2096,14 @@ public extension Api.functions.auth {
                 }
 }
 public extension Api.functions.auth {
-                static func resendCode(phoneNumber: String, phoneCodeHash: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.SentCode>) {
+                static func resendCode(flags: Int32, phoneNumber: String, phoneCodeHash: String, reason: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.SentCode>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1056025023)
+                    buffer.appendInt32(-890997469)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(phoneNumber, buffer: buffer, boxed: false)
                     serializeString(phoneCodeHash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "auth.resendCode", parameters: [("phoneNumber", String(describing: phoneNumber)), ("phoneCodeHash", String(describing: phoneCodeHash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.SentCode? in
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(reason!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "auth.resendCode", parameters: [("flags", String(describing: flags)), ("phoneNumber", String(describing: phoneNumber)), ("phoneCodeHash", String(describing: phoneCodeHash)), ("reason", String(describing: reason))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.SentCode? in
                         let reader = BufferReader(buffer)
                         var result: Api.auth.SentCode?
                         if let signature = reader.readInt32() {

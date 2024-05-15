@@ -4662,6 +4662,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 reveal()
             })
             self.present(controller, in: .window(.root))
+        }, playMessageEffect: { [weak self] message in
+            guard let self else {
+                return
+            }
+            self.playMessageEffect(message: message)
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
@@ -9091,7 +9096,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    func enqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
+    func enqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, messageEffect: ChatSendMessageActionSheetController.MessageEffect? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
         self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(context: self.context, account: self.context.account, signals: signals!)
         |> deliverOnMainQueue).startStrict(next: { [weak self] items in
             if let strongSelf = self {
@@ -9145,6 +9150,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         usedCorrelationId = correlationId
                         completionImpl = nil
                     }
+                    
+                    if let messageEffect {
+                        message = message.withUpdatedAttributes { attributes in
+                            var attributes = attributes
+                            attributes.append(EffectMessageAttribute(id: messageEffect.id))
+                            return attributes
+                        }
+                    }
+                    
                     mappedMessages.append(message)
                 }
                         

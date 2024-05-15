@@ -77,9 +77,10 @@ private final class ReferenceCompareTest {
                 let _ = await cacheReferenceAnimation(baseCachePath: baseCachePath, width: sizeMapping[fileName] ?? defaultSize, path: filePath, name: fileName)
             }
             
-            var continueFromName: String? = "5138957708585599529.json"
+            var continueFromName: String?
+            //continueFromName = "778160933443732778.json"
             
-            let _ = await processAnimationFolderParallel(basePath: bundlePath, path: "", stopOnFailure: true, process: { path, name, alwaysDraw in
+            let _ = await processAnimationFolderAsync(basePath: bundlePath, path: "", stopOnFailure: true, process: { path, name, alwaysDraw in
                 if let continueFromNameValue = continueFromName {
                     if continueFromNameValue == name {
                         continueFromName = nil
@@ -109,8 +110,12 @@ public final class ViewController: UIViewController {
     override public func viewDidLoad() {
         super.viewDidLoad()
         
+        SharedDisplayLinkDriver.shared.updateForegroundState(true)
+        
         let bundlePath = Bundle.main.path(forResource: "TestDataBundle", ofType: "bundle")!
         let filePath = bundlePath + "/fireworks.json"
+        
+        let performanceFrameSize = 8
         
         self.view.layer.addSublayer(MetalEngine.shared.rootLayer)
         
@@ -119,7 +124,10 @@ public final class ViewController: UIViewController {
                 self.test = ReferenceCompareTest(view: self.view)
             }
         } else if !"".isEmpty {
-            let animationData = try! Data(contentsOf: URL(fileURLWithPath: filePath))
+            let cachedAnimation = cacheLottieMetalAnimation(path: filePath)!
+            let animation = parseCachedLottieMetalAnimation(data: cachedAnimation)!
+            
+            /*let animationData = try! Data(contentsOf: URL(fileURLWithPath: filePath))
             
             var startTime = CFAbsoluteTimeGetCurrent()
             let animation = LottieAnimation(data: animationData)!
@@ -128,9 +136,9 @@ public final class ViewController: UIViewController {
             startTime = CFAbsoluteTimeGetCurrent()
             let animationContainer = LottieAnimationContainer(animation: animation)
             animationContainer.update(0)
-            print("Build time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+            print("Build time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")*/
             
-            let lottieLayer = LottieContentLayer(animation: animationContainer)
+            let lottieLayer = LottieContentLayer(content: animation)
             lottieLayer.frame = CGRect(origin: CGPoint(x: 10.0, y: 50.0), size: CGSize(width: 256.0, height: 256.0))
             self.view.layer.addSublayer(lottieLayer)
             lottieLayer.setNeedsUpdate()
@@ -152,12 +160,14 @@ public final class ViewController: UIViewController {
                 animationContainer.update(0)
                 print("Build time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
+                let animationRenderer = SoftwareLottieRenderer(animationContainer: animationContainer)
+                
                 startTime = CFAbsoluteTimeGetCurrent()
                 var numUpdates: Int = 0
                 var frameIndex = 0
                 while true {
                     animationContainer.update(frameIndex)
-                    let _ = animationContainer.getCurrentRenderTree(for: CGSize(width: 512.0, height: 512.0))
+                    //let _ = animationRenderer.render(for: CGSize(width: CGFloat(performanceFrameSize), height: CGFloat(performanceFrameSize)), useReferenceRendering: false)
                     frameIndex = (frameIndex + 1) % animationContainer.animation.frameCount
                     numUpdates += 1
                     let timestamp = CFAbsoluteTimeGetCurrent()
@@ -176,8 +186,7 @@ public final class ViewController: UIViewController {
                 let animationInstance = LottieInstance(data: try! Data(contentsOf: URL(fileURLWithPath: filePath)), fitzModifier: .none, colorReplacements: nil, cacheKey: "")!
                 print("Load time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
-                let frameSize = 8
-                let frameBuffer = malloc(frameSize * 4 * frameSize)!
+                let frameBuffer = malloc(performanceFrameSize * 4 * performanceFrameSize)!
                 defer {
                     free(frameBuffer)
                 }
@@ -186,7 +195,7 @@ public final class ViewController: UIViewController {
                 var numUpdates: Int = 0
                 var frameIndex = 0
                 while true {
-                    animationInstance.renderFrame(with: Int32(frameIndex), into: frameBuffer, width: Int32(frameSize), height: Int32(frameSize), bytesPerRow: Int32(frameSize * 4))
+                    animationInstance.renderFrame(with: Int32(frameIndex), into: frameBuffer, width: Int32(performanceFrameSize), height: Int32(performanceFrameSize), bytesPerRow: Int32(performanceFrameSize * 4))
                     
                     frameIndex = (frameIndex + 1) % Int(animationInstance.frameCount)
                     numUpdates += 1

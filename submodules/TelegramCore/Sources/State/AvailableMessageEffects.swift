@@ -3,10 +3,6 @@ import TelegramApi
 import Postbox
 import SwiftSignalKit
 
-/*
- availableEffect flags:# premium_required:flags.3?true id:long emoticon:string static_icon_id:flags.0?long effect_sticker_id:flags.1?long effect_animation_id:flags.2?long = AvailableEffect;
- */
-
 public final class AvailableMessageEffects: Equatable, Codable {
     public final class MessageEffect: Equatable, Codable {
         private enum CodingKeys: String, CodingKey {
@@ -156,7 +152,7 @@ private extension AvailableMessageEffects.MessageEffect {
                 return nil
             }
             
-            let isPremium = (flags & (1 << 3)) != 0
+            let isPremium = (flags & (1 << 2)) != 0
             self.init(
                 id: id,
                 isPremium: isPremium,
@@ -239,7 +235,7 @@ func managedSynchronizeAvailableMessageEffects(postbox: Postbox, network: Networ
                         break
                     }
                     
-                    var signals: [Signal<Never, NoError>] = []
+                    /*var signals: [Signal<Never, NoError>] = []
                     
                     if let availableMessageEffects = _internal_cachedAvailableMessageEffects(transaction: transaction) {
                         var resources: [MediaResource] = []
@@ -271,7 +267,9 @@ func managedSynchronizeAvailableMessageEffects(postbox: Postbox, network: Networ
                     }
                     
                     return combineLatest(signals)
-                    |> ignoreValues
+                    |> ignoreValues*/
+                    
+                    return .complete()
                 }
                 |> switchToLatest
             })

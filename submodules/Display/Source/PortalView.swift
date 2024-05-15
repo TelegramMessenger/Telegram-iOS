@@ -22,4 +22,10 @@ public class PortalView {
             portalSuperlayer.insertSublayer(self.view.layer, at: UInt32(index))
         }
     }
+    
+    public func reloadPortal() {
+        if let sourceView = self.sourceView as? PortalSourceView {
+            self.reloadPortal(sourceView: sourceView)
+        }
+    }
 }

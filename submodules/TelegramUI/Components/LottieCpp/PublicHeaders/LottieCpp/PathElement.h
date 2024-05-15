@@ -1,7 +1,9 @@
-#ifndef PathElement_hpp
-#define PathElement_hpp
+#ifndef PathElement_h
+#define PathElement_h
 
-#include "Lottie/Private/Utility/Primitives/CurveVertex.hpp"
+#ifdef __cplusplus
+
+#include <LottieCpp/CurveVertex.h>
 
 namespace lottie {
 
@@ -32,7 +34,7 @@ struct PathSplitResult {
 /// We don't do this however, as it would effectively double the memory footprint
 /// of path data.
 ///
-struct PathElement {
+struct __attribute__((packed)) PathElement {
     /// Initializes a new path with length of 0
     explicit PathElement(CurveVertex const &vertex_) :
     vertex(vertex_) {
@@ -87,4 +89,6 @@ struct PathElement {
 
 }
 
-#endif /* PathElement_hpp */
+#endif
+
+#endif /* PathElement_h */

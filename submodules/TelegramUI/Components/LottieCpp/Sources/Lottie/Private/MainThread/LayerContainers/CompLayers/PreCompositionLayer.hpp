@@ -101,61 +101,86 @@ public:
     }
     
     virtual std::shared_ptr<RenderTreeNode> renderTreeNode() override {
-        if (_contentsLayer->isHidden()) {
-            return nullptr;
-        }
-        
-        std::shared_ptr<RenderTreeNode> maskNode;
-        bool invertMask = false;
-        if (_matteLayer) {
-            maskNode = _matteLayer->renderTreeNode();
-            if (maskNode && _matteType.has_value() && _matteType.value() == MatteType::Invert) {
-                invertMask = true;
+        if (!_renderTreeNode) {
+            _contentsTreeNode = std::make_shared<RenderTreeNode>(
+                CGRect(0.0, 0.0, 0.0, 0.0),
+                Vector2D(0.0, 0.0),
+                CATransform3D::identity(),
+                1.0,
+                false,
+                false,
+                std::vector<std::shared_ptr<RenderTreeNode>>(),
+                nullptr,
+                false
+            );
+            
+            std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
+            subnodes.push_back(_contentsTreeNode);
+            
+            std::shared_ptr<RenderTreeNode> maskNode;
+            bool invertMask = false;
+            if (_matteLayer) {
+                maskNode = _matteLayer->renderTreeNode();
+                if (maskNode && _matteType.has_value() && _matteType.value() == MatteType::Invert) {
+                    invertMask = true;
+                }
             }
+            
+            _renderTreeNode = std::make_shared<RenderTreeNode>(
+                CGRect(0.0, 0.0, 0.0, 0.0),
+                Vector2D(0.0, 0.0),
+                CATransform3D::identity(),
+                1.0,
+                false,
+                false,
+                subnodes,
+                maskNode,
+                invertMask
+            );
+            
+            std::vector<std::shared_ptr<RenderTreeNode>> renderTreeSubnodes;
+            for (const auto &animationLayer : _animationLayers) {
+                bool found = false;
+                for (const auto &sublayer : contentsLayer()->sublayers()) {
+                    if (animationLayer == sublayer) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) {
+                    auto node = animationLayer->renderTreeNode();
+                    if (node) {
+                        renderTreeSubnodes.push_back(node);
+                    }
+                }
+            }
+            
+            std::vector<std::shared_ptr<RenderTreeNode>> renderTreeValue;
+            auto renderTreeContentItem = std::make_shared<RenderTreeNode>(
+                CGRect(0.0, 0.0, 0.0, 0.0),
+                Vector2D(0.0, 0.0),
+                CATransform3D::identity(),
+                1.0,
+                false,
+                false,
+                renderTreeSubnodes,
+                nullptr,
+                false
+            );
+            if (renderTreeContentItem) {
+                renderTreeValue.push_back(renderTreeContentItem);
+            }
+            
+            _contentsTreeNode->_subnodes = renderTreeValue;
         }
         
-        std::vector<std::shared_ptr<RenderTreeNode>> renderTreeValue;
-        auto renderTreeContentItem = renderTree();
-        if (renderTreeContentItem) {
-            renderTreeValue.push_back(renderTreeContentItem);
-        }
-        
-        std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
-        subnodes.push_back(std::make_shared<RenderTreeNode>(
-            _contentsLayer->bounds(),
-            _contentsLayer->position(),
-            _contentsLayer->transform(),
-            _contentsLayer->opacity(),
-            _contentsLayer->masksToBounds(),
-            _contentsLayer->isHidden(),
-            nullptr,
-            renderTreeValue,
-            nullptr,
-            false
-        ));
-        
-        assert(opacity() == 1.0);
-        assert(!isHidden());
-        assert(!masksToBounds());
-        assert(transform().isIdentity());
-        assert(position() == Vector2D::Zero());
-        
-        return std::make_shared<RenderTreeNode>(
-            bounds(),
-            position(),
-            transform(),
-            opacity(),
-            masksToBounds(),
-            isHidden(),
-            nullptr,
-            subnodes,
-            maskNode,
-            invertMask
-        );
+        return _renderTreeNode;
     }
     
-    std::shared_ptr<RenderTreeNode> renderTree() {
-        std::vector<std::shared_ptr<RenderTreeNode>> result;
+    virtual void updateRenderTree() override {
+        if (_matteLayer) {
+            _matteLayer->updateRenderTree();
+        }
         
         for (const auto &animationLayer : _animationLayers) {
             bool found = false;
@@ -166,26 +191,29 @@ public:
                 }
             }
             if (found) {
-                auto node = animationLayer->renderTreeNode();
-                if (node) {
-                    result.push_back(node);
-                }
+                animationLayer->updateRenderTree();
             }
         }
         
-        std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
-        return std::make_shared<RenderTreeNode>(
-            CGRect(0.0, 0.0, 0.0, 0.0),
-            Vector2D(0.0, 0.0),
-            CATransform3D::identity(),
-            1.0,
-            false,
-            false,
-            nullptr,
-            result,
-            nullptr,
-            false
-        );
+        assert(opacity() == 1.0);
+        assert(!isHidden());
+        assert(!masksToBounds());
+        assert(transform().isIdentity());
+        assert(position() == Vector2D::Zero());
+        
+        _contentsTreeNode->_bounds = _contentsLayer->bounds();
+        _contentsTreeNode->_position = _contentsLayer->position();
+        _contentsTreeNode->_transform = _contentsLayer->transform();
+        _contentsTreeNode->_alpha = _contentsLayer->opacity();
+        _contentsTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
+        _contentsTreeNode->_isHidden = _contentsLayer->isHidden();
+        
+        _renderTreeNode->_bounds = bounds();
+        _renderTreeNode->_position = position();
+        _renderTreeNode->_transform = transform();
+        _renderTreeNode->_alpha = opacity();
+        _renderTreeNode->_masksToBounds = masksToBounds();
+        _renderTreeNode->_isHidden = isHidden();
     }
     
 private:
@@ -193,6 +221,9 @@ private:
     std::shared_ptr<NodeProperty<Vector1D>> _remappingNode;
     
     std::vector<std::shared_ptr<CompositionLayer>> _animationLayers;
+    
+    std::shared_ptr<RenderTreeNode> _renderTreeNode;
+    std::shared_ptr<RenderTreeNode> _contentsTreeNode;
 };
 
 }

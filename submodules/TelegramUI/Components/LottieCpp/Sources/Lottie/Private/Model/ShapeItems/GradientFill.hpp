@@ -5,14 +5,9 @@
 #include "Lottie/Private/Model/Keyframes/KeyframeGroup.hpp"
 #include "Lottie/Private/Parsing/JsonParsing.hpp"
 #include "Lottie/Public/Primitives/GradientColorSet.hpp"
+#include <LottieCpp/ShapeAttributes.h>
 
 namespace lottie {
-
-enum class GradientType: int {
-    None = 0,
-    Linear = 1,
-    Radial = 2
-};
 
 /// An item that define a gradient fill
 class GradientFill: public ShapeItem {

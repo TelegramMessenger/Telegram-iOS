@@ -4450,7 +4450,7 @@ public final class StoryItemSetContainerComponent: Component {
                         context: component.context,
                         animationCache: component.context.animationCache,
                         presentationData: component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme),
-                        items: reactionItems.map(ReactionContextItem.reaction),
+                        items: reactionItems.map { ReactionContextItem.reaction(item: $0, icon: .none) },
                         selectedItems: component.slice.item.storyItem.myReaction.flatMap { Set([$0]) } ?? Set(),
                         title: self.displayLikeReactions ? nil : (isGroup ? component.strings.Story_SendReactionAsGroupMessage : component.strings.Story_SendReactionAsMessage),
                         reactionsLocked: false,

@@ -183,10 +183,10 @@ private final class AttachmentFileContext: AttachmentMediaPickerContext {
     func setCaption(_ caption: NSAttributedString) {
     }
     
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, messageEffect: ChatSendMessageActionSheetController.MessageEffect?) {
     }
     
-    func schedule() {
+    func schedule(messageEffect: ChatSendMessageActionSheetController.MessageEffect?) {
     }
     
     func mainButtonAction() {

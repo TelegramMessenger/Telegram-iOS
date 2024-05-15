@@ -12,17 +12,8 @@ _inputMatte(inputMatte) {
     addSublayer(_inputMatte);
 }
 
-void InvertedMatteLayer::setup() {
-    _inputMatte->setLayerDelegate(shared_from_base<InvertedMatteLayer>());
-}
-
-void InvertedMatteLayer::frameUpdated(double frame) {
-    setNeedsDisplay(true);
-}
-
 std::shared_ptr<InvertedMatteLayer> makeInvertedMatteLayer(std::shared_ptr<CompositionLayer> compositionLayer) {
     auto result = std::make_shared<InvertedMatteLayer>(compositionLayer);
-    result->setup();
     return result;
 }
 

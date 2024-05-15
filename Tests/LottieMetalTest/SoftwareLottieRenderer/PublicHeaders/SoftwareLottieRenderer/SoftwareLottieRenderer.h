@@ -11,7 +11,14 @@ extern "C" {
 #endif
 
 CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path);
-UIImage * _Nullable renderLottieAnimationContainer(LottieAnimationContainer * _Nonnull animationContainer, CGSize size, bool useReferenceRendering);
+
+@interface SoftwareLottieRenderer : NSObject
+
+- (instancetype _Nonnull)initWithAnimationContainer:(LottieAnimationContainer * _Nonnull)animationContainer;
+
+- (UIImage * _Nullable)renderForSize:(CGSize)size useReferenceRendering:(bool)useReferenceRendering;
+
+@end
 
 #ifdef __cplusplus
 }

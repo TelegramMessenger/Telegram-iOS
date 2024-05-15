@@ -133,7 +133,7 @@ public class DrawingReactionEntityView: DrawingStickerEntityView {
             context: self.context,
             animationCache: self.context.animationCache,
             presentationData: self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme),
-            items: reactionItems.map(ReactionContextItem.reaction),
+            items: reactionItems.map { ReactionContextItem.reaction(item: $0, icon: .none) },
             selectedItems: Set(),
             title: nil,
             reactionsLocked: false,

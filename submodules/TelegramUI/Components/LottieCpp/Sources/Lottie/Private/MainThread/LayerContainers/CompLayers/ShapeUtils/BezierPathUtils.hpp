@@ -2,7 +2,7 @@
 #define BezierPaths_h
 
 #include "Lottie/Private/Model/ShapeItems/Ellipse.hpp"
-#include "Lottie/Private/Utility/Primitives/BezierPath.hpp"
+#include <LottieCpp/BezierPath.h>
 #include "Lottie/Private/Utility/Primitives/CompoundBezierPath.hpp"
 #include "Lottie/Private/Model/ShapeItems/Trim.hpp"
 

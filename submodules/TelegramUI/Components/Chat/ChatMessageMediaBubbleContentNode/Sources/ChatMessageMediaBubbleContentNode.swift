@@ -71,6 +71,12 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             }
             strongSelf.item?.controllerInteraction.activateMessagePinch(sourceNode)
         }
+        self.interactiveImageNode.playMessageEffect = { [weak self] message in
+            guard let strongSelf = self, let _ = strongSelf.item else {
+                return
+            }
+            strongSelf.item?.controllerInteraction.playMessageEffect(message)
+        }
     }
     
     required public init?(coder aDecoder: NSCoder) {
@@ -403,8 +409,6 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                                     }
                                     item.controllerInteraction.displayImportedMessageTooltip(strongSelf.interactiveImageNode.dateAndStatusNode)
                                 }
-                            } else {
-                                strongSelf.interactiveImageNode.dateAndStatusNode.pressed = nil
                             }
                         }
                     })

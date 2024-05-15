@@ -1,4 +1,4 @@
-#include "CurveVertex.hpp"
+#include <LottieCpp/CurveVertex.h>
 
 namespace lottie {
 

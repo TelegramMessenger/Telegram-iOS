@@ -24,6 +24,7 @@ objc_library(
     ],
     deps = [
         "//submodules/TelegramUI/Components/LottieCpp",
+        "//Tests/LottieMetalTest/thorvg",
     ],
     sdk_frameworks = [
         "Foundation",

@@ -260,6 +260,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openStickerEditor: () -> Void
     public let openPhoneContextMenu: (OpenPhone) -> Void
     public let openAgeRestrictedMessageMedia: (Message, @escaping () -> Void) -> Void
+    public let playMessageEffect: (Message) -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -387,6 +388,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         openStickerEditor: @escaping () -> Void,
         openPhoneContextMenu: @escaping (OpenPhone) -> Void,
         openAgeRestrictedMessageMedia: @escaping (Message, @escaping () -> Void) -> Void,
+        playMessageEffect: @escaping (Message) -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -494,6 +496,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.openStickerEditor = openStickerEditor
         self.openPhoneContextMenu = openPhoneContextMenu
         self.openAgeRestrictedMessageMedia = openAgeRestrictedMessageMedia
+        self.playMessageEffect = playMessageEffect
         
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures

@@ -1,5 +1,7 @@
-#ifndef CurveVertex_hpp
-#define CurveVertex_hpp
+#ifndef CurveVertex_h
+#define CurveVertex_h
+
+#ifdef __cplusplus
 
 #include <LottieCpp/Vectors.h>
 #include <LottieCpp/CGPath.h>
@@ -26,7 +28,7 @@ struct CurveVertexSplitResult {
 };
 
 /// A single vertex with an in and out tangent
-struct CurveVertex {
+struct __attribute__((packed)) CurveVertex {
 private:
     /// Initializes a curve point with absolute or relative values
     explicit CurveVertex(Vector2D const &point_, Vector2D const &inTangent_, Vector2D const &outTangent_, bool isRelative_) :
@@ -68,7 +70,6 @@ public:
         
 public:
     Vector2D point = Vector2D::Zero();
-    
     Vector2D inTangent = Vector2D::Zero();
     Vector2D outTangent = Vector2D::Zero();
     
@@ -193,5 +194,7 @@ public:
 };
 
 }
+
+#endif
 
 #endif /* CurveVertex_hpp */

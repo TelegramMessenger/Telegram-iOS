@@ -110,7 +110,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
                 return
             }
             if !strongSelf.sendButtonHasApplyIcon {
-                strongSelf.sendButtonLongPressed?(strongSelf.sendContainerNode, recognizer)
+                strongSelf.sendButtonLongPressed?(strongSelf, recognizer)
             }
         }
         

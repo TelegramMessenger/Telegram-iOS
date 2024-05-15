@@ -886,6 +886,7 @@ public enum CollectibleItemInfoScreenSubject {
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
+    var networkArguments: NetworkInitializationArguments { get }
     var mainWindow: Window1? { get }
     var accountManager: AccountManager<TelegramAccountManagerTypes> { get }
     var appLockContext: AppLockContext { get }
@@ -1066,6 +1067,29 @@ public protocol AccountGroupCallContext: AnyObject {
 }
 
 public protocol AccountGroupCallContextCache: AnyObject {
+}
+
+public final class ChatSendMessageActionSheetControllerMessageEffect {
+    public let id: Int64
+    
+    public init(id: Int64) {
+        self.id = id
+    }
+}
+
+public enum ChatSendMessageActionSheetControllerSendMode {
+    case generic
+    case silently
+    case whenOnline
+}
+
+public protocol ChatSendMessageActionSheetControllerSourceSendButtonNode: ASDisplayNode {
+    func makeCustomContents() -> UIView?
+}
+
+public protocol ChatSendMessageActionSheetController: ViewController {
+    typealias SendMode = ChatSendMessageActionSheetControllerSendMode
+    typealias MessageEffect = ChatSendMessageActionSheetControllerMessageEffect
 }
 
 public protocol AccountContext: AnyObject {

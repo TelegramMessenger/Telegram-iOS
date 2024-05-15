@@ -52,6 +52,59 @@ private func generateTexture(device: MTLDevice, sideSize: Int, msaaSampleCount: 
     return device.makeTexture(descriptor: textureDescriptor)!
 }
 
+public func cacheLottieMetalAnimation(path: String) -> Data? {
+    if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+        let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
+        if let lottieAnimation = LottieAnimation(data: decompressedData) {
+            let animationContainer = LottieAnimationContainer(animation: lottieAnimation)
+            
+            let startTime = CFAbsoluteTimeGetCurrent()
+            
+            let buffer = WriteBuffer()
+            var frameMapping = SerializedLottieMetalFrameMapping()
+            frameMapping.size = animationContainer.animation.size
+            frameMapping.frameCount = animationContainer.animation.frameCount
+            frameMapping.framesPerSecond = animationContainer.animation.framesPerSecond
+            for i in 0 ..< frameMapping.frameCount {
+                frameMapping.frameRanges[i] = 0 ..< 1
+            }
+            serializeFrameMapping(buffer: buffer, frameMapping: frameMapping)
+            
+            for i in 0 ..< animationContainer.animation.frameCount {
+                animationContainer.update(i)
+                let frameRangeStart = buffer.length
+                if let node = animationContainer.getCurrentRenderTree(for: CGSize(width: 512.0, height: 512.0)) {
+                    serializeNode(buffer: buffer, node: node)
+                    let frameRangeEnd = buffer.length
+                    frameMapping.frameRanges[i] = frameRangeStart ..< frameRangeEnd
+                }
+            }
+            
+            let previousLength = buffer.length
+            buffer.length = 0
+            serializeFrameMapping(buffer: buffer, frameMapping: frameMapping)
+            buffer.length = previousLength
+            
+            buffer.trim()
+            let deltaTime = (CFAbsoluteTimeGetCurrent() - startTime)
+            let zippedData = TGGZipData(buffer.data, 1.0)
+            print("Serialized in \(deltaTime * 1000.0) size: \(zippedData.count / (1 * 1024 * 1024)) MB")
+            
+            return zippedData
+        }
+    }
+    return nil
+}
+
+public func parseCachedLottieMetalAnimation(data: Data) -> LottieContentLayer.Content? {
+    if let unzippedData = TGGUnzipData(data, 32 * 1024 * 1024) {
+        let SerializedLottieMetalFrameMapping = deserializeFrameMapping(buffer: ReadBuffer(data: unzippedData))
+        let serializedFrames = (SerializedLottieMetalFrameMapping, unzippedData)
+        return .serialized(frameMapping: serializedFrames.0, data: serializedFrames.1)
+    }
+    return nil
+}
+
 private final class AnimationCacheState {
     static let shared = AnimationCacheState()
     
@@ -118,45 +171,8 @@ private final class AnimationCacheState {
             let cachePath = task.cachePath
             let queue = self.queue
             Queue.concurrentDefaultQueue().async { [weak self, weak task] in
-                if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                    let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
-                    if let lottieAnimation = LottieAnimation(data: decompressedData) {
-                        let animationContainer = LottieAnimationContainer(animation: lottieAnimation)
-                        
-                        let startTime = CFAbsoluteTimeGetCurrent()
-                        
-                        let buffer = WriteBuffer()
-                        var frameMapping = SerializedFrameMapping()
-                        frameMapping.size = animationContainer.animation.size
-                        frameMapping.frameCount = animationContainer.animation.frameCount
-                        frameMapping.framesPerSecond = animationContainer.animation.framesPerSecond
-                        for i in 0 ..< frameMapping.frameCount {
-                            frameMapping.frameRanges[i] = 0 ..< 1
-                        }
-                        serializeFrameMapping(buffer: buffer, frameMapping: frameMapping)
-                        
-                        for i in 0 ..< animationContainer.animation.frameCount {
-                            animationContainer.update(i)
-                            let frameRangeStart = buffer.length
-                            if let node = animationContainer.getCurrentRenderTree(for: CGSize(width: 512.0, height: 512.0)) {
-                                serializeNode(buffer: buffer, node: node)
-                                let frameRangeEnd = buffer.length
-                                frameMapping.frameRanges[i] = frameRangeStart ..< frameRangeEnd
-                            }
-                        }
-                        
-                        let previousLength = buffer.length
-                        buffer.length = 0
-                        serializeFrameMapping(buffer: buffer, frameMapping: frameMapping)
-                        buffer.length = previousLength
-                        
-                        buffer.trim()
-                        let deltaTime = (CFAbsoluteTimeGetCurrent() - startTime)
-                        let zippedData = TGGZipData(buffer.data, 1.0)
-                        print("Serialized in \(deltaTime * 1000.0) size: \(zippedData.count / (1 * 1024 * 1024)) MB")
-                        
-                        let _ = try? zippedData.write(to: URL(fileURLWithPath: cachePath), options: .atomic)
-                    }
+                if let zippedData = cacheLottieMetalAnimation(path: path) {
+                    let _ = try? zippedData.write(to: URL(fileURLWithPath: cachePath), options: .atomic)
                 }
                 
                 queue.async {
@@ -191,12 +207,371 @@ private final class AnimationCacheState {
     }
 }
 
+private func defaultTransformForSize(_ size: CGSize) -> CATransform3D {
+    var transform = CATransform3DIdentity
+    transform = CATransform3DScale(transform, 2.0 / size.width, 2.0 / size.height, 1.0)
+    transform = CATransform3DTranslate(transform, -size.width * 0.5, -size.height * 0.5, 0.0)
+    transform = CATransform3DTranslate(transform, 0.0, size.height, 0.0)
+    transform = CATransform3DScale(transform, 1.0, -1.0, 1.0)
+    
+    return transform
+}
+
+private final class RenderFrameState {
+    let canvasSize: CGSize
+    let frameState: PathFrameState
+    let currentBezierIndicesBuffer: PathRenderBuffer
+    let currentBuffer: PathRenderBuffer
+    
+    var transform: CATransform3D
+    
+    init(
+        canvasSize: CGSize,
+        frameState: PathFrameState,
+        currentBezierIndicesBuffer: PathRenderBuffer,
+        currentBuffer: PathRenderBuffer
+    ) {
+        self.canvasSize = canvasSize
+        self.frameState = frameState
+        self.currentBezierIndicesBuffer = currentBezierIndicesBuffer
+        self.currentBuffer = currentBuffer
+        
+        self.transform = defaultTransformForSize(canvasSize)
+    }
+    
+    var transformStack: [CATransform3D] = []
+    
+    func saveState() {
+        transformStack.append(transform)
+    }
+    
+    func restoreState() {
+        transform = transformStack.removeLast()
+    }
+    
+    func concat(_ other: CATransform3D) {
+        transform = CATransform3DConcat(other, transform)
+    }
+    
+    private func fillPath(path: LottiePath, shading: PathShading, rule: LottieFillRule, transform: CATransform3D) {
+        let fillState = PathRenderFillState(buffer: self.currentBuffer, bezierDataBuffer: self.currentBezierIndicesBuffer, fillRule: rule, shading: shading, transform: transform)
+        
+        path.enumerateItems { pathItem in
+            switch pathItem.pointee.type {
+            case .moveTo:
+                let point = pathItem.pointee.points.0
+                fillState.begin(point: SIMD2<Float>(Float(point.x), Float(point.y)))
+            case .lineTo:
+                let point = pathItem.pointee.points.0
+                fillState.addLine(to: SIMD2<Float>(Float(point.x), Float(point.y)))
+            case .curveTo:
+                let cp1 = pathItem.pointee.points.0
+                let cp2 = pathItem.pointee.points.1
+                let point = pathItem.pointee.points.2
+                
+                fillState.addCurve(
+                    to: SIMD2<Float>(Float(point.x), Float(point.y)),
+                    cp1: SIMD2<Float>(Float(cp1.x), Float(cp1.y)),
+                    cp2: SIMD2<Float>(Float(cp2.x), Float(cp2.y))
+                )
+            case .close:
+                fillState.close()
+            @unknown default:
+                break
+            }
+        }
+        
+        fillState.close()
+        
+        self.frameState.add(fill: fillState)
+    }
+    
+    private func strokePath(path: LottiePath, width: CGFloat, join: CGLineJoin, cap: CGLineCap, miterLimit: CGFloat, color: LottieColor, transform: CATransform3D) {
+        let strokeState = PathRenderStrokeState(buffer: self.currentBuffer, bezierDataBuffer: self.currentBezierIndicesBuffer, lineWidth: Float(width), lineJoin: join, lineCap: cap, miterLimit: Float(miterLimit), color: color, transform: transform)
+        
+        path.enumerateItems { pathItem in
+            switch pathItem.pointee.type {
+            case .moveTo:
+                let point = pathItem.pointee.points.0
+                strokeState.begin(point: SIMD2<Float>(Float(point.x), Float(point.y)))
+            case .lineTo:
+                let point = pathItem.pointee.points.0
+                strokeState.addLine(to: SIMD2<Float>(Float(point.x), Float(point.y)))
+            case .curveTo:
+                let cp1 = pathItem.pointee.points.0
+                let cp2 = pathItem.pointee.points.1
+                let point = pathItem.pointee.points.2
+                
+                strokeState.addCurve(
+                    to: SIMD2<Float>(Float(point.x), Float(point.y)),
+                    cp1: SIMD2<Float>(Float(cp1.x), Float(cp1.y)),
+                    cp2: SIMD2<Float>(Float(cp2.x), Float(cp2.y))
+                )
+            case .close:
+                strokeState.close()
+            @unknown default:
+                break
+            }
+        }
+        
+        strokeState.complete()
+        
+        self.frameState.add(stroke: strokeState)
+    }
+    
+    func renderNodeContent(item: LottieRenderContent, alpha: Double) {
+        if let fill = item.fill {
+            if let solidShading = fill.shading as? LottieRenderContentSolidShading {
+                self.fillPath(
+                    path: item.path,
+                    shading: .color(LottieColor(r: solidShading.color.r, g: solidShading.color.g, b: solidShading.color.b, a: solidShading.color.a * solidShading.opacity * alpha)),
+                    rule: fill.fillRule,
+                    transform: transform
+                )
+            } else if let gradientShading = fill.shading as? LottieRenderContentGradientShading {
+                let gradientType: PathShading.Gradient.GradientType
+                switch gradientShading.gradientType {
+                case .linear:
+                    gradientType = .linear
+                case .radial:
+                    gradientType = .radial
+                @unknown default:
+                    gradientType = .linear
+                }
+                var colorStops: [PathShading.Gradient.ColorStop] = []
+                for colorStop in gradientShading.colorStops {
+                    colorStops.append(PathShading.Gradient.ColorStop(
+                        color: LottieColor(r: colorStop.color.r, g: colorStop.color.g, b: colorStop.color.b, a: colorStop.color.a * gradientShading.opacity * alpha),
+                        location: Float(colorStop.location)
+                    ))
+                }
+                let gradientShading = PathShading.Gradient(
+                    gradientType: gradientType,
+                    colorStops: colorStops,
+                    start: SIMD2<Float>(Float(gradientShading.start.x), Float(gradientShading.start.y)),
+                    end: SIMD2<Float>(Float(gradientShading.end.x), Float(gradientShading.end.y))
+                )
+                self.fillPath(
+                    path: item.path,
+                    shading: .gradient(gradientShading),
+                    rule: fill.fillRule,
+                    transform: transform
+                )
+            }
+        } else if let stroke = item.stroke {
+            if let solidShading = stroke.shading as? LottieRenderContentSolidShading {
+                let color = solidShading.color
+                strokePath(
+                    path: item.path,
+                    width: stroke.lineWidth,
+                    join: stroke.lineJoin,
+                    cap: stroke.lineCap,
+                    miterLimit: stroke.miterLimit,
+                    color: LottieColor(r: color.r, g: color.g, b: color.b, a: color.a * solidShading.opacity * alpha),
+                    transform: transform
+                )
+            }
+        }
+    }
+    
+    func renderNode(node: LottieRenderNode, globalSize: CGSize, parentAlpha: CGFloat) {
+        let normalizedOpacity = node.opacity
+        let layerAlpha = normalizedOpacity * parentAlpha
+        
+        if node.isHidden || normalizedOpacity == 0.0 {
+            return
+        }
+        
+        saveState()
+        
+        var needsTempContext = false
+        if node.mask != nil {
+            needsTempContext = true
+        } else {
+            needsTempContext = (layerAlpha != 1.0 && !node.hasSimpleContents) || node.masksToBounds
+        }
+        
+        var maskSurface: PathFrameState.MaskSurface?
+        
+        if needsTempContext {
+            if node.mask != nil || node.masksToBounds {
+                var maskMode: PathFrameState.MaskSurface.Mode = .regular
+                
+                frameState.pushOffscreen(width: Int(node.globalRect.width), height: Int(node.globalRect.height))
+                saveState()
+                
+                transform = defaultTransformForSize(node.globalRect.size)
+                concat(CATransform3DMakeTranslation(-node.globalRect.minX, -node.globalRect.minY, 0.0))
+                concat(node.globalTransform)
+                
+                if node.masksToBounds {
+                    let fillState = PathRenderFillState(buffer: self.currentBuffer, bezierDataBuffer: self.currentBezierIndicesBuffer, fillRule: .evenOdd, shading: .color(.init(r: 1.0, g: 1.0, b: 1.0, a: 1.0)), transform: transform)
+                    
+                    fillState.begin(point: SIMD2<Float>(Float(node.bounds.minX), Float(node.bounds.minY)))
+                    fillState.addLine(to: SIMD2<Float>(Float(node.bounds.minX), Float(node.bounds.maxY)))
+                    fillState.addLine(to: SIMD2<Float>(Float(node.bounds.maxX), Float(node.bounds.maxY)))
+                    fillState.addLine(to: SIMD2<Float>(Float(node.bounds.maxX), Float(node.bounds.minY)))
+                    fillState.close()
+                    
+                    frameState.add(fill: fillState)
+                }
+                if let maskNode = node.mask {
+                    if maskNode.isInvertedMatte {
+                        maskMode = .inverse
+                    }
+                    renderNode(node: maskNode, globalSize: globalSize, parentAlpha: 1.0)
+                }
+                
+                restoreState()
+                
+                maskSurface = frameState.popOffscreenMask(mode: maskMode)
+            }
+            
+            frameState.pushOffscreen(width: Int(node.globalRect.width), height: Int(node.globalRect.height))
+            saveState()
+            
+            transform = defaultTransformForSize(node.globalRect.size)
+            concat(CATransform3DMakeTranslation(-node.globalRect.minX, -node.globalRect.minY, 0.0))
+            concat(node.globalTransform)
+        } else {
+            concat(CATransform3DMakeTranslation(node.position.x, node.position.y, 0.0))
+            concat(CATransform3DMakeTranslation(-node.bounds.origin.x, -node.bounds.origin.y, 0.0))
+            concat(node.transform)
+        }
+        
+        var renderAlpha: CGFloat = 1.0
+        if needsTempContext {
+            renderAlpha = 1.0
+        } else {
+            renderAlpha = layerAlpha
+        }
+        
+        if let renderContent = node.renderContent {
+            renderNodeContent(item: renderContent, alpha: renderAlpha)
+        }
+        
+        for subnode in node.subnodes {
+            renderNode(node: subnode, globalSize: globalSize, parentAlpha: renderAlpha)
+        }
+        
+        if needsTempContext {
+            restoreState()
+            
+            concat(CATransform3DMakeTranslation(node.position.x, node.position.y, 0.0))
+            concat(CATransform3DMakeTranslation(-node.bounds.origin.x, -node.bounds.origin.y, 0.0))
+            concat(node.transform)
+            concat(CATransform3DInvert(node.globalTransform))
+            
+            frameState.popOffscreen(rect: node.globalRect, transform: transform, opacity: Float(layerAlpha), mask: maskSurface)
+        }
+        
+        restoreState()
+    }
+    
+    func renderNode(animationContainer: LottieAnimationContainer, node: LottieRenderNodeProxy, globalSize: CGSize, parentAlpha: CGFloat) {
+        let normalizedOpacity = node.layer.opacity
+        let layerAlpha = normalizedOpacity * parentAlpha
+        
+        if node.layer.isHidden || normalizedOpacity == 0.0 {
+            return
+        }
+        
+        saveState()
+        
+        var needsTempContext = false
+        if node.maskId != 0 {
+            needsTempContext = true
+        } else {
+            needsTempContext = (layerAlpha != 1.0 && !node.hasSimpleContents) || node.layer.masksToBounds
+        }
+        
+        var maskSurface: PathFrameState.MaskSurface?
+        
+        if needsTempContext {
+            if node.maskId != 0 || node.layer.masksToBounds {
+                var maskMode: PathFrameState.MaskSurface.Mode = .regular
+                
+                frameState.pushOffscreen(width: Int(node.globalRect.width), height: Int(node.globalRect.height))
+                saveState()
+                
+                transform = defaultTransformForSize(node.globalRect.size)
+                concat(CATransform3DMakeTranslation(-node.globalRect.minX, -node.globalRect.minY, 0.0))
+                concat(node.globalTransform)
+                
+                if node.layer.masksToBounds {
+                    let fillState = PathRenderFillState(buffer: self.currentBuffer, bezierDataBuffer: self.currentBezierIndicesBuffer, fillRule: .evenOdd, shading: .color(.init(r: 1.0, g: 1.0, b: 1.0, a: 1.0)), transform: transform)
+                    
+                    fillState.begin(point: SIMD2<Float>(Float(node.layer.bounds.minX), Float(node.layer.bounds.minY)))
+                    fillState.addLine(to: SIMD2<Float>(Float(node.layer.bounds.minX), Float(node.layer.bounds.maxY)))
+                    fillState.addLine(to: SIMD2<Float>(Float(node.layer.bounds.maxX), Float(node.layer.bounds.maxY)))
+                    fillState.addLine(to: SIMD2<Float>(Float(node.layer.bounds.maxX), Float(node.layer.bounds.minY)))
+                    fillState.close()
+                    
+                    frameState.add(fill: fillState)
+                }
+                if node.maskId != 0 {
+                    let maskNode = animationContainer.getRenderNodeProxy(byId: node.maskId)
+                    if maskNode.isInvertedMatte {
+                        maskMode = .inverse
+                    }
+                    renderNode(animationContainer: animationContainer, node: maskNode, globalSize: globalSize, parentAlpha: 1.0)
+                }
+                
+                restoreState()
+                
+                maskSurface = frameState.popOffscreenMask(mode: maskMode)
+            }
+            
+            frameState.pushOffscreen(width: Int(node.globalRect.width), height: Int(node.globalRect.height))
+            saveState()
+            
+            transform = defaultTransformForSize(node.globalRect.size)
+            concat(CATransform3DMakeTranslation(-node.globalRect.minX, -node.globalRect.minY, 0.0))
+            concat(node.globalTransform)
+        } else {
+            concat(CATransform3DMakeTranslation(node.layer.position.x, node.layer.position.y, 0.0))
+            concat(CATransform3DMakeTranslation(-node.layer.bounds.origin.x, -node.layer.bounds.origin.y, 0.0))
+            concat(node.layer.transform)
+        }
+        
+        var renderAlpha: CGFloat = 1.0
+        if needsTempContext {
+            renderAlpha = 1.0
+        } else {
+            renderAlpha = layerAlpha
+        }
+        
+        /*if let renderContent = node.renderContent {
+            renderNodeContent(item: renderContent, alpha: renderAlpha)
+        }*/
+        assert(false)
+        
+        for i in 0 ..< node.subnodeCount {
+            let subnode = animationContainer.getRenderNodeSubnodeProxy(byId: node.internalId, index: i)
+            renderNode(animationContainer: animationContainer, node: subnode, globalSize: globalSize, parentAlpha: renderAlpha)
+        }
+        
+        if needsTempContext {
+            restoreState()
+            
+            concat(CATransform3DMakeTranslation(node.layer.position.x, node.layer.position.y, 0.0))
+            concat(CATransform3DMakeTranslation(-node.layer.bounds.origin.x, -node.layer.bounds.origin.y, 0.0))
+            concat(node.layer.transform)
+            concat(CATransform3DInvert(node.globalTransform))
+            
+            frameState.popOffscreen(rect: node.globalRect, transform: transform, opacity: Float(layerAlpha), mask: maskSurface)
+        }
+        
+        restoreState()
+    }
+}
+
 public final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubject {
-    enum Content {
-        case serialized(frameMapping: SerializedFrameMapping, data: Data)
+    public enum Content {
+        case serialized(frameMapping: SerializedLottieMetalFrameMapping, data: Data)
         case animation(LottieAnimationContainer)
         
-        var size: CGSize {
+        public var size: CGSize {
             switch self {
             case let .serialized(frameMapping, _):
                 return frameMapping.size
@@ -205,7 +580,7 @@ public final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubje
             }
         }
         
-        var frameCount: Int {
+        public var frameCount: Int {
             switch self {
             case let .serialized(frameMapping, _):
                 return frameMapping.frameCount
@@ -214,7 +589,7 @@ public final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubje
             }
         }
         
-        var framesPerSecond: Int {
+        public var framesPerSecond: Int {
             switch self {
             case let .serialized(frameMapping, _):
                 return frameMapping.framesPerSecond
@@ -288,7 +663,7 @@ public final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubje
         }
     }
     
-    init(content: Content) {
+    public init(content: Content) {
         self.content = content
         
         super.init()
@@ -312,71 +687,7 @@ public final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubje
         fatalError("init(coder:) has not been implemented")
     }
     
-    private func fillPath(frameState: PathFrameState, path: LottiePath, shading: PathShading, rule: LottieFillRule, transform: CATransform3D) {
-        let fillState = PathRenderFillState(buffer: self.currentBuffer, bezierDataBuffer: self.currentBezierIndicesBuffer, fillRule: rule, shading: shading, transform: transform)
-        
-        path.enumerateItems { pathItem in
-            switch pathItem.pointee.type {
-            case .moveTo:
-                let point = pathItem.pointee.points.0
-                fillState.begin(point: SIMD2<Float>(Float(point.x), Float(point.y)))
-            case .lineTo:
-                let point = pathItem.pointee.points.0
-                fillState.addLine(to: SIMD2<Float>(Float(point.x), Float(point.y)))
-            case .curveTo:
-                let cp1 = pathItem.pointee.points.0
-                let cp2 = pathItem.pointee.points.1
-                let point = pathItem.pointee.points.2
-                
-                fillState.addCurve(
-                    to: SIMD2<Float>(Float(point.x), Float(point.y)),
-                    cp1: SIMD2<Float>(Float(cp1.x), Float(cp1.y)),
-                    cp2: SIMD2<Float>(Float(cp2.x), Float(cp2.y))
-                )
-            case .close:
-                fillState.close()
-            @unknown default:
-                break
-            }
-        }
-        
-        fillState.close()
-        
-        frameState.add(fill: fillState)
-    }
-    
-    private func strokePath(frameState: PathFrameState, path: LottiePath, width: CGFloat, join: CGLineJoin, cap: CGLineCap, miterLimit: CGFloat, color: LottieColor, transform: CATransform3D) {
-        let strokeState = PathRenderStrokeState(buffer: self.currentBuffer, bezierDataBuffer: self.currentBezierIndicesBuffer, lineWidth: Float(width), lineJoin: join, lineCap: cap, miterLimit: Float(miterLimit), color: color, transform: transform)
-        
-        path.enumerateItems { pathItem in
-            switch pathItem.pointee.type {
-            case .moveTo:
-                let point = pathItem.pointee.points.0
-                strokeState.begin(point: SIMD2<Float>(Float(point.x), Float(point.y)))
-            case .lineTo:
-                let point = pathItem.pointee.points.0
-                strokeState.addLine(to: SIMD2<Float>(Float(point.x), Float(point.y)))
-            case .curveTo:
-                let cp1 = pathItem.pointee.points.0
-                let cp2 = pathItem.pointee.points.1
-                let point = pathItem.pointee.points.2
-                
-                strokeState.addCurve(
-                    to: SIMD2<Float>(Float(point.x), Float(point.y)),
-                    cp1: SIMD2<Float>(Float(cp1.x), Float(cp1.y)),
-                    cp2: SIMD2<Float>(Float(cp2.x), Float(cp2.y))
-                )
-            case .close:
-                strokeState.close()
-            @unknown default:
-                break
-            }
-        }
-        
-        strokeState.complete()
-        
-        frameState.add(stroke: strokeState)
-    }
+    private var renderNodeCache: [Int: LottieRenderNode] = [:]
     
     public func update(context: MetalEngineSubjectContext) {
         if self.bounds.isEmpty {
@@ -392,196 +703,32 @@ public final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubje
             return
         }
         
-        guard let node = content.updateAndGetRenderNode(frameIndex: self.frameIndex) else {
+        var maybeNode: LottieRenderNode?
+        if let current = self.renderNodeCache[self.frameIndex] {
+            maybeNode = current
+        } else {
+            if let value = content.updateAndGetRenderNode(frameIndex: self.frameIndex) {
+                maybeNode = value
+                //self.renderNodeCache[self.frameIndex] = value
+            }
+        }
+        guard let node = maybeNode else {
             return
-        }
-        
-        func defaultTransformForSize(_ size: CGSize) -> CATransform3D {
-            var transform = CATransform3DIdentity
-            transform = CATransform3DScale(transform, 2.0 / size.width, 2.0 / size.height, 1.0)
-            transform = CATransform3DTranslate(transform, -size.width * 0.5, -size.height * 0.5, 0.0)
-            transform = CATransform3DTranslate(transform, 0.0, size.height, 0.0)
-            transform = CATransform3DScale(transform, 1.0, -1.0, 1.0)
-            
-            return transform
-        }
-        
-        let canvasSize = size
-        var transform = defaultTransformForSize(canvasSize)
-        
-        concat(CATransform3DMakeScale(canvasSize.width / content.size.width, canvasSize.height / content.size.height, 1.0))
-        
-        var transformStack: [CATransform3D] = []
-        
-        func saveState() {
-            transformStack.append(transform)
-        }
-        
-        func restoreState() {
-            transform = transformStack.removeLast()
-        }
-        
-        func concat(_ other: CATransform3D) {
-            transform = CATransform3DConcat(other, transform)
-        }
-        
-        func renderNodeContent(frameState: PathFrameState, item: LottieRenderContent, alpha: Double) {
-            if let fill = item.fill {
-                if let solidShading = fill.shading as? LottieRenderContentSolidShading {
-                    self.fillPath(
-                        frameState: frameState,
-                        path: item.path,
-                        shading: .color(LottieColor(r: solidShading.color.r, g: solidShading.color.g, b: solidShading.color.b, a: solidShading.color.a * solidShading.opacity * alpha)),
-                        rule: fill.fillRule,
-                        transform: transform
-                    )
-                } else if let gradientShading = fill.shading as? LottieRenderContentGradientShading {
-                    let gradientType: PathShading.Gradient.GradientType
-                    switch gradientShading.gradientType {
-                    case .linear:
-                        gradientType = .linear
-                    case .radial:
-                        gradientType = .radial
-                    @unknown default:
-                        gradientType = .linear
-                    }
-                    var colorStops: [PathShading.Gradient.ColorStop] = []
-                    for colorStop in gradientShading.colorStops {
-                        colorStops.append(PathShading.Gradient.ColorStop(
-                            color: LottieColor(r: colorStop.color.r, g: colorStop.color.g, b: colorStop.color.b, a: colorStop.color.a * gradientShading.opacity * alpha),
-                            location: Float(colorStop.location)
-                        ))
-                    }
-                    let gradientShading = PathShading.Gradient(
-                        gradientType: gradientType,
-                        colorStops: colorStops,
-                        start: SIMD2<Float>(Float(gradientShading.start.x), Float(gradientShading.start.y)),
-                        end: SIMD2<Float>(Float(gradientShading.end.x), Float(gradientShading.end.y))
-                    )
-                    self.fillPath(
-                        frameState: frameState,
-                        path: item.path,
-                        shading: .gradient(gradientShading),
-                        rule: fill.fillRule,
-                        transform: transform
-                    )
-                }
-            } else if let stroke = item.stroke {
-                if let solidShading = stroke.shading as? LottieRenderContentSolidShading {
-                    let color = solidShading.color
-                    strokePath(
-                        frameState: frameState,
-                        path: item.path,
-                        width: stroke.lineWidth,
-                        join: stroke.lineJoin,
-                        cap: stroke.lineCap,
-                        miterLimit: stroke.miterLimit,
-                        color: LottieColor(r: color.r, g: color.g, b: color.b, a: color.a * solidShading.opacity * alpha),
-                        transform: transform
-                    )
-                }
-            }
-        }
-        
-        func renderNode(frameState: PathFrameState, node: LottieRenderNode, globalSize: CGSize, parentAlpha: CGFloat) {
-            let normalizedOpacity = node.opacity
-            let layerAlpha = normalizedOpacity * parentAlpha
-            
-            if node.isHidden || normalizedOpacity == 0.0 {
-                return
-            }
-            
-            saveState()
-            
-            var needsTempContext = false
-            if node.mask != nil {
-                needsTempContext = true
-            } else {
-                needsTempContext = (layerAlpha != 1.0 && !node.hasSimpleContents) || node.masksToBounds
-            }
-            
-            var maskSurface: PathFrameState.MaskSurface?
-            
-            if needsTempContext {
-                if node.mask != nil || node.masksToBounds {
-                    var maskMode: PathFrameState.MaskSurface.Mode = .regular
-                    
-                    frameState.pushOffscreen(width: Int(node.globalRect.width), height: Int(node.globalRect.height))
-                    saveState()
-                    
-                    transform = defaultTransformForSize(node.globalRect.size)
-                    concat(CATransform3DMakeTranslation(-node.globalRect.minX, -node.globalRect.minY, 0.0))
-                    concat(node.globalTransform)
-                    
-                    if node.masksToBounds {
-                        let fillState = PathRenderFillState(buffer: self.currentBuffer, bezierDataBuffer: self.currentBezierIndicesBuffer, fillRule: .evenOdd, shading: .color(.init(r: 1.0, g: 1.0, b: 1.0, a: 1.0)), transform: transform)
-                        
-                        fillState.begin(point: SIMD2<Float>(Float(node.bounds.minX), Float(node.bounds.minY)))
-                        fillState.addLine(to: SIMD2<Float>(Float(node.bounds.minX), Float(node.bounds.maxY)))
-                        fillState.addLine(to: SIMD2<Float>(Float(node.bounds.maxX), Float(node.bounds.maxY)))
-                        fillState.addLine(to: SIMD2<Float>(Float(node.bounds.maxX), Float(node.bounds.minY)))
-                        fillState.close()
-                        
-                        frameState.add(fill: fillState)
-                    }
-                    if let maskNode = node.mask {
-                        if maskNode.isInvertedMatte {
-                            maskMode = .inverse
-                        }
-                        renderNode(frameState: frameState, node: maskNode, globalSize: globalSize, parentAlpha: 1.0)
-                    }
-                    
-                    restoreState()
-                    
-                    maskSurface = frameState.popOffscreenMask(mode: maskMode)
-                }
-                
-                frameState.pushOffscreen(width: Int(node.globalRect.width), height: Int(node.globalRect.height))
-                saveState()
-                
-                transform = defaultTransformForSize(node.globalRect.size)
-                concat(CATransform3DMakeTranslation(-node.globalRect.minX, -node.globalRect.minY, 0.0))
-                concat(node.globalTransform)
-            } else {
-                concat(CATransform3DMakeTranslation(node.position.x, node.position.y, 0.0))
-                concat(CATransform3DMakeTranslation(-node.bounds.origin.x, -node.bounds.origin.y, 0.0))
-                concat(node.transform)
-            }
-            
-            var renderAlpha: CGFloat = 1.0
-            if needsTempContext {
-                renderAlpha = 1.0
-            } else {
-                renderAlpha = layerAlpha
-            }
-            
-            if let renderContent = node.renderContent {
-                renderNodeContent(frameState: frameState, item: renderContent, alpha: renderAlpha)
-            }
-            
-            for subnode in node.subnodes {
-                renderNode(frameState: frameState, node: subnode, globalSize: globalSize, parentAlpha: renderAlpha)
-            }
-            
-            if needsTempContext {
-                restoreState()
-                
-                concat(CATransform3DMakeTranslation(node.position.x, node.position.y, 0.0))
-                concat(CATransform3DMakeTranslation(-node.bounds.origin.x, -node.bounds.origin.y, 0.0))
-                concat(node.transform)
-                concat(CATransform3DInvert(node.globalTransform))
-                
-                frameState.popOffscreen(rect: node.globalRect, transform: transform, opacity: Float(layerAlpha), mask: maskSurface)
-            }
-            
-            restoreState()
         }
         
         self.currentBuffer.reset()
         self.currentBezierIndicesBuffer.reset()
         let frameState = PathFrameState(width: Int(size.width), height: Int(size.height), msaaSampleCount: self.msaaSampleCount, buffer: self.currentBuffer, bezierDataBuffer: self.currentBezierIndicesBuffer)
         
-        renderNode(frameState: frameState, node: node, globalSize: canvasSize, parentAlpha: 1.0)
+        let frameContext = RenderFrameState(
+            canvasSize: size,
+            frameState: frameState,
+            currentBezierIndicesBuffer: self.currentBezierIndicesBuffer,
+            currentBuffer: self.currentBuffer
+        )
+        frameContext.concat(CATransform3DMakeScale(frameContext.canvasSize.width / content.size.width, frameContext.canvasSize.height / content.size.height, 1.0))
+        
+        frameContext.renderNode(node: node, globalSize: frameContext.canvasSize, parentAlpha: 1.0)
         
         final class ComputeOutput {
             let pathRenderContext: PathRenderContext
@@ -693,7 +840,7 @@ public final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubje
                 self.offscreenHeap = offscreenHeap
             }
             
-            frameState.encodeOffscreen(context: state.pathRenderContext, heap: offscreenHeap, commandBuffer: commandBuffer, canvasSize: canvasSize)
+            frameState.encodeOffscreen(context: state.pathRenderContext, heap: offscreenHeap, commandBuffer: commandBuffer, canvasSize: frameContext.canvasSize)
             
             guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
                 self.multisampleTextureQueue.append(multisampleTexture)
@@ -701,7 +848,7 @@ public final class LottieContentLayer: MetalEngineSubjectLayer, MetalEngineSubje
                 return nil
             }
             
-            frameState.encodeRender(context: state.pathRenderContext, encoder: renderEncoder, canvasSize: canvasSize)
+            frameState.encodeRender(context: state.pathRenderContext, encoder: renderEncoder, canvasSize: frameContext.canvasSize)
             
             renderEncoder.endEncoding()
             
@@ -866,15 +1013,15 @@ public final class LottieMetalAnimatedStickerNode: ASDisplayNode, AnimatedSticke
                     return
                 }
                 
-                var serializedFrames: (SerializedFrameMapping, Data)?
+                var serializedFrames: (SerializedLottieMetalFrameMapping, Data)?
                 var cachePathValue: String?
                 if let cachePathPrefix {
                     let cachePath = cachePathPrefix + "-metal1"
                     cachePathValue = cachePath
                     if let data = try? Data(contentsOf: URL(fileURLWithPath: cachePath), options: .mappedIfSafe) {
                         if let unzippedData = TGGUnzipData(data, 32 * 1024 * 1024) {
-                            let serializedFrameMapping = deserializeFrameMapping(buffer: ReadBuffer(data: unzippedData))
-                            serializedFrames = (serializedFrameMapping, unzippedData)
+                            let SerializedLottieMetalFrameMapping = deserializeFrameMapping(buffer: ReadBuffer(data: unzippedData))
+                            serializedFrames = (SerializedLottieMetalFrameMapping, unzippedData)
                         }
                     }
                 }

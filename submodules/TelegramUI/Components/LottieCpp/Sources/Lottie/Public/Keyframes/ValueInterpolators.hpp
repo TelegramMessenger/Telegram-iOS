@@ -2,8 +2,8 @@
 #define ValueInterpolators_hpp
 
 #include <LottieCpp/Vectors.h>
-#include "Lottie/Public/Primitives/Color.hpp"
-#include "Lottie/Private/Utility/Primitives/BezierPath.hpp"
+#import <LottieCpp/Color.h>
+#include <LottieCpp/BezierPath.h>
 #include "Lottie/Private/Model/Text/TextDocument.hpp"
 #include "Lottie/Public/Primitives/GradientColorSet.hpp"
 #include "Lottie/Public/Primitives/DashPattern.hpp"
@@ -89,6 +89,8 @@ public:
     }
 };
 
+void batchInterpolate(std::vector<PathElement> const &from, std::vector<PathElement> const &to, BezierPath &resultPath, double amount);
+
 template<>
 struct ValueInterpolator<CurveVertex> {
 public:
@@ -155,6 +157,7 @@ public:
         
         //TODO:probably a bug in the upstream code, uncomment
         //newPath.setClosed(value.closed());
+        
         int elementCount = (int)std::min(value.elements().size(), to.elements().size());
         
         resultPath.reserveCapacity(std::max(value.elements().size(), to.elements().size()));
@@ -174,14 +177,7 @@ public:
                 resultPath.updateVertex(vertex, i, false);
             }
         } else {
-            for (int i = 0; i < elementCount; i++) {
-                const auto &fromVertex = value.elements()[i].vertex;
-                const auto &toVertex = to.elements()[i].vertex;
-                
-                auto vertex = ValueInterpolator<CurveVertex>::interpolate(fromVertex, toVertex, amount);
-                
-                resultPath.updateVertex(vertex, i, false);
-            }
+            batchInterpolate(value.elements(), to.elements(), resultPath, amount);
         }
     }
 };

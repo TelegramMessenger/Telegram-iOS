@@ -2176,7 +2176,7 @@ public extension EmojiPagerContentComponent {
         
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
-        let searchCategories: Signal<EmojiSearchCategories?, NoError> = .single(nil)
+        let searchCategories: Signal<EmojiSearchCategories?, NoError> = context.engine.stickers.emojiSearchCategories(kind: .emoji)
         
         return combineLatest(
             hasPremium(context: context, chatPeerId: nil, premiumIfSavedMessages: false),
@@ -2225,13 +2225,30 @@ public extension EmojiPagerContentComponent {
                             tintMode = .primary
                         }
                         
+                        let icon: EmojiPagerContentComponent.Item.Icon
+                        if i == 0 {
+                            if !hasPremium && item.isPremium {
+                                icon = .locked
+                            } else {
+                                icon = .none
+                            }
+                        } else {
+                            if !hasPremium && item.isPremium {
+                                icon = .locked
+                            } else if let staticIcon = item.staticIcon {
+                                icon = .customFile(staticIcon)
+                            } else {
+                                icon = .text(item.emoticon)
+                            }
+                        }
+                        
                         let animationData = EntityKeyboardAnimationData(file: itemFile, partialReference: .none)
                         let resultItem = EmojiPagerContentComponent.Item(
                             animationData: animationData,
                             content: .animation(animationData),
                             itemFile: itemFile,
                             subgroupId: nil,
-                            icon: .none,
+                            icon: icon,
                             tintMode: tintMode
                         )
                         

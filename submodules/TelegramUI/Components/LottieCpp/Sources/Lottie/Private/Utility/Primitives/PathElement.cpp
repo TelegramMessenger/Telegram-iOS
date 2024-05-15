@@ -1,4 +1,4 @@
-#include "PathElement.hpp"
+#include <LottieCpp/PathElement.h>
 
 namespace lottie {
 

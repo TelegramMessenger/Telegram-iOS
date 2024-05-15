@@ -83,7 +83,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     var requestOpenDisabledPeer: ((EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void)?
     var requestOpenPeerFromSearch: ((EnginePeer, Int64?) -> Void)?
     var requestOpenMessageFromSearch: ((EnginePeer, Int64?, EngineMessage.Id) -> Void)?
-    var requestSend: (([EnginePeer], [EnginePeer.Id: EnginePeer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
+    var requestSend: (([EnginePeer], [EnginePeer.Id: EnginePeer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?, ChatSendMessageActionSheetController.MessageEffect?) -> Void)?
     
     private var presentationData: PresentationData {
         didSet {
@@ -529,7 +529,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         forwardMessageIds = forwardMessageIds.filter { selectedMessageIds.contains($0) }
                         strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(forwardMessageIds) }) })
                     }
-                    strongSelf.textInputPanelNode?.sendMessage(.generic)
+                    strongSelf.textInputPanelNode?.sendMessage(.generic, nil)
 
                     f(.default)
                 })))
@@ -692,17 +692,17 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }
             
             let controller = makeChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputView: textInputNode.textView, emojiViewProvider: textInputPanelNode.emojiViewProvider, canSendWhenOnline: false, completion: {
-            }, sendMessage: { [weak textInputPanelNode] mode, _ in
+            }, sendMessage: { [weak textInputPanelNode] mode, messageEffect in
                 switch mode {
                 case .generic:
-                    textInputPanelNode?.sendMessage(.generic)
+                    textInputPanelNode?.sendMessage(.generic, messageEffect)
                 case .silently:
-                    textInputPanelNode?.sendMessage(.silent)
+                    textInputPanelNode?.sendMessage(.silent, messageEffect)
                 case .whenOnline:
-                    textInputPanelNode?.sendMessage(.whenOnline)
+                    textInputPanelNode?.sendMessage(.whenOnline, messageEffect)
                 }
-            }, schedule: { [weak textInputPanelNode] _ in
-                textInputPanelNode?.sendMessage(.schedule)
+            }, schedule: { [weak textInputPanelNode] messageEffect in
+                textInputPanelNode?.sendMessage(.schedule, messageEffect)
             })
             strongSelf.presentInGlobalOverlay(controller, nil)
         }, openScheduledMessages: {
@@ -825,7 +825,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 return nil
             })
             textInputPanelNode.interfaceInteraction = self.interfaceInteraction
-            textInputPanelNode.sendMessage = { [weak self] mode in
+            textInputPanelNode.sendMessage = { [weak self] mode, messageEffect in
                 guard let strongSelf = self else {
                     return
                 }
@@ -835,7 +835,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 
                 let (selectedPeers, selectedPeerMap) = strongSelf.selectedPeers
                 if !selectedPeers.isEmpty {
-                    strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode, forwardOptionsState)
+                    strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode, forwardOptionsState, messageEffect)
                 }
             }
             self.addSubnode(textInputPanelNode)

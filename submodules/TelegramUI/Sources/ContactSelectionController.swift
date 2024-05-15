@@ -451,11 +451,11 @@ final class ContactsPickerContext: AttachmentMediaPickerContext {
         self.controller?.caption = caption
     }
     
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, messageEffect: ChatSendMessageActionSheetController.MessageEffect?) {
         self.controller?.contactsNode.requestMultipleAction?(mode == .silently, mode == .whenOnline ? scheduleWhenOnlineTimestamp : nil)
     }
     
-    func schedule() {
+    func schedule(messageEffect: ChatSendMessageActionSheetController.MessageEffect?) {
         self.controller?.presentScheduleTimePicker ({ time in
             self.controller?.contactsNode.requestMultipleAction?(false, time)
         })

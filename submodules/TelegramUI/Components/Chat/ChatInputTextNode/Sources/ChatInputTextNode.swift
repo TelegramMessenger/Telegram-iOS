@@ -312,6 +312,10 @@ public final class ChatInputTextView: ChatInputTextViewImpl, UITextViewDelegate,
         }
     }
     
+    public var currentRightInset: CGFloat {
+        return self.customTextContainer.rightInset
+    }
+    
     private var didInitializePrimaryInputLanguage: Bool = false
     public var initialPrimaryLanguage: String?
     
@@ -654,6 +658,45 @@ public final class ChatInputTextView: ChatInputTextViewImpl, UITextViewDelegate,
         super.layoutSubviews()
         
         self.isUpdatingLayout = false
+    }
+    
+    public func currentTextBoundingRect() -> CGRect {
+        let glyphRange = self.customLayoutManager.glyphRange(forCharacterRange: NSRange(location: 0, length: self.textStorage.length), actualCharacterRange: nil)
+        
+        var boundingRect = CGRect()
+        var startIndex = glyphRange.lowerBound
+        while startIndex < glyphRange.upperBound {
+            var effectiveRange = NSRange(location: NSNotFound, length: 0)
+            let rect = self.customLayoutManager.lineFragmentUsedRect(forGlyphAt: startIndex, effectiveRange: &effectiveRange)
+            if boundingRect.isEmpty {
+                boundingRect = rect
+            } else {
+                boundingRect = boundingRect.union(rect)
+            }
+            if effectiveRange.location != NSNotFound {
+                startIndex = max(startIndex + 1, effectiveRange.upperBound)
+            } else {
+                break
+            }
+        }
+        return boundingRect
+    }
+    
+    public func lastLineBoundingRect() -> CGRect {
+        let glyphRange = self.customLayoutManager.glyphRange(forCharacterRange: NSRange(location: 0, length: self.textStorage.length), actualCharacterRange: nil)
+        var boundingRect = CGRect()
+        var startIndex = glyphRange.lowerBound
+        while startIndex < glyphRange.upperBound {
+            var effectiveRange = NSRange(location: NSNotFound, length: 0)
+            let rect = self.customLayoutManager.lineFragmentUsedRect(forGlyphAt: startIndex, effectiveRange: &effectiveRange)
+            boundingRect = rect
+            if effectiveRange.location != NSNotFound {
+                startIndex = max(startIndex + 1, effectiveRange.upperBound)
+            } else {
+                break
+            }
+        }
+        return boundingRect
     }
     
     public func updateTextElements() {

@@ -368,7 +368,7 @@ Vector2D Vector2D::interpolate(
     while (!foundPoint) {
         refineIterations = refineIterations + 1;
         /// First see if the next point is still less than the projected length.
-        auto nextPoint = points[closestPoint + 1];
+        auto nextPoint = points[std::min(closestPoint + 1, (int)points.size() - 1)];
         if (nextPoint.distance < accurateDistance) {
             point = nextPoint;
             closestPoint = closestPoint + 1;

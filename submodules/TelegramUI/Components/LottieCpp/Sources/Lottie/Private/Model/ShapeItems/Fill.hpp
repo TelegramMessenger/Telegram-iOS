@@ -3,17 +3,12 @@
 
 #include "Lottie/Private/Model/Keyframes/KeyframeGroup.hpp"
 #include "Lottie/Private/Model/ShapeItems/ShapeItem.hpp"
-#include "Lottie/Public/Primitives/Color.hpp"
+#import <LottieCpp/Color.h>
 #include <LottieCpp/Vectors.h>
 #include "Lottie/Private/Parsing/JsonParsing.hpp"
+#include <LottieCpp/ShapeAttributes.h>
 
 namespace lottie {
-
-enum class FillRule: int {
-    None = 0,
-    NonZeroWinding = 1,
-    EvenOdd = 2
-};
 
 class Fill: public ShapeItem {
 public:

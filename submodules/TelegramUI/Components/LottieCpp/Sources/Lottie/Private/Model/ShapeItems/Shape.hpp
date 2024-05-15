@@ -3,7 +3,7 @@
 
 #include "Lottie/Private/Model/ShapeItems/ShapeItem.hpp"
 #include "Lottie/Private/Model/ShapeItems/Ellipse.hpp"
-#include "Lottie/Private/Utility/Primitives/BezierPath.hpp"
+#include <LottieCpp/BezierPath.h>
 #include "Lottie/Private/Parsing/JsonParsing.hpp"
 
 #include <optional>

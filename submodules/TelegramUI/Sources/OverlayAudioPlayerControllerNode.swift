@@ -177,6 +177,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, ASGestu
         }, openStickerEditor: {
         }, openPhoneContextMenu: { _ in
         }, openAgeRestrictedMessageMedia: { _, _ in
+        }, playMessageEffect: { _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {

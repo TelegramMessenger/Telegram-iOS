@@ -492,7 +492,7 @@ public func bubbleMaskForType(_ type: ChatMessageBackgroundType, graphics: Princ
 }
 
 public final class ChatMessageBubbleBackdrop: ASDisplayNode {
-    private var backgroundContent: WallpaperBubbleBackgroundNode?
+    public private(set) var backgroundContent: WallpaperBubbleBackgroundNode?
     
     private var currentType: ChatMessageBackgroundType?
     private var currentMaskMode: Bool?

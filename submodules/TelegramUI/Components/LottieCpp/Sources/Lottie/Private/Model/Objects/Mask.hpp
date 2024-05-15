@@ -2,7 +2,7 @@
 #define Mask_hpp
 
 #include "Lottie/Private/Model/Keyframes/KeyframeGroup.hpp"
-#include "Lottie/Private/Utility/Primitives/BezierPath.hpp"
+#include <LottieCpp/BezierPath.h>
 #include "Lottie/Private/Parsing/JsonParsing.hpp"
 
 namespace lottie {

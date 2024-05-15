@@ -3,7 +3,7 @@
 
 #include "Lottie/Private/Model/ShapeItems/ShapeItem.hpp"
 #include "Lottie/Private/Model/ShapeItems/GradientStroke.hpp"
-#include "Lottie/Public/Primitives/Color.hpp"
+#import <LottieCpp/Color.h>
 #include "Lottie/Private/Model/Keyframes/KeyframeGroup.hpp"
 #include "Lottie/Private/Model/Objects/DashElement.hpp"
 #include "Lottie/Private/Parsing/JsonParsing.hpp"

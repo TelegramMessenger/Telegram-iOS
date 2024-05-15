@@ -38,7 +38,7 @@ Vector1D interpolate(
     double amount
 );
 
-struct Vector2D {
+struct __attribute__((packed)) Vector2D {
     static Vector2D Zero() {
         return Vector2D(0.0, 0.0);
     }

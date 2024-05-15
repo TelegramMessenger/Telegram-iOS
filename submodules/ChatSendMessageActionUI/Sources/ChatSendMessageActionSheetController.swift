@@ -11,25 +11,6 @@ import TextFormat
 import ReactionSelectionNode
 import WallpaperBackgroundNode
 
-public enum ChatSendMessageActionSheetControllerSendMode {
-    case generic
-    case silently
-    case whenOnline
-}
-
-public final class ChatSendMessageActionSheetControllerMessageEffect {
-    public let id: Int64
-    
-    public init(id: Int64) {
-        self.id = id
-    }
-}
-
-public protocol ChatSendMessageActionSheetController: ViewController {
-    typealias SendMode = ChatSendMessageActionSheetControllerSendMode
-    typealias MessageEffect = ChatSendMessageActionSheetControllerMessageEffect
-}
-
 private final class ChatSendMessageActionSheetControllerImpl: ViewController, ChatSendMessageActionSheetController {
     private var controllerNode: ChatSendMessageActionSheetControllerNode {
         return self.displayNode as! ChatSendMessageActionSheetControllerNode
@@ -203,6 +184,7 @@ public func makeChatSendMessageActionSheetController(
     gesture: ContextGesture,
     sourceSendButton: ASDisplayNode,
     textInputView: UITextView,
+    mediaPreview: ChatSendMessageContextScreenMediaPreview? = nil,
     emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?,
     wallpaperBackgroundNode: WallpaperBackgroundNode? = nil,
     attachment: Bool = false,
@@ -210,9 +192,11 @@ public func makeChatSendMessageActionSheetController(
     completion: @escaping () -> Void,
     sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void,
     schedule: @escaping (ChatSendMessageActionSheetController.MessageEffect?) -> Void,
-    reactionItems: [ReactionItem]? = nil
+    reactionItems: [ReactionItem]? = nil,
+    availableMessageEffects: AvailableMessageEffects? = nil,
+    isPremium: Bool = false
 ) -> ChatSendMessageActionSheetController {
-    if textInputView.text.isEmpty {
+    if textInputView.text.isEmpty && !"".isEmpty {
         return ChatSendMessageActionSheetControllerImpl(
             context: context,
             updatedPresentationData: updatedPresentationData,
@@ -229,7 +213,7 @@ public func makeChatSendMessageActionSheetController(
             completion: completion,
             sendMessage: sendMessage,
             schedule: schedule,
-            reactionItems: reactionItems
+            reactionItems: nil
         )
     }
     
@@ -243,6 +227,7 @@ public func makeChatSendMessageActionSheetController(
         gesture: gesture,
         sourceSendButton: sourceSendButton,
         textInputView: textInputView,
+        mediaPreview: mediaPreview,
         emojiViewProvider: emojiViewProvider,
         wallpaperBackgroundNode: wallpaperBackgroundNode,
         attachment: attachment,
@@ -250,6 +235,8 @@ public func makeChatSendMessageActionSheetController(
         completion: completion,
         sendMessage: sendMessage,
         schedule: schedule,
-        reactionItems: reactionItems
+        reactionItems: reactionItems,
+        availableMessageEffects: availableMessageEffects,
+        isPremium: isPremium
     )
 }
