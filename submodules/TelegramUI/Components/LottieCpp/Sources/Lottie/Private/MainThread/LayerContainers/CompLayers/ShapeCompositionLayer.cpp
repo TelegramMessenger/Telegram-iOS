@@ -1317,23 +1317,8 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
     }
     
     if (!_renderTreeNode) {
-        std::vector<std::shared_ptr<RenderTreeNode>> renderTreeValue;
-        renderTreeValue.push_back(_contentTree->itemTree->renderTree());
-        
-        _contentsTreeNode = std::make_shared<RenderTreeNode>(
-            CGRect(0.0, 0.0, 0.0, 0.0),
-            Vector2D(0.0, 0.0),
-            CATransform3D::identity(),
-            1.0,
-            false,
-            false,
-            renderTreeValue,
-            nullptr,
-            false
-        );
-        
         std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
-        subnodes.push_back(_contentsTreeNode);
+        subnodes.push_back(_contentTree->itemTree->renderTree());
         
         std::shared_ptr<RenderTreeNode> maskNode;
         bool invertMask = false;
@@ -1365,12 +1350,12 @@ void ShapeCompositionLayer::updateRenderTree() {
         _matteLayer->updateRenderTree();
     }
     
-    _contentsTreeNode->_bounds = _contentsLayer->bounds();
-    _contentsTreeNode->_position = _contentsLayer->position();
-    _contentsTreeNode->_transform = _contentsLayer->transform();
-    _contentsTreeNode->_alpha = _contentsLayer->opacity();
-    _contentsTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
-    _contentsTreeNode->_isHidden = _contentsLayer->isHidden();
+    _contentTree->itemTree->renderTree()->_bounds = _contentsLayer->bounds();
+    _contentTree->itemTree->renderTree()->_position = _contentsLayer->position();
+    _contentTree->itemTree->renderTree()->_transform = _contentsLayer->transform();
+    _contentTree->itemTree->renderTree()->_alpha = _contentsLayer->opacity();
+    _contentTree->itemTree->renderTree()->_masksToBounds = _contentsLayer->masksToBounds();
+    _contentTree->itemTree->renderTree()->_isHidden = _contentsLayer->isHidden();
     
     assert(position() == Vector2D::Zero());
     assert(transform().isIdentity());

@@ -27,7 +27,6 @@ private:
     bool _frameTimeInitialized = false;
     
     std::shared_ptr<RenderTreeNode> _renderTreeNode;
-    std::shared_ptr<RenderTreeNode> _contentsTreeNode;
 };
 
 }
