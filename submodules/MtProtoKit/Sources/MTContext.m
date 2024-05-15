@@ -181,6 +181,7 @@ static MTDatacenterAuthInfoMapKeyStruct parseAuthInfoMapKeyInteger(NSNumber *key
     NSMutableArray<MTWeakContextChangeListener *> *_changeListeners;
     
     MTSignal *_discoverBackupAddressListSignal;
+    MTSignal * _Nonnull (^ _Nullable _externalRequestVerification)(NSString * _Nonnull);
     
     NSMutableDictionary *_discoverDatacenterAddressActions;
     NSMutableDictionary<NSNumber *, MTDatacenterAuthAction *> *_datacenterAuthActions;
@@ -524,6 +525,25 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
     [[MTContext contextQueue] dispatchOnQueue:^ {
         _discoverBackupAddressListSignal = signal;
     } synchronous:true];
+}
+
+- (void)setExternalRequestVerification:(MTSignal * _Nonnull (^ _Nonnull)(NSString * _Nonnull))externalRequestVerification {
+    [[MTContext contextQueue] dispatchOnQueue:^ {
+        _externalRequestVerification = externalRequestVerification;
+    } synchronous:true];
+}
+
+- (MTSignal * _Nullable)performExternalRequestVerificationWithNonce:(NSString * _Nonnull)nonce {
+    __block MTSignal * _Nonnull (^ _Nullable externalRequestVerification)(NSString * _Nonnull);
+    [[MTContext contextQueue] dispatchOnQueue:^ {
+        externalRequestVerification = _externalRequestVerification;
+    } synchronous:true];
+    
+    if (externalRequestVerification != nil) {
+        return externalRequestVerification(nonce);
+    } else {
+        return [MTSignal single:nil];
+    }
 }
 
 - (NSTimeInterval)globalTime
