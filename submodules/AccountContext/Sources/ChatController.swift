@@ -971,6 +971,7 @@ public protocol ChatController: ViewController {
     var chatLocation: ChatLocation { get }
     var canReadHistory: ValuePromise<Bool> { get }
     var parentController: ViewController? { get set }
+    var customNavigationController: NavigationController? { get set }
     
     var purposefulAction: (() -> Void)? { get set }
     

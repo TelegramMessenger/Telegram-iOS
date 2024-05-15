@@ -932,7 +932,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeOverlayAudioPlayerController(context: AccountContext, chatLocation: ChatLocation, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, playlistLocation: SharedMediaPlaylistLocation?, parentNavigationController: NavigationController?) -> ViewController & OverlayAudioPlayerController
     func makePeerInfoController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, fromChat: Bool, requestsContext: PeerInvitationImportersContext?) -> ViewController?
     func makeChannelAdminController(context: AccountContext, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant) -> ViewController?
-    func makeDeviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController
+    func makeDeviceContactInfoController(context: ShareControllerAccountContext, environment: ShareControllerEnvironment, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController
     func makePeersNearbyController(context: AccountContext) -> ViewController
     func makeComposeController(context: AccountContext) -> ViewController
     func makeChatListController(context: AccountContext, location: ChatListControllerLocation, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool, previewing: Bool, enableDebugActions: Bool) -> ChatListController
@@ -1223,4 +1223,29 @@ public struct StickersSearchConfiguration {
             return .defaultValue
         }
     }
+}
+
+public protocol ShareControllerAccountContext: AnyObject {
+    var accountId: AccountRecordId { get }
+    var accountPeerId: EnginePeer.Id { get }
+    var stateManager: AccountStateManager { get }
+    var engineData: TelegramEngine.EngineData { get }
+    var animationCache: AnimationCache { get }
+    var animationRenderer: MultiAnimationRenderer { get }
+    var contentSettings: ContentSettings { get }
+    var appConfiguration: AppConfiguration { get }
+    
+    func resolveInlineStickers(fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>
+}
+
+public protocol ShareControllerEnvironment: AnyObject {
+    var presentationData: PresentationData { get }
+    var updatedPresentationData: Signal<PresentationData, NoError> { get }
+    var isMainApp: Bool { get }
+    var energyUsageSettings: EnergyUsageSettings { get }
+    
+    var mediaManager: MediaManager? { get }
+    
+    func setAccountUserInterfaceInUse(id: AccountRecordId) -> Disposable
+    func donateSendMessageIntent(account: ShareControllerAccountContext, peerIds: [EnginePeer.Id])
 }

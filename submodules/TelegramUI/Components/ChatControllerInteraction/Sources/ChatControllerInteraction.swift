@@ -148,6 +148,22 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         }
     }
     
+    public struct OpenPhone {
+        public var number: String
+        public var message: Message
+        public var contentNode: ContextExtractedContentContainingNode
+        public var messageNode: ASDisplayNode
+        public var progress: Promise<Bool>?
+        
+        public init(number: String, message: Message, contentNode: ContextExtractedContentContainingNode, messageNode: ASDisplayNode, progress: Promise<Bool>? = nil) {
+            self.number = number
+            self.message = message
+            self.contentNode = contentNode
+            self.messageNode = messageNode
+            self.progress = progress
+        }
+    }
+    
     public let openMessage: (Message, OpenMessageParams) -> Bool
     public let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void
     public let openPeerMention: (String, Promise<Bool>?) -> Void
@@ -242,6 +258,8 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openRecommendedChannelContextMenu: (EnginePeer, UIView, ContextGesture?) -> Void
     public let openGroupBoostInfo: (EnginePeer.Id?, Int) -> Void
     public let openStickerEditor: () -> Void
+    public let openPhoneContextMenu: (OpenPhone) -> Void
+    public let openAgeRestrictedMessageMedia: (Message, @escaping () -> Void) -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -367,6 +385,8 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         openRecommendedChannelContextMenu: @escaping (EnginePeer, UIView, ContextGesture?) -> Void,
         openGroupBoostInfo: @escaping (EnginePeer.Id?, Int) -> Void,
         openStickerEditor: @escaping () -> Void,
+        openPhoneContextMenu: @escaping (OpenPhone) -> Void,
+        openAgeRestrictedMessageMedia: @escaping (Message, @escaping () -> Void) -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -472,6 +492,8 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.openRecommendedChannelContextMenu = openRecommendedChannelContextMenu
         self.openGroupBoostInfo = openGroupBoostInfo
         self.openStickerEditor = openStickerEditor
+        self.openPhoneContextMenu = openPhoneContextMenu
+        self.openAgeRestrictedMessageMedia = openAgeRestrictedMessageMedia
         
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures

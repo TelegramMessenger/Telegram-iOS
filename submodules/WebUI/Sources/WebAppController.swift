@@ -234,24 +234,22 @@ public struct WebAppParameters {
     }
 }
 
-public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) -> [String: Any] {
-    let backgroundColor = presentationTheme.list.plainBackgroundColor.rgb
-    let secondaryBackgroundColor = presentationTheme.list.blocksBackgroundColor.rgb
+public func generateWebAppThemeParams(_ theme: PresentationTheme) -> [String: Any] {
     return [
-        "bg_color": Int32(bitPattern: backgroundColor),
-        "secondary_bg_color": Int32(bitPattern: secondaryBackgroundColor),
-        "text_color": Int32(bitPattern: presentationTheme.list.itemPrimaryTextColor.rgb),
-        "hint_color": Int32(bitPattern: presentationTheme.list.itemSecondaryTextColor.rgb),
-        "link_color": Int32(bitPattern: presentationTheme.list.itemAccentColor.rgb),
-        "button_color": Int32(bitPattern: presentationTheme.list.itemCheckColors.fillColor.rgb),
-        "button_text_color": Int32(bitPattern: presentationTheme.list.itemCheckColors.foregroundColor.rgb),
-        "header_bg_color": Int32(bitPattern: presentationTheme.rootController.navigationBar.opaqueBackgroundColor.rgb),
-        "accent_text_color": Int32(bitPattern: presentationTheme.list.itemAccentColor.rgb),
-        "section_bg_color": Int32(bitPattern: presentationTheme.list.itemBlocksBackgroundColor.rgb),
-        "section_header_text_color": Int32(bitPattern: presentationTheme.list.freeTextColor.rgb),
-        "subtitle_text_color": Int32(bitPattern: presentationTheme.list.itemSecondaryTextColor.rgb),
-        "destructive_text_color": Int32(bitPattern: presentationTheme.list.itemDestructiveColor.rgb),
-        "section_separator_color": Int32(bitPattern: presentationTheme.list.itemBlocksSeparatorColor.rgb)
+        "bg_color": Int32(bitPattern: theme.list.plainBackgroundColor.rgb),
+        "secondary_bg_color": Int32(bitPattern: theme.list.blocksBackgroundColor.rgb),
+        "text_color": Int32(bitPattern: theme.list.itemPrimaryTextColor.rgb),
+        "hint_color": Int32(bitPattern: theme.list.itemSecondaryTextColor.rgb),
+        "link_color": Int32(bitPattern: theme.list.itemAccentColor.rgb),
+        "button_color": Int32(bitPattern: theme.list.itemCheckColors.fillColor.rgb),
+        "button_text_color": Int32(bitPattern: theme.list.itemCheckColors.foregroundColor.rgb),
+        "header_bg_color": Int32(bitPattern: theme.rootController.navigationBar.opaqueBackgroundColor.rgb),
+        "accent_text_color": Int32(bitPattern: theme.list.itemAccentColor.rgb),
+        "section_bg_color": Int32(bitPattern: theme.list.itemBlocksBackgroundColor.rgb),
+        "section_header_text_color": Int32(bitPattern: theme.list.freeTextColor.rgb),
+        "subtitle_text_color": Int32(bitPattern: theme.list.itemSecondaryTextColor.rgb),
+        "destructive_text_color": Int32(bitPattern: theme.list.itemDestructiveColor.rgb),
+        "section_separator_color": Int32(bitPattern: theme.list.itemBlocksSeparatorColor.rgb)
     ]
 }
 

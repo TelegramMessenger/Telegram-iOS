@@ -123,6 +123,7 @@ import PeerNameColorScreen
 import ChatEmptyNode
 import ChatMediaInputStickerGridItem
 import AdsInfoScreen
+import MessageUI
 
 public enum ChatControllerPeekActions {
     case standard
@@ -224,6 +225,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var validLayout: ContainerViewLayout?
     
     public weak var parentController: ViewController?
+    public weak var customNavigationController: NavigationController?
 
     let currentChatListFilter: Int32?
     let chatNavigationStack: [ChatNavigationStackItem]
@@ -592,6 +594,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var performOpenURL: ((Message?, String, Promise<Bool>?) -> Void)?
     
     var networkSpeedEventsDisposable: Disposable?
+    
+    var messageComposeController: MFMessageComposeViewController?
     
     public var alwaysShowSearchResultsAsList: Bool = false {
         didSet {
@@ -2295,27 +2299,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }, openUrl: { [weak self] urlData in
-            if let strongSelf = self {
-                let url = urlData.url
-                let concealed = urlData.concealed
-                let message = urlData.message
-                let progress = urlData.progress
-                let forceExternal = urlData.external ?? false
-                
-                var skipConcealedAlert = false
-                if let author = message?.author, author.isVerified {
-                    skipConcealedAlert = true
-                }
-                
-                if let message, let adAttribute = message.attributes.first(where: { $0 is AdMessageAttribute }) as? AdMessageAttribute {
-                    strongSelf.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId)
-                }
-                
-                if let performOpenURL = strongSelf.performOpenURL {
-                    performOpenURL(message, url, progress)
-                } else {
-                    strongSelf.openUrl(url, concealed: concealed, forceExternal: forceExternal, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress)
-                }
+            guard let strongSelf = self else {
+                return
+            }
+            let url = urlData.url
+            let concealed = urlData.concealed
+            let message = urlData.message
+            let progress = urlData.progress
+            let forceExternal = urlData.external ?? false
+            
+            var skipConcealedAlert = false
+            if let author = message?.author, author.isVerified {
+                skipConcealedAlert = true
+            }
+            
+            if let message, let adAttribute = message.attributes.first(where: { $0 is AdMessageAttribute }) as? AdMessageAttribute {
+                strongSelf.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId)
+            }
+            
+            if let performOpenURL = strongSelf.performOpenURL {
+                performOpenURL(message, url, progress)
+            } else {
+                strongSelf.openUrl(url, concealed: concealed, forceExternal: forceExternal, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress)
             }
         }, shareCurrentLocation: { [weak self] in
             if let strongSelf = self {
@@ -4629,6 +4634,34 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.openStickerEditor()
+        }, openPhoneContextMenu: { [weak self] phoneData in
+            guard let self else {
+                return
+            }
+            phoneData.progress?.set(.single(true))
+            let _ = (self.context.engine.peers.resolvePeerByPhone(phone: phoneData.number)
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self else {
+                    return
+                }
+                phoneData.progress?.set(.single(false))
+                
+                self.openPhoneContextMenu(number: phoneData.number, peer: peer, message: phoneData.message, contentNode: phoneData.contentNode, messageNode: phoneData.messageNode, frame: phoneData.messageNode.bounds, anyRecognizer: nil, location: nil)
+            })
+        }, openAgeRestrictedMessageMedia: { [weak self] message, reveal in
+            guard let self else {
+                return
+            }
+            let controller = chatAgeRestrictionAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, completion: { [weak self] alwaysShow in
+                guard let self else {
+                    return
+                }
+                if alwaysShow {
+                    self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: "You can update the visibility of sensitive media in [Data and Storage > Show 18+ Content]().", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
+                }
+                reveal()
+            })
+            self.present(controller, in: .window(.root))
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
@@ -9511,7 +9544,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     func addPeerContact() {
         if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramUser, let peerStatusSettings = self.presentationInterfaceState.contactStatus?.peerStatusSettings, let contactData = DeviceContactExtendedData(peer: EnginePeer(peer)) {
-            self.present(context.sharedContext.makeDeviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, isSharing: true, shareViaException: peerStatusSettings.contains(.addExceptionWhenAddingContact), completion: { [weak self] peer, stableId, contactData in
+            self.present(context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: self.context), environment: ShareControllerAppEnvironment(sharedContext: self.context.sharedContext), subject: .create(peer: peer, contactData: contactData, isSharing: true, shareViaException: peerStatusSettings.contains(.addExceptionWhenAddingContact), completion: { [weak self] peer, stableId, contactData in
                 guard let strongSelf = self else {
                     return
                 }
@@ -10556,6 +10589,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else if case let .overlay(navigationController) = self.presentationInterfaceState.mode {
             return navigationController
         } else {
+            if let navigationController = self.customNavigationController {
+                return navigationController
+            }
             return nil
         }
     }

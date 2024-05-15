@@ -176,7 +176,8 @@ extension ChatControllerImpl {
             }), in: .current)
         }
 
-        self.push(calendarScreen)
+        self.effectiveNavigationController?.pushViewController(calendarScreen)
+        
         dismissCalendarScreen = { [weak calendarScreen] in
             calendarScreen?.dismiss(completion: nil)
         }
