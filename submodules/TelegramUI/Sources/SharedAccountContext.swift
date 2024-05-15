@@ -100,6 +100,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public let applicationBindings: TelegramApplicationBindings
     public let sharedContainerPath: String
     public let basePath: String
+    public let networkArguments: NetworkInitializationArguments
     public let accountManager: AccountManager<TelegramAccountManagerTypes>
     public let appLockContext: AppLockContext
     public var notificationController: NotificationContainerController? {
@@ -253,6 +254,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.applicationBindings = applicationBindings
         self.sharedContainerPath = sharedContainerPath
         self.basePath = basePath
+        self.networkArguments = networkArguments
         self.accountManager = accountManager
         self.navigateToChatImpl = navigateToChat
         self.displayUpgradeProgress = displayUpgradeProgress
