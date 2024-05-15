@@ -1034,6 +1034,7 @@ public:
                 for (int i = (int)subItems.size() - 1; i >= 0; i--) {
                     subItems[i]->initializeRenderChildren();
                     subItemNodes.push_back(subItems[i]->_renderTree);
+                    //_renderTree->_contentItem->subItems.push_back(subItems[i]->_renderTree->_contentItem);
                 }
                 
                 if (!subItemNodes.empty()) {

@@ -8,6 +8,30 @@
 
 namespace lottie {
 
+static void processRenderContentItem(std::shared_ptr<RenderTreeNodeContentItem> const &contentItem, std::optional<CGRect> &effectiveLocalBounds, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+    for (const auto &shadingVariant : contentItem->shadings) {
+        CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, shadingVariant->explicitPath.value());
+        if (shadingVariant->stroke) {
+            shapeBounds = shapeBounds.insetBy(-shadingVariant->stroke->lineWidth / 2.0, -shadingVariant->stroke->lineWidth / 2.0);
+            if (effectiveLocalBounds) {
+                effectiveLocalBounds = effectiveLocalBounds->unionWith(shapeBounds);
+            } else {
+                effectiveLocalBounds = shapeBounds;
+            }
+        } else if (shadingVariant->fill) {
+            if (effectiveLocalBounds) {
+                effectiveLocalBounds = effectiveLocalBounds->unionWith(shapeBounds);
+            } else {
+                effectiveLocalBounds = shapeBounds;
+            }
+        }
+    }
+    
+    for (const auto &subItem : contentItem->subItems) {
+        processRenderContentItem(subItem, effectiveLocalBounds, bezierPathsBoundingBoxContext);
+    }
+}
+
 static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vector2D const &globalSize, CATransform3D const &parentTransform, bool isInvertedMask, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
     if (node->isHidden() || node->alpha() == 0.0f) {
         node->renderData.isValid = false;
@@ -39,24 +63,7 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
     double alpha = node->alpha();
     
     if (node->_contentItem) {
-        RenderTreeNodeContentItem *contentItem = node->_contentItem.get();
-        for (const auto &shadingVariant : contentItem->shadings) {
-            CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, shadingVariant->explicitPath.value());
-            if (shadingVariant->stroke) {
-                shapeBounds = shapeBounds.insetBy(-shadingVariant->stroke->lineWidth / 2.0, -shadingVariant->stroke->lineWidth / 2.0);
-                if (effectiveLocalBounds) {
-                    effectiveLocalBounds = effectiveLocalBounds->unionWith(shapeBounds);
-                } else {
-                    effectiveLocalBounds = shapeBounds;
-                }
-            } else if (shadingVariant->fill) {
-                if (effectiveLocalBounds) {
-                    effectiveLocalBounds = effectiveLocalBounds->unionWith(shapeBounds);
-                } else {
-                    effectiveLocalBounds = shapeBounds;
-                }
-            }
-        }
+        processRenderContentItem(node->_contentItem, effectiveLocalBounds, bezierPathsBoundingBoxContext);
     }
     
     bool isInvertedMatte = isInvertedMask;
@@ -189,10 +196,6 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
 namespace {
 
 static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> context, std::shared_ptr<lottie::RenderTreeNodeContentItem> item) {
-    if (item->shadings.empty()) {
-        return;
-    }
-    
     for (const auto &shading : item->shadings) {
         if (shading->explicitPath->empty()) {
             continue;
@@ -358,6 +361,10 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> conte
                 }
             }
         }
+    }
+    
+    for (const auto &subItem : item->subItems) {
+        drawLottieContentItem(context, subItem);
     }
 }
 
