@@ -8,8 +8,24 @@
 
 namespace lottie {
 
-static void processRenderContentItem(std::shared_ptr<RenderTreeNodeContentItem> const &contentItem, std::optional<CGRect> &effectiveLocalBounds, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+static void processRenderContentItem(std::shared_ptr<RenderTreeNodeContentItem> const &contentItem, Vector2D const &globalSize, CATransform3D const &parentTransform, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+    auto currentTransform = parentTransform;
+    
+    CATransform3D localTransform = contentItem->transform;
+    currentTransform = localTransform * currentTransform;
+    
+    if (!currentTransform.isInvertible()) {
+        contentItem->renderData.isValid = false;
+        return;
+    }
+    
+    std::optional<CGRect> effectiveLocalBounds;
+    
+    int drawContentDescendants = 0;
+    
     for (const auto &shadingVariant : contentItem->shadings) {
+        drawContentDescendants += 1;
+        
         CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, shadingVariant->explicitPath.value());
         if (shadingVariant->stroke) {
             shapeBounds = shapeBounds.insetBy(-shadingVariant->stroke->lineWidth / 2.0, -shadingVariant->stroke->lineWidth / 2.0);
@@ -27,9 +43,86 @@ static void processRenderContentItem(std::shared_ptr<RenderTreeNodeContentItem> 
         }
     }
     
-    for (const auto &subItem : contentItem->subItems) {
-        processRenderContentItem(subItem, effectiveLocalBounds, bezierPathsBoundingBoxContext);
+    std::optional<CGRect> effectiveLocalRect;
+    if (effectiveLocalBounds.has_value()) {
+        effectiveLocalRect = effectiveLocalBounds;
     }
+    
+    std::optional<CGRect> subnodesGlobalRect;
+    
+    for (const auto &subItem : contentItem->subItems) {
+        processRenderContentItem(subItem, globalSize, currentTransform, bezierPathsBoundingBoxContext);
+        
+        drawContentDescendants += subItem->renderData.drawContentDescendants;
+        
+        if (!subItem->renderData.localRect.empty()) {
+            if (effectiveLocalRect.has_value()) {
+                effectiveLocalRect = effectiveLocalRect->unionWith(subItem->renderData.localRect);
+            } else {
+                effectiveLocalRect = subItem->renderData.localRect;
+            }
+        }
+        
+        if (subnodesGlobalRect) {
+            subnodesGlobalRect = subnodesGlobalRect->unionWith(subItem->renderData.globalRect);
+        } else {
+            subnodesGlobalRect = subItem->renderData.globalRect;
+        }
+    }
+    
+    std::optional<CGRect> fuzzyGlobalRect;
+    
+    if (effectiveLocalBounds) {
+        CGRect effectiveGlobalBounds = effectiveLocalBounds->applyingTransform(currentTransform);
+        if (fuzzyGlobalRect) {
+            fuzzyGlobalRect = fuzzyGlobalRect->unionWith(effectiveGlobalBounds);
+        } else {
+            fuzzyGlobalRect = effectiveGlobalBounds;
+        }
+    }
+    
+    if (subnodesGlobalRect) {
+        if (fuzzyGlobalRect) {
+            fuzzyGlobalRect = fuzzyGlobalRect->unionWith(subnodesGlobalRect.value());
+        } else {
+            fuzzyGlobalRect = subnodesGlobalRect;
+        }
+    }
+    
+    if (!fuzzyGlobalRect) {
+        contentItem->renderData.isValid = false;
+        return;
+    }
+    
+    CGRect globalRect(
+        std::floor(fuzzyGlobalRect->x),
+        std::floor(fuzzyGlobalRect->y),
+        std::ceil(fuzzyGlobalRect->width + fuzzyGlobalRect->x - floor(fuzzyGlobalRect->x)),
+        std::ceil(fuzzyGlobalRect->height + fuzzyGlobalRect->y - floor(fuzzyGlobalRect->y))
+    );
+    
+    if (!CGRect(0.0, 0.0, globalSize.x, globalSize.y).intersects(globalRect)) {
+        contentItem->renderData.isValid = false;
+        return;
+    }
+    
+    CGRect localRect = effectiveLocalRect.value_or(CGRect(0.0, 0.0, 0.0, 0.0)).applyingTransform(localTransform);
+    
+    contentItem->renderData.isValid = true;
+    
+    contentItem->renderData.layer._bounds = CGRect(0.0, 0.0, 0.0, 0.0);
+    contentItem->renderData.layer._position = Vector2D(0.0, 0.0);
+    contentItem->renderData.layer._transform = contentItem->transform;
+    contentItem->renderData.layer._opacity = contentItem->alpha;
+    contentItem->renderData.layer._masksToBounds = false;
+    contentItem->renderData.layer._isHidden = false;
+    
+    contentItem->renderData.globalRect = globalRect;
+    contentItem->renderData.localRect = localRect;
+    contentItem->renderData.globalTransform = currentTransform;
+    contentItem->renderData.drawsContent = effectiveLocalBounds.has_value();
+    contentItem->renderData.drawContentDescendants = drawContentDescendants;
+    contentItem->renderData.isInvertedMatte = false;
 }
 
 static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vector2D const &globalSize, CATransform3D const &parentTransform, bool isInvertedMask, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
@@ -58,13 +151,11 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
         return;
     }
     
-    std::optional<CGRect> effectiveLocalBounds;
-    
-    double alpha = node->alpha();
-    
     if (node->_contentItem) {
-        processRenderContentItem(node->_contentItem, effectiveLocalBounds, bezierPathsBoundingBoxContext);
+        processRenderContentItem(node->_contentItem, globalSize, currentTransform, bezierPathsBoundingBoxContext);
     }
+    
+    std::optional<CGRect> effectiveLocalBounds;
     
     bool isInvertedMatte = isInvertedMask;
     if (isInvertedMatte) {
@@ -179,7 +270,7 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
     node->renderData.layer._bounds = node->bounds();
     node->renderData.layer._position = node->position();
     node->renderData.layer._transform = node->transform();
-    node->renderData.layer._opacity = alpha;
+    node->renderData.layer._opacity = node->alpha();
     node->renderData.layer._masksToBounds = masksToBounds;
     node->renderData.layer._isHidden = node->isHidden();
     
@@ -196,6 +287,9 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
 namespace {
 
 static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> context, std::shared_ptr<lottie::RenderTreeNodeContentItem> item) {
+    context->saveState();
+    context->concatenate(item->transform);
+    
     for (const auto &shading : item->shadings) {
         if (shading->explicitPath->empty()) {
             continue;
@@ -366,6 +460,8 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> conte
     for (const auto &subItem : item->subItems) {
         drawLottieContentItem(context, subItem);
     }
+    
+    context->restoreState();
 }
 
 static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node, std::shared_ptr<lottieRendering::Canvas> parentContext, lottie::Vector2D const &globalSize, double parentAlpha) {

@@ -1034,10 +1034,10 @@ public:
                 for (int i = (int)subItems.size() - 1; i >= 0; i--) {
                     subItems[i]->initializeRenderChildren();
                     subItemNodes.push_back(subItems[i]->_renderTree);
-                    //_renderTree->_contentItem->subItems.push_back(subItems[i]->_renderTree->_contentItem);
+                    _renderTree->_contentItem->subItems.push_back(subItems[i]->_renderTree->_contentItem);
                 }
                 
-                if (!subItemNodes.empty()) {
+                /*if (!subItemNodes.empty()) {
                     _renderTree->_subnodes.push_back(std::make_shared<RenderTreeNode>(
                         CGRect(0.0, 0.0, 0.0, 0.0),
                         Vector2D(0.0, 0.0),
@@ -1049,7 +1049,7 @@ public:
                         nullptr,
                         false
                     ));
-                }
+                }*/
             }
         }
         
@@ -1087,6 +1087,9 @@ public:
                 containerTransform = transform->transform();
                 containerOpacity = transform->opacity();
             }
+            _renderTree->_contentItem->transform = containerTransform;
+            _renderTree->_contentItem->alpha = containerOpacity;
+            
             _renderTree->_transform = containerTransform;
             _renderTree->_alpha = containerOpacity;
             
