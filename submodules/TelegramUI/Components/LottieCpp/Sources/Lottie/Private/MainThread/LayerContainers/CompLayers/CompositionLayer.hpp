@@ -7,7 +7,6 @@
 #include "Lottie/Private/Model/Layers/LayerModel.hpp"
 #include "Lottie/Private/MainThread/LayerContainers/Utility/LayerTransformNode.hpp"
 #include "Lottie/Private/MainThread/LayerContainers/CompLayers/MaskContainerLayer.hpp"
-#include "Lottie/Private/MainThread/LayerContainers/CompLayers/CompositionLayerDelegate.hpp"
 
 #include <memory>
 
@@ -17,15 +16,11 @@ class CompositionLayer;
 class InvertedMatteLayer;
 
 /// A layer that inverses the alpha output of its input layer.
-class InvertedMatteLayer: public CALayer, public CompositionLayerDelegate {
+class InvertedMatteLayer: public CALayer {
 public:
     InvertedMatteLayer(std::shared_ptr<CompositionLayer> inputMatte);
     
-    void setup();
-    
     std::shared_ptr<CompositionLayer> _inputMatte;
-    
-    virtual void frameUpdated(double frame) override;
     
     virtual bool isInvertedMatte() const override {
         return true;
@@ -103,10 +98,6 @@ public:
                 _maskLayer->updateWithFrame(frame, forceUpdates);
             }
         }
-        
-        if (const auto delegate = _layerDelegate.lock()) {
-            delegate->frameUpdated(frame);
-        }
     }
     
     virtual void displayContentsWithFrame(double frame, bool forceUpdates) {
@@ -130,13 +121,6 @@ public:
         } else {
             setMask(nullptr);
         }
-    }
-    
-    std::weak_ptr<CompositionLayerDelegate> const &layerDelegate() const {
-        return _layerDelegate;
-    }
-    void setLayerDelegate(std::weak_ptr<CompositionLayerDelegate> const &layerDelegate) {
-        _layerDelegate = layerDelegate;
     }
     
     std::shared_ptr<CALayer> const &contentsLayer() const {
@@ -184,8 +168,6 @@ protected:
     std::optional<MatteType> _matteType;
     
 private:
-    std::weak_ptr<CompositionLayerDelegate> _layerDelegate;
-    
     std::shared_ptr<LayerTransformNode> _transformNode;
     
     std::shared_ptr<MaskContainerLayer> _maskLayer;
