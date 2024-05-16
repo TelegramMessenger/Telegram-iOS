@@ -65,9 +65,7 @@
     result.layer.isHidden = node->renderData.layer._isHidden;
     
     result.globalRect = CGRectMake(node->renderData.globalRect.x, node->renderData.globalRect.y, node->renderData.globalRect.width, node->renderData.globalRect.height);
-    result.localRect = CGRectMake(node->renderData.localRect.x, node->renderData.localRect.y, node->renderData.localRect.width, node->renderData.localRect.height);
     result.globalTransform = lottie::nativeTransform(node->renderData.globalTransform);
-    result.drawsContent = node->renderData.drawsContent;
     result.hasSimpleContents = node->renderData.drawContentDescendants <= 1;
     result.drawContentDescendants = node->renderData.drawContentDescendants;
     result.isInvertedMatte = node->renderData.isInvertedMatte;

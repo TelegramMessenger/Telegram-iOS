@@ -13,6 +13,82 @@
 
 namespace lottie {
 
+class ProcessedRenderTreeNodeData {
+public:
+    struct LayerParams {
+        CGRect _bounds;
+        Vector2D _position;
+        CATransform3D _transform;
+        double _opacity;
+        bool _masksToBounds;
+        bool _isHidden;
+        
+        LayerParams(
+            CGRect bounds_,
+            Vector2D position_,
+            CATransform3D transform_,
+            double opacity_,
+            bool masksToBounds_,
+            bool isHidden_
+        ) :
+        _bounds(bounds_),
+        _position(position_),
+        _transform(transform_),
+        _opacity(opacity_),
+        _masksToBounds(masksToBounds_),
+        _isHidden(isHidden_) {
+        }
+        
+        CGRect bounds() const {
+            return _bounds;
+        }
+        
+        Vector2D position() const {
+            return _position;
+        }
+        
+        CATransform3D transform() const {
+            return _transform;
+        }
+        
+        double opacity() const {
+            return _opacity;
+        }
+        
+        bool masksToBounds() const {
+            return _masksToBounds;
+        }
+        
+        bool isHidden() const {
+            return _isHidden;
+        }
+    };
+    
+    ProcessedRenderTreeNodeData() :
+    isValid(false),
+    layer(
+        CGRect(0.0, 0.0, 0.0, 0.0),
+        Vector2D(0.0, 0.0),
+        CATransform3D::identity(),
+        1.0,
+        false,
+        false
+    ),
+    globalRect(CGRect(0.0, 0.0, 0.0, 0.0)),
+    globalTransform(CATransform3D::identity()),
+    drawContentDescendants(false),
+    isInvertedMatte(false) {
+        
+    }
+    
+    bool isValid = false;
+    LayerParams layer;
+    CGRect globalRect;
+    CATransform3D globalTransform;
+    int drawContentDescendants;
+    bool isInvertedMatte;
+};
+
 class RenderableItem {
 public:
     enum class Type {
@@ -345,8 +421,13 @@ public:
 public:
     bool isGroup = false;
     CATransform3D transform = CATransform3D::identity();
+    double alpha = 0.0;
+    std::optional<TrimParams> trimParams;
+    std::optional<BezierPath> path;
     std::vector<std::shared_ptr<RenderTreeNodeContentShadingVariant>> shadings;
     std::vector<std::shared_ptr<RenderTreeNodeContentItem>> subItems;
+    
+    ProcessedRenderTreeNodeData renderData;
 };
 
 class RenderTreeNodeContentShadingVariant {
@@ -360,86 +441,6 @@ public:
     std::optional<std::vector<BezierPath>> explicitPath;
     
     size_t subItemLimit = 0;
-};
-
-class ProcessedRenderTreeNodeData {
-public:
-    struct LayerParams {
-        CGRect _bounds;
-        Vector2D _position;
-        CATransform3D _transform;
-        double _opacity;
-        bool _masksToBounds;
-        bool _isHidden;
-        
-        LayerParams(
-            CGRect bounds_,
-            Vector2D position_,
-            CATransform3D transform_,
-            double opacity_,
-            bool masksToBounds_,
-            bool isHidden_
-        ) :
-        _bounds(bounds_),
-        _position(position_),
-        _transform(transform_),
-        _opacity(opacity_),
-        _masksToBounds(masksToBounds_),
-        _isHidden(isHidden_) {
-        }
-        
-        CGRect bounds() const {
-            return _bounds;
-        }
-        
-        Vector2D position() const {
-            return _position;
-        }
-        
-        CATransform3D transform() const {
-            return _transform;
-        }
-        
-        double opacity() const {
-            return _opacity;
-        }
-        
-        bool masksToBounds() const {
-            return _masksToBounds;
-        }
-        
-        bool isHidden() const {
-            return _isHidden;
-        }
-    };
-    
-    ProcessedRenderTreeNodeData() :
-    isValid(false),
-    layer(
-        CGRect(0.0, 0.0, 0.0, 0.0),
-        Vector2D(0.0, 0.0),
-        CATransform3D::identity(),
-        1.0,
-        false,
-        false
-    ),
-    globalRect(CGRect(0.0, 0.0, 0.0, 0.0)),
-    localRect(CGRect(0.0, 0.0, 0.0, 0.0)),
-    globalTransform(CATransform3D::identity()),
-    drawsContent(false),
-    drawContentDescendants(false),
-    isInvertedMatte(false) {
-        
-    }
-    
-    bool isValid = false;
-    LayerParams layer;
-    CGRect globalRect;
-    CGRect localRect;
-    CATransform3D globalTransform;
-    bool drawsContent;
-    int drawContentDescendants;
-    bool isInvertedMatte;
 };
 
 class RenderTreeNode {
