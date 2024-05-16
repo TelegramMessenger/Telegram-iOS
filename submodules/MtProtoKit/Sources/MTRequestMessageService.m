@@ -922,7 +922,7 @@
                             }];
                             
                             restartRequest = true;
-                        } else if (rpcError.errorCode == 400 && [rpcError.errorDescription rangeOfString:@"APNS_VERIFY_CHECK_"].location != NSNotFound) {
+                        } else if (rpcError.errorCode == 403 && [rpcError.errorDescription rangeOfString:@"APNS_VERIFY_CHECK_"].location != NSNotFound) {
                             if (request.errorContext == nil) {
                                 request.errorContext = [[MTRequestErrorContext alloc] init];
                             }

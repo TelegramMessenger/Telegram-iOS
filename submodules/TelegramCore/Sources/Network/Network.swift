@@ -584,7 +584,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                         }
                         |> filter { $0 != nil }
                         |> take(1)
-                        |> timeout(15.0, queue: .mainQueue(), alternate: .single(nil))).start(next: { secret in
+                        |> timeout(15.0, queue: .mainQueue(), alternate: .single("APNS_PUSH_TIMEOUT"))).start(next: { secret in
                             subscriber?.putNext(secret)
                             subscriber?.putCompletion()
                         })
