@@ -1762,7 +1762,7 @@ final class StoryItemSetContainerSendMessage {
                                         
                                         self.sendMessages(view: view, peer: targetPeer, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime)
                                     } else {
-                                        let contactController = component.context.sharedContext.makeDeviceContactInfoController(context: component.context, subject: .filter(peer: peerAndContactData.0?._asPeer(), contactId: nil, contactData: contactData, completion: { [weak self, weak view] peer, contactData in
+                                        let contactController = component.context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: component.context), environment: ShareControllerAppEnvironment(sharedContext: component.context.sharedContext), subject: .filter(peer: peerAndContactData.0?._asPeer(), contactId: nil, contactData: contactData, completion: { [weak self, weak view] peer, contactData in
                                             guard let self, let view else {
                                                 return
                                             }

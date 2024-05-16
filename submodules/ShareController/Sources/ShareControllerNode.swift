@@ -349,7 +349,6 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     var disabledPeerSelected: ((EnginePeer) -> Void)?
     
     let ready = Promise<Bool>()
-    private var didSetReady = false
     
     private var controllerInteraction: ShareControllerInteraction?
     

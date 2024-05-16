@@ -371,6 +371,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-977967015] = { return Api.InputInvoice.parse_inputInvoiceMessage($0) }
     dict[-1734841331] = { return Api.InputInvoice.parse_inputInvoicePremiumGiftCode($0) }
     dict[-1020867857] = { return Api.InputInvoice.parse_inputInvoiceSlug($0) }
+    dict[497236696] = { return Api.InputInvoice.parse_inputInvoiceStars($0) }
     dict[-122978821] = { return Api.InputMedia.parse_inputMediaContact($0) }
     dict[-428884101] = { return Api.InputMedia.parse_inputMediaDice($0) }
     dict[860303448] = { return Api.InputMedia.parse_inputMediaDocument($0) }
@@ -459,6 +460,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1551868097] = { return Api.InputStorePaymentPurpose.parse_inputStorePaymentPremiumGiftCode($0) }
     dict[369444042] = { return Api.InputStorePaymentPurpose.parse_inputStorePaymentPremiumGiveaway($0) }
     dict[-1502273946] = { return Api.InputStorePaymentPurpose.parse_inputStorePaymentPremiumSubscription($0) }
+    dict[1326377183] = { return Api.InputStorePaymentPurpose.parse_inputStorePaymentStars($0) }
     dict[1012306921] = { return Api.InputTheme.parse_inputTheme($0) }
     dict[-175567375] = { return Api.InputTheme.parse_inputThemeSlug($0) }
     dict[-1881255857] = { return Api.InputThemeSettings.parse_inputThemeSettings($0) }
@@ -866,6 +868,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-425595208] = { return Api.SmsJob.parse_smsJob($0) }
     dict[-1108478618] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
     dict[1124938064] = { return Api.SponsoredMessageReportOption.parse_sponsoredMessageReportOption($0) }
+    dict[198776256] = { return Api.StarsTopupOption.parse_starsTopupOption($0) }
+    dict[1939194818] = { return Api.StarsTransaction.parse_starsTransaction($0) }
     dict[-884757282] = { return Api.StatsAbsValueAndPrev.parse_statsAbsValueAndPrev($0) }
     dict[-1237848657] = { return Api.StatsDateRangeDays.parse_statsDateRangeDays($0) }
     dict[-1901828938] = { return Api.StatsGraph.parse_statsGraph($0) }
@@ -1030,6 +1034,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[2103604867] = { return Api.Update.parse_updateSentStoryReaction($0) }
     dict[-337352679] = { return Api.Update.parse_updateServiceNotification($0) }
     dict[-245208620] = { return Api.Update.parse_updateSmsJob($0) }
+    dict[263737752] = { return Api.Update.parse_updateStarsBalance($0) }
     dict[834816008] = { return Api.Update.parse_updateStickerSets($0) }
     dict[196268545] = { return Api.Update.parse_updateStickerSetsOrder($0) }
     dict[738741697] = { return Api.Update.parse_updateStoriesStealthMode($0) }
@@ -1292,6 +1297,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1314881805] = { return Api.payments.PaymentResult.parse_paymentResult($0) }
     dict[-666824391] = { return Api.payments.PaymentResult.parse_paymentVerificationNeeded($0) }
     dict[-74456004] = { return Api.payments.SavedInfo.parse_savedInfo($0) }
+    dict[-1930105248] = { return Api.payments.StarsStatus.parse_starsStatus($0) }
     dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
     dict[541839704] = { return Api.phone.ExportedGroupCallInvite.parse_exportedGroupCallInvite($0) }
     dict[-1636664659] = { return Api.phone.GroupCall.parse_groupCall($0) }
@@ -1365,7 +1371,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
@@ -1953,6 +1959,10 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SponsoredMessageReportOption:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.StarsTopupOption:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.StarsTransaction:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.StatsAbsValueAndPrev:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StatsDateRangeDays:
@@ -2302,6 +2312,8 @@ public extension Api {
             case let _1 as Api.payments.PaymentResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.SavedInfo:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.StarsStatus:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.ValidatedRequestedInfo:
                 _1.serialize(buffer, boxed)

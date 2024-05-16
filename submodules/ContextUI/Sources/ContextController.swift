@@ -36,6 +36,7 @@ public enum ContextMenuActionItemTextLayout {
     case singleLine
     case twoLinesMax
     case secondLineWithValue(String)
+    case secondLineWithAttributedValue(NSAttributedString)
     case multiline
 }
 
@@ -2150,6 +2151,7 @@ public protocol ContextExtractedContentSource: AnyObject {
     var initialAppearanceOffset: CGPoint { get }
     var centerVertically: Bool { get }
     var keepInPlace: Bool { get }
+    var adjustContentHorizontally: Bool { get }
     var adjustContentForSideInset: Bool { get }
     var ignoreContentTouches: Bool { get }
     var blurBackground: Bool { get }
@@ -2167,6 +2169,10 @@ public extension ContextExtractedContentSource {
     }
     
     var centerVertically: Bool {
+        return false
+    }
+    
+    var adjustContentHorizontally: Bool {
         return false
     }
     

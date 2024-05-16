@@ -9,8 +9,8 @@ public enum BotPaymentInvoiceSource {
     case slug(String)
     case premiumGiveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, option: PremiumGiftCodeOption)
     case giftCode(users: [PeerId], currency: String, amount: Int64, option: PremiumGiftCodeOption)
+    case stars(option: StarsTopUpOption)
 }
-
 
 public struct BotPaymentInvoiceFields: OptionSet {
     public var rawValue: Int32
@@ -257,8 +257,6 @@ private func _internal_parseInputInvoice(transaction: Transaction, source: BotPa
         
         return .inputInvoicePremiumGiftCode(purpose: inputPurpose, option: option)
     case let .giftCode(users, currency, amount, option):
-        
-        
         var inputUsers: [Api.InputUser] = []
         if !users.isEmpty {
             for peerId in users {
@@ -269,7 +267,6 @@ private func _internal_parseInputInvoice(transaction: Transaction, source: BotPa
         }
         
         let inputPurpose: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiftCode(flags: 0, users: inputUsers, boostPeer: nil, currency: currency, amount: amount)
-
         
         var flags: Int32 = 0
         if let _ = option.storeProductId {
@@ -282,7 +279,14 @@ private func _internal_parseInputInvoice(transaction: Transaction, source: BotPa
         let option: Api.PremiumGiftCodeOption = .premiumGiftCodeOption(flags: flags, users: option.users, months: option.months, storeProduct: option.storeProductId, storeQuantity: option.storeQuantity, currency: option.currency, amount: option.amount)
 
         return .inputInvoicePremiumGiftCode(purpose: inputPurpose, option: option)
-
+    case let .stars(option):
+        var flags: Int32 = 0
+        if let _ = option.storeProductId {
+            flags |= (1 << 0)
+        }
+        return .inputInvoiceStars(
+            option: .starsTopupOption(flags: flags, stars: option.count, storeProduct: option.storeProductId, currency: option.currency, amount: option.amount)
+        )
     }
 }
 
@@ -568,6 +572,8 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                                                 }
                                             }
                                         case .giftCode:
+                                            receiptMessageId = nil
+                                        case .stars:
                                             receiptMessageId = nil
                                         }
                                     }

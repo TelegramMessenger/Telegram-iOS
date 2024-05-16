@@ -23,6 +23,7 @@ import StoryContainerScreen
 import ChatListHeaderComponent
 import TelegramIntents
 import UndoUI
+import ShareController
 
 private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
@@ -309,7 +310,7 @@ public class ContactsController: ViewController {
                             guard let strongSelf = self, let value = value else {
                                 return
                             }
-                            (strongSelf.navigationController as? NavigationController)?.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .vcard(nil, id, value), completed: nil, cancelled: nil), completion: { [weak self] in
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: strongSelf.context), environment: ShareControllerAppEnvironment(sharedContext: strongSelf.context.sharedContext), subject: .vcard(nil, id, value), completed: nil, cancelled: nil), completion: { [weak self] in
                                 if let strongSelf = self {
                                     strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
                                 }
@@ -741,7 +742,7 @@ public class ContactsController: ViewController {
                 case .allowed:
                     let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: "", lastName: "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: "+")]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
                     if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
-                        navigationController.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .create(peer: nil, contactData: contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
+                        navigationController.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: strongSelf.context), environment: ShareControllerAppEnvironment(sharedContext: strongSelf.context.sharedContext), subject: .create(peer: nil, contactData: contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
                             guard let strongSelf = self else {
                                 return
                             }
@@ -755,7 +756,7 @@ public class ContactsController: ViewController {
                                 }
                             } else {
                                 if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
-                                    navigationController.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .vcard(nil, stableId, contactData), completed: nil, cancelled: nil))
+                                    navigationController.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: strongSelf.context), environment: ShareControllerAppEnvironment(sharedContext: strongSelf.context.sharedContext), subject: .vcard(nil, stableId, contactData), completed: nil, cancelled: nil))
                                 }
                             }
                         }), completed: nil, cancelled: nil))

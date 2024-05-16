@@ -304,18 +304,6 @@ private func collectExternalShareItems(strings: PresentationStrings, dateTimeFor
     })
 }
 
-public protocol ShareControllerEnvironment: AnyObject {
-    var presentationData: PresentationData { get }
-    var updatedPresentationData: Signal<PresentationData, NoError> { get }
-    var isMainApp: Bool { get }
-    var energyUsageSettings: EnergyUsageSettings { get }
-    
-    var mediaManager: MediaManager? { get }
-    
-    func setAccountUserInterfaceInUse(id: AccountRecordId) -> Disposable
-    func donateSendMessageIntent(account: ShareControllerAccountContext, peerIds: [EnginePeer.Id])
-}
-
 public final class ShareControllerAppEnvironment: ShareControllerEnvironment {
     let sharedContext: SharedAccountContext
     
@@ -351,19 +339,6 @@ public final class ShareControllerAppEnvironment: ShareControllerEnvironment {
             assertionFailure()
         }
     }
-}
-
-public protocol ShareControllerAccountContext: AnyObject {
-    var accountId: AccountRecordId { get }
-    var accountPeerId: EnginePeer.Id { get }
-    var stateManager: AccountStateManager { get }
-    var engineData: TelegramEngine.EngineData { get }
-    var animationCache: AnimationCache { get }
-    var animationRenderer: MultiAnimationRenderer { get }
-    var contentSettings: ContentSettings { get }
-    var appConfiguration: AppConfiguration { get }
-    
-    func resolveInlineStickers(fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>
 }
 
 public final class ShareControllerAppAccountContext: ShareControllerAccountContext {

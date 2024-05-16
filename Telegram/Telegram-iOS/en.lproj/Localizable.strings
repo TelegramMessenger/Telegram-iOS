@@ -12190,3 +12190,19 @@ Sorry for the inconvenience.";
 
 "EmojiPacks.UnarchiveEmojiPacksConfirmation_1" = "Unarchive %@ Pack";
 "EmojiPacks.UnarchiveEmojiPacksConfirmation_any" = "Unarchive %@ Packs";
+
+"HashtagSearch.ThisChat" = "This Chat";
+"HashtagSearch.MyMessages" = "My Messages";
+"HashtagSearch.PublicPosts" = "Public Posts";
+
+"Chat.Context.Phone.AddToContacts" = "Add to Contacts";
+"Chat.Context.Phone.CreateNewContact" = "Create New Contact";
+"Chat.Context.Phone.AddToExistingContact" = "Add to Existing Contact";
+"Chat.Context.Phone.SendMessage" = "Send Message";
+"Chat.Context.Phone.TelegramVoiceCall" = "Telegram Voice Call";
+"Chat.Context.Phone.TelegramVideoCall" = "Telegram Video Call";
+"Chat.Context.Phone.InviteToTelegram" = "Invite to Telegram";
+"Chat.Context.Phone.CallViaCarrier" = "Call via Carrier";
+"Chat.Context.Phone.CopyNumber" = "Copy Number";
+"Chat.Context.Phone.NotOnTelegram" = "This number is not on Telegram.";
+"Chat.Context.Phone.ViewProfile" = "View Profile";

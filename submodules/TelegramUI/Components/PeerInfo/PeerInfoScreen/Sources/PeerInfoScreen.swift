@@ -3325,7 +3325,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openPremiumStatusInfo: { _, _, _, _ in
         }, openRecommendedChannelContextMenu: { _, _, _ in
         }, openGroupBoostInfo: { _, _ in
-        }, openStickerEditor: {   
+        }, openStickerEditor: {
+        }, openPhoneContextMenu: { _ in
+        }, openAgeRestrictedMessageMedia: { _, _ in
         }, playMessageEffect: { _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {

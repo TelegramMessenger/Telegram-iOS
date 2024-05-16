@@ -45,7 +45,7 @@ private final class UpdatedPeersNearbySubscriberContext {
 }
 
 private final class UpdatedRevenueBalancesSubscriberContext {
-    let subscribers = Bag<(RevenueStats.Balances) -> Void>()
+    let subscribers = Bag<([PeerId: RevenueStats.Balances]) -> Void>()
 }
 
 public enum DeletedMessageId: Hashable {
@@ -1027,8 +1027,8 @@ public final class AccountStateManager {
                             if let updatedPeersNearby = events.updatedPeersNearby {
                                 strongSelf.notifyUpdatedPeersNearby(updatedPeersNearby)
                             }
-                            if let updatedRevenueBalances = events.updatedRevenueBalances {
-                                strongSelf.notifyUpdatedRevenueBalances(updatedRevenueBalances)
+                            if !events.updatedRevenueBalances.isEmpty {
+                                strongSelf.notifyUpdatedRevenueBalances(events.updatedRevenueBalances)
                             }
                             if !events.updatedCalls.isEmpty {
                                 for call in events.updatedCalls {
@@ -1602,7 +1602,7 @@ public final class AccountStateManager {
             }
         }
         
-        public func updatedRevenueBalances() -> Signal<RevenueStats.Balances, NoError> {
+        public func updatedRevenueBalances() -> Signal<[PeerId: RevenueStats.Balances], NoError> {
             let queue = self.queue
             return Signal { [weak self] subscriber in
                 let disposable = MetaDisposable()
@@ -1623,7 +1623,7 @@ public final class AccountStateManager {
             }
         }
         
-        private func notifyUpdatedRevenueBalances(_ updatedRevenueBalances: RevenueStats.Balances) {
+        private func notifyUpdatedRevenueBalances(_ updatedRevenueBalances: [PeerId: RevenueStats.Balances]) {
             for subscriber in self.updatedRevenueBalancesContext.subscribers.copyItems() {
                 subscriber(updatedRevenueBalances)
             }
@@ -1916,7 +1916,7 @@ public final class AccountStateManager {
         }
     }
     
-    public func updatedRevenueBalances() -> Signal<RevenueStats.Balances, NoError> {
+    public func updatedRevenueBalances() -> Signal<[PeerId: RevenueStats.Balances], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.updatedRevenueBalances().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }

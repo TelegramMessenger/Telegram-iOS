@@ -330,7 +330,7 @@ public func generateTintedImage(image: UIImage?, color: UIColor, backgroundColor
     return tintedImage
 }
 
-public func generateGradientTintedImage(image: UIImage?, colors: [UIColor]) -> UIImage? {
+public func generateGradientTintedImage(image: UIImage?, colors: [UIColor], direction: GradientImageDirection = .vertical) -> UIImage? {
     guard let image = image else {
         return nil
     }
@@ -357,7 +357,21 @@ public func generateGradientTintedImage(image: UIImage?, colors: [UIColor]) -> U
             let colorSpace = DeviceGraphicsContextSettings.shared.colorSpace
             let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
 
-            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: imageRect.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
+            let start: CGPoint
+            let end: CGPoint
+            switch direction {
+            case .horizontal:
+                start = .zero
+                end = CGPoint(x: imageRect.width, y: 0.0)
+            case .vertical:
+                start = CGPoint(x: 0.0, y: imageRect.height)
+                end = .zero
+            case .diagonal:
+                start = CGPoint(x: 0.0, y: 0.0)
+                end = CGPoint(x: imageRect.width, y: imageRect.height)
+            }
+            
+            context.drawLinearGradient(gradient, start: start, end: end, options: CGGradientDrawingOptions())
         } else if !colors.isEmpty {
             context.setFillColor(colors[0].cgColor)
             context.fill(imageRect)
