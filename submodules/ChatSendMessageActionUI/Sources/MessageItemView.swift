@@ -202,6 +202,7 @@ final class MessageItemView: UIView {
         sourceTextInputView: ChatInputTextView?,
         emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?,
         sourceMediaPreview: ChatSendMessageContextScreenMediaPreview?,
+        mediaCaptionIsAbove: Bool,
         textInsets: UIEdgeInsets,
         explicitBackgroundSize: CGSize?,
         maxTextWidth: CGFloat,
@@ -255,6 +256,16 @@ final class MessageItemView: UIView {
             backgroundNode: backgroundNode
         )
         
+        self.backgroundNode.setType(
+            type: .outgoing(.None),
+            highlighted: false,
+            graphics: themeGraphics,
+            maskMode: true,
+            hasWallpaper: true,
+            transition: transition.containedViewLayoutTransition,
+            backgroundNode: backgroundNode
+        )
+        
         if let sourceMediaPreview {
             let mediaPreviewClippingView: UIView
             if let current = self.mediaPreviewClippingView {
@@ -281,7 +292,7 @@ final class MessageItemView: UIView {
             let mediaPreviewSize = sourceMediaPreview.update(containerSize: containerSize, transition: transition)
             
             var backgroundSize = CGSize(width: mediaPreviewSize.width, height: mediaPreviewSize.height)
-            let mediaPreviewFrame: CGRect
+            var mediaPreviewFrame: CGRect
             switch sourceMediaPreview.layoutType {
             case .message, .media:
                 backgroundSize.width += 7.0
@@ -290,7 +301,134 @@ final class MessageItemView: UIView {
                 mediaPreviewFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: mediaPreviewSize)
             }
             
+            let backgroundAlpha: CGFloat
+            switch sourceMediaPreview.layoutType {
+            case .media:
+                backgroundAlpha = explicitBackgroundSize != nil ? 0.0 : 1.0
+            case .message, .videoMessage:
+                backgroundAlpha = 0.0
+            }
+            
+            var backgroundFrame = mediaPreviewFrame.insetBy(dx: -2.0, dy: -2.0)
+            backgroundFrame.size.width += 6.0
+            
+            if textString.length != 0 {
+                let textNode: ChatInputTextNode
+                if let current = self.textNode {
+                    textNode = current
+                } else {
+                    textNode = ChatInputTextNode(disableTiling: true)
+                    textNode.textView.isScrollEnabled = false
+                    textNode.isUserInteractionEnabled = false
+                    self.textNode = textNode
+                    self.textClippingContainer.addSubview(textNode.view)
+                    
+                    if let sourceTextInputView {
+                        var textContainerInset = sourceTextInputView.defaultTextContainerInset
+                        textContainerInset.right = 0.0
+                        textNode.textView.defaultTextContainerInset = textContainerInset
+                    }
+                    
+                    let messageAttributedText = NSMutableAttributedString(attributedString: textString)
+                    textNode.attributedText = messageAttributedText
+                }
+                
+                let mainColor = presentationData.theme.chat.message.outgoing.accentControlColor
+                let mappedLineStyle: ChatInputTextView.Theme.Quote.LineStyle
+                if let sourceTextInputView, let textTheme = sourceTextInputView.theme {
+                    switch textTheme.quote.lineStyle {
+                    case .solid:
+                        mappedLineStyle = .solid(color: mainColor)
+                    case .doubleDashed:
+                        mappedLineStyle = .doubleDashed(mainColor: mainColor, secondaryColor: .clear)
+                    case .tripleDashed:
+                        mappedLineStyle = .tripleDashed(mainColor: mainColor, secondaryColor: .clear, tertiaryColor: .clear)
+                    }
+                } else {
+                    mappedLineStyle = .solid(color: mainColor)
+                }
+                
+                textNode.textView.theme = ChatInputTextView.Theme(
+                    quote: ChatInputTextView.Theme.Quote(
+                        background: mainColor.withMultipliedAlpha(0.1),
+                        foreground: mainColor,
+                        lineStyle: mappedLineStyle,
+                        codeBackground: mainColor.withMultipliedAlpha(0.1),
+                        codeForeground: mainColor
+                    )
+                )
+                
+                let maxTextWidth = mediaPreviewFrame.width
+                
+                let textPositioningInsets = UIEdgeInsets(top: -5.0, left: 0.0, bottom: -4.0, right: -4.0)
+                
+                let currentRightInset: CGFloat = 0.0
+                let textHeight = textNode.textHeightForWidth(maxTextWidth, rightInset: currentRightInset)
+                textNode.updateLayout(size: CGSize(width: maxTextWidth, height: textHeight))
+                
+                let textBoundingRect = textNode.textView.currentTextBoundingRect().integral
+                let lastLineBoundingRect = textNode.textView.lastLineBoundingRect().integral
+                
+                let textWidth = textBoundingRect.width
+                let textSize = CGSize(width: textWidth, height: textHeight)
+                
+                var positionedTextSize = CGSize(width: textSize.width + textPositioningInsets.left + textPositioningInsets.right, height: textSize.height + textPositioningInsets.top + textPositioningInsets.bottom)
+                
+                let effectInset: CGFloat = 12.0
+                if effect != nil, lastLineBoundingRect.width > textSize.width - effectInset {
+                    if lastLineBoundingRect != textBoundingRect {
+                        positionedTextSize.height += 11.0
+                    } else {
+                        positionedTextSize.width += effectInset
+                    }
+                }
+                let unclippedPositionedTextHeight = positionedTextSize.height - (textPositioningInsets.top + textPositioningInsets.bottom)
+                
+                positionedTextSize.height = min(positionedTextSize.height, maxTextHeight)
+                
+                let size = CGSize(width: positionedTextSize.width + textInsets.left + textInsets.right, height: positionedTextSize.height + textInsets.top + textInsets.bottom)
+                
+                var textFrame = CGRect(origin: CGPoint(x: textInsets.left - 6.0, y: backgroundFrame.height - 4.0 + textInsets.top), size: positionedTextSize)
+                if mediaCaptionIsAbove {
+                    textFrame.origin.y = 5.0
+                }
+                
+                backgroundFrame.size.height += textSize.height + 2.0
+                if mediaCaptionIsAbove {
+                    mediaPreviewFrame.origin.y += textSize.height + 2.0
+                }
+                
+                let backgroundSize = explicitBackgroundSize ?? size
+                
+                let previousSize = self.currentSize
+                self.currentSize = backgroundFrame.size
+                let _ = previousSize
+                
+                let textClippingContainerFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + 1.0, y: backgroundFrame.minY + 1.0), size: CGSize(width: backgroundFrame.width - 1.0 - 7.0, height: backgroundFrame.height - 1.0 - 1.0))
+                
+                var textClippingContainerBounds = CGRect(origin: CGPoint(), size: textClippingContainerFrame.size)
+                if explicitBackgroundSize != nil, let sourceTextInputView {
+                    textClippingContainerBounds.origin.y = sourceTextInputView.contentOffset.y
+                } else {
+                    textClippingContainerBounds.origin.y = unclippedPositionedTextHeight - backgroundSize.height + 4.0
+                    textClippingContainerBounds.origin.y = max(0.0, textClippingContainerBounds.origin.y)
+                }
+                
+                transition.setPosition(view: self.textClippingContainer, position: textClippingContainerFrame.center)
+                transition.setBounds(view: self.textClippingContainer, bounds: textClippingContainerBounds)
+                
+                transition.setFrame(view: textNode.view, frame: CGRect(origin: CGPoint(x: textFrame.minX + textPositioningInsets.left - textClippingContainerFrame.minX, y: textFrame.minY + textPositioningInsets.top - textClippingContainerFrame.minY), size: CGSize(width: maxTextWidth, height: textHeight)))
+                self.updateTextContents()
+            }
+            
             transition.setFrame(view: sourceMediaPreview.view, frame: mediaPreviewFrame)
+            
+            transition.setFrame(view: self.backgroundWallpaperNode.view, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+            transition.setAlpha(view: self.backgroundWallpaperNode.view, alpha: backgroundAlpha)
+            self.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: transition.containedViewLayoutTransition)
+            transition.setFrame(view: self.backgroundNode.view, frame: backgroundFrame)
+            transition.setAlpha(view: self.backgroundNode.view, alpha: backgroundAlpha)
+            self.backgroundNode.updateLayout(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
             
             if let effectIcon = self.effectIcon, let effectIconSize {
                 if let effectIconView = effectIcon.view {
@@ -367,7 +505,7 @@ final class MessageItemView: UIView {
                 }
             }
             
-            return backgroundSize
+            return backgroundFrame.size
         } else {
             let textNode: ChatInputTextNode
             if let current = self.textNode {
@@ -384,7 +522,6 @@ final class MessageItemView: UIView {
                 }
                 
                 let messageAttributedText = NSMutableAttributedString(attributedString: textString)
-                //messageAttributedText.addAttribute(NSAttributedString.Key.foregroundColor, value: presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (messageAttributedText.string as NSString).length))
                 textNode.attributedText = messageAttributedText
             }
             
@@ -445,16 +582,6 @@ final class MessageItemView: UIView {
             let size = CGSize(width: positionedTextSize.width + textInsets.left + textInsets.right, height: positionedTextSize.height + textInsets.top + textInsets.bottom)
             
             let textFrame = CGRect(origin: CGPoint(x: textInsets.left, y: textInsets.top), size: positionedTextSize)
-            
-            self.backgroundNode.setType(
-                type: .outgoing(.None),
-                highlighted: false,
-                graphics: themeGraphics,
-                maskMode: true,
-                hasWallpaper: true,
-                transition: transition.containedViewLayoutTransition,
-                backgroundNode: backgroundNode
-            )
             
             let backgroundSize = explicitBackgroundSize ?? size
             

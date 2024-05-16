@@ -998,6 +998,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                         sourceSendButton: node,
                         textInputView: textInputNode.textView,
                         mediaPreview: mediaPreview,
+                        mediaCaptionIsAbove: (false, { _ in
+                        }),
                         emojiViewProvider: textInputPanelNode.emojiViewProvider,
                         attachment: true,
                         canSendWhenOnline: sendWhenOnlineAvailable,
