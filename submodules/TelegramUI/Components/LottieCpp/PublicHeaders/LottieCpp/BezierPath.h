@@ -144,6 +144,7 @@ public:
 
 CGRect bezierPathsBoundingBox(std::vector<BezierPath> const &paths);
 CGRect bezierPathsBoundingBoxParallel(BezierPathsBoundingBoxContext &context, std::vector<BezierPath> const &paths);
+CGRect bezierPathsBoundingBoxParallel(BezierPathsBoundingBoxContext &context, BezierPath const &path);
 
 std::vector<BezierPath> trimBezierPaths(std::vector<BezierPath> &sourcePaths, double start, double end, double offset, TrimType type);
 

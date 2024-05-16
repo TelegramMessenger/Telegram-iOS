@@ -18,6 +18,35 @@ struct TransformedPath {
     }
 };
 
+static lottie::CGRect collectPathBoundingBoxes(std::shared_ptr<lottie::RenderTreeNodeContentItem> item, size_t subItemLimit, lottie::CATransform3D const &parentTransform, bool skipApplyTransform) {
+    //TODO:remove skipApplyTransform
+    lottie::CATransform3D effectiveTransform = parentTransform;
+    if (!skipApplyTransform && item->isGroup) {
+        effectiveTransform = item->transform * effectiveTransform;
+    }
+    
+    size_t maxSubitem = std::min(item->subItems.size(), subItemLimit);
+    
+    lottie::CGRect boundingBox(0.0, 0.0, 0.0, 0.0);
+    if (item->path) {
+        boundingBox = item->pathBoundingBox.applyingTransform(effectiveTransform);
+    }
+    
+    for (size_t i = 0; i < maxSubitem; i++) {
+        auto &subItem = item->subItems[i];
+        
+        lottie::CGRect subItemBoundingBox = collectPathBoundingBoxes(subItem, INT32_MAX, effectiveTransform, false);
+        
+        if (boundingBox.empty()) {
+            boundingBox = subItemBoundingBox;
+        } else {
+            boundingBox = boundingBox.unionWith(subItemBoundingBox);
+        }
+    }
+    
+    return boundingBox;
+}
+
 static std::vector<TransformedPath> collectPaths(std::shared_ptr<lottie::RenderTreeNodeContentItem> item, size_t subItemLimit, lottie::CATransform3D const &parentTransform, bool skipApplyTransform) {
     std::vector<TransformedPath> mappedPaths;
     
@@ -32,6 +61,7 @@ static std::vector<TransformedPath> collectPaths(std::shared_ptr<lottie::RenderT
     if (item->path) {
         mappedPaths.emplace_back(item->path.value(), effectiveTransform);
     }
+    assert(!item->trimParams);
     
     for (size_t i = 0; i < maxSubitem; i++) {
         auto &subItem = item->subItems[i];
@@ -66,17 +96,8 @@ static void processRenderContentItem(std::shared_ptr<RenderTreeNodeContentItem> 
     int drawContentDescendants = 0;
     
     for (const auto &shadingVariant : contentItem->shadings) {
-        std::vector<lottie::BezierPath> itemPaths;
-        if (shadingVariant->explicitPath) {
-            itemPaths = shadingVariant->explicitPath.value();
-        } else {
-            auto rawPaths = collectPaths(contentItem, shadingVariant->subItemLimit, lottie::CATransform3D::identity(), true);
-            for (const auto &rawPath : rawPaths) {
-                itemPaths.push_back(rawPath.path.copyUsingTransform(rawPath.transform));
-            }
-        }
+        lottie::CGRect shapeBounds = collectPathBoundingBoxes(contentItem, shadingVariant->subItemLimit, lottie::CATransform3D::identity(), true);
         
-        CGRect shapeBounds = bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, itemPaths);
         if (shadingVariant->stroke) {
             shapeBounds = shapeBounds.insetBy(-shadingVariant->stroke->lineWidth / 2.0, -shadingVariant->stroke->lineWidth / 2.0);
         } else if (shadingVariant->fill) {
@@ -95,7 +116,8 @@ static void processRenderContentItem(std::shared_ptr<RenderTreeNodeContentItem> 
     }
     
     if (contentItem->isGroup) {
-        for (const auto &subItem : contentItem->subItems) {
+        for (auto it = contentItem->subItems.rbegin(); it != contentItem->subItems.rend(); it++) {
+            const auto &subItem = *it;
             processRenderContentItem(subItem, globalSize, currentTransform, bezierPathsBoundingBoxContext);
             
             if (subItem->renderData.isValid) {
@@ -491,7 +513,8 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
         }
     }
     
-    for (const auto &subItem : item->subItems) {
+    for (auto it = item->subItems.rbegin(); it != item->subItems.rend(); it++) {
+        const auto &subItem = *it;
         drawLottieContentItem(currentContext, subItem, renderAlpha);
     }
     

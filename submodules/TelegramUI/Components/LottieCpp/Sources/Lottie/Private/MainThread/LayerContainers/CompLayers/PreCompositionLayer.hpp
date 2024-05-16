@@ -86,7 +86,7 @@ public:
         return result;
     }
     
-    virtual void displayContentsWithFrame(double frame, bool forceUpdates) override {
+    virtual void displayContentsWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) override {
         double localFrame = 0.0;
         if (_remappingNode) {
             _remappingNode->update(frame);
@@ -96,11 +96,11 @@ public:
         }
         
         for (const auto &animationLayer : _animationLayers) {
-            animationLayer->displayWithFrame(localFrame, forceUpdates);
+            animationLayer->displayWithFrame(localFrame, forceUpdates, boundingBoxContext);
         }
     }
     
-    virtual std::shared_ptr<RenderTreeNode> renderTreeNode() override {
+    virtual std::shared_ptr<RenderTreeNode> renderTreeNode(BezierPathsBoundingBoxContext &boundingBoxContext) override {
         if (!_renderTreeNode) {
             _contentsTreeNode = std::make_shared<RenderTreeNode>(
                 CGRect(0.0, 0.0, 0.0, 0.0),
@@ -120,7 +120,7 @@ public:
             std::shared_ptr<RenderTreeNode> maskNode;
             bool invertMask = false;
             if (_matteLayer) {
-                maskNode = _matteLayer->renderTreeNode();
+                maskNode = _matteLayer->renderTreeNode(boundingBoxContext);
                 if (maskNode && _matteType.has_value() && _matteType.value() == MatteType::Invert) {
                     invertMask = true;
                 }
@@ -148,7 +148,7 @@ public:
                     }
                 }
                 if (found) {
-                    auto node = animationLayer->renderTreeNode();
+                    auto node = animationLayer->renderTreeNode(boundingBoxContext);
                     if (node) {
                         renderTreeSubnodes.push_back(node);
                     }
@@ -177,9 +177,9 @@ public:
         return _renderTreeNode;
     }
     
-    virtual void updateRenderTree() override {
+    virtual void updateRenderTree(BezierPathsBoundingBoxContext &boundingBoxContext) override {
         if (_matteLayer) {
-            _matteLayer->updateRenderTree();
+            _matteLayer->updateRenderTree(boundingBoxContext);
         }
         
         for (const auto &animationLayer : _animationLayers) {
@@ -191,7 +191,7 @@ public:
                 }
             }
             if (found) {
-                animationLayer->updateRenderTree();
+                animationLayer->updateRenderTree(boundingBoxContext);
             }
         }
         

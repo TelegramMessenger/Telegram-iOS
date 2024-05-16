@@ -82,7 +82,7 @@ public:
         return _contentsLayer;
     }
     
-    void displayWithFrame(double frame, bool forceUpdates) {
+    void displayWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
         _transformNode->updateTree(frame, forceUpdates);
         
         bool layerVisible = isInRangeOrEqual(frame, _inFrame, _outFrame);
@@ -93,14 +93,14 @@ public:
         
         /// Only update contents if current time is within the layers time bounds.
         if (layerVisible) {
-            displayContentsWithFrame(frame, forceUpdates);
+            displayContentsWithFrame(frame, forceUpdates, boundingBoxContext);
             if (_maskLayer) {
                 _maskLayer->updateWithFrame(frame, forceUpdates);
             }
         }
     }
     
-    virtual void displayContentsWithFrame(double frame, bool forceUpdates) {
+    virtual void displayContentsWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
         /// To be overridden by subclass
     }
     
@@ -151,11 +151,11 @@ public:
         return _timeStretch;
     }
     
-    virtual std::shared_ptr<RenderTreeNode> renderTreeNode() {
+    virtual std::shared_ptr<RenderTreeNode> renderTreeNode(BezierPathsBoundingBoxContext &boundingBoxContext) {
         return nullptr;
     }
     
-    virtual void updateRenderTree() {
+    virtual void updateRenderTree(BezierPathsBoundingBoxContext &boundingBoxContext) {
     }
     
 public:
