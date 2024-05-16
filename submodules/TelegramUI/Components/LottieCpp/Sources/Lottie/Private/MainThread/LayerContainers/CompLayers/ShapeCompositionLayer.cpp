@@ -909,10 +909,6 @@ public:
             transform = std::move(transform_);
         }
         
-        std::shared_ptr<RenderTreeNode> const &renderTree() const {
-            return _renderTree;
-        }
-        
     private:
         std::unique_ptr<PathOutput> path;
         std::unique_ptr<TransformOutput> transform;
@@ -922,7 +918,8 @@ public:
         
         std::vector<std::shared_ptr<ContentItem>> subItems;
         
-        std::shared_ptr<RenderTreeNode> _renderTree;
+    public:
+        std::shared_ptr<RenderTreeNodeContentItem> _contentItem;
         
     private:
         std::vector<TransformedPath> collectPaths(size_t subItemLimit, CATransform3D const &parentTransform, bool skipApplyTransform) {
@@ -993,20 +990,8 @@ public:
         
     public:
         void initializeRenderChildren() {
-            _renderTree = std::make_shared<RenderTreeNode>(
-                CGRect(0.0, 0.0, 0.0, 0.0),
-                Vector2D(0.0, 0.0),
-                CATransform3D::identity(),
-                1.0,
-                false,
-                false,
-                std::vector<std::shared_ptr<RenderTreeNode>>(),
-                nullptr,
-                false
-            );
-            
-            _renderTree->_contentItem = std::make_shared<RenderTreeNodeContentItem>();
-            _renderTree->_contentItem->isGroup = isGroup;
+            _contentItem = std::make_shared<RenderTreeNodeContentItem>();
+            _contentItem->isGroup = isGroup;
             
             if (!shadings.empty()) {
                 for (int i = 0; i < shadings.size(); i++) {
@@ -1025,7 +1010,7 @@ public:
                     }
                     itemShadingVariant->subItemLimit = shadingVariant.subItemLimit;
                     
-                    _renderTree->_contentItem->shadings.push_back(itemShadingVariant);
+                    _contentItem->shadings.push_back(itemShadingVariant);
                 }
             }
             
@@ -1033,23 +1018,8 @@ public:
                 std::vector<std::shared_ptr<RenderTreeNode>> subItemNodes;
                 for (int i = (int)subItems.size() - 1; i >= 0; i--) {
                     subItems[i]->initializeRenderChildren();
-                    subItemNodes.push_back(subItems[i]->_renderTree);
-                    _renderTree->_contentItem->subItems.push_back(subItems[i]->_renderTree->_contentItem);
+                    _contentItem->subItems.push_back(subItems[i]->_contentItem);
                 }
-                
-                /*if (!subItemNodes.empty()) {
-                    _renderTree->_subnodes.push_back(std::make_shared<RenderTreeNode>(
-                        CGRect(0.0, 0.0, 0.0, 0.0),
-                        Vector2D(0.0, 0.0),
-                        CATransform3D::identity(),
-                        1.0,
-                        false,
-                        false,
-                        subItemNodes,
-                        nullptr,
-                        false
-                    ));
-                }*/
             }
         }
         
@@ -1087,11 +1057,8 @@ public:
                 containerTransform = transform->transform();
                 containerOpacity = transform->opacity();
             }
-            _renderTree->_contentItem->transform = containerTransform;
-            _renderTree->_contentItem->alpha = containerOpacity;
-            
-            _renderTree->_transform = containerTransform;
-            _renderTree->_alpha = containerOpacity;
+            _contentItem->transform = containerTransform;
+            _contentItem->alpha = containerOpacity;
             
             for (int i = 0; i < shadings.size(); i++) {
                 const auto &shadingVariant = shadings[i];
@@ -1121,7 +1088,7 @@ public:
                     resultPaths.push_back(path);
                 }
                 
-                _renderTree->_contentItem->shadings[i]->explicitPath = resultPaths;
+                _contentItem->shadings[i]->explicitPath = resultPaths;
             }
             
             if (isGroup && !subItems.empty()) {
@@ -1321,8 +1288,22 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
     }
     
     if (!_renderTreeNode) {
+        _contentRenderTreeNode = std::make_shared<RenderTreeNode>(
+            CGRect(0.0, 0.0, 0.0, 0.0),
+            Vector2D(0.0, 0.0),
+            CATransform3D::identity(),
+            1.0,
+            false,
+            false,
+            std::vector<std::shared_ptr<RenderTreeNode>>(),
+            nullptr,
+            false
+        );
+        _contentRenderTreeNode->_contentItem = _contentTree->itemTree->_contentItem;
+        
         std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
-        subnodes.push_back(_contentTree->itemTree->renderTree());
+        //subnodes.push_back(_contentTree->itemTree->renderTree());
+        subnodes.push_back(_contentRenderTreeNode);
         
         std::shared_ptr<RenderTreeNode> maskNode;
         bool invertMask = false;
@@ -1354,12 +1335,12 @@ void ShapeCompositionLayer::updateRenderTree() {
         _matteLayer->updateRenderTree();
     }
     
-    _contentTree->itemTree->renderTree()->_bounds = _contentsLayer->bounds();
-    _contentTree->itemTree->renderTree()->_position = _contentsLayer->position();
-    _contentTree->itemTree->renderTree()->_transform = _contentsLayer->transform();
-    _contentTree->itemTree->renderTree()->_alpha = _contentsLayer->opacity();
-    _contentTree->itemTree->renderTree()->_masksToBounds = _contentsLayer->masksToBounds();
-    _contentTree->itemTree->renderTree()->_isHidden = _contentsLayer->isHidden();
+    _contentRenderTreeNode->_bounds = _contentsLayer->bounds();
+    _contentRenderTreeNode->_position = _contentsLayer->position();
+    _contentRenderTreeNode->_transform = _contentsLayer->transform();
+    _contentRenderTreeNode->_alpha = _contentsLayer->opacity();
+    _contentRenderTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
+    _contentRenderTreeNode->_isHidden = _contentsLayer->isHidden();
     
     assert(position() == Vector2D::Zero());
     assert(transform().isIdentity());
