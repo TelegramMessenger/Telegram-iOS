@@ -422,6 +422,8 @@ public:
     bool isGroup = false;
     CATransform3D transform = CATransform3D::identity();
     double alpha = 0.0;
+    std::optional<TrimParams> trimParams;
+    std::optional<BezierPath> path;
     std::vector<std::shared_ptr<RenderTreeNodeContentShadingVariant>> shadings;
     std::vector<std::shared_ptr<RenderTreeNodeContentItem>> subItems;
     

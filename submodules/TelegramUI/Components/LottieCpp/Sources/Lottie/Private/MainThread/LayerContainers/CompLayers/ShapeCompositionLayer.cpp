@@ -437,22 +437,6 @@ public:
         std::shared_ptr<RenderTreeNodeContentItem::Stroke> _stroke;
     };
     
-    struct TrimParams {
-        double start = 0.0;
-        double end = 0.0;
-        double offset = 0.0;
-        TrimType type = TrimType::Simultaneously;
-        size_t subItemLimit = 0;
-        
-        TrimParams(double start_, double end_, double offset_, TrimType type_, size_t subItemLimit_) :
-        start(start_),
-        end(end_),
-        offset(offset_),
-        type(type_),
-        subItemLimit(subItemLimit_) {
-        }
-    };
-    
     class TrimParamsOutput {
     public:
         TrimParamsOutput(Trim const &trim, size_t subItemLimit) :
@@ -597,7 +581,7 @@ public:
             }
             
             if (hasUpdates) {
-                resolvedPath = makeRectangleBezierPath(Vector2D(positionValue.x, positionValue.y), Vector2D(sizeValue.x, sizeValue.y), cornerRadiusValue, direction);
+                ValueInterpolator<BezierPath>::setInplace(makeRectangleBezierPath(Vector2D(positionValue.x, positionValue.y), Vector2D(sizeValue.x, sizeValue.y), cornerRadiusValue, direction), resolvedPath);
             }
             
             hasValidData = true;
@@ -645,7 +629,7 @@ public:
             }
             
             if (hasUpdates) {
-                resolvedPath = makeEllipseBezierPath(Vector2D(sizeValue.x, sizeValue.y), Vector2D(positionValue.x, positionValue.y), direction);
+                ValueInterpolator<BezierPath>::setInplace(makeEllipseBezierPath(Vector2D(sizeValue.x, sizeValue.y), Vector2D(positionValue.x, positionValue.y), direction), resolvedPath);
             }
             
             hasValidData = true;
@@ -732,7 +716,7 @@ public:
             }
             
             if (hasUpdates) {
-                resolvedPath = makeStarBezierPath(Vector2D(positionValue.x, positionValue.y), outerRadiusValue, innerRadiusValue, outerRoundednessValue, innerRoundednessValue, pointsValue, rotationValue, direction);
+                ValueInterpolator<BezierPath>::setInplace(makeStarBezierPath(Vector2D(positionValue.x, positionValue.y), outerRadiusValue, innerRadiusValue, outerRoundednessValue, innerRoundednessValue, pointsValue, rotationValue, direction), resolvedPath);
             }
             
             hasValidData = true;
@@ -916,15 +900,19 @@ public:
         std::vector<ShadingVariant> shadings;
         std::vector<std::shared_ptr<TrimParamsOutput>> trims;
         
-        std::vector<std::shared_ptr<ContentItem>> subItems;
-        
     public:
+        std::vector<std::shared_ptr<ContentItem>> subItems;
         std::shared_ptr<RenderTreeNodeContentItem> _contentItem;
         
     private:
-        std::vector<TransformedPath> collectPaths(size_t subItemLimit, CATransform3D const &parentTransform, bool skipApplyTransform) {
+        bool hasTrims(size_t subItemLimit) {
+            return false;
+        }
+        
+        std::vector<TransformedPath> collectPaths(size_t subItemLimit, CATransform3D const &parentTransform, bool skipApplyTransform, bool &hasTrims) {
             std::vector<TransformedPath> mappedPaths;
             
+            //TODO:remove skipApplyTransform
             CATransform3D effectiveTransform = parentTransform;
             if (!skipApplyTransform && isGroup && transform) {
                 effectiveTransform = transform->transform() * effectiveTransform;
@@ -932,8 +920,8 @@ public:
             
             size_t maxSubitem = std::min(subItems.size(), subItemLimit);
             
-            if (path) {
-                mappedPaths.emplace_back(*(path->currentPath()), effectiveTransform);
+            if (_contentItem->path) {
+                mappedPaths.emplace_back(_contentItem->path.value(), effectiveTransform);
             }
             
             for (size_t i = 0; i < maxSubitem; i++) {
@@ -944,9 +932,10 @@ public:
                     currentTrim = trims[0]->trimParams();
                 }
                 
-                auto subItemPaths = subItem->collectPaths(INT32_MAX, effectiveTransform, false);
+                auto subItemPaths = subItem->collectPaths(INT32_MAX, effectiveTransform, false, hasTrims);
                 
                 if (currentTrim) {
+                    hasTrims = true;
                     CompoundBezierPath tempPath;
                     for (auto &path : subItemPaths) {
                         tempPath.appendPath(path.path.copyUsingTransform(path.transform));
@@ -993,6 +982,10 @@ public:
             _contentItem = std::make_shared<RenderTreeNodeContentItem>();
             _contentItem->isGroup = isGroup;
             
+            if (path) {
+                _contentItem->path = *path->currentPath();
+            }
+            
             if (!shadings.empty()) {
                 for (int i = 0; i < shadings.size(); i++) {
                     auto &shadingVariant = shadings[i];
@@ -1031,6 +1024,8 @@ public:
             
             if (path) {
                 path->update(frameTime);
+            } else {
+                _contentItem->path = std::nullopt;
             }
             for (const auto &trim : trims) {
                 trim->update(frameTime);
@@ -1067,28 +1062,46 @@ public:
                     continue;
                 }
                 
-                CompoundBezierPath compoundPath;
-                auto paths = collectPaths(shadingVariant.subItemLimit, CATransform3D::identity(), true);
-                for (const auto &path : paths) {
-                    compoundPath.appendPath(path.path.copyUsingTransform(path.transform));
-                }
-                
                 //std::optional<TrimParams> currentTrim = parentTrim;
                 //TODO:investigate
                 /*if (!trims.empty()) {
                     currentTrim = trims[0];
                 }*/
                 
+                bool hasTrims = false;
                 if (parentTrim) {
+                    CompoundBezierPath compoundPath;
+                    hasTrims = true;
+                    auto paths = collectPaths(shadingVariant.subItemLimit, CATransform3D::identity(), true, hasTrims);
+                    for (const auto &path : paths) {
+                        compoundPath.appendPath(path.path.copyUsingTransform(path.transform));
+                    }
+                    
                     compoundPath = trimCompoundPath(compoundPath, parentTrim->start, parentTrim->end, parentTrim->offset, parentTrim->type);
+                    
+                    std::vector<BezierPath> resultPaths;
+                    for (const auto &path : compoundPath.paths) {
+                        resultPaths.push_back(path);
+                    }
+                    _contentItem->shadings[i]->explicitPath = resultPaths;
+                } else {
+                    CompoundBezierPath compoundPath;
+                    auto paths = collectPaths(shadingVariant.subItemLimit, CATransform3D::identity(), true, hasTrims);
+                    for (const auto &path : paths) {
+                        compoundPath.appendPath(path.path.copyUsingTransform(path.transform));
+                    }
+                    std::vector<BezierPath> resultPaths;
+                    for (const auto &path : compoundPath.paths) {
+                        resultPaths.push_back(path);
+                    }
+                    
+                    if (hasTrims) {
+                        _contentItem->shadings[i]->explicitPath = resultPaths;
+                    } else {
+                        _contentItem->shadings[i]->explicitPath = std::nullopt;
+                        _contentItem->shadings[i]->explicitPath = resultPaths;
+                    }
                 }
-                
-                std::vector<BezierPath> resultPaths;
-                for (const auto &path : compoundPath.paths) {
-                    resultPaths.push_back(path);
-                }
-                
-                _contentItem->shadings[i]->explicitPath = resultPaths;
             }
             
             if (isGroup && !subItems.empty()) {
@@ -1199,7 +1212,16 @@ private:
                 case ShapeType::Trim: {
                     Trim const &trim = *((Trim *)item.get());
                     
-                    itemTree->addTrim(trim);
+                    auto groupItem = std::make_shared<ContentItem>();
+                    groupItem->isGroup = true;
+                    for (const auto &subItem : itemTree->subItems) {
+                        groupItem->addSubItem(subItem);
+                    }
+                    groupItem->addTrim(trim);
+                    itemTree->subItems.clear();
+                    itemTree->addSubItem(groupItem);
+                    
+                    //itemTree->addTrim(trim);
                     
                     break;
                 }
