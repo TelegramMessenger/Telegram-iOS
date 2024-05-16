@@ -439,9 +439,8 @@ public:
     
     class TrimParamsOutput {
     public:
-        TrimParamsOutput(Trim const &trim, size_t subItemLimit) :
+        TrimParamsOutput(Trim const &trim) :
         type(trim.trimType),
-        subItemLimit(subItemLimit),
         start(trim.start.keyframes),
         end(trim.end.keyframes),
         offset(trim.offset.keyframes) {
@@ -469,12 +468,11 @@ public:
             
             double resolvedOffset = fmod(offsetValue, 360.0) / 360.0;
             
-            return TrimParams(resolvedStart, resolvedEnd, resolvedOffset, type, subItemLimit);
+            return TrimParams(resolvedStart, resolvedEnd, resolvedOffset, type);
         }
         
     private:
         TrimType type;
-        size_t subItemLimit = 0;
         
         KeyframeInterpolator<Vector1D> start;
         double startValue = 0.0;
@@ -974,7 +972,7 @@ public:
         }
         
         void addTrim(Trim const &trim) {
-            trims.push_back(std::make_shared<TrimParamsOutput>(trim, subItems.size()));
+            trims.push_back(std::make_shared<TrimParamsOutput>(trim));
         }
         
     public:
@@ -1045,7 +1043,7 @@ public:
             }
         }
         
-        void updateChildren(std::optional<TrimParams> parentTrim) {
+        void updateContents(std::optional<TrimParams> parentTrim) {
             CATransform3D containerTransform = CATransform3D::identity();
             double containerOpacity = 1.0;
             if (transform) {
@@ -1108,14 +1106,12 @@ public:
                 for (int i = (int)subItems.size() - 1; i >= 0; i--) {
                     std::optional<TrimParams> childTrim = parentTrim;
                     for (const auto &trim : trims) {
-                        if (i < (int)trim->trimParams().subItemLimit) {
-                            //TODO:allow combination
-                            //assert(!parentTrim);
-                            childTrim = trim->trimParams();
-                        }
+                        //TODO:allow combination
+                        //assert(!parentTrim);
+                        childTrim = trim->trimParams();
                     }
                     
-                    subItems[i]->updateChildren(childTrim);
+                    subItems[i]->updateContents(childTrim);
                 }
             }
         }
@@ -1221,8 +1217,6 @@ private:
                     itemTree->subItems.clear();
                     itemTree->addSubItem(groupItem);
                     
-                    //itemTree->addTrim(trim);
-                    
                     break;
                 }
                 case ShapeType::Transform: {
@@ -1298,7 +1292,7 @@ void ShapeCompositionLayer::displayContentsWithFrame(double frame, bool forceUpd
     _frameTime = frame;
     _frameTimeInitialized = true;
     _contentTree->itemTree->updateFrame(_frameTime);
-    _contentTree->itemTree->updateChildren(std::nullopt);
+    _contentTree->itemTree->updateContents(std::nullopt);
 }
 
 std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
@@ -1306,7 +1300,7 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode() {
         _frameTime = 0.0;
         _frameTimeInitialized = true;
         _contentTree->itemTree->updateFrame(_frameTime);
-        _contentTree->itemTree->updateChildren(std::nullopt);
+        _contentTree->itemTree->updateContents(std::nullopt);
     }
     
     if (!_renderTreeNode) {

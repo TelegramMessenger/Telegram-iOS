@@ -41,14 +41,12 @@ struct TrimParams {
     double end = 0.0;
     double offset = 0.0;
     TrimType type = TrimType::Simultaneously;
-    size_t subItemLimit = 0;
     
-    TrimParams(double start_, double end_, double offset_, TrimType type_, size_t subItemLimit_) :
+    TrimParams(double start_, double end_, double offset_, TrimType type_) :
     start(start_),
     end(end_),
     offset(offset_),
-    type(type_),
-    subItemLimit(subItemLimit_) {
+    type(type_) {
     }
 };
 
