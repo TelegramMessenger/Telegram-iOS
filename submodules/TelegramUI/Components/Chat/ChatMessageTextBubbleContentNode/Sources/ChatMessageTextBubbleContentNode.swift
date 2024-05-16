@@ -857,7 +857,15 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     urlRange = urlRangeValue
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
-                return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed)), activate: { [weak self] in
+                
+                var content: ChatMessageBubbleContentTapAction.Content
+                if url.hasPrefix("tel:") {
+                    content = .phone(url.replacingOccurrences(of: "tel:", with: ""))
+                } else {
+                    content = .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed))
+                }
+                
+                return ChatMessageBubbleContentTapAction(content: content, activate: { [weak self] in
                     guard let self else {
                         return nil
                     }

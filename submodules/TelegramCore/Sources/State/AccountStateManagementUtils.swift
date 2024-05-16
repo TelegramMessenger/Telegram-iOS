@@ -1776,8 +1776,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateNewAuthorization(isUnconfirmed: isUnconfirmed, hash: hash, date: date ?? 0, device: device ?? "", location: location ?? "")
             case let .updatePeerWallpaper(_, peer, wallpaper):
                 updatedState.updateWallpaper(peerId: peer.peerId, wallpaper: wallpaper.flatMap { TelegramWallpaper(apiWallpaper: $0) })
-            case let .updateBroadcastRevenueTransactions(_, balances):
-                updatedState.updateRevenueBalances(RevenueStats.Balances(apiRevenueBalances: balances))
+            case let .updateBroadcastRevenueTransactions(peer, balances):
+                updatedState.updateRevenueBalances(peerId: peer.peerId, balances: RevenueStats.Balances(apiRevenueBalances: balances))
             default:
                 break
         }
@@ -3402,7 +3402,7 @@ func replayFinalState(
     var deletedMessageIds: [DeletedMessageId] = []
     var syncAttachMenuBots = false
     var updateConfig = false
-    var updatedRevenueBalances: RevenueStats.Balances?
+    var updatedRevenueBalances: [PeerId: RevenueStats.Balances] = [:]
     
     var holesFromPreviousStateMessageIds: [MessageId] = []
     var clearHolesFromPreviousStateForChannelMessagesWithPts: [PeerIdAndMessageNamespace: Int32] = [:]
@@ -4828,8 +4828,8 @@ func replayFinalState(
                 } else {
                     transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.NewSessionReviews, itemId: id.rawValue)
                 }
-            case let .UpdateRevenueBalances(balances):
-                updatedRevenueBalances = balances
+            case let .UpdateRevenueBalances(peerId, balances):
+                updatedRevenueBalances[peerId] = balances
         }
     }
     

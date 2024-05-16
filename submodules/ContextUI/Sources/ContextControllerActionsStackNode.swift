@@ -228,21 +228,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
         let iconSpacing: CGFloat = 8.0
         
         self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
-        
-        var subtitle: String?
-        switch self.item.textLayout {
-        case .singleLine:
-            self.titleLabelNode.maximumNumberOfLines = 1
-        case .twoLinesMax:
-            self.titleLabelNode.maximumNumberOfLines = 2
-        case let .secondLineWithValue(subtitleValue):
-            self.titleLabelNode.maximumNumberOfLines = 1
-            subtitle = subtitleValue
-        case .multiline:
-            self.titleLabelNode.maximumNumberOfLines = 0
-            self.titleLabelNode.lineSpacing = 0.1
-        }
-        
+                
         var forcedHeight: CGFloat?
         var titleVerticalOffset: CGFloat?
         let titleFont: UIFont
@@ -264,6 +250,30 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
         
         let subtitleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
         let subtitleColor = presentationData.theme.contextMenu.secondaryColor
+        
+        var subtitle: NSAttributedString?
+        switch self.item.textLayout {
+        case .singleLine:
+            self.titleLabelNode.maximumNumberOfLines = 1
+        case .twoLinesMax:
+            self.titleLabelNode.maximumNumberOfLines = 2
+        case let .secondLineWithValue(subtitleValue):
+            self.titleLabelNode.maximumNumberOfLines = 1
+            subtitle = NSAttributedString(
+                string: subtitleValue,
+                font: subtitleFont,
+                textColor: subtitleColor
+            )
+        case let .secondLineWithAttributedValue(subtitleValue):
+            self.titleLabelNode.maximumNumberOfLines = 1
+            let mutableString = subtitleValue.mutableCopy() as! NSMutableAttributedString
+            mutableString.addAttribute(.foregroundColor, value: subtitleColor, range: NSRange(location: 0, length: mutableString.length))
+            mutableString.addAttribute(.font, value: subtitleFont, range: NSRange(location: 0, length: mutableString.length))
+            subtitle = mutableString
+        case .multiline:
+            self.titleLabelNode.maximumNumberOfLines = 0
+            self.titleLabelNode.lineSpacing = 0.1
+        }
         
         let titleColor: UIColor
         switch self.item.textColor {
@@ -308,13 +318,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
         
         self.titleLabelNode.isUserInteractionEnabled = self.titleLabelNode.tapAttributeAction != nil && self.item.action == nil
         
-        self.subtitleNode.attributedText = subtitle.flatMap { subtitle in
-            return NSAttributedString(
-                string: subtitle,
-                font: subtitleFont,
-                textColor: subtitleColor
-            )
-        }
+        self.subtitleNode.attributedText = subtitle
         
         var iconSize: CGSize?
         if let iconSource = self.item.iconSource {

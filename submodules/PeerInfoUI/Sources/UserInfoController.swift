@@ -58,8 +58,8 @@ public func openAddPersonContactImpl(context: AccountContext, updatedPresentatio
         if let statusSettings = statusSettings {
             shareViaException = statusSettings.contains(.addExceptionWhenAddingContact)
         }
-        
-        pushController(deviceContactInfoController(context: context, updatedPresentationData: updatedPresentationData, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in
+
+        pushController(deviceContactInfoController(context: ShareControllerAppAccountContext(context: context), environment: ShareControllerAppEnvironment(sharedContext: context.sharedContext), updatedPresentationData: updatedPresentationData, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in
             if let peer = peer as? TelegramUser {
                 completion()
                 

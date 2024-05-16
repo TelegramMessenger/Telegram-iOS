@@ -121,6 +121,19 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
             statusNode.attributedText = NSAttributedString(string: value, font: subtitleFont, textColor: presentationData.theme.contextMenu.secondaryColor)
             statusNode.maximumNumberOfLines = 1
             self.statusNode = statusNode
+        case let .secondLineWithAttributedValue(value):
+            self.textNode.maximumNumberOfLines = 1
+            let statusNode = ImmediateTextNode()
+            statusNode.isAccessibilityElement = false
+            statusNode.isUserInteractionEnabled = false
+            statusNode.displaysAsynchronously = false
+            
+            let mutableString = value.mutableCopy() as! NSMutableAttributedString
+            mutableString.addAttribute(.foregroundColor, value: presentationData.theme.contextMenu.secondaryColor, range: NSRange(location: 0, length: mutableString.length))
+            mutableString.addAttribute(.font, value: subtitleFont, range: NSRange(location: 0, length: mutableString.length))
+            statusNode.attributedText = mutableString
+            statusNode.maximumNumberOfLines = 1
+            self.statusNode = statusNode
         case .multiline:
             self.textNode.maximumNumberOfLines = 0
             self.statusNode = nil
@@ -350,10 +363,15 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         
         self.textNode.attributedText = NSAttributedString(string: self.action.text, font: titleFont, textColor: textColor)
         
+        let subtitleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)
         switch self.action.textLayout {
         case let .secondLineWithValue(value):
-            let subtitleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)
             self.statusNode?.attributedText = NSAttributedString(string: value, font: subtitleFont, textColor: presentationData.theme.contextMenu.secondaryColor)
+        case let .secondLineWithAttributedValue(value):
+            let mutableString = value.mutableCopy() as! NSMutableAttributedString
+            mutableString.addAttribute(.foregroundColor, value: presentationData.theme.contextMenu.secondaryColor, range: NSRange(location: 0, length: mutableString.length))
+            mutableString.addAttribute(.font, value: subtitleFont, range: NSRange(location: 0, length: mutableString.length))
+            self.statusNode?.attributedText = mutableString
         default:
             break
         }
