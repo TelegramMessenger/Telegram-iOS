@@ -135,6 +135,7 @@ private final class RevenueStatsContextImpl {
         assert(Queue.mainQueue().isCurrent())
         
         let account = self.account
+        let peerId = self.peerId
         let signal = requestRevenueStats(postbox: self.account.postbox, network: self.account.network, peerId: self.peerId)
         |> mapToSignal { initial -> Signal<RevenueStats?, NoError> in
             guard let initial else {
@@ -143,8 +144,11 @@ private final class RevenueStatsContextImpl {
             return .single(initial)
             |> then(
                 account.stateManager.updatedRevenueBalances()
-                |> map { balances in
-                    return initial.withUpdated(balances: balances)
+                |> mapToSignal { updates in
+                    if let balances = updates[peerId] {
+                        return .single(initial.withUpdated(balances: balances))
+                    }
+                    return .complete()
                 }
             )
         }

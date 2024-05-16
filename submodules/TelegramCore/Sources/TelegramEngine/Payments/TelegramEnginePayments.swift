@@ -65,5 +65,13 @@ public extension TelegramEngine {
         public func launchPrepaidGiveaway(peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32) -> Signal<Never, LaunchPrepaidGiveawayError> {
             return _internal_launchPrepaidGiveaway(account: self.account, peerId: peerId, id: id, additionalPeerIds: additionalPeerIds, countries: countries, onlyNewSubscribers: onlyNewSubscribers, showWinners: showWinners, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate)
         }
-    }
+        
+        public func starsTopUpOptions() -> Signal<[StarsTopUpOption], NoError> {
+            return _internal_starsTopUpOptions(account: self.account)
+        }
+        
+        public func peerStarsContext(peerId: EnginePeer.Id) -> StarsContext {
+            return StarsContext(account: self.account, peerId: peerId)
+        }
+     }
 }
