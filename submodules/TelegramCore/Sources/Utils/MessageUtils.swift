@@ -523,6 +523,14 @@ public extension Message {
         }
         return nil
     }
+    var invertMedia: Bool {
+        for attribute in self.attributes {
+            if let _ = attribute as? InvertMediaMessageAttribute {
+                return true
+            }
+        }
+        return false
+    }
 }
 
 public extension Message {

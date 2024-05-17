@@ -1328,6 +1328,9 @@ public final class PendingMessageManager {
                                 flags |= 1 << 16
                             }
                         }
+                        if message.invertMedia {
+                            flags |= 1 << 16
+                        }
                     
                         var quickReplyShortcut: Api.InputQuickReplyShortcut?
                         if let quickReply {
@@ -1408,6 +1411,9 @@ public final class PendingMessageManager {
                             if attribute.leadingPreview {
                                 flags |= 1 << 16
                             }
+                        }
+                        if message.invertMedia {
+                            flags |= 1 << 16
                         }
                     
                         var quickReplyShortcut: Api.InputQuickReplyShortcut?
