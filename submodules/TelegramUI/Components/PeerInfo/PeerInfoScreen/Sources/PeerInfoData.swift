@@ -348,6 +348,7 @@ final class PeerInfoScreenData {
     let hasSavedMessageTags: Bool
     let isPremiumRequiredForStoryPosting: Bool
     let personalChannel: PeerInfoPersonalChannelData?
+    let starsState: StarsContext.State?
     
     let _isContact: Bool
     var forceIsContact: Bool = false
@@ -387,7 +388,8 @@ final class PeerInfoScreenData {
         accountIsPremium: Bool,
         hasSavedMessageTags: Bool,
         isPremiumRequiredForStoryPosting: Bool,
-        personalChannel: PeerInfoPersonalChannelData?
+        personalChannel: PeerInfoPersonalChannelData?,
+        starsState: StarsContext.State?
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -416,6 +418,7 @@ final class PeerInfoScreenData {
         self.hasSavedMessageTags = hasSavedMessageTags
         self.isPremiumRequiredForStoryPosting = isPremiumRequiredForStoryPosting
         self.personalChannel = personalChannel
+        self.starsState = starsState
     }
 }
 
@@ -675,7 +678,7 @@ private func peerInfoPersonalChannel(context: AccountContext, peerId: EnginePeer
     |> distinctUntilChanged
 }
 
-func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, accountsAndPeers: Signal<[(AccountContext, EnginePeer, Int32)], NoError>, activeSessionsContextAndCount: Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError>, notificationExceptions: Signal<NotificationExceptionsList?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, hasPassport: Signal<Bool, NoError>) -> Signal<PeerInfoScreenData, NoError> {
+func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, accountsAndPeers: Signal<[(AccountContext, EnginePeer, Int32)], NoError>, activeSessionsContextAndCount: Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError>, notificationExceptions: Signal<NotificationExceptionsList?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, hasPassport: Signal<Bool, NoError>, starsContext: StarsContext?) -> Signal<PeerInfoScreenData, NoError> {
     let preferences = context.sharedContext.accountManager.sharedData(keys: [
         SharedDataKeys.proxySettings,
         ApplicationSpecificSharedDataKeys.inAppNotificationSettings,
@@ -794,6 +797,13 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         }
     }
     
+    let starsState: Signal<StarsContext.State?, NoError>
+    if let starsContext {
+        starsState = starsContext.state
+    } else {
+        starsState = .single(nil)
+    }
+    
     return combineLatest(
         context.account.viewTracker.peerView(peerId, updateData: true),
         accountsAndPeers,
@@ -818,9 +828,10 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         |> distinctUntilChanged,
         hasStories,
         bots,
-        peerInfoPersonalChannel(context: context, peerId: peerId, isSettings: true)
+        peerInfoPersonalChannel(context: context, peerId: peerId, isSettings: true),
+        starsState
     )
-    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots, personalChannel -> PeerInfoScreenData in
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots, personalChannel, starsState -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
@@ -893,7 +904,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             accountIsPremium: peer?.isPremium ?? false,
             hasSavedMessageTags: false,
             isPremiumRequiredForStoryPosting: true,
-            personalChannel: personalChannel
+            personalChannel: personalChannel,
+            starsState: starsState
         )
     }
 }
@@ -932,7 +944,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 accountIsPremium: false,
                 hasSavedMessageTags: false,
                 isPremiumRequiredForStoryPosting: true,
-                personalChannel: nil
+                personalChannel: nil,
+                starsState: nil
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -1259,7 +1272,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     accountIsPremium: accountIsPremium,
                     hasSavedMessageTags: hasSavedMessageTags,
                     isPremiumRequiredForStoryPosting: false,
-                    personalChannel: personalChannel
+                    personalChannel: personalChannel,
+                    starsState: nil
                 )
             }
         case .channel:
@@ -1430,7 +1444,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     accountIsPremium: accountIsPremium,
                     hasSavedMessageTags: hasSavedMessageTags,
                     isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
-                    personalChannel: nil
+                    personalChannel: nil,
+                    starsState: nil
                 )
             }
         case let .group(groupId):
@@ -1724,7 +1739,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     accountIsPremium: accountIsPremium,
                     hasSavedMessageTags: hasSavedMessageTags,
                     isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting,
-                    personalChannel: nil
+                    personalChannel: nil,
+                    starsState: nil
                 ))
             }
         }

@@ -820,25 +820,45 @@ func openResolvedUrlImpl(
                 if let navigationController = navigationController {
                     let inputData = Promise<BotCheckoutController.InputData?>()
                     inputData.set(BotCheckoutController.InputData.fetch(context: context, source: .slug(slug))
-                                  |> map(Optional.init)
-                                  |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
                         return .single(nil)
                     })
-                    let checkoutController = BotCheckoutController(context: context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
-                        /*strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .paymentSent(currencyValue: currencyValue, itemTitle: invoice.title), elevatedLayout: false, action: { action in
-                         guard let strongSelf = self, let receiptMessageId = receiptMessageId else {
-                         return false
-                         }
-                         
-                         if case .info = action {
-                         strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                         return true
-                         }
-                         return false
-                         }), in: .current)*/
-                    })
-                    checkoutController.navigationPresentation = .modal
-                    navigationController.pushViewController(checkoutController)
+                    if invoice.currency == "XTR" {
+                        let statePromise = Promise<StarsContext.State?>()
+                        statePromise.set(context.engine.payments.peerStarsState(peerId: context.account.peerId))
+                        let starsInputData = combineLatest(
+                            inputData.get(),
+                            statePromise.get()
+                        )
+                        |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
+                            if let data, let state {
+                                return (state, data.form, data.botPeer)
+                            } else {
+                                return nil
+                            }
+                        }
+                        let _ = (starsInputData |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                            let controller = context.sharedContext.makeStarsTransferScreen(context: context, invoice: invoice, source: .slug(slug), inputData: starsInputData)
+                            navigationController.pushViewController(controller)
+                        })
+                    } else {
+                        let checkoutController = BotCheckoutController(context: context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
+                            /*strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .paymentSent(currencyValue: currencyValue, itemTitle: invoice.title), elevatedLayout: false, action: { action in
+                             guard let strongSelf = self, let receiptMessageId = receiptMessageId else {
+                             return false
+                             }
+                             
+                             if case .info = action {
+                             strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                             return true
+                             }
+                             return false
+                             }), in: .current)*/
+                        })
+                        checkoutController.navigationPresentation = .modal
+                        navigationController.pushViewController(checkoutController)
+                    }
                 }
             } else {
                 present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Chat_ErrorInvoiceNotFound, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)

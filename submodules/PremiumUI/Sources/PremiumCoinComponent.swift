@@ -7,6 +7,7 @@ import SceneKit
 import GZip
 import AppBundle
 import LegacyComponents
+import PremiumStarComponent
 
 private let sceneVersion: Int = 3
 

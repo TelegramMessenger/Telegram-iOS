@@ -64,6 +64,9 @@ import TelegramNotices
 import BotSettingsScreen
 import CameraScreen
 import BirthdayPickerScreen
+import StarsTransactionsScreen
+import StarsPurchaseScreen
+import StarsTransferScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2608,6 +2611,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeStoryStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: EnginePeer.Id, storyId: Int32, storyItem: EngineStoryItem, fromStory: Bool) -> ViewController {
         return messageStatsController(context: context, updatedPresentationData: updatedPresentationData, subject: .story(peerId: peerId, id: storyId, item: storyItem, fromStory: fromStory))
+    }
+    
+    public func makeStarsTransactionsScreen(context: AccountContext, starsContext: StarsContext) -> ViewController {
+        return StarsTransactionsScreen(context: context, starsContext: starsContext)
+    }
+    
+    public func makeStarsPurchaseScreen(context: AccountContext, starsContext: StarsContext, options: [StarsTopUpOption], peerId: EnginePeer.Id?, requiredStars: Int32?) -> ViewController {
+        return StarsPurchaseScreen(context: context, starsContext: starsContext, options: options, peerId: peerId, requiredStars: requiredStars, modal: true)
+    }
+    
+    public func makeStarsTransferScreen(context: AccountContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>) -> ViewController {
+        return StarsTransferScreen(context: context, invoice: invoice, source: source, inputData: inputData)
     }
 }
 

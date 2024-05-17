@@ -66,13 +66,13 @@ func _internal_starsTopUpOptions(account: Account) -> Signal<[StarsTopUpOption],
     }
 }
 
-private struct InternalStarsStatus {
+struct InternalStarsStatus {
     let balance: Int64
     let transactions: [StarsContext.State.Transaction]
     let nextOffset: String?
 }
 
-private func requestStarsState(account: Account, peerId: EnginePeer.Id, offset: String?) -> Signal<InternalStarsStatus?, NoError> {
+func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, offset: String?) -> Signal<InternalStarsStatus?, NoError> {
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     } |> mapToSignal { peer -> Signal<InternalStarsStatus?, NoError> in
@@ -152,6 +152,7 @@ private final class StarsContextImpl {
                 return
             }
             self._state = StarsContext.State(balance: balance, transactions: state.transactions)
+            self.load()
         })
     }
     
@@ -164,12 +165,14 @@ private final class StarsContextImpl {
     func load() {
         assert(Queue.mainQueue().isCurrent())
         
-        self.disposable.set((requestStarsState(account: self.account, peerId: self.peerId, offset: nil)
+        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, offset: nil)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let self {
                 if let status {
                     self._state = StarsContext.State(balance: status.balance, transactions: status.transactions)
                     self.nextOffset = status.nextOffset
+                    
+                    self.loadMore()
                 } else {
                     self._state = nil
                 }
@@ -183,7 +186,7 @@ private final class StarsContextImpl {
         guard let currentState = self._state, let nextOffset = self.nextOffset else {
             return
         }
-        self.disposable.set((requestStarsState(account: self.account, peerId: self.peerId, offset: nextOffset)
+        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, offset: nextOffset)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let self {
                 if let status {

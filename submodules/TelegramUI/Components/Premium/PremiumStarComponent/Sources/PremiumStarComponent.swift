@@ -30,22 +30,17 @@ private func generateShineTexture() -> UIImage {
     return UIImage()
 }
 
-private func generateDiffuseTexture() -> UIImage {
+private func generateDiffuseTexture(colors: [UIColor]) -> UIImage {
     return generateImage(CGSize(width: 256, height: 256), rotatedContext: { size, context in
-        let colorsArray: [CGColor] = [
-            UIColor(rgb: 0x0079ff).cgColor,
-            UIColor(rgb: 0x6a93ff).cgColor,
-            UIColor(rgb: 0x9172fe).cgColor,
-            UIColor(rgb: 0xe46acd).cgColor,
-        ]
+        let colorsArray: [CGColor] = colors.map { $0.cgColor }
         var locations: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
         let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
 
-        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: size.height), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
     })!
 }
 
-func loadCompressedScene(name: String, version: Int) -> SCNScene? {
+public func loadCompressedScene(name: String, version: Int) -> SCNScene? {
     let resourceUrl: URL
     if let url = getAppBundle().url(forResource: name, withExtension: "scn") {
         resourceUrl = url
@@ -69,40 +64,52 @@ func loadCompressedScene(name: String, version: Int) -> SCNScene? {
     return scene
 }
 
-final class PremiumStarComponent: Component {
+public final class PremiumStarComponent: Component {
     let isIntro: Bool
     let isVisible: Bool
     let hasIdleAnimations: Bool
-        
-    init(isIntro: Bool, isVisible: Bool, hasIdleAnimations: Bool) {
+    let colors: [UIColor]?
+    
+    public init(
+        isIntro: Bool,
+        isVisible: Bool,
+        hasIdleAnimations: Bool,
+        colors: [UIColor]? = nil
+    ) {
         self.isIntro = isIntro
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
+        self.colors = colors
     }
     
-    static func ==(lhs: PremiumStarComponent, rhs: PremiumStarComponent) -> Bool {
-        return lhs.isIntro == rhs.isIntro && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
+    public static func ==(lhs: PremiumStarComponent, rhs: PremiumStarComponent) -> Bool {
+        return lhs.isIntro == rhs.isIntro && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations && lhs.colors == rhs.colors
     }
     
-    final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
-        final class Tag {
+    public final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
+        public final class Tag {
+            public init() {
+                
+            }
         }
         
-        func matches(tag: Any) -> Bool {
+        public func matches(tag: Any) -> Bool {
             if let _ = tag as? Tag {
                 return true
             }
             return false
         }
         
+        private var component: PremiumStarComponent?
+        
         private var _ready = Promise<Bool>()
-        var ready: Signal<Bool, NoError> {
+        public var ready: Signal<Bool, NoError> {
             return self._ready.get()
         }
         
-        weak var animateFrom: UIView?
-        weak var containerView: UIView?
-        var animationColor: UIColor?
+        public weak var animateFrom: UIView?
+        public weak var containerView: UIView?
+        public var animationColor: UIColor?
         
         private let sceneView: SCNView
                 
@@ -125,8 +132,6 @@ final class PremiumStarComponent: Component {
             super.init(frame: frame)
             
             self.addSubview(self.sceneView)
-            
-            self.setup()
             
             let panGestureRecoginzer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
             self.addGestureRecognizer(panGestureRecoginzer)
@@ -274,21 +279,46 @@ final class PremiumStarComponent: Component {
             }
         }
         
+        private var didSetup = false
         private func setup() {
-            guard let scene = loadCompressedScene(name: "star", version: sceneVersion) else {
+            guard !self.didSetup, let scene = loadCompressedScene(name: "star", version: sceneVersion) else {
                 return
             }
             
+            self.didSetup = true
             self.sceneView.scene = scene
             self.sceneView.delegate = self
             
-            self.didSetReady = true
-            self._ready.set(.single(true))
-            self.onReady()
+            if let node = scene.rootNode.childNode(withName: "star", recursively: false), let colors = self.component?.colors, let color = colors.first {
+                node.geometry?.materials.first?.diffuse.contents = generateDiffuseTexture(colors: colors)
+                
+                let names: [String] = [
+                    "particles_left",
+                    "particles_right",
+                    "particles_left_bottom",
+                    "particles_right_bottom",
+                    "particles_center"
+                ]
+                
+                for name in names {
+                    if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
+                        particleSystem.particleColor = color
+                        particleSystem.particleColorVariation = SCNVector4Make(0, 0, 0, 0)
+                    }
+                }
+            }
+            
+            if self.animateFrom != nil {
+                let _ = self.sceneView.snapshot()
+            } else {
+                self.didSetReady = true
+                self._ready.set(.single(true))
+                self.onReady()
+            }
         }
         
         private var didSetReady = false
-        func renderer(_ renderer: SCNSceneRenderer, didRenderScene scene: SCNScene, atTime time: TimeInterval) {
+        public func renderer(_ renderer: SCNSceneRenderer, didRenderScene scene: SCNScene, atTime time: TimeInterval) {
             if !self.didSetReady {
                 self.didSetReady = true
                 
@@ -305,7 +335,7 @@ final class PremiumStarComponent: Component {
             }
                         
             containerView = containerView.subviews[2].subviews[1]
-            
+                        
             if let animationColor = self.animationColor {
                 let newNode = node.clone()
                 newNode.geometry = node.geometry?.copy() as? SCNGeometry
@@ -562,6 +592,10 @@ final class PremiumStarComponent: Component {
         }
         
         func update(component: PremiumStarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            self.component = component
+            
+            self.setup()
+            
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
             if self.sceneView.superview == self {
                 self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
@@ -573,11 +607,11 @@ final class PremiumStarComponent: Component {
         }
     }
     
-    func makeView() -> View {
+    public func makeView() -> View {
         return View(frame: CGRect(), isIntro: self.isIntro)
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

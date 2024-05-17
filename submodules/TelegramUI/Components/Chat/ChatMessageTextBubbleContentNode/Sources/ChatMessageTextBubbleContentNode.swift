@@ -290,11 +290,14 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var isSeekableWebMedia = false
                 var isUnsupportedMedia = false
                 var story: Stories.Item?
+                var invoice: TelegramMediaInvoice?
                 for media in item.message.media {
                     if let file = media as? TelegramMediaFile, let duration = file.duration {
                         mediaDuration = Double(duration)
                     }
-                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, webEmbedType(content: content).supportsSeeking {
+                    if let media = media as? TelegramMediaInvoice, media.currency == "XTR" {
+                        invoice = media
+                    } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, webEmbedType(content: content).supportsSeeking {
                         isSeekableWebMedia = true
                     } else if media is TelegramMediaUnsupported {
                         isUnsupportedMedia = true
@@ -308,7 +311,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 var isTranslating = false
-                if let story {
+                if let invoice {
+                    rawText = invoice.description
+                } else if let story {
                     rawText = story.text
                     messageEntities = story.entities
                 } else if isUnsupportedMedia {

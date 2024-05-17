@@ -8,6 +8,7 @@ import ItemListUI
 import PresentationDataUtils
 import Markdown
 import ComponentFlow
+import PremiumStarComponent
 
 final class CreateGiveawayHeaderItem: ItemListControllerHeaderItem {
     let theme: PresentationTheme

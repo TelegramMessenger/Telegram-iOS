@@ -448,6 +448,9 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/BotSettingsScreen",
         "//submodules/TelegramUI/Components/AdminUserActionsSheet",
         "//submodules/TelegramUI/Components/Chat/ChatSendAudioMessageContextPreview",
+        "//submodules/TelegramUI/Components/Stars/StarsTransactionsScreen",
+        "//submodules/TelegramUI/Components/Stars/StarsPurchaseScreen",
+        "//submodules/TelegramUI/Components/Stars/StarsTransferScreen",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

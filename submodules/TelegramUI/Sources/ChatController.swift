@@ -2913,22 +2913,45 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
                                 return .single(nil)
                             })
-                            strongSelf.present(BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .message(messageId), inputData: inputData, completed: { currencyValue, receiptMessageId in
-                                guard let strongSelf = self else {
-                                    return
+                            if invoice.currency == "XTR" {
+                                let statePromise = Promise<StarsContext.State?>()
+                                statePromise.set(strongSelf.context.engine.payments.peerStarsState(peerId: strongSelf.context.account.peerId))
+                                let starsInputData = combineLatest(
+                                    inputData.get(),
+                                    statePromise.get()
+                                )
+                                |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
+                                    if let data, let state {
+                                        return (state, data.form, data.botPeer)
+                                    } else {
+                                        return nil
+                                    }
                                 }
-                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .paymentSent(currencyValue: currencyValue, itemTitle: invoice.title), elevatedLayout: false, action: { action in
-                                    guard let strongSelf = self, let receiptMessageId = receiptMessageId else {
+                                let _ = (starsInputData |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, invoice: invoice, source: .message(messageId), inputData: starsInputData)
+                                    strongSelf.push(controller)
+                                })
+                            } else {
+                                strongSelf.present(BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .message(messageId), inputData: inputData, completed: { currencyValue, receiptMessageId in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .paymentSent(currencyValue: currencyValue, itemTitle: invoice.title), elevatedLayout: false, action: { action in
+                                        guard let strongSelf = self, let receiptMessageId = receiptMessageId else {
+                                            return false
+                                        }
+                                        
+                                        if case .info = action {
+                                            strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                            return true
+                                        }
                                         return false
-                                    }
-
-                                    if case .info = action {
-                                        strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                                        return true
-                                    }
-                                    return false
-                                }), in: .current)
-                            }), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                    }), in: .current)
+                                }), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            }
                         }
                     }
                 }

@@ -453,7 +453,7 @@ final class LimitsPageComponent: CombinedComponent {
         let updateDismissOffset: (CGFloat) -> Void
         let updatedIsDisplaying: (Bool) -> Void
         
-        var resetScroll: ActionSlot<Void>?
+        var resetScroll: ActionSlot<CGPoint?>?
         
         var topContentOffset: CGFloat = 0.0
         var bottomContentOffset: CGFloat = 100.0 {
@@ -474,7 +474,7 @@ final class LimitsPageComponent: CombinedComponent {
                     self.updatedIsDisplaying(self.isDisplaying)
                     
                     if !self.isDisplaying {
-                        self.resetScroll?.invoke(Void())
+                        self.resetScroll?.invoke(nil)
                     }
                 }
             }
@@ -521,7 +521,7 @@ final class LimitsPageComponent: CombinedComponent {
         let topSeparator = Child(Rectangle.self)
         let title = Child(MultilineTextComponent.self)
         
-        let resetScroll = ActionSlot<Void>()
+        let resetScroll = ActionSlot<CGPoint?>()
         
         return { context in
             let state = context.state

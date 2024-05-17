@@ -109,6 +109,30 @@ public struct PresentationResourcesSettings {
         
         drawBorder(context: context, rect: bounds)
     })
+    
+    public static let stars = generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        let path = UIBezierPath(roundedRect: bounds, cornerRadius: 7.0)
+        context.addPath(path.cgPath)
+        context.clip()
+        
+        let colorsArray: [CGColor] = [
+            UIColor(rgb: 0xfec80f).cgColor,
+            UIColor(rgb: 0xdd6f12).cgColor
+        ]
+        var locations: [CGFloat] = [0.0, 1.0]
+        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
+
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
+        
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Premium/ButtonIcon"), color: UIColor(rgb: 0xffffff)), let cgImage = image.cgImage {
+            context.draw(cgImage, in: CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - image.size.width) / 2.0), y: floorToScreenPixels((bounds.height - image.size.height) / 2.0)), size: image.size))
+        }
+        
+        drawBorder(context: context, rect: bounds)
+    })
 
     public static let passport = renderIcon(name: "Settings/Menu/Passport")
     public static let watch = renderIcon(name: "Settings/Menu/Watch")

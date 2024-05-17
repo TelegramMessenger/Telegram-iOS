@@ -857,14 +857,28 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             return .single(nil)
                         }
                         |> deliverOnMainQueue).start(next: { [weak self] invoice in
-                            if let strongSelf = self, let invoice = invoice {
+                            if let strongSelf = self, let invoice, let navigationController = strongSelf.controller?.getNavigationController() {
                                 let inputData = Promise<BotCheckoutController.InputData?>()
                                 inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .slug(slug))
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
                                     return .single(nil)
                                 })
-                                if let navigationController = strongSelf.controller?.getNavigationController() {
+                                if invoice.currency == "XTR" {
+                                    let starsInputData = combineLatest(
+                                        inputData.get(),
+                                        strongSelf.context.engine.payments.peerStarsState(peerId: strongSelf.context.account.peerId)
+                                    )
+                                    |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
+                                        if let data, let state {
+                                            return (state, data.form, data.botPeer)
+                                        } else {
+                                            return nil
+                                        }
+                                    }
+                                    let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: starsInputData)
+                                    navigationController.pushViewController(controller)
+                                } else {
                                     let checkoutController = BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
                                         self?.sendInvoiceClosedEvent(slug: slug, result: .paid)
                                     }, cancelled: { [weak self] in

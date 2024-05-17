@@ -21,6 +21,7 @@ import TextFormat
 import TelegramStringFormatting
 import UndoUI
 import InvisibleInkDustNode
+import PremiumStarComponent
 
 private final class PremiumGiftCodeSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment

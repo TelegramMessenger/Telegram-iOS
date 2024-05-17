@@ -3,6 +3,7 @@ import UIKit
 import SceneKit
 import Display
 import AppBundle
+import PremiumStarComponent
 
 private let sceneVersion: Int = 1
 

@@ -191,7 +191,11 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 case .switchInline:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingShareIconImage : graphics.chatBubbleActionButtonOutgoingShareIconImage
                 case .payment:
-                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPaymentIconImage : graphics.chatBubbleActionButtonOutgoingPaymentIconImage
+                    if button.title.contains("Pay XTR") {
+                        iconImage = nil
+                    } else {
+                        iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPaymentIconImage : graphics.chatBubbleActionButtonOutgoingPaymentIconImage
+                    }
                 case .openUserProfile:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingProfileIconImage : graphics.chatBubbleActionButtonOutgoingProfileIconImage
                 case .openWebView:
@@ -215,7 +219,23 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             }
             
             let messageTheme = incoming ? theme.theme.chat.message.incoming : theme.theme.chat.message.outgoing
-            let (titleSize, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor:  bubbleVariableColor(variableColor: messageTheme.actionButtonsTextColor, wallpaper: theme.wallpaper)), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(44.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
+            
+            let titleColor = bubbleVariableColor(variableColor: messageTheme.actionButtonsTextColor, wallpaper: theme.wallpaper)
+            let attributedTitle: NSAttributedString
+            if title.contains("Pay XTR") {
+                let stars = title.replacingOccurrences(of: "Pay XTR", with: "")
+                let buttonAttributedString = NSMutableAttributedString(string: "Pay  >  \(stars)", font: titleFont, textColor: titleColor, paragraphAlignment: .center)
+                if let range = buttonAttributedString.string.range(of: ">"), let starImage = UIImage(bundleImageName: "Item List/PremiumIcon") {
+                    buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
+                    buttonAttributedString.addAttribute(.foregroundColor, value: titleColor, range: NSRange(range, in: buttonAttributedString.string))
+                    buttonAttributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: buttonAttributedString.string))
+                }
+                attributedTitle = buttonAttributedString
+            } else {
+                attributedTitle = NSAttributedString(string: title, font: titleFont, textColor: titleColor)
+            }
+            
+            let (titleSize, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(44.0, constrainedWidth - minimumSideInset - minimumSideInset), height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)))
 
             return (titleSize.size.width + sideInset + sideInset, { width in
                 return (CGSize(width: width, height: 42.0), { animation in

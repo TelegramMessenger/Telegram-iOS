@@ -13,9 +13,9 @@ public final class BotCheckoutController: ViewController {
             case generic
         }
 
-        let form: BotPaymentForm
-        let validatedFormInfo: BotPaymentValidatedFormInfo?
-        let botPeer: EnginePeer?
+        public let form: BotPaymentForm
+        public let validatedFormInfo: BotPaymentValidatedFormInfo?
+        public let botPeer: EnginePeer?
 
         private init(
             form: BotPaymentForm,

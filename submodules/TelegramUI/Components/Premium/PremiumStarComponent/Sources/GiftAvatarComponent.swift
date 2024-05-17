@@ -16,38 +16,49 @@ import TelegramPresentationData
 
 private let sceneVersion: Int = 1
 
-final class GiftAvatarComponent: Component {
+public final class GiftAvatarComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let peers: [EnginePeer]
     let isVisible: Bool
     let hasIdleAnimations: Bool
+    let hasScaleAnimation: Bool
+    let color: UIColor?
+    let offset: CGFloat?
         
-    init(context: AccountContext, theme: PresentationTheme, peers: [EnginePeer], isVisible: Bool, hasIdleAnimations: Bool) {
+    public init(context: AccountContext, theme: PresentationTheme, peers: [EnginePeer], isVisible: Bool, hasIdleAnimations: Bool, hasScaleAnimation: Bool = true, color: UIColor? = nil, offset: CGFloat? = nil) {
         self.context = context
         self.theme = theme
         self.peers = peers
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
+        self.hasScaleAnimation = hasScaleAnimation
+        self.color = color
+        self.offset = offset
     }
     
-    static func ==(lhs: GiftAvatarComponent, rhs: GiftAvatarComponent) -> Bool {
-        return lhs.peers == rhs.peers && lhs.theme === rhs.theme && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
+    public static func ==(lhs: GiftAvatarComponent, rhs: GiftAvatarComponent) -> Bool {
+        return lhs.peers == rhs.peers && lhs.theme === rhs.theme && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations && lhs.hasScaleAnimation == rhs.hasScaleAnimation && lhs.offset == rhs.offset
     }
     
-    final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
-        final class Tag {
+    public final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
+        public final class Tag {
+            public init() {
+                
+            }
         }
         
-        func matches(tag: Any) -> Bool {
+        public func matches(tag: Any) -> Bool {
             if let _ = tag as? Tag {
                 return true
             }
             return false
         }
         
+        private var component: GiftAvatarComponent?
+        
         private var _ready = Promise<Bool>()
-        var ready: Signal<Bool, NoError> {
+        public var ready: Signal<Bool, NoError> {
             return self._ready.get()
         }
         
@@ -66,7 +77,7 @@ final class GiftAvatarComponent: Component {
         private var timer: SwiftSignalKit.Timer?
         private var hasIdleAnimations = false
         
-        override init(frame: CGRect) {
+        public override init(frame: CGRect) {
             self.sceneView = SCNView(frame: CGRect(origin: .zero, size: CGSize(width: 64.0, height: 64.0)))
             self.sceneView.backgroundColor = .clear
             self.sceneView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
@@ -80,9 +91,7 @@ final class GiftAvatarComponent: Component {
             
             self.addSubview(self.sceneView)
             self.addSubview(self.avatarNode.view)
-            
-            self.setup()
-                        
+                                    
             let tapGestureRecoginzer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
             self.addGestureRecognizer(tapGestureRecoginzer)
             
@@ -105,19 +114,43 @@ final class GiftAvatarComponent: Component {
             self.playAppearanceAnimation(velocity: nil, mirror: false, explode: true)
         }
         
+        private var didSetup = false
         private func setup() {
-            guard let scene = loadCompressedScene(name: "gift", version: sceneVersion) else {
+            guard let scene = loadCompressedScene(name: "gift", version: sceneVersion), !self.didSetup else {
                 return
             }
+            
+            self.didSetup = true
             
             self.sceneView.scene = scene
             self.sceneView.delegate = self
             
-            let _ = self.sceneView.snapshot()
+            if let color = self.component?.color {
+                let names: [String] = [
+                    "particles_left",
+                    "particles_right",
+                    "particles_left_bottom",
+                    "particles_right_bottom",
+                    "particles_center"
+                ]
+                
+                for name in names {
+                    if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
+                        particleSystem.particleColor = color
+                        particleSystem.particleColorVariation = SCNVector4Make(0, 0, 0, 0)
+                    }
+                }
+
+                self.didSetReady = true
+                self._ready.set(.single(true))
+                self.onReady()
+            } else {
+                let _ = self.sceneView.snapshot()
+            }
         }
         
         private var didSetReady = false
-        func renderer(_ renderer: SCNSceneRenderer, didRenderScene scene: SCNScene, atTime time: TimeInterval) {
+        public func renderer(_ renderer: SCNSceneRenderer, didRenderScene scene: SCNScene, atTime time: TimeInterval) {
             if !self.didSetReady {
                 self.didSetReady = true
                 
@@ -146,6 +179,10 @@ final class GiftAvatarComponent: Component {
         }
         
         private func setupScaleAnimation() {
+            guard self.component?.hasScaleAnimation == true else {
+                return
+            }
+            
             let animation = CABasicAnimation(keyPath: "transform.scale")
             animation.duration = 2.0
             animation.fromValue = 1.0
@@ -245,9 +282,13 @@ final class GiftAvatarComponent: Component {
         }
         
         func update(component: GiftAvatarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            self.component = component
+            
+            self.setup()
+            
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
             if self.sceneView.superview == self {
-                self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
+                self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0 + (component.offset ?? 0.0))
             }
             
             self.hasIdleAnimations = component.hasIdleAnimations
@@ -325,11 +366,11 @@ final class GiftAvatarComponent: Component {
         }
     }
     
-    func makeView() -> View {
+    public func makeView() -> View {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
