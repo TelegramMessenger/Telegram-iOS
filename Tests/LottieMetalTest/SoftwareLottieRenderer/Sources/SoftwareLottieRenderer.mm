@@ -657,6 +657,10 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
         return nil;
     }
     
+    if (!useReferenceRendering) {
+        return nil;
+    }
+    
     processRenderTree(renderNode, lottie::Vector2D((int)size.width, (int)size.height), lottie::CATransform3D::identity().scaled(lottie::Vector2D(size.width / (double)animation.size.width, size.height / (double)animation.size.height)), false, *_bezierPathsBoundingBoxContext.get());
     
     if (useReferenceRendering) {

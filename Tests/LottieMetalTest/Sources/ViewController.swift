@@ -119,7 +119,7 @@ public final class ViewController: UIViewController {
         
         self.view.layer.addSublayer(MetalEngine.shared.rootLayer)
         
-        if "".isEmpty {
+        if !"".isEmpty {
             if #available(iOS 13.0, *) {
                 self.test = ReferenceCompareTest(view: self.view)
             }
@@ -167,7 +167,7 @@ public final class ViewController: UIViewController {
                 var frameIndex = 0
                 while true {
                     animationContainer.update(frameIndex)
-                    //let _ = animationRenderer.render(for: CGSize(width: CGFloat(performanceFrameSize), height: CGFloat(performanceFrameSize)), useReferenceRendering: false)
+                    let _ = animationRenderer.render(for: CGSize(width: CGFloat(performanceFrameSize), height: CGFloat(performanceFrameSize)), useReferenceRendering: false)
                     frameIndex = (frameIndex + 1) % animationContainer.animation.frameCount
                     numUpdates += 1
                     let timestamp = CFAbsoluteTimeGetCurrent()

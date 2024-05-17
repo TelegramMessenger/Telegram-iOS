@@ -1403,15 +1403,6 @@ void ShapeCompositionLayer::updateRenderTree(BezierPathsBoundingBoxContext &boun
     _contentRenderTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
     _contentRenderTreeNode->_isHidden = _contentsLayer->isHidden();
     
-    assert(position() == Vector2D::Zero());
-    assert(transform().isIdentity());
-    assert(opacity() == 1.0);
-    assert(!masksToBounds());
-    assert(!isHidden());
-    assert(_contentsLayer->bounds() == CGRect(0.0, 0.0, 0.0, 0.0));
-    assert(_contentsLayer->position() == Vector2D::Zero());
-    assert(!_contentsLayer->masksToBounds());
-    
     _renderTreeNode->_bounds = bounds();
     _renderTreeNode->_position = position();
     _renderTreeNode->_transform = transform();
