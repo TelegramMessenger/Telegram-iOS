@@ -827,6 +827,8 @@ public final class PendingMessageManager {
                         quickReply = attribute
                     } else if let attribute = attribute as? EffectMessageAttribute {
                         messageEffect = attribute
+                    } else if let _ = attribute as? InvertMediaMessageAttribute {
+                        flags |= Int32(1 << 16)
                     }
                 }
                                 
@@ -1322,7 +1324,6 @@ public final class PendingMessageManager {
                                 replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
                             }
                         }
-                    
                         if let attribute = message.webpagePreviewAttribute {
                             if attribute.leadingPreview {
                                 flags |= 1 << 16

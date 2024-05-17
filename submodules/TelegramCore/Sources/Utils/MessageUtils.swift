@@ -531,6 +531,14 @@ public extension Message {
         }
         return false
     }
+    var invertMediaAttribute: InvertMediaMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? InvertMediaMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
 }
 
 public extension Message {
