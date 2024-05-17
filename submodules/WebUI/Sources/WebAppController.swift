@@ -2089,6 +2089,17 @@ final class WebAppPickerContext: AttachmentMediaPickerContext {
         return .single(nil)
     }
     
+    var hasCaption: Bool {
+        return false
+    }
+    
+    var captionIsAboveMedia: Signal<Bool, NoError> {
+        return .single(false)
+    }
+    
+    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
+    }
+    
     public var loadingProgress: Signal<CGFloat?, NoError> {
         return self.controller?.controllerNode.loadingProgressPromise.get() ?? .single(nil)
     }
@@ -2104,10 +2115,10 @@ final class WebAppPickerContext: AttachmentMediaPickerContext {
     func setCaption(_ caption: NSAttributedString) {
     }
     
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, messageEffect: ChatSendMessageActionSheetController.MessageEffect?) {
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
     }
     
-    func schedule(messageEffect: ChatSendMessageActionSheetController.MessageEffect?) {
+    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
     }
     
     func mainButtonAction() {

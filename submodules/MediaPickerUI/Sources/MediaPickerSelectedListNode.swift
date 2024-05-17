@@ -976,7 +976,14 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
         let graphics = PresentationResourcesChat.principalGraphics(theme: theme, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
         
         var groupIndex = 0
+        var isFirstGroup = true
         for (items, groupSize) in groupLayouts {
+            if isFirstGroup {
+                isFirstGroup = false
+            } else {
+                contentHeight += spacing
+            }
+            
             var groupRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top + contentHeight), size: groupSize)
             if !self.isExternalPreview {
                 groupRect.origin.x = insets.left + floorToScreenPixels((size.width - insets.left - insets.right - groupSize.width) / 2.0)
@@ -1005,7 +1012,6 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
                 groupBackgroundNode.update(size: groupBackgroundNode.frame.size, theme: theme, wallpaper: wallpaper, graphics: graphics, wallpaperBackgroundNode: self.wallpaperBackgroundNode, transition: itemTransition)
             }
             
-            var isFirstGroup = true
             for (item, itemRect, itemPosition) in items {
                 if let identifier = item.uniqueIdentifier, let itemNode = self.itemNodes[identifier] {
                     var corners: CACornerMask = []
@@ -1039,11 +1045,6 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
                 }
             }
             
-            if isFirstGroup {
-                isFirstGroup = false
-            } else {
-                contentHeight += spacing
-            }
             contentHeight += groupSize.height
             contentWidth = max(contentWidth, groupSize.width)
             groupIndex += 1

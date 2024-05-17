@@ -38,7 +38,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((ContactListPeer) -> Void)?
     var requestOpenDisabledPeerFromSearch: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
-    var requestMultipleAction: ((_ silent: Bool, _ scheduleTime: Int32?) -> Void)?
+    var requestMultipleAction: ((_ silent: Bool, _ scheduleTime: Int32?, _ parameters: ChatSendMessageActionSheetController.SendParameters?) -> Void)?
     var dismiss: (() -> Void)?
     var cancelSearch: (() -> Void)?
     
@@ -110,7 +110,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         }
         
         shareImpl = { [weak self] in
-            self?.requestMultipleAction?(false, nil)
+            self?.requestMultipleAction?(false, nil, nil)
         }
         
         contextActionImpl = { [weak self] peer, node, gesture, _ in

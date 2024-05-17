@@ -151,7 +151,7 @@ private final class StarsContextImpl {
             guard let self, let state = self._state, let balance = balances[peerId] else {
                 return
             }
-            self._state = StarsContext.State(balance: balance, transactions: state.transactions)
+            self._state = StarsContext.State(balance: balance, transactions: state.transactions, canLoadMore: nextOffset != nil, isLoading: false)
             self.load()
         })
     }
@@ -169,7 +169,7 @@ private final class StarsContextImpl {
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let self {
                 if let status {
-                    self._state = StarsContext.State(balance: status.balance, transactions: status.transactions)
+                    self._state = StarsContext.State(balance: status.balance, transactions: status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false)
                     self.nextOffset = status.nextOffset
                     
                     self.loadMore()
@@ -180,17 +180,30 @@ private final class StarsContextImpl {
         }))
     }
     
+    func add(balance: Int64) {
+        if var state = self._state {
+            var transactions = state.transactions
+            transactions.insert(.init(id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore), at: 0)
+            
+            state.balance = state.balance + balance
+            self._state = state
+        }
+    }
+    
     func loadMore() {
         assert(Queue.mainQueue().isCurrent())
         
         guard let currentState = self._state, let nextOffset = self.nextOffset else {
             return
         }
+
+        self._state?.isLoading = true
+        
         self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, offset: nextOffset)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let self {
                 if let status {
-                    self._state = StarsContext.State(balance: status.balance, transactions: currentState.transactions + status.transactions)
+                    self._state = StarsContext.State(balance: status.balance, transactions: currentState.transactions + status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false)
                     self.nextOffset = status.nextOffset
                 } else {
                     self.nextOffset = nil
@@ -246,12 +259,15 @@ public final class StarsContext {
             }
         }
         
-        public let balance: Int64
-        public let transactions: [Transaction]
-        
-        init(balance: Int64, transactions: [Transaction]) {
+        public var balance: Int64
+        public var transactions: [Transaction]
+        public var canLoadMore: Bool
+        public var isLoading: Bool
+        init(balance: Int64, transactions: [Transaction], canLoadMore: Bool, isLoading: Bool) {
             self.balance = balance
             self.transactions = transactions
+            self.canLoadMore = canLoadMore
+            self.isLoading = isLoading
         }
         
         public static func == (lhs: State, rhs: State) -> Bool {
@@ -259,6 +275,12 @@ public final class StarsContext {
                 return false
             }
             if lhs.transactions != rhs.transactions {
+                return false
+            }
+            if lhs.canLoadMore != rhs.canLoadMore {
+                return false
+            }
+            if lhs.isLoading != rhs.isLoading {
                 return false
             }
             return true
@@ -276,6 +298,18 @@ public final class StarsContext {
                 }))
             }
             return disposable
+        }
+    }
+    
+    public func add(balance: Int64) {
+        self.impl.with {
+            $0.add(balance: balance)
+        }
+    }
+    
+    public func loadMore() {
+        self.impl.with {
+            $0.loadMore()
         }
     }
     

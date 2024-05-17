@@ -456,7 +456,6 @@ final class PeerInfoStoryGridScreenComponent: Component {
                 paneNode = PeerInfoStoryPaneNode(
                     context: component.context,
                     peerId: component.peerId,
-                    chatLocation: .peer(id: component.peerId),
                     contentType: .photoOrVideo,
                     captureProtected: false,
                     isSaved: true,

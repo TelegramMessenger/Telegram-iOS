@@ -969,6 +969,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeAttachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, send: @escaping (AnyMediaReference) -> Void) -> AttachmentFileController
     func makeGalleryCaptionPanelView(context: AccountContext, chatLocation: ChatLocation, isScheduledMessages: Bool, isFile: Bool, customEmojiAvailable: Bool, present: @escaping (ViewController) -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) -> NSObject?
     func makeHashtagSearchController(context: AccountContext, peer: EnginePeer?, query: String, all: Bool) -> ViewController
+    func makeStorySearchController(context: AccountContext, query: String) -> ViewController
     func makeMyStoriesController(context: AccountContext, isArchive: Bool) -> ViewController
     func makeArchiveSettingsController(context: AccountContext) -> ViewController
     func makeFilterSettingsController(context: AccountContext, modal: Bool, scrollToTags: Bool, dismissed: (() -> Void)?) -> ViewController
@@ -1073,11 +1074,24 @@ public protocol AccountGroupCallContext: AnyObject {
 public protocol AccountGroupCallContextCache: AnyObject {
 }
 
-public final class ChatSendMessageActionSheetControllerMessageEffect {
-    public let id: Int64
+public struct ChatSendMessageActionSheetControllerSendParameters {
+    public struct Effect {
+        public let id: Int64
+        
+        public init(id: Int64) {
+            self.id = id
+        }
+    }
     
-    public init(id: Int64) {
-        self.id = id
+    public var effect: Effect?
+    public var textIsAboveMedia: Bool
+    
+    public init(
+        effect: Effect?,
+        textIsAboveMedia: Bool
+    ) {
+        self.effect = effect
+        self.textIsAboveMedia = textIsAboveMedia
     }
 }
 
@@ -1093,7 +1107,7 @@ public protocol ChatSendMessageActionSheetControllerSourceSendButtonNode: ASDisp
 
 public protocol ChatSendMessageActionSheetController: ViewController {
     typealias SendMode = ChatSendMessageActionSheetControllerSendMode
-    typealias MessageEffect = ChatSendMessageActionSheetControllerMessageEffect
+    typealias SendParameters = ChatSendMessageActionSheetControllerSendParameters
 }
 
 public protocol AccountContext: AnyObject {

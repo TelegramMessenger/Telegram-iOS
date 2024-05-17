@@ -1556,14 +1556,14 @@ final class StoryItemSetContainerSendMessage {
                                 completion(controller, mediaPickerContext)
                             }, updateMediaPickerContext: { [weak attachmentController] mediaPickerContext in
                                 attachmentController?.mediaPickerContext = mediaPickerContext
-                            }, completion: { [weak self, weak view] signals, silentPosting, scheduleTime, messageEffect, getAnimatedTransitionSource, completion in
+                            }, completion: { [weak self, weak view] signals, silentPosting, scheduleTime, parameters, getAnimatedTransitionSource, completion in
                                 guard let self, let view else {
                                     return
                                 }
                                 if !inputText.string.isEmpty {
                                     self.clearInputText(view: view)
                                 }
-                                self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, messageEffect: messageEffect, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                                self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                             }
                         )
                     case .file:
@@ -1658,7 +1658,7 @@ final class StoryItemSetContainerSendMessage {
                         }
                         self.controllerNavigationDisposable.set((contactsController.result
                         |> deliverOnMainQueue).start(next: { [weak self, weak view] peers in
-                            guard let self, let view, let (peers, _, silent, scheduleTime, text) = peers else {
+                            guard let self, let view, let (peers, _, silent, scheduleTime, text, _) = peers else {
                                 return
                             }
                             
@@ -1875,7 +1875,7 @@ final class StoryItemSetContainerSendMessage {
         bannedSendVideos: (Int32, Bool)?,
         present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void,
         updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void,
-        completion: @escaping ([Any], Bool, Int32?, ChatSendMessageActionSheetController.MessageEffect?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void
+        completion: @escaping ([Any], Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void
     ) {
         guard let component = view.component else {
             return
@@ -2240,14 +2240,14 @@ final class StoryItemSetContainerSendMessage {
                             present(controller, mediaPickerContext)
                         },
                         updateMediaPickerContext: { _ in },
-                        completion: { [weak self, weak view] signals, silentPosting, scheduleTime, messageEffect, getAnimatedTransitionSource, completion in
+                        completion: { [weak self, weak view] signals, silentPosting, scheduleTime, parameters, getAnimatedTransitionSource, completion in
                             guard let self, let view else {
                                 return
                             }
                             if !inputText.string.isEmpty {
                                 self.clearInputText(view: view)
                             }
-                            self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, messageEffect: messageEffect, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                            self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                         }
                     )
                 }
@@ -2569,7 +2569,7 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    private func enqueueMediaMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyToMessageId: EngineMessage.Id?, replyToStoryId: StoryId?, signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, messageEffect: ChatSendMessageActionSheetController.MessageEffect? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
+    private func enqueueMediaMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyToMessageId: EngineMessage.Id?, replyToStoryId: StoryId?, signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
         guard let component = view.component else {
             return
         }
@@ -2620,11 +2620,20 @@ final class StoryItemSetContainerSendMessage {
                             }
                         }
                     }
-                    if let messageEffect {
-                        message = message.withUpdatedAttributes { attributes in
-                            var attributes = attributes
-                            attributes.append(EffectMessageAttribute(id: messageEffect.id))
-                            return attributes
+                    if let parameters {
+                        if let effect = parameters.effect {
+                            message = message.withUpdatedAttributes { attributes in
+                                var attributes = attributes
+                                attributes.append(EffectMessageAttribute(id: effect.id))
+                                return attributes
+                            }
+                        }
+                        if parameters.textIsAboveMedia {
+                            message = message.withUpdatedAttributes { attributes in
+                                var attributes = attributes
+                                attributes.append(InvertMediaMessageAttribute())
+                                return attributes
+                            }
                         }
                     }
                     mappedMessages.append(message)
@@ -2909,8 +2918,13 @@ final class StoryItemSetContainerSendMessage {
                 return
             }
             if !hashtag.isEmpty {
-                let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)
-                navigationController.pushViewController(searchController)
+                if "".isEmpty {
+                    let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, query: hashtag)
+                    navigationController.pushViewController(searchController)
+                } else {
+                    let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)
+                    navigationController.pushViewController(searchController)
+                }
             }
         }))
     }

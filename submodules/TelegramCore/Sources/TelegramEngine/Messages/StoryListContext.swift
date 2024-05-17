@@ -1175,7 +1175,7 @@ public final class PeerStoryListContext {
         public var hasCache: Bool
         public var allEntityFiles: [MediaId: TelegramMediaFile]
         
-        init(
+        public init(
             peerReference: PeerReference?,
             items: [EngineStoryItem],
             pinnedIds: Set<Int32>,

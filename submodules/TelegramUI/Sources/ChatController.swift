@@ -9119,7 +9119,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    func enqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, messageEffect: ChatSendMessageActionSheetController.MessageEffect? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
+    func enqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
         self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(context: self.context, account: self.context.account, signals: signals!)
         |> deliverOnMainQueue).startStrict(next: { [weak self] items in
             if let strongSelf = self {
@@ -9174,11 +9174,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         completionImpl = nil
                     }
                     
-                    if let messageEffect {
-                        message = message.withUpdatedAttributes { attributes in
-                            var attributes = attributes
-                            attributes.append(EffectMessageAttribute(id: messageEffect.id))
-                            return attributes
+                    if let parameters {
+                        if let effect = parameters.effect {
+                            message = message.withUpdatedAttributes { attributes in
+                                var attributes = attributes
+                                attributes.append(EffectMessageAttribute(id: effect.id))
+                                return attributes
+                            }
+                        }
+                        if parameters.textIsAboveMedia {
+                            message = message.withUpdatedAttributes { attributes in
+                                var attributes = attributes
+                                attributes.append(InvertMediaMessageAttribute())
+                                return attributes
+                            }
                         }
                     }
                     

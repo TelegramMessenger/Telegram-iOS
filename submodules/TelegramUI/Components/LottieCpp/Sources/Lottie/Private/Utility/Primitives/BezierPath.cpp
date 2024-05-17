@@ -582,6 +582,58 @@ CGRect bezierPathsBoundingBoxParallel(BezierPathsBoundingBoxContext &context, st
     return calculateBoundingRectOpt(pointsX, pointsY, pointCount);
 }
 
+CGRect bezierPathsBoundingBoxParallel(BezierPathsBoundingBoxContext &context, BezierPath const &path) {
+    int pointCount = 0;
+    
+    float *pointsX = context.pointsX;
+    float *pointsY = context.pointsY;
+    int pointsSize = context.pointsSize;
+    
+    PathElement const *pathElements = path.elements().data();
+    int pathElementCount = (int)path.elements().size();
+    
+    for (int i = 0; i < pathElementCount; i++) {
+        const auto &element = pathElements[i];
+        
+        if (pointsSize < pointCount + 1) {
+            pointsSize = (pointCount + 1) * 2;
+            pointsX = (float *)realloc(pointsX, pointsSize * 4);
+            pointsY = (float *)realloc(pointsY, pointsSize * 4);
+        }
+        pointsX[pointCount] = (float)element.vertex.point.x;
+        pointsY[pointCount] = (float)element.vertex.point.y;
+        pointCount++;
+        
+        if (i != 0) {
+            const auto &previousElement = pathElements[i - 1];
+            if (previousElement.vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
+            } else {
+                if (pointsSize < pointCount + 1) {
+                    pointsSize = (pointCount + 2) * 2;
+                    pointsX = (float *)realloc(pointsX, pointsSize * 4);
+                    pointsY = (float *)realloc(pointsY, pointsSize * 4);
+                }
+                pointsX[pointCount] = (float)previousElement.vertex.outTangent.x;
+                pointsY[pointCount] = (float)previousElement.vertex.outTangent.y;
+                pointCount++;
+                pointsX[pointCount] = (float)element.vertex.inTangent.x;
+                pointsY[pointCount] = (float)element.vertex.inTangent.y;
+                pointCount++;
+            }
+        }
+    }
+    
+    context.pointsX = pointsX;
+    context.pointsY = pointsY;
+    context.pointsSize = pointsSize;
+    
+    if (pointCount == 0) {
+        return CGRect(0.0, 0.0, 0.0, 0.0);
+    }
+    
+    return calculateBoundingRectOpt(pointsX, pointsY, pointCount);
+}
+
 CGRect bezierPathsBoundingBox(std::vector<BezierPath> const &paths) {
     int pointCount = 0;
     

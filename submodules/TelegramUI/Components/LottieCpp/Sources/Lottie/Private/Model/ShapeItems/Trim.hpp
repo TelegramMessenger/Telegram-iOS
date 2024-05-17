@@ -8,11 +8,6 @@
 
 namespace lottie {
 
-enum class TrimType: int {
-    Simultaneously = 1,
-    Individually = 2
-};
-
 /// An item that defines trim
 class Trim: public ShapeItem {
 public:

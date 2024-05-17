@@ -15,7 +15,7 @@ import ChatControllerInteraction
 import ChatSendAudioMessageContextPreview
 
 extension ChatSendMessageEffect {
-    convenience init(_ effect: ChatSendMessageActionSheetController.MessageEffect) {
+    convenience init(_ effect: ChatSendMessageActionSheetController.SendParameters.Effect) {
         self.init(id: effect.id)
     }
 }
@@ -114,17 +114,17 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
                 }
                 selfController.supportedOrientations = previousSupportedOrientations
             },
-            sendMessage: { [weak selfController] mode, messageEffect in
+            sendMessage: { [weak selfController] mode, parameters in
                 guard let selfController else {
                     return
                 }
                 switch mode {
                 case .generic:
-                    selfController.controllerInteraction?.sendCurrentMessage(false, messageEffect.flatMap(ChatSendMessageEffect.init))
+                    selfController.controllerInteraction?.sendCurrentMessage(false, parameters?.effect.flatMap(ChatSendMessageEffect.init))
                 case .silently:
-                    selfController.controllerInteraction?.sendCurrentMessage(true, messageEffect.flatMap(ChatSendMessageEffect.init))
+                    selfController.controllerInteraction?.sendCurrentMessage(true, parameters?.effect.flatMap(ChatSendMessageEffect.init))
                 case .whenOnline:
-                    selfController.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp, messageEffect: messageEffect.flatMap(ChatSendMessageEffect.init)) { [weak selfController] in
+                    selfController.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp, messageEffect: parameters?.effect.flatMap(ChatSendMessageEffect.init)) { [weak selfController] in
                         guard let selfController else {
                             return
                         }
@@ -135,7 +135,7 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
                     }
                 }
             },
-            schedule: { [weak selfController] messageEffect in
+            schedule: { [weak selfController] effect in
                 guard let selfController else {
                     return
                 }

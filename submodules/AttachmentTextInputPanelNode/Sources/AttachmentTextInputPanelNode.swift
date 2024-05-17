@@ -269,7 +269,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
 
     private var validLayout: (CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool)?
     
-    public var sendMessage: (AttachmentTextInputPanelSendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void = { _, _ in }
+    public var sendMessage: (AttachmentTextInputPanelSendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void = { _, _ in }
     public var updateHeight: (Bool) -> Void = { _ in }
 
     private var updatingInputState = false

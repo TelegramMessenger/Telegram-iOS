@@ -309,11 +309,11 @@ extension ChatControllerImpl {
                         completion(controller, mediaPickerContext)
                     }, updateMediaPickerContext: { [weak attachmentController] mediaPickerContext in
                         attachmentController?.mediaPickerContext = mediaPickerContext
-                    }, completion: { [weak self] signals, silentPosting, scheduleTime, messageEffect, getAnimatedTransitionSource, completion in
+                    }, completion: { [weak self] signals, silentPosting, scheduleTime, parameters, getAnimatedTransitionSource, completion in
                         if !inputText.string.isEmpty {
                             self?.clearInputText()
                         }
-                        self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, messageEffect: messageEffect, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                        self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                     })
                 case .file:
                     strongSelf.controllerNavigationDisposable.set(nil)
@@ -405,7 +405,7 @@ extension ChatControllerImpl {
                     completion(contactsController, contactsController.mediaPickerContext)
                     strongSelf.controllerNavigationDisposable.set((contactsController.result
                     |> deliverOnMainQueue).startStrict(next: { [weak self] peers in
-                        if let strongSelf = self, let (peers, _, silent, scheduleTime, text) = peers {
+                        if let strongSelf = self, let (peers, _, silent, scheduleTime, text, parameters) = peers {
                             var textEnqueueMessage: EnqueueMessage?
                             if let text = text, text.length > 0 {
                                 var attributes: [MessageAttribute] = []
@@ -456,6 +456,17 @@ extension ChatControllerImpl {
                                         enqueueMessages.append(message)
                                     }
                                 }
+                                if !enqueueMessages.isEmpty {
+                                    enqueueMessages[enqueueMessages.count - 1] = enqueueMessages[enqueueMessages.count - 1].withUpdatedAttributes { attributes in
+                                        var attributes = attributes
+                                        if let parameters {
+                                            if let effect = parameters.effect {
+                                                attributes.append(EffectMessageAttribute(id: effect.id))
+                                            }
+                                        }
+                                        return attributes
+                                    }
+                                }
                                 strongSelf.sendMessages(strongSelf.transformEnqueueMessages(enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime))
                             } else if let peer = peers.first {
                                 let dataSignal: Signal<(Peer?,  DeviceContactExtendedData?), NoError>
@@ -471,14 +482,14 @@ extension ChatControllerImpl {
                                     |> mapToSignal { basicData -> Signal<(Peer?,  DeviceContactExtendedData?), NoError> in
                                         var stableId: String?
                                         let queryPhoneNumber = formatPhoneNumber(context: context, number: phoneNumber)
-                                    outer: for (id, data) in basicData {
-                                        for phoneNumber in data.phoneNumbers {
-                                            if formatPhoneNumber(context: context, number: phoneNumber.value) == queryPhoneNumber {
-                                                stableId = id
-                                                break outer
+                                        outer: for (id, data) in basicData {
+                                            for phoneNumber in data.phoneNumbers {
+                                                if formatPhoneNumber(context: context, number: phoneNumber.value) == queryPhoneNumber {
+                                                    stableId = id
+                                                    break outer
+                                                }
                                             }
                                         }
-                                    }
                                         
                                         if let stableId = stableId {
                                             return (context.sharedContext.contactDataManager?.extendedData(stableId: stableId) ?? .single(nil))
@@ -498,7 +509,7 @@ extension ChatControllerImpl {
                                     }
                                 }
                                 strongSelf.controllerNavigationDisposable.set((dataSignal
-                                                                               |> deliverOnMainQueue).startStrict(next: { peerAndContactData in
+                                |> deliverOnMainQueue).startStrict(next: { peerAndContactData in
                                     if let strongSelf = self, let contactData = peerAndContactData.1, contactData.basicData.phoneNumbers.count != 0 {
                                         if contactData.isPrimitive {
                                             let phone = contactData.basicData.phoneNumbers[0].value
@@ -518,7 +529,13 @@ extension ChatControllerImpl {
                                             if let textEnqueueMessage = textEnqueueMessage {
                                                 enqueueMessages.append(textEnqueueMessage)
                                             }
-                                            enqueueMessages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), threadId: strongSelf.chatLocation.threadId, replyToMessageId: replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                                            var attributes: [MessageAttribute] = []
+                                            if let parameters {
+                                                if let effect = parameters.effect {
+                                                    attributes.append(EffectMessageAttribute(id: effect.id))
+                                                }
+                                            }
+                                            enqueueMessages.append(.message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), threadId: strongSelf.chatLocation.threadId, replyToMessageId: replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                                             strongSelf.sendMessages(strongSelf.transformEnqueueMessages(enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime))
                                         } else {
                                             let contactController = strongSelf.context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: strongSelf.context), environment: ShareControllerAppEnvironment(sharedContext: strongSelf.context.sharedContext), subject: .filter(peer: peerAndContactData.0, contactId: nil, contactData: contactData, completion: { peer, contactData in
@@ -1137,7 +1154,7 @@ extension ChatControllerImpl {
         self.present(actionSheet, in: .window(.root))
     }
     
-    func presentMediaPicker(subject: MediaPickerScreen.Subject = .assets(nil, .default), saveEditedPhotos: Bool, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?, ChatSendMessageActionSheetController.MessageEffect?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
+    func presentMediaPicker(subject: MediaPickerScreen.Subject = .assets(nil, .default), saveEditedPhotos: Bool, bannedSendPhotos: (Int32, Bool)?, bannedSendVideos: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
         var isScheduledMessages = false
         if case .scheduledMessages = self.presentationInterfaceState.subject {
             isScheduledMessages = true
@@ -1211,8 +1228,8 @@ extension ChatControllerImpl {
         controller.getCaptionPanelView = { [weak self] in
             return self?.getCaptionPanelView(isFile: false)
         }
-        controller.legacyCompletion = { signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion in
-            completion(signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion)
+        controller.legacyCompletion = { signals, silently, scheduleTime, parameters, getAnimatedTransitionSource, sendCompletion in
+            completion(signals, silently, scheduleTime, parameters, getAnimatedTransitionSource, sendCompletion)
         }
         present(controller, mediaPickerContext)
     }
@@ -1492,7 +1509,7 @@ extension ChatControllerImpl {
         self.effectiveNavigationController?.pushViewController(contactsController)
         self.controllerNavigationDisposable.set((contactsController.result
         |> deliverOnMainQueue).startStrict(next: { [weak self] peers in
-            if let strongSelf = self, let (peers, _, _, _, _) = peers {
+            if let strongSelf = self, let (peers, _, _, _, _, _) = peers {
                 if peers.count > 1 {
                     var enqueueMessages: [EnqueueMessage] = []
                     for peer in peers {
