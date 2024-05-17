@@ -104,11 +104,8 @@ private func requestStarsState(account: Account, peerId: EnginePeer.Id, offset: 
                     
                     var parsedTransactions: [StarsContext.State.Transaction] = []
                     for entry in history {
-                        switch entry {
-                        case let .starsTransaction(id, stars, date, peer):
-                            if let peer = transaction.getPeer(peer.peerId) {
-                                parsedTransactions.append(StarsContext.State.Transaction(id: id, count: stars, date: date, peer: EnginePeer(peer)))
-                            }
+                        if let parsedTransaction = StarsContext.State.Transaction(apiTransaction: entry, transaction: transaction) {
+                            parsedTransactions.append(parsedTransaction)
                         }
                     }
                     return InternalStarsStatus(balance: balance, transactions: parsedTransactions, nextOffset: nextOffset)
@@ -136,6 +133,7 @@ private final class StarsContextImpl {
     private var nextOffset: String?
     
     private let disposable = MetaDisposable()
+    private var updateDisposable: Disposable?
     
     init(account: Account, peerId: EnginePeer.Id) {
         assert(Queue.mainQueue().isCurrent())
@@ -147,11 +145,20 @@ private final class StarsContextImpl {
         self._statePromise.set(.single(nil))
         
         self.load()
+        
+        self.updateDisposable = (account.stateManager.updatedStarsBalance()
+        |> deliverOnMainQueue).startStrict(next: { [weak self] balances in
+            guard let self, let state = self._state, let balance = balances[peerId] else {
+                return
+            }
+            self._state = StarsContext.State(balance: balance, transactions: state.transactions)
+        })
     }
     
     deinit {
         assert(Queue.mainQueue().isCurrent())
         self.disposable.dispose()
+        self.updateDisposable?.dispose()
     }
     
     func load() {
@@ -190,15 +197,45 @@ private final class StarsContextImpl {
     }
 }
 
+private extension StarsContext.State.Transaction {
+    init?(apiTransaction: Api.StarsTransaction, transaction: Transaction) {
+        switch apiTransaction {
+        case let .starsTransaction(id, stars, date, transactionPeer):
+            let parsedPeer: StarsContext.State.Transaction.Peer
+            switch transactionPeer {
+            case .starsTransactionPeerAppStore:
+                parsedPeer = .appStore
+            case .starsTransactionPeerPlayMarket:
+                parsedPeer = .playMarket
+            case .starsTransactionPeerFragment:
+                parsedPeer = .fragment
+            case let .starsTransactionPeer(apiPeer):
+                guard let peer = transaction.getPeer(apiPeer.peerId) else {
+                    return nil
+                }
+                parsedPeer = .peer(EnginePeer(peer))
+            }
+            self.init(id: id, count: stars, date: date, peer: parsedPeer)
+        }
+    }
+}
+
 public final class StarsContext {
     public struct State: Equatable {
         public struct Transaction: Equatable {
+            public enum Peer: Equatable {
+                case appStore
+                case playMarket
+                case fragment
+                case peer(EnginePeer)
+            }
+            
             public let id: String
             public let count: Int64
             public let date: Int32
-            public let peer: EnginePeer
+            public let peer: Peer
             
-            init(id: String, count: Int64, date: Int32, peer: EnginePeer) {
+            init(id: String, count: Int64, date: Int32, peer: Peer) {
                 self.id = id
                 self.count = count
                 self.date = date
@@ -243,5 +280,81 @@ public final class StarsContext {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
             return StarsContextImpl(account: account, peerId: peerId)
         })
+    }
+}
+
+func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: BotPaymentInvoiceSource) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
+    return account.postbox.transaction { transaction -> Api.InputInvoice? in
+        return _internal_parseInputInvoice(transaction: transaction, source: source)
+    }
+    |> castError(SendBotPaymentFormError.self)
+    |> mapToSignal { invoice -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
+        guard let invoice = invoice else {
+            return .fail(.generic)
+        }
+        
+        let flags: Int32 = 0
+
+        return account.network.request(Api.functions.payments.sendStarsForm(flags: flags, formId: formId, invoice: invoice))
+        |> map { result -> SendBotPaymentResult in
+            switch result {
+                case let .paymentResult(updates):
+                    account.stateManager.addUpdates(updates)
+                    var receiptMessageId: MessageId?
+                    for apiMessage in updates.messages {
+                        if let message = StoreMessage(apiMessage: apiMessage, accountPeerId: account.peerId, peerIsForum: false) {
+                            for media in message.media {
+                                if let action = media as? TelegramMediaAction {
+                                    if case .paymentSent = action.action {
+                                        switch source {
+                                        case let .slug(slug):
+                                            for media in message.media {
+                                                if let action = media as? TelegramMediaAction, case let .paymentSent(_, _, invoiceSlug?, _, _) = action.action, invoiceSlug == slug {
+                                                    if case let .Id(id) = message.id {
+                                                        receiptMessageId = id
+                                                    }
+                                                }
+                                            }
+                                        case let .message(messageId):
+                                            for attribute in message.attributes {
+                                                if let reply = attribute as? ReplyMessageAttribute {
+                                                    if reply.messageId == messageId {
+                                                        if case let .Id(id) = message.id {
+                                                            receiptMessageId = id
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        case let .premiumGiveaway(_, _, _, _, _, _, randomId, _, _, _, _):
+                                            if message.globallyUniqueId == randomId {
+                                                if case let .Id(id) = message.id {
+                                                    receiptMessageId = id
+                                                }
+                                            }
+                                        case .giftCode:
+                                            receiptMessageId = nil
+                                        case .stars:
+                                            receiptMessageId = nil
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return .done(receiptMessageId: receiptMessageId)
+                case let .paymentVerificationNeeded(url):
+                    return .externalVerificationRequired(url: url)
+            }
+        }
+        |> `catch` { error -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
+            if error.errorDescription == "BOT_PRECHECKOUT_FAILED" {
+                return .fail(.precheckoutFailed)
+            } else if error.errorDescription == "PAYMENT_FAILED" {
+                return .fail(.paymentFailed)
+            } else if error.errorDescription == "INVOICE_ALREADY_PAID" {
+                return .fail(.alreadyPaid)
+            }
+            return .fail(.generic)
+        }
     }
 }

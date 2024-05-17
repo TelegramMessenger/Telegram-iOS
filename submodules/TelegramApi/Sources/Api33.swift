@@ -595,6 +595,7 @@ public extension Api.payments {
 public extension Api.payments {
     enum PaymentForm: TypeConstructorDescription {
         case paymentForm(flags: Int32, formId: Int64, botId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, providerId: Int64, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, additionalMethods: [Api.PaymentFormMethod]?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: [Api.PaymentSavedCredentials]?, users: [Api.User])
+        case paymentFormStars(flags: Int32, formId: Int64, botId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -630,6 +631,23 @@ public extension Api.payments {
                         item.serialize(buffer, true)
                     }
                     break
+                case .paymentFormStars(let flags, let formId, let botId, let title, let description, let photo, let invoice, let users):
+                    if boxed {
+                        buffer.appendInt32(2079764828)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(formId, buffer: buffer, boxed: false)
+                    serializeInt64(botId, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(description, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 5) != 0 {photo!.serialize(buffer, true)}
+                    invoice.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
     }
     }
     
@@ -637,6 +655,8 @@ public extension Api.payments {
         switch self {
                 case .paymentForm(let flags, let formId, let botId, let title, let description, let photo, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let additionalMethods, let savedInfo, let savedCredentials, let users):
                 return ("paymentForm", [("flags", flags as Any), ("formId", formId as Any), ("botId", botId as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("providerId", providerId as Any), ("url", url as Any), ("nativeProvider", nativeProvider as Any), ("nativeParams", nativeParams as Any), ("additionalMethods", additionalMethods as Any), ("savedInfo", savedInfo as Any), ("savedCredentials", savedCredentials as Any), ("users", users as Any)])
+                case .paymentFormStars(let flags, let formId, let botId, let title, let description, let photo, let invoice, let users):
+                return ("paymentFormStars", [("flags", flags as Any), ("formId", formId as Any), ("botId", botId as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("users", users as Any)])
     }
     }
     
@@ -702,6 +722,44 @@ public extension Api.payments {
             let _c15 = _15 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 {
                 return Api.payments.PaymentForm.paymentForm(flags: _1!, formId: _2!, botId: _3!, title: _4!, description: _5!, photo: _6, invoice: _7!, providerId: _8!, url: _9!, nativeProvider: _10, nativeParams: _11, additionalMethods: _12, savedInfo: _13, savedCredentials: _14, users: _15!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_paymentFormStars(_ reader: BufferReader) -> PaymentForm? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Api.WebDocument?
+            if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.WebDocument
+            } }
+            var _7: Api.Invoice?
+            if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.Invoice
+            }
+            var _8: [Api.User]?
+            if let _ = reader.readInt32() {
+                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 5) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.payments.PaymentForm.paymentFormStars(flags: _1!, formId: _2!, botId: _3!, title: _4!, description: _5!, photo: _6, invoice: _7!, users: _8!)
             }
             else {
                 return nil
@@ -1610,92 +1668,6 @@ public extension Api.premium {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.premium.BoostsList.boostsList(flags: _1!, count: _2!, boosts: _3!, nextOffset: _4, users: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.premium {
-    enum BoostsStatus: TypeConstructorDescription {
-        case boostsStatus(flags: Int32, level: Int32, currentLevelBoosts: Int32, boosts: Int32, giftBoosts: Int32?, nextLevelBoosts: Int32?, premiumAudience: Api.StatsPercentValue?, boostUrl: String, prepaidGiveaways: [Api.PrepaidGiveaway]?, myBoostSlots: [Int32]?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let giftBoosts, let nextLevelBoosts, let premiumAudience, let boostUrl, let prepaidGiveaways, let myBoostSlots):
-                    if boxed {
-                        buffer.appendInt32(1230586490)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(level, buffer: buffer, boxed: false)
-                    serializeInt32(currentLevelBoosts, buffer: buffer, boxed: false)
-                    serializeInt32(boosts, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(giftBoosts!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(nextLevelBoosts!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 1) != 0 {premiumAudience!.serialize(buffer, true)}
-                    serializeString(boostUrl, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(prepaidGiveaways!.count))
-                    for item in prepaidGiveaways! {
-                        item.serialize(buffer, true)
-                    }}
-                    if Int(flags) & Int(1 << 2) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(myBoostSlots!.count))
-                    for item in myBoostSlots! {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let giftBoosts, let nextLevelBoosts, let premiumAudience, let boostUrl, let prepaidGiveaways, let myBoostSlots):
-                return ("boostsStatus", [("flags", flags as Any), ("level", level as Any), ("currentLevelBoosts", currentLevelBoosts as Any), ("boosts", boosts as Any), ("giftBoosts", giftBoosts as Any), ("nextLevelBoosts", nextLevelBoosts as Any), ("premiumAudience", premiumAudience as Any), ("boostUrl", boostUrl as Any), ("prepaidGiveaways", prepaidGiveaways as Any), ("myBoostSlots", myBoostSlots as Any)])
-    }
-    }
-    
-        public static func parse_boostsStatus(_ reader: BufferReader) -> BoostsStatus? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Int32?
-            if Int(_1!) & Int(1 << 4) != 0 {_5 = reader.readInt32() }
-            var _6: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_6 = reader.readInt32() }
-            var _7: Api.StatsPercentValue?
-            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.StatsPercentValue
-            } }
-            var _8: String?
-            _8 = parseString(reader)
-            var _9: [Api.PrepaidGiveaway]?
-            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
-                _9 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PrepaidGiveaway.self)
-            } }
-            var _10: [Int32]?
-            if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
-                _10 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
-            let _c8 = _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 3) == 0) || _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 2) == 0) || _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.premium.BoostsStatus.boostsStatus(flags: _1!, level: _2!, currentLevelBoosts: _3!, boosts: _4!, giftBoosts: _5, nextLevelBoosts: _6, premiumAudience: _7, boostUrl: _8!, prepaidGiveaways: _9, myBoostSlots: _10)
             }
             else {
                 return nil

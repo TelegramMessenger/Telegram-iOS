@@ -656,13 +656,13 @@ public extension Api {
 }
 public extension Api {
     enum StarsTransaction: TypeConstructorDescription {
-        case starsTransaction(id: String, stars: Int64, date: Int32, peer: Api.Peer)
+        case starsTransaction(id: String, stars: Int64, date: Int32, peer: Api.StarsTransactionPeer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .starsTransaction(let id, let stars, let date, let peer):
                     if boxed {
-                        buffer.appendInt32(1939194818)
+                        buffer.appendInt32(1600878860)
                     }
                     serializeString(id, buffer: buffer, boxed: false)
                     serializeInt64(stars, buffer: buffer, boxed: false)
@@ -686,9 +686,9 @@ public extension Api {
             _2 = reader.readInt64()
             var _3: Int32?
             _3 = reader.readInt32()
-            var _4: Api.Peer?
+            var _4: Api.StarsTransactionPeer?
             if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.Peer
+                _4 = Api.parse(reader, signature: signature) as? Api.StarsTransactionPeer
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -700,6 +700,80 @@ public extension Api {
             else {
                 return nil
             }
+        }
+    
+    }
+}
+public extension Api {
+    enum StarsTransactionPeer: TypeConstructorDescription {
+        case starsTransactionPeer(peer: Api.Peer)
+        case starsTransactionPeerAppStore
+        case starsTransactionPeerFragment
+        case starsTransactionPeerPlayMarket
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .starsTransactionPeer(let peer):
+                    if boxed {
+                        buffer.appendInt32(-670195363)
+                    }
+                    peer.serialize(buffer, true)
+                    break
+                case .starsTransactionPeerAppStore:
+                    if boxed {
+                        buffer.appendInt32(-1269320843)
+                    }
+                    
+                    break
+                case .starsTransactionPeerFragment:
+                    if boxed {
+                        buffer.appendInt32(-382740222)
+                    }
+                    
+                    break
+                case .starsTransactionPeerPlayMarket:
+                    if boxed {
+                        buffer.appendInt32(2069236235)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .starsTransactionPeer(let peer):
+                return ("starsTransactionPeer", [("peer", peer as Any)])
+                case .starsTransactionPeerAppStore:
+                return ("starsTransactionPeerAppStore", [])
+                case .starsTransactionPeerFragment:
+                return ("starsTransactionPeerFragment", [])
+                case .starsTransactionPeerPlayMarket:
+                return ("starsTransactionPeerPlayMarket", [])
+    }
+    }
+    
+        public static func parse_starsTransactionPeer(_ reader: BufferReader) -> StarsTransactionPeer? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.StarsTransactionPeer.starsTransactionPeer(peer: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_starsTransactionPeerAppStore(_ reader: BufferReader) -> StarsTransactionPeer? {
+            return Api.StarsTransactionPeer.starsTransactionPeerAppStore
+        }
+        public static func parse_starsTransactionPeerFragment(_ reader: BufferReader) -> StarsTransactionPeer? {
+            return Api.StarsTransactionPeer.starsTransactionPeerFragment
+        }
+        public static func parse_starsTransactionPeerPlayMarket(_ reader: BufferReader) -> StarsTransactionPeer? {
+            return Api.StarsTransactionPeer.starsTransactionPeerPlayMarket
         }
     
     }
@@ -776,140 +850,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.StatsDateRangeDays.statsDateRangeDays(minDate: _1!, maxDate: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum StatsGraph: TypeConstructorDescription {
-        case statsGraph(flags: Int32, json: Api.DataJSON, zoomToken: String?)
-        case statsGraphAsync(token: String)
-        case statsGraphError(error: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsGraph(let flags, let json, let zoomToken):
-                    if boxed {
-                        buffer.appendInt32(-1901828938)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    json.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(zoomToken!, buffer: buffer, boxed: false)}
-                    break
-                case .statsGraphAsync(let token):
-                    if boxed {
-                        buffer.appendInt32(1244130093)
-                    }
-                    serializeString(token, buffer: buffer, boxed: false)
-                    break
-                case .statsGraphError(let error):
-                    if boxed {
-                        buffer.appendInt32(-1092839390)
-                    }
-                    serializeString(error, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsGraph(let flags, let json, let zoomToken):
-                return ("statsGraph", [("flags", flags as Any), ("json", json as Any), ("zoomToken", zoomToken as Any)])
-                case .statsGraphAsync(let token):
-                return ("statsGraphAsync", [("token", token as Any)])
-                case .statsGraphError(let error):
-                return ("statsGraphError", [("error", error as Any)])
-    }
-    }
-    
-        public static func parse_statsGraph(_ reader: BufferReader) -> StatsGraph? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.DataJSON?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.DataJSON
-            }
-            var _3: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.StatsGraph.statsGraph(flags: _1!, json: _2!, zoomToken: _3)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_statsGraphAsync(_ reader: BufferReader) -> StatsGraph? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.StatsGraph.statsGraphAsync(token: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_statsGraphError(_ reader: BufferReader) -> StatsGraph? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.StatsGraph.statsGraphError(error: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum StatsGroupTopAdmin: TypeConstructorDescription {
-        case statsGroupTopAdmin(userId: Int64, deleted: Int32, kicked: Int32, banned: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsGroupTopAdmin(let userId, let deleted, let kicked, let banned):
-                    if boxed {
-                        buffer.appendInt32(-682079097)
-                    }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeInt32(deleted, buffer: buffer, boxed: false)
-                    serializeInt32(kicked, buffer: buffer, boxed: false)
-                    serializeInt32(banned, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsGroupTopAdmin(let userId, let deleted, let kicked, let banned):
-                return ("statsGroupTopAdmin", [("userId", userId as Any), ("deleted", deleted as Any), ("kicked", kicked as Any), ("banned", banned as Any)])
-    }
-    }
-    
-        public static func parse_statsGroupTopAdmin(_ reader: BufferReader) -> StatsGroupTopAdmin? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.StatsGroupTopAdmin.statsGroupTopAdmin(userId: _1!, deleted: _2!, kicked: _3!, banned: _4!)
             }
             else {
                 return nil
