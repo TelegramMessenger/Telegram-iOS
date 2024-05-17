@@ -76,11 +76,11 @@ public extension TelegramEngine {
         
         public func peerStarsState(peerId: EnginePeer.Id) -> Signal<StarsContext.State?, NoError> {
             return _internal_requestStarsState(account: self.account, peerId: peerId, offset: nil)
-            |> map { state in
+            |> map { state -> StarsContext.State? in
                 guard let state else {
                     return nil
                 }
-                return StarsContext.State(balance: state.balance, transactions: state.transactions)
+                return StarsContext.State(balance: state.balance, transactions: state.transactions, canLoadMore: false, isLoading: false)
             }
         }
         
