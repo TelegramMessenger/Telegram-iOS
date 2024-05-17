@@ -155,6 +155,7 @@ final class MessageItemView: UIView {
     
     private var chatTheme: ChatPresentationThemeData?
     private var currentSize: CGSize?
+    private var currentMediaCaptionIsAbove: Bool = false
     
     override init(frame: CGRect) {
         self.backgroundWallpaperNode = ChatMessageBubbleBackdrop()
@@ -162,6 +163,7 @@ final class MessageItemView: UIView {
         self.backgroundNode.backdropNode = self.backgroundWallpaperNode
         
         self.textClippingContainer = UIView()
+        self.textClippingContainer.layer.anchorPoint = CGPoint()
         self.textClippingContainer.clipsToBounds = true
         
         super.init(frame: frame)
@@ -178,13 +180,20 @@ final class MessageItemView: UIView {
         preconditionFailure()
     }
     
-    func animateIn(transition: Transition) {
+    func animateIn(
+        sourceTextInputView: ChatInputTextView?,
+        transition: Transition
+    ) {
         if let mediaPreview = self.mediaPreview {
             mediaPreview.animateIn(transition: transition)
         }
     }
     
-    func animateOut(toEmpty: Bool, transition: Transition) {
+    func animateOut(
+        sourceTextInputView: ChatInputTextView?,
+        toEmpty: Bool,
+        transition: Transition
+    ) {
         if let mediaPreview = self.mediaPreview {
             if toEmpty {
                 mediaPreview.animateOutOnSend(transition: transition)
@@ -266,6 +275,8 @@ final class MessageItemView: UIView {
             backgroundNode: backgroundNode
         )
         
+        let alphaTransition: Transition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.25)
+        
         if let sourceMediaPreview {
             let mediaPreviewClippingView: UIView
             if let current = self.mediaPreviewClippingView {
@@ -304,7 +315,11 @@ final class MessageItemView: UIView {
             let backgroundAlpha: CGFloat
             switch sourceMediaPreview.layoutType {
             case .media:
-                backgroundAlpha = explicitBackgroundSize != nil ? 0.0 : 1.0
+                if textString.length != 0 {
+                    backgroundAlpha = explicitBackgroundSize != nil ? 0.0 : 1.0
+                } else {
+                    backgroundAlpha = 0.0
+                }
             case .message, .videoMessage:
                 backgroundAlpha = 0.0
             }
@@ -312,7 +327,7 @@ final class MessageItemView: UIView {
             var backgroundFrame = mediaPreviewFrame.insetBy(dx: -2.0, dy: -2.0)
             backgroundFrame.size.width += 6.0
             
-            if textString.length != 0 {
+            if textString.length != 0, case .media = sourceMediaPreview.layoutType {
                 let textNode: ChatInputTextNode
                 if let current = self.textNode {
                     textNode = current
@@ -414,9 +429,10 @@ final class MessageItemView: UIView {
                     textClippingContainerBounds.origin.y = max(0.0, textClippingContainerBounds.origin.y)
                 }
                 
-                transition.setPosition(view: self.textClippingContainer, position: textClippingContainerFrame.center)
+                transition.setPosition(view: self.textClippingContainer, position: textClippingContainerFrame.origin)
                 transition.setBounds(view: self.textClippingContainer, bounds: textClippingContainerBounds)
                 
+                alphaTransition.setAlpha(view: textNode.view, alpha: backgroundAlpha)
                 transition.setFrame(view: textNode.view, frame: CGRect(origin: CGPoint(x: textFrame.minX + textPositioningInsets.left - textClippingContainerFrame.minX, y: textFrame.minY + textPositioningInsets.top - textClippingContainerFrame.minY), size: CGSize(width: maxTextWidth, height: textHeight)))
                 self.updateTextContents()
             }
@@ -424,10 +440,10 @@ final class MessageItemView: UIView {
             transition.setFrame(view: sourceMediaPreview.view, frame: mediaPreviewFrame)
             
             transition.setFrame(view: self.backgroundWallpaperNode.view, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
-            transition.setAlpha(view: self.backgroundWallpaperNode.view, alpha: backgroundAlpha)
+            alphaTransition.setAlpha(view: self.backgroundWallpaperNode.view, alpha: backgroundAlpha)
             self.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.backgroundNode.view, frame: backgroundFrame)
-            transition.setAlpha(view: self.backgroundNode.view, alpha: backgroundAlpha)
+            alphaTransition.setAlpha(view: self.backgroundNode.view, alpha: backgroundAlpha)
             self.backgroundNode.updateLayout(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
             
             if let effectIcon = self.effectIcon, let effectIconSize {
@@ -598,7 +614,7 @@ final class MessageItemView: UIView {
                 textClippingContainerBounds.origin.y = max(0.0, textClippingContainerBounds.origin.y)
             }
             
-            transition.setPosition(view: self.textClippingContainer, position: textClippingContainerFrame.center)
+            transition.setPosition(view: self.textClippingContainer, position: textClippingContainerFrame.origin)
             transition.setBounds(view: self.textClippingContainer, bounds: textClippingContainerBounds)
             
             textNode.view.frame = CGRect(origin: CGPoint(x: textFrame.minX + textPositioningInsets.left - textClippingContainerFrame.minX, y: textFrame.minY + textPositioningInsets.top - textClippingContainerFrame.minY), size: CGSize(width: maxTextWidth, height: textHeight))

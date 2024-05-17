@@ -29,8 +29,8 @@ private final class ChatSendMessageActionSheetControllerImpl: ViewController, Ch
     private let attachment: Bool
     private let canSendWhenOnline: Bool
     private let completion: () -> Void
-    private let sendMessage: (SendMode, MessageEffect?) -> Void
-    private let schedule: (MessageEffect?) -> Void
+    private let sendMessage: (SendMode, SendParameters?) -> Void
+    private let schedule: (SendParameters?) -> Void
     private let reactionItems: [ReactionItem]?
     
     private var presentationData: PresentationData
@@ -44,7 +44,7 @@ private final class ChatSendMessageActionSheetControllerImpl: ViewController, Ch
     
     private let emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id?, isScheduledMessages: Bool = false, forwardMessageIds: [EngineMessage.Id]?, hasEntityKeyboard: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputView: UITextView, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, attachment: Bool = false, canSendWhenOnline: Bool, completion: @escaping () -> Void, sendMessage: @escaping (SendMode, MessageEffect?) -> Void, schedule: @escaping (MessageEffect?) -> Void, reactionItems: [ReactionItem]? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id?, isScheduledMessages: Bool = false, forwardMessageIds: [EngineMessage.Id]?, hasEntityKeyboard: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputView: UITextView, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, attachment: Bool = false, canSendWhenOnline: Bool, completion: @escaping () -> Void, sendMessage: @escaping (SendMode, SendParameters?) -> Void, schedule: @escaping (SendParameters?) -> Void, reactionItems: [ReactionItem]? = nil) {
         self.context = context
         self.peerId = peerId
         self.isScheduledMessages = isScheduledMessages
@@ -108,32 +108,16 @@ private final class ChatSendMessageActionSheetControllerImpl: ViewController, Ch
         }
         
         self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputView: self.textInputView, attachment: self.attachment, canSendWhenOnline: self.canSendWhenOnline, forwardedCount: forwardedCount, hasEntityKeyboard: self.hasEntityKeyboard, emojiViewProvider: self.emojiViewProvider, send: { [weak self] in
-            var messageEffect: MessageEffect?
-            if let selectedEffect = self?.controllerNode.selectedMessageEffect {
-                messageEffect = MessageEffect(id: selectedEffect.id)
-            }
-            self?.sendMessage(.generic, messageEffect)
+            self?.sendMessage(.generic, nil)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in
-            var messageEffect: MessageEffect?
-            if let selectedEffect = self?.controllerNode.selectedMessageEffect {
-                messageEffect = MessageEffect(id: selectedEffect.id)
-            }
-            self?.sendMessage(.silently, messageEffect)
+            self?.sendMessage(.silently, nil)
             self?.dismiss(cancel: false)
         }, sendWhenOnline: { [weak self] in
-            var messageEffect: MessageEffect?
-            if let selectedEffect = self?.controllerNode.selectedMessageEffect {
-                messageEffect = MessageEffect(id: selectedEffect.id)
-            }
-            self?.sendMessage(.whenOnline, messageEffect)
+            self?.sendMessage(.whenOnline, nil)
             self?.dismiss(cancel: false)
         }, schedule: !canSchedule ? nil : { [weak self] in
-            var messageEffect: MessageEffect?
-            if let selectedEffect = self?.controllerNode.selectedMessageEffect {
-                messageEffect = MessageEffect(id: selectedEffect.id)
-            }
-            self?.schedule(messageEffect)
+            self?.schedule(nil)
             self?.dismiss(cancel: false)
         }, cancel: { [weak self] in
             self?.dismiss(cancel: true)
@@ -191,8 +175,8 @@ public func makeChatSendMessageActionSheetController(
     attachment: Bool = false,
     canSendWhenOnline: Bool,
     completion: @escaping () -> Void,
-    sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void,
-    schedule: @escaping (ChatSendMessageActionSheetController.MessageEffect?) -> Void,
+    sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void,
+    schedule: @escaping (ChatSendMessageActionSheetController.SendParameters?) -> Void,
     reactionItems: [ReactionItem]? = nil,
     availableMessageEffects: AvailableMessageEffects? = nil,
     isPremium: Bool = false

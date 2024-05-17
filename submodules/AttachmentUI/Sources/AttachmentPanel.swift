@@ -683,6 +683,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
 }
 
 final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
+    private weak var controller: AttachmentController?
     private let context: AccountContext
     private let isScheduledMessages: Bool
     private var presentationData: PresentationData
@@ -729,7 +730,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
 
     var beganTextEditing: () -> Void = {}
     var textUpdated: (NSAttributedString) -> Void = { _ in }
-    var sendMessagePressed: (AttachmentTextInputPanelSendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void = { _, _ in }
+    var sendMessagePressed: (AttachmentTextInputPanelSendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void = { _, _ in }
     var requestLayout: () -> Void = {}
     var present: (ViewController) -> Void = { _ in }
     var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
@@ -738,7 +739,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
     
     var mainButtonPressed: () -> Void = { }
     
-    init(context: AccountContext, chatLocation: ChatLocation?, isScheduledMessages: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
+    init(controller: AttachmentController, context: AccountContext, chatLocation: ChatLocation?, isScheduledMessages: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
+        self.controller = controller
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -982,8 +984,16 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                     isReady = .single(true)
                 }
                 
-                let _ = (isReady
-                |> deliverOnMainQueue).start(next: { [weak strongSelf] _ in
+                var captionIsAboveMedia: Signal<Bool, NoError> = .single(false)
+                if let controller = strongSelf.controller, let mediaPickerContext = controller.mediaPickerContext {
+                    captionIsAboveMedia = mediaPickerContext.captionIsAboveMedia
+                }
+                
+                let _ = (combineLatest(
+                    isReady,
+                    captionIsAboveMedia |> take(1)
+                )
+                |> deliverOnMainQueue).start(next: { [weak strongSelf] _, captionIsAboveMedia in
                     guard let strongSelf else {
                         return
                     }
@@ -998,7 +1008,11 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                         sourceSendButton: node,
                         textInputView: textInputNode.textView,
                         mediaPreview: mediaPreview,
-                        mediaCaptionIsAbove: (false, { _ in
+                        mediaCaptionIsAbove: (captionIsAboveMedia, { [weak strongSelf] value in
+                            guard let strongSelf, let controller = strongSelf.controller, let mediaPickerContext = controller.mediaPickerContext else {
+                                return
+                            }
+                            mediaPickerContext.setCaptionIsAboveMedia(value)
                         }),
                         emojiViewProvider: textInputPanelNode.emojiViewProvider,
                         attachment: true,

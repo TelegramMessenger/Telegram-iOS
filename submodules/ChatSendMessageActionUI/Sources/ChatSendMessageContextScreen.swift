@@ -69,8 +69,8 @@ final class ChatSendMessageContextScreenComponent: Component {
     let attachment: Bool
     let canSendWhenOnline: Bool
     let completion: () -> Void
-    let sendMessage: (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void
-    let schedule: (ChatSendMessageActionSheetController.MessageEffect?) -> Void
+    let sendMessage: (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void
+    let schedule: (ChatSendMessageActionSheetController.SendParameters?) -> Void
     let reactionItems: [ReactionItem]?
     let availableMessageEffects: AvailableMessageEffects?
     let isPremium: Bool
@@ -92,8 +92,8 @@ final class ChatSendMessageContextScreenComponent: Component {
         attachment: Bool,
         canSendWhenOnline: Bool,
         completion: @escaping () -> Void,
-        sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void,
-        schedule: @escaping (ChatSendMessageActionSheetController.MessageEffect?) -> Void,
+        sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void,
+        schedule: @escaping (ChatSendMessageActionSheetController.SendParameters?) -> Void,
         reactionItems: [ReactionItem]?,
         availableMessageEffects: AvailableMessageEffects?,
         isPremium: Bool
@@ -222,7 +222,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                 return
             }
             self.animateOutToEmpty = true
-            component.sendMessage(.generic, self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.MessageEffect(id: $0.id) }))
+            
+            let sendParameters = ChatSendMessageActionSheetController.SendParameters(
+                effect: self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.SendParameters.Effect(id: $0.id) }),
+                textIsAboveMedia: self.mediaCaptionIsAbove
+            )
+            
+            component.sendMessage(.generic, sendParameters)
             self.environment?.controller()?.dismiss()
         }
         
@@ -327,6 +333,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                 )
             }
             
+            let textString: NSAttributedString
+            if let attributedText = component.textInputView.attributedText {
+                textString = attributedText
+            } else {
+                textString = NSAttributedString(string: " ", font: Font.regular(17.0), textColor: .black)
+            }
+            
             let sendButton: SendButton
             if let current = self.sendButton {
                 sendButton = current
@@ -365,7 +378,7 @@ final class ChatSendMessageContextScreenComponent: Component {
             }
             
             var items: [ContextMenuItem] = []
-            if component.mediaCaptionIsAbove != nil {
+            if component.mediaCaptionIsAbove != nil, textString.length != 0, case .media = component.mediaPreview?.layoutType {
                 //TODO:localize
                 let mediaCaptionIsAbove = self.mediaCaptionIsAbove
                 items.append(.action(ContextMenuActionItem(
@@ -398,7 +411,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                             return
                         }
                         self.animateOutToEmpty = true
-                        component.sendMessage(.silently, self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.MessageEffect(id: $0.id) }))
+                        
+                        let sendParameters = ChatSendMessageActionSheetController.SendParameters(
+                            effect: self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.SendParameters.Effect(id: $0.id) }),
+                            textIsAboveMedia: self.mediaCaptionIsAbove
+                        )
+                        
+                        component.sendMessage(.silently, sendParameters)
                         self.environment?.controller()?.dismiss()
                     }
                 )))
@@ -414,7 +433,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                                 return
                             }
                             self.animateOutToEmpty = true
-                            component.sendMessage(.whenOnline, self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.MessageEffect(id: $0.id) }))
+                            
+                            let sendParameters = ChatSendMessageActionSheetController.SendParameters(
+                                effect: self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.SendParameters.Effect(id: $0.id) }),
+                                textIsAboveMedia: self.mediaCaptionIsAbove
+                            )
+                            
+                            component.sendMessage(.whenOnline, sendParameters)
                             self.environment?.controller()?.dismiss()
                         }
                     )))
@@ -431,7 +456,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                             return
                         }
                         self.animateOutToEmpty = true
-                        component.schedule(self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.MessageEffect(id: $0.id) }))
+                        
+                        let sendParameters = ChatSendMessageActionSheetController.SendParameters(
+                            effect: self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.SendParameters.Effect(id: $0.id) }),
+                            textIsAboveMedia: self.mediaCaptionIsAbove
+                        )
+                        
+                        component.schedule(sendParameters)
                         self.environment?.controller()?.dismiss()
                     }
                 )))
@@ -497,13 +528,6 @@ final class ChatSendMessageContextScreenComponent: Component {
                 messageItemView = MessageItemView(frame: CGRect())
                 self.messageItemView = messageItemView
                 self.addSubview(messageItemView)
-            }
-            
-            let textString: NSAttributedString
-            if let attributedText = component.textInputView.attributedText {
-                textString = attributedText
-            } else {
-                textString = NSAttributedString(string: " ", font: Font.regular(17.0), textColor: .black)
             }
             
             let localSourceTextInputViewFrame = convertFrame(component.textInputView.bounds, from: component.textInputView, to: self)
@@ -952,12 +976,19 @@ final class ChatSendMessageContextScreenComponent: Component {
                     Transition.immediate.setScale(view: actionsStackNode.view, scale: 1.0)
                     actionsStackNode.layer.animateSpring(from: 0.001 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.42, damping: 104.0)
                     
-                    messageItemView.animateIn(transition: transition)
+                    messageItemView.animateIn(
+                        sourceTextInputView: component.textInputView as? ChatInputTextView,
+                        transition: transition
+                    )
                 case .animatedOut:
                     transition.setAlpha(view: actionsStackNode.view, alpha: 0.0)
                     transition.setScale(view: actionsStackNode.view, scale: 0.001)
                     
-                    messageItemView.animateOut(toEmpty: self.animateOutToEmpty, transition: transition)
+                    messageItemView.animateOut(
+                        sourceTextInputView: component.textInputView as? ChatInputTextView,
+                        toEmpty: self.animateOutToEmpty,
+                        transition: transition
+                    )
                 }
             } else {
                 switch self.presentationAnimationState {
@@ -1141,8 +1172,8 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
         attachment: Bool,
         canSendWhenOnline: Bool,
         completion: @escaping () -> Void,
-        sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void,
-        schedule: @escaping (ChatSendMessageActionSheetController.MessageEffect?) -> Void,
+        sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void,
+        schedule: @escaping (ChatSendMessageActionSheetController.SendParameters?) -> Void,
         reactionItems: [ReactionItem]?,
         availableMessageEffects: AvailableMessageEffects?,
         isPremium: Bool

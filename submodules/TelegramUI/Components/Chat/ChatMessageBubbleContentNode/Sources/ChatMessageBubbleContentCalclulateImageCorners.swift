@@ -12,8 +12,8 @@ public func chatMessageBubbleImageContentCorners(relativeContentPosition positio
         case let .linear(top, _):
             switch top {
                 case .Neighbour:
-                    topLeftCorner = .Corner(mergedWithAnotherContentRadius)
-                    topRightCorner = .Corner(mergedWithAnotherContentRadius)
+                    topLeftCorner = .Corner(normalRadius)
+                    topRightCorner = .Corner(normalRadius)
                 case .BubbleNeighbour:
                     topLeftCorner = .Corner(mergedRadius)
                     topRightCorner = .Corner(mergedRadius)
