@@ -8,7 +8,7 @@ public extension Api {
         case inputMediaGame(id: Api.InputGame)
         case inputMediaGeoLive(flags: Int32, geoPoint: Api.InputGeoPoint, heading: Int32?, period: Int32?, proximityNotificationRadius: Int32?)
         case inputMediaGeoPoint(geoPoint: Api.InputGeoPoint)
-        case inputMediaInvoice(flags: Int32, title: String, description: String, photo: Api.InputWebDocument?, invoice: Api.Invoice, payload: Buffer, provider: String, providerData: Api.DataJSON, startParam: String?, extendedMedia: Api.InputMedia?)
+        case inputMediaInvoice(flags: Int32, title: String, description: String, photo: Api.InputWebDocument?, invoice: Api.Invoice, payload: Buffer, provider: String?, providerData: Api.DataJSON, startParam: String?, extendedMedia: Api.InputMedia?)
         case inputMediaPhoto(flags: Int32, id: Api.InputPhoto, ttlSeconds: Int32?)
         case inputMediaPhotoExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaPoll(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?, solution: String?, solutionEntities: [Api.MessageEntity]?)
@@ -82,7 +82,7 @@ public extension Api {
                     break
                 case .inputMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let startParam, let extendedMedia):
                     if boxed {
-                        buffer.appendInt32(-1900697899)
+                        buffer.appendInt32(1080028941)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -90,7 +90,7 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {photo!.serialize(buffer, true)}
                     invoice.serialize(buffer, true)
                     serializeBytes(payload, buffer: buffer, boxed: false)
-                    serializeString(provider, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(provider!, buffer: buffer, boxed: false)}
                     providerData.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {extendedMedia!.serialize(buffer, true)}
@@ -371,7 +371,7 @@ public extension Api {
             var _6: Buffer?
             _6 = parseBytes(reader)
             var _7: String?
-            _7 = parseString(reader)
+            if Int(_1!) & Int(1 << 3) != 0 {_7 = parseString(reader) }
             var _8: Api.DataJSON?
             if let signature = reader.readInt32() {
                 _8 = Api.parse(reader, signature: signature) as? Api.DataJSON
@@ -388,12 +388,12 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            let _c7 = _7 != nil
+            let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
             let _c8 = _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 2) == 0) || _10 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.InputMedia.inputMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, invoice: _5!, payload: _6!, provider: _7!, providerData: _8!, startParam: _9, extendedMedia: _10)
+                return Api.InputMedia.inputMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, invoice: _5!, payload: _6!, provider: _7, providerData: _8!, startParam: _9, extendedMedia: _10)
             }
             else {
                 return nil

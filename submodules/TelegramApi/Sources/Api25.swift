@@ -1,4 +1,116 @@
 public extension Api {
+    enum TopPeerCategory: TypeConstructorDescription {
+        case topPeerCategoryBotsInline
+        case topPeerCategoryBotsPM
+        case topPeerCategoryChannels
+        case topPeerCategoryCorrespondents
+        case topPeerCategoryForwardChats
+        case topPeerCategoryForwardUsers
+        case topPeerCategoryGroups
+        case topPeerCategoryPhoneCalls
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .topPeerCategoryBotsInline:
+                    if boxed {
+                        buffer.appendInt32(344356834)
+                    }
+                    
+                    break
+                case .topPeerCategoryBotsPM:
+                    if boxed {
+                        buffer.appendInt32(-1419371685)
+                    }
+                    
+                    break
+                case .topPeerCategoryChannels:
+                    if boxed {
+                        buffer.appendInt32(371037736)
+                    }
+                    
+                    break
+                case .topPeerCategoryCorrespondents:
+                    if boxed {
+                        buffer.appendInt32(104314861)
+                    }
+                    
+                    break
+                case .topPeerCategoryForwardChats:
+                    if boxed {
+                        buffer.appendInt32(-68239120)
+                    }
+                    
+                    break
+                case .topPeerCategoryForwardUsers:
+                    if boxed {
+                        buffer.appendInt32(-1472172887)
+                    }
+                    
+                    break
+                case .topPeerCategoryGroups:
+                    if boxed {
+                        buffer.appendInt32(-1122524854)
+                    }
+                    
+                    break
+                case .topPeerCategoryPhoneCalls:
+                    if boxed {
+                        buffer.appendInt32(511092620)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .topPeerCategoryBotsInline:
+                return ("topPeerCategoryBotsInline", [])
+                case .topPeerCategoryBotsPM:
+                return ("topPeerCategoryBotsPM", [])
+                case .topPeerCategoryChannels:
+                return ("topPeerCategoryChannels", [])
+                case .topPeerCategoryCorrespondents:
+                return ("topPeerCategoryCorrespondents", [])
+                case .topPeerCategoryForwardChats:
+                return ("topPeerCategoryForwardChats", [])
+                case .topPeerCategoryForwardUsers:
+                return ("topPeerCategoryForwardUsers", [])
+                case .topPeerCategoryGroups:
+                return ("topPeerCategoryGroups", [])
+                case .topPeerCategoryPhoneCalls:
+                return ("topPeerCategoryPhoneCalls", [])
+    }
+    }
+    
+        public static func parse_topPeerCategoryBotsInline(_ reader: BufferReader) -> TopPeerCategory? {
+            return Api.TopPeerCategory.topPeerCategoryBotsInline
+        }
+        public static func parse_topPeerCategoryBotsPM(_ reader: BufferReader) -> TopPeerCategory? {
+            return Api.TopPeerCategory.topPeerCategoryBotsPM
+        }
+        public static func parse_topPeerCategoryChannels(_ reader: BufferReader) -> TopPeerCategory? {
+            return Api.TopPeerCategory.topPeerCategoryChannels
+        }
+        public static func parse_topPeerCategoryCorrespondents(_ reader: BufferReader) -> TopPeerCategory? {
+            return Api.TopPeerCategory.topPeerCategoryCorrespondents
+        }
+        public static func parse_topPeerCategoryForwardChats(_ reader: BufferReader) -> TopPeerCategory? {
+            return Api.TopPeerCategory.topPeerCategoryForwardChats
+        }
+        public static func parse_topPeerCategoryForwardUsers(_ reader: BufferReader) -> TopPeerCategory? {
+            return Api.TopPeerCategory.topPeerCategoryForwardUsers
+        }
+        public static func parse_topPeerCategoryGroups(_ reader: BufferReader) -> TopPeerCategory? {
+            return Api.TopPeerCategory.topPeerCategoryGroups
+        }
+        public static func parse_topPeerCategoryPhoneCalls(_ reader: BufferReader) -> TopPeerCategory? {
+            return Api.TopPeerCategory.topPeerCategoryPhoneCalls
+        }
+    
+    }
+}
+public extension Api {
     enum TopPeerCategoryPeers: TypeConstructorDescription {
         case topPeerCategoryPeers(category: Api.TopPeerCategory, count: Int32, peers: [Api.TopPeer])
     

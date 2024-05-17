@@ -29,7 +29,7 @@ public extension TelegramEngine {
         public func sendBotPaymentForm(source: BotPaymentInvoiceSource, formId: Int64, validatedInfoId: String?, shippingOptionId: String?, tipAmount: Int64?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
             return _internal_sendBotPaymentForm(account: self.account, formId: formId, source: source, validatedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, tipAmount: tipAmount, credentials: credentials)
         }
-
+        
         public func requestBotPaymentReceipt(messageId: MessageId) -> Signal<BotPaymentReceipt, RequestBotPaymentReceiptError> {
             return _internal_requestBotPaymentReceipt(account: self.account, messageId: messageId)
         }
@@ -73,5 +73,9 @@ public extension TelegramEngine {
         public func peerStarsContext(peerId: EnginePeer.Id) -> StarsContext {
             return StarsContext(account: self.account, peerId: peerId)
         }
-     }
+        
+        public func sendStarsPaymentForm(formId: Int64, source: BotPaymentInvoiceSource) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
+            return _internal_sendStarsPaymentForm(account: self.account, formId: formId, source: source)
+        }
+    }
 }

@@ -1,4 +1,138 @@
 public extension Api {
+    enum StatsGraph: TypeConstructorDescription {
+        case statsGraph(flags: Int32, json: Api.DataJSON, zoomToken: String?)
+        case statsGraphAsync(token: String)
+        case statsGraphError(error: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsGraph(let flags, let json, let zoomToken):
+                    if boxed {
+                        buffer.appendInt32(-1901828938)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    json.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(zoomToken!, buffer: buffer, boxed: false)}
+                    break
+                case .statsGraphAsync(let token):
+                    if boxed {
+                        buffer.appendInt32(1244130093)
+                    }
+                    serializeString(token, buffer: buffer, boxed: false)
+                    break
+                case .statsGraphError(let error):
+                    if boxed {
+                        buffer.appendInt32(-1092839390)
+                    }
+                    serializeString(error, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsGraph(let flags, let json, let zoomToken):
+                return ("statsGraph", [("flags", flags as Any), ("json", json as Any), ("zoomToken", zoomToken as Any)])
+                case .statsGraphAsync(let token):
+                return ("statsGraphAsync", [("token", token as Any)])
+                case .statsGraphError(let error):
+                return ("statsGraphError", [("error", error as Any)])
+    }
+    }
+    
+        public static func parse_statsGraph(_ reader: BufferReader) -> StatsGraph? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.DataJSON?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.DataJSON
+            }
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.StatsGraph.statsGraph(flags: _1!, json: _2!, zoomToken: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_statsGraphAsync(_ reader: BufferReader) -> StatsGraph? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.StatsGraph.statsGraphAsync(token: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_statsGraphError(_ reader: BufferReader) -> StatsGraph? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.StatsGraph.statsGraphError(error: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum StatsGroupTopAdmin: TypeConstructorDescription {
+        case statsGroupTopAdmin(userId: Int64, deleted: Int32, kicked: Int32, banned: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsGroupTopAdmin(let userId, let deleted, let kicked, let banned):
+                    if boxed {
+                        buffer.appendInt32(-682079097)
+                    }
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt32(deleted, buffer: buffer, boxed: false)
+                    serializeInt32(kicked, buffer: buffer, boxed: false)
+                    serializeInt32(banned, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsGroupTopAdmin(let userId, let deleted, let kicked, let banned):
+                return ("statsGroupTopAdmin", [("userId", userId as Any), ("deleted", deleted as Any), ("kicked", kicked as Any), ("banned", banned as Any)])
+    }
+    }
+    
+        public static func parse_statsGroupTopAdmin(_ reader: BufferReader) -> StatsGroupTopAdmin? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.StatsGroupTopAdmin.statsGroupTopAdmin(userId: _1!, deleted: _2!, kicked: _3!, banned: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum StatsGroupTopInviter: TypeConstructorDescription {
         case statsGroupTopInviter(userId: Int64, invitations: Int32)
     
@@ -1288,118 +1422,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api {
-    enum TopPeerCategory: TypeConstructorDescription {
-        case topPeerCategoryBotsInline
-        case topPeerCategoryBotsPM
-        case topPeerCategoryChannels
-        case topPeerCategoryCorrespondents
-        case topPeerCategoryForwardChats
-        case topPeerCategoryForwardUsers
-        case topPeerCategoryGroups
-        case topPeerCategoryPhoneCalls
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .topPeerCategoryBotsInline:
-                    if boxed {
-                        buffer.appendInt32(344356834)
-                    }
-                    
-                    break
-                case .topPeerCategoryBotsPM:
-                    if boxed {
-                        buffer.appendInt32(-1419371685)
-                    }
-                    
-                    break
-                case .topPeerCategoryChannels:
-                    if boxed {
-                        buffer.appendInt32(371037736)
-                    }
-                    
-                    break
-                case .topPeerCategoryCorrespondents:
-                    if boxed {
-                        buffer.appendInt32(104314861)
-                    }
-                    
-                    break
-                case .topPeerCategoryForwardChats:
-                    if boxed {
-                        buffer.appendInt32(-68239120)
-                    }
-                    
-                    break
-                case .topPeerCategoryForwardUsers:
-                    if boxed {
-                        buffer.appendInt32(-1472172887)
-                    }
-                    
-                    break
-                case .topPeerCategoryGroups:
-                    if boxed {
-                        buffer.appendInt32(-1122524854)
-                    }
-                    
-                    break
-                case .topPeerCategoryPhoneCalls:
-                    if boxed {
-                        buffer.appendInt32(511092620)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .topPeerCategoryBotsInline:
-                return ("topPeerCategoryBotsInline", [])
-                case .topPeerCategoryBotsPM:
-                return ("topPeerCategoryBotsPM", [])
-                case .topPeerCategoryChannels:
-                return ("topPeerCategoryChannels", [])
-                case .topPeerCategoryCorrespondents:
-                return ("topPeerCategoryCorrespondents", [])
-                case .topPeerCategoryForwardChats:
-                return ("topPeerCategoryForwardChats", [])
-                case .topPeerCategoryForwardUsers:
-                return ("topPeerCategoryForwardUsers", [])
-                case .topPeerCategoryGroups:
-                return ("topPeerCategoryGroups", [])
-                case .topPeerCategoryPhoneCalls:
-                return ("topPeerCategoryPhoneCalls", [])
-    }
-    }
-    
-        public static func parse_topPeerCategoryBotsInline(_ reader: BufferReader) -> TopPeerCategory? {
-            return Api.TopPeerCategory.topPeerCategoryBotsInline
-        }
-        public static func parse_topPeerCategoryBotsPM(_ reader: BufferReader) -> TopPeerCategory? {
-            return Api.TopPeerCategory.topPeerCategoryBotsPM
-        }
-        public static func parse_topPeerCategoryChannels(_ reader: BufferReader) -> TopPeerCategory? {
-            return Api.TopPeerCategory.topPeerCategoryChannels
-        }
-        public static func parse_topPeerCategoryCorrespondents(_ reader: BufferReader) -> TopPeerCategory? {
-            return Api.TopPeerCategory.topPeerCategoryCorrespondents
-        }
-        public static func parse_topPeerCategoryForwardChats(_ reader: BufferReader) -> TopPeerCategory? {
-            return Api.TopPeerCategory.topPeerCategoryForwardChats
-        }
-        public static func parse_topPeerCategoryForwardUsers(_ reader: BufferReader) -> TopPeerCategory? {
-            return Api.TopPeerCategory.topPeerCategoryForwardUsers
-        }
-        public static func parse_topPeerCategoryGroups(_ reader: BufferReader) -> TopPeerCategory? {
-            return Api.TopPeerCategory.topPeerCategoryGroups
-        }
-        public static func parse_topPeerCategoryPhoneCalls(_ reader: BufferReader) -> TopPeerCategory? {
-            return Api.TopPeerCategory.topPeerCategoryPhoneCalls
         }
     
     }

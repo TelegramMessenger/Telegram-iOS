@@ -380,7 +380,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-750828557] = { return Api.InputMedia.parse_inputMediaGame($0) }
     dict[-1759532989] = { return Api.InputMedia.parse_inputMediaGeoLive($0) }
     dict[-104578748] = { return Api.InputMedia.parse_inputMediaGeoPoint($0) }
-    dict[-1900697899] = { return Api.InputMedia.parse_inputMediaInvoice($0) }
+    dict[1080028941] = { return Api.InputMedia.parse_inputMediaInvoice($0) }
     dict[-1279654347] = { return Api.InputMedia.parse_inputMediaPhoto($0) }
     dict[-440664550] = { return Api.InputMedia.parse_inputMediaPhotoExternal($0) }
     dict[261416433] = { return Api.InputMedia.parse_inputMediaPoll($0) }
@@ -869,7 +869,11 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1108478618] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
     dict[1124938064] = { return Api.SponsoredMessageReportOption.parse_sponsoredMessageReportOption($0) }
     dict[198776256] = { return Api.StarsTopupOption.parse_starsTopupOption($0) }
-    dict[1939194818] = { return Api.StarsTransaction.parse_starsTransaction($0) }
+    dict[1600878860] = { return Api.StarsTransaction.parse_starsTransaction($0) }
+    dict[-670195363] = { return Api.StarsTransactionPeer.parse_starsTransactionPeer($0) }
+    dict[-1269320843] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerAppStore($0) }
+    dict[-382740222] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerFragment($0) }
+    dict[2069236235] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerPlayMarket($0) }
     dict[-884757282] = { return Api.StatsAbsValueAndPrev.parse_statsAbsValueAndPrev($0) }
     dict[-1237848657] = { return Api.StatsDateRangeDays.parse_statsDateRangeDays($0) }
     dict[-1901828938] = { return Api.StatsGraph.parse_statsGraph($0) }
@@ -1293,6 +1297,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1130879648] = { return Api.payments.GiveawayInfo.parse_giveawayInfo($0) }
     dict[13456752] = { return Api.payments.GiveawayInfo.parse_giveawayInfoResults($0) }
     dict[-1610250415] = { return Api.payments.PaymentForm.parse_paymentForm($0) }
+    dict[2079764828] = { return Api.payments.PaymentForm.parse_paymentFormStars($0) }
     dict[1891958275] = { return Api.payments.PaymentReceipt.parse_paymentReceipt($0) }
     dict[1314881805] = { return Api.payments.PaymentResult.parse_paymentResult($0) }
     dict[-666824391] = { return Api.payments.PaymentResult.parse_paymentVerificationNeeded($0) }
@@ -1962,6 +1967,8 @@ public extension Api {
             case let _1 as Api.StarsTopupOption:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StarsTransaction:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.StarsTransactionPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StatsAbsValueAndPrev:
                 _1.serialize(buffer, boxed)
