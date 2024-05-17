@@ -781,6 +781,12 @@ extension StoreMessage {
                                 attributes.append(WebpagePreviewMessageAttribute(leadingPreview: leadingPreview, forceLargeMedia: webpageAttributes.forceLargeMedia, isManuallyAdded: webpageAttributes.isManuallyAdded, isSafe: webpageAttributes.isSafe))
                             }
                         }
+                        
+                        let leadingPreview = (flags & (1 << 27)) != 0
+                        if leadingPreview {
+                            attributes.append(InvertMediaMessageAttribute())
+                        }
+                        
                     }
                 }
                 
