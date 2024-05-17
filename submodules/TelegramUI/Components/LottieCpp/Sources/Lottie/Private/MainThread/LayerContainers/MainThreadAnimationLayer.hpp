@@ -103,7 +103,7 @@ public:
             newFrame = floor(newFrame);
         }
         for (const auto &layer : _animationLayers) {
-            layer->displayWithFrame(newFrame, false);
+            layer->displayWithFrame(newFrame, false, _boundingBoxContext);
         }
     }
     
@@ -118,7 +118,7 @@ public:
     /// Forces the view to update its drawing.
     void forceDisplayUpdate() {
         for (const auto &layer : _animationLayers) {
-            layer->displayWithFrame(currentFrame(), true);
+            layer->displayWithFrame(currentFrame(), true, _boundingBoxContext);
         }
     }
     
@@ -193,7 +193,7 @@ public:
         _currentFrame = currentFrame;
         
         for (size_t i = 0; i < _animationLayers.size(); i++) {
-            _animationLayers[i]->displayWithFrame(_currentFrame, false);
+            _animationLayers[i]->displayWithFrame(_currentFrame, false, _boundingBoxContext);
         }
     }
     
@@ -230,7 +230,7 @@ public:
                     }
                 }
                 if (found) {
-                    auto node = animationLayer->renderTreeNode();
+                    auto node = animationLayer->renderTreeNode(_boundingBoxContext);
                     if (node) {
                         subnodes.push_back(node);
                     }
@@ -264,7 +264,7 @@ public:
                 }
             }
             if (found) {
-                animationLayer->updateRenderTree();
+                animationLayer->updateRenderTree(_boundingBoxContext);
             }
         }
     }
@@ -288,6 +288,8 @@ private:
     std::shared_ptr<LayerFontProvider> _layerFontProvider;
     
     std::shared_ptr<RenderTreeNode> _renderTreeNode;
+    
+    BezierPathsBoundingBoxContext _boundingBoxContext;
 };
 
 }

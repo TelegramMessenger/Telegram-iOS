@@ -33,14 +33,23 @@ final class MediaPickerInteraction {
     let openSelectedMedia: (TGMediaSelectableItem, UIImage?) -> Void
     let openDraft: (MediaEditorDraft, UIImage?) -> Void
     let toggleSelection: (TGMediaSelectableItem, Bool, Bool) -> Bool
-    let sendSelected: (TGMediaSelectableItem?, Bool, Int32?, Bool, ChatSendMessageActionSheetController.MessageEffect?, @escaping () -> Void) -> Void
-    let schedule: (ChatSendMessageActionSheetController.MessageEffect?) -> Void
+    let sendSelected: (TGMediaSelectableItem?, Bool, Int32?, Bool, ChatSendMessageActionSheetController.SendParameters?, @escaping () -> Void) -> Void
+    let schedule: (ChatSendMessageActionSheetController.SendParameters?) -> Void
     let dismissInput: () -> Void
     let selectionState: TGMediaSelectionContext?
     let editingState: TGMediaEditingContext
     var hiddenMediaId: String?
     
-    init(downloadManager: AssetDownloadManager, openMedia: @escaping (PHFetchResult<PHAsset>, Int, UIImage?) -> Void, openSelectedMedia: @escaping (TGMediaSelectableItem, UIImage?) -> Void, openDraft: @escaping (MediaEditorDraft, UIImage?) -> Void, toggleSelection: @escaping (TGMediaSelectableItem, Bool, Bool) -> Bool, sendSelected: @escaping (TGMediaSelectableItem?, Bool, Int32?, Bool, ChatSendMessageActionSheetController.MessageEffect?, @escaping () -> Void) -> Void, schedule: @escaping  (ChatSendMessageActionSheetController.MessageEffect?) -> Void, dismissInput: @escaping () -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
+    var captionIsAboveMedia: Bool = false {
+        didSet {
+            if self.captionIsAboveMedia != oldValue {
+                self.captionIsAboveMediaValue.set(self.captionIsAboveMedia)
+            }
+        }
+    }
+    let captionIsAboveMediaValue = ValuePromise<Bool>(false)
+    
+    init(downloadManager: AssetDownloadManager, openMedia: @escaping (PHFetchResult<PHAsset>, Int, UIImage?) -> Void, openSelectedMedia: @escaping (TGMediaSelectableItem, UIImage?) -> Void, openDraft: @escaping (MediaEditorDraft, UIImage?) -> Void, toggleSelection: @escaping (TGMediaSelectableItem, Bool, Bool) -> Bool, sendSelected: @escaping (TGMediaSelectableItem?, Bool, Int32?, Bool, ChatSendMessageActionSheetController.SendParameters?, @escaping () -> Void) -> Void, schedule: @escaping  (ChatSendMessageActionSheetController.SendParameters?) -> Void, dismissInput: @escaping () -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
         self.downloadManager = downloadManager
         self.openMedia = openMedia
         self.openSelectedMedia = openSelectedMedia
@@ -200,7 +209,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public var presentFilePicker: () -> Void = {}
     
     private var completed = false
-    public var legacyCompletion: (_ signals: [Any], _ silently: Bool, _ scheduleTime: Int32?, ChatSendMessageActionSheetController.MessageEffect?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void = { _, _, _, _, _, _ in }
+    public var legacyCompletion: (_ signals: [Any], _ silently: Bool, _ scheduleTime: Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void = { _, _, _, _, _, _ in }
     
     public var requestAttachmentMenuExpansion: () -> Void = { }
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
@@ -1218,11 +1227,23 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
         }
         
-        fileprivate func send(asFile: Bool = false, silently: Bool, scheduleTime: Int32?, animated: Bool, messageEffect: ChatSendMessageActionSheetController.MessageEffect?, completion: @escaping () -> Void) {
+        fileprivate func send(asFile: Bool = false, silently: Bool, scheduleTime: Int32?, animated: Bool, parameters: ChatSendMessageActionSheetController.SendParameters?, completion: @escaping () -> Void) {
             guard let controller = self.controller, !controller.completed else {
                 return
             }
             controller.dismissAllTooltips()
+            
+            var parameters = parameters
+            if parameters == nil {
+                var textIsAboveMedia = false
+                if let interaction = controller.interaction {
+                    textIsAboveMedia = interaction.captionIsAboveMedia
+                }
+                parameters = ChatSendMessageActionSheetController.SendParameters(
+                    effect: nil,
+                    textIsAboveMedia: textIsAboveMedia
+                )
+            }
             
             var hasHeic = false
             let allItems = controller.interaction?.selectionState?.selectedItems() ?? []
@@ -1246,7 +1267,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     return
                 }
                 controller.completed = true
-                controller.legacyCompletion(signals, silently, scheduleTime, messageEffect, { [weak self] identifier in
+                controller.legacyCompletion(signals, silently, scheduleTime, parameters, { [weak self] identifier in
                     return !asFile ? self?.getItemSnapshot(identifier) : nil
                 }, { [weak self] in
                     completion()
@@ -1959,18 +1980,18 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             } else {
                 return false
             }
-        }, sendSelected: { [weak self] currentItem, silently, scheduleTime, animated, messageEffect, completion in
+        }, sendSelected: { [weak self] currentItem, silently, scheduleTime, animated, parameters, completion in
             if let strongSelf = self, let selectionState = strongSelf.interaction?.selectionState, !strongSelf.isDismissing {
                 strongSelf.isDismissing = true
                 if let currentItem = currentItem {
                     selectionState.setItem(currentItem, selected: true)
                 }
-                strongSelf.controllerNode.send(silently: silently, scheduleTime: scheduleTime, animated: animated, messageEffect: messageEffect, completion: completion)
+                strongSelf.controllerNode.send(silently: silently, scheduleTime: scheduleTime, animated: animated, parameters: parameters, completion: completion)
             }
-        }, schedule: { [weak self] messageEffect in
+        }, schedule: { [weak self] parameters in
             if let strongSelf = self {
                 strongSelf.presentSchedulePicker(false, { [weak self] time in
-                    self?.interaction?.sendSelected(nil, false, time, true, messageEffect, {})
+                    self?.interaction?.sendSelected(nil, false, time, true, parameters, {})
                 })
             }
         }, dismissInput: { [weak self] in
@@ -2419,10 +2440,18 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         }
                     }
                 }
+            
+                var isCaptionAboveMediaAvailable: Signal<Bool, NoError> = .single(false)
+                if let mediaPickerContext = self.mediaPickerContext {
+                    isCaptionAboveMediaAvailable = .single(mediaPickerContext.hasCaption)
+                }
                         
-                let items: Signal<ContextController.Items, NoError>  = self.groupedPromise.get()
+                let items: Signal<ContextController.Items, NoError> = combineLatest(
+                    self.groupedPromise.get(),
+                    isCaptionAboveMediaAvailable
+                )
                 |> deliverOnMainQueue
-                |> map { [weak self] grouped -> ContextController.Items in
+                |> map { [weak self] grouped, isCaptionAboveMediaAvailable -> ContextController.Items in
                     var items: [ContextMenuItem] = []
                     if !hasSpoilers {
                         items.append(.action(ContextMenuActionItem(text: selectionCount > 1 ? strings.Attachment_SendAsFiles : strings.Attachment_SendAsFile, icon: { theme in
@@ -2430,7 +2459,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         }, action: { [weak self] _, f in
                             f(.default)
                             
-                            self?.controllerNode.send(asFile: true, silently: false, scheduleTime: nil, animated: true, messageEffect: nil, completion: {})
+                            self?.controllerNode.send(asFile: true, silently: false, scheduleTime: nil, animated: true, parameters: nil, completion: {})
                         })))
                     }
                     if selectionCount > 1 {
@@ -2458,25 +2487,48 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                             self?.groupedValue = false
                         })))
                     }
-                    if isSpoilerAvailable {
+                    if isSpoilerAvailable || (selectionCount > 0 && isCaptionAboveMediaAvailable) {
                         if !items.isEmpty {
                             items.append(.separator)
                         }
-                        items.append(.action(ContextMenuActionItem(text: hasGeneric ? strings.Attachment_EnableSpoiler : strings.Attachment_DisableSpoiler, icon: { _ in return nil }, iconAnimation: ContextMenuActionItem.IconAnimation(
-                            name: "anim_spoiler",
-                            loop: true
-                        ), action: { [weak self]  _, f in
-                            f(.default)
-                            guard let strongSelf = self else {
-                                return
+                        
+                        if isCaptionAboveMediaAvailable {
+                            var mediaCaptionIsAbove = false
+                            if let interaction = self?.interaction {
+                                mediaCaptionIsAbove = interaction.captionIsAboveMedia
                             }
                             
-                            if let selectionContext = strongSelf.interaction?.selectionState, let editingContext = strongSelf.interaction?.editingState {
-                                for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
-                                    editingContext.setSpoiler(hasGeneric, for: item)
+                            //TODO:localize
+                            items.append(.action(ContextMenuActionItem(text: mediaCaptionIsAbove ? "Move Caption Down" : "Move Caption Up", icon: { _ in return nil }, iconAnimation: ContextMenuActionItem.IconAnimation(
+                                name: !mediaCaptionIsAbove ? "message_preview_sort_above" : "message_preview_sort_below"
+                            ), action: { [weak self]  _, f in
+                                f(.default)
+                                guard let strongSelf = self else {
+                                    return
                                 }
-                            }
-                        })))
+                                
+                                if let interaction = strongSelf.interaction {
+                                    interaction.captionIsAboveMedia = !interaction.captionIsAboveMedia
+                                }
+                            })))
+                        }
+                        if isSpoilerAvailable {
+                            items.append(.action(ContextMenuActionItem(text: hasGeneric ? strings.Attachment_EnableSpoiler : strings.Attachment_DisableSpoiler, icon: { _ in return nil }, iconAnimation: ContextMenuActionItem.IconAnimation(
+                                name: "anim_spoiler",
+                                loop: true
+                            ), action: { [weak self]  _, f in
+                                f(.default)
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                if let selectionContext = strongSelf.interaction?.selectionState, let editingContext = strongSelf.interaction?.editingState {
+                                    for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                                        editingContext.setSpoiler(hasGeneric, for: item)
+                                    }
+                                }
+                            })))
+                        }
                     }
                     return ContextController.Items(content: .list(items))
                 }
@@ -2534,7 +2586,18 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
     
     var caption: Signal<NSAttributedString?, NoError> {
         return Signal { [weak self] subscriber in
-            let disposable = self?.controller?.interaction?.editingState.forcedCaption().start(next: { caption in
+            guard let self else {
+                subscriber.putNext(nil)
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+            guard let caption = self.controller?.interaction?.editingState.forcedCaption() else {
+                subscriber.putNext(nil)
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+            
+            let disposable = caption.start(next: { caption in
                 if let caption = caption as? NSAttributedString {
                     subscriber.putNext(caption)
                 } else {
@@ -2545,6 +2608,34 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
                 disposable?.dispose()
             }
         }
+    }
+    
+    var hasCaption: Bool {
+        guard let isForcedCaption = self.controller?.interaction?.editingState.isForcedCaption() else {
+            return false
+        }
+        return isForcedCaption
+    }
+    
+    var captionIsAboveMedia: Signal<Bool, NoError> {
+        return Signal { [weak self] subscriber in
+            guard let interaction = self?.controller?.interaction else {
+                subscriber.putNext(false)
+                subscriber.putCompletion()
+                
+                return EmptyDisposable
+            }
+            let disposable = interaction.captionIsAboveMediaValue.get().start(next: { value in
+                subscriber.putNext(value)
+            }, error: { _ in }, completed: { })
+            return ActionDisposable {
+                disposable.dispose()
+            }
+        }
+    }
+    
+    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
+        self.controller?.interaction?.captionIsAboveMedia = captionIsAboveMedia
     }
         
     public var loadingProgress: Signal<CGFloat?, NoError> {
@@ -2563,12 +2654,12 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
         self.controller?.interaction?.editingState.setForcedCaption(caption, skipUpdate: true)
     }
     
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, messageEffect: ChatSendMessageActionSheetController.MessageEffect?) {
-        self.controller?.interaction?.sendSelected(nil, mode == .silently, mode == .whenOnline ? scheduleWhenOnlineTimestamp : nil, true, messageEffect, {})
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
+        self.controller?.interaction?.sendSelected(nil, mode == .silently, mode == .whenOnline ? scheduleWhenOnlineTimestamp : nil, true, parameters, {})
     }
     
-    func schedule(messageEffect: ChatSendMessageActionSheetController.MessageEffect?) {
-        self.controller?.interaction?.schedule(messageEffect)
+    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
+        self.controller?.interaction?.schedule(parameters)
     }
     
     func mainButtonAction() {

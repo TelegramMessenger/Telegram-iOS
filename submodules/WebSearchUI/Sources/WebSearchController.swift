@@ -35,14 +35,14 @@ final class WebSearchControllerInteraction {
     let setSearchQuery: (String) -> Void
     let deleteRecentQuery: (String) -> Void
     let toggleSelection: (ChatContextResult, Bool) -> Bool
-    let sendSelected: (ChatContextResult?, Bool, Int32?, ChatSendMessageActionSheetController.MessageEffect?) -> Void
-    let schedule: (ChatSendMessageActionSheetController.MessageEffect?) -> Void
+    let sendSelected: (ChatContextResult?, Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?) -> Void
+    let schedule: (ChatSendMessageActionSheetController.SendParameters?) -> Void
     let avatarCompleted: (UIImage) -> Void
     let selectionState: TGMediaSelectionContext?
     let editingState: TGMediaEditingContext
     var hiddenMediaId: String?
     
-    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Bool, sendSelected: @escaping (ChatContextResult?, Bool, Int32?, ChatSendMessageActionSheetController.MessageEffect?) -> Void, schedule: @escaping (ChatSendMessageActionSheetController.MessageEffect?) -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
+    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Bool, sendSelected: @escaping (ChatContextResult?, Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?) -> Void, schedule: @escaping (ChatSendMessageActionSheetController.SendParameters?) -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
         self.openResult = openResult
         self.setSearchQuery = setSearchQuery
         self.deleteRecentQuery = deleteRecentQuery
@@ -589,6 +589,17 @@ public class WebSearchPickerContext: AttachmentMediaPickerContext {
             }
         }
     }
+    
+    public var hasCaption: Bool {
+        return false
+    }
+    
+    public var captionIsAboveMedia: Signal<Bool, NoError> {
+        return .single(false)
+    }
+    
+    public func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
+    }
         
     public var loadingProgress: Signal<CGFloat?, NoError> {
         return .single(nil)
@@ -606,12 +617,12 @@ public class WebSearchPickerContext: AttachmentMediaPickerContext {
         self.interaction?.editingState.setForcedCaption(caption, skipUpdate: true)
     }
     
-    public func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, messageEffect: ChatSendMessageActionSheetController.MessageEffect?) {
-        self.interaction?.sendSelected(nil, mode == .silently, nil, messageEffect)
+    public func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
+        self.interaction?.sendSelected(nil, mode == .silently, nil, parameters)
     }
     
-    public func schedule(messageEffect: ChatSendMessageActionSheetController.MessageEffect?) {
-        self.interaction?.schedule(messageEffect)
+    public func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
+        self.interaction?.schedule(parameters)
     }
     
     public func mainButtonAction() {

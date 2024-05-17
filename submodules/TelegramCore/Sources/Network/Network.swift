@@ -434,13 +434,14 @@ public struct NetworkInitializationArguments {
     public let voipMaxLayer: Int32
     public let voipVersions: [CallSessionManagerImplementationVersion]
     public let appData: Signal<Data?, NoError>
+    public let externalRequestVerificationStream: Signal<[String: String], NoError>
     public let autolockDeadine: Signal<Int32?, NoError>
     public let encryptionProvider: EncryptionProvider
     public let deviceModelName:String?
     public let useBetaFeatures: Bool
     public let isICloudEnabled: Bool
     
-    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider, deviceModelName: String?, useBetaFeatures: Bool, isICloudEnabled: Bool) {
+    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, externalRequestVerificationStream: Signal<[String: String], NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider, deviceModelName: String?, useBetaFeatures: Bool, isICloudEnabled: Bool) {
         self.apiId = apiId
         self.apiHash = apiHash
         self.languagesCategory = languagesCategory
@@ -448,6 +449,7 @@ public struct NetworkInitializationArguments {
         self.voipMaxLayer = voipMaxLayer
         self.voipVersions = voipVersions
         self.appData = appData
+        self.externalRequestVerificationStream = externalRequestVerificationStream
         self.autolockDeadine = autolockDeadine
         self.encryptionProvider = encryptionProvider
         self.deviceModelName = deviceModelName
@@ -573,6 +575,25 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             
             if !supplementary {
                 context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber, mainDatacenterId: datacenterId))
+                let externalRequestVerificationStream = arguments.externalRequestVerificationStream
+                context.setExternalRequestVerification({ nonce in
+                    return MTSignal(generator: { subscriber in
+                        let disposable = (externalRequestVerificationStream
+                        |> map { dict -> String? in
+                            return dict[nonce]
+                        }
+                        |> filter { $0 != nil }
+                        |> take(1)
+                        |> timeout(15.0, queue: .mainQueue(), alternate: .single("APNS_PUSH_TIMEOUT"))).start(next: { secret in
+                            subscriber?.putNext(secret)
+                            subscriber?.putCompletion()
+                        })
+                        
+                        return MTBlockDisposable(block: {
+                            disposable.dispose()
+                        })
+                    })
+                })
             }
             
             /*#if DEBUG

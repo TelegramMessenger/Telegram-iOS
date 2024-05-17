@@ -1903,6 +1903,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return HashtagSearchController(context: context, peer: peer, query: query, all: all)
     }
     
+    public func makeStorySearchController(context: AccountContext, query: String) -> ViewController {
+        return StorySearchGridScreen(context: context, searchQuery: query)
+    }
+    
     public func makeMyStoriesController(context: AccountContext, isArchive: Bool) -> ViewController {
         return PeerInfoStoryGridScreen(context: context, peerId: context.account.peerId, scope: isArchive ? .archive : .saved)
     }

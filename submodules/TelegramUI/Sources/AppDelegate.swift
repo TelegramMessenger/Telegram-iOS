@@ -274,6 +274,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     private let firebaseSecretStream = Promise<[String: String]>([:])
     
+    private var firebaseRequestVerificationSecrets: [String: String] = [:] {
+        didSet {
+            if self.firebaseRequestVerificationSecrets != oldValue {
+                self.firebaseRequestVerificationSecretStream.set(.single(self.firebaseRequestVerificationSecrets))
+            }
+        }
+    }
+    private let firebaseRequestVerificationSecretStream = Promise<[String: String]>([:])
+    
     private var urlSessions: [URLSession] = []
     private func urlSession(identifier: String) -> URLSession {
         if let existingSession = self.urlSessions.first(where: { $0.configuration.identifier == identifier }) {
@@ -491,7 +500,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 Logger.shared.log("data", "can't deserialize")
             }
             return data
-        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: buildConfig.isICloudEnabled)
+        }, externalRequestVerificationStream: self.firebaseRequestVerificationSecretStream.get(), autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider(), deviceModelName: nil, useBetaFeatures: !buildConfig.isAppStoreBuild, isICloudEnabled: buildConfig.isICloudEnabled)
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
@@ -1894,6 +1903,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 var firebaseSecrets = self.firebaseSecrets
                 firebaseSecrets[receipt] = secret
                 self.firebaseSecrets = firebaseSecrets
+            }
+            if let nonce = firebaseDict["verify_nonce"] as? String, let secret = firebaseDict["verify_secret"] as? String {
+                var firebaseRequestVerificationSecrets = self.firebaseRequestVerificationSecrets
+                firebaseRequestVerificationSecrets[nonce] = secret
+                self.firebaseRequestVerificationSecrets = firebaseRequestVerificationSecrets
             }
             
             completionHandler(.newData)

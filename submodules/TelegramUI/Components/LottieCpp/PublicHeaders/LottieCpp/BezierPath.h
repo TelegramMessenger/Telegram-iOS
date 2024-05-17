@@ -6,6 +6,7 @@
 #include <LottieCpp/CurveVertex.h>
 #include <LottieCpp/PathElement.h>
 #include <LottieCpp/CGPath.h>
+#include <LottieCpp/ShapeAttributes.h>
 
 #include <vector>
 
@@ -126,7 +127,7 @@ public:
 public:
     BezierPath(std::shared_ptr<BezierPathContents> contents);
     
-private:
+public:
     std::shared_ptr<BezierPathContents> _contents;
 };
 
@@ -143,6 +144,9 @@ public:
 
 CGRect bezierPathsBoundingBox(std::vector<BezierPath> const &paths);
 CGRect bezierPathsBoundingBoxParallel(BezierPathsBoundingBoxContext &context, std::vector<BezierPath> const &paths);
+CGRect bezierPathsBoundingBoxParallel(BezierPathsBoundingBoxContext &context, BezierPath const &path);
+
+std::vector<BezierPath> trimBezierPaths(std::vector<BezierPath> &sourcePaths, double start, double end, double offset, TrimType type);
 
 }
 

@@ -63,13 +63,14 @@ final class ChatSendMessageContextScreenComponent: Component {
     let sourceSendButton: ASDisplayNode
     let textInputView: UITextView
     let mediaPreview: ChatSendMessageContextScreenMediaPreview?
+    let mediaCaptionIsAbove: (Bool, (Bool) -> Void)?
     let emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
     let wallpaperBackgroundNode: WallpaperBackgroundNode?
     let attachment: Bool
     let canSendWhenOnline: Bool
     let completion: () -> Void
-    let sendMessage: (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void
-    let schedule: (ChatSendMessageActionSheetController.MessageEffect?) -> Void
+    let sendMessage: (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void
+    let schedule: (ChatSendMessageActionSheetController.SendParameters?) -> Void
     let reactionItems: [ReactionItem]?
     let availableMessageEffects: AvailableMessageEffects?
     let isPremium: Bool
@@ -85,13 +86,14 @@ final class ChatSendMessageContextScreenComponent: Component {
         sourceSendButton: ASDisplayNode,
         textInputView: UITextView,
         mediaPreview: ChatSendMessageContextScreenMediaPreview?,
+        mediaCaptionIsAbove: (Bool, (Bool) -> Void)?,
         emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?,
         wallpaperBackgroundNode: WallpaperBackgroundNode?,
         attachment: Bool,
         canSendWhenOnline: Bool,
         completion: @escaping () -> Void,
-        sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void,
-        schedule: @escaping (ChatSendMessageActionSheetController.MessageEffect?) -> Void,
+        sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void,
+        schedule: @escaping (ChatSendMessageActionSheetController.SendParameters?) -> Void,
         reactionItems: [ReactionItem]?,
         availableMessageEffects: AvailableMessageEffects?,
         isPremium: Bool
@@ -106,6 +108,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         self.sourceSendButton = sourceSendButton
         self.textInputView = textInputView
         self.mediaPreview = mediaPreview
+        self.mediaCaptionIsAbove = mediaCaptionIsAbove
         self.emojiViewProvider = emojiViewProvider
         self.wallpaperBackgroundNode = wallpaperBackgroundNode
         self.attachment = attachment
@@ -159,6 +162,8 @@ final class ChatSendMessageContextScreenComponent: Component {
         private var environment: EnvironmentType?
         private weak var state: EmptyComponentState?
         private var isUpdating: Bool = false
+        
+        private var mediaCaptionIsAbove: Bool = false
         
         private let messageEffectDisposable = MetaDisposable()
         private var selectedMessageEffect: AvailableMessageEffects.MessageEffect?
@@ -217,7 +222,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                 return
             }
             self.animateOutToEmpty = true
-            component.sendMessage(.generic, self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.MessageEffect(id: $0.id) }))
+            
+            let sendParameters = ChatSendMessageActionSheetController.SendParameters(
+                effect: self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.SendParameters.Effect(id: $0.id) }),
+                textIsAboveMedia: self.mediaCaptionIsAbove
+            )
+            
+            component.sendMessage(.generic, sendParameters)
             self.environment?.controller()?.dismiss()
         }
         
@@ -260,6 +271,18 @@ final class ChatSendMessageContextScreenComponent: Component {
                 self.isUpdating = false
             }
             
+            let environment = environment[EnvironmentType.self].value
+            
+            var transition = transition
+            
+            var transitionIsImmediate = transition.animation.isImmediate
+            if case let .curve(duration, _) = transition.animation, duration == 0.0 {
+                transitionIsImmediate = true
+            }
+            if transitionIsImmediate, let previousEnvironment = self.environment, previousEnvironment.inputHeight != 0.0, environment.inputHeight != 0.0, previousEnvironment.inputHeight != environment.inputHeight {
+                transition = .spring(duration: 0.4)
+            }
+            
             let previousAnimationState = self.appliedAnimationState
             self.appliedAnimationState = self.presentationAnimationState
             
@@ -273,11 +296,11 @@ final class ChatSendMessageContextScreenComponent: Component {
             }
             let _ = alphaTransition
             
-            let environment = environment[EnvironmentType.self].value
-            
             let themeUpdated = environment.theme !== self.environment?.theme
             
             if self.component == nil {
+                self.mediaCaptionIsAbove = component.mediaCaptionIsAbove?.0 ?? false
+                
                 component.gesture.externalUpdated = { [weak self] view, location in
                     guard let self, let actionsStackNode = self.actionsStackNode else {
                         return
@@ -320,6 +343,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                 )
             }
             
+            let textString: NSAttributedString
+            if let attributedText = component.textInputView.attributedText {
+                textString = attributedText
+            } else {
+                textString = NSAttributedString(string: " ", font: Font.regular(17.0), textColor: .black)
+            }
+            
             let sendButton: SendButton
             if let current = self.sendButton {
                 sendButton = current
@@ -345,9 +375,121 @@ final class ChatSendMessageContextScreenComponent: Component {
                 sendButtonScale = 1.0
             }
             
+            var reminders = false
+            var isSecret = false
+            var canSchedule = false
+            if let peerId = component.peerId {
+                reminders = peerId == component.context.account.peerId
+                isSecret = peerId.namespace == Namespaces.Peer.SecretChat
+                canSchedule = !isSecret
+            }
+            if component.isScheduledMessages {
+                canSchedule = false
+            }
+            
+            var items: [ContextMenuItem] = []
+            if component.mediaCaptionIsAbove != nil, textString.length != 0, case .media = component.mediaPreview?.layoutType {
+                //TODO:localize
+                let mediaCaptionIsAbove = self.mediaCaptionIsAbove
+                items.append(.action(ContextMenuActionItem(
+                    id: AnyHashable("captionPosition"),
+                    text: mediaCaptionIsAbove ? "Move Caption Down" : "Move Caption Up",
+                    icon: { _ in
+                        return nil
+                    }, iconAnimation: ContextMenuActionItem.IconAnimation(
+                        name: !mediaCaptionIsAbove ? "message_preview_sort_above" : "message_preview_sort_below"
+                    ), action: { [weak self] _, _ in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        self.mediaCaptionIsAbove = !self.mediaCaptionIsAbove
+                        component.mediaCaptionIsAbove?.1(self.mediaCaptionIsAbove)
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .spring(duration: 0.35))
+                        }
+                    }
+                )))
+            }
+            if !reminders {
+                items.append(.action(ContextMenuActionItem(
+                    id: AnyHashable("silent"),
+                    text: environment.strings.Conversation_SendMessage_SendSilently,
+                    icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, _ in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        self.animateOutToEmpty = true
+                        
+                        let sendParameters = ChatSendMessageActionSheetController.SendParameters(
+                            effect: self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.SendParameters.Effect(id: $0.id) }),
+                            textIsAboveMedia: self.mediaCaptionIsAbove
+                        )
+                        
+                        component.sendMessage(.silently, sendParameters)
+                        self.environment?.controller()?.dismiss()
+                    }
+                )))
+                
+                if component.canSendWhenOnline && canSchedule {
+                    items.append(.action(ContextMenuActionItem(
+                        id: AnyHashable("whenOnline"),
+                        text: environment.strings.Conversation_SendMessage_SendWhenOnline,
+                        icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/WhenOnlineIcon"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, _ in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            self.animateOutToEmpty = true
+                            
+                            let sendParameters = ChatSendMessageActionSheetController.SendParameters(
+                                effect: self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.SendParameters.Effect(id: $0.id) }),
+                                textIsAboveMedia: self.mediaCaptionIsAbove
+                            )
+                            
+                            component.sendMessage(.whenOnline, sendParameters)
+                            self.environment?.controller()?.dismiss()
+                        }
+                    )))
+                }
+            }
+            if canSchedule {
+                items.append(.action(ContextMenuActionItem(
+                    id: AnyHashable("schedule"),
+                    text: reminders ? environment.strings.Conversation_SendMessage_SetReminder: environment.strings.Conversation_SendMessage_ScheduleMessage,
+                    icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, _ in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        self.animateOutToEmpty = true
+                        
+                        let sendParameters = ChatSendMessageActionSheetController.SendParameters(
+                            effect: self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.SendParameters.Effect(id: $0.id) }),
+                            textIsAboveMedia: self.mediaCaptionIsAbove
+                        )
+                        
+                        component.schedule(sendParameters)
+                        self.environment?.controller()?.dismiss()
+                    }
+                )))
+            }
+            
             let actionsStackNode: ContextControllerActionsStackNode
             if let current = self.actionsStackNode {
                 actionsStackNode = current
+                
+                actionsStackNode.replace(item: ContextControllerActionsListStackItem(
+                    id: AnyHashable("items"),
+                    items: items,
+                    reactionItems: nil,
+                    tip: nil,
+                    tipSignal: .single(nil),
+                    dismissed: nil
+                ), animated: !transition.animation.isImmediate)
             } else {
                 actionsStackNode = ContextControllerActionsStackNode(
                     getController: {
@@ -366,69 +508,9 @@ final class ChatSendMessageContextScreenComponent: Component {
                 )
                 actionsStackNode.layer.anchorPoint = CGPoint(x: 1.0, y: 0.0)
                 
-                var reminders = false
-                var isSecret = false
-                var canSchedule = false
-                if let peerId = component.peerId {
-                    reminders = peerId == component.context.account.peerId
-                    isSecret = peerId.namespace == Namespaces.Peer.SecretChat
-                    canSchedule = !isSecret
-                }
-                if component.isScheduledMessages {
-                    canSchedule = false
-                }
-                
-                var items: [ContextMenuItem] = []
-                if !reminders {
-                    items.append(.action(ContextMenuActionItem(
-                        text: environment.strings.Conversation_SendMessage_SendSilently,
-                        icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, _ in
-                            guard let self, let component = self.component else {
-                                return
-                            }
-                            self.animateOutToEmpty = true
-                            component.sendMessage(.silently, self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.MessageEffect(id: $0.id) }))
-                            self.environment?.controller()?.dismiss()
-                        }
-                    )))
-                    
-                    if component.canSendWhenOnline && canSchedule {
-                        items.append(.action(ContextMenuActionItem(
-                            text: environment.strings.Conversation_SendMessage_SendWhenOnline,
-                            icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/WhenOnlineIcon"), color: theme.contextMenu.primaryColor)
-                            }, action: { [weak self] _, _ in
-                                guard let self, let component = self.component else {
-                                    return
-                                }
-                                self.animateOutToEmpty = true
-                                component.sendMessage(.whenOnline, self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.MessageEffect(id: $0.id) }))
-                                self.environment?.controller()?.dismiss()
-                            }
-                        )))
-                    }
-                }
-                if canSchedule {
-                    items.append(.action(ContextMenuActionItem(
-                        text: reminders ? environment.strings.Conversation_SendMessage_SetReminder: environment.strings.Conversation_SendMessage_ScheduleMessage,
-                        icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, _ in
-                            guard let self, let component = self.component else {
-                                return
-                            }
-                            self.animateOutToEmpty = true
-                            component.schedule(self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.MessageEffect(id: $0.id) }))
-                            self.environment?.controller()?.dismiss()
-                        }
-                    )))
-                }
-                
                 actionsStackNode.push(
                     item: ContextControllerActionsListStackItem(
-                        id: nil,
+                        id: AnyHashable("items"),
                         items: items,
                         reactionItems: nil,
                         tip: nil,
@@ -456,13 +538,6 @@ final class ChatSendMessageContextScreenComponent: Component {
                 messageItemView = MessageItemView(frame: CGRect())
                 self.messageItemView = messageItemView
                 self.addSubview(messageItemView)
-            }
-            
-            let textString: NSAttributedString
-            if let attributedText = component.textInputView.attributedText {
-                textString = attributedText
-            } else {
-                textString = NSAttributedString(string: " ", font: Font.regular(17.0), textColor: .black)
             }
             
             let localSourceTextInputViewFrame = convertFrame(component.textInputView.bounds, from: component.textInputView, to: self)
@@ -505,6 +580,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                 sourceTextInputView: component.textInputView as? ChatInputTextView,
                 emojiViewProvider: component.emojiViewProvider,
                 sourceMediaPreview: component.mediaPreview,
+                mediaCaptionIsAbove: self.mediaCaptionIsAbove,
                 textInsets: messageTextInsets,
                 explicitBackgroundSize: explicitMessageBackgroundSize,
                 maxTextWidth: localSourceTextInputViewFrame.width,
@@ -910,12 +986,19 @@ final class ChatSendMessageContextScreenComponent: Component {
                     Transition.immediate.setScale(view: actionsStackNode.view, scale: 1.0)
                     actionsStackNode.layer.animateSpring(from: 0.001 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.42, damping: 104.0)
                     
-                    messageItemView.animateIn(transition: transition)
+                    messageItemView.animateIn(
+                        sourceTextInputView: component.textInputView as? ChatInputTextView,
+                        transition: transition
+                    )
                 case .animatedOut:
                     transition.setAlpha(view: actionsStackNode.view, alpha: 0.0)
                     transition.setScale(view: actionsStackNode.view, scale: 0.001)
                     
-                    messageItemView.animateOut(toEmpty: self.animateOutToEmpty, transition: transition)
+                    messageItemView.animateOut(
+                        sourceTextInputView: component.textInputView as? ChatInputTextView,
+                        toEmpty: self.animateOutToEmpty,
+                        transition: transition
+                    )
                 }
             } else {
                 switch self.presentationAnimationState {
@@ -1093,13 +1176,14 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
         sourceSendButton: ASDisplayNode,
         textInputView: UITextView,
         mediaPreview: ChatSendMessageContextScreenMediaPreview?,
+        mediaCaptionIsAbove: (Bool, (Bool) -> Void)?,
         emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?,
         wallpaperBackgroundNode: WallpaperBackgroundNode?,
         attachment: Bool,
         canSendWhenOnline: Bool,
         completion: @escaping () -> Void,
-        sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.MessageEffect?) -> Void,
-        schedule: @escaping (ChatSendMessageActionSheetController.MessageEffect?) -> Void,
+        sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void,
+        schedule: @escaping (ChatSendMessageActionSheetController.SendParameters?) -> Void,
         reactionItems: [ReactionItem]?,
         availableMessageEffects: AvailableMessageEffects?,
         isPremium: Bool
@@ -1119,6 +1203,7 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
                 sourceSendButton: sourceSendButton,
                 textInputView: textInputView,
                 mediaPreview: mediaPreview,
+                mediaCaptionIsAbove: mediaCaptionIsAbove,
                 emojiViewProvider: emojiViewProvider,
                 wallpaperBackgroundNode: wallpaperBackgroundNode,
                 attachment: attachment,
