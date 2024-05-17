@@ -451,7 +451,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             reactionContextNode.updateIsIntersectingContent(isIntersectingContent: isIntersectingContent, transition: .animated(duration: 0.25, curve: .easeInOut))
             
             if !reactionContextNode.isExpanded && reactionContextNode.canBeExpanded {
-                if topOverscroll > 30.0 && self.scroller.isDragging {
+                if topOverscroll > 30.0 && self.scroller.isTracking {
                     self.scroller.panGestureRecognizer.state = .cancelled
                     reactionContextNode.expand()
                 } else {

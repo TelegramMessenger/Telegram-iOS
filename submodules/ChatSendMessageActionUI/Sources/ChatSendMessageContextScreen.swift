@@ -271,6 +271,18 @@ final class ChatSendMessageContextScreenComponent: Component {
                 self.isUpdating = false
             }
             
+            let environment = environment[EnvironmentType.self].value
+            
+            var transition = transition
+            
+            var transitionIsImmediate = transition.animation.isImmediate
+            if case let .curve(duration, _) = transition.animation, duration == 0.0 {
+                transitionIsImmediate = true
+            }
+            if transitionIsImmediate, let previousEnvironment = self.environment, previousEnvironment.inputHeight != 0.0, environment.inputHeight != 0.0, previousEnvironment.inputHeight != environment.inputHeight {
+                transition = .spring(duration: 0.4)
+            }
+            
             let previousAnimationState = self.appliedAnimationState
             self.appliedAnimationState = self.presentationAnimationState
             
@@ -283,8 +295,6 @@ final class ChatSendMessageContextScreenComponent: Component {
                 alphaTransition = .easeInOut(duration: 0.25)
             }
             let _ = alphaTransition
-            
-            let environment = environment[EnvironmentType.self].value
             
             let themeUpdated = environment.theme !== self.environment?.theme
             

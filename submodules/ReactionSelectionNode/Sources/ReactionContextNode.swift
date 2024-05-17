@@ -1943,11 +1943,13 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                 }
                             }
                         } else {
-                            let remotePacksSignal: Signal<(sets: FoundStickerSets, isFinalResult: Bool), NoError> = .single((FoundStickerSets(), false)) |> then(
+                            let remotePacksSignal: Signal<(sets: FoundStickerSets, isFinalResult: Bool), NoError> = .single((FoundStickerSets(), false))
+                            |> then(
                                 context.engine.stickers.searchEmojiSetsRemotely(query: query) |> map {
                                     ($0, true)
                                 }
                             )
+                            let localPacksSignal: Signal<FoundStickerSets, NoError> = context.engine.stickers.searchEmojiSets(query: query)
                             
                             resultSignal = signal
                             |> mapToSignal { keywords -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
@@ -1999,9 +2001,10 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                         context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000) |> take(1),
                                         context.engine.stickers.availableReactions() |> take(1),
                                         hasPremium |> take(1),
-                                        remotePacksSignal
+                                        remotePacksSignal,
+                                        localPacksSignal
                                     )
-                                    |> map { view, availableReactions, hasPremium, foundPacks -> [EmojiPagerContentComponent.ItemGroup] in
+                                    |> map { view, availableReactions, hasPremium, foundPacks, foundLocalPacks -> [EmojiPagerContentComponent.ItemGroup] in
                                         var result: [(String, TelegramMediaFile?, String)] = []
                                         
                                         var allEmoticons: [String: String] = [:]
@@ -2072,10 +2075,21 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                             items: items
                                         ))
                                         
-                                        for (collectionId, info, _, _) in foundPacks.sets.infos {
+                                        var combinedSets: FoundStickerSets
+                                        combinedSets = foundLocalPacks
+                                        combinedSets = combinedSets.merge(with: foundPacks.sets)
+                                        
+                                        var existingCollectionIds = Set<ItemCollectionId>()
+                                        for (collectionId, info, _, _) in combinedSets.infos {
+                                            if !existingCollectionIds.contains(collectionId) {
+                                                existingCollectionIds.insert(collectionId)
+                                            } else {
+                                                continue
+                                            }
+                                            
                                             if let info = info as? StickerPackCollectionInfo {
                                                 var topItems: [StickerPackItem] = []
-                                                for e in foundPacks.sets.entries {
+                                                for e in combinedSets.entries {
                                                     if let item = e.item as? StickerPackItem {
                                                         if e.index.collectionId == collectionId {
                                                             topItems.append(item)
