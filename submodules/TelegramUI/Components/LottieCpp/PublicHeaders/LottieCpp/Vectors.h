@@ -30,7 +30,7 @@ struct Vector1D {
     }
 };
 
-double interpolate(double value, double to, double amount);
+float interpolate(float value, float to, float amount);
 
 Vector1D interpolate(
     Vector1D const &from,

@@ -147,7 +147,7 @@ CATransform3D CATransform3D::_identity = CATransform3D(
     0.0, 0.0, 0.0, 1.0
 );
 
-double interpolate(double value, double to, double amount) {
+float interpolate(float value, float to, float amount) {
     return value + ((to - value) * amount);
 }
 
