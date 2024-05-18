@@ -555,7 +555,21 @@ bool CATransform3D::isInvertible() const {
 }
 
 CATransform3D CATransform3D::inverted() const {
-    return fromNativeTransform(CATransform3DMakeAffineTransform(CGAffineTransformInvert(CATransform3DGetAffineTransform(nativeTransform(*this)))));
+    simd_double4x4 matrix = {
+        simd_make_double4(m11, m21, m31, m41),
+        simd_make_double4(m12, m22, m32, m42),
+        simd_make_double4(m13, m23, m33, m43),
+        simd_make_double4(m14, m24, m34, m44)
+    };
+    simd_double4x4 result = simd_inverse(matrix);
+    CATransform3D nativeResult = CATransform3D(
+        result.columns[0][0], result.columns[1][0], result.columns[2][0], result.columns[3][0],
+        result.columns[0][1], result.columns[1][1], result.columns[2][1], result.columns[3][1],
+        result.columns[0][2], result.columns[1][2], result.columns[2][2], result.columns[3][2],
+        result.columns[0][3], result.columns[1][3], result.columns[2][3], result.columns[3][3]
+    );
+    
+    return nativeResult;
 }
 
 bool CGRect::intersects(CGRect const &other) const {
