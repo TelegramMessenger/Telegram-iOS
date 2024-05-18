@@ -294,7 +294,7 @@ namespace {
     }
 }
 
-Vector2D Vector2D::pointOnPath(Vector2D const &to, Vector2D const &outTangent, Vector2D const &inTangent, double amount) const {
+Vector2D Vector2D::pointOnPath(Vector2D const &to, Vector2D const &outTangent, Vector2D const &inTangent, float amount) const {
     auto a = interpolate(outTangent, amount);
     auto b = outTangent.interpolate(inTangent, amount);
     auto c = inTangent.interpolate(to, amount);

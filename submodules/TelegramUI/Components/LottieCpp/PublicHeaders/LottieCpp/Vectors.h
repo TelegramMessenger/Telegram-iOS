@@ -98,7 +98,7 @@ struct __attribute__((packed)) Vector2D {
         return false;
     }
     
-    Vector2D pointOnPath(Vector2D const &to, Vector2D const &outTangent, Vector2D const &inTangent, double amount) const;
+    Vector2D pointOnPath(Vector2D const &to, Vector2D const &outTangent, Vector2D const &inTangent, float amount) const;
     
     Vector2D interpolate(Vector2D const &to, float amount) const;
     
@@ -140,12 +140,12 @@ Vector3D interpolate(
     float amount
 );
 
-inline double degreesToRadians(double value) {
-    return value * M_PI / 180.0;
+inline float degreesToRadians(float value) {
+    return value * M_PI / 180.0f;
 }
 
-inline double radiansToDegrees(double value) {
-    return value * 180.0 / M_PI;
+inline float radiansToDegrees(float value) {
+    return value * 180.0f / M_PI;
 }
 
 struct CATransform3D {
@@ -312,21 +312,21 @@ private:
 };
 
 struct CGRect {
-    explicit CGRect(double x_, double y_, double width_, double height_) :
+    explicit CGRect(float x_, float y_, float width_, float height_) :
     x(x_), y(y_), width(width_), height(height_) {
     }
     
-    double x = 0.0;
-    double y = 0.0;
-    double width = 0.0;
-    double height = 0.0;
+    float x = 0.0f;
+    float y = 0.0f;
+    float width = 0.0f;
+    float height = 0.0f;
     
     static CGRect veryLarge() {
         return CGRect(
-            -100000000.0,
-            -100000000.0,
-            200000000.0,
-            200000000.0
+            -100000000.0f,
+            -100000000.0f,
+            200000000.0f,
+            200000000.0f
         );
     }
     
@@ -342,13 +342,13 @@ struct CGRect {
         return width <= 0.0 || height <= 0.0;
     }
     
-    CGRect insetBy(double dx, double dy) const {
+    CGRect insetBy(float dx, float dy) const {
         CGRect result = *this;
         
         result.x += dx;
         result.y += dy;
-        result.width -= dx * 2.0;
-        result.height -= dy * 2.0;
+        result.width -= dx * 2.0f;
+        result.height -= dy * 2.0f;
         
         return result;
     }
