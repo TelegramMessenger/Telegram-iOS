@@ -7,7 +7,7 @@ BezierPath makeEllipseBezierPath(
     Vector2D const &center,
     PathDirection direction
 ) {
-    const double ControlPointConstant = 0.55228;
+    const float ControlPointConstant = 0.55228;
     
     Vector2D half = size * 0.5;
     if (direction == PathDirection::CounterClockwise) {
@@ -51,13 +51,13 @@ BezierPath makeEllipseBezierPath(
 BezierPath makeRectangleBezierPath(
     Vector2D const &position,
     Vector2D const &inputSize,
-    double cornerRadius,
+    float cornerRadius,
     PathDirection direction
 ) {
-    const double ControlPointConstant = 0.55228;
+    const float ControlPointConstant = 0.55228;
     
     Vector2D size = inputSize * 0.5;
-    double radius = std::min(std::min(cornerRadius, (double)size.x), (double)size.y);
+    float radius = std::min(std::min(cornerRadius, (float)size.x), (float)size.y);
     
     BezierPath bezierPath;
     std::vector<CurveVertex> points;
@@ -97,7 +97,7 @@ BezierPath makeRectangleBezierPath(
             .translated(position)
         };
     } else {
-        double controlPoint = radius * ControlPointConstant;
+        float controlPoint = radius * ControlPointConstant;
         points = {
             /// Lead In
             CurveVertex::absolute(
@@ -184,28 +184,28 @@ BezierPath makeRectangleBezierPath(
 }
 
 /// Magic number needed for building path data
-static constexpr double StarNodePolystarConstant = 0.47829;
+static constexpr float StarNodePolystarConstant = 0.47829;
 
 BezierPath makeStarBezierPath(
     Vector2D const &position,
-    double outerRadius,
-    double innerRadius,
-    double inputOuterRoundedness,
-    double inputInnerRoundedness,
-    double numberOfPoints,
-    double rotation,
+    float outerRadius,
+    float innerRadius,
+    float inputOuterRoundedness,
+    float inputInnerRoundedness,
+    float numberOfPoints,
+    float rotation,
     PathDirection direction
 ) {
-    double currentAngle = degreesToRadians(rotation - 90.0);
-    double anglePerPoint = (2.0 * M_PI) / numberOfPoints;
-    double halfAnglePerPoint = anglePerPoint / 2.0;
-    double partialPointAmount = numberOfPoints - floor(numberOfPoints);
-    double outerRoundedness = inputOuterRoundedness * 0.01;
-    double innerRoundedness = inputInnerRoundedness * 0.01;
+    float currentAngle = degreesToRadians(rotation - 90.0);
+    float anglePerPoint = (2.0 * M_PI) / numberOfPoints;
+    float halfAnglePerPoint = anglePerPoint / 2.0;
+    float partialPointAmount = numberOfPoints - floor(numberOfPoints);
+    float outerRoundedness = inputOuterRoundedness * 0.01;
+    float innerRoundedness = inputInnerRoundedness * 0.01;
     
     Vector2D point = Vector2D::Zero();
     
-    double partialPointRadius = 0.0;
+    float partialPointRadius = 0.0;
     if (partialPointAmount != 0.0) {
         currentAngle += halfAnglePerPoint * (1 - partialPointAmount);
         partialPointRadius = innerRadius + partialPointAmount * (outerRadius - innerRadius);
@@ -225,8 +225,8 @@ BezierPath makeStarBezierPath(
     bool longSegment = false;
     int numPoints = (int)(ceil(numberOfPoints) * 2.0);
     for (int i = 0; i < numPoints; i++) {
-        double radius = longSegment ? outerRadius : innerRadius;
-        double dTheta = halfAnglePerPoint;
+        float radius = longSegment ? outerRadius : innerRadius;
+        float dTheta = halfAnglePerPoint;
         if (partialPointRadius != 0.0 && i == numPoints - 2) {
             dTheta = anglePerPoint * partialPointAmount / 2;
         }
@@ -240,18 +240,18 @@ BezierPath makeStarBezierPath(
         if (innerRoundedness == 0.0 && outerRoundedness == 0.0) {
             vertices.push_back(CurveVertex::relative(point + position, Vector2D::Zero(), Vector2D::Zero()));
         } else {
-            double cp1Theta = (atan2(previousPoint.y, previousPoint.x) - M_PI / 2.0);
-            double cp1Dx = cos(cp1Theta);
-            double cp1Dy = sin(cp1Theta);
+            float cp1Theta = (atan2(previousPoint.y, previousPoint.x) - M_PI / 2.0);
+            float cp1Dx = cos(cp1Theta);
+            float cp1Dy = sin(cp1Theta);
             
-            double cp2Theta = (atan2(point.y, point.x) - M_PI / 2.0);
-            double cp2Dx = cos(cp2Theta);
-            double cp2Dy = sin(cp2Theta);
+            float cp2Theta = (atan2(point.y, point.x) - M_PI / 2.0);
+            float cp2Dx = cos(cp2Theta);
+            float cp2Dy = sin(cp2Theta);
             
-            double cp1Roundedness = longSegment ? innerRoundedness : outerRoundedness;
-            double cp2Roundedness = longSegment ? outerRoundedness : innerRoundedness;
-            double cp1Radius = longSegment ? innerRadius : outerRadius;
-            double cp2Radius = longSegment ? outerRadius : innerRadius;
+            float cp1Roundedness = longSegment ? innerRoundedness : outerRoundedness;
+            float cp2Roundedness = longSegment ? outerRoundedness : innerRoundedness;
+            float cp1Radius = longSegment ? innerRadius : outerRadius;
+            float cp2Radius = longSegment ? outerRadius : innerRadius;
             
             Vector2D cp1(
                 cp1Radius * cp1Roundedness * StarNodePolystarConstant * cp1Dx,
@@ -295,7 +295,7 @@ BezierPath makeStarBezierPath(
     return path;
 }
 
-CompoundBezierPath trimCompoundPath(CompoundBezierPath sourcePath, double start, double end, double offset, TrimType type) {
+CompoundBezierPath trimCompoundPath(CompoundBezierPath sourcePath, float start, float end, float offset, TrimType type) {
     /// No need to trim, it's a full path
     if (start == 0.0 && end == 1.0) {
         return sourcePath;
@@ -328,8 +328,8 @@ CompoundBezierPath trimCompoundPath(CompoundBezierPath sourcePath, double start,
     /// Brace yourself for the below code.
     
     /// Normalize lengths with offset.
-    double startPosition = fmod(start + offset, 1.0);
-    double endPosition = fmod(end + offset, 1.0);
+    float startPosition = fmod(start + offset, 1.0);
+    float endPosition = fmod(end + offset, 1.0);
     
     if (startPosition < 0.0) {
         startPosition = 1.0 + startPosition;
@@ -346,15 +346,15 @@ CompoundBezierPath trimCompoundPath(CompoundBezierPath sourcePath, double start,
     }
     
     /// First get the total length of all paths.
-    double totalLength = 0.0;
+    float totalLength = 0.0;
     for (auto &upstreamPath : sourcePath.paths) {
         totalLength += upstreamPath.length();
     }
     
     /// Now determine the start and end cut lengths
-    double startLength = startPosition * totalLength;
-    double endLength = endPosition * totalLength;
-    double pathStart = 0.0;
+    float startLength = startPosition * totalLength;
+    float endLength = endPosition * totalLength;
+    float pathStart = 0.0;
     
     CompoundBezierPath result;
     
@@ -367,12 +367,12 @@ CompoundBezierPath trimCompoundPath(CompoundBezierPath sourcePath, double start,
             // pathStart|=======E----------------------|pathEnd
             // Cut path components, removing after end.
             
-            double pathCutLength = endLength - pathStart;
-            double subpathStart = 0.0;
-            double subpathEnd = subpathStart + pathContainer.length();
+            float pathCutLength = endLength - pathStart;
+            float subpathStart = 0.0;
+            float subpathEnd = subpathStart + pathContainer.length();
             if (pathCutLength < subpathEnd) {
                 /// This is the subpath that needs to be cut.
-                double cutLength = pathCutLength - subpathStart;
+                float cutLength = pathCutLength - subpathStart;
                 
                 CompoundBezierPath tempPath;
                 tempPath.appendPath(pathContainer);
@@ -395,14 +395,14 @@ CompoundBezierPath trimCompoundPath(CompoundBezierPath sourcePath, double start,
             //
             
             // Cut path components, removing before beginning.
-            double pathCutLength = startLength - pathStart;
+            float pathCutLength = startLength - pathStart;
             // Clear paths from container
-            double subpathStart = 0.0;
-            double subpathEnd = subpathStart + pathContainer.length();
+            float subpathStart = 0.0;
+            float subpathEnd = subpathStart + pathContainer.length();
             
             if (subpathStart < pathCutLength && pathCutLength < subpathEnd) {
                 /// This is the subpath that needs to be cut.
-                double cutLength = pathCutLength - subpathStart;
+                float cutLength = pathCutLength - subpathStart;
                 CompoundBezierPath tempPath;
                 tempPath.appendPath(pathContainer);
                 auto newPaths = tempPath.trim(cutLength / pathContainer.length(), 1, 0);
@@ -420,12 +420,12 @@ CompoundBezierPath trimCompoundPath(CompoundBezierPath sourcePath, double start,
             // trim from path beginning to endLength.
             
             // Cut path components, removing before beginnings.
-            double startCutLength = startLength - pathStart;
-            double endCutLength = endLength - pathStart;
+            float startCutLength = startLength - pathStart;
+            float endCutLength = endLength - pathStart;
             
-            double subpathStart = 0.0;
+            float subpathStart = 0.0;
                 
-            double subpathEnd = subpathStart + pathContainer.length();
+            float subpathEnd = subpathStart + pathContainer.length();
             
             if (!isInRange(startCutLength, subpathStart, subpathEnd) &&
                 !isInRange(endCutLength, subpathStart, subpathEnd))
@@ -437,7 +437,7 @@ CompoundBezierPath trimCompoundPath(CompoundBezierPath sourcePath, double start,
                        !isInRange(endCutLength, subpathStart, subpathEnd)) {
                 /// The start of the path needs to be trimmed
                 //  |-------S======================|E
-                double cutLength = startCutLength - subpathStart;
+                float cutLength = startCutLength - subpathStart;
                 CompoundBezierPath tempPath;
                 tempPath.appendPath(pathContainer);
                 auto newPaths = tempPath.trim(cutLength / pathContainer.length(), 1, 0);
@@ -447,7 +447,7 @@ CompoundBezierPath trimCompoundPath(CompoundBezierPath sourcePath, double start,
             } else if (!isInRange(startCutLength, subpathStart, subpathEnd) &&
                        isInRange(endCutLength, subpathStart, subpathEnd)) {
                 // S|=======E----------------------|
-                double cutLength = endCutLength - subpathStart;
+                float cutLength = endCutLength - subpathStart;
                 CompoundBezierPath tempPath;
                 tempPath.appendPath(pathContainer);
                 auto newPaths = tempPath.trim(0, cutLength / pathContainer.length(), 0);
@@ -457,8 +457,8 @@ CompoundBezierPath trimCompoundPath(CompoundBezierPath sourcePath, double start,
             } else if (isInRange(startCutLength, subpathStart, subpathEnd) &&
                        isInRange(endCutLength, subpathStart, subpathEnd)) {
                 //  |-------S============E---------|
-                double cutFromLength = startCutLength - subpathStart;
-                double cutToLength = endCutLength - subpathStart;
+                float cutFromLength = startCutLength - subpathStart;
+                float cutToLength = endCutLength - subpathStart;
                 CompoundBezierPath tempPath;
                 tempPath.appendPath(pathContainer);
                 auto newPaths = tempPath.trim(
