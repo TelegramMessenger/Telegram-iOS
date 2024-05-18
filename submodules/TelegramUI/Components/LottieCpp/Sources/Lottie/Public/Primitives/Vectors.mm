@@ -198,7 +198,7 @@ inline bool isApproximatelyEqual(float value, float other) {
     return std::abs(value - other) <= FLT_EPSILON;
 }
 
-static float SolveCubic(double a, double b, double c, double d) {
+static float SolveCubic(float a, float b, float c, float d) {
     if (isApproximatelyEqual(a, 0.0f)) {
         return SolveQuadratic(b, c, d);
     }
