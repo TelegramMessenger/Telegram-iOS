@@ -57,7 +57,7 @@ BezierPath makeRectangleBezierPath(
     const double ControlPointConstant = 0.55228;
     
     Vector2D size = inputSize * 0.5;
-    double radius = std::min(std::min(cornerRadius, size.x), size.y);
+    double radius = std::min(std::min(cornerRadius, (double)size.x), (double)size.y);
     
     BezierPath bezierPath;
     std::vector<CurveVertex> points;

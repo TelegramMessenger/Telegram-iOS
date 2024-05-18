@@ -16,16 +16,16 @@ struct Vector1D {
         Array
     };
     
-    explicit Vector1D(double value_) :
+    explicit Vector1D(float value_) :
     value(value_) {
     }
     
     explicit Vector1D(lottiejson11::Json const &json) noexcept(false);
     lottiejson11::Json toJson() const;
     
-    double value;
+    float value;
     
-    double distanceTo(Vector1D const &to) const {
+    float distanceTo(Vector1D const &to) const {
         return abs(to.value - value);
     }
 };
@@ -48,7 +48,7 @@ struct __attribute__((packed)) Vector2D {
     y(0.0) {
     }
     
-    explicit Vector2D(double x_, double y_) :
+    explicit Vector2D(float x_, float y_) :
     x(x_),
     y(y_) {
     }
@@ -56,8 +56,8 @@ struct __attribute__((packed)) Vector2D {
     explicit Vector2D(lottiejson11::Json const &json) noexcept(false);
     lottiejson11::Json toJson() const;
     
-    double x;
-    double y;
+    float x;
+    float y;
     
     Vector2D operator+(Vector2D const &rhs) const {
         return Vector2D(x + rhs.x, y + rhs.y);
@@ -67,7 +67,7 @@ struct __attribute__((packed)) Vector2D {
         return Vector2D(x - rhs.x, y - rhs.y);
     }
     
-    Vector2D operator*(double scalar) const {
+    Vector2D operator*(float scalar) const {
         return Vector2D(x * scalar, y * scalar);
     }
     
@@ -83,15 +83,15 @@ struct __attribute__((packed)) Vector2D {
         return x == 0.0 && y == 0.0;
     }
     
-    double distanceTo(Vector2D const &to) const {
+    float distanceTo(Vector2D const &to) const {
         auto deltaX = to.x - x;
         auto deltaY = to.y - y;
         return sqrt(deltaX * deltaX + deltaY * deltaY);
     }
     
     bool colinear(Vector2D const &a, Vector2D const &b) const {
-        double area = x * (a.y - b.y) + a.x * (b.y - y) + b.x * (y - a.y);
-        double accuracy = 0.05;
+        float area = x * (a.y - b.y) + a.x * (b.y - y) + b.x * (y - a.y);
+        float accuracy = 0.05;
         if (area < accuracy && area > -accuracy) {
             return true;
         }
@@ -120,7 +120,7 @@ Vector2D interpolate(
 );
 
 struct Vector3D {
-    explicit Vector3D(double x_, double y_, double z_) :
+    explicit Vector3D(float x_, float y_, float z_) :
     x(x_),
     y(y_),
     z(z_) {
@@ -129,9 +129,9 @@ struct Vector3D {
     explicit Vector3D(lottiejson11::Json const &json) noexcept(false);
     lottiejson11::Json toJson() const;
     
-    double x = 0.0;
-    double y = 0.0;
-    double z = 0.0;
+    float x = 0.0;
+    float y = 0.0;
+    float z = 0.0;
 };
 
 Vector3D interpolate(
