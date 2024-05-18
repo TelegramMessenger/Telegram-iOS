@@ -4,22 +4,22 @@ namespace lottieRendering {
 
 namespace {
 
-void tvgPath(std::shared_ptr<lottie::CGPath> const &path, tvg::Shape *shape) {
-    path->enumerate([shape](lottie::CGPathItem const &item) {
-        switch (item.type) {
-            case lottie::CGPathItem::Type::MoveTo: {
-                shape->moveTo(item.points[0].x, item.points[0].y);
+void tvgPath(CanvasPathEnumerator const &enumeratePath, tvg::Shape *shape) {
+    enumeratePath([&](PathCommand const &command) {
+        switch (command.type) {
+            case PathCommandType::MoveTo: {
+                shape->moveTo(command.points[0].x, command.points[0].y);
                 break;
             }
-            case lottie::CGPathItem::Type::LineTo: {
-                shape->lineTo(item.points[0].x, item.points[0].y);
+            case PathCommandType::LineTo: {
+                shape->lineTo(command.points[0].x, command.points[0].y);
                 break;
             }
-            case lottie::CGPathItem::Type::CurveTo: {
-                shape->cubicTo(item.points[0].x, item.points[0].y, item.points[1].x, item.points[1].y, item.points[2].x, item.points[2].y);
+            case PathCommandType::CurveTo: {
+                shape->cubicTo(command.points[0].x, command.points[0].y, command.points[1].x, command.points[1].y, command.points[2].x, command.points[2].y);
                 break;
             }
-            case lottie::CGPathItem::Type::Close: {
+            case PathCommandType::Close: {
                 shape->close();
                 break;
             }
@@ -89,9 +89,9 @@ void ThorVGCanvasImpl::restoreState() {
     _stateStack.pop_back();
 }
 
-void ThorVGCanvasImpl::fillPath(std::shared_ptr<lottie::CGPath> const &path, lottie::FillRule fillRule, lottie::Color const &color) {
+void ThorVGCanvasImpl::fillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottie::Color const &color) {
     auto shape = tvg::Shape::gen();
-    tvgPath(path, shape.get());
+    tvgPath(enumeratePath, shape.get());
     
     shape->transform(tvgTransform(_transform));
     
@@ -101,9 +101,9 @@ void ThorVGCanvasImpl::fillPath(std::shared_ptr<lottie::CGPath> const &path, lot
     _canvas->push(std::move(shape));
 }
 
-void ThorVGCanvasImpl::linearGradientFillPath(std::shared_ptr<lottie::CGPath> const &path, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
+void ThorVGCanvasImpl::linearGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
     auto shape = tvg::Shape::gen();
-    tvgPath(path, shape.get());
+    tvgPath(enumeratePath, shape.get());
     
     shape->transform(tvgTransform(_transform));
     
@@ -129,9 +129,9 @@ void ThorVGCanvasImpl::linearGradientFillPath(std::shared_ptr<lottie::CGPath> co
     _canvas->push(std::move(shape));
 }
 
-void ThorVGCanvasImpl::radialGradientFillPath(std::shared_ptr<lottie::CGPath> const &path, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
+void ThorVGCanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
     auto shape = tvg::Shape::gen();
-    tvgPath(path, shape.get());
+    tvgPath(enumeratePath, shape.get());
     
     shape->transform(tvgTransform(_transform));
     
@@ -157,9 +157,9 @@ void ThorVGCanvasImpl::radialGradientFillPath(std::shared_ptr<lottie::CGPath> co
     _canvas->push(std::move(shape));
 }
 
-void ThorVGCanvasImpl::strokePath(std::shared_ptr<lottie::CGPath> const &path, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, lottie::Color const &color) {
+void ThorVGCanvasImpl::strokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, lottie::Color const &color) {
     auto shape = tvg::Shape::gen();
-    tvgPath(path, shape.get());
+    tvgPath(enumeratePath, shape.get());
     
     shape->transform(tvgTransform(_transform));
     
@@ -217,12 +217,10 @@ void ThorVGCanvasImpl::strokePath(std::shared_ptr<lottie::CGPath> const &path, f
     _canvas->push(std::move(shape));
 }
 
-void ThorVGCanvasImpl::linearGradientStrokePath(std::shared_ptr<lottie::CGPath> const &path, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
-    assert(false);
+void ThorVGCanvasImpl::linearGradientStrokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
 }
 
-void ThorVGCanvasImpl::radialGradientStrokePath(std::shared_ptr<lottie::CGPath> const &path, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
-    assert(false);
+void ThorVGCanvasImpl::radialGradientStrokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
 }
 
 void ThorVGCanvasImpl::fill(lottie::CGRect const &rect, lottie::Color const &fillColor) {
@@ -269,10 +267,6 @@ void ThorVGCanvasImpl::concatenate(lottie::CATransform3D const &transform) {
         transform.m13, transform.m23, transform.m33, transform.m43,
         transform.m14, transform.m24, transform.m34, transform.m44
     ));*/
-}
-
-lottie::CATransform3D ThorVGCanvasImpl::currentTransform() {
-    return _transform;
 }
 
 void ThorVGCanvasImpl::draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) {

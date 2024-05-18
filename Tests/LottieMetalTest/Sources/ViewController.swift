@@ -78,7 +78,7 @@ private final class ReferenceCompareTest {
             }
             
             var continueFromName: String?
-            //continueFromName = "4986037051573928320.json"
+            //continueFromName = "35707580709863498.json"
             
             let _ = await processAnimationFolderAsync(basePath: bundlePath, path: "", stopOnFailure: true, process: { path, name, alwaysDraw in
                 if let continueFromNameValue = continueFromName {
@@ -119,7 +119,7 @@ public final class ViewController: UIViewController {
         
         self.view.layer.addSublayer(MetalEngine.shared.rootLayer)
         
-        if "".isEmpty {
+        if !"".isEmpty {
             if #available(iOS 13.0, *) {
                 self.test = ReferenceCompareTest(view: self.view)
             }

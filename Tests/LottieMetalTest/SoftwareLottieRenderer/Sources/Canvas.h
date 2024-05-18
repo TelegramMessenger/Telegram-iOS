@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #include <cassert>
+#include <functional>
 
 namespace lottieRendering {
 
@@ -41,6 +42,20 @@ enum class BlendMode {
     DestinationOut
 };
 
+enum class PathCommandType {
+    MoveTo,
+    LineTo,
+    CurveTo,
+    Close
+};
+
+typedef struct {
+    PathCommandType type;
+    CGPoint points[4];
+} PathCommand;
+
+typedef std::function<void(std::function<void(PathCommand const &)>)> CanvasPathEnumerator;
+
 class Canvas {
 public:
     virtual ~Canvas() = default;
@@ -53,13 +68,13 @@ public:
     virtual void saveState() = 0;
     virtual void restoreState() = 0;
     
-    virtual void fillPath(std::shared_ptr<lottie::CGPath> const &path, lottie::FillRule fillRule, lottie::Color const &color) = 0;
-    virtual void linearGradientFillPath(std::shared_ptr<lottie::CGPath> const &path, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) = 0;
-    virtual void radialGradientFillPath(std::shared_ptr<lottie::CGPath> const &path, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) = 0;
+    virtual void fillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottie::Color const &color) = 0;
+    virtual void linearGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) = 0;
+    virtual void radialGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) = 0;
     
-    virtual void strokePath(std::shared_ptr<lottie::CGPath> const &path, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, lottie::Color const &color) = 0;
-    virtual void linearGradientStrokePath(std::shared_ptr<lottie::CGPath> const &path, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) = 0;
-    virtual void radialGradientStrokePath(std::shared_ptr<lottie::CGPath> const &path, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) = 0;
+    virtual void strokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, lottie::Color const &color) = 0;
+    virtual void linearGradientStrokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) = 0;
+    virtual void radialGradientStrokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) = 0;
     
     virtual void fill(lottie::CGRect const &rect, lottie::Color const &fillColor) = 0;
     virtual void setBlendMode(BlendMode blendMode) = 0;
@@ -67,7 +82,6 @@ public:
     virtual void setAlpha(float alpha) = 0;
     
     virtual void concatenate(lottie::CATransform3D const &transform) = 0;
-    virtual lottie::CATransform3D currentTransform() = 0;
     
     virtual void draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) = 0;
 };

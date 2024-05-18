@@ -3,12 +3,15 @@
 #import "Canvas.h"
 #import "CoreGraphicsCanvasImpl.h"
 #import "ThorVGCanvasImpl.h"
+#import "NullCanvasImpl.h"
 
 #include <LottieCpp/RenderTreeNode.h>
 
 namespace {
 
 static constexpr float minVisibleAlpha = 0.5f / 255.0f;
+
+static constexpr float minGlobalRectCalculationSize = 200.0f;
 
 struct TransformedPath {
     lottie::BezierPath path;
@@ -53,9 +56,7 @@ static lottie::CGRect collectPathBoundingBoxes(std::shared_ptr<lottie::RenderTre
     return boundingBox;
 }
 
-static std::vector<TransformedPath> collectPaths(std::shared_ptr<lottie::RenderTreeNodeContentItem> item, size_t subItemLimit, lottie::CATransform3D const &parentTransform, bool skipApplyTransform) {
-    std::vector<TransformedPath> mappedPaths;
-    
+static void enumeratePaths(std::shared_ptr<lottie::RenderTreeNodeContentItem> item, size_t subItemLimit, lottie::CATransform3D const &parentTransform, bool skipApplyTransform, std::function<void(lottie::BezierPath const &path, lottie::CATransform3D const &transform)> const &onPath) {
     //TODO:remove skipApplyTransform
     lottie::CATransform3D effectiveTransform = parentTransform;
     if (!skipApplyTransform && item->isGroup) {
@@ -65,21 +66,14 @@ static std::vector<TransformedPath> collectPaths(std::shared_ptr<lottie::RenderT
     size_t maxSubitem = std::min(item->subItems.size(), subItemLimit);
     
     if (item->path) {
-        mappedPaths.emplace_back(item->path->path, effectiveTransform);
+        onPath(item->path->path, effectiveTransform);
     }
-    assert(!item->trimParams);
     
     for (size_t i = 0; i < maxSubitem; i++) {
         auto &subItem = item->subItems[i];
         
-        auto subItemPaths = collectPaths(subItem, INT32_MAX, effectiveTransform, false);
-        
-        for (auto &path : subItemPaths) {
-            mappedPaths.emplace_back(path.path, path.transform);
-        }
+        enumeratePaths(subItem, INT32_MAX, effectiveTransform, false, onPath);
     }
-    
-    return mappedPaths;
 }
 
 }
@@ -187,7 +181,7 @@ static std::optional<CGRect> getRenderNodeGlobalRect(std::shared_ptr<RenderTreeN
 
 namespace {
 
-static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> parentContext, std::shared_ptr<lottie::RenderTreeNodeContentItem> item, float parentAlpha, lottie::Vector2D const &globalSize, lottie::CATransform3D const &parentTransform, lottie::BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> const &parentContext, std::shared_ptr<lottie::RenderTreeNodeContentItem> item, float parentAlpha, lottie::Vector2D const &globalSize, lottie::CATransform3D const &parentTransform, lottie::BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
     auto currentTransform = parentTransform;
     lottie::CATransform3D localTransform = item->transform;
     currentTransform = localTransform * currentTransform;
@@ -201,7 +195,7 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
     
     parentContext->saveState();
     
-    std::shared_ptr<lottieRendering::Canvas> currentContext;
+    std::shared_ptr<lottieRendering::Canvas> const *currentContext;
     std::shared_ptr<lottieRendering::Canvas> tempContext;
     
     bool needsTempContext = false;
@@ -209,7 +203,11 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
     
     std::optional<lottie::CGRect> globalRect;
     if (needsTempContext) {
-        globalRect = lottie::getRenderContentItemGlobalRect(item, globalSize, parentTransform, bezierPathsBoundingBoxContext);
+        if (globalSize.x <= minGlobalRectCalculationSize && globalSize.y <= minGlobalRectCalculationSize) {
+            globalRect = lottie::CGRect(0.0, 0.0, globalSize.x, globalSize.y);
+        } else {
+            globalRect = lottie::getRenderContentItemGlobalRect(item, globalSize, parentTransform, bezierPathsBoundingBoxContext);
+        }
         if (!globalRect || globalRect->width <= 0.0f || globalRect->height <= 0.0f) {
             parentContext->restoreState();
             return;
@@ -218,13 +216,13 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
         auto tempContextValue = parentContext->makeLayer((int)(globalRect->width), (int)(globalRect->height));
         tempContext = tempContextValue;
         
-        currentContext = tempContextValue;
-        currentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-globalRect->x, -globalRect->y)));
+        currentContext = &tempContext;
+        (*currentContext)->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-globalRect->x, -globalRect->y)));
         
-        currentContext->saveState();
-        currentContext->concatenate(currentTransform);
+        (*currentContext)->saveState();
+        (*currentContext)->concatenate(currentTransform);
     } else {
-        currentContext = parentContext;
+        currentContext = &parentContext;
     }
     
     parentContext->concatenate(item->transform);
@@ -237,74 +235,104 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
     }
     
     for (const auto &shading : item->shadings) {
-        std::vector<lottie::BezierPath> itemPaths;
+        lottieRendering::CanvasPathEnumerator iteratePaths;
         if (shading->explicitPath) {
-            itemPaths = shading->explicitPath.value();
-        } else {
-            auto rawPaths = collectPaths(item, shading->subItemLimit, lottie::CATransform3D::identity(), true);
-            for (const auto &rawPath : rawPaths) {
-                itemPaths.push_back(rawPath.path.copyUsingTransform(rawPath.transform));
-            }
-        }
-        
-        if (itemPaths.empty()) {
-            continue;
-        }
-        
-        std::shared_ptr<lottie::CGPath> path = lottie::CGPath::makePath();
-        
-        const auto iterate = [&](LottiePathItem const *pathItem) {
-            switch (pathItem->type) {
-                case LottiePathItemTypeMoveTo: {
-                    path->moveTo(lottie::Vector2D(pathItem->points[0].x, pathItem->points[0].y));
-                    break;
-                }
-                case LottiePathItemTypeLineTo: {
-                    path->addLineTo(lottie::Vector2D(pathItem->points[0].x, pathItem->points[0].y));
-                    break;
-                }
-                case LottiePathItemTypeCurveTo: {
-                    path->addCurveTo(lottie::Vector2D(pathItem->points[2].x, pathItem->points[2].y), lottie::Vector2D(pathItem->points[0].x, pathItem->points[0].y), lottie::Vector2D(pathItem->points[1].x, pathItem->points[1].y));
-                    break;
-                }
-                case LottiePathItemTypeClose: {
-                    path->closeSubpath();
-                    break;
-                }
-                default: {
-                    break;
-                }
-            }
-        };
-        
-        LottiePathItem pathItem;
-        for (const auto &path : itemPaths) {
-            std::optional<lottie::PathElement> previousElement;
-            for (const auto &element : path.elements()) {
-                if (previousElement.has_value()) {
-                    if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
-                        pathItem.type = LottiePathItemTypeLineTo;
-                        pathItem.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                        iterate(&pathItem);
-                    } else {
-                        pathItem.type = LottiePathItemTypeCurveTo;
-                        pathItem.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                        pathItem.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
-                        pathItem.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
-                        iterate(&pathItem);
+            auto itemPaths = shading->explicitPath.value();
+            iteratePaths = [itemPaths = itemPaths](std::function<void(lottieRendering::PathCommand const &)> iterate) -> void {
+                lottieRendering::PathCommand pathCommand;
+                for (const auto &path : itemPaths) {
+                    std::optional<lottie::PathElement> previousElement;
+                    for (const auto &element : path.elements()) {
+                        if (previousElement.has_value()) {
+                            if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
+                                pathCommand.type = lottieRendering::PathCommandType::LineTo;
+                                pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                                iterate(pathCommand);
+                            } else {
+                                pathCommand.type = lottieRendering::PathCommandType::CurveTo;
+                                pathCommand.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                                pathCommand.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
+                                pathCommand.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
+                                iterate(pathCommand);
+                            }
+                        } else {
+                            pathCommand.type = lottieRendering::PathCommandType::MoveTo;
+                            pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                            iterate(pathCommand);
+                        }
+                        previousElement = element;
                     }
-                } else {
-                    pathItem.type = LottiePathItemTypeMoveTo;
-                    pathItem.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                    iterate(&pathItem);
+                    if (path.closed().value_or(true)) {
+                        pathCommand.type = lottieRendering::PathCommandType::Close;
+                        iterate(pathCommand);
+                    }
                 }
-                previousElement = element;
-            }
-            if (path.closed().value_or(true)) {
-                pathItem.type = LottiePathItemTypeClose;
-                iterate(&pathItem);
-            }
+            };
+        } else {
+            iteratePaths = [&](std::function<void(lottieRendering::PathCommand const &)> iterate) {
+                enumeratePaths(item, shading->subItemLimit, lottie::CATransform3D::identity(), true, [&](lottie::BezierPath const &sourcePath, lottie::CATransform3D const &transform) {
+                    auto path = sourcePath.copyUsingTransform(transform);
+                    
+                    lottieRendering::PathCommand pathCommand;
+                    std::optional<lottie::PathElement> previousElement;
+                    for (const auto &element : path.elements()) {
+                        if (previousElement.has_value()) {
+                            if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
+                                pathCommand.type = lottieRendering::PathCommandType::LineTo;
+                                pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                                iterate(pathCommand);
+                            } else {
+                                pathCommand.type = lottieRendering::PathCommandType::CurveTo;
+                                pathCommand.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                                pathCommand.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
+                                pathCommand.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
+                                iterate(pathCommand);
+                            }
+                        } else {
+                            pathCommand.type = lottieRendering::PathCommandType::MoveTo;
+                            pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                            iterate(pathCommand);
+                        }
+                        previousElement = element;
+                    }
+                    if (path.closed().value_or(true)) {
+                        pathCommand.type = lottieRendering::PathCommandType::Close;
+                        iterate(pathCommand);
+                    }
+                });
+            };
         }
+        
+        /*auto iteratePaths = [&](std::function<void(lottieRendering::PathCommand const &)> iterate) -> void {
+            lottieRendering::PathCommand pathCommand;
+            for (const auto &path : itemPaths) {
+                std::optional<lottie::PathElement> previousElement;
+                for (const auto &element : path.elements()) {
+                    if (previousElement.has_value()) {
+                        if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
+                            pathCommand.type = lottieRendering::PathCommandType::LineTo;
+                            pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                            iterate(pathCommand);
+                        } else {
+                            pathCommand.type = lottieRendering::PathCommandType::CurveTo;
+                            pathCommand.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                            pathCommand.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
+                            pathCommand.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
+                            iterate(pathCommand);
+                        }
+                    } else {
+                        pathCommand.type = lottieRendering::PathCommandType::MoveTo;
+                        pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                        iterate(pathCommand);
+                    }
+                    previousElement = element;
+                }
+                if (path.closed().value_or(true)) {
+                    pathCommand.type = lottieRendering::PathCommandType::Close;
+                    iterate(pathCommand);
+                }
+            }
+        };*/
         
         if (shading->stroke) {
             if (shading->stroke->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Solid) {
@@ -354,7 +382,7 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
                         dashPattern = shading->stroke->dashPattern;
                     }
                     
-                    currentContext->strokePath(path, shading->stroke->lineWidth, lineJoin, lineCap, shading->stroke->dashPhase, dashPattern, lottie::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity * renderAlpha));
+                    (*currentContext)->strokePath(iteratePaths, shading->stroke->lineWidth, lineJoin, lineCap, shading->stroke->dashPhase, dashPattern, lottie::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity * renderAlpha));
                 } else if (shading->stroke->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Gradient) {
                     //TODO:gradient stroke
                 }
@@ -378,7 +406,7 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
             if (shading->fill->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Solid) {
                 lottie::RenderTreeNodeContentItem::SolidShading *solidShading = (lottie::RenderTreeNodeContentItem::SolidShading *)shading->fill->shading.get();
                 if (solidShading->opacity != 0.0) {
-                    currentContext->fillPath(path, rule, lottie::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity * renderAlpha));
+                    (*currentContext)->fillPath(iteratePaths, rule, lottie::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity * renderAlpha));
                 }
             } else if (shading->fill->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Gradient) {
                 lottie::RenderTreeNodeContentItem::GradientShading *gradientShading = (lottie::RenderTreeNodeContentItem::GradientShading *)shading->fill->shading.get();
@@ -397,11 +425,11 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
                     
                     switch (gradientShading->gradientType) {
                         case lottie::GradientType::Linear: {
-                            currentContext->linearGradientFillPath(path, rule, gradient, start, end);
+                            (*currentContext)->linearGradientFillPath(iteratePaths, rule, gradient, start, end);
                             break;
                         }
                         case lottie::GradientType::Radial: {
-                            currentContext->radialGradientFillPath(path, rule, gradient, start, 0.0, start, start.distanceTo(end));
+                            (*currentContext)->radialGradientFillPath(iteratePaths, rule, gradient, start, 0.0, start, start.distanceTo(end));
                             break;
                         }
                         default: {
@@ -415,7 +443,7 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
     
     for (auto it = item->subItems.rbegin(); it != item->subItems.rend(); it++) {
         const auto &subItem = *it;
-        drawLottieContentItem(currentContext, subItem, renderAlpha, globalSize, currentTransform, bezierPathsBoundingBoxContext);
+        drawLottieContentItem(*currentContext, subItem, renderAlpha, globalSize, currentTransform, bezierPathsBoundingBoxContext);
     }
     
     if (tempContext) {
@@ -430,7 +458,7 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
     parentContext->restoreState();
 }
 
-static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node, std::shared_ptr<lottieRendering::Canvas> parentContext, lottie::Vector2D const &globalSize, lottie::CATransform3D const &parentTransform, float parentAlpha, bool isInvertedMatte, lottie::BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node, std::shared_ptr<lottieRendering::Canvas> const &parentContext, lottie::Vector2D const &globalSize, lottie::CATransform3D const &parentTransform, float parentAlpha, bool isInvertedMatte, lottie::BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
     float normalizedOpacity = node->alpha();
     float layerAlpha = ((float)normalizedOpacity) * parentAlpha;
     
@@ -470,7 +498,11 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
     
     std::optional<lottie::CGRect> globalRect;
     if (needsTempContext) {
-        globalRect = lottie::getRenderNodeGlobalRect(node, globalSize, parentTransform, false, bezierPathsBoundingBoxContext);
+        if (globalSize.x <= minGlobalRectCalculationSize && globalSize.y <= minGlobalRectCalculationSize) {
+            globalRect = lottie::CGRect(0.0, 0.0, globalSize.x, globalSize.y);
+        } else {
+            globalRect = lottie::getRenderNodeGlobalRect(node, globalSize, parentTransform, false, bezierPathsBoundingBoxContext);
+        }
         if (!globalRect || globalRect->width <= 0.0f || globalRect->height <= 0.0f) {
             parentContext->restoreState();
             return;
@@ -578,10 +610,6 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
     
     lottie::CATransform3D rootTransform = lottie::CATransform3D::identity().scaled(lottie::Vector2D(size.width / (float)animation.size.width, size.height / (float)animation.size.height));
     
-    if (!useReferenceRendering) {
-        return nil;
-    }
-    
     if (useReferenceRendering) {
         auto context = std::make_shared<lottieRendering::CanvasImpl>((int)size.width, (int)size.height);
         
@@ -594,12 +622,13 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
         
         return [[UIImage alloc] initWithCGImage:std::static_pointer_cast<lottieRendering::ImageImpl>(image)->nativeImage()];
     } else {
-        /*auto context = std::make_shared<lottieRendering::ThorVGCanvasImpl>((int)size.width, (int)size.height);
+        //auto context = std::make_shared<lottieRendering::ThorVGCanvasImpl>((int)size.width, (int)size.height);
+        auto context = std::make_shared<lottieRendering::NullCanvasImpl>((int)size.width, (int)size.height);
         
         CGPoint scale = CGPointMake(size.width / (CGFloat)animation.size.width, size.height / (CGFloat)animation.size.height);
         context->concatenate(lottie::CATransform3D::makeScale(scale.x, scale.y, 1.0));
         
-        renderLottieRenderNode(renderNode, context, lottie::Vector2D(context->width(), context->height()), 1.0);*/
+        renderLottieRenderNode(renderNode, context, lottie::Vector2D(context->width(), context->height()), rootTransform, 1.0, false, *_bezierPathsBoundingBoxContext.get());
         
         return nil;
     }

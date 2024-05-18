@@ -1,16 +1,14 @@
-#ifndef ThorVGCanvasImpl_h
-#define ThorVGCanvasImpl_h
+#ifndef NullCanvasImpl_h
+#define NullCanvasImpl_h
 
 #include "Canvas.h"
 
-#include <thorvg/thorvg.h>
-
 namespace lottieRendering {
 
-class ThorVGCanvasImpl: public Canvas {
+class NullCanvasImpl: public Canvas {
 public:
-    ThorVGCanvasImpl(int width, int height);
-    virtual ~ThorVGCanvasImpl();
+    NullCanvasImpl(int width, int height);
+    virtual ~NullCanvasImpl();
     
     virtual int width() const override;
     virtual int height() const override;
@@ -36,27 +34,12 @@ public:
     
     virtual void draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) override;
     
-    uint32_t *backingData() {
-        return _backingData;
-    }
-    
-    int bytesPerRow() const {
-        return _bytesPerRow;
-    }
-    
     void flush();
-    
-private:
-    int _width = 0;
-    int _height = 0;
-    std::unique_ptr<tvg::SwCanvas> _canvas;
 
-    float _alpha = 1.0;
+private:
+    float _width = 0.0f;
+    float _height = 0.0f;
     lottie::CATransform3D _transform;
-    std::vector<lottie::CATransform3D> _stateStack;
-    int _bytesPerRow = 0;
-    uint32_t *_backingData = nullptr;
-    int _statsNumStrokes = 0;
 };
 
 }

@@ -11,6 +11,52 @@ int alignUp(int size, int align) {
     return (size + alignmentMask) & ~alignmentMask;
 }
 
+bool addEnumeratedPath(CGContextRef context, CanvasPathEnumerator const &enumeratePath) {
+    bool isEmpty = true;
+    
+    enumeratePath([&](PathCommand const &command) {
+        switch (command.type) {
+            case PathCommandType::MoveTo: {
+                if (isEmpty) {
+                    isEmpty = false;
+                    CGContextBeginPath(context);
+                }
+                CGContextMoveToPoint(context, command.points[0].x, command.points[0].y);
+                break;
+            }
+            case PathCommandType::LineTo: {
+                if (isEmpty) {
+                    isEmpty = false;
+                    CGContextBeginPath(context);
+                }
+                CGContextAddLineToPoint(context, command.points[0].x, command.points[0].y);
+                break;
+            }
+            case PathCommandType::CurveTo: {
+                if (isEmpty) {
+                    isEmpty = false;
+                    CGContextBeginPath(context);
+                }
+                CGContextAddCurveToPoint(context, command.points[0].x, command.points[0].y, command.points[1].x, command.points[1].y, command.points[2].x, command.points[2].y);
+                break;
+            }
+            case PathCommandType::Close: {
+                if (isEmpty) {
+                    isEmpty = false;
+                    CGContextBeginPath(context);
+                }
+                CGContextClosePath(context);
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    });
+    
+    return !isEmpty;
+}
+
 }
 
 ImageImpl::ImageImpl(::CGImageRef image) {
@@ -87,11 +133,10 @@ void CanvasImpl::restoreState() {
     CGContextRestoreGState(_context);
 }
 
-void CanvasImpl::fillPath(std::shared_ptr<lottie::CGPath> const &path, lottie::FillRule fillRule, lottie::Color const &color) {
-    CGContextBeginPath(_context);
-    lottie::CGPathCocoaImpl::withNativePath(path, [context = _context](CGPathRef nativePath) {
-        CGContextAddPath(context, nativePath);
-    });
+void CanvasImpl::fillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottie::Color const &color) {
+    if (!addEnumeratedPath(_context, enumeratePath)) {
+        return;
+    }
     
     CGFloat components[4] = { color.r, color.g, color.b, color.a };
     CGColorRef nativeColor = CGColorCreate(CGBitmapContextGetColorSpace(_topContext), components);
@@ -110,12 +155,13 @@ void CanvasImpl::fillPath(std::shared_ptr<lottie::CGPath> const &path, lottie::F
     }
 }
 
-void CanvasImpl::linearGradientFillPath(std::shared_ptr<lottie::CGPath> const &path, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
+void CanvasImpl::linearGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
     CGContextSaveGState(_context);
-    CGContextBeginPath(_context);
-    lottie::CGPathCocoaImpl::withNativePath(path, [context = _context](CGPathRef nativePath) {
-        CGContextAddPath(context, nativePath);
-    });
+    
+    if (!addEnumeratedPath(_context, enumeratePath)) {
+        CGContextRestoreGState(_context);
+        return;
+    }
     
     switch (fillRule) {
         case lottie::FillRule::EvenOdd: {
@@ -155,12 +201,13 @@ void CanvasImpl::linearGradientFillPath(std::shared_ptr<lottie::CGPath> const &p
     CGContextRestoreGState(_context);
 }
 
-void CanvasImpl::radialGradientFillPath(std::shared_ptr<lottie::CGPath> const &path, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
+void CanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
     CGContextSaveGState(_context);
-    CGContextBeginPath(_context);
-    lottie::CGPathCocoaImpl::withNativePath(path, [context = _context](CGPathRef nativePath) {
-        CGContextAddPath(context, nativePath);
-    });
+    
+    if (!addEnumeratedPath(_context, enumeratePath)) {
+        CGContextRestoreGState(_context);
+        return;
+    }
     
     switch (fillRule) {
         case lottie::FillRule::EvenOdd: {
@@ -200,11 +247,10 @@ void CanvasImpl::radialGradientFillPath(std::shared_ptr<lottie::CGPath> const &p
     CGContextRestoreGState(_context);
 }
 
-void CanvasImpl::strokePath(std::shared_ptr<lottie::CGPath> const &path, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, lottie::Color const &color) {
-    CGContextBeginPath(_context);
-    lottie::CGPathCocoaImpl::withNativePath(path, [context = _context](CGPathRef nativePath) {
-        CGContextAddPath(context, nativePath);
-    });
+void CanvasImpl::strokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, lottie::Color const &color) {
+    if (!addEnumeratedPath(_context, enumeratePath)) {
+        return;
+    }
     
     CGFloat components[4] = { color.r, color.g, color.b, color.a };
     CGColorRef nativeColor = CGColorCreate(CGBitmapContextGetColorSpace(_topContext), components);
@@ -261,12 +307,12 @@ void CanvasImpl::strokePath(std::shared_ptr<lottie::CGPath> const &path, float l
     CGContextStrokePath(_context);
 }
 
-void CanvasImpl::linearGradientStrokePath(std::shared_ptr<lottie::CGPath> const &path, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
+void CanvasImpl::linearGradientStrokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
     CGContextSaveGState(_context);
-    CGContextBeginPath(_context);
-    lottie::CGPathCocoaImpl::withNativePath(path, [context = _context](CGPathRef nativePath) {
-        CGContextAddPath(context, nativePath);
-    });
+    if (!addEnumeratedPath(_context, enumeratePath)) {
+        CGContextRestoreGState(_context);
+        return;
+    }
     
     CGContextSetLineWidth(_context, lineWidth);
     
@@ -346,12 +392,12 @@ void CanvasImpl::linearGradientStrokePath(std::shared_ptr<lottie::CGPath> const 
     CGContextRestoreGState(_context);
 }
 
-void CanvasImpl::radialGradientStrokePath(std::shared_ptr<lottie::CGPath> const &path, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
+void CanvasImpl::radialGradientStrokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
     CGContextSaveGState(_context);
-    CGContextBeginPath(_context);
-    lottie::CGPathCocoaImpl::withNativePath(path, [context = _context](CGPathRef nativePath) {
-        CGContextAddPath(context, nativePath);
-    });
+    if (!addEnumeratedPath(_context, enumeratePath)) {
+        CGContextRestoreGState(_context);
+        return;
+    }
     
     CGContextSetLineWidth(_context, lineWidth);
     
@@ -465,10 +511,6 @@ void CanvasImpl::setAlpha(float alpha) {
 
 void CanvasImpl::concatenate(lottie::CATransform3D const &transform) {
     CGContextConcatCTM(_context, CATransform3DGetAffineTransform(nativeTransform(transform)));
-}
-
-lottie::CATransform3D CanvasImpl::currentTransform() {
-    return lottie::fromNativeTransform(CATransform3DMakeAffineTransform(CGContextGetCTM(_context)));
 }
 
 std::shared_ptr<Image> CanvasImpl::makeImage() const {
