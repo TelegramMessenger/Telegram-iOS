@@ -13,10 +13,10 @@
 namespace lottie {
 
 struct BezierTrimPathPosition {
-    double start;
-    double end;
+    float start;
+    float end;
     
-    explicit BezierTrimPathPosition(double start_, double end_);
+    explicit BezierTrimPathPosition(float start_, float end_);
 };
 
 class BezierPathContents: public std::enable_shared_from_this<BezierPathContents> {
@@ -38,10 +38,10 @@ public:
     std::vector<PathElement> elements;
     std::optional<bool> closed;
     
-    double length();
+    float length();
     
 private:
-    std::optional<double> _length;
+    std::optional<float> _length;
     
 public:
     void moveToStartPoint(CurveVertex const &vertex);
@@ -72,7 +72,7 @@ public:
     /// oooooooooooooooooo--------------------~~~~~~~~~~~~~~~~ooooooooooooooooooooooooooooo
     /// |        toLength|                    |Offset         |fromLength                 |
     ///
-    std::vector<std::shared_ptr<BezierPathContents>> trim(double fromLength, double toLength, double offsetLength);
+    std::vector<std::shared_ptr<BezierPathContents>> trim(float fromLength, float toLength, float offsetLength);
     
     // MARK: Private
     
@@ -87,7 +87,7 @@ public:
     
     lottiejson11::Json toJson() const;
     
-    double length();
+    float length();
 
     void moveToStartPoint(CurveVertex const &vertex);
     void addVertex(CurveVertex const &vertex);
@@ -115,7 +115,7 @@ public:
     /// oooooooooooooooooo--------------------~~~~~~~~~~~~~~~~ooooooooooooooooooooooooooooo
     /// |        toLength|                    |Offset         |fromLength                 |
     ///
-    std::vector<BezierPath> trim(double fromLength, double toLength, double offsetLength);
+    std::vector<BezierPath> trim(float fromLength, float toLength, float offsetLength);
     
     std::vector<PathElement> const &elements() const;
     std::vector<PathElement> &mutableElements();
@@ -146,7 +146,7 @@ CGRect bezierPathsBoundingBox(std::vector<BezierPath> const &paths);
 CGRect bezierPathsBoundingBoxParallel(BezierPathsBoundingBoxContext &context, std::vector<BezierPath> const &paths);
 CGRect bezierPathsBoundingBoxParallel(BezierPathsBoundingBoxContext &context, BezierPath const &path);
 
-std::vector<BezierPath> trimBezierPaths(std::vector<BezierPath> &sourcePaths, double start, double end, double offset, TrimType type);
+std::vector<BezierPath> trimBezierPaths(std::vector<BezierPath> &sourcePaths, float start, float end, float offset, TrimType type);
 
 }
 
