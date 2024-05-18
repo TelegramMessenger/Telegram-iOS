@@ -523,31 +523,26 @@ CATransform3D CATransform3D::operator*(CATransform3D const &b) const {
         return *this;
     }
     
-    const CATransform3D lhs = b;
-    const CATransform3D &rhs = *this;
-    CATransform3D result = CATransform3D::identity();
+    simd_double4x4 simdLhs = {
+        simd_make_double4(b.m11, b.m21, b.m31, b.m41),
+        simd_make_double4(b.m12, b.m22, b.m32, b.m42),
+        simd_make_double4(b.m13, b.m23, b.m33, b.m43),
+        simd_make_double4(b.m14, b.m24, b.m34, b.m44)
+    };
+    simd_double4x4 simdRhs = {
+        simd_make_double4(m11, m21, m31, m41),
+        simd_make_double4(m12, m22, m32, m42),
+        simd_make_double4(m13, m23, m33, m43),
+        simd_make_double4(m14, m24, m34, m44)
+    };
     
-    result.m11  = (lhs.m11*rhs.m11)+(lhs.m21*rhs.m12)+(lhs.m31*rhs.m13)+(lhs.m41*rhs.m14);
-    result.m12  = (lhs.m12*rhs.m11)+(lhs.m22*rhs.m12)+(lhs.m32*rhs.m13)+(lhs.m42*rhs.m14);
-    result.m13  = (lhs.m13*rhs.m11)+(lhs.m23*rhs.m12)+(lhs.m33*rhs.m13)+(lhs.m43*rhs.m14);
-    result.m14  = (lhs.m14*rhs.m11)+(lhs.m24*rhs.m12)+(lhs.m34*rhs.m13)+(lhs.m44*rhs.m14);
-    
-    result.m21  = (lhs.m11*rhs.m21)+(lhs.m21*rhs.m22)+(lhs.m31*rhs.m23)+(lhs.m41*rhs.m24);
-    result.m22  = (lhs.m12*rhs.m21)+(lhs.m22*rhs.m22)+(lhs.m32*rhs.m23)+(lhs.m42*rhs.m24);
-    result.m23  = (lhs.m13*rhs.m21)+(lhs.m23*rhs.m22)+(lhs.m33*rhs.m23)+(lhs.m43*rhs.m24);
-    result.m24  = (lhs.m14*rhs.m21)+(lhs.m24*rhs.m22)+(lhs.m34*rhs.m23)+(lhs.m44*rhs.m24);
-    
-    result.m31  = (lhs.m11*rhs.m31)+(lhs.m21*rhs.m32)+(lhs.m31*rhs.m33)+(lhs.m41*rhs.m34);
-    result.m32  = (lhs.m12*rhs.m31)+(lhs.m22*rhs.m32)+(lhs.m32*rhs.m33)+(lhs.m42*rhs.m34);
-    result.m33 = (lhs.m13*rhs.m31)+(lhs.m23*rhs.m32)+(lhs.m33*rhs.m33)+(lhs.m43*rhs.m34);
-    result.m34 = (lhs.m14*rhs.m31)+(lhs.m24*rhs.m32)+(lhs.m34*rhs.m33)+(lhs.m44*rhs.m34);
-    
-    result.m41 = (lhs.m11*rhs.m41)+(lhs.m21*rhs.m42)+(lhs.m31*rhs.m43)+(lhs.m41*rhs.m44);
-    result.m42 = (lhs.m12*rhs.m41)+(lhs.m22*rhs.m42)+(lhs.m32*rhs.m43)+(lhs.m42*rhs.m44);
-    result.m43 = (lhs.m13*rhs.m41)+(lhs.m23*rhs.m42)+(lhs.m33*rhs.m43)+(lhs.m43*rhs.m44);
-    result.m44 = (lhs.m14*rhs.m41)+(lhs.m24*rhs.m42)+(lhs.m34*rhs.m43)+(lhs.m44*rhs.m44);
-    
-    return result;
+    simd_double4x4 simdResult = simd_mul(simdRhs, simdLhs);
+    return CATransform3D(
+        simdResult.columns[0][0], simdResult.columns[1][0], simdResult.columns[2][0], simdResult.columns[3][0],
+        simdResult.columns[0][1], simdResult.columns[1][1], simdResult.columns[2][1], simdResult.columns[3][1],
+        simdResult.columns[0][2], simdResult.columns[1][2], simdResult.columns[2][2], simdResult.columns[3][2],
+        simdResult.columns[0][3], simdResult.columns[1][3], simdResult.columns[2][3], simdResult.columns[3][3]
+    );
 }
 
 bool CATransform3D::isInvertible() const {
@@ -590,71 +585,36 @@ CGRect CGRect::unionWith(CGRect const &other) const {
     return CGRect(result.origin.x, result.origin.y, result.size.width, result.size.height);
 }
 
-static inline Vector2D applyingTransformToPoint(CATransform3D const &transform, Vector2D const &point) {
-    double newX = point.x * transform.m11 + point.y * transform.m21 + transform.m41;
-    double newY = point.x * transform.m12 + point.y * transform.m22 + transform.m42;
-    double newW = point.x * transform.m14 + point.y * transform.m24 + transform.m44;
-    
-    return Vector2D(newX / newW, newY / newW);
-}
-
 CGRect CGRect::applyingTransform(CATransform3D const &transform) const {
     if (transform.isIdentity()) {
         return *this;
     }
     
-    Vector2D topLeft = applyingTransformToPoint(transform, Vector2D(x, y));
-    Vector2D topRight = applyingTransformToPoint(transform, Vector2D(x + width, y));
-    Vector2D bottomLeft = applyingTransformToPoint(transform, Vector2D(x, y + height));
-    Vector2D bottomRight = applyingTransformToPoint(transform, Vector2D(x + width, y + height));
+    simd_double3 simdRow1 = simd_make_double3(transform.m11, transform.m12, transform.m14);
+    simd_double3 simdRow2 = simd_make_double3(transform.m21, transform.m22, transform.m24);
+    simd_double3 simdRow3 = simd_make_double3(transform.m41, transform.m42, transform.m44);
     
-    double minX = topLeft.x;
-    if (topRight.x < minX) {
-        minX = topRight.x;
-    }
-    if (bottomLeft.x < minX) {
-        minX = bottomLeft.x;
-    }
-    if (bottomRight.x < minX) {
-        minX = bottomRight.x;
-    }
+    Vector2D sourceTopLeft = Vector2D(x, y);
+    Vector2D sourceTopRight = Vector2D(x + width, y);
+    Vector2D sourceBottomLeft = Vector2D(x, y + height);
+    Vector2D sourceBottomRight = Vector2D(x + width, y + height);
     
-    double minY = topLeft.y;
-    if (topRight.y < minY) {
-        minY = topRight.y;
-    }
-    if (bottomLeft.y < minY) {
-        minY = bottomLeft.y;
-    }
-    if (bottomRight.y < minY) {
-        minY = bottomRight.y;
-    }
+    simd_double3 simdTopLeft = sourceTopLeft.x * simdRow1 + sourceTopLeft.y * simdRow2 + simdRow3;
+    simd_double3 simdTopRight = sourceTopRight.x * simdRow1 + sourceTopRight.y * simdRow2 + simdRow3;
+    simd_double3 simdBottomLeft = sourceBottomLeft.x * simdRow1 + sourceBottomLeft.y * simdRow2 + simdRow3;
+    simd_double3 simdBottomRight = sourceBottomRight.x * simdRow1 + sourceBottomRight.y * simdRow2 + simdRow3;
     
-    double maxX = topLeft.x;
-    if (topRight.x > maxX) {
-        maxX = topRight.x;
-    }
-    if (bottomLeft.x > maxX) {
-        maxX = bottomLeft.x;
-    }
-    if (bottomRight.x > maxX) {
-        maxX = bottomRight.x;
-    }
+    Vector2D topLeft = Vector2D(simdTopLeft[0] / simdTopLeft[2], simdTopLeft[1] / simdTopLeft[2]);
+    Vector2D topRight = Vector2D(simdTopRight[0] / simdTopRight[2], simdTopRight[1] / simdTopRight[2]);
+    Vector2D bottomLeft = Vector2D(simdBottomLeft[0] / simdBottomLeft[2], simdBottomLeft[1] / simdBottomLeft[2]);
+    Vector2D bottomRight = Vector2D(simdBottomRight[0] / simdBottomRight[2], simdBottomRight[1] / simdBottomRight[2]);
     
-    double maxY = topLeft.y;
-    if (topRight.y > maxY) {
-        maxY = topRight.y;
-    }
-    if (bottomLeft.y > maxY) {
-        maxY = bottomLeft.y;
-    }
-    if (bottomRight.y > maxY) {
-        maxY = bottomRight.y;
-    }
+    double minX = simd_reduce_min(simd_make_double4(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
+    double minY = simd_reduce_min(simd_make_double4(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
+    double maxX = simd_reduce_max(simd_make_double4(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
+    double maxY = simd_reduce_max(simd_make_double4(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
     
-    CGRect result(minX, minY, maxX - minX, maxY - minY);
-    
-    return result;
+    return CGRect(minX, minY, maxX - minX, maxY - minY);
 }
 
 }
