@@ -362,11 +362,11 @@ struct CGRect {
     CGRect applyingTransform(CATransform3D const &transform) const;
 };
 
-inline bool isInRangeOrEqual(double value, double from, double to) {
+inline bool isInRangeOrEqual(float value, float from, float to) {
     return from <= value && value <= to;
 }
 
-inline bool isInRange(double value, double from, double to) {
+inline bool isInRange(float value, float from, float to) {
     return from < value && value < to;
 }
 
