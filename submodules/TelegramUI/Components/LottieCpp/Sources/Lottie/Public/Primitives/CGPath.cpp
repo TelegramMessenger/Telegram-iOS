@@ -35,7 +35,7 @@ void addPointToBoundingRect(bool *isFirst, CGRect *rect, Vector2D const *point) 
 
 }
 
-Vector2D transformVector(Vector2D const &v, CATransform3D const &m) {
+Vector2D transformVector(Vector2D const &v, Transform3D const &m) {
     return Vector2D(
         m.m11 * v.x + m.m21 * v.y + m.m41 * 1.0,
         m.m12 * v.x + m.m22 * v.y + m.m42 * 1.0
@@ -51,7 +51,7 @@ public:
     
     virtual bool empty() const override;
     
-    virtual std::shared_ptr<CGPath> copyUsingTransform(CATransform3D const &transform) const override;
+    virtual std::shared_ptr<CGPath> copyUsingTransform(Transform3D const &transform) const override;
     
     virtual void addLineTo(Vector2D const &point) override;
     virtual void addCurveTo(Vector2D const &point, Vector2D const &control1, Vector2D const &control2) override;
@@ -108,10 +108,10 @@ bool CGPathImpl::empty() const {
     return _items.empty();
 }
 
-std::shared_ptr<CGPath> CGPathImpl::copyUsingTransform(CATransform3D const &transform) const {
+std::shared_ptr<CGPath> CGPathImpl::copyUsingTransform(Transform3D const &transform) const {
     auto result = std::make_shared<CGPathImpl>();
     
-    if (transform == CATransform3D::identity()) {
+    if (transform == Transform3D::identity()) {
         result->_items = _items;
         return result;
     }

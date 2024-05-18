@@ -81,7 +81,7 @@ public:
     
     virtual void setAlpha(float alpha) = 0;
     
-    virtual void concatenate(lottie::CATransform3D const &transform) = 0;
+    virtual void concatenate(lottie::Transform3D const &transform) = 0;
     
     virtual void draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) = 0;
 };

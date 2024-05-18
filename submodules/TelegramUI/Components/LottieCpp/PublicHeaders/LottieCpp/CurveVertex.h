@@ -64,7 +64,7 @@ public:
         return CurveVertex(point + translation, inTangent + translation, outTangent + translation, false);
     }
     
-    CurveVertex transformed(CATransform3D const &transform) const {
+    CurveVertex transformed(Transform3D const &transform) const {
         return CurveVertex(transformVector(point, transform), transformVector(inTangent, transform), transformVector(outTangent, transform), false);
     }
         

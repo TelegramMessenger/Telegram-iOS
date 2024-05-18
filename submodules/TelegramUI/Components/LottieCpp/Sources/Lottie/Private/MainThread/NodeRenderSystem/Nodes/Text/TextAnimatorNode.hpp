@@ -93,7 +93,7 @@ public:
         return _childKeypaths;
     }
     
-    CATransform3D caTransform() {
+    Transform3D caTransform() {
         Vector2D anchor = Vector2D::Zero();
         if (_anchor) {
             auto anchor3d = _anchor->value();
@@ -126,7 +126,7 @@ public:
             skewAxis = _skewAxis->value().value;
         }
         
-        return CATransform3D::makeTransform(
+        return Transform3D::makeTransform(
             anchor,
             position,
             scale,
@@ -212,16 +212,16 @@ public:
         return _parentTextNode;
     }
     
-    CATransform3D xform() {
+    Transform3D xform() {
         if (_xform.has_value()) {
             return _xform.value();
         } else if (_parentTextNode) {
             return _parentTextNode->xform();
         } else {
-            return CATransform3D::identity();
+            return Transform3D::identity();
         }
     }
-    void setXform(CATransform3D const &xform) {
+    void setXform(Transform3D const &xform) {
         _xform = xform;
     }
     
@@ -312,7 +312,7 @@ private:
     
     std::shared_ptr<CGPath> _outputPath;
     
-    std::optional<CATransform3D> _xform;
+    std::optional<Transform3D> _xform;
     std::optional<float> _opacity;
     std::optional<Color> _strokeColor;
     std::optional<Color> _fillColor;

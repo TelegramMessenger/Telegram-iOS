@@ -140,7 +140,7 @@ lottiejson11::Json Vector3D::toJson() const {
     return lottiejson11::Json(result);
 }
 
-CATransform3D CATransform3D::_identity = CATransform3D(
+Transform3D Transform3D::_identity = Transform3D(
     1.0, 0.0, 0.0, 0.0,
     0.0, 1.0, 0.0, 0.0,
     0.0, 0.0, 1.0, 0.0,
@@ -415,7 +415,7 @@ Vector2D Vector2D::interpolate(
     return point.point;
 }
 
-::CATransform3D nativeTransform(CATransform3D const &value) {
+::CATransform3D nativeTransform(Transform3D const &value) {
     ::CATransform3D result;
     
     result.m11 = value.m11;
@@ -441,8 +441,8 @@ Vector2D Vector2D::interpolate(
     return result;
 }
 
-CATransform3D fromNativeTransform(::CATransform3D const &value) {
-    CATransform3D result = CATransform3D::identity();
+Transform3D fromNativeTransform(::CATransform3D const &value) {
+    Transform3D result = Transform3D::identity();
     
     result.m11 = value.m11;
     result.m12 = value.m12;
@@ -467,7 +467,7 @@ CATransform3D fromNativeTransform(::CATransform3D const &value) {
     return result;
 }
 
-CATransform3D CATransform3D::makeRotation(float radians, float x, float y, float z) {
+Transform3D Transform3D::makeRotation(float radians, float x, float y, float z) {
     return fromNativeTransform(CATransform3DMakeRotation(radians, x, y, z));
     
     /*if (x == 0.0 && y == 0.0 && z == 0.0) {
@@ -505,21 +505,21 @@ CATransform3D CATransform3D::makeRotation(float radians, float x, float y, float
     return returnValue;*/
 }
 
-CATransform3D CATransform3D::rotated(float degrees) const {
+Transform3D Transform3D::rotated(float degrees) const {
     return fromNativeTransform(CATransform3DRotate(nativeTransform(*this), degreesToRadians(degrees), 0.0, 0.0, 1.0));
     //return CATransform3D::makeRotation(degreesToRadians(degrees), 0.0, 0.0, 1.0) * (*this);
 }
 
-CATransform3D CATransform3D::translated(Vector2D const &translation) const {
+Transform3D Transform3D::translated(Vector2D const &translation) const {
     return fromNativeTransform(CATransform3DTranslate(nativeTransform(*this), translation.x, translation.y, 0.0));
 }
 
-CATransform3D CATransform3D::scaled(Vector2D const &scale) const {
+Transform3D Transform3D::scaled(Vector2D const &scale) const {
     return fromNativeTransform(CATransform3DScale(nativeTransform(*this), scale.x, scale.y, 1.0));
     //return CATransform3D::makeScale(scale.x, scale.y, 1.0) * (*this);
 }
 
-CATransform3D CATransform3D::operator*(CATransform3D const &b) const {
+Transform3D Transform3D::operator*(Transform3D const &b) const {
     if (isIdentity()) {
         return b;
     }
@@ -541,7 +541,7 @@ CATransform3D CATransform3D::operator*(CATransform3D const &b) const {
     };
     
     simd_float4x4 simdResult = simd_mul(simdRhs, simdLhs);
-    return CATransform3D(
+    return Transform3D(
         simdResult.columns[0][0], simdResult.columns[1][0], simdResult.columns[2][0], simdResult.columns[3][0],
         simdResult.columns[0][1], simdResult.columns[1][1], simdResult.columns[2][1], simdResult.columns[3][1],
         simdResult.columns[0][2], simdResult.columns[1][2], simdResult.columns[2][2], simdResult.columns[3][2],
@@ -549,11 +549,11 @@ CATransform3D CATransform3D::operator*(CATransform3D const &b) const {
     );
 }
 
-bool CATransform3D::isInvertible() const {
+bool Transform3D::isInvertible() const {
     return std::abs(m11 * m22 - m12 * m21) >= 0.00000001;
 }
 
-CATransform3D CATransform3D::inverted() const {
+Transform3D Transform3D::inverted() const {
     simd_float4x4 matrix = {
         simd_make_float4(m11, m21, m31, m41),
         simd_make_float4(m12, m22, m32, m42),
@@ -561,7 +561,7 @@ CATransform3D CATransform3D::inverted() const {
         simd_make_float4(m14, m24, m34, m44)
     };
     simd_float4x4 result = simd_inverse(matrix);
-    CATransform3D nativeResult = CATransform3D(
+    Transform3D nativeResult = Transform3D(
         result.columns[0][0], result.columns[1][0], result.columns[2][0], result.columns[3][0],
         result.columns[0][1], result.columns[1][1], result.columns[2][1], result.columns[3][1],
         result.columns[0][2], result.columns[1][2], result.columns[2][2], result.columns[3][2],
@@ -589,7 +589,7 @@ CGRect CGRect::unionWith(CGRect const &other) const {
     return CGRect(result.origin.x, result.origin.y, result.size.width, result.size.height);
 }
 
-CGRect CGRect::applyingTransform(CATransform3D const &transform) const {
+CGRect CGRect::applyingTransform(Transform3D const &transform) const {
     if (transform.isIdentity()) {
         return *this;
     }

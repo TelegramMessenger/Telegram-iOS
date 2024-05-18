@@ -22,7 +22,7 @@ public:
     
     virtual bool empty() const override;
     
-    virtual std::shared_ptr<CGPath> copyUsingTransform(CATransform3D const &transform) const override;
+    virtual std::shared_ptr<CGPath> copyUsingTransform(Transform3D const &transform) const override;
     
     virtual void addLineTo(Vector2D const &point) override;
     virtual void addCurveTo(Vector2D const &point, Vector2D const &control1, Vector2D const &control2) override;

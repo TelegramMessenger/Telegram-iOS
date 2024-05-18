@@ -157,7 +157,7 @@ public:
         
         Vector3D anchor = _transformProperties->anchor()->value();
         Vector3D scale = _transformProperties->scale()->value();
-        _localTransform = CATransform3D::makeTransform(
+        _localTransform = Transform3D::makeTransform(
             Vector2D(anchor.x, anchor.y),
             position,
             Vector2D(scale.x, scale.y),
@@ -181,7 +181,7 @@ public:
         return _opacity;
     }
     
-    CATransform3D const &globalTransform() {
+    Transform3D const &globalTransform() {
         return _globalTransform;
     }
     
@@ -191,8 +191,8 @@ private:
     std::shared_ptr<LayerTransformProperties> _transformProperties;
     
     float _opacity = 1.0;
-    CATransform3D _localTransform = CATransform3D::identity();
-    CATransform3D _globalTransform = CATransform3D::identity();
+    Transform3D _localTransform = Transform3D::identity();
+    Transform3D _globalTransform = Transform3D::identity();
     
 public:
     virtual LayerTransformNode *asLayerTransformNode() override {

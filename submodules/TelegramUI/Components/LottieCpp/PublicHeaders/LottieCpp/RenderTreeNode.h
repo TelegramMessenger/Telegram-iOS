@@ -364,7 +364,7 @@ public:
     
 public:
     bool isGroup = false;
-    CATransform3D transform = CATransform3D::identity();
+    Transform3D transform = Transform3D::identity();
     float alpha = 0.0;
     std::optional<TrimParams> trimParams;
     std::shared_ptr<RenderTreeNodeContentPath> path;
@@ -393,7 +393,7 @@ public:
     RenderTreeNode(
         CGRect bounds_,
         Vector2D position_,
-        CATransform3D transform_,
+        Transform3D transform_,
         float alpha_,
         bool masksToBounds_,
         bool isHidden_,
@@ -427,7 +427,7 @@ public:
         return _position;
     }
     
-    CATransform3D const &transform() const {
+    Transform3D const &transform() const {
         return _transform;
     }
     
@@ -458,7 +458,7 @@ public:
 public:
     CGRect _bounds;
     Vector2D _position;
-    CATransform3D _transform = CATransform3D::identity();
+    Transform3D _transform = Transform3D::identity();
     float _alpha = 1.0f;
     bool _masksToBounds = false;
     bool _isHidden = false;

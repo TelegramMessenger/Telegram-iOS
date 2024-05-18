@@ -239,7 +239,7 @@ public:
             _renderTreeNode = std::make_shared<RenderTreeNode>(
                 bounds(),
                 position(),
-                CATransform3D::identity(),
+                Transform3D::identity(),
                 1.0,
                 false,
                 false,

@@ -40,7 +40,7 @@ public:
     virtual void fill(lottie::CGRect const &rect, lottie::Color const &fillColor) override;
     virtual void setBlendMode(BlendMode blendMode) override;
     virtual void setAlpha(float alpha) override;
-    virtual void concatenate(lottie::CATransform3D const &transform) override;
+    virtual void concatenate(lottie::Transform3D const &transform) override;
     
     virtual std::shared_ptr<Image> makeImage() const;
     virtual void draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) override;

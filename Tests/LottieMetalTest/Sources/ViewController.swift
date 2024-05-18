@@ -119,7 +119,7 @@ public final class ViewController: UIViewController {
         
         self.view.layer.addSublayer(MetalEngine.shared.rootLayer)
         
-        if !"".isEmpty {
+        if "".isEmpty {
             if #available(iOS 13.0, *) {
                 self.test = ReferenceCompareTest(view: self.view)
             }

@@ -57,7 +57,7 @@ public:
     
     virtual bool empty() const = 0;
     
-    virtual std::shared_ptr<CGPath> copyUsingTransform(CATransform3D const &transform) const = 0;
+    virtual std::shared_ptr<CGPath> copyUsingTransform(Transform3D const &transform) const = 0;
     
     virtual void addLineTo(Vector2D const &point) = 0;
     virtual void addCurveTo(Vector2D const &point, Vector2D const &control1, Vector2D const &control2) = 0;
@@ -71,7 +71,7 @@ public:
     virtual bool isEqual(CGPath *other) const = 0;
 };
 
-Vector2D transformVector(Vector2D const &v, CATransform3D const &m);
+Vector2D transformVector(Vector2D const &v, Transform3D const &m);
 
 }
 

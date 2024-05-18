@@ -123,7 +123,7 @@ public:
             auto renderTreeContentItem = std::make_shared<RenderTreeNode>(
                 CGRect(0.0, 0.0, 0.0, 0.0),
                 Vector2D(0.0, 0.0),
-                CATransform3D::identity(),
+                Transform3D::identity(),
                 1.0,
                 false,
                 false,
@@ -138,7 +138,7 @@ public:
             _contentsTreeNode = std::make_shared<RenderTreeNode>(
                 CGRect(0.0, 0.0, 0.0, 0.0),
                 Vector2D(0.0, 0.0),
-                CATransform3D::identity(),
+                Transform3D::identity(),
                 1.0,
                 false,
                 false,
@@ -162,7 +162,7 @@ public:
             _renderTreeNode = std::make_shared<RenderTreeNode>(
                 CGRect(0.0, 0.0, 0.0, 0.0),
                 Vector2D(0.0, 0.0),
-                CATransform3D::identity(),
+                Transform3D::identity(),
                 1.0,
                 false,
                 false,

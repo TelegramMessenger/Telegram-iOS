@@ -92,7 +92,7 @@ bool CGPathCocoaImpl::empty() const {
     return CGPathIsEmpty(_path);
 }
 
-std::shared_ptr<CGPath> CGPathCocoaImpl::copyUsingTransform(CATransform3D const &transform) const {
+std::shared_ptr<CGPath> CGPathCocoaImpl::copyUsingTransform(Transform3D const &transform) const {
     ::CATransform3D nativeTransform;
     nativeTransform.m11 = transform.m11;
     nativeTransform.m12 = transform.m12;

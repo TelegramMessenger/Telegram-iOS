@@ -89,10 +89,10 @@ public:
         return bounds();
     }
     
-    CATransform3D const &transform() const {
+    Transform3D const &transform() const {
         return _transform;
     }
-    void setTransform(CATransform3D const &transform) {
+    void setTransform(Transform3D const &transform) {
         _transform = transform;
     }
     
@@ -145,7 +145,7 @@ private:
     float _opacity = 1.0;
     Vector2D _position = Vector2D(0.0, 0.0);
     CGRect _bounds = CGRect(0.0, 0.0, 0.0, 0.0);
-    CATransform3D _transform = CATransform3D::identity();
+    Transform3D _transform = Transform3D::identity();
     std::shared_ptr<CALayer> _mask;
     bool _masksToBounds = false;
     std::optional<BlendMode> _compositingFilter;
