@@ -506,60 +506,44 @@ public:
         }
         virtual ~PathOutput() = default;
         
-        virtual void update(AnimationFrameTime frameTime, BezierPathsBoundingBoxContext &boundingBoxContext) = 0;
-        virtual BezierPath const *currentPath() = 0;
-        virtual CGRect const &currentPathBounds() = 0;
+        virtual void update(AnimationFrameTime frameTime) = 0;
+        virtual std::shared_ptr<RenderTreeNodeContentPath> &currentPath() = 0;
     };
     
     class StaticPathOutput : public PathOutput {
     public:
         explicit StaticPathOutput(BezierPath const &path) :
-        resolvedPath(path) {
+        resolvedPath(std::make_shared<RenderTreeNodeContentPath>(path)) {
         }
         
-        virtual void update(AnimationFrameTime frameTime, BezierPathsBoundingBoxContext &boundingBoxContext) override {
-            if (!isPathBoundsResolved) {
-                resolvedPathBounds = bezierPathsBoundingBoxParallel(boundingBoxContext, resolvedPath);
-                isPathBoundsResolved = true;
-            }
+        virtual void update(AnimationFrameTime frameTime) override {
         }
         
-        virtual BezierPath const *currentPath() override {
-            return &resolvedPath;
-        }
-        
-        virtual CGRect const &currentPathBounds() override {
-            return resolvedPathBounds;
+        virtual std::shared_ptr<RenderTreeNodeContentPath> &currentPath() override {
+            return resolvedPath;
         }
         
     private:
-        BezierPath resolvedPath;
-        
-        bool isPathBoundsResolved = false;
-        CGRect resolvedPathBounds = CGRect(0.0, 0.0, 0.0, 0.0);
+        std::shared_ptr<RenderTreeNodeContentPath> resolvedPath;
     };
     
     class ShapePathOutput : public PathOutput {
     public:
         explicit ShapePathOutput(Shape const &shape) :
-        path(shape.path.keyframes) {
+        path(shape.path.keyframes),
+        resolvedPath(std::make_shared<RenderTreeNodeContentPath>(BezierPath())) {
         }
         
-        virtual void update(AnimationFrameTime frameTime, BezierPathsBoundingBoxContext &boundingBoxContext) override {
+        virtual void update(AnimationFrameTime frameTime) override {
             if (!hasValidData || path.hasUpdate(frameTime)) {
-                path.update(frameTime, resolvedPath);
-                resolvedPathBounds = bezierPathsBoundingBoxParallel(boundingBoxContext, resolvedPath);
+                path.update(frameTime, resolvedPath->path);
+                resolvedPath->needsBoundsRecalculation = true;
             }
-            
             hasValidData = true;
         }
         
-        virtual BezierPath const *currentPath() override {
-            return &resolvedPath;
-        }
-        
-        virtual CGRect const &currentPathBounds() override {
-            return resolvedPathBounds;
+        virtual std::shared_ptr<RenderTreeNodeContentPath> &currentPath() override {
+            return resolvedPath;
         }
         
     private:
@@ -567,8 +551,7 @@ public:
         
         BezierPathKeyframeInterpolator path;
         
-        BezierPath resolvedPath;
-        CGRect resolvedPathBounds = CGRect(0.0, 0.0, 0.0, 0.0);
+        std::shared_ptr<RenderTreeNodeContentPath> resolvedPath;
     };
     
     class RectanglePathOutput : public PathOutput {
@@ -577,10 +560,11 @@ public:
         direction(rectangle.direction.value_or(PathDirection::Clockwise)),
         position(rectangle.position.keyframes),
         size(rectangle.size.keyframes),
-        cornerRadius(rectangle.cornerRadius.keyframes) {
+        cornerRadius(rectangle.cornerRadius.keyframes),
+        resolvedPath(std::make_shared<RenderTreeNodeContentPath>(BezierPath())) {
         }
         
-        virtual void update(AnimationFrameTime frameTime, BezierPathsBoundingBoxContext &boundingBoxContext) override {
+        virtual void update(AnimationFrameTime frameTime) override {
             bool hasUpdates = false;
             
             if (!hasValidData || position.hasUpdate(frameTime)) {
@@ -597,19 +581,15 @@ public:
             }
             
             if (hasUpdates) {
-                ValueInterpolator<BezierPath>::setInplace(makeRectangleBezierPath(Vector2D(positionValue.x, positionValue.y), Vector2D(sizeValue.x, sizeValue.y), cornerRadiusValue, direction), resolvedPath);
-                resolvedPathBounds = bezierPathsBoundingBoxParallel(boundingBoxContext, resolvedPath);
+                ValueInterpolator<BezierPath>::setInplace(makeRectangleBezierPath(Vector2D(positionValue.x, positionValue.y), Vector2D(sizeValue.x, sizeValue.y), cornerRadiusValue, direction), resolvedPath->path);
+                resolvedPath->needsBoundsRecalculation = true;
             }
             
             hasValidData = true;
         }
         
-        virtual BezierPath const *currentPath() override {
-            return &resolvedPath;
-        }
-        
-        virtual CGRect const &currentPathBounds() override {
-            return resolvedPathBounds;
+        virtual std::shared_ptr<RenderTreeNodeContentPath> &currentPath() override {
+            return resolvedPath;
         }
         
     private:
@@ -626,8 +606,7 @@ public:
         KeyframeInterpolator<Vector1D> cornerRadius;
         float cornerRadiusValue = 0.0;
         
-        BezierPath resolvedPath;
-        CGRect resolvedPathBounds = CGRect(0.0, 0.0, 0.0, 0.0);
+        std::shared_ptr<RenderTreeNodeContentPath> resolvedPath;
     };
     
     class EllipsePathOutput : public PathOutput {
@@ -635,10 +614,11 @@ public:
         explicit EllipsePathOutput(Ellipse const &ellipse) :
         direction(ellipse.direction.value_or(PathDirection::Clockwise)),
         position(ellipse.position.keyframes),
-        size(ellipse.size.keyframes) {
+        size(ellipse.size.keyframes),
+        resolvedPath(std::make_shared<RenderTreeNodeContentPath>(BezierPath())) {
         }
         
-        virtual void update(AnimationFrameTime frameTime, BezierPathsBoundingBoxContext &boundingBoxContext) override {
+        virtual void update(AnimationFrameTime frameTime) override {
             bool hasUpdates = false;
             
             if (!hasValidData || position.hasUpdate(frameTime)) {
@@ -651,19 +631,15 @@ public:
             }
             
             if (hasUpdates) {
-                ValueInterpolator<BezierPath>::setInplace(makeEllipseBezierPath(Vector2D(sizeValue.x, sizeValue.y), Vector2D(positionValue.x, positionValue.y), direction), resolvedPath);
-                resolvedPathBounds = bezierPathsBoundingBoxParallel(boundingBoxContext, resolvedPath);
+                ValueInterpolator<BezierPath>::setInplace(makeEllipseBezierPath(Vector2D(sizeValue.x, sizeValue.y), Vector2D(positionValue.x, positionValue.y), direction), resolvedPath->path);
+                resolvedPath->needsBoundsRecalculation = true;
             }
             
             hasValidData = true;
         }
         
-        virtual BezierPath const *currentPath() override {
-            return &resolvedPath;
-        }
-        
-        virtual CGRect const &currentPathBounds() override {
-            return resolvedPathBounds;
+        virtual std::shared_ptr<RenderTreeNodeContentPath> &currentPath() override {
+            return resolvedPath;
         }
         
     private:
@@ -677,8 +653,7 @@ public:
         KeyframeInterpolator<Vector3D> size;
         Vector3D sizeValue = Vector3D(0.0, 0.0, 0.0);
         
-        BezierPath resolvedPath;
-        CGRect resolvedPathBounds = CGRect(0.0, 0.0, 0.0, 0.0);
+        std::shared_ptr<RenderTreeNodeContentPath> resolvedPath;
     };
     
     class StarPathOutput : public PathOutput {
@@ -689,7 +664,8 @@ public:
         outerRadius(star.outerRadius.keyframes),
         outerRoundedness(star.outerRoundness.keyframes),
         rotation(star.rotation.keyframes),
-        points(star.points.keyframes) {
+        points(star.points.keyframes),
+        resolvedPath(std::make_shared<RenderTreeNodeContentPath>(BezierPath())) {
             if (star.innerRadius.has_value()) {
                 innerRadius = std::make_unique<NodeProperty<Vector1D>>(std::make_shared<KeyframeInterpolator<Vector1D>>(star.innerRadius->keyframes));
             } else {
@@ -703,7 +679,7 @@ public:
             }
         }
         
-        virtual void update(AnimationFrameTime frameTime, BezierPathsBoundingBoxContext &boundingBoxContext) override {
+        virtual void update(AnimationFrameTime frameTime) override {
             bool hasUpdates = false;
             
             if (!hasValidData || position.hasUpdate(frameTime)) {
@@ -744,19 +720,15 @@ public:
             }
             
             if (hasUpdates) {
-                ValueInterpolator<BezierPath>::setInplace(makeStarBezierPath(Vector2D(positionValue.x, positionValue.y), outerRadiusValue, innerRadiusValue, outerRoundednessValue, innerRoundednessValue, pointsValue, rotationValue, direction), resolvedPath);
-                resolvedPathBounds = bezierPathsBoundingBoxParallel(boundingBoxContext, resolvedPath);
+                ValueInterpolator<BezierPath>::setInplace(makeStarBezierPath(Vector2D(positionValue.x, positionValue.y), outerRadiusValue, innerRadiusValue, outerRoundednessValue, innerRoundednessValue, pointsValue, rotationValue, direction), resolvedPath->path);
+                resolvedPath->needsBoundsRecalculation = true;
             }
             
             hasValidData = true;
         }
         
-        virtual BezierPath const *currentPath() override {
-            return &resolvedPath;
-        }
-        
-        virtual CGRect const &currentPathBounds() override {
-            return resolvedPathBounds;
+        virtual std::shared_ptr<RenderTreeNodeContentPath> &currentPath() override {
+            return resolvedPath;
         }
         
     private:
@@ -785,8 +757,7 @@ public:
         KeyframeInterpolator<Vector1D> points;
         float pointsValue = 0.0;
         
-        BezierPath resolvedPath;
-        CGRect resolvedPathBounds = CGRect(0.0, 0.0, 0.0, 0.0);
+        std::shared_ptr<RenderTreeNodeContentPath> resolvedPath;
     };
     
     class TransformOutput {
@@ -951,7 +922,7 @@ public:
             size_t maxSubitem = std::min(subItems.size(), subItemLimit);
             
             if (_contentItem->path) {
-                mappedPaths.emplace_back(_contentItem->path.value(), effectiveTransform);
+                mappedPaths.emplace_back(_contentItem->path->path, effectiveTransform);
             }
             
             for (size_t i = 0; i < maxSubitem; i++) {
@@ -1012,7 +983,7 @@ public:
             _contentItem->isGroup = isGroup;
             
             if (path) {
-                _contentItem->path = *path->currentPath();
+                _contentItem->path = path->currentPath();
             }
             
             if (!shadings.empty()) {
@@ -1052,8 +1023,7 @@ public:
             }
             
             if (path) {
-                path->update(frameTime, boundingBoxContext);
-                _contentItem->pathBoundingBox = path->currentPathBounds();
+                path->update(frameTime);
             }
             for (const auto &trim : trims) {
                 trim->update(frameTime);

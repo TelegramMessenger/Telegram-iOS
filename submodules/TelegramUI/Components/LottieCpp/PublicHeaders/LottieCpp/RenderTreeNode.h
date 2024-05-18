@@ -309,6 +309,17 @@ public:
 
 class RenderTreeNodeContentShadingVariant;
 
+struct RenderTreeNodeContentPath {
+public:
+    explicit RenderTreeNodeContentPath(BezierPath path_) :
+    path(path_) {
+    }
+    
+    BezierPath path;
+    CGRect bounds = CGRect(0.0, 0.0, 0.0, 0.0);
+    bool needsBoundsRecalculation = true;
+};
+
 class RenderTreeNodeContentItem {
 public:
     enum class ShadingType {
@@ -423,8 +434,7 @@ public:
     CATransform3D transform = CATransform3D::identity();
     float alpha = 0.0;
     std::optional<TrimParams> trimParams;
-    std::optional<BezierPath> path;
-    CGRect pathBoundingBox = CGRect(0.0, 0.0, 0.0, 0.0);
+    std::shared_ptr<RenderTreeNodeContentPath> path;
     std::vector<std::shared_ptr<RenderTreeNodeContentShadingVariant>> shadings;
     std::vector<std::shared_ptr<RenderTreeNodeContentItem>> subItems;
     
