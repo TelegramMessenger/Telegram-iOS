@@ -64,7 +64,7 @@ void getGradientParameters(int numberOfColors, GradientColorSet const &colors, s
                 if (location >= colorLocations[i] && location <= colorLocations[i + 1]) {
                     double localLocation = 0.0;
                     if (colorLocations[i] != colorLocations[i + 1]) {
-                        localLocation = remapDouble(location, colorLocations[i], colorLocations[i + 1], 0.0, 1.0);
+                        localLocation = remapFloat(location, colorLocations[i], colorLocations[i + 1], 0.0, 1.0);
                     }
                     color = ValueInterpolator<Color>::interpolate(gradientColors[i], gradientColors[i + 1], localLocation, std::nullopt, std::nullopt);
                     break;
@@ -76,7 +76,7 @@ void getGradientParameters(int numberOfColors, GradientColorSet const &colors, s
                 if (location >= alphaLocations[i] && location <= alphaLocations[i + 1]) {
                     double localLocation = 0.0;
                     if (alphaLocations[i] != alphaLocations[i + 1]) {
-                        localLocation = remapDouble(location, alphaLocations[i], alphaLocations[i + 1], 0.0, 1.0);
+                        localLocation = remapFloat(location, alphaLocations[i], alphaLocations[i + 1], 0.0, 1.0);
                     }
                     alpha = ValueInterpolator<double>::interpolate(alphaValues[i], alphaValues[i + 1], localLocation, std::nullopt, std::nullopt);
                     break;

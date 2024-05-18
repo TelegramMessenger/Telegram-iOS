@@ -176,12 +176,12 @@ Vector3D interpolate(
     return Vector3D(interpolate(from.x, to.x, amount), interpolate(from.y, to.y, amount), interpolate(from.z, to.z, amount));
 }
 
-static double cubicRoot(double value) {
+static float cubicRoot(float value) {
     return pow(value, 1.0 / 3.0);
 }
 
-static double SolveQuadratic(double a, double b, double c) {
-    double result = (-b + sqrt((b * b) - 4 * a * c)) / (2 * a);
+static float SolveQuadratic(float a, float b, float c) {
+    float result = (-b + sqrt((b * b) - 4 * a * c)) / (2 * a);
     if (isInRangeOrEqual(result, 0.0, 1.0)) {
         return result;
     }
@@ -194,35 +194,39 @@ static double SolveQuadratic(double a, double b, double c) {
     return -1.0;
 }
 
-static double SolveCubic(double a, double b, double c, double d) {
-    if (a == 0.0) {
+inline bool isApproximatelyEqual(float value, float other) {
+    return std::abs(value - other) <= FLT_EPSILON;
+}
+
+static float SolveCubic(double a, double b, double c, double d) {
+    if (isApproximatelyEqual(a, 0.0f)) {
         return SolveQuadratic(b, c, d);
     }
-    if (d == 0.0) {
+    if (isApproximatelyEqual(d, 0.0f)) {
         return 0.0;
     }
     b /= a;
     c /= a;
     d /= a;
-    double q = (3.0 * c - (b * b)) / 9.0;
-    double r = (-27.0 * d + b * (9.0 * c - 2.0 * (b * b))) / 54.0;
-    double disc = (q * q * q) + (r * r);
-    double term1 = b / 3.0;
+    float q = (3.0 * c - (b * b)) / 9.0;
+    float r = (-27.0 * d + b * (9.0 * c - 2.0 * (b * b))) / 54.0;
+    float disc = (q * q * q) + (r * r);
+    float term1 = b / 3.0;
     
     if (disc > 0.0) {
-        double s = r + sqrt(disc);
+        float s = r + sqrt(disc);
         s = (s < 0) ? -cubicRoot(-s) : cubicRoot(s);
-        double t = r - sqrt(disc);
+        float t = r - sqrt(disc);
         t = (t < 0) ? -cubicRoot(-t) : cubicRoot(t);
         
-        double result = -term1 + s + t;
+        float result = -term1 + s + t;
         if (isInRangeOrEqual(result, 0.0, 1.0)) {
             return result;
         }
-    } else if (disc == 0) {
-        double r13 = (r < 0) ? -cubicRoot(-r) : cubicRoot(r);
+    } else if (isApproximatelyEqual(disc, 0.0f)) {
+        float r13 = (r < 0) ? -cubicRoot(-r) : cubicRoot(r);
         
-        double result = -term1 + 2.0 * r13;
+        float result = -term1 + 2.0 * r13;
         if (isInRangeOrEqual(result, 0.0, 1.0)) {
             return result;
         }
@@ -233,11 +237,11 @@ static double SolveCubic(double a, double b, double c, double d) {
         }
     } else {
         q = -q;
-        double dum1 = q * q * q;
+        float dum1 = q * q * q;
         dum1 = acos(r / sqrt(dum1));
-        double r13 = 2.0 * sqrt(q);
+        float r13 = 2.0 * sqrt(q);
         
-        double result = -term1 + r13 * cos(dum1 / 3.0);
+        float result = -term1 + r13 * cos(dum1 / 3.0);
         if (isInRangeOrEqual(result, 0.0, 1.0)) {
             return result;
         }
@@ -251,45 +255,45 @@ static double SolveCubic(double a, double b, double c, double d) {
         }
     }
     
-    return -1;
+    return -1.0;
 }
 
 float cubicBezierInterpolate(float value, Vector2D const &P0, Vector2D const &P1, Vector2D const &P2, Vector2D const &P3) {
-    double t = 0.0;
-    if (value == P0.x) {
+    float t = 0.0;
+    if (isApproximatelyEqual(value, P0.x)) {
         // Handle corner cases explicitly to prevent rounding errors
         t = 0.0;
-    } else if (value == P3.x) {
+    } else if (isApproximatelyEqual(value, P3.x)) {
         t = 1.0;
     } else {
         // Calculate t
-        double a = -P0.x + 3 * P1.x - 3 * P2.x + P3.x;
-        double b = 3 * P0.x - 6 * P1.x + 3 * P2.x;
-        double c = -3 * P0.x + 3 * P1.x;
-        double d = P0.x - value;
-        double tTemp = SolveCubic(a, b, c, d);
-        if (tTemp == -1.0) {
+        float a = -P0.x + 3 * P1.x - 3 * P2.x + P3.x;
+        float b = 3 * P0.x - 6 * P1.x + 3 * P2.x;
+        float c = -3 * P0.x + 3 * P1.x;
+        float d = P0.x - value;
+        float tTemp = SolveCubic(a, b, c, d);
+        if (isApproximatelyEqual(tTemp, -1.0f)) {
             return -1.0;
         }
         t = tTemp;
     }
     
     // Calculate y from t
-    double oneMinusT = 1.0 - t;
+    float oneMinusT = 1.0 - t;
     return (oneMinusT * oneMinusT * oneMinusT) * P0.y + 3 * t * (oneMinusT * oneMinusT) * P1.y + 3 * (t * t) * (1 - t) * P2.y + (t * t * t) * P3.y;
 }
 
 struct InterpolationPoint2D {
-    InterpolationPoint2D(Vector2D const point_, double distance_) :
+    InterpolationPoint2D(Vector2D const point_, float distance_) :
     point(point_), distance(distance_) {
     }
     
     Vector2D point;
-    double distance;
+    float distance;
 };
 
 namespace {
-    double interpolateFloat(float value, float to, float amount) {
+    float interpolateFloat(float value, float to, float amount) {
         return value + ((to - value) * amount);
     }
 }
@@ -331,14 +335,14 @@ Vector2D Vector2D::interpolate(
         return interpolate(to, amount);
     }
         
-    double step = 1.0 / (double)samples;
+    float step = 1.0 / (float)samples;
     
     std::vector<InterpolationPoint2D> points;
     points.push_back(InterpolationPoint2D(*this, 0.0));
-    double totalLength = 0.0;
+    float totalLength = 0.0;
     
     Vector2D previousPoint = *this;
-    double previousAmount = 0.0;
+    float previousAmount = 0.0;
     
     int closestPoint = 0;
     
@@ -356,13 +360,13 @@ Vector2D Vector2D::interpolate(
         previousPoint = newPoint;
     }
     
-    double accurateDistance = amount * totalLength;
+    float accurateDistance = amount * totalLength;
     auto point = points[closestPoint];
     
     bool foundPoint = false;
     
-    double pointAmount = ((double)closestPoint) * step;
-    double nextPointAmount = pointAmount + step;
+    float pointAmount = ((float)closestPoint) * step;
+    float nextPointAmount = pointAmount + step;
     
     int refineIterations = 0;
     while (!foundPoint) {
@@ -372,7 +376,7 @@ Vector2D Vector2D::interpolate(
         if (nextPoint.distance < accurateDistance) {
             point = nextPoint;
             closestPoint = closestPoint + 1;
-            pointAmount = ((double)closestPoint) * step;
+            pointAmount = ((float)closestPoint) * step;
             nextPointAmount = pointAmount + step;
             if (closestPoint == (int)points.size()) {
                 foundPoint = true;
@@ -386,14 +390,14 @@ Vector2D Vector2D::interpolate(
                 continue;
             }
             point = points[closestPoint];
-            pointAmount = ((double)closestPoint) * step;
+            pointAmount = ((float)closestPoint) * step;
             nextPointAmount = pointAmount + step;
             continue;
         }
         
         /// Now we are certain the point is the closest point under the distance
         auto pointDiff = nextPoint.distance - point.distance;
-        auto proposedPointAmount = remapDouble((accurateDistance - point.distance) / pointDiff, 0.0, 1.0, pointAmount, nextPointAmount);
+        auto proposedPointAmount = remapFloat((accurateDistance - point.distance) / pointDiff, 0.0, 1.0, pointAmount, nextPointAmount);
         
         auto newPoint = pointOnPath(to, outTangent, inTangent, proposedPointAmount);
         auto newDistance = point.distance + point.point.distanceTo(newPoint);

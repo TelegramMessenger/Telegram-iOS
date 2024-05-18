@@ -100,8 +100,8 @@ public:
         if (to.inTangent.has_value()) {
             inTanPoint = to.inTangent.value();
         }
-        double progress = remapDouble(keyTime, startTime, endTime, 0.0, 1.0);
-        if (!outTanPoint.isZero() || inTanPoint != Vector2D(1.0, 1.0)) {
+        double progress = remapFloat(keyTime, startTime, endTime, 0.0f, 1.0f);
+        if (!outTanPoint.isZero() || inTanPoint != Vector2D(1.0f, 1.0f)) {
             /// Cubic interpolation
             progress = cubicBezierInterpolate(progress, Vector2D::Zero(), outTanPoint, inTanPoint, Vector2D(1.0, 1.0));
         }
