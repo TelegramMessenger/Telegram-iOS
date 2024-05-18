@@ -35,7 +35,7 @@ float interpolate(float value, float to, float amount);
 Vector1D interpolate(
     Vector1D const &from,
     Vector1D const &to,
-    double amount
+    float amount
 );
 
 struct __attribute__((packed)) Vector2D {
@@ -100,23 +100,23 @@ struct __attribute__((packed)) Vector2D {
     
     Vector2D pointOnPath(Vector2D const &to, Vector2D const &outTangent, Vector2D const &inTangent, double amount) const;
     
-    Vector2D interpolate(Vector2D const &to, double amount) const;
+    Vector2D interpolate(Vector2D const &to, float amount) const;
     
     Vector2D interpolate(
         Vector2D const &to,
         Vector2D const &outTangent,
         Vector2D const &inTangent,
-        double amount,
+        float amount,
         int maxIterations = 3,
         int samples = 20,
-        double accuracy = 1.0
+        float accuracy = 1.0
     ) const;
 };
 
 Vector2D interpolate(
     Vector2D const &from,
     Vector2D const &to,
-    double amount
+    float amount
 );
 
 struct Vector3D {
@@ -137,7 +137,7 @@ struct Vector3D {
 Vector3D interpolate(
     Vector3D const &from,
     Vector3D const &to,
-    double amount
+    float amount
 );
 
 inline double degreesToRadians(double value) {

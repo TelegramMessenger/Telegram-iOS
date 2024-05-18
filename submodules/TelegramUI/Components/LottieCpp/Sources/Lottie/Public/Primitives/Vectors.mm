@@ -154,7 +154,7 @@ float interpolate(float value, float to, float amount) {
 Vector1D interpolate(
     Vector1D const &from,
     Vector1D const &to,
-    double amount
+    float amount
 ) {
     return Vector1D(interpolate(from.value, to.value, amount));
 }
@@ -162,7 +162,7 @@ Vector1D interpolate(
 Vector2D interpolate(
     Vector2D const &from,
     Vector2D const &to,
-    double amount
+    float amount
 ) {
     return Vector2D(interpolate(from.x, to.x, amount), interpolate(from.y, to.y, amount));
 }
@@ -171,7 +171,7 @@ Vector2D interpolate(
 Vector3D interpolate(
     Vector3D const &from,
     Vector3D const &to,
-    double amount
+    float amount
 ) {
     return Vector3D(interpolate(from.x, to.x, amount), interpolate(from.y, to.y, amount), interpolate(from.z, to.z, amount));
 }
@@ -289,7 +289,7 @@ struct InterpolationPoint2D {
 };
 
 namespace {
-    double interpolateDouble(double value, double to, double amount) {
+    double interpolateFloat(float value, float to, float amount) {
         return value + ((to - value) * amount);
     }
 }
@@ -304,10 +304,10 @@ Vector2D Vector2D::pointOnPath(Vector2D const &to, Vector2D const &outTangent, V
     return f;
 }
 
-Vector2D Vector2D::interpolate(Vector2D const &to, double amount) const {
+Vector2D Vector2D::interpolate(Vector2D const &to, float amount) const {
     return Vector2D(
-        interpolateDouble(x, to.x, amount),
-        interpolateDouble(y, to.y, amount)
+        interpolateFloat(x, to.x, amount),
+        interpolateFloat(y, to.y, amount)
     );
 }
 
@@ -315,10 +315,10 @@ Vector2D Vector2D::interpolate(
     Vector2D const &to,
     Vector2D const &outTangent,
     Vector2D const &inTangent,
-    double amount,
+    float amount,
     int maxIterations,
     int samples,
-    double accuracy
+    float accuracy
 ) const {
     if (amount == 0.0) {
         return *this;
