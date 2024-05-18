@@ -661,17 +661,18 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
         needsTempContext = layerAlpha != 1.0 || node->renderData.layer.masksToBounds();
     }
     
-    auto testGlobalRect = lottie::getRenderNodeGlobalRect(node, globalSize, bezierPathsBoundingBoxContext);
-    auto actualGlobalRect = node->renderData.globalRect;
-    if (testGlobalRect != actualGlobalRect) {
-        //printf("getRenderNodeGlobalRect!\n");
-    }
-    
+    std::optional<lottie::CGRect> globalRect;
     if (needsTempContext) {
+        globalRect = lottie::getRenderNodeGlobalRect(node, globalSize, bezierPathsBoundingBoxContext);
+        if (!globalRect) {
+            parentContext->restoreState();
+            return;
+        }
+        
         if ((node->mask() && node->mask()->renderData.isValid) || node->renderData.layer.masksToBounds()) {
-            auto maskBackingStorage = parentContext->makeLayer((int)(node->renderData.globalRect.width), (int)(node->renderData.globalRect.height));
+            auto maskBackingStorage = parentContext->makeLayer((int)(globalRect->width), (int)(globalRect->height));
             
-            maskBackingStorage->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-node->renderData.globalRect.x, -node->renderData.globalRect.y)));
+            maskBackingStorage->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-globalRect->x, -globalRect->y)));
             maskBackingStorage->concatenate(node->renderData.globalTransform);
             
             if (node->renderData.layer.masksToBounds()) {
@@ -684,11 +685,11 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
             maskContext = maskBackingStorage;
         }
         
-        auto tempContextValue = parentContext->makeLayer((int)(node->renderData.globalRect.width), (int)(node->renderData.globalRect.height));
+        auto tempContextValue = parentContext->makeLayer((int)(globalRect->width), (int)(globalRect->height));
         tempContext = tempContextValue;
         
         currentContext = tempContextValue;
-        currentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-node->renderData.globalRect.x, -node->renderData.globalRect.y)));
+        currentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-globalRect->x, -globalRect->y)));
         
         currentContext->saveState();
         currentContext->concatenate(node->renderData.globalTransform);
@@ -727,12 +728,12 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
         
         if (maskContext) {
             tempContext->setBlendMode(lottieRendering::BlendMode::DestinationIn);
-            tempContext->draw(maskContext, lottie::CGRect(node->renderData.globalRect.x, node->renderData.globalRect.y, node->renderData.globalRect.width, node->renderData.globalRect.height));
+            tempContext->draw(maskContext, lottie::CGRect(globalRect->x, globalRect->y, globalRect->width, globalRect->height));
         }
         
         parentContext->concatenate(node->renderData.globalTransform.inverted());
         parentContext->setAlpha(layerAlpha);
-        parentContext->draw(tempContext, node->renderData.globalRect);
+        parentContext->draw(tempContext, globalRect.value());
     }
     
     parentContext->restoreState();
