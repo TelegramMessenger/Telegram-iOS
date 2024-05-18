@@ -271,6 +271,10 @@ void ThorVGCanvasImpl::concatenate(lottie::CATransform3D const &transform) {
     ));*/
 }
 
+lottie::CATransform3D ThorVGCanvasImpl::currentTransform() {
+    return _transform;
+}
+
 void ThorVGCanvasImpl::draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) {
     /*ThorVGCanvasImpl *impl = (ThorVGCanvasImpl *)other.get();
     auto image = impl->surface()->makeImageSnapshot();

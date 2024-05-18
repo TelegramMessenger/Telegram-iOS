@@ -467,6 +467,10 @@ void CanvasImpl::concatenate(lottie::CATransform3D const &transform) {
     CGContextConcatCTM(_context, CATransform3DGetAffineTransform(nativeTransform(transform)));
 }
 
+lottie::CATransform3D CanvasImpl::currentTransform() {
+    return lottie::fromNativeTransform(CATransform3DMakeAffineTransform(CGContextGetCTM(_context)));
+}
+
 std::shared_ptr<Image> CanvasImpl::makeImage() const {
     ::CGImageRef nativeImage = CGBitmapContextCreateImage(_context);
     if (nativeImage) {
