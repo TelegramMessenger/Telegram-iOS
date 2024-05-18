@@ -24,25 +24,11 @@ public:
     virtual ~CALayer() = default;
     
     void addSublayer(std::shared_ptr<CALayer> layer) {
-        if (layer->_superlayer) {
-            layer->_superlayer->removeSublayer(layer.get());
-        }
-        layer->_superlayer = this;
         _sublayers.push_back(layer);
     }
     
     void insertSublayer(std::shared_ptr<CALayer> layer, int index) {
-        if (layer->_superlayer) {
-            layer->_superlayer->removeSublayer(layer.get());
-        }
-        layer->_superlayer = this;
         _sublayers.insert(_sublayers.begin() + index, layer);
-    }
-    
-    void removeFromSuperlayer() {
-        if (_superlayer) {
-            _superlayer->removeSublayer(this);
-        }
     }
     
     virtual bool implementsDraw() const {
@@ -71,22 +57,11 @@ public:
         _opacity = opacity;
     }
     
-    Vector2D const &position() const {
-        return _position;
+    Vector2D const &size() const {
+        return _size;
     }
-    void setPosition(Vector2D const &position) {
-        _position = position;
-    }
-    
-    CGRect const &bounds() const {
-        return _bounds;
-    }
-    void setBounds(CGRect const &bounds) {
-        _bounds = bounds;
-    }
-    
-    virtual CGRect effectiveBounds() const {
-        return bounds();
+    void setSize(Vector2D const &size) {
+        _size = size;
     }
     
     Transform3D const &transform() const {
@@ -131,7 +106,6 @@ private:
     void removeSublayer(CALayer *layer) {
         for (auto it = _sublayers.begin(); it != _sublayers.end(); it++) {
             if (it->get() == layer) {
-                layer->_superlayer = nullptr;
                 _sublayers.erase(it);
                 break;
             }
@@ -139,12 +113,10 @@ private:
     }
     
 private:
-    CALayer *_superlayer = nullptr;
     std::vector<std::shared_ptr<CALayer>> _sublayers;
     bool _isHidden = false;
     float _opacity = 1.0;
-    Vector2D _position = Vector2D(0.0, 0.0);
-    CGRect _bounds = CGRect(0.0, 0.0, 0.0, 0.0);
+    Vector2D _size = Vector2D(0.0, 0.0);
     Transform3D _transform = Transform3D::identity();
     std::shared_ptr<CALayer> _mask;
     bool _masksToBounds = false;
@@ -219,21 +191,6 @@ public:
     }
     void setDashPattern(std::vector<float> const &dashPattern) {
         _dashPattern = dashPattern;
-    }
-    
-    virtual CGRect effectiveBounds() const override {
-        if (_path) {
-            CGRect boundingBox = _path->boundingBox();
-            if (_strokeColor) {
-                boundingBox.x -= _lineWidth / 2.0;
-                boundingBox.y -= _lineWidth / 2.0;
-                boundingBox.width += _lineWidth;
-                boundingBox.height += _lineWidth;
-            }
-            return boundingBox;
-        } else {
-            return CGRect(0.0, 0.0, 0.0, 0.0);
-        }
     }
     
     std::shared_ptr<RenderableItem> renderableItem() override;

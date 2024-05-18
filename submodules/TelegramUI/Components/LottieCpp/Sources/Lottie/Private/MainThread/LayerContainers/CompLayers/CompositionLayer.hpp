@@ -57,7 +57,7 @@ public:
         
         _childKeypaths.push_back(_transformNode->transformProperties());
         
-        _contentsLayer->setBounds(CGRect(0.0, 0.0, size.x, size.y));
+        _contentsLayer->setSize(size);
         
         if (layer->blendMode.has_value() && layer->blendMode.value() != BlendMode::Normal) {
             setCompositingFilter(layer->blendMode);

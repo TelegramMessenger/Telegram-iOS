@@ -134,9 +134,7 @@ static std::optional<CGRect> getRenderNodeGlobalRect(std::shared_ptr<RenderTreeN
     }
     
     auto currentTransform = parentTransform;
-    Vector2D localTranslation(node->position().x + -node->bounds().x, node->position().y + -node->bounds().y);
     Transform3D localTransform = node->transform();
-    localTransform = localTransform.translated(localTranslation);
     currentTransform = localTransform * currentTransform;
     
     std::optional<CGRect> globalRect;
@@ -145,7 +143,7 @@ static std::optional<CGRect> getRenderNodeGlobalRect(std::shared_ptr<RenderTreeN
     }
     
     if (isInvertedMatte) {
-        CGRect globalBounds = node->bounds().applyingTransform(currentTransform);
+        CGRect globalBounds = CGRect(0.0f, 0.0f, node->size().x, node->size().y).applyingTransform(currentTransform);
         if (globalRect) {
             globalRect = globalRect->unionWith(globalBounds);
         } else {
@@ -467,9 +465,7 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
     }
     
     auto currentTransform = parentTransform;
-    lottie::Vector2D localTranslation(node->position().x + -node->bounds().x, node->position().y + -node->bounds().y);
     lottie::Transform3D localTransform = node->transform();
-    localTransform = localTransform.translated(localTranslation);
     currentTransform = localTransform * currentTransform;
     
     std::shared_ptr<lottieRendering::Canvas> maskContext;
@@ -478,7 +474,7 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
     
     bool masksToBounds = node->masksToBounds();
     if (masksToBounds) {
-        lottie::CGRect effectiveGlobalBounds = node->bounds().applyingTransform(currentTransform);
+        lottie::CGRect effectiveGlobalBounds = lottie::CGRect(0.0f, 0.0f, node->size().x, node->size().y).applyingTransform(currentTransform);
         if (effectiveGlobalBounds.width <= 0.0f || effectiveGlobalBounds.height <= 0.0f) {
             return;
         }
@@ -515,7 +511,7 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
             maskBackingStorage->concatenate(currentTransform);
             
             if (masksToBounds) {
-                maskBackingStorage->fill(lottie::CGRect(node->bounds().x, node->bounds().y, node->bounds().width, node->bounds().height), lottie::Color(1.0, 1.0, 1.0, 1.0));
+                maskBackingStorage->fill(lottie::CGRect(0.0f, 0.0f, node->size().x, node->size().y), lottie::Color(1.0f, 1.0f, 1.0f, 1.0f));
             }
             if (node->mask() && !node->mask()->isHidden() && node->mask()->alpha() >= minVisibleAlpha) {
                 renderLottieRenderNode(node->mask(), maskBackingStorage, globalSize, currentTransform, 1.0, node->invertMask(), bezierPathsBoundingBoxContext);
@@ -536,13 +532,11 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
         currentContext = parentContext;
     }
     
-    parentContext->concatenate(lottie::Transform3D::identity().translated(lottie::Vector2D(node->position().x, node->position().y)));
-    parentContext->concatenate(lottie::Transform3D::identity().translated(lottie::Vector2D(-node->bounds().x, -node->bounds().y)));
     parentContext->concatenate(node->transform());
     
-    float renderAlpha = 1.0;
+    float renderAlpha = 1.0f;
     if (tempContext) {
-        renderAlpha = 1.0;
+        renderAlpha = 1.0f;
     } else {
         renderAlpha = layerAlpha;
     }
@@ -552,7 +546,7 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
     }
     
     if (isInvertedMatte) {
-        currentContext->fill(lottie::CGRect(node->bounds().x, node->bounds().y, node->bounds().width, node->bounds().height), lottie::Color(0.0, 0.0, 0.0, 1.0));
+        currentContext->fill(lottie::CGRect(0.0f, 0.0f, node->size().x, node->size().y), lottie::Color(0.0f, 0.0f, 0.0f, 1.0f));
         currentContext->setBlendMode(lottieRendering::BlendMode::DestinationOut);
     }
     

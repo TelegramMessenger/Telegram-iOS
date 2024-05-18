@@ -1323,7 +1323,6 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode(BezierPath
     
     if (!_renderTreeNode) {
         _contentRenderTreeNode = std::make_shared<RenderTreeNode>(
-            CGRect(0.0, 0.0, 0.0, 0.0),
             Vector2D(0.0, 0.0),
             Transform3D::identity(),
             1.0,
@@ -1349,7 +1348,6 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode(BezierPath
         }
         
         _renderTreeNode = std::make_shared<RenderTreeNode>(
-            CGRect(0.0, 0.0, 0.0, 0.0),
             Vector2D(0.0, 0.0),
             Transform3D::identity(),
             1.0,
@@ -1361,14 +1359,12 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode(BezierPath
         );
     }
     
-    _contentRenderTreeNode->_bounds = _contentsLayer->bounds();
-    _contentRenderTreeNode->_position = _contentsLayer->position();
+    _contentRenderTreeNode->_size = _contentsLayer->size();
     _contentRenderTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
     
     _renderTreeNode->_masksToBounds = masksToBounds();
     
-    _renderTreeNode->_bounds = bounds();
-    _renderTreeNode->_position = position();
+    _renderTreeNode->_size = size();
     
     return _renderTreeNode;
 }

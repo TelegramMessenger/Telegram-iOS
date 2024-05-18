@@ -30,9 +30,9 @@ public:
         }
         _frameRate = frameRate;
         
-        setBounds(CGRect(0.0, 0.0, precomp->width, precomp->height));
+        setSize(Vector2D(precomp->width, precomp->height));
         contentsLayer()->setMasksToBounds(true);
-        contentsLayer()->setBounds(bounds());
+        contentsLayer()->setSize(size());
         
         auto layers = initializeCompositionLayers(
             asset.layers,
@@ -49,7 +49,7 @@ public:
         
         for (auto layerIt = layers.rbegin(); layerIt != layers.rend(); layerIt++) {
             std::shared_ptr<CompositionLayer> layer = *layerIt;
-            layer->setBounds(bounds());
+            layer->setSize(size());
             _animationLayers.push_back(layer);
             
             if (layer->isImageCompositionLayer()) {
@@ -121,7 +121,6 @@ public:
             
             std::vector<std::shared_ptr<RenderTreeNode>> renderTreeValue;
             auto renderTreeContentItem = std::make_shared<RenderTreeNode>(
-                CGRect(0.0, 0.0, 0.0, 0.0),
                 Vector2D(0.0, 0.0),
                 Transform3D::identity(),
                 1.0,
@@ -136,7 +135,6 @@ public:
             }
             
             _contentsTreeNode = std::make_shared<RenderTreeNode>(
-                CGRect(0.0, 0.0, 0.0, 0.0),
                 Vector2D(0.0, 0.0),
                 Transform3D::identity(),
                 1.0,
@@ -160,7 +158,6 @@ public:
             }
             
             _renderTreeNode = std::make_shared<RenderTreeNode>(
-                CGRect(0.0, 0.0, 0.0, 0.0),
                 Vector2D(0.0, 0.0),
                 Transform3D::identity(),
                 1.0,
@@ -172,12 +169,10 @@ public:
             );
         }
         
-        _contentsTreeNode->_bounds = _contentsLayer->bounds();
-        _contentsTreeNode->_position = _contentsLayer->position();
+        _contentsTreeNode->_size = _contentsLayer->size();
         _contentsTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
         
-        _renderTreeNode->_bounds = bounds();
-        _renderTreeNode->_position = position();
+        _renderTreeNode->_size = size();
         _renderTreeNode->_transform = transform();
         _renderTreeNode->_alpha = opacity();
         _renderTreeNode->_masksToBounds = masksToBounds();

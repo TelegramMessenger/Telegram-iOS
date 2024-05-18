@@ -391,8 +391,7 @@ public:
 class RenderTreeNode {
 public:
     RenderTreeNode(
-        CGRect bounds_,
-        Vector2D position_,
+        Vector2D size_,
         Transform3D transform_,
         float alpha_,
         bool masksToBounds_,
@@ -401,8 +400,7 @@ public:
         std::shared_ptr<RenderTreeNode> mask_,
         bool invertMask_
     ) :
-    _bounds(bounds_),
-    _position(position_),
+    _size(size_),
     _transform(transform_),
     _alpha(alpha_),
     _masksToBounds(masksToBounds_),
@@ -419,12 +417,8 @@ public:
     }
     
 public:
-    CGRect const &bounds() const {
-        return _bounds;
-    }
-    
-    Vector2D const &position() const {
-        return _position;
+    Vector2D const &size() const {
+        return _size;
     }
     
     Transform3D const &transform() const {
@@ -456,8 +450,7 @@ public:
     }
     
 public:
-    CGRect _bounds;
-    Vector2D _position;
+    Vector2D _size;
     Transform3D _transform = Transform3D::identity();
     float _alpha = 1.0f;
     bool _masksToBounds = false;

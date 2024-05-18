@@ -468,10 +468,8 @@ Transform3D fromNativeTransform(::CATransform3D const &value) {
 }
 
 Transform3D Transform3D::makeRotation(float radians, float x, float y, float z) {
-    return fromNativeTransform(CATransform3DMakeRotation(radians, x, y, z));
-    
-    /*if (x == 0.0 && y == 0.0 && z == 0.0) {
-        return CATransform3D::identity();
+    if (std::abs(radians) <= FLT_EPSILON || (x == 0.0 && y == 0.0 && z == 0.0)) {
+        return Transform3D::identity();
     }
     
     float s = sin(radians);
@@ -480,43 +478,41 @@ Transform3D Transform3D::makeRotation(float radians, float x, float y, float z) 
     float len = sqrt(x*x + y*y + z*z);
     x /= len; y /= len; z /= len;
     
-    CATransform3D returnValue = CATransform3D::identity();
+    Transform3D returnValue = Transform3D::identity();
     
-    returnValue.m11 = c + (1-c) * x*x;
-    returnValue.m12 = (1-c) * x*y + s*z;
-    returnValue.m13 = (1-c) * x*z - s*y;
-    returnValue.m14 = 0;
+    returnValue.m11 = c + (1.0f - c) * x * x;
+    returnValue.m12 = (1.0f - c) * x*y + s * z;
+    returnValue.m13 = (1.0f - c) * x*z - s * y;
+    returnValue.m14 = 0.0f;
     
-    returnValue.m21 = (1-c) * y*x - s*z;
-    returnValue.m22 = c + (1-c) * y*y;
-    returnValue.m23 = (1-c) * y*z + s*x;
-    returnValue.m24 = 0;
+    returnValue.m21 = (1.0f - c) * y * x - s * z;
+    returnValue.m22 = c + (1.0f - c) * y * y;
+    returnValue.m23 = (1.0f - c) * y * z + s * x;
+    returnValue.m24 = 0.0f;
     
-    returnValue.m31 = (1-c) * z*x + s*y;
-    returnValue.m32 = (1-c) * y*z - s*x;
-    returnValue.m33 = c + (1-c) * z*z;
-    returnValue.m34 = 0;
+    returnValue.m31 = (1.0f - c) * z * x + s * y;
+    returnValue.m32 = (1.0f - c) * y * z - s * x;
+    returnValue.m33 = c + (1.0f - c) * z * z;
+    returnValue.m34 = 0.0f;
     
-    returnValue.m41 = 0;
-    returnValue.m42 = 0;
-    returnValue.m43 = 0;
-    returnValue.m44 = 1;
+    returnValue.m41 = 0.0f;
+    returnValue.m42 = 0.0f;
+    returnValue.m43 = 0.0f;
+    returnValue.m44 = 1.0f;
     
-    return returnValue;*/
+    return returnValue;
 }
 
 Transform3D Transform3D::rotated(float degrees) const {
-    return fromNativeTransform(CATransform3DRotate(nativeTransform(*this), degreesToRadians(degrees), 0.0, 0.0, 1.0));
-    //return CATransform3D::makeRotation(degreesToRadians(degrees), 0.0, 0.0, 1.0) * (*this);
+    return Transform3D::makeRotation(degreesToRadians(degrees), 0.0, 0.0, 1.0) * (*this);
 }
 
 Transform3D Transform3D::translated(Vector2D const &translation) const {
-    return fromNativeTransform(CATransform3DTranslate(nativeTransform(*this), translation.x, translation.y, 0.0));
+    return Transform3D::makeTranslation(translation.x, translation.y, 0.0f) * (*this);
 }
 
 Transform3D Transform3D::scaled(Vector2D const &scale) const {
-    return fromNativeTransform(CATransform3DScale(nativeTransform(*this), scale.x, scale.y, 1.0));
-    //return CATransform3D::makeScale(scale.x, scale.y, 1.0) * (*this);
+    return Transform3D::makeScale(scale.x, scale.y, 1.0) * (*this);
 }
 
 Transform3D Transform3D::operator*(Transform3D const &b) const {

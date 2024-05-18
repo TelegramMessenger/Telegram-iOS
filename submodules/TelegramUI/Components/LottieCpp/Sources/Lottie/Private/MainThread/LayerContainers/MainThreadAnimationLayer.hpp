@@ -42,7 +42,7 @@ public:
         _layerTextProvider = std::make_shared<LayerTextProvider>(textProvider);
         _layerFontProvider = std::make_shared<LayerFontProvider>(fontProvider);
         
-        setBounds(CGRect(0.0, 0.0, animation.width, animation.height));
+        setSize(Vector2D(animation.width, animation.height));
         
         auto layers = initializeCompositionLayers(
             animation.layers,
@@ -60,7 +60,7 @@ public:
         
         for (auto layerIt = layers.rbegin(); layerIt != layers.rend(); layerIt++) {
             std::shared_ptr<CompositionLayer> const &layer = *layerIt;
-            layer->setBounds(bounds());
+            layer->setSize(size());
             _animationLayers.push_back(layer);
             
             if (layer->isImageCompositionLayer()) {
@@ -237,8 +237,7 @@ public:
                 }
             }
             _renderTreeNode = std::make_shared<RenderTreeNode>(
-                bounds(),
-                position(),
+                size(),
                 Transform3D::identity(),
                 1.0,
                 false,
