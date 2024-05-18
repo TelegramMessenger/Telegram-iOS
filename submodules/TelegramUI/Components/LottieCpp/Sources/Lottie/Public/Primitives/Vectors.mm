@@ -254,7 +254,7 @@ static double SolveCubic(double a, double b, double c, double d) {
     return -1;
 }
 
-double cubicBezierInterpolate(double value, Vector2D const &P0, Vector2D const &P1, Vector2D const &P2, Vector2D const &P3) {
+float cubicBezierInterpolate(float value, Vector2D const &P0, Vector2D const &P1, Vector2D const &P2, Vector2D const &P3) {
     double t = 0.0;
     if (value == P0.x) {
         // Handle corner cases explicitly to prevent rounding errors

@@ -370,7 +370,7 @@ inline bool isInRange(double value, double from, double to) {
     return from < value && value < to;
 }
 
-double cubicBezierInterpolate(double value, Vector2D const &P0, Vector2D const &P1, Vector2D const &P2, Vector2D const &P3);
+float cubicBezierInterpolate(float value, Vector2D const &P0, Vector2D const &P1, Vector2D const &P2, Vector2D const &P3);
 
 }
 
