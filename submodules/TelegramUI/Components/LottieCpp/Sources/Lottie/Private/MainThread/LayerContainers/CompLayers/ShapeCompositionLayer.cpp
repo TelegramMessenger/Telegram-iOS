@@ -994,6 +994,8 @@ public:
                         continue;
                     }
                     
+                    _contentItem->drawContentCount++;
+                    
                     auto itemShadingVariant = std::make_shared<RenderTreeNodeContentShadingVariant>();
                     if (shadingVariant.fill) {
                         itemShadingVariant->fill = shadingVariant.fill->fill();
@@ -1011,6 +1013,7 @@ public:
                 std::vector<std::shared_ptr<RenderTreeNode>> subItemNodes;
                 for (const auto &subItem : subItems) {
                     subItem->initializeRenderChildren();
+                    _contentItem->drawContentCount += subItem->_contentItem->drawContentCount;
                     _contentItem->subItems.push_back(subItem->_contentItem);
                 }
             }
@@ -1331,9 +1334,9 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode(BezierPath
             false
         );
         _contentRenderTreeNode->_contentItem = _contentTree->itemTree->_contentItem;
+        _contentRenderTreeNode->drawContentCount = _contentTree->itemTree->_contentItem->drawContentCount;
         
         std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
-        //subnodes.push_back(_contentTree->itemTree->renderTree());
         subnodes.push_back(_contentRenderTreeNode);
         
         std::shared_ptr<RenderTreeNode> maskNode;

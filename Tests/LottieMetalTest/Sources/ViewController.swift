@@ -78,7 +78,7 @@ private final class ReferenceCompareTest {
             }
             
             var continueFromName: String?
-            //continueFromName = "1137162165791228042.json"
+            //continueFromName = "4986037051573928320.json"
             
             let _ = await processAnimationFolderAsync(basePath: bundlePath, path: "", stopOnFailure: true, process: { path, name, alwaysDraw in
                 if let continueFromNameValue = continueFromName {

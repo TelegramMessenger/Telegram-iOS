@@ -14,30 +14,12 @@
 namespace lottie {
 
 class ProcessedRenderTreeNodeData {
-public:
-    struct LayerParams {
-        bool masksToBounds;
-        
-        LayerParams(
-            bool masksToBounds_
-        ) :
-        masksToBounds(masksToBounds_) {
-        }
-    };
-    
-    ProcessedRenderTreeNodeData() :
-    isValid(false),
-    layer(
-        false
-    ),
-    drawContentDescendants(false),
-    isInvertedMatte(false) {
+public:    
+    ProcessedRenderTreeNodeData() {
     }
     
     bool isValid = false;
-    LayerParams layer;
-    int drawContentDescendants;
-    bool isInvertedMatte;
+    bool isInvertedMatte = false;
 };
 
 class RenderableItem {
@@ -388,6 +370,7 @@ public:
     std::shared_ptr<RenderTreeNodeContentPath> path;
     std::vector<std::shared_ptr<RenderTreeNodeContentShadingVariant>> shadings;
     std::vector<std::shared_ptr<RenderTreeNodeContentItem>> subItems;
+    int drawContentCount = 0;
     
     ProcessedRenderTreeNodeData renderData;
 };
@@ -427,6 +410,9 @@ public:
     _subnodes(subnodes_),
     _mask(mask_),
     _invertMask(invertMask_) {
+        for (const auto &subnode : _subnodes) {
+            drawContentCount += subnode->drawContentCount;
+        }
     }
     
     ~RenderTreeNode() {
@@ -477,6 +463,7 @@ public:
     bool _masksToBounds = false;
     bool _isHidden = false;
     std::shared_ptr<RenderTreeNodeContentItem> _contentItem;
+    int drawContentCount = 0;
     std::vector<std::shared_ptr<RenderTreeNode>> _subnodes;
     std::shared_ptr<RenderTreeNode> _mask;
     bool _invertMask = false;

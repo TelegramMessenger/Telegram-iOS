@@ -102,42 +102,6 @@ public:
     
     virtual std::shared_ptr<RenderTreeNode> renderTreeNode(BezierPathsBoundingBoxContext &boundingBoxContext) override {
         if (!_renderTreeNode) {
-            _contentsTreeNode = std::make_shared<RenderTreeNode>(
-                CGRect(0.0, 0.0, 0.0, 0.0),
-                Vector2D(0.0, 0.0),
-                CATransform3D::identity(),
-                1.0,
-                false,
-                false,
-                std::vector<std::shared_ptr<RenderTreeNode>>(),
-                nullptr,
-                false
-            );
-            
-            std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
-            subnodes.push_back(_contentsTreeNode);
-            
-            std::shared_ptr<RenderTreeNode> maskNode;
-            bool invertMask = false;
-            if (_matteLayer) {
-                maskNode = _matteLayer->renderTreeNode(boundingBoxContext);
-                if (maskNode && _matteType.has_value() && _matteType.value() == MatteType::Invert) {
-                    invertMask = true;
-                }
-            }
-            
-            _renderTreeNode = std::make_shared<RenderTreeNode>(
-                CGRect(0.0, 0.0, 0.0, 0.0),
-                Vector2D(0.0, 0.0),
-                CATransform3D::identity(),
-                1.0,
-                false,
-                false,
-                subnodes,
-                maskNode,
-                invertMask
-            );
-            
             std::vector<std::shared_ptr<RenderTreeNode>> renderTreeSubnodes;
             for (const auto &animationLayer : _animationLayers) {
                 bool found = false;
@@ -171,7 +135,41 @@ public:
                 renderTreeValue.push_back(renderTreeContentItem);
             }
             
-            _contentsTreeNode->_subnodes = renderTreeValue;
+            _contentsTreeNode = std::make_shared<RenderTreeNode>(
+                CGRect(0.0, 0.0, 0.0, 0.0),
+                Vector2D(0.0, 0.0),
+                CATransform3D::identity(),
+                1.0,
+                false,
+                false,
+                renderTreeValue,
+                nullptr,
+                false
+            );
+            
+            std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
+            subnodes.push_back(_contentsTreeNode);
+            
+            std::shared_ptr<RenderTreeNode> maskNode;
+            bool invertMask = false;
+            if (_matteLayer) {
+                maskNode = _matteLayer->renderTreeNode(boundingBoxContext);
+                if (maskNode && _matteType.has_value() && _matteType.value() == MatteType::Invert) {
+                    invertMask = true;
+                }
+            }
+            
+            _renderTreeNode = std::make_shared<RenderTreeNode>(
+                CGRect(0.0, 0.0, 0.0, 0.0),
+                Vector2D(0.0, 0.0),
+                CATransform3D::identity(),
+                1.0,
+                false,
+                false,
+                subnodes,
+                maskNode,
+                invertMask
+            );
         }
         
         _contentsTreeNode->_bounds = _contentsLayer->bounds();

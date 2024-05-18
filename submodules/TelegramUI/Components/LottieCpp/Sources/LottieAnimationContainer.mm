@@ -58,8 +58,6 @@
     result.isValid = node->renderData.isValid;
 
     
-    result.hasSimpleContents = node->renderData.drawContentDescendants <= 1;
-    result.drawContentDescendants = node->renderData.drawContentDescendants;
     result.isInvertedMatte = node->renderData.isInvertedMatte;
     if (node->mask()) {
         result.maskId = (int64_t)node->mask().get();
