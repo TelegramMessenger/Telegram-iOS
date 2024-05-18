@@ -185,9 +185,12 @@ public:
         return localUpdatesPermeateDownstream() ? hasUpstreamUpdates() || hasLocalUpdates() : hasUpstreamUpdates();
     }
     
-    virtual void updateTree(double frame, bool forceUpdates) {
-        updateContents(frame, forceUpdates);
-        updateOutputs(frame, forceUpdates);
+    bool updateTree(double frame, bool forceUpdates) {
+        if (updateContents(frame, forceUpdates)) {
+            return updateOutputs(frame, forceUpdates);
+        } else {
+            return false;
+        }
     }
     
     /// The name of the Keypath

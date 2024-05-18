@@ -1388,27 +1388,22 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode(BezierPath
         );
     }
     
-    return _renderTreeNode;
-}
-
-void ShapeCompositionLayer::updateRenderTree(BezierPathsBoundingBoxContext &boundingBoxContext) {
-    if (_matteLayer) {
-        _matteLayer->updateRenderTree(boundingBoxContext);
-    }
-    
     _contentRenderTreeNode->_bounds = _contentsLayer->bounds();
     _contentRenderTreeNode->_position = _contentsLayer->position();
-    _contentRenderTreeNode->_transform = _contentsLayer->transform();
-    _contentRenderTreeNode->_alpha = _contentsLayer->opacity();
     _contentRenderTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
-    _contentRenderTreeNode->_isHidden = _contentsLayer->isHidden();
+    
+    _renderTreeNode->_masksToBounds = masksToBounds();
     
     _renderTreeNode->_bounds = bounds();
     _renderTreeNode->_position = position();
-    _renderTreeNode->_transform = transform();
-    _renderTreeNode->_alpha = opacity();
-    _renderTreeNode->_masksToBounds = masksToBounds();
-    _renderTreeNode->_isHidden = isHidden();
+    
+    return _renderTreeNode;
+}
+
+void ShapeCompositionLayer::updateContentsLayerParameters() {
+    _contentRenderTreeNode->_transform = _contentsLayer->transform();
+    _contentRenderTreeNode->_alpha = _contentsLayer->opacity();
+    _contentRenderTreeNode->_isHidden = _contentsLayer->isHidden();
 }
 
 }

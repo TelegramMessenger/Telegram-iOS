@@ -651,13 +651,13 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
 }
 
 - (UIImage * _Nullable)renderForSize:(CGSize)size useReferenceRendering:(bool)useReferenceRendering {
-    LottieAnimation *animation = _animationContainer.animation;
-    std::shared_ptr<lottie::RenderTreeNode> renderNode = [_animationContainer internalGetRootRenderTreeNode];
-    if (!renderNode) {
+    if (!useReferenceRendering) {
         return nil;
     }
     
-    if (!useReferenceRendering) {
+    LottieAnimation *animation = _animationContainer.animation;
+    std::shared_ptr<lottie::RenderTreeNode> renderNode = [_animationContainer internalGetRootRenderTreeNode];
+    if (!renderNode) {
         return nil;
     }
     

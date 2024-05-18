@@ -5922,17 +5922,20 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
             
             let additionalAnimationNode: AnimatedStickerNode
+            var effectiveScale: CGFloat = 1.0
             #if targetEnvironment(simulator)
             additionalAnimationNode = DirectAnimatedStickerNode()
+            effectiveScale = 1.4
             #else
             if "".isEmpty {
                 additionalAnimationNode = DirectAnimatedStickerNode()
+                effectiveScale = 1.4
             } else {
                 additionalAnimationNode = LottieMetalAnimatedStickerNode()
             }
             #endif
             additionalAnimationNode.updateLayout(size: animationSize)
-            additionalAnimationNode.setup(source: source, width: Int(animationSize.width), height: Int(animationSize.height), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
+            additionalAnimationNode.setup(source: source, width: Int(animationSize.width * effectiveScale), height: Int(animationSize.height * effectiveScale), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
             var animationFrame: CGRect
             if isStickerEffect {
                 let offsetScale: CGFloat = 0.3

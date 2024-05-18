@@ -45,13 +45,6 @@ public:
         }
     }
     
-    bool needsDisplay() const {
-        return _needsDisplay;
-    }
-    void setNeedsDisplay(bool needsDisplay) {
-        _needsDisplay = true;
-    }
-    
     virtual bool implementsDraw() const {
         return false;
     }
@@ -148,7 +141,6 @@ private:
 private:
     CALayer *_superlayer = nullptr;
     std::vector<std::shared_ptr<CALayer>> _sublayers;
-    bool _needsDisplay = false;
     bool _isHidden = false;
     float _opacity = 1.0;
     Vector2D _position = Vector2D(0.0, 0.0);

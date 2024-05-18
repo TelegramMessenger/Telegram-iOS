@@ -90,7 +90,7 @@ public:
         _layerFontProvider->addTextLayers(textLayers);
         _layerFontProvider->reloadTexts();
         
-        setNeedsDisplay(true);
+        renderTreeNode();
     }
     
     void setRespectAnimationFrameRate(bool respectAnimationFrameRate) {
@@ -249,24 +249,7 @@ public:
             );
         }
         
-        updateRenderTree();
-        
         return _renderTreeNode;
-    }
-    
-    void updateRenderTree() {
-        for (const auto &animationLayer : _animationLayers) {
-            bool found = false;
-            for (const auto &sublayer : sublayers()) {
-                if (animationLayer == sublayer) {
-                    found = true;
-                    break;
-                }
-            }
-            if (found) {
-                animationLayer->updateRenderTree(_boundingBoxContext);
-            }
-        }
     }
     
 private:

@@ -7,7 +7,6 @@ namespace lottie {
 InvertedMatteLayer::InvertedMatteLayer(std::shared_ptr<CompositionLayer> inputMatte) :
 _inputMatte(inputMatte) {
     setBounds(inputMatte->bounds());
-    setNeedsDisplay(true);
     
     addSublayer(_inputMatte);
 }

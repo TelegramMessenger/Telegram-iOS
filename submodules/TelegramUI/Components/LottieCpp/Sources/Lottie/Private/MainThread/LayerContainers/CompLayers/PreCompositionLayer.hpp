@@ -174,39 +174,9 @@ public:
             _contentsTreeNode->_subnodes = renderTreeValue;
         }
         
-        return _renderTreeNode;
-    }
-    
-    virtual void updateRenderTree(BezierPathsBoundingBoxContext &boundingBoxContext) override {
-        if (_matteLayer) {
-            _matteLayer->updateRenderTree(boundingBoxContext);
-        }
-        
-        for (const auto &animationLayer : _animationLayers) {
-            bool found = false;
-            for (const auto &sublayer : contentsLayer()->sublayers()) {
-                if (animationLayer == sublayer) {
-                    found = true;
-                    break;
-                }
-            }
-            if (found) {
-                animationLayer->updateRenderTree(boundingBoxContext);
-            }
-        }
-        
-        assert(opacity() == 1.0);
-        assert(!isHidden());
-        assert(!masksToBounds());
-        assert(transform().isIdentity());
-        assert(position() == Vector2D::Zero());
-        
         _contentsTreeNode->_bounds = _contentsLayer->bounds();
         _contentsTreeNode->_position = _contentsLayer->position();
-        _contentsTreeNode->_transform = _contentsLayer->transform();
-        _contentsTreeNode->_alpha = _contentsLayer->opacity();
         _contentsTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
-        _contentsTreeNode->_isHidden = _contentsLayer->isHidden();
         
         _renderTreeNode->_bounds = bounds();
         _renderTreeNode->_position = position();
@@ -214,6 +184,14 @@ public:
         _renderTreeNode->_alpha = opacity();
         _renderTreeNode->_masksToBounds = masksToBounds();
         _renderTreeNode->_isHidden = isHidden();
+        
+        return _renderTreeNode;
+    }
+    
+    virtual void updateContentsLayerParameters() override {
+        _contentsTreeNode->_transform = _contentsLayer->transform();
+        _contentsTreeNode->_alpha = _contentsLayer->opacity();
+        _contentsTreeNode->_isHidden = _contentsLayer->isHidden();
     }
     
 private:

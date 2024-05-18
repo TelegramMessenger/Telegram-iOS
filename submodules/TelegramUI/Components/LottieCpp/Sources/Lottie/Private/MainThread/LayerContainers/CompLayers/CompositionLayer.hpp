@@ -83,13 +83,15 @@ public:
     }
     
     void displayWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
-        _transformNode->updateTree(frame, forceUpdates);
-        
         bool layerVisible = isInRangeOrEqual(frame, _inFrame, _outFrame);
         
-        _contentsLayer->setTransform(_transformNode->globalTransform());
-        _contentsLayer->setOpacity(_transformNode->opacity());
-        _contentsLayer->setIsHidden(!layerVisible);
+        if (_transformNode->updateTree(frame, forceUpdates) || _contentsLayer->isHidden() != !layerVisible) {
+            _contentsLayer->setTransform(_transformNode->globalTransform());
+            _contentsLayer->setOpacity(_transformNode->opacity());
+            _contentsLayer->setIsHidden(!layerVisible);
+            
+            updateContentsLayerParameters();
+        }
         
         /// Only update contents if current time is within the layers time bounds.
         if (layerVisible) {
@@ -98,6 +100,9 @@ public:
                 _maskLayer->updateWithFrame(frame, forceUpdates);
             }
         }
+    }
+    
+    virtual void updateContentsLayerParameters() {
     }
     
     virtual void displayContentsWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
@@ -153,9 +158,6 @@ public:
     
     virtual std::shared_ptr<RenderTreeNode> renderTreeNode(BezierPathsBoundingBoxContext &boundingBoxContext) {
         return nullptr;
-    }
-    
-    virtual void updateRenderTree(BezierPathsBoundingBoxContext &boundingBoxContext) {
     }
     
 public:

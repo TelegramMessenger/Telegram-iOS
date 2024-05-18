@@ -802,11 +802,14 @@ final class ChatSendMessageContextScreenComponent: Component {
                                 }
                                 
                                 let standaloneReactionAnimation: AnimatedStickerNode
+                                var effectiveScale: CGFloat = 1.0
                                 #if targetEnvironment(simulator)
                                 standaloneReactionAnimation = DirectAnimatedStickerNode()
+                                effectiveScale = 1.4
                                 #else
                                 if "".isEmpty {
                                     standaloneReactionAnimation = DirectAnimatedStickerNode()
+                                    effectiveScale = 1.4
                                 } else {
                                     standaloneReactionAnimation = LottieMetalAnimatedStickerNode()
                                 }
@@ -823,7 +826,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                                 
                                 let pathPrefix = component.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(customEffectResource.id)
                                 let source = AnimatedStickerResourceSource(account: component.context.account, resource: customEffectResource, fitzModifier: nil)
-                                standaloneReactionAnimation.setup(source: source, width: Int(effectSize.width), height: Int(effectSize.height), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
+                                standaloneReactionAnimation.setup(source: source, width: Int(effectSize.width * effectiveScale), height: Int(effectSize.height * effectiveScale), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
                                 standaloneReactionAnimation.completed = { [weak self, weak standaloneReactionAnimation] _ in
                                     guard let self else {
                                         return
