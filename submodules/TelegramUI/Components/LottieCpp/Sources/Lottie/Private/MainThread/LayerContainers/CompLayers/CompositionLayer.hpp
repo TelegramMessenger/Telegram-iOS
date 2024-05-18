@@ -82,7 +82,7 @@ public:
         return _contentsLayer;
     }
     
-    void displayWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
+    void displayWithFrame(float frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
         bool layerVisible = isInRangeOrEqual(frame, _inFrame, _outFrame);
         
         if (_transformNode->updateTree(frame, forceUpdates) || _contentsLayer->isHidden() != !layerVisible) {
@@ -105,7 +105,7 @@ public:
     virtual void updateContentsLayerParameters() {
     }
     
-    virtual void displayContentsWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
+    virtual void displayContentsWithFrame(float frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
         /// To be overridden by subclass
     }
     
@@ -143,16 +143,16 @@ public:
         return _matteType;
     }
     
-    double inFrame() const {
+    float inFrame() const {
         return _inFrame;
     }
-    double outFrame() const {
+    float outFrame() const {
         return _outFrame;
     }
-    double startFrame() const {
+    float startFrame() const {
         return _startFrame;
     }
-    double timeStretch() const {
+    float timeStretch() const {
         return _timeStretch;
     }
     
@@ -174,10 +174,10 @@ private:
     
     std::shared_ptr<MaskContainerLayer> _maskLayer;
     
-    double _inFrame = 0.0;
-    double _outFrame = 0.0;
-    double _startFrame = 0.0;
-    double _timeStretch = 0.0;
+    float _inFrame = 0.0;
+    float _outFrame = 0.0;
+    float _startFrame = 0.0;
+    float _timeStretch = 0.0;
     
     // MARK: Keypath Searchable
     

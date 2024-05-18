@@ -91,7 +91,7 @@ public:
     /// TI and TO are the new tangents for the trimPoint
     /// NO and NI are the new tangents for the startPoint and endPoints
     /// S==NO=========TI==T==TO=======NI==E
-    CurveVertexSplitResult<CurveVertex> splitCurve(CurveVertex const &toVertex, double position) const {
+    CurveVertexSplitResult<CurveVertex> splitCurve(CurveVertex const &toVertex, float position) const {
         /// If position is less than or equal to 0, trim at start.
         if (position <= 0.0) {
             return CurveVertexSplitResult<CurveVertex>(
@@ -147,8 +147,8 @@ public:
     ///
     /// This function should probably live in PathElement, since it deals with curve
     /// lengths.
-    CurveVertexSplitResult<CurveVertex> trimCurve(CurveVertex const &toVertex, double atLength, double curveLength, int maxSamples, double accuracy = 1.0) const {
-        double currentPosition = atLength / curveLength;
+    CurveVertexSplitResult<CurveVertex> trimCurve(CurveVertex const &toVertex, float atLength, float curveLength, int maxSamples, float accuracy = 1.0f) const {
+        float currentPosition = atLength / curveLength;
         auto results = splitCurve(toVertex, currentPosition);
         
         if (maxSamples == 0) {
@@ -162,7 +162,7 @@ public:
             if (lengthDiff < accuracy) {
                 return results;
             }
-            auto diffPosition = std::max(std::min((currentPosition / length) * lengthDiff, currentPosition * 0.5), currentPosition * (-0.5));
+            auto diffPosition = std::max(std::min((currentPosition / length) * lengthDiff, currentPosition * 0.5f), currentPosition * (-0.5f));
             currentPosition = diffPosition + currentPosition;
             results = splitCurve(toVertex, currentPosition);
         }
@@ -174,17 +174,17 @@ public:
     /// For lines (zeroed tangents) the distance between the two points is measured.
     /// For curves the curve is iterated over by sample count and the points are measured.
     /// This is ~99% accurate at a sample count of 30
-    double distanceTo(CurveVertex const &toVertex, int sampleCount = 25) const {
+    float distanceTo(CurveVertex const &toVertex, int sampleCount = 25) const {
         if (outTangentRelative().isZero() && toVertex.inTangentRelative().isZero()) {
             /// Return a linear distance.
             return point.distanceTo(toVertex.point);
         }
         
-        double distance = 0.0;
+        float distance = 0.0;
         
         auto previousPoint = point;
         for (int i = 0; i < sampleCount; i++) {
-            auto pointOnCurve = splitCurve(toVertex, ((double)(i)) / ((double)(sampleCount))).trimPoint;
+            auto pointOnCurve = splitCurve(toVertex, ((float)(i)) / ((float)(sampleCount))).trimPoint;
             distance = distance + previousPoint.distanceTo(pointOnCurve.point);
             previousPoint = pointOnCurve.point;
         }

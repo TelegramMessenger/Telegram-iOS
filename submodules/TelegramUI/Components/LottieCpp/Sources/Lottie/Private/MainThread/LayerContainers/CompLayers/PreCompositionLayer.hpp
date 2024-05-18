@@ -23,7 +23,7 @@ public:
         std::shared_ptr<AnimationTextProvider> const &textProvider,
         std::shared_ptr<AnimationFontProvider> const &fontProvider,
         std::shared_ptr<AssetLibrary> const &assetLibrary,
-        double frameRate
+        float frameRate
     ) : CompositionLayer(precomp, Vector2D(precomp->width, precomp->height)) {
         if (precomp->timeRemapping) {
             _remappingNode = std::make_shared<NodeProperty<Vector1D>>(std::make_shared<KeyframeInterpolator<Vector1D>>(precomp->timeRemapping->keyframes));
@@ -86,8 +86,8 @@ public:
         return result;
     }
     
-    virtual void displayContentsWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) override {
-        double localFrame = 0.0;
+    virtual void displayContentsWithFrame(float frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) override {
+        float localFrame = 0.0;
         if (_remappingNode) {
             _remappingNode->update(frame);
             localFrame = _remappingNode->value().value * _frameRate;
@@ -195,7 +195,7 @@ public:
     }
     
 private:
-    double _frameRate = 0.0;
+    float _frameRate = 0.0;
     std::shared_ptr<NodeProperty<Vector1D>> _remappingNode;
     
     std::vector<std::shared_ptr<CompositionLayer>> _animationLayers;

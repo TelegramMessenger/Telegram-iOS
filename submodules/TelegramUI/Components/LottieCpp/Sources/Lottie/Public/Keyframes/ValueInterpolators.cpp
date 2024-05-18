@@ -4,7 +4,7 @@
 
 namespace lottie {
 
-void batchInterpolate(std::vector<PathElement> const &from, std::vector<PathElement> const &to, BezierPath &resultPath, double amount) {
+void batchInterpolate(std::vector<PathElement> const &from, std::vector<PathElement> const &to, BezierPath &resultPath, float amount) {
     int elementCount = (int)from.size();
     if (elementCount > (int)to.size()) {
         elementCount = (int)to.size();

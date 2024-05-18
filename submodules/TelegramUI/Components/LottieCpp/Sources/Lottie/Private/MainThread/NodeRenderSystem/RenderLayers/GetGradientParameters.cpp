@@ -2,13 +2,13 @@
 
 namespace lottie {
 
-void getGradientParameters(int numberOfColors, GradientColorSet const &colors, std::vector<Color> &outColors, std::vector<double> &outLocations) {
+void getGradientParameters(int numberOfColors, GradientColorSet const &colors, std::vector<Color> &outColors, std::vector<float> &outLocations) {
     std::vector<Color> alphaColors;
-    std::vector<double> alphaValues;
-    std::vector<double> alphaLocations;
+    std::vector<float> alphaValues;
+    std::vector<float> alphaLocations;
     
     std::vector<Color> gradientColors;
-    std::vector<double> colorLocations;
+    std::vector<float> colorLocations;
     
     for (int i = 0; i < numberOfColors; i++) {
         int ix = i * 4;
@@ -26,7 +26,7 @@ void getGradientParameters(int numberOfColors, GradientColorSet const &colors, s
     
     bool drawMask = false;
     for (int i = numberOfColors * 4; i < (int)colors.colors.size(); i += 2) {
-        double alpha = colors.colors[i + 1];
+        float alpha = colors.colors[i + 1];
         if (alpha < 1.0) {
             drawMask = true;
         }
@@ -36,7 +36,7 @@ void getGradientParameters(int numberOfColors, GradientColorSet const &colors, s
     }
     
     if (drawMask) {
-        std::vector<double> locations;
+        std::vector<float> locations;
         for (size_t i = 0; i < std::min(gradientColors.size(), colorLocations.size()); i++) {
             if (std::find(locations.begin(), locations.end(), colorLocations[i]) == locations.end()) {
                 locations.push_back(colorLocations[i]);
@@ -62,7 +62,7 @@ void getGradientParameters(int numberOfColors, GradientColorSet const &colors, s
             Color color = gradientColors[0];
             for (size_t i = 0; i < std::min(gradientColors.size(), colorLocations.size()) - 1; i++) {
                 if (location >= colorLocations[i] && location <= colorLocations[i + 1]) {
-                    double localLocation = 0.0;
+                    float localLocation = 0.0;
                     if (colorLocations[i] != colorLocations[i + 1]) {
                         localLocation = remapFloat(location, colorLocations[i], colorLocations[i + 1], 0.0, 1.0);
                     }
@@ -71,14 +71,14 @@ void getGradientParameters(int numberOfColors, GradientColorSet const &colors, s
                 }
             }
             
-            double alpha = 1.0;
+            float alpha = 1.0;
             for (size_t i = 0; i < std::min(alphaValues.size(), alphaLocations.size()) - 1; i++) {
                 if (location >= alphaLocations[i] && location <= alphaLocations[i + 1]) {
-                    double localLocation = 0.0;
+                    float localLocation = 0.0;
                     if (alphaLocations[i] != alphaLocations[i + 1]) {
                         localLocation = remapFloat(location, alphaLocations[i], alphaLocations[i + 1], 0.0, 1.0);
                     }
-                    alpha = ValueInterpolator<double>::interpolate(alphaValues[i], alphaValues[i + 1], localLocation, std::nullopt, std::nullopt);
+                    alpha = ValueInterpolator<float>::interpolate(alphaValues[i], alphaValues[i + 1], localLocation, std::nullopt, std::nullopt);
                     break;
                 }
             }

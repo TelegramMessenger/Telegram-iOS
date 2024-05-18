@@ -13,10 +13,10 @@ class Glyph {
 public:
     Glyph(
         std::string const &character_,
-        double fontSize_,
+        float fontSize_,
         std::string const &fontFamily_,
         std::string const &fontStyle_,
-        double width_,
+        float width_,
         std::optional<std::vector<std::shared_ptr<ShapeItem>>> shapes_
     ) :
     character(character_),
@@ -86,7 +86,7 @@ public:
     std::string character;
     
     /// The font size of the character
-    double fontSize;
+    float fontSize;
     
     /// The font family of the character
     std::string fontFamily;
@@ -95,7 +95,7 @@ public:
     std::string fontStyle;
     
     /// The Width of the character
-    double width;
+    float width;
     
     /// The Shape Data of the Character
     std::optional<std::vector<std::shared_ptr<ShapeItem>>> shapes;

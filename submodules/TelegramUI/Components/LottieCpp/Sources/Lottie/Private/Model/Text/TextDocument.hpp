@@ -20,15 +20,15 @@ class TextDocument {
 public:
     TextDocument(
         std::string const &text_,
-        double fontSize_,
+        float fontSize_,
         std::string const &fontFamily_,
         TextJustification justification_,
         int tracking_,
-        double lineHeight_,
-        std::optional<double> baseline_,
+        float lineHeight_,
+        std::optional<float> baseline_,
         std::optional<Color> fillColorData_,
         std::optional<Color> strokeColorData_,
-        std::optional<double> strokeWidth_,
+        std::optional<float> strokeWidth_,
         std::optional<bool> strokeOverFill_,
         std::optional<Vector3D> textFramePosition_,
         std::optional<Vector3D> textFrameSize_
@@ -145,7 +145,7 @@ public:
     std::string text;
     
     /// The Font size
-    double fontSize;
+    float fontSize;
     
     /// The Font Family
     std::string fontFamily;
@@ -157,10 +157,10 @@ public:
     int tracking;
     
     /// Line Height
-    double lineHeight;
+    float lineHeight;
     
     /// Baseline
-    std::optional<double> baseline;
+    std::optional<float> baseline;
     
     /// Fill Color data
     std::optional<Color> fillColorData;
@@ -169,7 +169,7 @@ public:
     std::optional<Color> strokeColorData;
     
     /// Stroke Width
-    std::optional<double> strokeWidth;
+    std::optional<float> strokeWidth;
     
     /// Stroke Over Fill
     std::optional<bool> strokeOverFill;

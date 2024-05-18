@@ -56,7 +56,7 @@ public:
     /// Layers of the precomp
     std::vector<std::shared_ptr<LayerModel>> layers;
     
-    std::optional<double> frameRate;
+    std::optional<float> frameRate;
 };
 
 }

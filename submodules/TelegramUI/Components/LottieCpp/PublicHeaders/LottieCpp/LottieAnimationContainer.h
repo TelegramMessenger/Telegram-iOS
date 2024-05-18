@@ -25,7 +25,7 @@ typedef struct {
     CGRect bounds;
     CGPoint position;
     CATransform3D transform;
-    double opacity;
+    float opacity;
     bool masksToBounds;
     bool isHidden;
 } LottieRenderNodeLayerData;

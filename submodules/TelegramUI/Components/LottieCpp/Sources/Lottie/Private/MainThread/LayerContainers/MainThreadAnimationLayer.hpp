@@ -98,7 +98,7 @@ public:
     }
     
     void display() {
-        double newFrame = currentFrame();
+        float newFrame = currentFrame();
         if (_respectAnimationFrameRate) {
             newFrame = floor(newFrame);
         }
@@ -140,7 +140,7 @@ public:
         }*/
     }
     
-    std::optional<AnyValue> getValue(AnimationKeypath const &keypath, std::optional<double> atFrame) {
+    std::optional<AnyValue> getValue(AnimationKeypath const &keypath, std::optional<float> atFrame) {
         /*for (const auto &layer : _animationLayers) {
             assert(false);
             if
@@ -153,7 +153,7 @@ public:
         return std::nullopt;
     }
     
-    std::optional<AnyValue> getOriginalValue(AnimationKeypath const &keypath, std::optional<double> atFrame) {
+    std::optional<AnyValue> getOriginalValue(AnimationKeypath const &keypath, std::optional<float> atFrame) {
         /*for (const auto &layer : _animationLayers) {
             assert(false);
             if
@@ -186,10 +186,10 @@ public:
         return results;
     }
     
-    double currentFrame() const {
+    float currentFrame() const {
         return _currentFrame;
     }
-    void setCurrentFrame(double currentFrame) {
+    void setCurrentFrame(float currentFrame) {
         _currentFrame = currentFrame;
         
         for (size_t i = 0; i < _animationLayers.size(); i++) {
@@ -256,7 +256,7 @@ private:
     // MARK: Internal
     
     /// The animatable Current Frame Property
-    double _currentFrame = 0.0;
+    float _currentFrame = 0.0;
     
     std::shared_ptr<AnimationImageProvider> _imageProvider;
     std::shared_ptr<AnimationTextProvider> _textProvider;

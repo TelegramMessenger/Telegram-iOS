@@ -6,7 +6,7 @@
 
 namespace lottie {
 
-void getGradientParameters(int numberOfColors, GradientColorSet const &colors, std::vector<Color> &outColors, std::vector<double> &outLocations);
+void getGradientParameters(int numberOfColors, GradientColorSet const &colors, std::vector<Color> &outColors, std::vector<float> &outLocations);
 
 }
 

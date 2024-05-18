@@ -74,7 +74,7 @@ public:
         Color colorValue = Color(0.0, 0.0, 0.0, 0.0);
         
         KeyframeInterpolator<Vector1D> opacity;
-        double opacityValue = 0.0;
+        float opacityValue = 0.0;
         
         std::shared_ptr<RenderTreeNodeContentItem::Fill> _fill;
     };
@@ -93,7 +93,7 @@ public:
                 0.0,
                 gradientType,
                 std::vector<Color>(),
-                std::vector<double>(),
+                std::vector<float>(),
                 Vector2D(0.0, 0.0),
                 Vector2D(0.0, 0.0)
             );
@@ -130,7 +130,7 @@ public:
             
             if (hasUpdates) {
                 std::vector<Color> colors;
-                std::vector<double> locations;
+                std::vector<float> locations;
                 getGradientParameters(numberOfColors, colorsValue, colors, locations);
                 
                 RenderTreeNodeContentItem::GradientShading *gradient = ((RenderTreeNodeContentItem::GradientShading *)_fill->shading.get());
@@ -161,7 +161,7 @@ public:
         Vector3D endPointValue = Vector3D(0.0, 0.0, 0.0);
         
         KeyframeInterpolator<Vector1D> opacity;
-        double opacityValue = 0.0;
+        float opacityValue = 0.0;
         
         std::shared_ptr<RenderTreeNodeContentItem::Fill> _fill;
     };
@@ -202,7 +202,7 @@ public:
                 lineCap,
                 miterLimit,
                 0.0,
-                std::vector<double>()
+                std::vector<float>()
             );
         }
         
@@ -257,7 +257,7 @@ public:
                 
                 _stroke->lineWidth = widthValue;
                 _stroke->dashPhase = hasNonZeroDashes ? dashPhaseValue : 0.0;
-                _stroke->dashPattern = hasNonZeroDashes ? dashPatternValue.values : std::vector<double>();
+                _stroke->dashPattern = hasNonZeroDashes ? dashPatternValue.values : std::vector<float>();
             }
         }
         
@@ -268,22 +268,22 @@ public:
     private:
         LineJoin lineJoin;
         LineCap lineCap;
-        double miterLimit = 4.0;
+        float miterLimit = 4.0;
         
         KeyframeInterpolator<Color> color;
         Color colorValue = Color(0.0, 0.0, 0.0, 0.0);
         
         KeyframeInterpolator<Vector1D> opacity;
-        double opacityValue = 0.0;
+        float opacityValue = 0.0;
         
         KeyframeInterpolator<Vector1D> width;
-        double widthValue = 0.0;
+        float widthValue = 0.0;
         
         std::unique_ptr<DashPatternInterpolator> dashPattern;
         DashPattern dashPatternValue = DashPattern({});
         
         std::unique_ptr<KeyframeInterpolator<Vector1D>> dashPhase;
-        double dashPhaseValue = 0.0;
+        float dashPhaseValue = 0.0;
         
         std::shared_ptr<RenderTreeNodeContentItem::Stroke> _stroke;
     };
@@ -314,7 +314,7 @@ public:
                 0.0,
                 gradientType,
                 std::vector<Color>(),
-                std::vector<double>(),
+                std::vector<float>(),
                 Vector2D(0.0, 0.0),
                 Vector2D(0.0, 0.0)
             );
@@ -325,7 +325,7 @@ public:
                 lineCap,
                 miterLimit,
                 0.0,
-                std::vector<double>()
+                std::vector<float>()
             );
         }
         
@@ -385,7 +385,7 @@ public:
                 }
                 
                 std::vector<Color> colors;
-                std::vector<double> locations;
+                std::vector<float> locations;
                 getGradientParameters(numberOfColors, colorsValue, colors, locations);
                 
                 RenderTreeNodeContentItem::GradientShading *gradient = ((RenderTreeNodeContentItem::GradientShading *)_stroke->shading.get());
@@ -397,7 +397,7 @@ public:
                 
                 _stroke->lineWidth = widthValue;
                 _stroke->dashPhase = hasNonZeroDashes ? dashPhaseValue : 0.0;
-                _stroke->dashPattern = hasNonZeroDashes ? dashPatternValue.values : std::vector<double>();
+                _stroke->dashPattern = hasNonZeroDashes ? dashPatternValue.values : std::vector<float>();
             }
         }
         
@@ -408,7 +408,7 @@ public:
     private:
         LineJoin lineJoin;
         LineCap lineCap;
-        double miterLimit = 4.0;
+        float miterLimit = 4.0;
         
         int numberOfColors = 0;
         GradientType gradientType;
@@ -423,16 +423,16 @@ public:
         Vector3D endPointValue = Vector3D(0.0, 0.0, 0.0);
         
         KeyframeInterpolator<Vector1D> opacity;
-        double opacityValue = 0.0;
+        float opacityValue = 0.0;
         
         KeyframeInterpolator<Vector1D> width;
-        double widthValue = 0.0;
+        float widthValue = 0.0;
         
         std::unique_ptr<DashPatternInterpolator> dashPattern;
         DashPattern dashPatternValue = DashPattern({});
         
         std::unique_ptr<KeyframeInterpolator<Vector1D>> dashPhase;
-        double dashPhaseValue = 0.0;
+        float dashPhaseValue = 0.0;
         
         std::shared_ptr<RenderTreeNodeContentItem::Stroke> _stroke;
     };
@@ -461,12 +461,12 @@ public:
         }
         
         TrimParams trimParams() {
-            double resolvedStartValue = startValue * 0.01;
-            double resolvedEndValue = endValue * 0.01;
-            double resolvedStart = std::min(resolvedStartValue, resolvedEndValue);
-            double resolvedEnd = std::max(resolvedStartValue, resolvedEndValue);
+            float resolvedStartValue = startValue * 0.01;
+            float resolvedEndValue = endValue * 0.01;
+            float resolvedStart = std::min(resolvedStartValue, resolvedEndValue);
+            float resolvedEnd = std::max(resolvedStartValue, resolvedEndValue);
             
-            double resolvedOffset = fmod(offsetValue, 360.0) / 360.0;
+            float resolvedOffset = fmod(offsetValue, 360.0) / 360.0;
             
             return TrimParams(resolvedStart, resolvedEnd, resolvedOffset, type);
         }
@@ -475,13 +475,13 @@ public:
         TrimType type;
         
         KeyframeInterpolator<Vector1D> start;
-        double startValue = 0.0;
+        float startValue = 0.0;
         
         KeyframeInterpolator<Vector1D> end;
-        double endValue = 0.0;
+        float endValue = 0.0;
         
         KeyframeInterpolator<Vector1D> offset;
-        double offsetValue = 0.0;
+        float offsetValue = 0.0;
     };
     
     struct ShadingVariant {
@@ -624,7 +624,7 @@ public:
         Vector3D sizeValue = Vector3D(0.0, 0.0, 0.0);
         
         KeyframeInterpolator<Vector1D> cornerRadius;
-        double cornerRadiusValue = 0.0;
+        float cornerRadiusValue = 0.0;
         
         BezierPath resolvedPath;
         CGRect resolvedPathBounds = CGRect(0.0, 0.0, 0.0, 0.0);
@@ -768,22 +768,22 @@ public:
         Vector3D positionValue = Vector3D(0.0, 0.0, 0.0);
         
         KeyframeInterpolator<Vector1D> outerRadius;
-        double outerRadiusValue = 0.0;
+        float outerRadiusValue = 0.0;
         
         KeyframeInterpolator<Vector1D> outerRoundedness;
-        double outerRoundednessValue = 0.0;
+        float outerRoundednessValue = 0.0;
         
         std::unique_ptr<NodeProperty<Vector1D>> innerRadius;
-        double innerRadiusValue = 0.0;
+        float innerRadiusValue = 0.0;
         
         std::unique_ptr<NodeProperty<Vector1D>> innerRoundedness;
-        double innerRoundednessValue = 0.0;
+        float innerRoundednessValue = 0.0;
         
         KeyframeInterpolator<Vector1D> rotation;
-        double rotationValue = 0.0;
+        float rotationValue = 0.0;
         
         KeyframeInterpolator<Vector1D> points;
-        double pointsValue = 0.0;
+        float pointsValue = 0.0;
         
         BezierPath resolvedPath;
         CGRect resolvedPathBounds = CGRect(0.0, 0.0, 0.0, 0.0);
@@ -861,17 +861,17 @@ public:
                     scaleValue = _scale->value(frameTime);
                 }
                 
-                double rotationValue = 0.0;
+                float rotationValue = 0.0;
                 if (_rotation) {
                     rotationValue = _rotation->value(frameTime).value;
                 }
                 
-                double skewValue = 0.0;
+                float skewValue = 0.0;
                 if (_skew) {
                     skewValue = _skew->value(frameTime).value;
                 }
                 
-                double skewAxisValue = 0.0;
+                float skewAxisValue = 0.0;
                 if (_skewAxis) {
                     skewAxisValue = _skewAxis->value(frameTime).value;
                 }
@@ -892,7 +892,7 @@ public:
             return _transformValue;
         }
         
-        double opacity() {
+        float opacity() {
             return _opacityValue;
         }
         
@@ -908,7 +908,7 @@ public:
         std::unique_ptr<KeyframeInterpolator<Vector1D>> _opacity;
         
         CATransform3D _transformValue = CATransform3D::identity();
-        double _opacityValue = 1.0;
+        float _opacityValue = 1.0;
     };
     
     class ContentItem {
@@ -1089,7 +1089,7 @@ public:
         
         void updateContents(std::optional<TrimParams> parentTrim) {
             CATransform3D containerTransform = CATransform3D::identity();
-            double containerOpacity = 1.0;
+            float containerOpacity = 1.0;
             if (transform) {
                 containerTransform = transform->transform();
                 containerOpacity = transform->opacity();
@@ -1333,7 +1333,7 @@ CompositionLayer(solidLayer, Vector2D::Zero()) {
     _contentTree = std::make_shared<ShapeLayerPresentationTree>(solidLayer);
 }
 
-void ShapeCompositionLayer::displayContentsWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
+void ShapeCompositionLayer::displayContentsWithFrame(float frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
     _frameTime = frame;
     _frameTimeInitialized = true;
     _contentTree->itemTree->updateFrame(_frameTime, boundingBoxContext);

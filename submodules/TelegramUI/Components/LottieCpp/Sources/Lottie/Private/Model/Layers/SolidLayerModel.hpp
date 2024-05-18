@@ -31,10 +31,10 @@ public:
     std::string colorHex;
     
     /// The Width of the color layer
-    double width;
+    float width;
     
     /// The height of the color layer
-    double height;
+    float height;
 };
 
 }

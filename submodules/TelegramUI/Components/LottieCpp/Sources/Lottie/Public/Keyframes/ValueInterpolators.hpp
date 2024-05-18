@@ -18,9 +18,9 @@ struct ValueInterpolator {
 };
 
 template<>
-struct ValueInterpolator<double> {
+struct ValueInterpolator<float> {
 public:
-    static double interpolate(double value, double to, double amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
+    static float interpolate(float value, float to, float amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
         return value + ((to - value) * amount);
     }
 };
@@ -28,22 +28,22 @@ public:
 template<>
 struct ValueInterpolator<Vector1D> {
 public:
-    static Vector1D interpolate(Vector1D const &value, Vector1D const &to, double amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
-        return Vector1D(ValueInterpolator<double>::interpolate(value.value, to.value, amount, spatialOutTangent, spatialInTangent));
+    static Vector1D interpolate(Vector1D const &value, Vector1D const &to, float amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
+        return Vector1D(ValueInterpolator<float>::interpolate(value.value, to.value, amount, spatialOutTangent, spatialInTangent));
     }
 };
 
 template<>
 struct ValueInterpolator<Vector2D> {
 public:
-    static Vector2D interpolate(Vector2D const &value, Vector2D const &to, double amount, Vector2D spatialOutTangent, Vector2D spatialInTangent) {
+    static Vector2D interpolate(Vector2D const &value, Vector2D const &to, float amount, Vector2D spatialOutTangent, Vector2D spatialInTangent) {
         auto cp1 = value + spatialOutTangent;
         auto cp2 = to + spatialInTangent;
         
         return value.interpolate(to, cp1, cp2, amount);
     }
     
-    static Vector2D interpolate(Vector2D const &value, Vector2D const &to, double amount) {
+    static Vector2D interpolate(Vector2D const &value, Vector2D const &to, float amount) {
         return value.interpolate(to, amount);
     }
 };
@@ -51,7 +51,7 @@ public:
 template<>
 struct ValueInterpolator<Vector3D> {
 public:
-    static Vector3D interpolate(Vector3D const &value, Vector3D const &to, double amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
+    static Vector3D interpolate(Vector3D const &value, Vector3D const &to, float amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
         if (spatialOutTangent && spatialInTangent) {
             Vector2D from2d(value.x, value.y);
             Vector2D to2d(to.x, to.y);
@@ -64,14 +64,14 @@ public:
             return Vector3D(
                 result2d.x,
                 result2d.y,
-                ValueInterpolator<double>::interpolate(value.z, to.z, amount, spatialOutTangent, spatialInTangent)
+                ValueInterpolator<float>::interpolate(value.z, to.z, amount, spatialOutTangent, spatialInTangent)
             );
         }
         
         return Vector3D(
-            ValueInterpolator<double>::interpolate(value.x, to.x, amount, spatialOutTangent, spatialInTangent),
-            ValueInterpolator<double>::interpolate(value.y, to.y, amount, spatialOutTangent, spatialInTangent),
-            ValueInterpolator<double>::interpolate(value.z, to.z, amount, spatialOutTangent, spatialInTangent)
+            ValueInterpolator<float>::interpolate(value.x, to.x, amount, spatialOutTangent, spatialInTangent),
+            ValueInterpolator<float>::interpolate(value.y, to.y, amount, spatialOutTangent, spatialInTangent),
+            ValueInterpolator<float>::interpolate(value.z, to.z, amount, spatialOutTangent, spatialInTangent)
         );
     }
 };
@@ -79,22 +79,22 @@ public:
 template<>
 struct ValueInterpolator<Color> {
 public:
-    static Color interpolate(Color const &value, Color const &to, double amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
+    static Color interpolate(Color const &value, Color const &to, float amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
         return Color(
-            ValueInterpolator<double>::interpolate(value.r, to.r, amount, spatialOutTangent, spatialInTangent),
-            ValueInterpolator<double>::interpolate(value.g, to.g, amount, spatialOutTangent, spatialInTangent),
-            ValueInterpolator<double>::interpolate(value.b, to.b, amount, spatialOutTangent, spatialInTangent),
-            ValueInterpolator<double>::interpolate(value.a, to.a, amount, spatialOutTangent, spatialInTangent)
+            ValueInterpolator<float>::interpolate(value.r, to.r, amount, spatialOutTangent, spatialInTangent),
+            ValueInterpolator<float>::interpolate(value.g, to.g, amount, spatialOutTangent, spatialInTangent),
+            ValueInterpolator<float>::interpolate(value.b, to.b, amount, spatialOutTangent, spatialInTangent),
+            ValueInterpolator<float>::interpolate(value.a, to.a, amount, spatialOutTangent, spatialInTangent)
         );
     }
 };
 
-void batchInterpolate(std::vector<PathElement> const &from, std::vector<PathElement> const &to, BezierPath &resultPath, double amount);
+void batchInterpolate(std::vector<PathElement> const &from, std::vector<PathElement> const &to, BezierPath &resultPath, float amount);
 
 template<>
 struct ValueInterpolator<CurveVertex> {
 public:
-    static CurveVertex interpolate(CurveVertex const &value, CurveVertex const &to, double amount, Vector2D spatialOutTangent, Vector2D spatialInTangent) {
+    static CurveVertex interpolate(CurveVertex const &value, CurveVertex const &to, float amount, Vector2D spatialOutTangent, Vector2D spatialInTangent) {
         return CurveVertex::absolute(
             ValueInterpolator<Vector2D>::interpolate(value.point, to.point, amount, spatialOutTangent, spatialInTangent),
             ValueInterpolator<Vector2D>::interpolate(value.inTangent, to.inTangent, amount, spatialOutTangent, spatialInTangent),
@@ -102,7 +102,7 @@ public:
         );
     }
     
-    static CurveVertex interpolate(CurveVertex const &value, CurveVertex const &to, double amount) {
+    static CurveVertex interpolate(CurveVertex const &value, CurveVertex const &to, float amount) {
         return CurveVertex::absolute(
             ValueInterpolator<Vector2D>::interpolate(value.point, to.point, amount),
             ValueInterpolator<Vector2D>::interpolate(value.inTangent, to.inTangent, amount),
@@ -114,7 +114,7 @@ public:
 template<>
 struct ValueInterpolator<BezierPath> {
 public:
-    static BezierPath interpolate(BezierPath const &value, BezierPath const &to, double amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
+    static BezierPath interpolate(BezierPath const &value, BezierPath const &to, float amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
         BezierPath newPath;
         newPath.reserveCapacity(std::max(value.elements().size(), to.elements().size()));
         //TODO:probably a bug in the upstream code, uncomment
@@ -150,7 +150,7 @@ public:
         memcpy(resultPath.mutableElements().data(), value.elements().data(), value.elements().size() * sizeof(PathElement));
     }
     
-    static void interpolateInplace(BezierPath const &value, BezierPath const &to, double amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent, BezierPath &resultPath) {
+    static void interpolateInplace(BezierPath const &value, BezierPath const &to, float amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent, BezierPath &resultPath) {
         /*if (value.elements().size() != to.elements().size()) {
             return to;
         }*/
@@ -185,7 +185,7 @@ public:
 template<>
 struct ValueInterpolator<TextDocument> {
 public:
-    static TextDocument interpolate(TextDocument const &value, TextDocument const &to, double amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
+    static TextDocument interpolate(TextDocument const &value, TextDocument const &to, float amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
         if (amount == 1.0) {
             return to;
         } else {
@@ -197,12 +197,12 @@ public:
 template<>
 struct ValueInterpolator<GradientColorSet> {
 public:
-    static GradientColorSet interpolate(GradientColorSet const &value, GradientColorSet const &to, double amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
+    static GradientColorSet interpolate(GradientColorSet const &value, GradientColorSet const &to, float amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
         assert(value.colors.size() == to.colors.size());
-        std::vector<double> colors;
+        std::vector<float> colors;
         size_t colorCount = std::min(value.colors.size(), to.colors.size());
         for (size_t i = 0; i < colorCount; i++) {
-            colors.push_back(ValueInterpolator<double>::interpolate(value.colors[i], to.colors[i], amount, spatialOutTangent, spatialInTangent));
+            colors.push_back(ValueInterpolator<float>::interpolate(value.colors[i], to.colors[i], amount, spatialOutTangent, spatialInTangent));
         }
         return GradientColorSet(colors);
     }
@@ -211,12 +211,12 @@ public:
 template<>
 struct ValueInterpolator<DashPattern> {
 public:
-    static DashPattern interpolate(DashPattern const &value, DashPattern const &to, double amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
+    static DashPattern interpolate(DashPattern const &value, DashPattern const &to, float amount, std::optional<Vector2D> spatialOutTangent, std::optional<Vector2D> spatialInTangent) {
         assert(value.values.size() == to.values.size());
-        std::vector<double> values;
+        std::vector<float> values;
         size_t colorCount = std::min(value.values.size(), to.values.size());
         for (size_t i = 0; i < colorCount; i++) {
-            values.push_back(ValueInterpolator<double>::interpolate(value.values[i], to.values[i], amount, spatialOutTangent, spatialInTangent));
+            values.push_back(ValueInterpolator<float>::interpolate(value.values[i], to.values[i], amount, spatialOutTangent, spatialInTangent));
         }
         return DashPattern(std::move(values));
     }

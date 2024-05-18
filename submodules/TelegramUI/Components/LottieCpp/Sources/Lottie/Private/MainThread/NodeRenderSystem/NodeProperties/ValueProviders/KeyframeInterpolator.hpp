@@ -62,7 +62,7 @@ public:
     /// - If time is outside of the span, and there are more keyframes
     /// - If a value delegate is set
     /// - If leading and trailing are both nil.
-    virtual bool hasUpdate(double frame) const override {
+    virtual bool hasUpdate(float frame) const override {
         if (!lastUpdatedFrame.has_value()) {
             return true;
         }
@@ -94,7 +94,7 @@ public:
     
     // MARK: Fileprivate
     
-    std::optional<double> lastUpdatedFrame;
+    std::optional<float> lastUpdatedFrame;
     
     std::optional<int> leadingIndex;
     std::optional<int> trailingIndex;
@@ -102,7 +102,7 @@ public:
     std::optional<Keyframe<T>> trailingKeyframe;
     
     /// Finds the appropriate Leading and Trailing keyframe index for the given time.
-    void updateSpanIndices(double frame) {
+    void updateSpanIndices(float frame) {
         if (keyframes.empty()) {
             leadingIndex = std::nullopt;
             trailingIndex = std::nullopt;
@@ -270,7 +270,7 @@ public:
     /// - If time is outside of the span, and there are more keyframes
     /// - If a value delegate is set
     /// - If leading and trailing are both nil.
-    bool hasUpdate(double frame) const {
+    bool hasUpdate(float frame) const {
         if (!lastUpdatedFrame.has_value()) {
             return true;
         }
@@ -302,7 +302,7 @@ public:
     
     // MARK: Fileprivate
     
-    std::optional<double> lastUpdatedFrame;
+    std::optional<float> lastUpdatedFrame;
     
     std::optional<int> leadingIndex;
     std::optional<int> trailingIndex;
@@ -310,7 +310,7 @@ public:
     std::optional<Keyframe<BezierPath>> trailingKeyframe;
     
     /// Finds the appropriate Leading and Trailing keyframe index for the given time.
-    void updateSpanIndices(double frame) {
+    void updateSpanIndices(float frame) {
         if (keyframes.empty()) {
             leadingIndex = std::nullopt;
             trailingIndex = std::nullopt;
@@ -434,7 +434,7 @@ private:
         ValueInterpolator<BezierPath>::setInplace(from.value, outPath);
     }
     
-    void interpolateInplace(Keyframe<BezierPath> const &from, Keyframe<BezierPath> const &to, double progress, BezierPath &outPath) {
+    void interpolateInplace(Keyframe<BezierPath> const &from, Keyframe<BezierPath> const &to, float progress, BezierPath &outPath) {
         std::optional<Vector2D> spatialOutTangent2d;
         if (from.spatialOutTangent) {
             spatialOutTangent2d = Vector2D(from.spatialOutTangent->x, from.spatialOutTangent->y);

@@ -40,7 +40,7 @@ public:
         return nullptr;
     }
     
-    virtual bool hasOutputUpdates(double forFrame) override {
+    virtual bool hasOutputUpdates(float forFrame) override {
         /// Changes to this node do not affect downstream nodes.
         bool parentUpdate = false;
         if (_parent) {
@@ -51,7 +51,7 @@ public:
         return parentUpdate;
     }
     
-    virtual bool hasRenderUpdates(double forFrame) override {
+    virtual bool hasRenderUpdates(float forFrame) override {
         /// Return true if there are upstream updates or if this node has updates
         bool upstreamUpdates = false;
         if (_parent) {

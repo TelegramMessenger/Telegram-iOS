@@ -182,7 +182,7 @@ public:
     LineJoin lineJoin;
     
     /// Miter Limit
-    std::optional<double> miterLimit;
+    std::optional<float> miterLimit;
     
     /// The dash pattern of the stroke
     std::optional<std::vector<DashElement>> dashPattern;

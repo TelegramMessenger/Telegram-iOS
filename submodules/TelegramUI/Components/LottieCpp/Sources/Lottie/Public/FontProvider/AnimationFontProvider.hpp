@@ -11,7 +11,7 @@ namespace lottie {
 ///
 class AnimationFontProvider {
 public:
-    virtual std::shared_ptr<CTFont> fontFor(std::string const &family, double size) = 0;
+    virtual std::shared_ptr<CTFont> fontFor(std::string const &family, float size) = 0;
 };
 
 /// Default Font provider.
@@ -22,7 +22,7 @@ public:
     
     virtual ~DefaultFontProvider() = default;
 
-    virtual std::shared_ptr<CTFont> fontFor(std::string const &family, double size) override {
+    virtual std::shared_ptr<CTFont> fontFor(std::string const &family, float size) override {
         //CTFontCreateWithName(family as CFString, size, nil)
         return nullptr;
     }

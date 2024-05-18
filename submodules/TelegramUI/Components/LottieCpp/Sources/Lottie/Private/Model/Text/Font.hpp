@@ -14,7 +14,7 @@ public:
          std::string const &name_,
          std::string const &familyName_,
          std::string const &style_,
-         double ascent_
+         float ascent_
     ) :
     name(name_),
     familyName(familyName_),
@@ -63,7 +63,7 @@ public:
     std::optional<std::string> weight;
     std::optional<std::string> fontClass;
     std::string style;
-    double ascent;
+    float ascent;
     std::optional<int> origin;
 };
 

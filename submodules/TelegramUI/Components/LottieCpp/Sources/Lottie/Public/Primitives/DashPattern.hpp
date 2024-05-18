@@ -6,11 +6,11 @@
 namespace lottie {
 
 struct DashPattern {
-    DashPattern(std::vector<double> &&values_) :
+    DashPattern(std::vector<float> &&values_) :
     values(std::move(values_)) {
     }
     
-    std::vector<double> values;
+    std::vector<float> values;
 };
 
 }

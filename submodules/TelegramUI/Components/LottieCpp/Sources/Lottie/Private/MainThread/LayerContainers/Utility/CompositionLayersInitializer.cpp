@@ -14,7 +14,7 @@ std::vector<std::shared_ptr<CompositionLayer>> initializeCompositionLayers(
     std::shared_ptr<LayerImageProvider> const &layerImageProvider,
     std::shared_ptr<AnimationTextProvider> const &textProvider,
     std::shared_ptr<AnimationFontProvider> const &fontProvider,
-    double frameRate
+    float frameRate
 ) {
     std::vector<std::shared_ptr<CompositionLayer>> compositionLayers;
     std::map<int, std::shared_ptr<CompositionLayer>> layerMap;

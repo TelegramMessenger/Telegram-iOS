@@ -16,10 +16,10 @@ public:
     
 public:
     /// Returns true if the property needs to recompute its stored value
-    virtual bool needsUpdate(double frame) const = 0;
+    virtual bool needsUpdate(float frame) const = 0;
     
     /// Updates the property for the frame
-    virtual void update(double frame) = 0;
+    virtual void update(float frame) = 0;
     
     /// The Type of the value provider
     virtual AnyValue::Type valueType() const = 0;

@@ -23,14 +23,14 @@ public:
     }
     
     virtual DashPattern value(AnimationFrameTime frame) override {
-        std::vector<double> values;
+        std::vector<float> values;
         for (const auto &interpolator : _keyframeInterpolators) {
             values.push_back(interpolator->value(frame).value);
         }
         return DashPattern(std::move(values));
     }
     
-    virtual bool hasUpdate(double frame) const override {
+    virtual bool hasUpdate(float frame) const override {
         for (const auto &interpolator : _keyframeInterpolators) {
             if (interpolator->hasUpdate(frame)) {
                 return true;

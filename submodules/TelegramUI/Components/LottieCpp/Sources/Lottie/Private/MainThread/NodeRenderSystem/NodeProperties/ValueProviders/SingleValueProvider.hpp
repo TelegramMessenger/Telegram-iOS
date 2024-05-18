@@ -28,7 +28,7 @@ public:
         return AnyValueType<T>::type();
     }
     
-    virtual bool hasUpdate(double frame) const override {
+    virtual bool hasUpdate(float frame) const override {
         return _hasUpdate;
     }
     

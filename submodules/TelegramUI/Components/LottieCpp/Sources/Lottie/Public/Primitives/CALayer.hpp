@@ -186,10 +186,10 @@ public:
         _path = path;
     }
     
-    double lineWidth() const {
+    float lineWidth() const {
         return _lineWidth;
     }
-    void setLineWidth(double lineWidth) {
+    void setLineWidth(float lineWidth) {
         _lineWidth = lineWidth;
     }
     
@@ -207,17 +207,17 @@ public:
         _lineCap = lineCap;
     }
     
-    double lineDashPhase() const {
+    float lineDashPhase() const {
         return _lineDashPhase;
     }
-    void setLineDashPhase(double lineDashPhase) {
+    void setLineDashPhase(float lineDashPhase) {
         _lineDashPhase = lineDashPhase;
     }
     
-    std::vector<double> const &dashPattern() const {
+    std::vector<float> const &dashPattern() const {
         return _dashPattern;
     }
-    void setDashPattern(std::vector<double> const &dashPattern) {
+    void setDashPattern(std::vector<float> const &dashPattern) {
         _dashPattern = dashPattern;
     }
     
@@ -243,11 +243,11 @@ private:
     std::optional<Color> _fillColor = Color(0.0, 0.0, 0.0, 1.0);
     FillRule _fillRule = FillRule::NonZeroWinding;
     std::shared_ptr<CGPath> _path;
-    double _lineWidth = 1.0;
+    float _lineWidth = 1.0;
     LineJoin _lineJoin = LineJoin::Miter;
     LineCap _lineCap = LineCap::Butt;
-    double _lineDashPhase = 0.0;
-    std::vector<double> _dashPattern;
+    float _lineDashPhase = 0.0;
+    std::vector<float> _dashPattern;
 };
 
 }

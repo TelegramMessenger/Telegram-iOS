@@ -255,7 +255,7 @@ public:
         }
     }
     
-    double timeStretch() {
+    float timeStretch() {
         if (_timeStretch.has_value()) {
             return _timeStretch.value();
         } else {
@@ -279,12 +279,12 @@ public:
     std::optional<CoordinateSpace> coordinateSpace;
     
     /// The in time of the layer in frames.
-    double inFrame;
+    float inFrame;
     /// The out time of the layer in frames.
-    double outFrame;
+    float outFrame;
     
     /// The start time of the layer in frames.
-    double startTime;
+    float startTime;
     
     /// The transform of the layer
     std::shared_ptr<Transform> transform;
@@ -299,7 +299,7 @@ public:
     std::optional<std::vector<std::shared_ptr<Mask>>> masks;
     
     /// A number that stretches time by a multiplier
-    std::optional<double> _timeStretch;
+    std::optional<float> _timeStretch;
     
     /// The type of matte if any.
     std::optional<MatteType> matte;

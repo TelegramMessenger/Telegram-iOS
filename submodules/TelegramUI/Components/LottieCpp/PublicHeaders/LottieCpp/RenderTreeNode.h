@@ -19,7 +19,7 @@ public:
         CGRect _bounds;
         Vector2D _position;
         CATransform3D _transform;
-        double _opacity;
+        float _opacity;
         bool _masksToBounds;
         bool _isHidden;
         
@@ -27,7 +27,7 @@ public:
             CGRect bounds_,
             Vector2D position_,
             CATransform3D transform_,
-            double opacity_,
+            float opacity_,
             bool masksToBounds_,
             bool isHidden_
         ) :
@@ -51,7 +51,7 @@ public:
             return _transform;
         }
         
-        double opacity() const {
+        float opacity() const {
             return _opacity;
         }
         
@@ -135,19 +135,19 @@ public:
     
     struct Stroke {
         Color color;
-        double lineWidth = 0.0;
+        float lineWidth = 0.0;
         LineJoin lineJoin = LineJoin::Round;
         LineCap lineCap = LineCap::Square;
-        double dashPhase = 0.0;
-        std::vector<double> dashPattern;
+        float dashPhase = 0.0;
+        std::vector<float> dashPattern;
         
         Stroke(
             Color color_,
-            double lineWidth_,
+            float lineWidth_,
             LineJoin lineJoin_,
             LineCap lineCap_,
-            double dashPhase_,
-            std::vector<double> dashPattern_
+            float dashPhase_,
+            std::vector<float> dashPattern_
         ) :
         color(color_),
         lineWidth(lineWidth_),
@@ -245,7 +245,7 @@ public:
         FillRule pathFillRule_,
         GradientType gradientType_,
         std::vector<Color> const &colors_,
-        std::vector<double> const &locations_,
+        std::vector<float> const &locations_,
         Vector2D const &start_,
         Vector2D const &end_,
         CGRect bounds_
@@ -301,7 +301,7 @@ public:
     FillRule pathFillRule;
     GradientType gradientType;
     std::vector<Color> colors;
-    std::vector<double> locations;
+    std::vector<float> locations;
     Vector2D start;
     Vector2D end;
     CGRect bounds;
@@ -328,7 +328,7 @@ public:
     
     class SolidShading: public Shading {
     public:
-        SolidShading(Color const &color_, double opacity_) :
+        SolidShading(Color const &color_, float opacity_) :
         color(color_),
         opacity(opacity_) {
         }
@@ -339,16 +339,16 @@ public:
         
     public:
         Color color;
-        double opacity = 0.0;
+        float opacity = 0.0;
     };
     
     class GradientShading: public Shading {
     public:
         GradientShading(
-            double opacity_,
+            float opacity_,
             GradientType gradientType_,
             std::vector<Color> const &colors_,
-            std::vector<double> const &locations_,
+            std::vector<float> const &locations_,
             Vector2D const &start_,
             Vector2D const &end_
         ) :
@@ -365,31 +365,31 @@ public:
         }
         
     public:
-        double opacity = 0.0;
+        float opacity = 0.0;
         GradientType gradientType;
         std::vector<Color> colors;
-        std::vector<double> locations;
+        std::vector<float> locations;
         Vector2D start;
         Vector2D end;
     };
     
     struct Stroke {
         std::shared_ptr<Shading> shading;
-        double lineWidth = 0.0;
+        float lineWidth = 0.0;
         LineJoin lineJoin = LineJoin::Round;
         LineCap lineCap = LineCap::Square;
-        double miterLimit = 4.0;
-        double dashPhase = 0.0;
-        std::vector<double> dashPattern;
+        float miterLimit = 4.0;
+        float dashPhase = 0.0;
+        std::vector<float> dashPattern;
         
         Stroke(
             std::shared_ptr<Shading> shading_,
-            double lineWidth_,
+            float lineWidth_,
             LineJoin lineJoin_,
             LineCap lineCap_,
-            double miterLimit_,
-            double dashPhase_,
-            std::vector<double> dashPattern_
+            float miterLimit_,
+            float dashPhase_,
+            std::vector<float> dashPattern_
         ) :
         shading(shading_),
         lineWidth(lineWidth_),
@@ -421,7 +421,7 @@ public:
 public:
     bool isGroup = false;
     CATransform3D transform = CATransform3D::identity();
-    double alpha = 0.0;
+    float alpha = 0.0;
     std::optional<TrimParams> trimParams;
     std::optional<BezierPath> path;
     CGRect pathBoundingBox = CGRect(0.0, 0.0, 0.0, 0.0);
@@ -450,7 +450,7 @@ public:
         CGRect bounds_,
         Vector2D position_,
         CATransform3D transform_,
-        double alpha_,
+        float alpha_,
         bool masksToBounds_,
         bool isHidden_,
         std::vector<std::shared_ptr<RenderTreeNode>> subnodes_,
@@ -484,7 +484,7 @@ public:
         return _transform;
     }
     
-    double alpha() const {
+    float alpha() const {
         return _alpha;
     }
     
@@ -512,7 +512,7 @@ public:
     CGRect _bounds;
     Vector2D _position;
     CATransform3D _transform = CATransform3D::identity();
-    double _alpha = 1.0;
+    float _alpha = 1.0f;
     bool _masksToBounds = false;
     bool _isHidden = false;
     std::shared_ptr<RenderTreeNodeContentItem> _contentItem;

@@ -136,11 +136,11 @@ public:
         return _transformProperties;
     }
     
-    virtual bool shouldRebuildOutputs(double frame) override {
+    virtual bool shouldRebuildOutputs(float frame) override {
         return hasLocalUpdates() || hasUpstreamUpdates();
     }
     
-    virtual void rebuildOutputs(double frame) override {
+    virtual void rebuildOutputs(float frame) override {
         _opacity = ((float)_transformProperties->opacity()->value().value) * 0.01f;
         
         Vector2D position(0.0, 0.0);

@@ -46,10 +46,10 @@ public:
     std::optional<KeyframeGroup<Vector1D>> timeRemapping;
     
     /// Precomp Width
-    double width;
+    float width;
     
     /// Precomp Height
-    double height;
+    float height;
 };
 
 }
