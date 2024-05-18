@@ -16,73 +16,26 @@ namespace lottie {
 class ProcessedRenderTreeNodeData {
 public:
     struct LayerParams {
-        CGRect _bounds;
-        Vector2D _position;
-        CATransform3D _transform;
-        float _opacity;
-        bool _masksToBounds;
-        bool _isHidden;
+        bool masksToBounds;
         
         LayerParams(
-            CGRect bounds_,
-            Vector2D position_,
-            CATransform3D transform_,
-            float opacity_,
-            bool masksToBounds_,
-            bool isHidden_
+            bool masksToBounds_
         ) :
-        _bounds(bounds_),
-        _position(position_),
-        _transform(transform_),
-        _opacity(opacity_),
-        _masksToBounds(masksToBounds_),
-        _isHidden(isHidden_) {
-        }
-        
-        CGRect bounds() const {
-            return _bounds;
-        }
-        
-        Vector2D position() const {
-            return _position;
-        }
-        
-        CATransform3D transform() const {
-            return _transform;
-        }
-        
-        float opacity() const {
-            return _opacity;
-        }
-        
-        bool masksToBounds() const {
-            return _masksToBounds;
-        }
-        
-        bool isHidden() const {
-            return _isHidden;
+        masksToBounds(masksToBounds_) {
         }
     };
     
     ProcessedRenderTreeNodeData() :
     isValid(false),
     layer(
-        CGRect(0.0, 0.0, 0.0, 0.0),
-        Vector2D(0.0, 0.0),
-        CATransform3D::identity(),
-        1.0,
-        false,
         false
     ),
-    globalTransform(CATransform3D::identity()),
     drawContentDescendants(false),
     isInvertedMatte(false) {
-        
     }
     
     bool isValid = false;
     LayerParams layer;
-    CATransform3D globalTransform;
     int drawContentDescendants;
     bool isInvertedMatte;
 };

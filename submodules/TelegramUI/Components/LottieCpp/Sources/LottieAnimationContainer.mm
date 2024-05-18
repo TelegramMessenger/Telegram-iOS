@@ -56,15 +56,8 @@
     
     result.internalId = nodeId;
     result.isValid = node->renderData.isValid;
+
     
-    result.layer.bounds = CGRectMake(node->renderData.layer._bounds.x, node->renderData.layer._bounds.y, node->renderData.layer._bounds.width, node->renderData.layer._bounds.height);
-    result.layer.position = CGPointMake(node->renderData.layer._position.x, node->renderData.layer._position.y);
-    result.layer.transform = lottie::nativeTransform(node->renderData.layer._transform);
-    result.layer.opacity = node->renderData.layer._opacity;
-    result.layer.masksToBounds = node->renderData.layer._masksToBounds;
-    result.layer.isHidden = node->renderData.layer._isHidden;
-    
-    result.globalTransform = lottie::nativeTransform(node->renderData.globalTransform);
     result.hasSimpleContents = node->renderData.drawContentDescendants <= 1;
     result.drawContentDescendants = node->renderData.drawContentDescendants;
     result.isInvertedMatte = node->renderData.isInvertedMatte;

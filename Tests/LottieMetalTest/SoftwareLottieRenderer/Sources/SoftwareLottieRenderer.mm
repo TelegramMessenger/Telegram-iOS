@@ -84,12 +84,14 @@ static std::vector<TransformedPath> collectPaths(std::shared_ptr<lottie::RenderT
 
 namespace lottie {
 
-static std::optional<CGRect> getRenderContentItemGlobalRect(std::shared_ptr<RenderTreeNodeContentItem> const &contentItem, lottie::Vector2D const &globalSize, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+static std::optional<CGRect> getRenderContentItemGlobalRect(std::shared_ptr<RenderTreeNodeContentItem> const &contentItem, lottie::Vector2D const &globalSize, lottie::CATransform3D const &parentTransform, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
     if (!contentItem->renderData.isValid) {
         return std::nullopt;
     }
     
-    auto currentTransform = contentItem->renderData.globalTransform;
+    auto currentTransform = parentTransform;
+    CATransform3D localTransform = contentItem->transform;
+    currentTransform = localTransform * currentTransform;
     
     std::optional<CGRect> globalRect;
     for (const auto &shadingVariant : contentItem->shadings) {
@@ -111,7 +113,7 @@ static std::optional<CGRect> getRenderContentItemGlobalRect(std::shared_ptr<Rend
     }
     
     for (const auto &subItem : contentItem->subItems) {
-        auto subGlobalRect = getRenderContentItemGlobalRect(subItem, globalSize, bezierPathsBoundingBoxContext);
+        auto subGlobalRect = getRenderContentItemGlobalRect(subItem, globalSize, currentTransform, bezierPathsBoundingBoxContext);
         if (subGlobalRect) {
             if (globalRect) {
                 globalRect = globalRect->unionWith(subGlobalRect.value());
@@ -134,15 +136,20 @@ static std::optional<CGRect> getRenderContentItemGlobalRect(std::shared_ptr<Rend
     }
 }
 
-static std::optional<CGRect> getRenderNodeGlobalRect(std::shared_ptr<RenderTreeNode> const &node, lottie::Vector2D const &globalSize, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+static std::optional<CGRect> getRenderNodeGlobalRect(std::shared_ptr<RenderTreeNode> const &node, lottie::Vector2D const &globalSize, lottie::CATransform3D const &parentTransform, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
     if (!node->renderData.isValid) {
         return std::nullopt;
     }
-    auto currentTransform = node->renderData.globalTransform;
+    
+    auto currentTransform = parentTransform;
+    Vector2D localTranslation(node->position().x + -node->bounds().x, node->position().y + -node->bounds().y);
+    CATransform3D localTransform = node->transform();
+    localTransform = localTransform.translated(localTranslation);
+    currentTransform = localTransform * currentTransform;
     
     std::optional<CGRect> globalRect;
     if (node->_contentItem) {
-        globalRect = getRenderContentItemGlobalRect(node->_contentItem, globalSize, bezierPathsBoundingBoxContext);
+        globalRect = getRenderContentItemGlobalRect(node->_contentItem, globalSize, currentTransform, bezierPathsBoundingBoxContext);
     }
     
     if (node->renderData.isInvertedMatte) {
@@ -155,7 +162,7 @@ static std::optional<CGRect> getRenderNodeGlobalRect(std::shared_ptr<RenderTreeN
     }
     
     for (const auto &subNode : node->subnodes()) {
-        auto subGlobalRect = getRenderNodeGlobalRect(subNode, globalSize, bezierPathsBoundingBoxContext);
+        auto subGlobalRect = getRenderNodeGlobalRect(subNode, globalSize, currentTransform, bezierPathsBoundingBoxContext);
         if (subGlobalRect) {
             if (globalRect) {
                 globalRect = globalRect->unionWith(subGlobalRect.value());
@@ -180,7 +187,6 @@ static std::optional<CGRect> getRenderNodeGlobalRect(std::shared_ptr<RenderTreeN
 
 static void processRenderContentItem(std::shared_ptr<RenderTreeNodeContentItem> const &contentItem, Vector2D const &globalSize, CATransform3D const &parentTransform, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
     auto currentTransform = parentTransform;
-    
     CATransform3D localTransform = contentItem->transform;
     currentTransform = localTransform * currentTransform;
     
@@ -217,14 +223,8 @@ static void processRenderContentItem(std::shared_ptr<RenderTreeNodeContentItem> 
     
     contentItem->renderData.isValid = true;
     
-    contentItem->renderData.layer._bounds = CGRect(0.0, 0.0, 0.0, 0.0);
-    contentItem->renderData.layer._position = Vector2D(0.0, 0.0);
-    contentItem->renderData.layer._transform = contentItem->transform;
-    contentItem->renderData.layer._opacity = contentItem->alpha;
-    contentItem->renderData.layer._masksToBounds = false;
-    contentItem->renderData.layer._isHidden = false;
+    contentItem->renderData.layer.masksToBounds = false;
     
-    contentItem->renderData.globalTransform = currentTransform;
     contentItem->renderData.drawContentDescendants = drawContentDescendants;
     contentItem->renderData.isInvertedMatte = false;
 }
@@ -243,11 +243,9 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
     }
     
     auto currentTransform = parentTransform;
-    
     Vector2D localTranslation(node->position().x + -node->bounds().x, node->position().y + -node->bounds().y);
     CATransform3D localTransform = node->transform();
     localTransform = localTransform.translated(localTranslation);
-    
     currentTransform = localTransform * currentTransform;
     
     if (!currentTransform.isInvertible()) {
@@ -290,14 +288,8 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
     
     node->renderData.isValid = true;
     
-    node->renderData.layer._bounds = node->bounds();
-    node->renderData.layer._position = node->position();
-    node->renderData.layer._transform = node->transform();
-    node->renderData.layer._opacity = node->alpha();
-    node->renderData.layer._masksToBounds = masksToBounds;
-    node->renderData.layer._isHidden = node->isHidden();
+    node->renderData.layer.masksToBounds = masksToBounds;
     
-    node->renderData.globalTransform = currentTransform;
     node->renderData.drawContentDescendants = drawContentDescendants;
     node->renderData.isInvertedMatte = isInvertedMatte;
 }
@@ -306,15 +298,19 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
 
 namespace {
 
-static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> parentContext, std::shared_ptr<lottie::RenderTreeNodeContentItem> item, float parentAlpha, lottie::Vector2D const &globalSize, lottie::BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> parentContext, std::shared_ptr<lottie::RenderTreeNodeContentItem> item, float parentAlpha, lottie::Vector2D const &globalSize, lottie::CATransform3D const &parentTransform, lottie::BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
     if (!item->renderData.isValid) {
         return;
     }
     
-    float normalizedOpacity = item->renderData.layer.opacity();
+    auto currentTransform = parentTransform;
+    lottie::CATransform3D localTransform = item->transform;
+    currentTransform = localTransform * currentTransform;
+    
+    float normalizedOpacity = item->alpha;
     float layerAlpha = ((float)normalizedOpacity) * parentAlpha;
     
-    if (item->renderData.layer.isHidden() || normalizedOpacity == 0.0f) {
+    if (normalizedOpacity == 0.0f) {
         return;
     }
     
@@ -328,7 +324,7 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
     
     std::optional<lottie::CGRect> globalRect;
     if (needsTempContext) {
-        globalRect = lottie::getRenderContentItemGlobalRect(item, globalSize, bezierPathsBoundingBoxContext);
+        globalRect = lottie::getRenderContentItemGlobalRect(item, globalSize, parentTransform, bezierPathsBoundingBoxContext);
         if (!globalRect || globalRect->width <= 0.0f || globalRect->height <= 0.0f) {
             parentContext->restoreState();
             return;
@@ -341,14 +337,12 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
         currentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-globalRect->x, -globalRect->y)));
         
         currentContext->saveState();
-        currentContext->concatenate(item->renderData.globalTransform);
+        currentContext->concatenate(currentTransform);
     } else {
         currentContext = parentContext;
     }
     
-    parentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(item->renderData.layer.position().x, item->renderData.layer.position().y)));
-    parentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-item->renderData.layer.bounds().x, -item->renderData.layer.bounds().y)));
-    parentContext->concatenate(item->renderData.layer.transform());
+    parentContext->concatenate(item->transform);
     
     float renderAlpha = 1.0;
     if (tempContext) {
@@ -536,13 +530,13 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
     
     for (auto it = item->subItems.rbegin(); it != item->subItems.rend(); it++) {
         const auto &subItem = *it;
-        drawLottieContentItem(currentContext, subItem, renderAlpha, globalSize, bezierPathsBoundingBoxContext);
+        drawLottieContentItem(currentContext, subItem, renderAlpha, globalSize, currentTransform, bezierPathsBoundingBoxContext);
     }
     
     if (tempContext) {
         tempContext->restoreState();
         
-        parentContext->concatenate(item->renderData.globalTransform.inverted());
+        parentContext->concatenate(currentTransform.inverted());
         parentContext->setAlpha(layerAlpha);
         parentContext->draw(tempContext, globalRect.value());
         parentContext->setAlpha(1.0);
@@ -551,16 +545,22 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
     parentContext->restoreState();
 }
 
-static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node, std::shared_ptr<lottieRendering::Canvas> parentContext, lottie::Vector2D const &globalSize, float parentAlpha, lottie::BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node, std::shared_ptr<lottieRendering::Canvas> parentContext, lottie::Vector2D const &globalSize, lottie::CATransform3D const &parentTransform, float parentAlpha, lottie::BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
     if (!node->renderData.isValid) {
         return;
     }
-    float normalizedOpacity = node->renderData.layer.opacity();
+    float normalizedOpacity = node->alpha();
     float layerAlpha = ((float)normalizedOpacity) * parentAlpha;
     
-    if (node->renderData.layer.isHidden() || normalizedOpacity == 0.0f) {
+    if (node->isHidden() || normalizedOpacity == 0.0f) {
         return;
     }
+    
+    auto currentTransform = parentTransform;
+    lottie::Vector2D localTranslation(node->position().x + -node->bounds().x, node->position().y + -node->bounds().y);
+    lottie::CATransform3D localTransform = node->transform();
+    localTransform = localTransform.translated(localTranslation);
+    currentTransform = localTransform * currentTransform;
     
     parentContext->saveState();
     
@@ -572,28 +572,28 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
     if (node->mask() && node->mask()->renderData.isValid) {
         needsTempContext = true;
     } else {
-        needsTempContext = layerAlpha != 1.0 || node->renderData.layer.masksToBounds();
+        needsTempContext = layerAlpha != 1.0 || node->renderData.layer.masksToBounds;
     }
     
     std::optional<lottie::CGRect> globalRect;
     if (needsTempContext) {
-        globalRect = lottie::getRenderNodeGlobalRect(node, globalSize, bezierPathsBoundingBoxContext);
+        globalRect = lottie::getRenderNodeGlobalRect(node, globalSize, parentTransform, bezierPathsBoundingBoxContext);
         if (!globalRect || globalRect->width <= 0.0f || globalRect->height <= 0.0f) {
             parentContext->restoreState();
             return;
         }
         
-        if ((node->mask() && node->mask()->renderData.isValid) || node->renderData.layer.masksToBounds()) {
+        if ((node->mask() && node->mask()->renderData.isValid) || node->renderData.layer.masksToBounds) {
             auto maskBackingStorage = parentContext->makeLayer((int)(globalRect->width), (int)(globalRect->height));
             
             maskBackingStorage->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-globalRect->x, -globalRect->y)));
-            maskBackingStorage->concatenate(node->renderData.globalTransform);
+            maskBackingStorage->concatenate(currentTransform);
             
-            if (node->renderData.layer.masksToBounds()) {
-                maskBackingStorage->fill(lottie::CGRect(node->renderData.layer.bounds().x, node->renderData.layer.bounds().y, node->renderData.layer.bounds().width, node->renderData.layer.bounds().height), lottie::Color(1.0, 1.0, 1.0, 1.0));
+            if (node->renderData.layer.masksToBounds) {
+                maskBackingStorage->fill(lottie::CGRect(node->bounds().x, node->bounds().y, node->bounds().width, node->bounds().height), lottie::Color(1.0, 1.0, 1.0, 1.0));
             }
             if (node->mask() && node->mask()->renderData.isValid) {
-                renderLottieRenderNode(node->mask(), maskBackingStorage, globalSize, 1.0, bezierPathsBoundingBoxContext);
+                renderLottieRenderNode(node->mask(), maskBackingStorage, globalSize, currentTransform, 1.0, bezierPathsBoundingBoxContext);
             }
             
             maskContext = maskBackingStorage;
@@ -606,14 +606,14 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
         currentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-globalRect->x, -globalRect->y)));
         
         currentContext->saveState();
-        currentContext->concatenate(node->renderData.globalTransform);
+        currentContext->concatenate(currentTransform);
     } else {
         currentContext = parentContext;
     }
     
-    parentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(node->renderData.layer.position().x, node->renderData.layer.position().y)));
-    parentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-node->renderData.layer.bounds().x, -node->renderData.layer.bounds().y)));
-    parentContext->concatenate(node->renderData.layer.transform());
+    parentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(node->position().x, node->position().y)));
+    parentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-node->bounds().x, -node->bounds().y)));
+    parentContext->concatenate(node->transform());
     
     float renderAlpha = 1.0;
     if (tempContext) {
@@ -623,17 +623,17 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
     }
     
     if (node->_contentItem) {
-        drawLottieContentItem(currentContext, node->_contentItem, renderAlpha, globalSize, bezierPathsBoundingBoxContext);
+        drawLottieContentItem(currentContext, node->_contentItem, renderAlpha, globalSize, currentTransform, bezierPathsBoundingBoxContext);
     }
     
     if (node->renderData.isInvertedMatte) {
-        currentContext->fill(lottie::CGRect(node->renderData.layer.bounds().x, node->renderData.layer.bounds().y, node->renderData.layer.bounds().width, node->renderData.layer.bounds().height), lottie::Color(0.0, 0.0, 0.0, 1.0));
+        currentContext->fill(lottie::CGRect(node->bounds().x, node->bounds().y, node->bounds().width, node->bounds().height), lottie::Color(0.0, 0.0, 0.0, 1.0));
         currentContext->setBlendMode(lottieRendering::BlendMode::DestinationOut);
     }
     
     for (const auto &subnode : node->subnodes()) {
         if (subnode->renderData.isValid) {
-            renderLottieRenderNode(subnode, currentContext, globalSize, renderAlpha, bezierPathsBoundingBoxContext);
+            renderLottieRenderNode(subnode, currentContext, globalSize, currentTransform, renderAlpha, bezierPathsBoundingBoxContext);
         }
     }
     
@@ -645,7 +645,7 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
             tempContext->draw(maskContext, lottie::CGRect(globalRect->x, globalRect->y, globalRect->width, globalRect->height));
         }
         
-        parentContext->concatenate(node->renderData.globalTransform.inverted());
+        parentContext->concatenate(currentTransform.inverted());
         parentContext->setAlpha(layerAlpha);
         parentContext->draw(tempContext, globalRect.value());
     }
@@ -689,7 +689,9 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
         return nil;
     }
     
-    processRenderTree(renderNode, lottie::Vector2D((int)size.width, (int)size.height), lottie::CATransform3D::identity().scaled(lottie::Vector2D(size.width / (float)animation.size.width, size.height / (float)animation.size.height)), false, *_bezierPathsBoundingBoxContext.get());
+    lottie::CATransform3D rootTransform = lottie::CATransform3D::identity().scaled(lottie::Vector2D(size.width / (float)animation.size.width, size.height / (float)animation.size.height));
+    
+    processRenderTree(renderNode, lottie::Vector2D((int)size.width, (int)size.height), rootTransform, false, *_bezierPathsBoundingBoxContext.get());
     
     if (useReferenceRendering) {
         auto context = std::make_shared<lottieRendering::CanvasImpl>((int)size.width, (int)size.height);
@@ -697,7 +699,7 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
         CGPoint scale = CGPointMake(size.width / (CGFloat)animation.size.width, size.height / (CGFloat)animation.size.height);
         context->concatenate(lottie::CATransform3D::makeScale(scale.x, scale.y, 1.0));
         
-        renderLottieRenderNode(renderNode, context, lottie::Vector2D(context->width(), context->height()), 1.0, *_bezierPathsBoundingBoxContext.get());
+        renderLottieRenderNode(renderNode, context, lottie::Vector2D(context->width(), context->height()), rootTransform, 1.0, *_bezierPathsBoundingBoxContext.get());
         
         auto image = context->makeImage();
         
