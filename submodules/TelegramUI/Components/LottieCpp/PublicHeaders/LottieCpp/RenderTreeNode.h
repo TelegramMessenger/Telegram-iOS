@@ -74,7 +74,6 @@ public:
         false,
         false
     ),
-    globalRect(CGRect(0.0, 0.0, 0.0, 0.0)),
     globalTransform(CATransform3D::identity()),
     drawContentDescendants(false),
     isInvertedMatte(false) {
@@ -83,7 +82,6 @@ public:
     
     bool isValid = false;
     LayerParams layer;
-    CGRect globalRect;
     CATransform3D globalTransform;
     int drawContentDescendants;
     bool isInvertedMatte;

@@ -64,7 +64,6 @@
     result.layer.masksToBounds = node->renderData.layer._masksToBounds;
     result.layer.isHidden = node->renderData.layer._isHidden;
     
-    result.globalRect = CGRectMake(node->renderData.globalRect.x, node->renderData.globalRect.y, node->renderData.globalRect.width, node->renderData.globalRect.height);
     result.globalTransform = lottie::nativeTransform(node->renderData.globalTransform);
     result.hasSimpleContents = node->renderData.drawContentDescendants <= 1;
     result.drawContentDescendants = node->renderData.drawContentDescendants;
