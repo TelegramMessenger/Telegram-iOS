@@ -62,7 +62,7 @@ public:
         lottiejson11::Json::object const &json = jsonAny.object_items();
         
         text = getString(json, "t");
-        fontSize = getDouble(json, "s");
+        fontSize = (float)getDouble(json, "s");
         fontFamily = getString(json, "f");
         
         auto justificationRawValue = getInt(json, "j");
@@ -81,8 +81,10 @@ public:
         }
         
         tracking = getInt(json, "tr");
-        lineHeight = getDouble(json, "lh");
-        baseline = getOptionalDouble(json, "ls");
+        lineHeight = (float)getDouble(json, "lh");
+        if (const auto baselineValue = getOptionalDouble(json, "ls")) {
+            baseline = (float)baselineValue.value();
+        }
         
         if (const auto fillColorDataValue = getOptionalAny(json, "fc")) {
             fillColorData = Color(fillColorDataValue.value());
@@ -92,8 +94,12 @@ public:
             strokeColorData = Color(strokeColorDataValue.value());
         }
         
-        strokeWidth = getOptionalDouble(json, "sw");
-        strokeOverFill = getOptionalBool(json, "of");
+        if (const auto strokeWidthValue = getOptionalDouble(json, "sw")) {
+            strokeWidth = (float)strokeWidthValue.value();
+        }
+        if (const auto strokeOverFillValue = getOptionalBool(json, "of")) {
+            strokeOverFill = (float)strokeOverFillValue.value();
+        }
         
         if (const auto textFramePositionData = getOptionalAny(json, "ps")) {
             textFramePosition = Vector3D(textFramePositionData.value());

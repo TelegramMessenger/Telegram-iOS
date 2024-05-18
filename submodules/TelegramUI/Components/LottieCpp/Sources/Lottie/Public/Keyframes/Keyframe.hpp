@@ -162,7 +162,10 @@ public:
             endValue = T(endValueData.value());
         }
         
-        time = getOptionalDouble(json.object_items(), "t");
+        if (const auto timeValue = getOptionalDouble(json.object_items(), "t")) {
+            time = (float)timeValue.value();
+        }
+        
         hold = getOptionalInt(json.object_items(), "h");
         
         if (const auto inTangentData = getOptionalObject(json.object_items(), "i")) {

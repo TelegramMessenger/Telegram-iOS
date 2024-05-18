@@ -34,10 +34,10 @@ public:
     fontStyle(""),
     width(0.0) {
         character = getString(json, "ch");
-        fontSize = getDouble(json, "size");
+        fontSize = (float)getDouble(json, "size");
         fontFamily = getString(json, "fFamily");
         fontStyle = getString(json, "style");
-        width = getDouble(json, "w");
+        width = (float)getDouble(json, "w");
         
         if (const auto shapeContainer = getOptionalObject(json, "data")) {
             internalHasData = true;

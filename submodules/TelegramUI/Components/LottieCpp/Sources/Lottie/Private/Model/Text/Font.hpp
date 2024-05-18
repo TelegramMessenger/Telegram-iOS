@@ -29,7 +29,7 @@ public:
         weight = getOptionalString(json, "fWeight");
         fontClass = getOptionalString(json, "fClass");
         style = getString(json, "fStyle");
-        ascent = getDouble(json, "ascent");
+        ascent = (float)getDouble(json, "ascent");
         origin = getOptionalInt(json, "origin");
     }
     

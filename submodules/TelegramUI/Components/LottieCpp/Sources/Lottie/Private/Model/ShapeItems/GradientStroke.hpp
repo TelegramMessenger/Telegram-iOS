@@ -91,7 +91,7 @@ public:
         }
         
         if (const auto miterLimitData = getOptionalDouble(json, "ml")) {
-            miterLimit = miterLimitData.value();
+            miterLimit = (float)miterLimitData.value();
         }
         
         auto colorsContainer = getObject(json, "g");

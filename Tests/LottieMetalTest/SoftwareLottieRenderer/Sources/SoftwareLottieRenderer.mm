@@ -292,13 +292,13 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
 
 namespace {
 
-static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> parentContext, std::shared_ptr<lottie::RenderTreeNodeContentItem> item, double parentAlpha) {
+static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> parentContext, std::shared_ptr<lottie::RenderTreeNodeContentItem> item, float parentAlpha) {
     if (!item->renderData.isValid) {
         return;
     }
     
     float normalizedOpacity = item->renderData.layer.opacity();
-    double layerAlpha = ((double)normalizedOpacity) * parentAlpha;
+    float layerAlpha = ((float)normalizedOpacity) * parentAlpha;
     
     if (item->renderData.layer.isHidden() || normalizedOpacity == 0.0f) {
         return;
@@ -329,7 +329,7 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
     parentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-item->renderData.layer.bounds().x, -item->renderData.layer.bounds().y)));
     parentContext->concatenate(item->renderData.layer.transform());
     
-    double renderAlpha = 1.0;
+    float renderAlpha = 1.0;
     if (tempContext) {
         renderAlpha = 1.0;
     } else {
@@ -530,12 +530,12 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
     parentContext->restoreState();
 }
 
-static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node, std::shared_ptr<lottieRendering::Canvas> parentContext, lottie::Vector2D const &globalSize, double parentAlpha) {
+static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node, std::shared_ptr<lottieRendering::Canvas> parentContext, lottie::Vector2D const &globalSize, float parentAlpha) {
     if (!node->renderData.isValid) {
         return;
     }
     float normalizedOpacity = node->renderData.layer.opacity();
-    double layerAlpha = ((double)normalizedOpacity) * parentAlpha;
+    float layerAlpha = ((float)normalizedOpacity) * parentAlpha;
     
     if (node->renderData.layer.isHidden() || normalizedOpacity == 0.0f) {
         return;
@@ -587,7 +587,7 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
     parentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-node->renderData.layer.bounds().x, -node->renderData.layer.bounds().y)));
     parentContext->concatenate(node->renderData.layer.transform());
     
-    double renderAlpha = 1.0;
+    float renderAlpha = 1.0;
     if (tempContext) {
         renderAlpha = 1.0;
     } else {
@@ -661,7 +661,7 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
         return nil;
     }
     
-    processRenderTree(renderNode, lottie::Vector2D((int)size.width, (int)size.height), lottie::CATransform3D::identity().scaled(lottie::Vector2D(size.width / (double)animation.size.width, size.height / (double)animation.size.height)), false, *_bezierPathsBoundingBoxContext.get());
+    processRenderTree(renderNode, lottie::Vector2D((int)size.width, (int)size.height), lottie::CATransform3D::identity().scaled(lottie::Vector2D(size.width / (float)animation.size.width, size.height / (float)animation.size.height)), false, *_bezierPathsBoundingBoxContext.get());
     
     if (useReferenceRendering) {
         auto context = std::make_shared<lottieRendering::CanvasImpl>((int)size.width, (int)size.height);

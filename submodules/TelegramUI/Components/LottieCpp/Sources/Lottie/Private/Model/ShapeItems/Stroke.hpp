@@ -65,7 +65,7 @@ public:
         }
         
         if (const auto miterLimitData = getOptionalDouble(json, "ml")) {
-            miterLimit = miterLimitData.value();
+            miterLimit = (float)miterLimitData.value();
         }
         
         if (const auto dashElementsData = getOptionalObjectArray(json, "d")) {

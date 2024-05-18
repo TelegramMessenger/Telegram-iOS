@@ -90,10 +90,10 @@ public:
             }
         }
         
-        AnimationFrameTime startFrame = getDouble(json, "ip");
-        AnimationFrameTime endFrame = getDouble(json, "op");
+        AnimationFrameTime startFrame = (float)getDouble(json, "ip");
+        AnimationFrameTime endFrame = (float)getDouble(json, "op");
         
-        float framerate = getDouble(json, "fr");
+        float framerate = (float)getDouble(json, "fr");
         
         int width = getInt(json, "w");
         int height = getInt(json, "h");

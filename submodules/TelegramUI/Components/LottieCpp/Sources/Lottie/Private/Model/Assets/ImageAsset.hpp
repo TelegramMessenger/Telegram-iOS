@@ -33,8 +33,8 @@ public:
     Asset(json) {
         name = getString(json, "p");
         directory = getString(json, "u");
-        width = getDouble(json, "w");
-        height = getDouble(json, "h");
+        width = (float)getDouble(json, "w");
+        height = (float)getDouble(json, "h");
         
         _e = getOptionalInt(json, "e");
         _t = getOptionalString(json, "t");

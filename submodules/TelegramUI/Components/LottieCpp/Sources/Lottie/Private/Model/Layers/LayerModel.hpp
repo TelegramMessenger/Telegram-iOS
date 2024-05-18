@@ -71,9 +71,9 @@ public:
             coordinateSpace = std::nullopt;
         }
         
-        inFrame = getDouble(json, "ip");
-        outFrame = getDouble(json, "op");
-        startTime = getDouble(json, "st");
+        inFrame = (float)getDouble(json, "ip");
+        outFrame = (float)getDouble(json, "op");
+        startTime = (float)getDouble(json, "st");
         
         transform = std::make_shared<Transform>(getObject(json, "ks"));
         parent = getOptionalInt(json, "parent");
@@ -141,7 +141,7 @@ public:
         }
         
         if (const auto timeStretchData = getOptionalDouble(json, "sr")) {
-            _timeStretch = timeStretchData.value();
+            _timeStretch = (float)timeStretchData.value();
         }
         
         if (const auto matteRawValue = getOptionalInt(json, "tt")) {
