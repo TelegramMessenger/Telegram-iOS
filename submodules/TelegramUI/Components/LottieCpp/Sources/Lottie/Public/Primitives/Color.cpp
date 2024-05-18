@@ -6,8 +6,8 @@
 
 namespace lottie {
 
-Color::Color(double r_, double g_, double b_, double a_, ColorFormatDenominator denominator) {
-    double denominatorValue = 1.0;
+Color::Color(float r_, float g_, float b_, float a_, ColorFormatDenominator denominator) {
+    float denominatorValue = 1.0;
     switch (denominator) {
         case ColorFormatDenominator::One: {
             denominatorValue = 1.0;
@@ -43,7 +43,7 @@ Color::Color(lottiejson11::Json const &jsonAny) noexcept(false) :
     
     size_t index = 0;
     
-    double r1 = 0.0;
+    float r1 = 0.0;
     if (index < jsonAny.array_items().size()) {
         if (!jsonAny.array_items()[index].is_number()) {
             throw LottieParsingException();
@@ -52,7 +52,7 @@ Color::Color(lottiejson11::Json const &jsonAny) noexcept(false) :
         index++;
     }
     
-    double g1 = 0.0;
+    float g1 = 0.0;
     if (index < jsonAny.array_items().size()) {
         if (!jsonAny.array_items()[index].is_number()) {
             throw LottieParsingException();
@@ -61,7 +61,7 @@ Color::Color(lottiejson11::Json const &jsonAny) noexcept(false) :
         index++;
     }
     
-    double b1 = 0.0;
+    float b1 = 0.0;
     if (index < jsonAny.array_items().size()) {
         if (!jsonAny.array_items()[index].is_number()) {
             throw LottieParsingException();
@@ -70,7 +70,7 @@ Color::Color(lottiejson11::Json const &jsonAny) noexcept(false) :
         index++;
     }
     
-    double a1 = 0.0;
+    float a1 = 0.0;
     if (index < jsonAny.array_items().size()) {
         if (!jsonAny.array_items()[index].is_number()) {
             throw LottieParsingException();
@@ -118,9 +118,9 @@ Color Color::fromString(std::string const &string) {
     converter >> std::hex >> rgbValue;
 
     return Color(
-        ((double)((rgbValue & 0xFF0000) >> 16)) / 255.0,
-        ((double)((rgbValue & 0x00FF00) >> 8)) / 255.0,
-        ((double)(rgbValue & 0x0000FF)) / 255.0,
+        ((float)((rgbValue & 0xFF0000) >> 16)) / 255.0,
+        ((float)((rgbValue & 0x00FF00) >> 8)) / 255.0,
+        ((float)(rgbValue & 0x0000FF)) / 255.0,
         1.0
     );
 }
