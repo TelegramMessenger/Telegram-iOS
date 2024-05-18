@@ -149,16 +149,16 @@ inline double radiansToDegrees(double value) {
 }
 
 struct CATransform3D {
-    double m11, m12, m13, m14;
-    double m21, m22, m23, m24;
-    double m31, m32, m33, m34;
-    double m41, m42, m43, m44;
+    float m11, m12, m13, m14;
+    float m21, m22, m23, m24;
+    float m31, m32, m33, m34;
+    float m41, m42, m43, m44;
     
     CATransform3D(
-        double m11_, double m12_, double m13_, double m14_,
-        double m21_, double m22_, double m23_, double m24_,
-        double m31_, double m32_, double m33_, double m34_,
-        double m41_, double m42_, double m43_, double m44_
+        float m11_, float m12_, float m13_, float m14_,
+        float m21_, float m22_, float m23_, float m24_,
+        float m31_, float m32_, float m33_, float m34_,
+        float m41_, float m42_, float m43_, float m44_
     ) :
     m11(m11_), m12(m12_), m13(m13_), m14(m14_),
     m21(m21_), m22(m22_), m23(m23_), m24(m24_),
@@ -184,7 +184,7 @@ struct CATransform3D {
             m41 == 0.0 && m42 == 0.0 && m43 == 0.0 && m44 == 1.0;
     }
     
-    static CATransform3D makeTranslation(double tx, double ty, double tz) {
+    static CATransform3D makeTranslation(float tx, float ty, float tz) {
         return CATransform3D(
             1,  0,  0,  0,
             0,  1,  0,  0,
@@ -193,7 +193,7 @@ struct CATransform3D {
         );
     }
     
-    static CATransform3D makeScale(double sx, double sy, double sz) {
+    static CATransform3D makeScale(float sx, float sy, float sz) {
         return CATransform3D(
             sx, 0, 0, 0,
             0, sy, 0, 0,
@@ -202,12 +202,12 @@ struct CATransform3D {
         );
     }
     
-    static CATransform3D makeRotation(double radians, double x, double y, double z);
+    static CATransform3D makeRotation(float radians, float x, float y, float z);
     
-    static CATransform3D makeSkew(double skew, double skewAxis) {
-        double mCos = cos(degreesToRadians(skewAxis));
-        double mSin = sin(degreesToRadians(skewAxis));
-        double aTan = tan(degreesToRadians(skew));
+    static CATransform3D makeSkew(float skew, float skewAxis) {
+        float mCos = cos(degreesToRadians(skewAxis));
+        float mSin = sin(degreesToRadians(skewAxis));
+        float aTan = tan(degreesToRadians(skew));
         
         CATransform3D transform1(
             mCos,
@@ -273,9 +273,9 @@ struct CATransform3D {
         Vector2D const &anchor,
         Vector2D const &position,
         Vector2D const &scale,
-        double rotation,
-        std::optional<double> skew,
-        std::optional<double> skewAxis
+        float rotation,
+        std::optional<float> skew,
+        std::optional<float> skewAxis
     ) {
         CATransform3D result = CATransform3D::identity();
         if (skew.has_value() && skewAxis.has_value()) {
@@ -287,13 +287,13 @@ struct CATransform3D {
         return result;
     }
     
-    CATransform3D rotated(double degrees) const;
+    CATransform3D rotated(float degrees) const;
     
     CATransform3D translated(Vector2D const &translation) const;
     
     CATransform3D scaled(Vector2D const &scale) const;
     
-    CATransform3D skewed(double skew, double skewAxis) const {
+    CATransform3D skewed(float skew, float skewAxis) const {
         return CATransform3D::makeSkew(skew, skewAxis) * (*this);
     }
     

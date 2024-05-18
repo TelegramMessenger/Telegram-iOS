@@ -463,7 +463,7 @@ CATransform3D fromNativeTransform(::CATransform3D const &value) {
     return result;
 }
 
-CATransform3D CATransform3D::makeRotation(double radians, double x, double y, double z) {
+CATransform3D CATransform3D::makeRotation(float radians, float x, float y, float z) {
     return fromNativeTransform(CATransform3DMakeRotation(radians, x, y, z));
     
     /*if (x == 0.0 && y == 0.0 && z == 0.0) {
@@ -501,7 +501,7 @@ CATransform3D CATransform3D::makeRotation(double radians, double x, double y, do
     return returnValue;*/
 }
 
-CATransform3D CATransform3D::rotated(double degrees) const {
+CATransform3D CATransform3D::rotated(float degrees) const {
     return fromNativeTransform(CATransform3DRotate(nativeTransform(*this), degreesToRadians(degrees), 0.0, 0.0, 1.0));
     //return CATransform3D::makeRotation(degreesToRadians(degrees), 0.0, 0.0, 1.0) * (*this);
 }
@@ -523,20 +523,20 @@ CATransform3D CATransform3D::operator*(CATransform3D const &b) const {
         return *this;
     }
     
-    simd_double4x4 simdLhs = {
-        simd_make_double4(b.m11, b.m21, b.m31, b.m41),
-        simd_make_double4(b.m12, b.m22, b.m32, b.m42),
-        simd_make_double4(b.m13, b.m23, b.m33, b.m43),
-        simd_make_double4(b.m14, b.m24, b.m34, b.m44)
+    simd_float4x4 simdLhs = {
+        simd_make_float4(b.m11, b.m21, b.m31, b.m41),
+        simd_make_float4(b.m12, b.m22, b.m32, b.m42),
+        simd_make_float4(b.m13, b.m23, b.m33, b.m43),
+        simd_make_float4(b.m14, b.m24, b.m34, b.m44)
     };
-    simd_double4x4 simdRhs = {
-        simd_make_double4(m11, m21, m31, m41),
-        simd_make_double4(m12, m22, m32, m42),
-        simd_make_double4(m13, m23, m33, m43),
-        simd_make_double4(m14, m24, m34, m44)
+    simd_float4x4 simdRhs = {
+        simd_make_float4(m11, m21, m31, m41),
+        simd_make_float4(m12, m22, m32, m42),
+        simd_make_float4(m13, m23, m33, m43),
+        simd_make_float4(m14, m24, m34, m44)
     };
     
-    simd_double4x4 simdResult = simd_mul(simdRhs, simdLhs);
+    simd_float4x4 simdResult = simd_mul(simdRhs, simdLhs);
     return CATransform3D(
         simdResult.columns[0][0], simdResult.columns[1][0], simdResult.columns[2][0], simdResult.columns[3][0],
         simdResult.columns[0][1], simdResult.columns[1][1], simdResult.columns[2][1], simdResult.columns[3][1],
@@ -550,13 +550,13 @@ bool CATransform3D::isInvertible() const {
 }
 
 CATransform3D CATransform3D::inverted() const {
-    simd_double4x4 matrix = {
-        simd_make_double4(m11, m21, m31, m41),
-        simd_make_double4(m12, m22, m32, m42),
-        simd_make_double4(m13, m23, m33, m43),
-        simd_make_double4(m14, m24, m34, m44)
+    simd_float4x4 matrix = {
+        simd_make_float4(m11, m21, m31, m41),
+        simd_make_float4(m12, m22, m32, m42),
+        simd_make_float4(m13, m23, m33, m43),
+        simd_make_float4(m14, m24, m34, m44)
     };
-    simd_double4x4 result = simd_inverse(matrix);
+    simd_float4x4 result = simd_inverse(matrix);
     CATransform3D nativeResult = CATransform3D(
         result.columns[0][0], result.columns[1][0], result.columns[2][0], result.columns[3][0],
         result.columns[0][1], result.columns[1][1], result.columns[2][1], result.columns[3][1],
@@ -590,29 +590,29 @@ CGRect CGRect::applyingTransform(CATransform3D const &transform) const {
         return *this;
     }
     
-    simd_double3 simdRow1 = simd_make_double3(transform.m11, transform.m12, transform.m14);
-    simd_double3 simdRow2 = simd_make_double3(transform.m21, transform.m22, transform.m24);
-    simd_double3 simdRow3 = simd_make_double3(transform.m41, transform.m42, transform.m44);
+    simd_float3 simdRow1 = simd_make_float3(transform.m11, transform.m12, transform.m14);
+    simd_float3 simdRow2 = simd_make_float3(transform.m21, transform.m22, transform.m24);
+    simd_float3 simdRow3 = simd_make_float3(transform.m41, transform.m42, transform.m44);
     
     Vector2D sourceTopLeft = Vector2D(x, y);
     Vector2D sourceTopRight = Vector2D(x + width, y);
     Vector2D sourceBottomLeft = Vector2D(x, y + height);
     Vector2D sourceBottomRight = Vector2D(x + width, y + height);
     
-    simd_double3 simdTopLeft = sourceTopLeft.x * simdRow1 + sourceTopLeft.y * simdRow2 + simdRow3;
-    simd_double3 simdTopRight = sourceTopRight.x * simdRow1 + sourceTopRight.y * simdRow2 + simdRow3;
-    simd_double3 simdBottomLeft = sourceBottomLeft.x * simdRow1 + sourceBottomLeft.y * simdRow2 + simdRow3;
-    simd_double3 simdBottomRight = sourceBottomRight.x * simdRow1 + sourceBottomRight.y * simdRow2 + simdRow3;
+    simd_float3 simdTopLeft = sourceTopLeft.x * simdRow1 + sourceTopLeft.y * simdRow2 + simdRow3;
+    simd_float3 simdTopRight = sourceTopRight.x * simdRow1 + sourceTopRight.y * simdRow2 + simdRow3;
+    simd_float3 simdBottomLeft = sourceBottomLeft.x * simdRow1 + sourceBottomLeft.y * simdRow2 + simdRow3;
+    simd_float3 simdBottomRight = sourceBottomRight.x * simdRow1 + sourceBottomRight.y * simdRow2 + simdRow3;
     
     Vector2D topLeft = Vector2D(simdTopLeft[0] / simdTopLeft[2], simdTopLeft[1] / simdTopLeft[2]);
     Vector2D topRight = Vector2D(simdTopRight[0] / simdTopRight[2], simdTopRight[1] / simdTopRight[2]);
     Vector2D bottomLeft = Vector2D(simdBottomLeft[0] / simdBottomLeft[2], simdBottomLeft[1] / simdBottomLeft[2]);
     Vector2D bottomRight = Vector2D(simdBottomRight[0] / simdBottomRight[2], simdBottomRight[1] / simdBottomRight[2]);
     
-    double minX = simd_reduce_min(simd_make_double4(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
-    double minY = simd_reduce_min(simd_make_double4(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
-    double maxX = simd_reduce_max(simd_make_double4(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
-    double maxY = simd_reduce_max(simd_make_double4(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
+    float minX = simd_reduce_min(simd_make_float4(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
+    float minY = simd_reduce_min(simd_make_float4(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
+    float maxX = simd_reduce_max(simd_make_float4(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
+    float maxY = simd_reduce_max(simd_make_float4(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));
     
     return CGRect(minX, minY, maxX - minX, maxY - minY);
 }
