@@ -8,6 +8,8 @@
 
 #include <LottieCpp/lottiejson11.hpp>
 
+#import <simd/simd.h>
+
 namespace lottie {
 
 struct Vector1D {
@@ -148,167 +150,64 @@ inline float radiansToDegrees(float value) {
     return value * 180.0f / M_PI;
 }
 
-struct Transform3D {
-    float m11, m12, m13, m14;
-    float m21, m22, m23, m24;
-    float m31, m32, m33, m34;
-    float m41, m42, m43, m44;
-    
-    Transform3D(
-        float m11_, float m12_, float m13_, float m14_,
-        float m21_, float m22_, float m23_, float m24_,
-        float m31_, float m32_, float m33_, float m34_,
-        float m41_, float m42_, float m43_, float m44_
-    ) :
-    m11(m11_), m12(m12_), m13(m13_), m14(m14_),
-    m21(m21_), m22(m22_), m23(m23_), m24(m24_),
-    m31(m31_), m32(m32_), m33(m33_), m34(m34_),
-    m41(m41_), m42(m42_), m43(m43_), m44(m44_) {
+struct Transform2D {
+    static Transform2D const &identity() {
+        return _identity;
     }
     
-    bool operator==(Transform3D const &rhs) const {
-        return m11 == rhs.m11 && m12 == rhs.m12 && m13 == rhs.m13 && m14 == rhs.m14 &&
-        m21 == rhs.m21 && m22 == rhs.m22 && m23 == rhs.m23 && m24 == rhs.m24 &&
-        m31 == rhs.m31 && m32 == rhs.m32 && m33 == rhs.m33 && m34 == rhs.m34 &&
-        m41 == rhs.m41 && m42 == rhs.m42 && m43 == rhs.m43 && m44 == rhs.m44;
+    explicit Transform2D(simd_float3x3 const &rows_) :
+    _rows(rows_) {
     }
     
-    bool operator!=(Transform3D const &rhs) const {
-        return !(*this == rhs);
+    Transform2D operator*(Transform2D const &other) const {
+        return Transform2D(simd_mul(other._rows, _rows));
     }
     
-    inline bool isIdentity() const {
-        return m11 == 1.0 && m12 == 0.0 && m13 == 0.0 && m14 == 0.0 &&
-            m21 == 0.0 && m22 == 1.0 && m23 == 0.0 && m24 == 0.0 &&
-            m31 == 0.0 && m32 == 0.0 && m33 == 1.0 && m34 == 0.0 &&
-            m41 == 0.0 && m42 == 0.0 && m43 == 0.0 && m44 == 1.0;
+    bool isInvertible() const {
+        return simd_determinant(_rows) > 0.00000001;
     }
     
-    static Transform3D makeTranslation(float tx, float ty, float tz) {
-        return Transform3D(
-            1,  0,  0,  0,
-            0,  1,  0,  0,
-            0,  0,  1,  0,
-            tx, ty, tz, 1
-        );
+    Transform2D inverted() const {
+        return Transform2D(simd_inverse(_rows));
     }
     
-    static Transform3D makeScale(float sx, float sy, float sz) {
-        return Transform3D(
-            sx, 0, 0, 0,
-            0, sy, 0, 0,
-            0, 0, sz, 0,
-            0, 0, 0, 1
-        );
+    bool isIdentity() const {
+        return (*this) == identity();
     }
     
-    static Transform3D makeRotation(float radians, float x, float y, float z);
-    
-    static Transform3D makeSkew(float skew, float skewAxis) {
-        float mCos = cos(degreesToRadians(skewAxis));
-        float mSin = sin(degreesToRadians(skewAxis));
-        float aTan = tan(degreesToRadians(skew));
-        
-        Transform3D transform1(
-            mCos,
-            mSin,
-            0.0,
-            0.0,
-            -mSin,
-            mCos,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0
-        );
-        
-        Transform3D transform2(
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            aTan,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0
-        );
-        
-        Transform3D transform3(
-            mCos,
-            -mSin,
-            0.0,
-            0.0,
-            mSin,
-            mCos,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0
-        );
-        
-        return transform3 * transform2 * transform1;
-    }
-
-    static Transform3D makeTransform(
+    static Transform2D makeTranslation(float tx, float ty);
+    static Transform2D makeScale(float sx, float sy);
+    static Transform2D makeRotation(float radians);
+    static Transform2D makeSkew(float skew, float skewAxis);
+    static Transform2D makeTransform(
         Vector2D const &anchor,
         Vector2D const &position,
         Vector2D const &scale,
         float rotation,
         std::optional<float> skew,
         std::optional<float> skewAxis
-    ) {
-        Transform3D result = Transform3D::identity();
-        if (skew.has_value() && skewAxis.has_value()) {
-            result = Transform3D::identity().translated(position).rotated(rotation).skewed(-skew.value(), skewAxis.value()).scaled(Vector2D(scale.x * 0.01, scale.y * 0.01)).translated(Vector2D(-anchor.x, -anchor.y));
-        } else {
-            result = Transform3D::identity().translated(position).rotated(rotation).scaled(Vector2D(scale.x * 0.01, scale.y * 0.01)).translated(Vector2D(-anchor.x, -anchor.y));
-        }
-        
-        return result;
+    );
+    
+    Transform2D rotated(float degrees) const;
+    Transform2D translated(Vector2D const &translation) const;
+    Transform2D scaled(Vector2D const &scale) const;
+    Transform2D skewed(float skew, float skewAxis) const;
+    
+    bool operator==(Transform2D const &rhs) const {
+        return simd_equal(_rows, rhs._rows);
     }
     
-    Transform3D rotated(float degrees) const;
-    
-    Transform3D translated(Vector2D const &translation) const;
-    
-    Transform3D scaled(Vector2D const &scale) const;
-    
-    Transform3D skewed(float skew, float skewAxis) const {
-        return Transform3D::makeSkew(skew, skewAxis) * (*this);
+    bool operator!=(Transform2D const &rhs) const {
+        return !((*this) == rhs);
     }
     
-    static Transform3D const &identity() {
-        return _identity;
+    simd_float3x3 const &rows() const {
+        return _rows;
     }
-    
-    Transform3D operator*(Transform3D const &b) const;
-    
-    bool isInvertible() const;
-    
-    Transform3D inverted() const;
-    
 private:
-    static Transform3D _identity;
+    static Transform2D _identity;
+    
+    simd_float3x3 _rows;
 };
 
 struct CGRect {
@@ -359,7 +258,7 @@ struct CGRect {
     CGRect intersection(CGRect const &other) const;
     CGRect unionWith(CGRect const &other) const;
     
-    CGRect applyingTransform(Transform3D const &transform) const;
+    CGRect applyingTransform(Transform2D const &transform) const;
 };
 
 inline bool isInRangeOrEqual(float value, float from, float to) {

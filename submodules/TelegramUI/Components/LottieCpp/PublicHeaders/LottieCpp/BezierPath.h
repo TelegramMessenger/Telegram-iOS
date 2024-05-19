@@ -122,7 +122,7 @@ public:
     std::optional<bool> const &closed() const;
     void setClosed(std::optional<bool> const &closed);
     std::shared_ptr<CGPath> cgPath() const;
-    BezierPath copyUsingTransform(Transform3D const &transform) const;
+    BezierPath copyUsingTransform(Transform2D const &transform) const;
     
 public:
     BezierPath(std::shared_ptr<BezierPathContents> contents);

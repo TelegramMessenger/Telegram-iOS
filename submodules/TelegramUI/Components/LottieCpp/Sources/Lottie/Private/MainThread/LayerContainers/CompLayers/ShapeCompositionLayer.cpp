@@ -492,9 +492,9 @@ public:
     
     struct TransformedPath {
         BezierPath path;
-        Transform3D transform;
+        Transform2D transform;
         
-        TransformedPath(BezierPath const &path_, Transform3D const &transform_) :
+        TransformedPath(BezierPath const &path_, Transform2D const &transform_) :
         path(path_),
         transform(transform_) {
         }
@@ -853,13 +853,13 @@ public:
                     _opacityValue = 1.0;
                 }
                 
-                _transformValue = Transform3D::identity().translated(Vector2D(positionValue.x, positionValue.y)).rotated(rotationValue).skewed(-skewValue, skewAxisValue).scaled(Vector2D(scaleValue.x * 0.01, scaleValue.y * 0.01)).translated(Vector2D(-anchorValue.x, -anchorValue.y));
+                _transformValue = Transform2D::identity().translated(Vector2D(positionValue.x, positionValue.y)).rotated(rotationValue).skewed(-skewValue, skewAxisValue).scaled(Vector2D(scaleValue.x * 0.01, scaleValue.y * 0.01)).translated(Vector2D(-anchorValue.x, -anchorValue.y));
                 
                 hasValidData = true;
             }
         }
         
-        Transform3D const &transform() {
+        Transform2D const &transform() {
             return _transformValue;
         }
         
@@ -878,7 +878,7 @@ public:
         std::unique_ptr<KeyframeInterpolator<Vector1D>> _skewAxis;
         std::unique_ptr<KeyframeInterpolator<Vector1D>> _opacity;
         
-        Transform3D _transformValue = Transform3D::identity();
+        Transform2D _transformValue = Transform2D::identity();
         float _opacityValue = 1.0;
     };
     
@@ -910,11 +910,11 @@ public:
         std::shared_ptr<RenderTreeNodeContentItem> _contentItem;
         
     private:
-        std::vector<TransformedPath> collectPaths(size_t subItemLimit, Transform3D const &parentTransform, bool skipApplyTransform) {
+        std::vector<TransformedPath> collectPaths(size_t subItemLimit, Transform2D const &parentTransform, bool skipApplyTransform) {
             std::vector<TransformedPath> mappedPaths;
             
             //TODO:remove skipApplyTransform
-            Transform3D effectiveTransform = parentTransform;
+            Transform2D effectiveTransform = parentTransform;
             if (!skipApplyTransform && isGroup && transform) {
                 effectiveTransform = transform->transform() * effectiveTransform;
             }
@@ -942,7 +942,7 @@ public:
                     }
                     CompoundBezierPath trimmedPath = trimCompoundPath(tempPath, currentTrim->start, currentTrim->end, currentTrim->offset, currentTrim->type);
                     for (auto &path : trimmedPath.paths) {
-                        mappedPaths.emplace_back(path, Transform3D::identity());
+                        mappedPaths.emplace_back(path, Transform2D::identity());
                     }
                 } else {
                     for (auto &path : subItemPaths) {
@@ -1061,7 +1061,7 @@ public:
         }
         
         void updateContents(std::optional<TrimParams> parentTrim) {
-            Transform3D containerTransform = Transform3D::identity();
+            Transform2D containerTransform = Transform2D::identity();
             float containerOpacity = 1.0;
             if (transform) {
                 containerTransform = transform->transform();
@@ -1089,7 +1089,7 @@ public:
                 
                 if (parentTrim) {
                     CompoundBezierPath compoundPath;
-                    auto paths = collectPaths(shadingVariant.subItemLimit, Transform3D::identity(), true);
+                    auto paths = collectPaths(shadingVariant.subItemLimit, Transform2D::identity(), true);
                     for (const auto &path : paths) {
                         compoundPath.appendPath(path.path.copyUsingTransform(path.transform));
                     }
@@ -1104,7 +1104,7 @@ public:
                 } else {
                     if (hasTrims()) {
                         CompoundBezierPath compoundPath;
-                        auto paths = collectPaths(shadingVariant.subItemLimit, Transform3D::identity(), true);
+                        auto paths = collectPaths(shadingVariant.subItemLimit, Transform2D::identity(), true);
                         for (const auto &path : paths) {
                             compoundPath.appendPath(path.path.copyUsingTransform(path.transform));
                         }
@@ -1324,7 +1324,7 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode(BezierPath
     if (!_renderTreeNode) {
         _contentRenderTreeNode = std::make_shared<RenderTreeNode>(
             Vector2D(0.0, 0.0),
-            Transform3D::identity(),
+            Transform2D::identity(),
             1.0,
             false,
             false,
@@ -1349,7 +1349,7 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode(BezierPath
         
         _renderTreeNode = std::make_shared<RenderTreeNode>(
             Vector2D(0.0, 0.0),
-            Transform3D::identity(),
+            Transform2D::identity(),
             1.0,
             false,
             false,

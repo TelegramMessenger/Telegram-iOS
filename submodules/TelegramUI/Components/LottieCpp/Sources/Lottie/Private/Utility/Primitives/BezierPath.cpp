@@ -486,8 +486,8 @@ std::shared_ptr<CGPath> BezierPath::cgPath() const {
     return _contents->cgPath();
 }
 
-BezierPath BezierPath::copyUsingTransform(Transform3D const &transform) const {
-    if (transform == Transform3D::identity()) {
+BezierPath BezierPath::copyUsingTransform(Transform2D const &transform) const {
+    if (transform == Transform2D::identity()) {
         return (*this);
     }
     BezierPath result;

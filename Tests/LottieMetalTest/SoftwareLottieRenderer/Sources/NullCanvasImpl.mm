@@ -12,7 +12,7 @@ void addEnumeratedPath(CanvasPathEnumerator const &enumeratePath) {
 }
 
 NullCanvasImpl::NullCanvasImpl(int width, int height) :
-_width(width), _height(height), _transform(lottie::Transform3D::identity()) {
+_width(width), _height(height), _transform(lottie::Transform2D::identity()) {
 }
 
 NullCanvasImpl::~NullCanvasImpl() {
@@ -69,7 +69,7 @@ void NullCanvasImpl::setBlendMode(BlendMode blendMode) {
 void NullCanvasImpl::setAlpha(float alpha) {
 }
 
-void NullCanvasImpl::concatenate(lottie::Transform3D const &transform) {
+void NullCanvasImpl::concatenate(lottie::Transform2D const &transform) {
 }
 
 void NullCanvasImpl::draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) {

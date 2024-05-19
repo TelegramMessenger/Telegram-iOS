@@ -122,7 +122,7 @@ public:
             std::vector<std::shared_ptr<RenderTreeNode>> renderTreeValue;
             auto renderTreeContentItem = std::make_shared<RenderTreeNode>(
                 Vector2D(0.0, 0.0),
-                Transform3D::identity(),
+                Transform2D::identity(),
                 1.0,
                 false,
                 false,
@@ -136,7 +136,7 @@ public:
             
             _contentsTreeNode = std::make_shared<RenderTreeNode>(
                 Vector2D(0.0, 0.0),
-                Transform3D::identity(),
+                Transform2D::identity(),
                 1.0,
                 false,
                 false,
@@ -159,7 +159,7 @@ public:
             
             _renderTreeNode = std::make_shared<RenderTreeNode>(
                 Vector2D(0.0, 0.0),
-                Transform3D::identity(),
+                Transform2D::identity(),
                 1.0,
                 false,
                 false,

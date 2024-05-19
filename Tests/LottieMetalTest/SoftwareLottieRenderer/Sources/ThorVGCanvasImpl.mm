@@ -27,7 +27,7 @@ void tvgPath(CanvasPathEnumerator const &enumeratePath, tvg::Shape *shape) {
     });
 }
 
-tvg::Matrix tvgTransform(lottie::Transform3D const &transform) {
+tvg::Matrix tvgTransform(lottie::Transform2D const &transform) {
     CGAffineTransform affineTransform = CATransform3DGetAffineTransform(lottie::nativeTransform(transform));
     tvg::Matrix result;
     result.e11 = affineTransform.a;
@@ -45,7 +45,7 @@ tvg::Matrix tvgTransform(lottie::Transform3D const &transform) {
 }
 
 ThorVGCanvasImpl::ThorVGCanvasImpl(int width, int height) :
-_width(width), _height(height), _transform(lottie::Transform3D::identity()) {
+_width(width), _height(height), _transform(lottie::Transform2D::identity()) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         tvg::Initializer::init(0);
@@ -259,7 +259,7 @@ void ThorVGCanvasImpl::setAlpha(float alpha) {
     _alpha = alpha;
 }
 
-void ThorVGCanvasImpl::concatenate(lottie::Transform3D const &transform) {
+void ThorVGCanvasImpl::concatenate(lottie::Transform2D const &transform) {
     _transform = transform * _transform;
     /*_canvas->concat(SkM44(
         transform.m11, transform.m21, transform.m31, transform.m41,

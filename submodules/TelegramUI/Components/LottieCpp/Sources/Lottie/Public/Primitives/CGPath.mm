@@ -92,29 +92,12 @@ bool CGPathCocoaImpl::empty() const {
     return CGPathIsEmpty(_path);
 }
 
-std::shared_ptr<CGPath> CGPathCocoaImpl::copyUsingTransform(Transform3D const &transform) const {
-    ::CATransform3D nativeTransform;
-    nativeTransform.m11 = transform.m11;
-    nativeTransform.m12 = transform.m12;
-    nativeTransform.m13 = transform.m13;
-    nativeTransform.m14 = transform.m14;
-    
-    nativeTransform.m21 = transform.m21;
-    nativeTransform.m22 = transform.m22;
-    nativeTransform.m23 = transform.m23;
-    nativeTransform.m24 = transform.m24;
-    
-    nativeTransform.m31 = transform.m31;
-    nativeTransform.m32 = transform.m32;
-    nativeTransform.m33 = transform.m33;
-    nativeTransform.m34 = transform.m34;
-    
-    nativeTransform.m41 = transform.m41;
-    nativeTransform.m42 = transform.m42;
-    nativeTransform.m43 = transform.m43;
-    nativeTransform.m44 = transform.m44;
-    
-    auto affineTransform = CATransform3DGetAffineTransform(nativeTransform);
+std::shared_ptr<CGPath> CGPathCocoaImpl::copyUsingTransform(Transform2D const &transform) const {
+    CGAffineTransform affineTransform = CGAffineTransformMake(
+        transform.rows().columns[0][0], transform.rows().columns[0][1],
+        transform.rows().columns[1][0], transform.rows().columns[1][1],
+        transform.rows().columns[2][0], transform.rows().columns[2][1]
+    );
     
     CGPathRef resultPath = CGPathCreateCopyByTransformingPath(_path, &affineTransform);
     if (resultPath == nil) {

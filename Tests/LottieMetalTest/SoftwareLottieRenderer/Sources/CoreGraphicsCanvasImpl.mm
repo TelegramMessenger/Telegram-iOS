@@ -509,7 +509,7 @@ void CanvasImpl::setAlpha(float alpha) {
     CGContextSetAlpha(_context, alpha);
 }
 
-void CanvasImpl::concatenate(lottie::Transform3D const &transform) {
+void CanvasImpl::concatenate(lottie::Transform2D const &transform) {
     CGContextConcatCTM(_context, CATransform3DGetAffineTransform(nativeTransform(transform)));
 }
 

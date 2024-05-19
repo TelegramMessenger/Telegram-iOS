@@ -7,8 +7,8 @@
 
 namespace lottie {
 
-::CATransform3D nativeTransform(Transform3D const &value);
-Transform3D fromNativeTransform(::CATransform3D const &value);
+::CATransform3D nativeTransform(Transform2D const &value);
+Transform2D fromNativeTransform(::CATransform3D const &value);
 
 }
 

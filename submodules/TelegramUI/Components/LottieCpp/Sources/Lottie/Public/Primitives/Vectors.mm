@@ -8,9 +8,260 @@
 
 #import <QuartzCore/QuartzCore.h>
 
-#import <simd/simd.h>
-
 namespace lottie {
+
+/*explicit Transform2D(Transform3D const &t) {
+    CGAffineTransform at = CATransform3DGetAffineTransform(nativeTransform(t));
+    _rows.columns[0] = simd_make_float3(at.a, at.b, 0.0);
+    _rows.columns[1] = simd_make_float3(at.c, at.d, 0.0);
+    _rows.columns[2] = simd_make_float3(at.tx, at.ty, 1.0);
+}
+ 
+ Transform3D transform3D() {
+     CGAffineTransform at = CGAffineTransformMake(
+         _rows.columns[0][0], _rows.columns[0][1],
+         _rows.columns[1][0], _rows.columns[1][1],
+         _rows.columns[2][0], _rows.columns[2][1]
+     );
+     return fromNativeTransform(CATransform3DMakeAffineTransform(at));
+ }*/
+
+/*struct Transform3D {
+    float m11, m12, m13, m14;
+    float m21, m22, m23, m24;
+    float m31, m32, m33, m34;
+    float m41, m42, m43, m44;
+    
+    Transform3D(
+        float m11_, float m12_, float m13_, float m14_,
+        float m21_, float m22_, float m23_, float m24_,
+        float m31_, float m32_, float m33_, float m34_,
+        float m41_, float m42_, float m43_, float m44_
+    ) :
+    m11(m11_), m12(m12_), m13(m13_), m14(m14_),
+    m21(m21_), m22(m22_), m23(m23_), m24(m24_),
+    m31(m31_), m32(m32_), m33(m33_), m34(m34_),
+    m41(m41_), m42(m42_), m43(m43_), m44(m44_) {
+    }
+    
+    bool operator==(Transform3D const &rhs) const {
+        return m11 == rhs.m11 && m12 == rhs.m12 && m13 == rhs.m13 && m14 == rhs.m14 &&
+        m21 == rhs.m21 && m22 == rhs.m22 && m23 == rhs.m23 && m24 == rhs.m24 &&
+        m31 == rhs.m31 && m32 == rhs.m32 && m33 == rhs.m33 && m34 == rhs.m34 &&
+        m41 == rhs.m41 && m42 == rhs.m42 && m43 == rhs.m43 && m44 == rhs.m44;
+    }
+    
+    bool operator!=(Transform3D const &rhs) const {
+        return !(*this == rhs);
+    }
+    
+    inline bool isIdentity() const {
+        return m11 == 1.0 && m12 == 0.0 && m13 == 0.0 && m14 == 0.0 &&
+            m21 == 0.0 && m22 == 1.0 && m23 == 0.0 && m24 == 0.0 &&
+            m31 == 0.0 && m32 == 0.0 && m33 == 1.0 && m34 == 0.0 &&
+            m41 == 0.0 && m42 == 0.0 && m43 == 0.0 && m44 == 1.0;
+    }
+    
+    static Transform3D makeTranslation(float tx, float ty, float tz) {
+        return Transform3D(
+            1,  0,  0,  0,
+            0,  1,  0,  0,
+            0,  0,  1,  0,
+            tx, ty, tz, 1
+        );
+    }
+    
+    static Transform3D makeScale(float sx, float sy, float sz) {
+        return Transform3D(
+            sx, 0, 0, 0,
+            0, sy, 0, 0,
+            0, 0, sz, 0,
+            0, 0, 0, 1
+        );
+    }
+    
+    static Transform3D makeRotation(float radians);
+    
+    static Transform3D makeSkew(float skew, float skewAxis) {
+        float mCos = cos(degreesToRadians(skewAxis));
+        float mSin = sin(degreesToRadians(skewAxis));
+        float aTan = tan(degreesToRadians(skew));
+        
+        Transform3D transform1(
+            mCos,
+            mSin,
+            0.0,
+            0.0,
+            -mSin,
+            mCos,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        );
+        
+        Transform3D transform2(
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            aTan,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        );
+        
+        Transform3D transform3(
+            mCos,
+            -mSin,
+            0.0,
+            0.0,
+            mSin,
+            mCos,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        );
+        
+        return transform3 * transform2 * transform1;
+    }
+
+    static Transform3D makeTransform(
+        Vector2D const &anchor,
+        Vector2D const &position,
+        Vector2D const &scale,
+        float rotation,
+        std::optional<float> skew,
+        std::optional<float> skewAxis
+    ) {
+        Transform3D result = Transform3D::identity();
+        if (skew.has_value() && skewAxis.has_value()) {
+            result = Transform3D::identity().translated(position).rotated(rotation).skewed(-skew.value(), skewAxis.value()).scaled(Vector2D(scale.x * 0.01, scale.y * 0.01)).translated(Vector2D(-anchor.x, -anchor.y));
+        } else {
+            result = Transform3D::identity().translated(position).rotated(rotation).scaled(Vector2D(scale.x * 0.01, scale.y * 0.01)).translated(Vector2D(-anchor.x, -anchor.y));
+        }
+        
+        return result;
+    }
+    
+    Transform3D rotated(float degrees) const;
+    
+    Transform3D translated(Vector2D const &translation) const;
+    
+    Transform3D scaled(Vector2D const &scale) const;
+    
+    Transform3D skewed(float skew, float skewAxis) const {
+        return Transform3D::makeSkew(skew, skewAxis) * (*this);
+    }
+    
+    static Transform3D identity() {
+        return Transform3D(
+            1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+        );
+    }
+    
+    Transform3D operator*(Transform3D const &b) const;
+};*/
+
+/*Transform2D t2d(Transform3D const &testMatrix) {
+    ::CATransform3D nativeTest;
+    
+    nativeTest.m11 = testMatrix.m11;
+    nativeTest.m12 = testMatrix.m12;
+    nativeTest.m13 = testMatrix.m13;
+    nativeTest.m14 = testMatrix.m14;
+    
+    nativeTest.m21 = testMatrix.m21;
+    nativeTest.m22 = testMatrix.m22;
+    nativeTest.m23 = testMatrix.m23;
+    nativeTest.m24 = testMatrix.m24;
+    
+    nativeTest.m31 = testMatrix.m31;
+    nativeTest.m32 = testMatrix.m32;
+    nativeTest.m33 = testMatrix.m33;
+    nativeTest.m34 = testMatrix.m34;
+    
+    nativeTest.m41 = testMatrix.m41;
+    nativeTest.m42 = testMatrix.m42;
+    nativeTest.m43 = testMatrix.m43;
+    nativeTest.m44 = testMatrix.m44;
+    
+    CGAffineTransform at = CATransform3DGetAffineTransform(nativeTest);
+    Transform2D result = Transform2D::identity();
+    simd_float3x3 *rows = (simd_float3x3 *)&result.rows();
+    rows->columns[0] = simd_make_float3(at.a, at.b, 0.0);
+    rows->columns[1] = simd_make_float3(at.c, at.d, 0.0);
+    rows->columns[2] = simd_make_float3(at.tx, at.ty, 1.0);
+    
+    return result;
+}
+
+Transform3D t3d(Transform2D const &t) {
+    CGAffineTransform at = CGAffineTransformMake(
+        t.rows().columns[0][0], t.rows().columns[0][1],
+        t.rows().columns[1][0], t.rows().columns[1][1],
+        t.rows().columns[2][0], t.rows().columns[2][1]
+    );
+    ::CATransform3D value = CATransform3DMakeAffineTransform(at);
+    
+    Transform3D result = Transform3D::identity();
+    result.m11 = value.m11;
+    result.m12 = value.m12;
+    result.m13 = value.m13;
+    result.m14 = value.m14;
+    
+    result.m21 = value.m21;
+    result.m22 = value.m22;
+    result.m23 = value.m23;
+    result.m24 = value.m24;
+    
+    result.m31 = value.m31;
+    result.m32 = value.m32;
+    result.m33 = value.m33;
+    result.m34 = value.m34;
+    
+    result.m41 = value.m41;
+    result.m42 = value.m42;
+    result.m43 = value.m43;
+    result.m44 = value.m44;
+    
+    return result;
+}
+
+Transform3D Transform3D::operator*(Transform3D const &b) const {
+    if (isIdentity()) {
+        return b;
+    }
+    if (b.isIdentity()) {
+        return *this;
+    }
+    
+    return t3d((t2d(*this) * t2d(b)));
+}*/
 
 Vector1D::Vector1D(lottiejson11::Json const &json) noexcept(false) {
     if (json.is_number()) {
@@ -140,12 +391,107 @@ lottiejson11::Json Vector3D::toJson() const {
     return lottiejson11::Json(result);
 }
 
-Transform3D Transform3D::_identity = Transform3D(
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0,
-    0.0, 0.0, 0.0, 1.0
+Transform2D Transform2D::_identity = Transform2D(
+    simd_float3x3({
+        simd_make_float3(1.0f, 0.0f, 0.0f),
+        simd_make_float3(0.0f, 1.0f, 0.0f),
+        simd_make_float3(0.0f, 0.0f, 1.0f)
+    })
 );
+
+Transform2D Transform2D::makeTranslation(float tx, float ty) {
+    return Transform2D(simd_float3x3({
+        simd_make_float3(1.0f, 0.0f, 0.0f),
+        simd_make_float3(0.0f, 1.0f, 0.0f),
+        simd_make_float3(tx, ty, 1.0f)
+    }));
+}
+
+Transform2D Transform2D::makeScale(float sx, float sy) {
+    return Transform2D(simd_float3x3({
+        simd_make_float3(sx, 0.0f, 0.0f),
+        simd_make_float3(0.0f, sy, 0.0f),
+        simd_make_float3(0.0f, 0.0f, 1.0f)
+    }));
+}
+
+Transform2D Transform2D::makeRotation(float radians) {
+    float c = cos(radians);
+    float s = sin(radians);
+    
+    return Transform2D(simd_float3x3({
+        simd_make_float3(c, s, 0.0f),
+        simd_make_float3(-s, c, 0.0f),
+        simd_make_float3(0.0f, 0.0f, 1.0f)
+    }));
+}
+
+Transform2D Transform2D::makeSkew(float skew, float skewAxis) {
+    if (std::abs(skew) <= FLT_EPSILON && std::abs(skewAxis) <= FLT_EPSILON) {
+        return Transform2D::identity();
+    }
+    
+    float mCos = cos(degreesToRadians(skewAxis));
+    float mSin = sin(degreesToRadians(skewAxis));
+    float aTan = tan(degreesToRadians(skew));
+    
+    simd_float3x3 simd1 = simd_float3x3({
+        simd_make_float3(mCos, -mSin, 0.0),
+        simd_make_float3(mSin, mCos, 0.0),
+        simd_make_float3(0.0, 0.0, 1.0)
+    });
+    
+    simd_float3x3 simd2 = simd_float3x3({
+        simd_make_float3(1.0, 0.0, 0.0),
+        simd_make_float3(aTan, 1.0, 0.0),
+        simd_make_float3(0.0, 0.0, 1.0)
+    });
+    
+    simd_float3x3 simd3 = simd_float3x3({
+        simd_make_float3(mCos, mSin, 0.0),
+        simd_make_float3(-mSin, mCos, 0.0),
+        simd_make_float3(0.0, 0.0, 1.0)
+    });
+    
+    simd_float3x3 result = simd_mul(simd_mul(simd3, simd2), simd1);
+    Transform2D resultTransform(result);
+    
+    return resultTransform;
+}
+
+Transform2D Transform2D::makeTransform(
+    Vector2D const &anchor,
+    Vector2D const &position,
+    Vector2D const &scale,
+    float rotation,
+    std::optional<float> skew,
+    std::optional<float> skewAxis
+) {
+    Transform2D result = Transform2D::identity();
+    if (skew.has_value() && skewAxis.has_value()) {
+        result = Transform2D::identity().translated(position).rotated(rotation).skewed(-skew.value(), skewAxis.value()).scaled(Vector2D(scale.x * 0.01, scale.y * 0.01)).translated(Vector2D(-anchor.x, -anchor.y));
+    } else {
+        result = Transform2D::identity().translated(position).rotated(rotation).scaled(Vector2D(scale.x * 0.01, scale.y * 0.01)).translated(Vector2D(-anchor.x, -anchor.y));
+    }
+    
+    return result;
+}
+
+Transform2D Transform2D::rotated(float degrees) const {
+    return Transform2D::makeRotation(degreesToRadians(degrees)) * (*this);
+}
+
+Transform2D Transform2D::translated(Vector2D const &translation) const {
+    return Transform2D::makeTranslation(translation.x, translation.y) * (*this);
+}
+
+Transform2D Transform2D::scaled(Vector2D const &scale) const {
+    return Transform2D::makeScale(scale.x, scale.y) * (*this);
+}
+
+Transform2D Transform2D::skewed(float skew, float skewAxis) const {
+    return Transform2D::makeSkew(skew, skewAxis) * (*this);
+}
 
 float interpolate(float value, float to, float amount) {
     return value + ((to - value) * amount);
@@ -415,8 +761,15 @@ Vector2D Vector2D::interpolate(
     return point.point;
 }
 
-::CATransform3D nativeTransform(Transform3D const &value) {
-    ::CATransform3D result;
+::CATransform3D nativeTransform(Transform2D const &value) {
+    CGAffineTransform at = CGAffineTransformMake(
+        value.rows().columns[0][0], value.rows().columns[0][1],
+        value.rows().columns[1][0], value.rows().columns[1][1],
+        value.rows().columns[2][0], value.rows().columns[2][1]
+    );
+    return CATransform3DMakeAffineTransform(at);
+    
+    /*::CATransform3D result;
     
     result.m11 = value.m11;
     result.m12 = value.m12;
@@ -438,11 +791,20 @@ Vector2D Vector2D::interpolate(
     result.m43 = value.m43;
     result.m44 = value.m44;
     
-    return result;
+    return result;*/
 }
 
-Transform3D fromNativeTransform(::CATransform3D const &value) {
-    Transform3D result = Transform3D::identity();
+Transform2D fromNativeTransform(::CATransform3D const &value) {
+    CGAffineTransform at = CATransform3DGetAffineTransform(value);
+    return Transform2D(
+        simd_float3x3({
+            simd_make_float3(at.a, at.b, 0.0),
+            simd_make_float3(at.c, at.d, 0.0),
+            simd_make_float3(at.tx, at.ty, 1.0)
+        })
+    );
+    
+    /*Transform2D result = Transform2D::identity();
     
     result.m11 = value.m11;
     result.m12 = value.m12;
@@ -464,47 +826,23 @@ Transform3D fromNativeTransform(::CATransform3D const &value) {
     result.m43 = value.m43;
     result.m44 = value.m44;
     
-    return result;
+    return result;*/
 }
 
-Transform3D Transform3D::makeRotation(float radians, float x, float y, float z) {
-    if (std::abs(radians) <= FLT_EPSILON || (x == 0.0 && y == 0.0 && z == 0.0)) {
+/*Transform3D Transform3D::makeRotation(float radians) {
+    if (std::abs(radians) <= FLT_EPSILON) {
         return Transform3D::identity();
     }
     
     float s = sin(radians);
     float c = cos(radians);
     
-    float len = sqrt(x*x + y*y + z*z);
-    x /= len; y /= len; z /= len;
-    
-    Transform3D returnValue = Transform3D::identity();
-    
-    returnValue.m11 = c + (1.0f - c) * x * x;
-    returnValue.m12 = (1.0f - c) * x*y + s * z;
-    returnValue.m13 = (1.0f - c) * x*z - s * y;
-    returnValue.m14 = 0.0f;
-    
-    returnValue.m21 = (1.0f - c) * y * x - s * z;
-    returnValue.m22 = c + (1.0f - c) * y * y;
-    returnValue.m23 = (1.0f - c) * y * z + s * x;
-    returnValue.m24 = 0.0f;
-    
-    returnValue.m31 = (1.0f - c) * z * x + s * y;
-    returnValue.m32 = (1.0f - c) * y * z - s * x;
-    returnValue.m33 = c + (1.0f - c) * z * z;
-    returnValue.m34 = 0.0f;
-    
-    returnValue.m41 = 0.0f;
-    returnValue.m42 = 0.0f;
-    returnValue.m43 = 0.0f;
-    returnValue.m44 = 1.0f;
-    
-    return returnValue;
+    ::CGAffineTransform t = CGAffineTransformMake(c, s, -s, c, 0.0f, 0.0f);
+    return fromNativeTransform(CATransform3DMakeAffineTransform(t));
 }
 
 Transform3D Transform3D::rotated(float degrees) const {
-    return Transform3D::makeRotation(degreesToRadians(degrees), 0.0, 0.0, 1.0) * (*this);
+    return Transform3D::makeRotation(degreesToRadians(degrees)) * (*this);
 }
 
 Transform3D Transform3D::translated(Vector2D const &translation) const {
@@ -515,57 +853,14 @@ Transform3D Transform3D::scaled(Vector2D const &scale) const {
     return Transform3D::makeScale(scale.x, scale.y, 1.0) * (*this);
 }
 
-Transform3D Transform3D::operator*(Transform3D const &b) const {
-    if (isIdentity()) {
-        return b;
-    }
-    if (b.isIdentity()) {
-        return *this;
-    }
-    
-    simd_float4x4 simdLhs = {
-        simd_make_float4(b.m11, b.m21, b.m31, b.m41),
-        simd_make_float4(b.m12, b.m22, b.m32, b.m42),
-        simd_make_float4(b.m13, b.m23, b.m33, b.m43),
-        simd_make_float4(b.m14, b.m24, b.m34, b.m44)
-    };
-    simd_float4x4 simdRhs = {
-        simd_make_float4(m11, m21, m31, m41),
-        simd_make_float4(m12, m22, m32, m42),
-        simd_make_float4(m13, m23, m33, m43),
-        simd_make_float4(m14, m24, m34, m44)
-    };
-    
-    simd_float4x4 simdResult = simd_mul(simdRhs, simdLhs);
-    return Transform3D(
-        simdResult.columns[0][0], simdResult.columns[1][0], simdResult.columns[2][0], simdResult.columns[3][0],
-        simdResult.columns[0][1], simdResult.columns[1][1], simdResult.columns[2][1], simdResult.columns[3][1],
-        simdResult.columns[0][2], simdResult.columns[1][2], simdResult.columns[2][2], simdResult.columns[3][2],
-        simdResult.columns[0][3], simdResult.columns[1][3], simdResult.columns[2][3], simdResult.columns[3][3]
-    );
-}
-
 bool Transform3D::isInvertible() const {
-    return std::abs(m11 * m22 - m12 * m21) >= 0.00000001;
+    return Transform2D(*this).isInvertible();
+    //return std::abs(m11 * m22 - m12 * m21) >= 0.00000001;
 }
 
 Transform3D Transform3D::inverted() const {
-    simd_float4x4 matrix = {
-        simd_make_float4(m11, m21, m31, m41),
-        simd_make_float4(m12, m22, m32, m42),
-        simd_make_float4(m13, m23, m33, m43),
-        simd_make_float4(m14, m24, m34, m44)
-    };
-    simd_float4x4 result = simd_inverse(matrix);
-    Transform3D nativeResult = Transform3D(
-        result.columns[0][0], result.columns[1][0], result.columns[2][0], result.columns[3][0],
-        result.columns[0][1], result.columns[1][1], result.columns[2][1], result.columns[3][1],
-        result.columns[0][2], result.columns[1][2], result.columns[2][2], result.columns[3][2],
-        result.columns[0][3], result.columns[1][3], result.columns[2][3], result.columns[3][3]
-    );
-    
-    return nativeResult;
-}
+    return Transform2D(*this).inverted().transform3D();
+}*/
 
 bool CGRect::intersects(CGRect const &other) const {
     return CGRectIntersectsRect(CGRectMake(x, y, width, height), CGRectMake(other.x, other.y, other.width, other.height));
@@ -585,29 +880,26 @@ CGRect CGRect::unionWith(CGRect const &other) const {
     return CGRect(result.origin.x, result.origin.y, result.size.width, result.size.height);
 }
 
-CGRect CGRect::applyingTransform(Transform3D const &transform) const {
+CGRect CGRect::applyingTransform(Transform2D const &transform) const {
     if (transform.isIdentity()) {
         return *this;
     }
-    
-    simd_float3 simdRow1 = simd_make_float3(transform.m11, transform.m12, transform.m14);
-    simd_float3 simdRow2 = simd_make_float3(transform.m21, transform.m22, transform.m24);
-    simd_float3 simdRow3 = simd_make_float3(transform.m41, transform.m42, transform.m44);
     
     Vector2D sourceTopLeft = Vector2D(x, y);
     Vector2D sourceTopRight = Vector2D(x + width, y);
     Vector2D sourceBottomLeft = Vector2D(x, y + height);
     Vector2D sourceBottomRight = Vector2D(x + width, y + height);
     
-    simd_float3 simdTopLeft = sourceTopLeft.x * simdRow1 + sourceTopLeft.y * simdRow2 + simdRow3;
-    simd_float3 simdTopRight = sourceTopRight.x * simdRow1 + sourceTopRight.y * simdRow2 + simdRow3;
-    simd_float3 simdBottomLeft = sourceBottomLeft.x * simdRow1 + sourceBottomLeft.y * simdRow2 + simdRow3;
-    simd_float3 simdBottomRight = sourceBottomRight.x * simdRow1 + sourceBottomRight.y * simdRow2 + simdRow3;
+    simd_float4 xs = simd_make_float4(sourceTopLeft.x, sourceTopRight.x, sourceBottomLeft.x, sourceBottomRight.x);
+    simd_float4 ys = simd_make_float4(sourceTopLeft.y, sourceTopRight.y, sourceBottomLeft.y, sourceBottomRight.y);
     
-    Vector2D topLeft = Vector2D(simdTopLeft[0] / simdTopLeft[2], simdTopLeft[1] / simdTopLeft[2]);
-    Vector2D topRight = Vector2D(simdTopRight[0] / simdTopRight[2], simdTopRight[1] / simdTopRight[2]);
-    Vector2D bottomLeft = Vector2D(simdBottomLeft[0] / simdBottomLeft[2], simdBottomLeft[1] / simdBottomLeft[2]);
-    Vector2D bottomRight = Vector2D(simdBottomRight[0] / simdBottomRight[2], simdBottomRight[1] / simdBottomRight[2]);
+    simd_float4 rx = xs * transform.rows().columns[0][0] + ys * transform.rows().columns[1][0] + transform.rows().columns[2][0];
+    simd_float4 ry = xs * transform.rows().columns[0][1] + ys * transform.rows().columns[1][1] + transform.rows().columns[2][1];
+    
+    Vector2D topLeft = Vector2D(rx[0], ry[0]);
+    Vector2D topRight = Vector2D(rx[1], ry[1]);
+    Vector2D bottomLeft = Vector2D(rx[2], ry[2]);
+    Vector2D bottomRight = Vector2D(rx[3], ry[3]);
     
     float minX = simd_reduce_min(simd_make_float4(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x));
     float minY = simd_reduce_min(simd_make_float4(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y));

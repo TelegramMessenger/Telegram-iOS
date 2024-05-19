@@ -238,7 +238,7 @@ public:
             }
             _renderTreeNode = std::make_shared<RenderTreeNode>(
                 size(),
-                Transform3D::identity(),
+                Transform2D::identity(),
                 1.0,
                 false,
                 false,

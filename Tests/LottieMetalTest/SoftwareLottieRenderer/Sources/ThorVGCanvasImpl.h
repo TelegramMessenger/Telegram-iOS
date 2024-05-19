@@ -32,7 +32,7 @@ public:
     
     virtual void setAlpha(float alpha) override;
     
-    virtual void concatenate(lottie::Transform3D const &transform) override;
+    virtual void concatenate(lottie::Transform2D const &transform) override;
     
     virtual void draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) override;
     
@@ -52,8 +52,8 @@ private:
     std::unique_ptr<tvg::SwCanvas> _canvas;
 
     float _alpha = 1.0;
-    lottie::Transform3D _transform;
-    std::vector<lottie::Transform3D> _stateStack;
+    lottie::Transform2D _transform;
+    std::vector<lottie::Transform2D> _stateStack;
     int _bytesPerRow = 0;
     uint32_t *_backingData = nullptr;
     int _statsNumStrokes = 0;

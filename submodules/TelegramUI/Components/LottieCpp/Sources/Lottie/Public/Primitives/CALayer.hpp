@@ -64,10 +64,10 @@ public:
         _size = size;
     }
     
-    Transform3D const &transform() const {
+    Transform2D const &transform() const {
         return _transform;
     }
-    void setTransform(Transform3D const &transform) {
+    void setTransform(Transform2D const &transform) {
         _transform = transform;
     }
     
@@ -117,7 +117,7 @@ private:
     bool _isHidden = false;
     float _opacity = 1.0;
     Vector2D _size = Vector2D(0.0, 0.0);
-    Transform3D _transform = Transform3D::identity();
+    Transform2D _transform = Transform2D::identity();
     std::shared_ptr<CALayer> _mask;
     bool _masksToBounds = false;
     std::optional<BlendMode> _compositingFilter;

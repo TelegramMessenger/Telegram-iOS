@@ -364,7 +364,7 @@ public:
     
 public:
     bool isGroup = false;
-    Transform3D transform = Transform3D::identity();
+    Transform2D transform = Transform2D::identity();
     float alpha = 0.0;
     std::optional<TrimParams> trimParams;
     std::shared_ptr<RenderTreeNodeContentPath> path;
@@ -392,7 +392,7 @@ class RenderTreeNode {
 public:
     RenderTreeNode(
         Vector2D size_,
-        Transform3D transform_,
+        Transform2D transform_,
         float alpha_,
         bool masksToBounds_,
         bool isHidden_,
@@ -421,7 +421,7 @@ public:
         return _size;
     }
     
-    Transform3D const &transform() const {
+    Transform2D const &transform() const {
         return _transform;
     }
     
@@ -451,7 +451,7 @@ public:
     
 public:
     Vector2D _size;
-    Transform3D _transform = Transform3D::identity();
+    Transform2D _transform = Transform2D::identity();
     float _alpha = 1.0f;
     bool _masksToBounds = false;
     bool _isHidden = false;
