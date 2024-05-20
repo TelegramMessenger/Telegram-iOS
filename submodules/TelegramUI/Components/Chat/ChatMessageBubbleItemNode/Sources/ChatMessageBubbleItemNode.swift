@@ -4545,7 +4545,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                     if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                                     } else if case .member = channel.participationStatus {
                                     } else if !item.message.id.peerId.isReplies {
-                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, false, forwardInfoNode, nil)
                                         return
                                     }
                                 }
@@ -4557,7 +4557,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 if let textNode = forwardInfoNode.nameNode {
                                     subRect = textNode.frame
                                 }
-                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, subRect)
+                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, false, forwardInfoNode, subRect)
                             }
                         }
                         
@@ -4707,7 +4707,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     case let .tooltip(text, node, rect):
                         if let item = self.item {
                             return .optionalAction({
-                                let _ = item.controllerInteraction.displayMessageTooltip(item.message.id, text, node, rect)
+                                let _ = item.controllerInteraction.displayMessageTooltip(item.message.id, text, false, node, rect)
                             })
                         }
                     case let .openPollResults(option):

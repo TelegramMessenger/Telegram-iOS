@@ -1715,15 +1715,15 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             let title: String
             if hasFactCheck {
-                title = chatPresentationInterfaceState.strings.Conversation_ContextMenuAddFactCheck
-            } else {
                 title = chatPresentationInterfaceState.strings.Conversation_ContextMenuEditFactCheck
+            } else {
+                title = chatPresentationInterfaceState.strings.Conversation_ContextMenuAddFactCheck
             }
             actions.append(.action(ContextMenuActionItem(text: title, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/FactCheck"), color: theme.actionSheet.primaryTextColor)
             }, action: { c, f in
-                f(.dismissWithoutContent)
-                
+                c?.dismiss(completion: {
+                })
                 controllerInteraction.editMessageFactCheck(messages[0].id)
             })))
         }
