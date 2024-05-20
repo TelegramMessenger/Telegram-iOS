@@ -69,19 +69,6 @@ public:
             return std::make_shared<CompoundBezierPath>();
         }
         
-        /*bool trimSimultaneously = false;
-        if (trimSimultaneously) {
-            /// Trim each path individually.
-            std::vector<BezierPath> newPaths;
-            for (auto &path : paths) {
-                auto trimmedPaths = path.trim(fromPosition * path.length(), toPosition * path.length(), offset * path.length());
-                for (const auto &trimmedPath : trimmedPaths) {
-                    newPaths.push_back(trimmedPath);
-                }
-            }
-            return std::make_shared<CompoundBezierPath>(newPaths);
-        }*/
-        
         float lengthValue = length();
         
         /// Normalize lengths to the curve length.

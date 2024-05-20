@@ -176,7 +176,7 @@ public final class ViewController: UIViewController {
                         let updatesPerSecond = Double(numUpdates) / deltaTime
                         startTime = timestamp
                         numUpdates = 0
-                        print("updatesPerSecond: \(updatesPerSecond)")
+                        print("Ours: updatesPerSecond: \(updatesPerSecond)")
                     }
                 }
             }.start()
@@ -205,7 +205,7 @@ public final class ViewController: UIViewController {
                         let updatesPerSecond = Double(numUpdates) / deltaTime
                         startTime = timestamp
                         numUpdates = 0
-                        print("updatesPerSecond: \(updatesPerSecond)")
+                        print("Rlottie: updatesPerSecond: \(updatesPerSecond)")
                     }
                 }
             }.start()
