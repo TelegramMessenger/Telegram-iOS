@@ -302,6 +302,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             for attribute in message.attributes {
                 if let attribute = attribute as? FactCheckMessageAttribute, case .Loaded = attribute.content {
                     result.append((message, ChatMessageFactCheckBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                    needReactions = false
                     break
                 }
             }
