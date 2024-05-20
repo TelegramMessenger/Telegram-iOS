@@ -24,32 +24,11 @@ public:
     virtual ~CALayer() = default;
     
     void addSublayer(std::shared_ptr<CALayer> layer) {
-        if (layer->_superlayer) {
-            layer->_superlayer->removeSublayer(layer.get());
-        }
-        layer->_superlayer = this;
         _sublayers.push_back(layer);
     }
     
     void insertSublayer(std::shared_ptr<CALayer> layer, int index) {
-        if (layer->_superlayer) {
-            layer->_superlayer->removeSublayer(layer.get());
-        }
-        layer->_superlayer = this;
         _sublayers.insert(_sublayers.begin() + index, layer);
-    }
-    
-    void removeFromSuperlayer() {
-        if (_superlayer) {
-            _superlayer->removeSublayer(this);
-        }
-    }
-    
-    bool needsDisplay() const {
-        return _needsDisplay;
-    }
-    void setNeedsDisplay(bool needsDisplay) {
-        _needsDisplay = true;
     }
     
     virtual bool implementsDraw() const {
@@ -78,28 +57,17 @@ public:
         _opacity = opacity;
     }
     
-    Vector2D const &position() const {
-        return _position;
+    Vector2D const &size() const {
+        return _size;
     }
-    void setPosition(Vector2D const &position) {
-        _position = position;
-    }
-    
-    CGRect const &bounds() const {
-        return _bounds;
-    }
-    void setBounds(CGRect const &bounds) {
-        _bounds = bounds;
+    void setSize(Vector2D const &size) {
+        _size = size;
     }
     
-    virtual CGRect effectiveBounds() const {
-        return bounds();
-    }
-    
-    CATransform3D const &transform() const {
+    Transform2D const &transform() const {
         return _transform;
     }
-    void setTransform(CATransform3D const &transform) {
+    void setTransform(Transform2D const &transform) {
         _transform = transform;
     }
     
@@ -138,7 +106,6 @@ private:
     void removeSublayer(CALayer *layer) {
         for (auto it = _sublayers.begin(); it != _sublayers.end(); it++) {
             if (it->get() == layer) {
-                layer->_superlayer = nullptr;
                 _sublayers.erase(it);
                 break;
             }
@@ -146,14 +113,11 @@ private:
     }
     
 private:
-    CALayer *_superlayer = nullptr;
     std::vector<std::shared_ptr<CALayer>> _sublayers;
-    bool _needsDisplay = false;
     bool _isHidden = false;
     float _opacity = 1.0;
-    Vector2D _position = Vector2D(0.0, 0.0);
-    CGRect _bounds = CGRect(0.0, 0.0, 0.0, 0.0);
-    CATransform3D _transform = CATransform3D::identity();
+    Vector2D _size = Vector2D(0.0, 0.0);
+    Transform2D _transform = Transform2D::identity();
     std::shared_ptr<CALayer> _mask;
     bool _masksToBounds = false;
     std::optional<BlendMode> _compositingFilter;
@@ -194,10 +158,10 @@ public:
         _path = path;
     }
     
-    double lineWidth() const {
+    float lineWidth() const {
         return _lineWidth;
     }
-    void setLineWidth(double lineWidth) {
+    void setLineWidth(float lineWidth) {
         _lineWidth = lineWidth;
     }
     
@@ -215,33 +179,18 @@ public:
         _lineCap = lineCap;
     }
     
-    double lineDashPhase() const {
+    float lineDashPhase() const {
         return _lineDashPhase;
     }
-    void setLineDashPhase(double lineDashPhase) {
+    void setLineDashPhase(float lineDashPhase) {
         _lineDashPhase = lineDashPhase;
     }
     
-    std::vector<double> const &dashPattern() const {
+    std::vector<float> const &dashPattern() const {
         return _dashPattern;
     }
-    void setDashPattern(std::vector<double> const &dashPattern) {
+    void setDashPattern(std::vector<float> const &dashPattern) {
         _dashPattern = dashPattern;
-    }
-    
-    virtual CGRect effectiveBounds() const override {
-        if (_path) {
-            CGRect boundingBox = _path->boundingBox();
-            if (_strokeColor) {
-                boundingBox.x -= _lineWidth / 2.0;
-                boundingBox.y -= _lineWidth / 2.0;
-                boundingBox.width += _lineWidth;
-                boundingBox.height += _lineWidth;
-            }
-            return boundingBox;
-        } else {
-            return CGRect(0.0, 0.0, 0.0, 0.0);
-        }
     }
     
     std::shared_ptr<RenderableItem> renderableItem() override;
@@ -251,11 +200,11 @@ private:
     std::optional<Color> _fillColor = Color(0.0, 0.0, 0.0, 1.0);
     FillRule _fillRule = FillRule::NonZeroWinding;
     std::shared_ptr<CGPath> _path;
-    double _lineWidth = 1.0;
+    float _lineWidth = 1.0;
     LineJoin _lineJoin = LineJoin::Miter;
     LineCap _lineCap = LineCap::Butt;
-    double _lineDashPhase = 0.0;
-    std::vector<double> _dashPattern;
+    float _lineDashPhase = 0.0;
+    std::vector<float> _dashPattern;
 };
 
 }

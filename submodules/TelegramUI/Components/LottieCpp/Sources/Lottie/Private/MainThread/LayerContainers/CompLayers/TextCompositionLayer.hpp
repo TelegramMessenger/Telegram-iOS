@@ -42,7 +42,7 @@ public:
         _fontProvider = fontProvider;
     }
     
-    virtual void displayContentsWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) override {
+    virtual void displayContentsWithFrame(float frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) override {
         if (!_textDocument) {
             return;
         }

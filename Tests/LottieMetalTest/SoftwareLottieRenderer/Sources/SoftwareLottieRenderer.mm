@@ -3,24 +3,29 @@
 #import "Canvas.h"
 #import "CoreGraphicsCanvasImpl.h"
 #import "ThorVGCanvasImpl.h"
+#import "NullCanvasImpl.h"
 
 #include <LottieCpp/RenderTreeNode.h>
 
 namespace {
 
+static constexpr float minVisibleAlpha = 0.5f / 255.0f;
+
+static constexpr float minGlobalRectCalculationSize = 200.0f;
+
 struct TransformedPath {
     lottie::BezierPath path;
-    lottie::CATransform3D transform;
+    lottie::Transform2D transform;
     
-    TransformedPath(lottie::BezierPath const &path_, lottie::CATransform3D const &transform_) :
+    TransformedPath(lottie::BezierPath const &path_, lottie::Transform2D const &transform_) :
     path(path_),
     transform(transform_) {
     }
 };
 
-static lottie::CGRect collectPathBoundingBoxes(std::shared_ptr<lottie::RenderTreeNodeContentItem> item, size_t subItemLimit, lottie::CATransform3D const &parentTransform, bool skipApplyTransform) {
+static lottie::CGRect collectPathBoundingBoxes(std::shared_ptr<lottie::RenderTreeNodeContentItem> item, size_t subItemLimit, lottie::Transform2D const &parentTransform, bool skipApplyTransform, lottie::BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
     //TODO:remove skipApplyTransform
-    lottie::CATransform3D effectiveTransform = parentTransform;
+    lottie::Transform2D effectiveTransform = parentTransform;
     if (!skipApplyTransform && item->isGroup) {
         effectiveTransform = item->transform * effectiveTransform;
     }
@@ -29,13 +34,17 @@ static lottie::CGRect collectPathBoundingBoxes(std::shared_ptr<lottie::RenderTre
     
     lottie::CGRect boundingBox(0.0, 0.0, 0.0, 0.0);
     if (item->path) {
-        boundingBox = item->pathBoundingBox.applyingTransform(effectiveTransform);
+        if (item->path->needsBoundsRecalculation) {
+            item->path->bounds = lottie::bezierPathsBoundingBoxParallel(bezierPathsBoundingBoxContext, item->path->path);
+            item->path->needsBoundsRecalculation = false;
+        }
+        boundingBox = item->path->bounds.applyingTransform(effectiveTransform);
     }
     
     for (size_t i = 0; i < maxSubitem; i++) {
         auto &subItem = item->subItems[i];
         
-        lottie::CGRect subItemBoundingBox = collectPathBoundingBoxes(subItem, INT32_MAX, effectiveTransform, false);
+        lottie::CGRect subItemBoundingBox = collectPathBoundingBoxes(subItem, INT32_MAX, effectiveTransform, false, bezierPathsBoundingBoxContext);
         
         if (boundingBox.empty()) {
             boundingBox = subItemBoundingBox;
@@ -47,11 +56,9 @@ static lottie::CGRect collectPathBoundingBoxes(std::shared_ptr<lottie::RenderTre
     return boundingBox;
 }
 
-static std::vector<TransformedPath> collectPaths(std::shared_ptr<lottie::RenderTreeNodeContentItem> item, size_t subItemLimit, lottie::CATransform3D const &parentTransform, bool skipApplyTransform) {
-    std::vector<TransformedPath> mappedPaths;
-    
+static void enumeratePaths(std::shared_ptr<lottie::RenderTreeNodeContentItem> item, size_t subItemLimit, lottie::Transform2D const &parentTransform, bool skipApplyTransform, std::function<void(lottie::BezierPath const &path, lottie::Transform2D const &transform)> const &onPath) {
     //TODO:remove skipApplyTransform
-    lottie::CATransform3D effectiveTransform = parentTransform;
+    lottie::Transform2D effectiveTransform = parentTransform;
     if (!skipApplyTransform && item->isGroup) {
         effectiveTransform = item->transform * effectiveTransform;
     }
@@ -59,44 +66,28 @@ static std::vector<TransformedPath> collectPaths(std::shared_ptr<lottie::RenderT
     size_t maxSubitem = std::min(item->subItems.size(), subItemLimit);
     
     if (item->path) {
-        mappedPaths.emplace_back(item->path.value(), effectiveTransform);
+        onPath(item->path->path, effectiveTransform);
     }
-    assert(!item->trimParams);
     
     for (size_t i = 0; i < maxSubitem; i++) {
         auto &subItem = item->subItems[i];
         
-        auto subItemPaths = collectPaths(subItem, INT32_MAX, effectiveTransform, false);
-        
-        for (auto &path : subItemPaths) {
-            mappedPaths.emplace_back(path.path, path.transform);
-        }
+        enumeratePaths(subItem, INT32_MAX, effectiveTransform, false, onPath);
     }
-    
-    return mappedPaths;
 }
 
 }
 
 namespace lottie {
 
-static void processRenderContentItem(std::shared_ptr<RenderTreeNodeContentItem> const &contentItem, Vector2D const &globalSize, CATransform3D const &parentTransform, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+static std::optional<CGRect> getRenderContentItemGlobalRect(std::shared_ptr<RenderTreeNodeContentItem> const &contentItem, lottie::Vector2D const &globalSize, lottie::Transform2D const &parentTransform, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
     auto currentTransform = parentTransform;
-    
-    CATransform3D localTransform = contentItem->transform;
+    Transform2D localTransform = contentItem->transform;
     currentTransform = localTransform * currentTransform;
     
-    if (!currentTransform.isInvertible()) {
-        contentItem->renderData.isValid = false;
-        return;
-    }
-    
     std::optional<CGRect> globalRect;
-    
-    int drawContentDescendants = 0;
-    
     for (const auto &shadingVariant : contentItem->shadings) {
-        lottie::CGRect shapeBounds = collectPathBoundingBoxes(contentItem, shadingVariant->subItemLimit, lottie::CATransform3D::identity(), true);
+        lottie::CGRect shapeBounds = collectPathBoundingBoxes(contentItem, shadingVariant->subItemLimit, lottie::Transform2D::identity(), true, bezierPathsBoundingBoxContext);
         
         if (shadingVariant->stroke) {
             shapeBounds = shapeBounds.insetBy(-shadingVariant->stroke->lineWidth / 2.0, -shadingVariant->stroke->lineWidth / 2.0);
@@ -104,8 +95,6 @@ static void processRenderContentItem(std::shared_ptr<RenderTreeNodeContentItem> 
         } else {
             continue;
         }
-        
-        drawContentDescendants += 1;
         
         CGRect shapeGlobalBounds = shapeBounds.applyingTransform(currentTransform);
         if (globalRect) {
@@ -115,101 +104,46 @@ static void processRenderContentItem(std::shared_ptr<RenderTreeNodeContentItem> 
         }
     }
     
-    if (contentItem->isGroup) {
-        for (auto it = contentItem->subItems.rbegin(); it != contentItem->subItems.rend(); it++) {
-            const auto &subItem = *it;
-            processRenderContentItem(subItem, globalSize, currentTransform, bezierPathsBoundingBoxContext);
-            
-            if (subItem->renderData.isValid) {
-                drawContentDescendants += subItem->renderData.drawContentDescendants;
-                if (globalRect) {
-                    globalRect = globalRect->unionWith(subItem->renderData.globalRect);
-                } else {
-                    globalRect = subItem->renderData.globalRect;
-                }
+    for (const auto &subItem : contentItem->subItems) {
+        auto subGlobalRect = getRenderContentItemGlobalRect(subItem, globalSize, currentTransform, bezierPathsBoundingBoxContext);
+        if (subGlobalRect) {
+            if (globalRect) {
+                globalRect = globalRect->unionWith(subGlobalRect.value());
+            } else {
+                globalRect = subGlobalRect.value();
             }
         }
+    }
+    
+    if (globalRect) {
+        CGRect integralGlobalRect(
+            std::floor(globalRect->x),
+            std::floor(globalRect->y),
+            std::ceil(globalRect->width + globalRect->x - floor(globalRect->x)),
+            std::ceil(globalRect->height + globalRect->y - floor(globalRect->y))
+        );
+        return integralGlobalRect.intersection(CGRect(0.0, 0.0, globalSize.x, globalSize.y));
     } else {
-        for (const auto &subItem : contentItem->subItems) {
-            subItem->renderData.isValid = false;
-        }
+        return std::nullopt;
     }
-    
-    if (!globalRect) {
-        contentItem->renderData.isValid = false;
-        return;
-    }
-    
-    CGRect integralGlobalRect(
-        std::floor(globalRect->x),
-        std::floor(globalRect->y),
-        std::ceil(globalRect->width + globalRect->x - floor(globalRect->x)),
-        std::ceil(globalRect->height + globalRect->y - floor(globalRect->y))
-    );
-    
-    if (!CGRect(0.0, 0.0, globalSize.x, globalSize.y).intersects(integralGlobalRect)) {
-        contentItem->renderData.isValid = false;
-        return;
-    }
-    if (integralGlobalRect.width <= 0.0 || integralGlobalRect.height <= 0.0) {
-        contentItem->renderData.isValid = false;
-        return;
-    }
-    
-    contentItem->renderData.isValid = true;
-    
-    contentItem->renderData.layer._bounds = CGRect(0.0, 0.0, 0.0, 0.0);
-    contentItem->renderData.layer._position = Vector2D(0.0, 0.0);
-    contentItem->renderData.layer._transform = contentItem->transform;
-    contentItem->renderData.layer._opacity = contentItem->alpha;
-    contentItem->renderData.layer._masksToBounds = false;
-    contentItem->renderData.layer._isHidden = false;
-    
-    contentItem->renderData.globalRect = integralGlobalRect;
-    contentItem->renderData.globalTransform = currentTransform;
-    contentItem->renderData.drawContentDescendants = drawContentDescendants;
-    contentItem->renderData.isInvertedMatte = false;
 }
 
-static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vector2D const &globalSize, CATransform3D const &parentTransform, bool isInvertedMask, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
-    if (node->isHidden() || node->alpha() == 0.0f) {
-        node->renderData.isValid = false;
-        return;
-    }
-    
-    if (node->masksToBounds()) {
-        if (node->bounds().empty()) {
-            node->renderData.isValid = false;
-            return;
-        }
+static std::optional<CGRect> getRenderNodeGlobalRect(std::shared_ptr<RenderTreeNode> const &node, lottie::Vector2D const &globalSize, lottie::Transform2D const &parentTransform, bool isInvertedMatte, BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+    if (node->isHidden() || node->alpha() < minVisibleAlpha) {
+        return std::nullopt;
     }
     
     auto currentTransform = parentTransform;
-    
-    Vector2D localTranslation(node->position().x + -node->bounds().x, node->position().y + -node->bounds().y);
-    CATransform3D localTransform = node->transform();
-    localTransform = localTransform.translated(localTranslation);
-    
+    Transform2D localTransform = node->transform();
     currentTransform = localTransform * currentTransform;
     
-    if (!currentTransform.isInvertible()) {
-        node->renderData.isValid = false;
-        return;
-    }
-    
-    int drawContentDescendants = 0;
     std::optional<CGRect> globalRect;
     if (node->_contentItem) {
-        processRenderContentItem(node->_contentItem, globalSize, currentTransform, bezierPathsBoundingBoxContext);
-        if (node->_contentItem->renderData.isValid) {
-            drawContentDescendants += node->_contentItem->renderData.drawContentDescendants;
-            globalRect = node->_contentItem->renderData.globalRect;
-        }
+        globalRect = getRenderContentItemGlobalRect(node->_contentItem, globalSize, currentTransform, bezierPathsBoundingBoxContext);
     }
     
-    bool isInvertedMatte = isInvertedMask;
     if (isInvertedMatte) {
-        CGRect globalBounds = node->bounds().applyingTransform(currentTransform);
+        CGRect globalBounds = CGRect(0.0f, 0.0f, node->size().x, node->size().y).applyingTransform(currentTransform);
         if (globalRect) {
             globalRect = globalRect->unionWith(globalBounds);
         } else {
@@ -217,119 +151,81 @@ static void processRenderTree(std::shared_ptr<RenderTreeNode> const &node, Vecto
         }
     }
     
-    for (const auto &item : node->subnodes()) {
-        processRenderTree(item, globalSize, currentTransform, false, bezierPathsBoundingBoxContext);
-        if (item->renderData.isValid) {
-            drawContentDescendants += item->renderData.drawContentDescendants;
-            
+    for (const auto &subNode : node->subnodes()) {
+        auto subGlobalRect = getRenderNodeGlobalRect(subNode, globalSize, currentTransform, false, bezierPathsBoundingBoxContext);
+        if (subGlobalRect) {
             if (globalRect) {
-                globalRect = globalRect->unionWith(item->renderData.globalRect);
+                globalRect = globalRect->unionWith(subGlobalRect.value());
             } else {
-                globalRect = item->renderData.globalRect;
+                globalRect = subGlobalRect.value();
             }
         }
     }
     
-    if (!globalRect) {
-        node->renderData.isValid = false;
-        return;
+    if (globalRect) {
+        CGRect integralGlobalRect(
+            std::floor(globalRect->x),
+            std::floor(globalRect->y),
+            std::ceil(globalRect->width + globalRect->x - floor(globalRect->x)),
+            std::ceil(globalRect->height + globalRect->y - floor(globalRect->y))
+        );
+        return integralGlobalRect.intersection(CGRect(0.0, 0.0, globalSize.x, globalSize.y));
+    } else {
+        return std::nullopt;
     }
-    
-    CGRect integralGlobalRect(
-        std::floor(globalRect->x),
-        std::floor(globalRect->y),
-        std::ceil(globalRect->width + globalRect->x - floor(globalRect->x)),
-        std::ceil(globalRect->height + globalRect->y - floor(globalRect->y))
-    );
-    
-    if (!CGRect(0.0, 0.0, globalSize.x, globalSize.y).intersects(integralGlobalRect)) {
-        node->renderData.isValid = false;
-        return;
-    }
-    
-    bool masksToBounds = node->masksToBounds();
-    if (masksToBounds) {
-        CGRect effectiveGlobalBounds = node->bounds().applyingTransform(currentTransform);
-        if (effectiveGlobalBounds.contains(CGRect(0.0, 0.0, globalSize.x, globalSize.y))) {
-            masksToBounds = false;
-        }
-    }
-    
-    if (node->mask()) {
-        processRenderTree(node->mask(), globalSize, currentTransform, node->invertMask(), bezierPathsBoundingBoxContext);
-        if (node->mask()->renderData.isValid) {
-            if (!node->mask()->renderData.globalRect.intersects(integralGlobalRect)) {
-                node->renderData.isValid = false;
-                return;
-            }
-        } else {
-            node->renderData.isValid = false;
-            return;
-        }
-    }
-    
-    if (integralGlobalRect.width <= 0.0 || integralGlobalRect.height <= 0.0) {
-        node->renderData.isValid = false;
-        return;
-    }
-    
-    node->renderData.isValid = true;
-    
-    node->renderData.layer._bounds = node->bounds();
-    node->renderData.layer._position = node->position();
-    node->renderData.layer._transform = node->transform();
-    node->renderData.layer._opacity = node->alpha();
-    node->renderData.layer._masksToBounds = masksToBounds;
-    node->renderData.layer._isHidden = node->isHidden();
-    
-    node->renderData.globalRect = integralGlobalRect;
-    node->renderData.globalTransform = currentTransform;
-    node->renderData.drawContentDescendants = drawContentDescendants;
-    node->renderData.isInvertedMatte = isInvertedMatte;
 }
 
 }
 
 namespace {
 
-static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> parentContext, std::shared_ptr<lottie::RenderTreeNodeContentItem> item, double parentAlpha) {
-    if (!item->renderData.isValid) {
-        return;
-    }
+static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> const &parentContext, std::shared_ptr<lottie::RenderTreeNodeContentItem> item, float parentAlpha, lottie::Vector2D const &globalSize, lottie::Transform2D const &parentTransform, lottie::BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+    auto currentTransform = parentTransform;
+    lottie::Transform2D localTransform = item->transform;
+    currentTransform = localTransform * currentTransform;
     
-    float normalizedOpacity = item->renderData.layer.opacity();
-    double layerAlpha = ((double)normalizedOpacity) * parentAlpha;
+    float normalizedOpacity = item->alpha;
+    float layerAlpha = ((float)normalizedOpacity) * parentAlpha;
     
-    if (item->renderData.layer.isHidden() || normalizedOpacity == 0.0f) {
+    if (normalizedOpacity == 0.0f) {
         return;
     }
     
     parentContext->saveState();
     
-    std::shared_ptr<lottieRendering::Canvas> currentContext;
+    std::shared_ptr<lottieRendering::Canvas> const *currentContext;
     std::shared_ptr<lottieRendering::Canvas> tempContext;
     
     bool needsTempContext = false;
-    needsTempContext = layerAlpha != 1.0 && item->renderData.drawContentDescendants > 1;
+    needsTempContext = layerAlpha != 1.0 && item->drawContentCount > 1;
     
+    std::optional<lottie::CGRect> globalRect;
     if (needsTempContext) {
-        auto tempContextValue = parentContext->makeLayer((int)(item->renderData.globalRect.width), (int)(item->renderData.globalRect.height));
+        if (globalSize.x <= minGlobalRectCalculationSize && globalSize.y <= minGlobalRectCalculationSize) {
+            globalRect = lottie::CGRect(0.0, 0.0, globalSize.x, globalSize.y);
+        } else {
+            globalRect = lottie::getRenderContentItemGlobalRect(item, globalSize, parentTransform, bezierPathsBoundingBoxContext);
+        }
+        if (!globalRect || globalRect->width <= 0.0f || globalRect->height <= 0.0f) {
+            parentContext->restoreState();
+            return;
+        }
+        
+        auto tempContextValue = parentContext->makeLayer((int)(globalRect->width), (int)(globalRect->height));
         tempContext = tempContextValue;
         
-        currentContext = tempContextValue;
-        currentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-item->renderData.globalRect.x, -item->renderData.globalRect.y)));
+        currentContext = &tempContext;
+        (*currentContext)->concatenate(lottie::Transform2D::identity().translated(lottie::Vector2D(-globalRect->x, -globalRect->y)));
         
-        currentContext->saveState();
-        currentContext->concatenate(item->renderData.globalTransform);
+        (*currentContext)->saveState();
+        (*currentContext)->concatenate(currentTransform);
     } else {
-        currentContext = parentContext;
+        currentContext = &parentContext;
     }
     
-    parentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(item->renderData.layer.position().x, item->renderData.layer.position().y)));
-    parentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-item->renderData.layer.bounds().x, -item->renderData.layer.bounds().y)));
-    parentContext->concatenate(item->renderData.layer.transform());
+    parentContext->concatenate(item->transform);
     
-    double renderAlpha = 1.0;
+    float renderAlpha = 1.0;
     if (tempContext) {
         renderAlpha = 1.0;
     } else {
@@ -337,92 +233,122 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
     }
     
     for (const auto &shading : item->shadings) {
-        std::vector<lottie::BezierPath> itemPaths;
+        lottieRendering::CanvasPathEnumerator iteratePaths;
         if (shading->explicitPath) {
-            itemPaths = shading->explicitPath.value();
-        } else {
-            auto rawPaths = collectPaths(item, shading->subItemLimit, lottie::CATransform3D::identity(), true);
-            for (const auto &rawPath : rawPaths) {
-                itemPaths.push_back(rawPath.path.copyUsingTransform(rawPath.transform));
-            }
-        }
-        
-        if (itemPaths.empty()) {
-            continue;
-        }
-        
-        std::shared_ptr<lottie::CGPath> path = lottie::CGPath::makePath();
-        
-        const auto iterate = [&](LottiePathItem const *pathItem) {
-            switch (pathItem->type) {
-                case LottiePathItemTypeMoveTo: {
-                    path->moveTo(lottie::Vector2D(pathItem->points[0].x, pathItem->points[0].y));
-                    break;
-                }
-                case LottiePathItemTypeLineTo: {
-                    path->addLineTo(lottie::Vector2D(pathItem->points[0].x, pathItem->points[0].y));
-                    break;
-                }
-                case LottiePathItemTypeCurveTo: {
-                    path->addCurveTo(lottie::Vector2D(pathItem->points[2].x, pathItem->points[2].y), lottie::Vector2D(pathItem->points[0].x, pathItem->points[0].y), lottie::Vector2D(pathItem->points[1].x, pathItem->points[1].y));
-                    break;
-                }
-                case LottiePathItemTypeClose: {
-                    path->closeSubpath();
-                    break;
-                }
-                default: {
-                    break;
-                }
-            }
-        };
-        
-        LottiePathItem pathItem;
-        for (const auto &path : itemPaths) {
-            std::optional<lottie::PathElement> previousElement;
-            for (const auto &element : path.elements()) {
-                if (previousElement.has_value()) {
-                    if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
-                        pathItem.type = LottiePathItemTypeLineTo;
-                        pathItem.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                        iterate(&pathItem);
-                    } else {
-                        pathItem.type = LottiePathItemTypeCurveTo;
-                        pathItem.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                        pathItem.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
-                        pathItem.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
-                        iterate(&pathItem);
+            auto itemPaths = shading->explicitPath.value();
+            iteratePaths = [itemPaths = itemPaths](std::function<void(lottieRendering::PathCommand const &)> iterate) -> void {
+                lottieRendering::PathCommand pathCommand;
+                for (const auto &path : itemPaths) {
+                    std::optional<lottie::PathElement> previousElement;
+                    for (const auto &element : path.elements()) {
+                        if (previousElement.has_value()) {
+                            if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
+                                pathCommand.type = lottieRendering::PathCommandType::LineTo;
+                                pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                                iterate(pathCommand);
+                            } else {
+                                pathCommand.type = lottieRendering::PathCommandType::CurveTo;
+                                pathCommand.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                                pathCommand.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
+                                pathCommand.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
+                                iterate(pathCommand);
+                            }
+                        } else {
+                            pathCommand.type = lottieRendering::PathCommandType::MoveTo;
+                            pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                            iterate(pathCommand);
+                        }
+                        previousElement = element;
                     }
-                } else {
-                    pathItem.type = LottiePathItemTypeMoveTo;
-                    pathItem.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                    iterate(&pathItem);
+                    if (path.closed().value_or(true)) {
+                        pathCommand.type = lottieRendering::PathCommandType::Close;
+                        iterate(pathCommand);
+                    }
                 }
-                previousElement = element;
-            }
-            if (path.closed().value_or(true)) {
-                pathItem.type = LottiePathItemTypeClose;
-                iterate(&pathItem);
-            }
+            };
+        } else {
+            iteratePaths = [&](std::function<void(lottieRendering::PathCommand const &)> iterate) {
+                enumeratePaths(item, shading->subItemLimit, lottie::Transform2D::identity(), true, [&](lottie::BezierPath const &sourcePath, lottie::Transform2D const &transform) {
+                    auto path = sourcePath.copyUsingTransform(transform);
+                    
+                    lottieRendering::PathCommand pathCommand;
+                    std::optional<lottie::PathElement> previousElement;
+                    for (const auto &element : path.elements()) {
+                        if (previousElement.has_value()) {
+                            if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
+                                pathCommand.type = lottieRendering::PathCommandType::LineTo;
+                                pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                                iterate(pathCommand);
+                            } else {
+                                pathCommand.type = lottieRendering::PathCommandType::CurveTo;
+                                pathCommand.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                                pathCommand.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
+                                pathCommand.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
+                                iterate(pathCommand);
+                            }
+                        } else {
+                            pathCommand.type = lottieRendering::PathCommandType::MoveTo;
+                            pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                            iterate(pathCommand);
+                        }
+                        previousElement = element;
+                    }
+                    if (path.closed().value_or(true)) {
+                        pathCommand.type = lottieRendering::PathCommandType::Close;
+                        iterate(pathCommand);
+                    }
+                });
+            };
         }
+        
+        /*auto iteratePaths = [&](std::function<void(lottieRendering::PathCommand const &)> iterate) -> void {
+            lottieRendering::PathCommand pathCommand;
+            for (const auto &path : itemPaths) {
+                std::optional<lottie::PathElement> previousElement;
+                for (const auto &element : path.elements()) {
+                    if (previousElement.has_value()) {
+                        if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
+                            pathCommand.type = lottieRendering::PathCommandType::LineTo;
+                            pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                            iterate(pathCommand);
+                        } else {
+                            pathCommand.type = lottieRendering::PathCommandType::CurveTo;
+                            pathCommand.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                            pathCommand.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
+                            pathCommand.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
+                            iterate(pathCommand);
+                        }
+                    } else {
+                        pathCommand.type = lottieRendering::PathCommandType::MoveTo;
+                        pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
+                        iterate(pathCommand);
+                    }
+                    previousElement = element;
+                }
+                if (path.closed().value_or(true)) {
+                    pathCommand.type = lottieRendering::PathCommandType::Close;
+                    iterate(pathCommand);
+                }
+            }
+        };*/
         
         if (shading->stroke) {
             if (shading->stroke->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Solid) {
                 lottie::RenderTreeNodeContentItem::SolidShading *solidShading = (lottie::RenderTreeNodeContentItem::SolidShading *)shading->stroke->shading.get();
                 
                 if (solidShading->opacity != 0.0) {
-                    lottieRendering::LineJoin lineJoin = lottieRendering::LineJoin::Bevel;
+                    lottie::LineJoin lineJoin = lottie::LineJoin::Bevel;
                     switch (shading->stroke->lineJoin) {
                         case lottie::LineJoin::Bevel: {
-                            lineJoin = lottieRendering::LineJoin::Bevel;
+                            lineJoin = lottie::LineJoin::Bevel;
                             break;
                         }
                         case lottie::LineJoin::Round: {
-                            lineJoin = lottieRendering::LineJoin::Round;
+                            lineJoin = lottie::LineJoin::Round;
                             break;
                         }
                         case lottie::LineJoin::Miter: {
-                            lineJoin = lottieRendering::LineJoin::Miter;
+                            lineJoin = lottie::LineJoin::Miter;
                             break;
                         }
                         default: {
@@ -430,18 +356,18 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
                         }
                     }
                     
-                    lottieRendering::LineCap lineCap = lottieRendering::LineCap::Square;
+                    lottie::LineCap lineCap = lottie::LineCap::Square;
                     switch (shading->stroke->lineCap) {
                         case lottie::LineCap::Butt: {
-                            lineCap = lottieRendering::LineCap::Butt;
+                            lineCap = lottie::LineCap::Butt;
                             break;
                         }
                         case lottie::LineCap::Round: {
-                            lineCap = lottieRendering::LineCap::Round;
+                            lineCap = lottie::LineCap::Round;
                             break;
                         }
                         case lottie::LineCap::Square: {
-                            lineCap = lottieRendering::LineCap::Square;
+                            lineCap = lottie::LineCap::Square;
                             break;
                         }
                         default: {
@@ -449,25 +375,25 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
                         }
                     }
                     
-                    std::vector<double> dashPattern;
+                    std::vector<float> dashPattern;
                     if (!shading->stroke->dashPattern.empty()) {
                         dashPattern = shading->stroke->dashPattern;
                     }
                     
-                    currentContext->strokePath(path, shading->stroke->lineWidth, lineJoin, lineCap, shading->stroke->dashPhase, dashPattern, lottieRendering::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity * renderAlpha));
+                    (*currentContext)->strokePath(iteratePaths, shading->stroke->lineWidth, lineJoin, lineCap, shading->stroke->dashPhase, dashPattern, lottie::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity * renderAlpha));
                 } else if (shading->stroke->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Gradient) {
                     //TODO:gradient stroke
                 }
             }
         } else if (shading->fill) {
-            lottieRendering::FillRule rule = lottieRendering::FillRule::NonZeroWinding;
+            lottie::FillRule rule = lottie::FillRule::NonZeroWinding;
             switch (shading->fill->rule) {
                 case lottie::FillRule::EvenOdd: {
-                    rule = lottieRendering::FillRule::EvenOdd;
+                    rule = lottie::FillRule::EvenOdd;
                     break;
                 }
                 case lottie::FillRule::NonZeroWinding: {
-                    rule = lottieRendering::FillRule::NonZeroWinding;
+                    rule = lottie::FillRule::NonZeroWinding;
                     break;
                 }
                 default: {
@@ -478,16 +404,16 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
             if (shading->fill->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Solid) {
                 lottie::RenderTreeNodeContentItem::SolidShading *solidShading = (lottie::RenderTreeNodeContentItem::SolidShading *)shading->fill->shading.get();
                 if (solidShading->opacity != 0.0) {
-                    currentContext->fillPath(path, rule, lottieRendering::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity * renderAlpha));
+                    (*currentContext)->fillPath(iteratePaths, rule, lottie::Color(solidShading->color.r, solidShading->color.g, solidShading->color.b, solidShading->color.a * solidShading->opacity * renderAlpha));
                 }
             } else if (shading->fill->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Gradient) {
                 lottie::RenderTreeNodeContentItem::GradientShading *gradientShading = (lottie::RenderTreeNodeContentItem::GradientShading *)shading->fill->shading.get();
                 
                 if (gradientShading->opacity != 0.0) {
-                    std::vector<lottieRendering::Color> colors;
-                    std::vector<double> locations;
+                    std::vector<lottie::Color> colors;
+                    std::vector<float> locations;
                     for (const auto &color : gradientShading->colors) {
-                        colors.push_back(lottieRendering::Color(color.r, color.g, color.b, color.a * gradientShading->opacity * renderAlpha));
+                        colors.push_back(lottie::Color(color.r, color.g, color.b, color.a * gradientShading->opacity * renderAlpha));
                     }
                     locations = gradientShading->locations;
                     
@@ -497,11 +423,11 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
                     
                     switch (gradientShading->gradientType) {
                         case lottie::GradientType::Linear: {
-                            currentContext->linearGradientFillPath(path, rule, gradient, start, end);
+                            (*currentContext)->linearGradientFillPath(iteratePaths, rule, gradient, start, end);
                             break;
                         }
                         case lottie::GradientType::Radial: {
-                            currentContext->radialGradientFillPath(path, rule, gradient, start, 0.0, start, start.distanceTo(end));
+                            (*currentContext)->radialGradientFillPath(iteratePaths, rule, gradient, start, 0.0, start, start.distanceTo(end));
                             break;
                         }
                         default: {
@@ -515,98 +441,117 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> paren
     
     for (auto it = item->subItems.rbegin(); it != item->subItems.rend(); it++) {
         const auto &subItem = *it;
-        drawLottieContentItem(currentContext, subItem, renderAlpha);
+        drawLottieContentItem(*currentContext, subItem, renderAlpha, globalSize, currentTransform, bezierPathsBoundingBoxContext);
     }
     
     if (tempContext) {
         tempContext->restoreState();
         
-        parentContext->concatenate(item->renderData.globalTransform.inverted());
+        parentContext->concatenate(currentTransform.inverted());
         parentContext->setAlpha(layerAlpha);
-        parentContext->draw(tempContext, item->renderData.globalRect);
+        parentContext->draw(tempContext, globalRect.value());
         parentContext->setAlpha(1.0);
     }
     
     parentContext->restoreState();
 }
 
-static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node, std::shared_ptr<lottieRendering::Canvas> parentContext, lottie::Vector2D const &globalSize, double parentAlpha) {
-    if (!node->renderData.isValid) {
-        return;
-    }
-    float normalizedOpacity = node->renderData.layer.opacity();
-    double layerAlpha = ((double)normalizedOpacity) * parentAlpha;
+static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node, std::shared_ptr<lottieRendering::Canvas> const &parentContext, lottie::Vector2D const &globalSize, lottie::Transform2D const &parentTransform, float parentAlpha, bool isInvertedMatte, lottie::BezierPathsBoundingBoxContext &bezierPathsBoundingBoxContext) {
+    float normalizedOpacity = node->alpha();
+    float layerAlpha = ((float)normalizedOpacity) * parentAlpha;
     
-    if (node->renderData.layer.isHidden() || normalizedOpacity == 0.0f) {
+    if (node->isHidden() || normalizedOpacity < minVisibleAlpha) {
         return;
     }
     
-    parentContext->saveState();
+    auto currentTransform = parentTransform;
+    lottie::Transform2D localTransform = node->transform();
+    currentTransform = localTransform * currentTransform;
     
     std::shared_ptr<lottieRendering::Canvas> maskContext;
     std::shared_ptr<lottieRendering::Canvas> currentContext;
     std::shared_ptr<lottieRendering::Canvas> tempContext;
     
-    bool needsTempContext = false;
-    if (node->mask() && node->mask()->renderData.isValid) {
-        needsTempContext = true;
-    } else {
-        needsTempContext = layerAlpha != 1.0 || node->renderData.layer.masksToBounds();
+    bool masksToBounds = node->masksToBounds();
+    if (masksToBounds) {
+        lottie::CGRect effectiveGlobalBounds = lottie::CGRect(0.0f, 0.0f, node->size().x, node->size().y).applyingTransform(currentTransform);
+        if (effectiveGlobalBounds.width <= 0.0f || effectiveGlobalBounds.height <= 0.0f) {
+            return;
+        }
+        if (effectiveGlobalBounds.contains(lottie::CGRect(0.0, 0.0, globalSize.x, globalSize.y))) {
+            masksToBounds = false;
+        }
     }
     
+    parentContext->saveState();
+    
+    bool needsTempContext = false;
+    if (node->mask() && !node->mask()->isHidden() && node->mask()->alpha() >= minVisibleAlpha) {
+        needsTempContext = true;
+    } else {
+        needsTempContext = layerAlpha != 1.0 || masksToBounds;
+    }
+    
+    std::optional<lottie::CGRect> globalRect;
     if (needsTempContext) {
-        if ((node->mask() && node->mask()->renderData.isValid) || node->renderData.layer.masksToBounds()) {
-            auto maskBackingStorage = parentContext->makeLayer((int)(node->renderData.globalRect.width), (int)(node->renderData.globalRect.height));
+        if (globalSize.x <= minGlobalRectCalculationSize && globalSize.y <= minGlobalRectCalculationSize) {
+            globalRect = lottie::CGRect(0.0, 0.0, globalSize.x, globalSize.y);
+        } else {
+            globalRect = lottie::getRenderNodeGlobalRect(node, globalSize, parentTransform, false, bezierPathsBoundingBoxContext);
+        }
+        if (!globalRect || globalRect->width <= 0.0f || globalRect->height <= 0.0f) {
+            parentContext->restoreState();
+            return;
+        }
+        
+        if ((node->mask() && !node->mask()->isHidden() && node->mask()->alpha() >= minVisibleAlpha) || masksToBounds) {
+            auto maskBackingStorage = parentContext->makeLayer((int)(globalRect->width), (int)(globalRect->height));
             
-            maskBackingStorage->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-node->renderData.globalRect.x, -node->renderData.globalRect.y)));
-            maskBackingStorage->concatenate(node->renderData.globalTransform);
+            maskBackingStorage->concatenate(lottie::Transform2D::identity().translated(lottie::Vector2D(-globalRect->x, -globalRect->y)));
+            maskBackingStorage->concatenate(currentTransform);
             
-            if (node->renderData.layer.masksToBounds()) {
-                maskBackingStorage->fill(lottie::CGRect(node->renderData.layer.bounds().x, node->renderData.layer.bounds().y, node->renderData.layer.bounds().width, node->renderData.layer.bounds().height), lottieRendering::Color(1.0, 1.0, 1.0, 1.0));
+            if (masksToBounds) {
+                maskBackingStorage->fill(lottie::CGRect(0.0f, 0.0f, node->size().x, node->size().y), lottie::Color(1.0f, 1.0f, 1.0f, 1.0f));
             }
-            if (node->mask() && node->mask()->renderData.isValid) {
-                renderLottieRenderNode(node->mask(), maskBackingStorage, globalSize, 1.0);
+            if (node->mask() && !node->mask()->isHidden() && node->mask()->alpha() >= minVisibleAlpha) {
+                renderLottieRenderNode(node->mask(), maskBackingStorage, globalSize, currentTransform, 1.0, node->invertMask(), bezierPathsBoundingBoxContext);
             }
             
             maskContext = maskBackingStorage;
         }
         
-        auto tempContextValue = parentContext->makeLayer((int)(node->renderData.globalRect.width), (int)(node->renderData.globalRect.height));
+        auto tempContextValue = parentContext->makeLayer((int)(globalRect->width), (int)(globalRect->height));
         tempContext = tempContextValue;
         
         currentContext = tempContextValue;
-        currentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-node->renderData.globalRect.x, -node->renderData.globalRect.y)));
+        currentContext->concatenate(lottie::Transform2D::identity().translated(lottie::Vector2D(-globalRect->x, -globalRect->y)));
         
         currentContext->saveState();
-        currentContext->concatenate(node->renderData.globalTransform);
+        currentContext->concatenate(currentTransform);
     } else {
         currentContext = parentContext;
     }
     
-    parentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(node->renderData.layer.position().x, node->renderData.layer.position().y)));
-    parentContext->concatenate(lottie::CATransform3D::identity().translated(lottie::Vector2D(-node->renderData.layer.bounds().x, -node->renderData.layer.bounds().y)));
-    parentContext->concatenate(node->renderData.layer.transform());
+    parentContext->concatenate(node->transform());
     
-    double renderAlpha = 1.0;
+    float renderAlpha = 1.0f;
     if (tempContext) {
-        renderAlpha = 1.0;
+        renderAlpha = 1.0f;
     } else {
         renderAlpha = layerAlpha;
     }
     
     if (node->_contentItem) {
-        drawLottieContentItem(currentContext, node->_contentItem, renderAlpha);
+        drawLottieContentItem(currentContext, node->_contentItem, renderAlpha, globalSize, currentTransform, bezierPathsBoundingBoxContext);
     }
     
-    if (node->renderData.isInvertedMatte) {
-        currentContext->fill(lottie::CGRect(node->renderData.layer.bounds().x, node->renderData.layer.bounds().y, node->renderData.layer.bounds().width, node->renderData.layer.bounds().height), lottieRendering::Color(0.0, 0.0, 0.0, 1.0));
+    if (isInvertedMatte) {
+        currentContext->fill(lottie::CGRect(0.0f, 0.0f, node->size().x, node->size().y), lottie::Color(0.0f, 0.0f, 0.0f, 1.0f));
         currentContext->setBlendMode(lottieRendering::BlendMode::DestinationOut);
     }
     
     for (const auto &subnode : node->subnodes()) {
-        if (subnode->renderData.isValid) {
-            renderLottieRenderNode(subnode, currentContext, globalSize, renderAlpha);
-        }
+        renderLottieRenderNode(subnode, currentContext, globalSize, currentTransform, renderAlpha, false, bezierPathsBoundingBoxContext);
     }
     
     if (tempContext) {
@@ -614,12 +559,12 @@ static void renderLottieRenderNode(std::shared_ptr<lottie::RenderTreeNode> node,
         
         if (maskContext) {
             tempContext->setBlendMode(lottieRendering::BlendMode::DestinationIn);
-            tempContext->draw(maskContext, lottie::CGRect(node->renderData.globalRect.x, node->renderData.globalRect.y, node->renderData.globalRect.width, node->renderData.globalRect.height));
+            tempContext->draw(maskContext, lottie::CGRect(globalRect->x, globalRect->y, globalRect->width, globalRect->height));
         }
         
-        parentContext->concatenate(node->renderData.globalTransform.inverted());
+        parentContext->concatenate(currentTransform.inverted());
         parentContext->setAlpha(layerAlpha);
-        parentContext->draw(tempContext, node->renderData.globalRect);
+        parentContext->draw(tempContext, globalRect.value());
     }
     
     parentContext->restoreState();
@@ -657,30 +602,27 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
         return nil;
     }
     
-    if (!useReferenceRendering) {
-        return nil;
-    }
-    
-    processRenderTree(renderNode, lottie::Vector2D((int)size.width, (int)size.height), lottie::CATransform3D::identity().scaled(lottie::Vector2D(size.width / (double)animation.size.width, size.height / (double)animation.size.height)), false, *_bezierPathsBoundingBoxContext.get());
+    lottie::Transform2D rootTransform = lottie::Transform2D::identity().scaled(lottie::Vector2D(size.width / (float)animation.size.width, size.height / (float)animation.size.height));
     
     if (useReferenceRendering) {
         auto context = std::make_shared<lottieRendering::CanvasImpl>((int)size.width, (int)size.height);
         
         CGPoint scale = CGPointMake(size.width / (CGFloat)animation.size.width, size.height / (CGFloat)animation.size.height);
-        context->concatenate(lottie::CATransform3D::makeScale(scale.x, scale.y, 1.0));
+        context->concatenate(lottie::Transform2D::makeScale(scale.x, scale.y));
         
-        renderLottieRenderNode(renderNode, context, lottie::Vector2D(context->width(), context->height()), 1.0);
+        renderLottieRenderNode(renderNode, context, lottie::Vector2D(context->width(), context->height()), rootTransform, 1.0, false, *_bezierPathsBoundingBoxContext.get());
         
         auto image = context->makeImage();
         
         return [[UIImage alloc] initWithCGImage:std::static_pointer_cast<lottieRendering::ImageImpl>(image)->nativeImage()];
     } else {
-        /*auto context = std::make_shared<lottieRendering::ThorVGCanvasImpl>((int)size.width, (int)size.height);
+        //auto context = std::make_shared<lottieRendering::ThorVGCanvasImpl>((int)size.width, (int)size.height);
+        auto context = std::make_shared<lottieRendering::NullCanvasImpl>((int)size.width, (int)size.height);
         
         CGPoint scale = CGPointMake(size.width / (CGFloat)animation.size.width, size.height / (CGFloat)animation.size.height);
-        context->concatenate(lottie::CATransform3D::makeScale(scale.x, scale.y, 1.0));
+        context->concatenate(lottie::Transform2D::makeScale(scale.x, scale.y));
         
-        renderLottieRenderNode(renderNode, context, lottie::Vector2D(context->width(), context->height()), 1.0);*/
+        //renderLottieRenderNode(renderNode, context, lottie::Vector2D(context->width(), context->height()), rootTransform, 1.0, false, *_bezierPathsBoundingBoxContext.get());
         
         return nil;
     }

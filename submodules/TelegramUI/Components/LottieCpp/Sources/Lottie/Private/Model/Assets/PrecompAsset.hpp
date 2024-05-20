@@ -23,7 +23,9 @@ public:
     
     explicit PrecompAsset(lottiejson11::Json::object const &json) noexcept(false) :
     Asset(json) {
-        frameRate = getOptionalDouble(json, "fr");
+        if (const auto frameRateValue = getOptionalDouble(json, "fr")) {
+            frameRate = (float)frameRateValue.value();
+        }
         
         auto layerDictionaries = getObjectArray(json, "layers");
         for (size_t i = 0; i < layerDictionaries.size(); i++) {
@@ -56,7 +58,7 @@ public:
     /// Layers of the precomp
     std::vector<std::shared_ptr<LayerModel>> layers;
     
-    std::optional<double> frameRate;
+    std::optional<float> frameRate;
 };
 
 }

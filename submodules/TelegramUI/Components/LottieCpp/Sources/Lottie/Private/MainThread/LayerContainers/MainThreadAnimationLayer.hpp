@@ -42,7 +42,7 @@ public:
         _layerTextProvider = std::make_shared<LayerTextProvider>(textProvider);
         _layerFontProvider = std::make_shared<LayerFontProvider>(fontProvider);
         
-        setBounds(CGRect(0.0, 0.0, animation.width, animation.height));
+        setSize(Vector2D(animation.width, animation.height));
         
         auto layers = initializeCompositionLayers(
             animation.layers,
@@ -60,7 +60,7 @@ public:
         
         for (auto layerIt = layers.rbegin(); layerIt != layers.rend(); layerIt++) {
             std::shared_ptr<CompositionLayer> const &layer = *layerIt;
-            layer->setBounds(bounds());
+            layer->setSize(size());
             _animationLayers.push_back(layer);
             
             if (layer->isImageCompositionLayer()) {
@@ -90,7 +90,7 @@ public:
         _layerFontProvider->addTextLayers(textLayers);
         _layerFontProvider->reloadTexts();
         
-        setNeedsDisplay(true);
+        renderTreeNode();
     }
     
     void setRespectAnimationFrameRate(bool respectAnimationFrameRate) {
@@ -98,7 +98,7 @@ public:
     }
     
     void display() {
-        double newFrame = currentFrame();
+        float newFrame = currentFrame();
         if (_respectAnimationFrameRate) {
             newFrame = floor(newFrame);
         }
@@ -140,7 +140,7 @@ public:
         }*/
     }
     
-    std::optional<AnyValue> getValue(AnimationKeypath const &keypath, std::optional<double> atFrame) {
+    std::optional<AnyValue> getValue(AnimationKeypath const &keypath, std::optional<float> atFrame) {
         /*for (const auto &layer : _animationLayers) {
             assert(false);
             if
@@ -153,7 +153,7 @@ public:
         return std::nullopt;
     }
     
-    std::optional<AnyValue> getOriginalValue(AnimationKeypath const &keypath, std::optional<double> atFrame) {
+    std::optional<AnyValue> getOriginalValue(AnimationKeypath const &keypath, std::optional<float> atFrame) {
         /*for (const auto &layer : _animationLayers) {
             assert(false);
             if
@@ -186,10 +186,10 @@ public:
         return results;
     }
     
-    double currentFrame() const {
+    float currentFrame() const {
         return _currentFrame;
     }
-    void setCurrentFrame(double currentFrame) {
+    void setCurrentFrame(float currentFrame) {
         _currentFrame = currentFrame;
         
         for (size_t i = 0; i < _animationLayers.size(); i++) {
@@ -237,9 +237,8 @@ public:
                 }
             }
             _renderTreeNode = std::make_shared<RenderTreeNode>(
-                bounds(),
-                position(),
-                CATransform3D::identity(),
+                size(),
+                Transform2D::identity(),
                 1.0,
                 false,
                 false,
@@ -249,31 +248,14 @@ public:
             );
         }
         
-        updateRenderTree();
-        
         return _renderTreeNode;
-    }
-    
-    void updateRenderTree() {
-        for (const auto &animationLayer : _animationLayers) {
-            bool found = false;
-            for (const auto &sublayer : sublayers()) {
-                if (animationLayer == sublayer) {
-                    found = true;
-                    break;
-                }
-            }
-            if (found) {
-                animationLayer->updateRenderTree(_boundingBoxContext);
-            }
-        }
     }
     
 private:
     // MARK: Internal
     
     /// The animatable Current Frame Property
-    double _currentFrame = 0.0;
+    float _currentFrame = 0.0;
     
     std::shared_ptr<AnimationImageProvider> _imageProvider;
     std::shared_ptr<AnimationTextProvider> _textProvider;

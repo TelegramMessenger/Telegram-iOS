@@ -16,7 +16,7 @@ namespace lottie {
 class AnyValue {
 public:
     enum class Type {
-        Double,
+        Float,
         Vector1D,
         Vector2D,
         Vector3D,
@@ -28,9 +28,9 @@ public:
     };
     
 public:
-    AnyValue(double value) :
-    _type(Type::Double),
-    _doubleValue(value) {
+    AnyValue(float value) :
+    _type(Type::Float),
+    _floatValue(value) {
     }
     
     AnyValue(Vector1D const &value) :
@@ -73,9 +73,9 @@ public:
     _dashPatternValue(value) {
     }
     
-    template<typename T, typename = std::enable_if_t<std::is_same<T, double>::value>>
-    double get() {
-        return asDouble();
+    template<typename T, typename = std::enable_if_t<std::is_same<T, float>::value>>
+    float get() {
+        return asFloat();
     }
     
     template<typename T, typename = std::enable_if_t<std::is_same<T, Vector1D>::value>>
@@ -123,8 +123,8 @@ public:
         return _type;
     }
     
-    double asDouble() {
-        return _doubleValue.value();
+    float asFloat() {
+        return _floatValue.value();
     }
     
     Vector1D asVector1D() {
@@ -162,7 +162,7 @@ public:
 private:
     Type _type;
     
-    std::optional<double> _doubleValue;
+    std::optional<float> _floatValue;
     std::optional<Vector1D> _vector1DValue;
     std::optional<Vector2D> _vector2DValue;
     std::optional<Vector3D> _vector3DValue;
@@ -178,9 +178,9 @@ struct AnyValueType {
 };
 
 template<>
-struct AnyValueType<double> {
+struct AnyValueType<float> {
     static AnyValue::Type type() {
-        return AnyValue::Type::Double;
+        return AnyValue::Type::Float;
     }
 };
 

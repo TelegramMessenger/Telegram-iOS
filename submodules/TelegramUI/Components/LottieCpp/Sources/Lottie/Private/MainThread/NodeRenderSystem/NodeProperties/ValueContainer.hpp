@@ -15,7 +15,7 @@ public:
     }
     
 public:
-    double _lastUpdateFrame = std::numeric_limits<double>::infinity();
+    float _lastUpdateFrame = std::numeric_limits<float>::infinity();
     bool _needsUpdate = true;
     
     virtual AnyValue value() const override {
@@ -26,7 +26,7 @@ public:
         return _needsUpdate;
     }
     
-    virtual double lastUpdateFrame() const override {
+    virtual float lastUpdateFrame() const override {
         return _lastUpdateFrame;
     }
     
@@ -40,7 +40,7 @@ public:
         _needsUpdate = false;
     }
     
-    void setValue(AnyValue value, double forFrame) {
+    void setValue(AnyValue value, float forFrame) {
         if (value.type() == AnyValueType<T>::type()) {
             _needsUpdate = false;
             _lastUpdateFrame = forFrame;

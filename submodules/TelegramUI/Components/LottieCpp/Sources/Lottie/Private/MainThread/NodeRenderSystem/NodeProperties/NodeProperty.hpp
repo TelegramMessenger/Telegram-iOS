@@ -27,7 +27,7 @@ public:
         return _typedContainer.outputValue();
     }
     
-    virtual bool needsUpdate(double frame) const override {
+    virtual bool needsUpdate(float frame) const override {
         return _typedContainer.needsUpdate() || _valueProvider->hasUpdate(frame);
     }
     
@@ -39,7 +39,7 @@ public:
         _typedContainer.setNeedsUpdate();*/
     }
     
-    virtual void update(double frame) override {
+    virtual void update(float frame) override {
         _typedContainer.setValue(_valueProvider->value(frame), frame);
     }
     

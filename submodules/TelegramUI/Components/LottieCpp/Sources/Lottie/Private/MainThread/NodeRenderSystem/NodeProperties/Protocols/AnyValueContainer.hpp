@@ -17,7 +17,7 @@ public:
     virtual bool needsUpdate() const = 0;
     
     /// The frame time of the last provided update
-    virtual double lastUpdateFrame() const = 0;
+    virtual float lastUpdateFrame() const = 0;
 };
 
 }

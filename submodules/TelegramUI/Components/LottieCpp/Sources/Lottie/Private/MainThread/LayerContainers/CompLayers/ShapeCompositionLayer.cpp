@@ -74,7 +74,7 @@ public:
         Color colorValue = Color(0.0, 0.0, 0.0, 0.0);
         
         KeyframeInterpolator<Vector1D> opacity;
-        double opacityValue = 0.0;
+        float opacityValue = 0.0;
         
         std::shared_ptr<RenderTreeNodeContentItem::Fill> _fill;
     };
@@ -93,7 +93,7 @@ public:
                 0.0,
                 gradientType,
                 std::vector<Color>(),
-                std::vector<double>(),
+                std::vector<float>(),
                 Vector2D(0.0, 0.0),
                 Vector2D(0.0, 0.0)
             );
@@ -130,7 +130,7 @@ public:
             
             if (hasUpdates) {
                 std::vector<Color> colors;
-                std::vector<double> locations;
+                std::vector<float> locations;
                 getGradientParameters(numberOfColors, colorsValue, colors, locations);
                 
                 RenderTreeNodeContentItem::GradientShading *gradient = ((RenderTreeNodeContentItem::GradientShading *)_fill->shading.get());
@@ -161,7 +161,7 @@ public:
         Vector3D endPointValue = Vector3D(0.0, 0.0, 0.0);
         
         KeyframeInterpolator<Vector1D> opacity;
-        double opacityValue = 0.0;
+        float opacityValue = 0.0;
         
         std::shared_ptr<RenderTreeNodeContentItem::Fill> _fill;
     };
@@ -202,7 +202,7 @@ public:
                 lineCap,
                 miterLimit,
                 0.0,
-                std::vector<double>()
+                std::vector<float>()
             );
         }
         
@@ -257,7 +257,7 @@ public:
                 
                 _stroke->lineWidth = widthValue;
                 _stroke->dashPhase = hasNonZeroDashes ? dashPhaseValue : 0.0;
-                _stroke->dashPattern = hasNonZeroDashes ? dashPatternValue.values : std::vector<double>();
+                _stroke->dashPattern = hasNonZeroDashes ? dashPatternValue.values : std::vector<float>();
             }
         }
         
@@ -268,22 +268,22 @@ public:
     private:
         LineJoin lineJoin;
         LineCap lineCap;
-        double miterLimit = 4.0;
+        float miterLimit = 4.0;
         
         KeyframeInterpolator<Color> color;
         Color colorValue = Color(0.0, 0.0, 0.0, 0.0);
         
         KeyframeInterpolator<Vector1D> opacity;
-        double opacityValue = 0.0;
+        float opacityValue = 0.0;
         
         KeyframeInterpolator<Vector1D> width;
-        double widthValue = 0.0;
+        float widthValue = 0.0;
         
         std::unique_ptr<DashPatternInterpolator> dashPattern;
         DashPattern dashPatternValue = DashPattern({});
         
         std::unique_ptr<KeyframeInterpolator<Vector1D>> dashPhase;
-        double dashPhaseValue = 0.0;
+        float dashPhaseValue = 0.0;
         
         std::shared_ptr<RenderTreeNodeContentItem::Stroke> _stroke;
     };
@@ -314,7 +314,7 @@ public:
                 0.0,
                 gradientType,
                 std::vector<Color>(),
-                std::vector<double>(),
+                std::vector<float>(),
                 Vector2D(0.0, 0.0),
                 Vector2D(0.0, 0.0)
             );
@@ -325,7 +325,7 @@ public:
                 lineCap,
                 miterLimit,
                 0.0,
-                std::vector<double>()
+                std::vector<float>()
             );
         }
         
@@ -385,7 +385,7 @@ public:
                 }
                 
                 std::vector<Color> colors;
-                std::vector<double> locations;
+                std::vector<float> locations;
                 getGradientParameters(numberOfColors, colorsValue, colors, locations);
                 
                 RenderTreeNodeContentItem::GradientShading *gradient = ((RenderTreeNodeContentItem::GradientShading *)_stroke->shading.get());
@@ -397,7 +397,7 @@ public:
                 
                 _stroke->lineWidth = widthValue;
                 _stroke->dashPhase = hasNonZeroDashes ? dashPhaseValue : 0.0;
-                _stroke->dashPattern = hasNonZeroDashes ? dashPatternValue.values : std::vector<double>();
+                _stroke->dashPattern = hasNonZeroDashes ? dashPatternValue.values : std::vector<float>();
             }
         }
         
@@ -408,7 +408,7 @@ public:
     private:
         LineJoin lineJoin;
         LineCap lineCap;
-        double miterLimit = 4.0;
+        float miterLimit = 4.0;
         
         int numberOfColors = 0;
         GradientType gradientType;
@@ -423,16 +423,16 @@ public:
         Vector3D endPointValue = Vector3D(0.0, 0.0, 0.0);
         
         KeyframeInterpolator<Vector1D> opacity;
-        double opacityValue = 0.0;
+        float opacityValue = 0.0;
         
         KeyframeInterpolator<Vector1D> width;
-        double widthValue = 0.0;
+        float widthValue = 0.0;
         
         std::unique_ptr<DashPatternInterpolator> dashPattern;
         DashPattern dashPatternValue = DashPattern({});
         
         std::unique_ptr<KeyframeInterpolator<Vector1D>> dashPhase;
-        double dashPhaseValue = 0.0;
+        float dashPhaseValue = 0.0;
         
         std::shared_ptr<RenderTreeNodeContentItem::Stroke> _stroke;
     };
@@ -461,12 +461,12 @@ public:
         }
         
         TrimParams trimParams() {
-            double resolvedStartValue = startValue * 0.01;
-            double resolvedEndValue = endValue * 0.01;
-            double resolvedStart = std::min(resolvedStartValue, resolvedEndValue);
-            double resolvedEnd = std::max(resolvedStartValue, resolvedEndValue);
+            float resolvedStartValue = startValue * 0.01;
+            float resolvedEndValue = endValue * 0.01;
+            float resolvedStart = std::min(resolvedStartValue, resolvedEndValue);
+            float resolvedEnd = std::max(resolvedStartValue, resolvedEndValue);
             
-            double resolvedOffset = fmod(offsetValue, 360.0) / 360.0;
+            float resolvedOffset = fmod(offsetValue, 360.0) / 360.0;
             
             return TrimParams(resolvedStart, resolvedEnd, resolvedOffset, type);
         }
@@ -475,13 +475,13 @@ public:
         TrimType type;
         
         KeyframeInterpolator<Vector1D> start;
-        double startValue = 0.0;
+        float startValue = 0.0;
         
         KeyframeInterpolator<Vector1D> end;
-        double endValue = 0.0;
+        float endValue = 0.0;
         
         KeyframeInterpolator<Vector1D> offset;
-        double offsetValue = 0.0;
+        float offsetValue = 0.0;
     };
     
     struct ShadingVariant {
@@ -492,9 +492,9 @@ public:
     
     struct TransformedPath {
         BezierPath path;
-        CATransform3D transform;
+        Transform2D transform;
         
-        TransformedPath(BezierPath const &path_, CATransform3D const &transform_) :
+        TransformedPath(BezierPath const &path_, Transform2D const &transform_) :
         path(path_),
         transform(transform_) {
         }
@@ -506,60 +506,44 @@ public:
         }
         virtual ~PathOutput() = default;
         
-        virtual void update(AnimationFrameTime frameTime, BezierPathsBoundingBoxContext &boundingBoxContext) = 0;
-        virtual BezierPath const *currentPath() = 0;
-        virtual CGRect const &currentPathBounds() = 0;
+        virtual void update(AnimationFrameTime frameTime) = 0;
+        virtual std::shared_ptr<RenderTreeNodeContentPath> &currentPath() = 0;
     };
     
     class StaticPathOutput : public PathOutput {
     public:
         explicit StaticPathOutput(BezierPath const &path) :
-        resolvedPath(path) {
+        resolvedPath(std::make_shared<RenderTreeNodeContentPath>(path)) {
         }
         
-        virtual void update(AnimationFrameTime frameTime, BezierPathsBoundingBoxContext &boundingBoxContext) override {
-            if (!isPathBoundsResolved) {
-                resolvedPathBounds = bezierPathsBoundingBoxParallel(boundingBoxContext, resolvedPath);
-                isPathBoundsResolved = true;
-            }
+        virtual void update(AnimationFrameTime frameTime) override {
         }
         
-        virtual BezierPath const *currentPath() override {
-            return &resolvedPath;
-        }
-        
-        virtual CGRect const &currentPathBounds() override {
-            return resolvedPathBounds;
+        virtual std::shared_ptr<RenderTreeNodeContentPath> &currentPath() override {
+            return resolvedPath;
         }
         
     private:
-        BezierPath resolvedPath;
-        
-        bool isPathBoundsResolved = false;
-        CGRect resolvedPathBounds = CGRect(0.0, 0.0, 0.0, 0.0);
+        std::shared_ptr<RenderTreeNodeContentPath> resolvedPath;
     };
     
     class ShapePathOutput : public PathOutput {
     public:
         explicit ShapePathOutput(Shape const &shape) :
-        path(shape.path.keyframes) {
+        path(shape.path.keyframes),
+        resolvedPath(std::make_shared<RenderTreeNodeContentPath>(BezierPath())) {
         }
         
-        virtual void update(AnimationFrameTime frameTime, BezierPathsBoundingBoxContext &boundingBoxContext) override {
+        virtual void update(AnimationFrameTime frameTime) override {
             if (!hasValidData || path.hasUpdate(frameTime)) {
-                path.update(frameTime, resolvedPath);
-                resolvedPathBounds = bezierPathsBoundingBoxParallel(boundingBoxContext, resolvedPath);
+                path.update(frameTime, resolvedPath->path);
+                resolvedPath->needsBoundsRecalculation = true;
             }
-            
             hasValidData = true;
         }
         
-        virtual BezierPath const *currentPath() override {
-            return &resolvedPath;
-        }
-        
-        virtual CGRect const &currentPathBounds() override {
-            return resolvedPathBounds;
+        virtual std::shared_ptr<RenderTreeNodeContentPath> &currentPath() override {
+            return resolvedPath;
         }
         
     private:
@@ -567,8 +551,7 @@ public:
         
         BezierPathKeyframeInterpolator path;
         
-        BezierPath resolvedPath;
-        CGRect resolvedPathBounds = CGRect(0.0, 0.0, 0.0, 0.0);
+        std::shared_ptr<RenderTreeNodeContentPath> resolvedPath;
     };
     
     class RectanglePathOutput : public PathOutput {
@@ -577,10 +560,11 @@ public:
         direction(rectangle.direction.value_or(PathDirection::Clockwise)),
         position(rectangle.position.keyframes),
         size(rectangle.size.keyframes),
-        cornerRadius(rectangle.cornerRadius.keyframes) {
+        cornerRadius(rectangle.cornerRadius.keyframes),
+        resolvedPath(std::make_shared<RenderTreeNodeContentPath>(BezierPath())) {
         }
         
-        virtual void update(AnimationFrameTime frameTime, BezierPathsBoundingBoxContext &boundingBoxContext) override {
+        virtual void update(AnimationFrameTime frameTime) override {
             bool hasUpdates = false;
             
             if (!hasValidData || position.hasUpdate(frameTime)) {
@@ -597,19 +581,15 @@ public:
             }
             
             if (hasUpdates) {
-                ValueInterpolator<BezierPath>::setInplace(makeRectangleBezierPath(Vector2D(positionValue.x, positionValue.y), Vector2D(sizeValue.x, sizeValue.y), cornerRadiusValue, direction), resolvedPath);
-                resolvedPathBounds = bezierPathsBoundingBoxParallel(boundingBoxContext, resolvedPath);
+                ValueInterpolator<BezierPath>::setInplace(makeRectangleBezierPath(Vector2D(positionValue.x, positionValue.y), Vector2D(sizeValue.x, sizeValue.y), cornerRadiusValue, direction), resolvedPath->path);
+                resolvedPath->needsBoundsRecalculation = true;
             }
             
             hasValidData = true;
         }
         
-        virtual BezierPath const *currentPath() override {
-            return &resolvedPath;
-        }
-        
-        virtual CGRect const &currentPathBounds() override {
-            return resolvedPathBounds;
+        virtual std::shared_ptr<RenderTreeNodeContentPath> &currentPath() override {
+            return resolvedPath;
         }
         
     private:
@@ -624,10 +604,9 @@ public:
         Vector3D sizeValue = Vector3D(0.0, 0.0, 0.0);
         
         KeyframeInterpolator<Vector1D> cornerRadius;
-        double cornerRadiusValue = 0.0;
+        float cornerRadiusValue = 0.0;
         
-        BezierPath resolvedPath;
-        CGRect resolvedPathBounds = CGRect(0.0, 0.0, 0.0, 0.0);
+        std::shared_ptr<RenderTreeNodeContentPath> resolvedPath;
     };
     
     class EllipsePathOutput : public PathOutput {
@@ -635,10 +614,11 @@ public:
         explicit EllipsePathOutput(Ellipse const &ellipse) :
         direction(ellipse.direction.value_or(PathDirection::Clockwise)),
         position(ellipse.position.keyframes),
-        size(ellipse.size.keyframes) {
+        size(ellipse.size.keyframes),
+        resolvedPath(std::make_shared<RenderTreeNodeContentPath>(BezierPath())) {
         }
         
-        virtual void update(AnimationFrameTime frameTime, BezierPathsBoundingBoxContext &boundingBoxContext) override {
+        virtual void update(AnimationFrameTime frameTime) override {
             bool hasUpdates = false;
             
             if (!hasValidData || position.hasUpdate(frameTime)) {
@@ -651,19 +631,15 @@ public:
             }
             
             if (hasUpdates) {
-                ValueInterpolator<BezierPath>::setInplace(makeEllipseBezierPath(Vector2D(sizeValue.x, sizeValue.y), Vector2D(positionValue.x, positionValue.y), direction), resolvedPath);
-                resolvedPathBounds = bezierPathsBoundingBoxParallel(boundingBoxContext, resolvedPath);
+                ValueInterpolator<BezierPath>::setInplace(makeEllipseBezierPath(Vector2D(sizeValue.x, sizeValue.y), Vector2D(positionValue.x, positionValue.y), direction), resolvedPath->path);
+                resolvedPath->needsBoundsRecalculation = true;
             }
             
             hasValidData = true;
         }
         
-        virtual BezierPath const *currentPath() override {
-            return &resolvedPath;
-        }
-        
-        virtual CGRect const &currentPathBounds() override {
-            return resolvedPathBounds;
+        virtual std::shared_ptr<RenderTreeNodeContentPath> &currentPath() override {
+            return resolvedPath;
         }
         
     private:
@@ -677,8 +653,7 @@ public:
         KeyframeInterpolator<Vector3D> size;
         Vector3D sizeValue = Vector3D(0.0, 0.0, 0.0);
         
-        BezierPath resolvedPath;
-        CGRect resolvedPathBounds = CGRect(0.0, 0.0, 0.0, 0.0);
+        std::shared_ptr<RenderTreeNodeContentPath> resolvedPath;
     };
     
     class StarPathOutput : public PathOutput {
@@ -689,7 +664,8 @@ public:
         outerRadius(star.outerRadius.keyframes),
         outerRoundedness(star.outerRoundness.keyframes),
         rotation(star.rotation.keyframes),
-        points(star.points.keyframes) {
+        points(star.points.keyframes),
+        resolvedPath(std::make_shared<RenderTreeNodeContentPath>(BezierPath())) {
             if (star.innerRadius.has_value()) {
                 innerRadius = std::make_unique<NodeProperty<Vector1D>>(std::make_shared<KeyframeInterpolator<Vector1D>>(star.innerRadius->keyframes));
             } else {
@@ -703,7 +679,7 @@ public:
             }
         }
         
-        virtual void update(AnimationFrameTime frameTime, BezierPathsBoundingBoxContext &boundingBoxContext) override {
+        virtual void update(AnimationFrameTime frameTime) override {
             bool hasUpdates = false;
             
             if (!hasValidData || position.hasUpdate(frameTime)) {
@@ -744,19 +720,15 @@ public:
             }
             
             if (hasUpdates) {
-                ValueInterpolator<BezierPath>::setInplace(makeStarBezierPath(Vector2D(positionValue.x, positionValue.y), outerRadiusValue, innerRadiusValue, outerRoundednessValue, innerRoundednessValue, pointsValue, rotationValue, direction), resolvedPath);
-                resolvedPathBounds = bezierPathsBoundingBoxParallel(boundingBoxContext, resolvedPath);
+                ValueInterpolator<BezierPath>::setInplace(makeStarBezierPath(Vector2D(positionValue.x, positionValue.y), outerRadiusValue, innerRadiusValue, outerRoundednessValue, innerRoundednessValue, pointsValue, rotationValue, direction), resolvedPath->path);
+                resolvedPath->needsBoundsRecalculation = true;
             }
             
             hasValidData = true;
         }
         
-        virtual BezierPath const *currentPath() override {
-            return &resolvedPath;
-        }
-        
-        virtual CGRect const &currentPathBounds() override {
-            return resolvedPathBounds;
+        virtual std::shared_ptr<RenderTreeNodeContentPath> &currentPath() override {
+            return resolvedPath;
         }
         
     private:
@@ -768,25 +740,24 @@ public:
         Vector3D positionValue = Vector3D(0.0, 0.0, 0.0);
         
         KeyframeInterpolator<Vector1D> outerRadius;
-        double outerRadiusValue = 0.0;
+        float outerRadiusValue = 0.0;
         
         KeyframeInterpolator<Vector1D> outerRoundedness;
-        double outerRoundednessValue = 0.0;
+        float outerRoundednessValue = 0.0;
         
         std::unique_ptr<NodeProperty<Vector1D>> innerRadius;
-        double innerRadiusValue = 0.0;
+        float innerRadiusValue = 0.0;
         
         std::unique_ptr<NodeProperty<Vector1D>> innerRoundedness;
-        double innerRoundednessValue = 0.0;
+        float innerRoundednessValue = 0.0;
         
         KeyframeInterpolator<Vector1D> rotation;
-        double rotationValue = 0.0;
+        float rotationValue = 0.0;
         
         KeyframeInterpolator<Vector1D> points;
-        double pointsValue = 0.0;
+        float pointsValue = 0.0;
         
-        BezierPath resolvedPath;
-        CGRect resolvedPathBounds = CGRect(0.0, 0.0, 0.0, 0.0);
+        std::shared_ptr<RenderTreeNodeContentPath> resolvedPath;
     };
     
     class TransformOutput {
@@ -861,17 +832,17 @@ public:
                     scaleValue = _scale->value(frameTime);
                 }
                 
-                double rotationValue = 0.0;
+                float rotationValue = 0.0;
                 if (_rotation) {
                     rotationValue = _rotation->value(frameTime).value;
                 }
                 
-                double skewValue = 0.0;
+                float skewValue = 0.0;
                 if (_skew) {
                     skewValue = _skew->value(frameTime).value;
                 }
                 
-                double skewAxisValue = 0.0;
+                float skewAxisValue = 0.0;
                 if (_skewAxis) {
                     skewAxisValue = _skewAxis->value(frameTime).value;
                 }
@@ -882,17 +853,17 @@ public:
                     _opacityValue = 1.0;
                 }
                 
-                _transformValue = CATransform3D::identity().translated(Vector2D(positionValue.x, positionValue.y)).rotated(rotationValue).skewed(-skewValue, skewAxisValue).scaled(Vector2D(scaleValue.x * 0.01, scaleValue.y * 0.01)).translated(Vector2D(-anchorValue.x, -anchorValue.y));
+                _transformValue = Transform2D::identity().translated(Vector2D(positionValue.x, positionValue.y)).rotated(rotationValue).skewed(-skewValue, skewAxisValue).scaled(Vector2D(scaleValue.x * 0.01, scaleValue.y * 0.01)).translated(Vector2D(-anchorValue.x, -anchorValue.y));
                 
                 hasValidData = true;
             }
         }
         
-        CATransform3D const &transform() {
+        Transform2D const &transform() {
             return _transformValue;
         }
         
-        double opacity() {
+        float opacity() {
             return _opacityValue;
         }
         
@@ -907,8 +878,8 @@ public:
         std::unique_ptr<KeyframeInterpolator<Vector1D>> _skewAxis;
         std::unique_ptr<KeyframeInterpolator<Vector1D>> _opacity;
         
-        CATransform3D _transformValue = CATransform3D::identity();
-        double _opacityValue = 1.0;
+        Transform2D _transformValue = Transform2D::identity();
+        float _opacityValue = 1.0;
     };
     
     class ContentItem {
@@ -939,11 +910,11 @@ public:
         std::shared_ptr<RenderTreeNodeContentItem> _contentItem;
         
     private:
-        std::vector<TransformedPath> collectPaths(size_t subItemLimit, CATransform3D const &parentTransform, bool skipApplyTransform) {
+        std::vector<TransformedPath> collectPaths(size_t subItemLimit, Transform2D const &parentTransform, bool skipApplyTransform) {
             std::vector<TransformedPath> mappedPaths;
             
             //TODO:remove skipApplyTransform
-            CATransform3D effectiveTransform = parentTransform;
+            Transform2D effectiveTransform = parentTransform;
             if (!skipApplyTransform && isGroup && transform) {
                 effectiveTransform = transform->transform() * effectiveTransform;
             }
@@ -951,7 +922,7 @@ public:
             size_t maxSubitem = std::min(subItems.size(), subItemLimit);
             
             if (_contentItem->path) {
-                mappedPaths.emplace_back(_contentItem->path.value(), effectiveTransform);
+                mappedPaths.emplace_back(_contentItem->path->path, effectiveTransform);
             }
             
             for (size_t i = 0; i < maxSubitem; i++) {
@@ -971,7 +942,7 @@ public:
                     }
                     CompoundBezierPath trimmedPath = trimCompoundPath(tempPath, currentTrim->start, currentTrim->end, currentTrim->offset, currentTrim->type);
                     for (auto &path : trimmedPath.paths) {
-                        mappedPaths.emplace_back(path, CATransform3D::identity());
+                        mappedPaths.emplace_back(path, Transform2D::identity());
                     }
                 } else {
                     for (auto &path : subItemPaths) {
@@ -1012,7 +983,7 @@ public:
             _contentItem->isGroup = isGroup;
             
             if (path) {
-                _contentItem->path = *path->currentPath();
+                _contentItem->path = path->currentPath();
             }
             
             if (!shadings.empty()) {
@@ -1022,6 +993,8 @@ public:
                     if (!(shadingVariant.fill || shadingVariant.stroke)) {
                         continue;
                     }
+                    
+                    _contentItem->drawContentCount++;
                     
                     auto itemShadingVariant = std::make_shared<RenderTreeNodeContentShadingVariant>();
                     if (shadingVariant.fill) {
@@ -1040,6 +1013,7 @@ public:
                 std::vector<std::shared_ptr<RenderTreeNode>> subItemNodes;
                 for (const auto &subItem : subItems) {
                     subItem->initializeRenderChildren();
+                    _contentItem->drawContentCount += subItem->_contentItem->drawContentCount;
                     _contentItem->subItems.push_back(subItem->_contentItem);
                 }
             }
@@ -1052,8 +1026,7 @@ public:
             }
             
             if (path) {
-                path->update(frameTime, boundingBoxContext);
-                _contentItem->pathBoundingBox = path->currentPathBounds();
+                path->update(frameTime);
             }
             for (const auto &trim : trims) {
                 trim->update(frameTime);
@@ -1088,8 +1061,8 @@ public:
         }
         
         void updateContents(std::optional<TrimParams> parentTrim) {
-            CATransform3D containerTransform = CATransform3D::identity();
-            double containerOpacity = 1.0;
+            Transform2D containerTransform = Transform2D::identity();
+            float containerOpacity = 1.0;
             if (transform) {
                 containerTransform = transform->transform();
                 containerOpacity = transform->opacity();
@@ -1116,7 +1089,7 @@ public:
                 
                 if (parentTrim) {
                     CompoundBezierPath compoundPath;
-                    auto paths = collectPaths(shadingVariant.subItemLimit, CATransform3D::identity(), true);
+                    auto paths = collectPaths(shadingVariant.subItemLimit, Transform2D::identity(), true);
                     for (const auto &path : paths) {
                         compoundPath.appendPath(path.path.copyUsingTransform(path.transform));
                     }
@@ -1131,7 +1104,7 @@ public:
                 } else {
                     if (hasTrims()) {
                         CompoundBezierPath compoundPath;
-                        auto paths = collectPaths(shadingVariant.subItemLimit, CATransform3D::identity(), true);
+                        auto paths = collectPaths(shadingVariant.subItemLimit, Transform2D::identity(), true);
                         for (const auto &path : paths) {
                             compoundPath.appendPath(path.path.copyUsingTransform(path.transform));
                         }
@@ -1333,7 +1306,7 @@ CompositionLayer(solidLayer, Vector2D::Zero()) {
     _contentTree = std::make_shared<ShapeLayerPresentationTree>(solidLayer);
 }
 
-void ShapeCompositionLayer::displayContentsWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
+void ShapeCompositionLayer::displayContentsWithFrame(float frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
     _frameTime = frame;
     _frameTimeInitialized = true;
     _contentTree->itemTree->updateFrame(_frameTime, boundingBoxContext);
@@ -1350,9 +1323,8 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode(BezierPath
     
     if (!_renderTreeNode) {
         _contentRenderTreeNode = std::make_shared<RenderTreeNode>(
-            CGRect(0.0, 0.0, 0.0, 0.0),
             Vector2D(0.0, 0.0),
-            CATransform3D::identity(),
+            Transform2D::identity(),
             1.0,
             false,
             false,
@@ -1361,9 +1333,9 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode(BezierPath
             false
         );
         _contentRenderTreeNode->_contentItem = _contentTree->itemTree->_contentItem;
+        _contentRenderTreeNode->drawContentCount = _contentTree->itemTree->_contentItem->drawContentCount;
         
         std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
-        //subnodes.push_back(_contentTree->itemTree->renderTree());
         subnodes.push_back(_contentRenderTreeNode);
         
         std::shared_ptr<RenderTreeNode> maskNode;
@@ -1376,9 +1348,8 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode(BezierPath
         }
         
         _renderTreeNode = std::make_shared<RenderTreeNode>(
-            CGRect(0.0, 0.0, 0.0, 0.0),
             Vector2D(0.0, 0.0),
-            CATransform3D::identity(),
+            Transform2D::identity(),
             1.0,
             false,
             false,
@@ -1388,27 +1359,20 @@ std::shared_ptr<RenderTreeNode> ShapeCompositionLayer::renderTreeNode(BezierPath
         );
     }
     
+    _contentRenderTreeNode->_size = _contentsLayer->size();
+    _contentRenderTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
+    
+    _renderTreeNode->_masksToBounds = masksToBounds();
+    
+    _renderTreeNode->_size = size();
+    
     return _renderTreeNode;
 }
 
-void ShapeCompositionLayer::updateRenderTree(BezierPathsBoundingBoxContext &boundingBoxContext) {
-    if (_matteLayer) {
-        _matteLayer->updateRenderTree(boundingBoxContext);
-    }
-    
-    _contentRenderTreeNode->_bounds = _contentsLayer->bounds();
-    _contentRenderTreeNode->_position = _contentsLayer->position();
+void ShapeCompositionLayer::updateContentsLayerParameters() {
     _contentRenderTreeNode->_transform = _contentsLayer->transform();
     _contentRenderTreeNode->_alpha = _contentsLayer->opacity();
-    _contentRenderTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
     _contentRenderTreeNode->_isHidden = _contentsLayer->isHidden();
-    
-    _renderTreeNode->_bounds = bounds();
-    _renderTreeNode->_position = position();
-    _renderTreeNode->_transform = transform();
-    _renderTreeNode->_alpha = opacity();
-    _renderTreeNode->_masksToBounds = masksToBounds();
-    _renderTreeNode->_isHidden = isHidden();
 }
 
 }

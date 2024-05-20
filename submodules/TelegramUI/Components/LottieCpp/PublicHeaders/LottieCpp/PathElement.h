@@ -41,7 +41,7 @@ struct __attribute__((packed)) PathElement {
     }
     
     /// Initializes a new path with length
-    explicit PathElement(std::optional<double> length_, CurveVertex const &vertex_) :
+    explicit PathElement(std::optional<float> length_, CurveVertex const &vertex_) :
     vertex(vertex_) {
     }
     
@@ -58,7 +58,7 @@ struct __attribute__((packed)) PathElement {
     }
     
     /// Splits an element span defined by the receiver and fromElement to a position 0-1
-    PathSplitResult<PathElement> splitElementAtPosition(PathElement const &fromElement, double atLength) {
+    PathSplitResult<PathElement> splitElementAtPosition(PathElement const &fromElement, float atLength) {
         /// Trim the span. Start and trim go into the first, trim and end go into second.
         auto trimResults = fromElement.vertex.trimCurve(vertex, atLength, length(fromElement), 3);
         
@@ -81,8 +81,8 @@ struct __attribute__((packed)) PathElement {
         );
     }
     
-    double length(PathElement const &previous) {
-        double result = previous.vertex.distanceTo(vertex);
+    float length(PathElement const &previous) {
+        float result = previous.vertex.distanceTo(vertex);
         return result;
     }
 };

@@ -23,16 +23,16 @@ public:
         std::shared_ptr<AnimationTextProvider> const &textProvider,
         std::shared_ptr<AnimationFontProvider> const &fontProvider,
         std::shared_ptr<AssetLibrary> const &assetLibrary,
-        double frameRate
+        float frameRate
     ) : CompositionLayer(precomp, Vector2D(precomp->width, precomp->height)) {
         if (precomp->timeRemapping) {
             _remappingNode = std::make_shared<NodeProperty<Vector1D>>(std::make_shared<KeyframeInterpolator<Vector1D>>(precomp->timeRemapping->keyframes));
         }
         _frameRate = frameRate;
         
-        setBounds(CGRect(0.0, 0.0, precomp->width, precomp->height));
+        setSize(Vector2D(precomp->width, precomp->height));
         contentsLayer()->setMasksToBounds(true);
-        contentsLayer()->setBounds(bounds());
+        contentsLayer()->setSize(size());
         
         auto layers = initializeCompositionLayers(
             asset.layers,
@@ -49,7 +49,7 @@ public:
         
         for (auto layerIt = layers.rbegin(); layerIt != layers.rend(); layerIt++) {
             std::shared_ptr<CompositionLayer> layer = *layerIt;
-            layer->setBounds(bounds());
+            layer->setSize(size());
             _animationLayers.push_back(layer);
             
             if (layer->isImageCompositionLayer()) {
@@ -86,8 +86,8 @@ public:
         return result;
     }
     
-    virtual void displayContentsWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) override {
-        double localFrame = 0.0;
+    virtual void displayContentsWithFrame(float frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) override {
+        float localFrame = 0.0;
         if (_remappingNode) {
             _remappingNode->update(frame);
             localFrame = _remappingNode->value().value * _frameRate;
@@ -102,42 +102,6 @@ public:
     
     virtual std::shared_ptr<RenderTreeNode> renderTreeNode(BezierPathsBoundingBoxContext &boundingBoxContext) override {
         if (!_renderTreeNode) {
-            _contentsTreeNode = std::make_shared<RenderTreeNode>(
-                CGRect(0.0, 0.0, 0.0, 0.0),
-                Vector2D(0.0, 0.0),
-                CATransform3D::identity(),
-                1.0,
-                false,
-                false,
-                std::vector<std::shared_ptr<RenderTreeNode>>(),
-                nullptr,
-                false
-            );
-            
-            std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
-            subnodes.push_back(_contentsTreeNode);
-            
-            std::shared_ptr<RenderTreeNode> maskNode;
-            bool invertMask = false;
-            if (_matteLayer) {
-                maskNode = _matteLayer->renderTreeNode(boundingBoxContext);
-                if (maskNode && _matteType.has_value() && _matteType.value() == MatteType::Invert) {
-                    invertMask = true;
-                }
-            }
-            
-            _renderTreeNode = std::make_shared<RenderTreeNode>(
-                CGRect(0.0, 0.0, 0.0, 0.0),
-                Vector2D(0.0, 0.0),
-                CATransform3D::identity(),
-                1.0,
-                false,
-                false,
-                subnodes,
-                maskNode,
-                invertMask
-            );
-            
             std::vector<std::shared_ptr<RenderTreeNode>> renderTreeSubnodes;
             for (const auto &animationLayer : _animationLayers) {
                 bool found = false;
@@ -157,9 +121,8 @@ public:
             
             std::vector<std::shared_ptr<RenderTreeNode>> renderTreeValue;
             auto renderTreeContentItem = std::make_shared<RenderTreeNode>(
-                CGRect(0.0, 0.0, 0.0, 0.0),
                 Vector2D(0.0, 0.0),
-                CATransform3D::identity(),
+                Transform2D::identity(),
                 1.0,
                 false,
                 false,
@@ -171,53 +134,61 @@ public:
                 renderTreeValue.push_back(renderTreeContentItem);
             }
             
-            _contentsTreeNode->_subnodes = renderTreeValue;
-        }
-        
-        return _renderTreeNode;
-    }
-    
-    virtual void updateRenderTree(BezierPathsBoundingBoxContext &boundingBoxContext) override {
-        if (_matteLayer) {
-            _matteLayer->updateRenderTree(boundingBoxContext);
-        }
-        
-        for (const auto &animationLayer : _animationLayers) {
-            bool found = false;
-            for (const auto &sublayer : contentsLayer()->sublayers()) {
-                if (animationLayer == sublayer) {
-                    found = true;
-                    break;
+            _contentsTreeNode = std::make_shared<RenderTreeNode>(
+                Vector2D(0.0, 0.0),
+                Transform2D::identity(),
+                1.0,
+                false,
+                false,
+                renderTreeValue,
+                nullptr,
+                false
+            );
+            
+            std::vector<std::shared_ptr<RenderTreeNode>> subnodes;
+            subnodes.push_back(_contentsTreeNode);
+            
+            std::shared_ptr<RenderTreeNode> maskNode;
+            bool invertMask = false;
+            if (_matteLayer) {
+                maskNode = _matteLayer->renderTreeNode(boundingBoxContext);
+                if (maskNode && _matteType.has_value() && _matteType.value() == MatteType::Invert) {
+                    invertMask = true;
                 }
             }
-            if (found) {
-                animationLayer->updateRenderTree(boundingBoxContext);
-            }
+            
+            _renderTreeNode = std::make_shared<RenderTreeNode>(
+                Vector2D(0.0, 0.0),
+                Transform2D::identity(),
+                1.0,
+                false,
+                false,
+                subnodes,
+                maskNode,
+                invertMask
+            );
         }
         
-        assert(opacity() == 1.0);
-        assert(!isHidden());
-        assert(!masksToBounds());
-        assert(transform().isIdentity());
-        assert(position() == Vector2D::Zero());
-        
-        _contentsTreeNode->_bounds = _contentsLayer->bounds();
-        _contentsTreeNode->_position = _contentsLayer->position();
-        _contentsTreeNode->_transform = _contentsLayer->transform();
-        _contentsTreeNode->_alpha = _contentsLayer->opacity();
+        _contentsTreeNode->_size = _contentsLayer->size();
         _contentsTreeNode->_masksToBounds = _contentsLayer->masksToBounds();
-        _contentsTreeNode->_isHidden = _contentsLayer->isHidden();
         
-        _renderTreeNode->_bounds = bounds();
-        _renderTreeNode->_position = position();
+        _renderTreeNode->_size = size();
         _renderTreeNode->_transform = transform();
         _renderTreeNode->_alpha = opacity();
         _renderTreeNode->_masksToBounds = masksToBounds();
         _renderTreeNode->_isHidden = isHidden();
+        
+        return _renderTreeNode;
+    }
+    
+    virtual void updateContentsLayerParameters() override {
+        _contentsTreeNode->_transform = _contentsLayer->transform();
+        _contentsTreeNode->_alpha = _contentsLayer->opacity();
+        _contentsTreeNode->_isHidden = _contentsLayer->isHidden();
     }
     
 private:
-    double _frameRate = 0.0;
+    float _frameRate = 0.0;
     std::shared_ptr<NodeProperty<Vector1D>> _remappingNode;
     
     std::vector<std::shared_ptr<CompositionLayer>> _animationLayers;

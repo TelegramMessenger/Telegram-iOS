@@ -32,7 +32,7 @@ public:
         std::optional<int> tgs_,
         AnimationFrameTime startFrame_,
         AnimationFrameTime endFrame_,
-        double framerate_,
+        float framerate_,
         std::string const &version_,
         std::optional<CoordinateSpace> type_,
         int width_,
@@ -90,10 +90,10 @@ public:
             }
         }
         
-        AnimationFrameTime startFrame = getDouble(json, "ip");
-        AnimationFrameTime endFrame = getDouble(json, "op");
+        AnimationFrameTime startFrame = (float)getDouble(json, "ip");
+        AnimationFrameTime endFrame = (float)getDouble(json, "op");
         
-        double framerate = getDouble(json, "fr");
+        float framerate = (float)getDouble(json, "fr");
         
         int width = getInt(json, "w");
         int height = getInt(json, "h");
@@ -256,7 +256,7 @@ public:
     AnimationFrameTime endFrame;
     
     /// The frame rate of the composition.
-    double framerate;
+    float framerate;
     
     /// Return all marker names, in order, or an empty list if none are specified
     std::vector<std::string> markerNames() {

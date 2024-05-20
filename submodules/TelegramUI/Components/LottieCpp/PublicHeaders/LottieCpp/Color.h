@@ -15,10 +15,10 @@ enum class ColorFormatDenominator {
 };
 
 struct Color {
-    double r;
-    double g;
-    double b;
-    double a;
+    float r;
+    float g;
+    float b;
+    float a;
     
     bool operator==(Color const &rhs) const {
         if (r != rhs.r) {
@@ -40,7 +40,7 @@ struct Color {
         return !(*this == rhs);
     }
     
-    explicit Color(double r_, double g_, double b_, double a_, ColorFormatDenominator denominator = ColorFormatDenominator::One);
+    explicit Color(float r_, float g_, float b_, float a_, ColorFormatDenominator denominator = ColorFormatDenominator::One);
     explicit Color(lottiejson11::Json const &jsonAny) noexcept(false);
 
     lottiejson11::Json toJson() const;

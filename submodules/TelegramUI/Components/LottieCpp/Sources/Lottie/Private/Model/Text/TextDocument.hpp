@@ -20,15 +20,15 @@ class TextDocument {
 public:
     TextDocument(
         std::string const &text_,
-        double fontSize_,
+        float fontSize_,
         std::string const &fontFamily_,
         TextJustification justification_,
         int tracking_,
-        double lineHeight_,
-        std::optional<double> baseline_,
+        float lineHeight_,
+        std::optional<float> baseline_,
         std::optional<Color> fillColorData_,
         std::optional<Color> strokeColorData_,
-        std::optional<double> strokeWidth_,
+        std::optional<float> strokeWidth_,
         std::optional<bool> strokeOverFill_,
         std::optional<Vector3D> textFramePosition_,
         std::optional<Vector3D> textFrameSize_
@@ -62,7 +62,7 @@ public:
         lottiejson11::Json::object const &json = jsonAny.object_items();
         
         text = getString(json, "t");
-        fontSize = getDouble(json, "s");
+        fontSize = (float)getDouble(json, "s");
         fontFamily = getString(json, "f");
         
         auto justificationRawValue = getInt(json, "j");
@@ -81,8 +81,10 @@ public:
         }
         
         tracking = getInt(json, "tr");
-        lineHeight = getDouble(json, "lh");
-        baseline = getOptionalDouble(json, "ls");
+        lineHeight = (float)getDouble(json, "lh");
+        if (const auto baselineValue = getOptionalDouble(json, "ls")) {
+            baseline = (float)baselineValue.value();
+        }
         
         if (const auto fillColorDataValue = getOptionalAny(json, "fc")) {
             fillColorData = Color(fillColorDataValue.value());
@@ -92,8 +94,12 @@ public:
             strokeColorData = Color(strokeColorDataValue.value());
         }
         
-        strokeWidth = getOptionalDouble(json, "sw");
-        strokeOverFill = getOptionalBool(json, "of");
+        if (const auto strokeWidthValue = getOptionalDouble(json, "sw")) {
+            strokeWidth = (float)strokeWidthValue.value();
+        }
+        if (const auto strokeOverFillValue = getOptionalBool(json, "of")) {
+            strokeOverFill = (float)strokeOverFillValue.value();
+        }
         
         if (const auto textFramePositionData = getOptionalAny(json, "ps")) {
             textFramePosition = Vector3D(textFramePositionData.value());
@@ -145,7 +151,7 @@ public:
     std::string text;
     
     /// The Font size
-    double fontSize;
+    float fontSize;
     
     /// The Font Family
     std::string fontFamily;
@@ -157,10 +163,10 @@ public:
     int tracking;
     
     /// Line Height
-    double lineHeight;
+    float lineHeight;
     
     /// Baseline
-    std::optional<double> baseline;
+    std::optional<float> baseline;
     
     /// Fill Color data
     std::optional<Color> fillColorData;
@@ -169,7 +175,7 @@ public:
     std::optional<Color> strokeColorData;
     
     /// Stroke Width
-    std::optional<double> strokeWidth;
+    std::optional<float> strokeWidth;
     
     /// Stroke Over Fill
     std::optional<bool> strokeOverFill;

@@ -65,7 +65,7 @@ public:
         }
         
         if (const auto miterLimitData = getOptionalDouble(json, "ml")) {
-            miterLimit = miterLimitData.value();
+            miterLimit = (float)miterLimitData.value();
         }
         
         if (const auto dashElementsData = getOptionalObjectArray(json, "d")) {
@@ -128,7 +128,7 @@ public:
     LineJoin lineJoin;
     
     /// Miter Limit
-    std::optional<double> miterLimit;
+    std::optional<float> miterLimit;
     
     /// The dash pattern of the stroke
     std::optional<std::vector<DashElement>> dashPattern;

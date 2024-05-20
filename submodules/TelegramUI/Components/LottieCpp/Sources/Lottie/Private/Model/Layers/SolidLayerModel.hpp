@@ -12,8 +12,8 @@ public:
     explicit SolidLayerModel(lottiejson11::Json::object const &json) noexcept(false) :
     LayerModel(json) {
         colorHex = getString(json, "sc");
-        width = getDouble(json, "sw");
-        height = getDouble(json, "sh");
+        width = (float)getDouble(json, "sw");
+        height = (float)getDouble(json, "sh");
     }
     
     virtual ~SolidLayerModel() = default;
@@ -31,10 +31,10 @@ public:
     std::string colorHex;
     
     /// The Width of the color layer
-    double width;
+    float width;
     
     /// The height of the color layer
-    double height;
+    float height;
 };
 
 }

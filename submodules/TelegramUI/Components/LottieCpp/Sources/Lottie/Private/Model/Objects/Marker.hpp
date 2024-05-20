@@ -20,7 +20,7 @@ public:
     
     explicit Marker(lottiejson11::Json::object const &json) noexcept(false) {
         name = getString(json, "cm");
-        frameTime = getDouble(json, "tm");
+        frameTime = (float)getDouble(json, "tm");
         dr = getOptionalInt(json, "dr");
     }
     

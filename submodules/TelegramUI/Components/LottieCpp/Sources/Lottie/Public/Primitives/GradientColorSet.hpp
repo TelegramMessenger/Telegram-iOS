@@ -34,7 +34,7 @@ struct GradientColorSet {
         return result;
     }
     
-    std::vector<double> colors;
+    std::vector<float> colors;
 };
 
 }

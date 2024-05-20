@@ -17,22 +17,22 @@ BezierPath makeEllipseBezierPath(
 BezierPath makeRectangleBezierPath(
     Vector2D const &position,
     Vector2D const &inputSize,
-    double cornerRadius,
+    float cornerRadius,
     PathDirection direction
 );
 
 BezierPath makeStarBezierPath(
     Vector2D const &position,
-    double outerRadius,
-    double innerRadius,
-    double inputOuterRoundedness,
-    double inputInnerRoundedness,
-    double numberOfPoints,
-    double rotation,
+    float outerRadius,
+    float innerRadius,
+    float inputOuterRoundedness,
+    float inputInnerRoundedness,
+    float numberOfPoints,
+    float rotation,
     PathDirection direction
 );
 
-CompoundBezierPath trimCompoundPath(CompoundBezierPath sourcePath, double start, double end, double offset, TrimType type);
+CompoundBezierPath trimCompoundPath(CompoundBezierPath sourcePath, float start, float end, float offset, TrimType type);
 
 }
 

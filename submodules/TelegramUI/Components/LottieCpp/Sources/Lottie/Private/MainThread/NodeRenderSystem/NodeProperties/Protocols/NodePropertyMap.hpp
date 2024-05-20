@@ -13,7 +13,7 @@ class NodePropertyMap: virtual public HasChildKeypaths {
 public:
     virtual std::vector<std::shared_ptr<AnyNodeProperty>> &properties() = 0;
     
-    bool needsLocalUpdate(double frame) {
+    bool needsLocalUpdate(float frame) {
         for (auto &property : properties()) {
             if (property->needsUpdate(frame)) {
                 return true;
@@ -22,7 +22,7 @@ public:
         return false;
     }
     
-    void updateNodeProperties(double frame) {
+    void updateNodeProperties(float frame) {
         for (auto &property : properties()) {
             property->update(frame);
         }

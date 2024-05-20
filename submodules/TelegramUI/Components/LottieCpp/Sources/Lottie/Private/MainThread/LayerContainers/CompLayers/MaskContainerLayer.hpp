@@ -106,7 +106,7 @@ public:
     
     virtual ~MaskLayer() = default;
     
-    void updateWithFrame(double frame, bool forceUpdates) {
+    void updateWithFrame(float frame, bool forceUpdates) {
         if (_properties.opacity()->needsUpdate(frame) || forceUpdates) {
             _properties.opacity()->update(frame);
             setOpacity(_properties.opacity()->value().value);
@@ -163,7 +163,7 @@ public:
     
     // MARK: Internal
     
-    void updateWithFrame(double frame, bool forceUpdates) {
+    void updateWithFrame(float frame, bool forceUpdates) {
         for (const auto &maskLayer : _maskLayers) {
             maskLayer->updateWithFrame(frame, forceUpdates);
         }

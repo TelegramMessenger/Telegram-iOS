@@ -55,7 +55,7 @@ public:
     virtual std::shared_ptr<NodeOutput> outputNode() = 0;
     
     /// Update the outputs of the node. Called if local contents were update or if outputsNeedUpdate returns true.
-    virtual void rebuildOutputs(double frame) = 0;
+    virtual void rebuildOutputs(float frame) = 0;
     
     /// Setters for marking current node state.
     bool isEnabled() {
@@ -79,10 +79,10 @@ public:
         _hasUpstreamUpdates = hasUpstreamUpdates;
     }
     
-    std::optional<double> lastUpdateFrame() {
+    std::optional<float> lastUpdateFrame() {
         return _lastUpdateFrame;
     }
-    virtual void setLastUpdateFrame(std::optional<double> lastUpdateFrame) {
+    virtual void setLastUpdateFrame(std::optional<float> lastUpdateFrame) {
         _lastUpdateFrame = lastUpdateFrame;
     }
     
@@ -97,20 +97,20 @@ public:
     }
     
     /// Called at the end of this nodes update cycle. Always called. Optional.
-    virtual bool performAdditionalLocalUpdates(double frame, bool forceLocalUpdate) {
+    virtual bool performAdditionalLocalUpdates(float frame, bool forceLocalUpdate) {
         /// Optional
         return forceLocalUpdate;
     }
-    virtual void performAdditionalOutputUpdates(double frame, bool forceOutputUpdate) {
+    virtual void performAdditionalOutputUpdates(float frame, bool forceOutputUpdate) {
         /// Optional
     }
     
     /// The default simply returns `hasLocalUpdates`
-    virtual bool shouldRebuildOutputs(double frame) {
+    virtual bool shouldRebuildOutputs(float frame) {
         return hasLocalUpdates();
     }
     
-    virtual bool updateOutputs(double frame, bool forceOutputUpdate) {
+    virtual bool updateOutputs(float frame, bool forceOutputUpdate) {
         if (!isEnabled()) {
             setLastUpdateFrame(frame);
             if (const auto parentNodeValue = parentNode()) {
@@ -147,7 +147,7 @@ public:
     }
     
     /// Rebuilds the content of this node, and upstream nodes if necessary.
-    virtual bool updateContents(double frame, bool forceLocalUpdate) {
+    virtual bool updateContents(float frame, bool forceLocalUpdate) {
         if (!isEnabled()) {
             // Disabled node, pass through.
             if (const auto parentNodeValue = parentNode()) {
@@ -185,9 +185,12 @@ public:
         return localUpdatesPermeateDownstream() ? hasUpstreamUpdates() || hasLocalUpdates() : hasUpstreamUpdates();
     }
     
-    virtual void updateTree(double frame, bool forceUpdates) {
-        updateContents(frame, forceUpdates);
-        updateOutputs(frame, forceUpdates);
+    bool updateTree(float frame, bool forceUpdates) {
+        if (updateContents(frame, forceUpdates)) {
+            return updateOutputs(frame, forceUpdates);
+        } else {
+            return false;
+        }
     }
     
     /// The name of the Keypath
@@ -227,7 +230,7 @@ private:
     bool _isEnabled = true;
     bool _hasLocalUpdates = false;
     bool _hasUpstreamUpdates = false;
-    std::optional<double> _lastUpdateFrame;
+    std::optional<float> _lastUpdateFrame;
 };
 
 }

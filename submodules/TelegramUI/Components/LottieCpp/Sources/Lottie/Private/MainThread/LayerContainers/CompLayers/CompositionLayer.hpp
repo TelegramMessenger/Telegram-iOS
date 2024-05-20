@@ -57,7 +57,7 @@ public:
         
         _childKeypaths.push_back(_transformNode->transformProperties());
         
-        _contentsLayer->setBounds(CGRect(0.0, 0.0, size.x, size.y));
+        _contentsLayer->setSize(size);
         
         if (layer->blendMode.has_value() && layer->blendMode.value() != BlendMode::Normal) {
             setCompositingFilter(layer->blendMode);
@@ -82,14 +82,16 @@ public:
         return _contentsLayer;
     }
     
-    void displayWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
-        _transformNode->updateTree(frame, forceUpdates);
-        
+    void displayWithFrame(float frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
         bool layerVisible = isInRangeOrEqual(frame, _inFrame, _outFrame);
         
-        _contentsLayer->setTransform(_transformNode->globalTransform());
-        _contentsLayer->setOpacity(_transformNode->opacity());
-        _contentsLayer->setIsHidden(!layerVisible);
+        if (_transformNode->updateTree(frame, forceUpdates) || _contentsLayer->isHidden() != !layerVisible) {
+            _contentsLayer->setTransform(_transformNode->globalTransform());
+            _contentsLayer->setOpacity(_transformNode->opacity());
+            _contentsLayer->setIsHidden(!layerVisible);
+            
+            updateContentsLayerParameters();
+        }
         
         /// Only update contents if current time is within the layers time bounds.
         if (layerVisible) {
@@ -100,7 +102,10 @@ public:
         }
     }
     
-    virtual void displayContentsWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
+    virtual void updateContentsLayerParameters() {
+    }
+    
+    virtual void displayContentsWithFrame(float frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) {
         /// To be overridden by subclass
     }
     
@@ -138,24 +143,21 @@ public:
         return _matteType;
     }
     
-    double inFrame() const {
+    float inFrame() const {
         return _inFrame;
     }
-    double outFrame() const {
+    float outFrame() const {
         return _outFrame;
     }
-    double startFrame() const {
+    float startFrame() const {
         return _startFrame;
     }
-    double timeStretch() const {
+    float timeStretch() const {
         return _timeStretch;
     }
     
     virtual std::shared_ptr<RenderTreeNode> renderTreeNode(BezierPathsBoundingBoxContext &boundingBoxContext) {
         return nullptr;
-    }
-    
-    virtual void updateRenderTree(BezierPathsBoundingBoxContext &boundingBoxContext) {
     }
     
 public:
@@ -172,10 +174,10 @@ private:
     
     std::shared_ptr<MaskContainerLayer> _maskLayer;
     
-    double _inFrame = 0.0;
-    double _outFrame = 0.0;
-    double _startFrame = 0.0;
-    double _timeStretch = 0.0;
+    float _inFrame = 0.0;
+    float _outFrame = 0.0;
+    float _startFrame = 0.0;
+    float _timeStretch = 0.0;
     
     // MARK: Keypath Searchable
     

@@ -85,7 +85,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
     }
     
     final class View: UIView {
-        var itemLayer: EmojiPagerContentComponent.View.ItemLayer?
+        var itemLayer: EmojiKeyboardItemLayer?
         var placeholderView: EmojiPagerContentComponent.View.ItemPlaceholderView?
         var component: EntityKeyboardAnimationTopPanelComponent?
         var titleView: ComponentView<Empty>?
@@ -116,7 +116,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
             
             if self.itemLayer == nil {
                 let tintColor: EmojiPagerContentComponent.Item.TintMode = component.customTintColor.flatMap { .custom($0) } ?? .primary
-                let itemLayer = EmojiPagerContentComponent.View.ItemLayer(
+                let itemLayer = EmojiKeyboardItemLayer(
                     item: EmojiPagerContentComponent.Item(
                         animationData: component.item,
                         content: .animation(component.item),
@@ -157,7 +157,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                 transition.setPosition(layer: itemLayer, position: CGPoint(x: iconFrame.midX, y: iconFrame.midY))
                 transition.setBounds(layer: itemLayer, bounds: CGRect(origin: CGPoint(), size: iconFrame.size))
                 
-                var badge: EmojiPagerContentComponent.View.ItemLayer.Badge?
+                var badge: EmojiKeyboardItemLayer.Badge?
                 if component.isPremiumLocked {
                     badge = .locked
                 } else if component.isFeatured {

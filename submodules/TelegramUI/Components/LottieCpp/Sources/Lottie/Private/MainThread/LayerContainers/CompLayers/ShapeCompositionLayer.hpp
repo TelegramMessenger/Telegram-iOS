@@ -16,9 +16,10 @@ public:
     ShapeCompositionLayer(std::shared_ptr<ShapeLayerModel> const &shapeLayer);
     ShapeCompositionLayer(std::shared_ptr<SolidLayerModel> const &solidLayer);
     
-    virtual void displayContentsWithFrame(double frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) override;
+    virtual void displayContentsWithFrame(float frame, bool forceUpdates, BezierPathsBoundingBoxContext &boundingBoxContext) override;
     virtual std::shared_ptr<RenderTreeNode> renderTreeNode(BezierPathsBoundingBoxContext &boundingBoxContext) override;
-    virtual void updateRenderTree(BezierPathsBoundingBoxContext &boundingBoxContext) override;
+    void initializeContentsLayerParameters();
+    virtual void updateContentsLayerParameters() override;
     
 private:
     std::shared_ptr<ShapeLayerPresentationTree> _contentTree;

@@ -1,13 +1,10 @@
 #include "CompositionLayer.hpp"
 
-#include "Lottie/Public/Primitives/RenderTree.hpp"
-
 namespace lottie {
 
 InvertedMatteLayer::InvertedMatteLayer(std::shared_ptr<CompositionLayer> inputMatte) :
 _inputMatte(inputMatte) {
-    setBounds(inputMatte->bounds());
-    setNeedsDisplay(true);
+    setSize(inputMatte->size());
     
     addSublayer(_inputMatte);
 }

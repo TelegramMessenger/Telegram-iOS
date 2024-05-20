@@ -5,9 +5,9 @@
 
 namespace lottie {
 
-double remapDouble(double value, double fromLow, double fromHigh, double toLow, double toHigh);
+float remapFloat(float value, float fromLow, float fromHigh, float toLow, float toHigh);
 
-double clampDouble(double value, double a, double b);
+float clampFloat(float value, float a, float b);
 
 }
 

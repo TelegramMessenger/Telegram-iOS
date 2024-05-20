@@ -7,7 +7,7 @@
 
 namespace lottie {
 
-BezierTrimPathPosition::BezierTrimPathPosition(double start_, double end_) :
+BezierTrimPathPosition::BezierTrimPathPosition(float start_, float end_) :
 start(start_),
 end(end_) {
 }
@@ -129,11 +129,11 @@ std::shared_ptr<CGPath> BezierPathContents::cgPath() const {
     return cgPath;
 }
 
-double BezierPathContents::length() {
+float BezierPathContents::length() {
     if (_length.has_value()) {
         return _length.value();
     } else {
-        double result = 0.0;
+        float result = 0.0;
         for (size_t i = 1; i < elements.size(); i++) {
             result += elements[i].length(elements[i - 1]);
         }
@@ -221,7 +221,7 @@ void BezierPathContents::updateVertex(CurveVertex const &vertex, int atIndex, bo
     }
 }
 
-std::vector<std::shared_ptr<BezierPathContents>> BezierPathContents::trim(double fromLength, double toLength, double offsetLength) {
+std::vector<std::shared_ptr<BezierPathContents>> BezierPathContents::trim(float fromLength, float toLength, float offsetLength) {
     if (elements.size() <= 1) {
         return {};
     }
@@ -230,7 +230,7 @@ std::vector<std::shared_ptr<BezierPathContents>> BezierPathContents::trim(double
         return {};
     }
     
-    double lengthValue = length();
+    float lengthValue = length();
         
     /// Normalize lengths to the curve length.
     auto start = fmod(fromLength + offsetLength, lengthValue);
@@ -284,7 +284,7 @@ std::vector<std::shared_ptr<BezierPathContents>> BezierPathContents::trimPathAtL
     
     std::vector<std::shared_ptr<BezierPathContents>> paths;
     
-    double runningLength = 0.0;
+    float runningLength = 0.0;
     bool finishedTrimming = false;
     auto pathElements = elements;
     
@@ -301,7 +301,7 @@ std::vector<std::shared_ptr<BezierPathContents>> BezierPathContents::trimPathAtL
         /// Loop through and add elements within start->end range.
         /// Get current element
         auto element = pathElements[i];
-        double elementLength = 0.0;
+        float elementLength = 0.0;
         if (i != 0) {
             elementLength = element.length(pathElements[i - 1]);
         }
@@ -412,7 +412,7 @@ lottiejson11::Json BezierPath::toJson() const {
     return _contents->toJson();
 }
 
-double BezierPath::length() {
+float BezierPath::length() {
     return _contents->length();
 }
 
@@ -456,7 +456,7 @@ void BezierPath::updateVertex(CurveVertex const &vertex, int atIndex, bool remea
     _contents->updateVertex(vertex, atIndex, remeasure);
 }
 
-std::vector<BezierPath> BezierPath::trim(double fromLength, double toLength, double offsetLength) {
+std::vector<BezierPath> BezierPath::trim(float fromLength, float toLength, float offsetLength) {
     std::vector<BezierPath> result;
     
     auto resultContents = _contents->trim(fromLength, toLength, offsetLength);
@@ -486,8 +486,8 @@ std::shared_ptr<CGPath> BezierPath::cgPath() const {
     return _contents->cgPath();
 }
 
-BezierPath BezierPath::copyUsingTransform(CATransform3D const &transform) const {
-    if (transform == CATransform3D::identity()) {
+BezierPath BezierPath::copyUsingTransform(Transform2D const &transform) const {
+    if (transform == Transform2D::identity()) {
         return (*this);
     }
     BezierPath result;

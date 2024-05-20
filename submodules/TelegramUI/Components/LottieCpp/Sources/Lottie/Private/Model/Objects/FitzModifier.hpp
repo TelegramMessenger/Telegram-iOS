@@ -19,33 +19,33 @@ public:
     lottiejson11::Json::object toJson() const {
         lottiejson11::Json::object result;
         
-        result.insert(std::make_pair("o", (double)original));
+        result.insert(std::make_pair("o", (float)original));
         if (type12.has_value()) {
-            result.insert(std::make_pair("f12", (double)type12.value()));
+            result.insert(std::make_pair("f12", (float)type12.value()));
         }
         if (type3.has_value()) {
-            result.insert(std::make_pair("f3", (double)type3.value()));
+            result.insert(std::make_pair("f3", (float)type3.value()));
         }
         if (type4.has_value()) {
-            result.insert(std::make_pair("f4", (double)type4.value()));
+            result.insert(std::make_pair("f4", (float)type4.value()));
         }
         if (type5.has_value()) {
-            result.insert(std::make_pair("f5", (double)type5.value()));
+            result.insert(std::make_pair("f5", (float)type5.value()));
         }
         if (type6.has_value()) {
-            result.insert(std::make_pair("f6", (double)type6.value()));
+            result.insert(std::make_pair("f6", (float)type6.value()));
         }
         
         return result;
     }
     
 public:
-    double original;
-    std::optional<double> type12;
-    std::optional<double> type3;
-    std::optional<double> type4;
-    std::optional<double> type5;
-    std::optional<double> type6;
+    float original;
+    std::optional<float> type12;
+    std::optional<float> type3;
+    std::optional<float> type4;
+    std::optional<float> type5;
+    std::optional<float> type6;
 };
 
 }

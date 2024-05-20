@@ -15,7 +15,7 @@ public:
     virtual std::shared_ptr<NodeOutput> parent() = 0;
     
     /// Returns true if there are any updates upstream. OutputPath must be built before returning.
-    virtual bool hasOutputUpdates(double forFrame) = 0;
+    virtual bool hasOutputUpdates(float forFrame) = 0;
     
     virtual std::shared_ptr<CGPath> outputPath() = 0;
     

@@ -18,8 +18,8 @@ public:
         std::string id_,
         std::string name_,
         std::string directory_,
-        double width_,
-        double height_
+        float width_,
+        float height_
     ) : Asset(id_),
     name(name_),
     directory(directory_),
@@ -33,8 +33,8 @@ public:
     Asset(json) {
         name = getString(json, "p");
         directory = getString(json, "u");
-        width = getDouble(json, "w");
-        height = getDouble(json, "h");
+        width = (float)getDouble(json, "w");
+        height = (float)getDouble(json, "h");
         
         _e = getOptionalInt(json, "e");
         _t = getOptionalString(json, "t");
@@ -64,8 +64,8 @@ public:
     std::string directory;
     
     /// Image Size
-    double width;
-    double height;
+    float width;
+    float height;
     
     std::optional<int> _e;
     std::optional<std::string> _t;

@@ -14,79 +14,12 @@
 namespace lottie {
 
 class ProcessedRenderTreeNodeData {
-public:
-    struct LayerParams {
-        CGRect _bounds;
-        Vector2D _position;
-        CATransform3D _transform;
-        double _opacity;
-        bool _masksToBounds;
-        bool _isHidden;
-        
-        LayerParams(
-            CGRect bounds_,
-            Vector2D position_,
-            CATransform3D transform_,
-            double opacity_,
-            bool masksToBounds_,
-            bool isHidden_
-        ) :
-        _bounds(bounds_),
-        _position(position_),
-        _transform(transform_),
-        _opacity(opacity_),
-        _masksToBounds(masksToBounds_),
-        _isHidden(isHidden_) {
-        }
-        
-        CGRect bounds() const {
-            return _bounds;
-        }
-        
-        Vector2D position() const {
-            return _position;
-        }
-        
-        CATransform3D transform() const {
-            return _transform;
-        }
-        
-        double opacity() const {
-            return _opacity;
-        }
-        
-        bool masksToBounds() const {
-            return _masksToBounds;
-        }
-        
-        bool isHidden() const {
-            return _isHidden;
-        }
-    };
-    
-    ProcessedRenderTreeNodeData() :
-    isValid(false),
-    layer(
-        CGRect(0.0, 0.0, 0.0, 0.0),
-        Vector2D(0.0, 0.0),
-        CATransform3D::identity(),
-        1.0,
-        false,
-        false
-    ),
-    globalRect(CGRect(0.0, 0.0, 0.0, 0.0)),
-    globalTransform(CATransform3D::identity()),
-    drawContentDescendants(false),
-    isInvertedMatte(false) {
-        
+public:    
+    ProcessedRenderTreeNodeData() {
     }
     
     bool isValid = false;
-    LayerParams layer;
-    CGRect globalRect;
-    CATransform3D globalTransform;
-    int drawContentDescendants;
-    bool isInvertedMatte;
+    bool isInvertedMatte = false;
 };
 
 class RenderableItem {
@@ -135,19 +68,19 @@ public:
     
     struct Stroke {
         Color color;
-        double lineWidth = 0.0;
+        float lineWidth = 0.0;
         LineJoin lineJoin = LineJoin::Round;
         LineCap lineCap = LineCap::Square;
-        double dashPhase = 0.0;
-        std::vector<double> dashPattern;
+        float dashPhase = 0.0;
+        std::vector<float> dashPattern;
         
         Stroke(
             Color color_,
-            double lineWidth_,
+            float lineWidth_,
             LineJoin lineJoin_,
             LineCap lineCap_,
-            double dashPhase_,
-            std::vector<double> dashPattern_
+            float dashPhase_,
+            std::vector<float> dashPattern_
         ) :
         color(color_),
         lineWidth(lineWidth_),
@@ -245,7 +178,7 @@ public:
         FillRule pathFillRule_,
         GradientType gradientType_,
         std::vector<Color> const &colors_,
-        std::vector<double> const &locations_,
+        std::vector<float> const &locations_,
         Vector2D const &start_,
         Vector2D const &end_,
         CGRect bounds_
@@ -301,13 +234,24 @@ public:
     FillRule pathFillRule;
     GradientType gradientType;
     std::vector<Color> colors;
-    std::vector<double> locations;
+    std::vector<float> locations;
     Vector2D start;
     Vector2D end;
     CGRect bounds;
 };
 
 class RenderTreeNodeContentShadingVariant;
+
+struct RenderTreeNodeContentPath {
+public:
+    explicit RenderTreeNodeContentPath(BezierPath path_) :
+    path(path_) {
+    }
+    
+    BezierPath path;
+    CGRect bounds = CGRect(0.0, 0.0, 0.0, 0.0);
+    bool needsBoundsRecalculation = true;
+};
 
 class RenderTreeNodeContentItem {
 public:
@@ -328,7 +272,7 @@ public:
     
     class SolidShading: public Shading {
     public:
-        SolidShading(Color const &color_, double opacity_) :
+        SolidShading(Color const &color_, float opacity_) :
         color(color_),
         opacity(opacity_) {
         }
@@ -339,16 +283,16 @@ public:
         
     public:
         Color color;
-        double opacity = 0.0;
+        float opacity = 0.0;
     };
     
     class GradientShading: public Shading {
     public:
         GradientShading(
-            double opacity_,
+            float opacity_,
             GradientType gradientType_,
             std::vector<Color> const &colors_,
-            std::vector<double> const &locations_,
+            std::vector<float> const &locations_,
             Vector2D const &start_,
             Vector2D const &end_
         ) :
@@ -365,31 +309,31 @@ public:
         }
         
     public:
-        double opacity = 0.0;
+        float opacity = 0.0;
         GradientType gradientType;
         std::vector<Color> colors;
-        std::vector<double> locations;
+        std::vector<float> locations;
         Vector2D start;
         Vector2D end;
     };
     
     struct Stroke {
         std::shared_ptr<Shading> shading;
-        double lineWidth = 0.0;
+        float lineWidth = 0.0;
         LineJoin lineJoin = LineJoin::Round;
         LineCap lineCap = LineCap::Square;
-        double miterLimit = 4.0;
-        double dashPhase = 0.0;
-        std::vector<double> dashPattern;
+        float miterLimit = 4.0;
+        float dashPhase = 0.0;
+        std::vector<float> dashPattern;
         
         Stroke(
             std::shared_ptr<Shading> shading_,
-            double lineWidth_,
+            float lineWidth_,
             LineJoin lineJoin_,
             LineCap lineCap_,
-            double miterLimit_,
-            double dashPhase_,
-            std::vector<double> dashPattern_
+            float miterLimit_,
+            float dashPhase_,
+            std::vector<float> dashPattern_
         ) :
         shading(shading_),
         lineWidth(lineWidth_),
@@ -420,13 +364,13 @@ public:
     
 public:
     bool isGroup = false;
-    CATransform3D transform = CATransform3D::identity();
-    double alpha = 0.0;
+    Transform2D transform = Transform2D::identity();
+    float alpha = 0.0;
     std::optional<TrimParams> trimParams;
-    std::optional<BezierPath> path;
-    CGRect pathBoundingBox = CGRect(0.0, 0.0, 0.0, 0.0);
+    std::shared_ptr<RenderTreeNodeContentPath> path;
     std::vector<std::shared_ptr<RenderTreeNodeContentShadingVariant>> shadings;
     std::vector<std::shared_ptr<RenderTreeNodeContentItem>> subItems;
+    int drawContentCount = 0;
     
     ProcessedRenderTreeNodeData renderData;
 };
@@ -447,18 +391,16 @@ public:
 class RenderTreeNode {
 public:
     RenderTreeNode(
-        CGRect bounds_,
-        Vector2D position_,
-        CATransform3D transform_,
-        double alpha_,
+        Vector2D size_,
+        Transform2D transform_,
+        float alpha_,
         bool masksToBounds_,
         bool isHidden_,
         std::vector<std::shared_ptr<RenderTreeNode>> subnodes_,
         std::shared_ptr<RenderTreeNode> mask_,
         bool invertMask_
     ) :
-    _bounds(bounds_),
-    _position(position_),
+    _size(size_),
     _transform(transform_),
     _alpha(alpha_),
     _masksToBounds(masksToBounds_),
@@ -466,25 +408,24 @@ public:
     _subnodes(subnodes_),
     _mask(mask_),
     _invertMask(invertMask_) {
+        for (const auto &subnode : _subnodes) {
+            drawContentCount += subnode->drawContentCount;
+        }
     }
     
     ~RenderTreeNode() {
     }
     
 public:
-    CGRect const &bounds() const {
-        return _bounds;
+    Vector2D const &size() const {
+        return _size;
     }
     
-    Vector2D const &position() const {
-        return _position;
-    }
-    
-    CATransform3D const &transform() const {
+    Transform2D const &transform() const {
         return _transform;
     }
     
-    double alpha() const {
+    float alpha() const {
         return _alpha;
     }
     
@@ -509,13 +450,13 @@ public:
     }
     
 public:
-    CGRect _bounds;
-    Vector2D _position;
-    CATransform3D _transform = CATransform3D::identity();
-    double _alpha = 1.0;
+    Vector2D _size;
+    Transform2D _transform = Transform2D::identity();
+    float _alpha = 1.0f;
     bool _masksToBounds = false;
     bool _isHidden = false;
     std::shared_ptr<RenderTreeNodeContentItem> _contentItem;
+    int drawContentCount = 0;
     std::vector<std::shared_ptr<RenderTreeNode>> _subnodes;
     std::shared_ptr<RenderTreeNode> _mask;
     bool _invertMask = false;

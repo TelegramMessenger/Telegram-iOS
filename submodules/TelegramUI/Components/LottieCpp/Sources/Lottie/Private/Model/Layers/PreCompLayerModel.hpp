@@ -19,8 +19,8 @@ public:
         if (const auto timeRemappingData = getOptionalObject(json, "tm")) {
             timeRemapping = KeyframeGroup<Vector1D>(timeRemappingData.value());
         }
-        width = getDouble(json, "w");
-        height = getDouble(json, "h");
+        width = (float)getDouble(json, "w");
+        height = (float)getDouble(json, "h");
     }
     
     virtual ~PreCompLayerModel() = default;
@@ -46,10 +46,10 @@ public:
     std::optional<KeyframeGroup<Vector1D>> timeRemapping;
     
     /// Precomp Width
-    double width;
+    float width;
     
     /// Precomp Height
-    double height;
+    float height;
 };
 
 }

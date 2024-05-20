@@ -468,7 +468,7 @@ private final class RenderFrameState {
         restoreState()
     }
     
-    func renderNode(animationContainer: LottieAnimationContainer, node: LottieRenderNodeProxy, globalSize: CGSize, parentAlpha: CGFloat) {
+    func renderNode(animationContainer: LottieAnimationContainer, node: LottieRenderNodeProxy, globalSize: CGSize, parentAlpha: Float) {
         let normalizedOpacity = node.layer.opacity
         let layerAlpha = normalizedOpacity * parentAlpha
         
@@ -534,7 +534,7 @@ private final class RenderFrameState {
             concat(node.layer.transform)
         }
         
-        var renderAlpha: CGFloat = 1.0
+        var renderAlpha: Float = 1.0
         if needsTempContext {
             renderAlpha = 1.0
         } else {

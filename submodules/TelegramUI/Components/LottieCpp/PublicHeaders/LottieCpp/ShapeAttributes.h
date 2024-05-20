@@ -37,12 +37,12 @@ enum class TrimType: int {
 };
 
 struct TrimParams {
-    double start = 0.0;
-    double end = 0.0;
-    double offset = 0.0;
+    float start = 0.0;
+    float end = 0.0;
+    float offset = 0.0;
     TrimType type = TrimType::Simultaneously;
     
-    TrimParams(double start_, double end_, double offset_, TrimType type_) :
+    TrimParams(float start_, float end_, float offset_, TrimType type_) :
     start(start_),
     end(end_),
     offset(offset_),

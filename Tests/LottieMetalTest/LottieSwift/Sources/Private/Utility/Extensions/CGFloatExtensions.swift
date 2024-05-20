@@ -25,11 +25,15 @@ extension CGFloat {
   }
 
   func isInRangeOrEqual(_ from: CGFloat, _ to: CGFloat) -> Bool {
-    from <= self && self <= to
+    let from = Float(from)
+    let to = Float(to)
+    return from <= Float(self) && Float(self) <= to
   }
 
   func isInRange(_ from: CGFloat, _ to: CGFloat) -> Bool {
-    from < self && self < to
+    let from = Float(from)
+    let to = Float(to)
+    return from < Float(self) && Float(self) < to
   }
 
   func cubicBezierInterpolate(_ P0: CGPoint, _ P1: CGPoint, _ P2: CGPoint, _ P3: CGPoint) -> CGFloat {

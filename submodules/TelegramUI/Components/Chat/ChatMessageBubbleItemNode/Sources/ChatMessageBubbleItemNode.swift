@@ -639,6 +639,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var replyRecognizer: ChatSwipeToReplyRecognizer?
     private var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
+    private var fetchEffectDisposable: Disposable?
+    
     //private let debugNode: ASDisplayNode
     
     override public var visibility: ListViewItemNodeVisibility {
@@ -838,6 +840,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.fetchEffectDisposable?.dispose()
     }
 
     override public func cancelInsertionAnimations() {
@@ -5878,6 +5884,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var additionalAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
     
     private func playPremiumStickerAnimation(effect: AvailableMessageEffects.MessageEffect, force: Bool) {
+        guard let item = self.item else {
+            return
+        }
         if self.playedPremiumStickerAnimation && !force {
             return
         }
@@ -5885,10 +5894,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         if let effectAnimation = effect.effectAnimation {
             self.playEffectAnimation(resource: effectAnimation.resource, isStickerEffect: true)
+            if self.fetchEffectDisposable == nil {
+                self.fetchEffectDisposable = freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .other, fileReference: .standalone(media: effectAnimation), resource: effectAnimation.resource).startStrict()
+            }
         } else {
             let effectSticker = effect.effectSticker
             if let effectFile = effectSticker.videoThumbnails.first {
                 self.playEffectAnimation(resource: effectFile.resource, isStickerEffect: true)
+                if self.fetchEffectDisposable == nil {
+                    self.fetchEffectDisposable = freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .other, fileReference: .standalone(media: effectSticker), resource: effectFile.resource).startStrict()
+                }
             }
         }
     }
@@ -5935,17 +5950,20 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
             
             let additionalAnimationNode: AnimatedStickerNode
+            var effectiveScale: CGFloat = 1.0
             #if targetEnvironment(simulator)
             additionalAnimationNode = DirectAnimatedStickerNode()
+            effectiveScale = 1.4
             #else
             if "".isEmpty {
                 additionalAnimationNode = DirectAnimatedStickerNode()
+                effectiveScale = 1.4
             } else {
                 additionalAnimationNode = LottieMetalAnimatedStickerNode()
             }
             #endif
             additionalAnimationNode.updateLayout(size: animationSize)
-            additionalAnimationNode.setup(source: source, width: Int(animationSize.width), height: Int(animationSize.height), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
+            additionalAnimationNode.setup(source: source, width: Int(animationSize.width * effectiveScale), height: Int(animationSize.height * effectiveScale), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
             var animationFrame: CGRect
             if isStickerEffect {
                 let offsetScale: CGFloat = 0.3

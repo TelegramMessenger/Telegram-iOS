@@ -17,7 +17,7 @@ public:
     paths({ path }) {
     }
     
-    CompoundBezierPath(std::vector<BezierPath> paths_, std::optional<double> length_) :
+    CompoundBezierPath(std::vector<BezierPath> paths_, std::optional<float> length_) :
     paths(paths_), _length(length_) {
     }
     
@@ -28,11 +28,11 @@ public:
 public:
     std::vector<BezierPath> paths;
     
-    double length() {
+    float length() {
         if (_length.has_value()) {
             return _length.value();
         } else {
-            double l = 0.0;
+            float l = 0.0;
             for (auto &path : paths) {
                 l += path.length();
             }
@@ -42,7 +42,7 @@ public:
     }
     
 private:
-    std::optional<double> _length;
+    std::optional<float> _length;
     
 public:
     std::shared_ptr<CompoundBezierPath> addingPath(BezierPath const &path) const {
@@ -64,29 +64,16 @@ public:
         return std::make_shared<CompoundBezierPath>(newPaths);
     }
     
-    std::shared_ptr<CompoundBezierPath> trim(double fromPosition, double toPosition, double offset) {
+    std::shared_ptr<CompoundBezierPath> trim(float fromPosition, float toPosition, float offset) {
         if (fromPosition == toPosition) {
             return std::make_shared<CompoundBezierPath>();
         }
         
-        /*bool trimSimultaneously = false;
-        if (trimSimultaneously) {
-            /// Trim each path individually.
-            std::vector<BezierPath> newPaths;
-            for (auto &path : paths) {
-                auto trimmedPaths = path.trim(fromPosition * path.length(), toPosition * path.length(), offset * path.length());
-                for (const auto &trimmedPath : trimmedPaths) {
-                    newPaths.push_back(trimmedPath);
-                }
-            }
-            return std::make_shared<CompoundBezierPath>(newPaths);
-        }*/
-        
-        double lengthValue = length();
+        float lengthValue = length();
         
         /// Normalize lengths to the curve length.
-        double startPosition = fmod(fromPosition + offset, 1.0);
-        double endPosition = fmod(toPosition + offset, 1.0);
+        float startPosition = fmod(fromPosition + offset, 1.0);
+        float endPosition = fmod(toPosition + offset, 1.0);
         
         if (startPosition < 0.0) {
             startPosition = 1.0 + startPosition;
@@ -123,7 +110,7 @@ public:
         auto compoundPath = std::make_shared<CompoundBezierPath>();
         auto trim = positions[0];
         positions.erase(positions.begin());
-        double pathStartPosition = 0.0;
+        float pathStartPosition = 0.0;
         
         bool finishedTrimming = false;
         int i = 0;

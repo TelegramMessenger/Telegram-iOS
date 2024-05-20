@@ -93,7 +93,7 @@ public:
         return _childKeypaths;
     }
     
-    CATransform3D caTransform() {
+    Transform2D caTransform() {
         Vector2D anchor = Vector2D::Zero();
         if (_anchor) {
             auto anchor3d = _anchor->value();
@@ -112,21 +112,21 @@ public:
             scale = Vector2D(scale3d.x, scale3d.y);
         }
         
-        double rotation = 0.0;
+        float rotation = 0.0;
         if (_rotation) {
             rotation = _rotation->value().value;
         }
         
-        std::optional<double> skew;
+        std::optional<float> skew;
         if (_skew) {
             skew = _skew->value().value;
         }
-        std::optional<double> skewAxis;
+        std::optional<float> skewAxis;
         if (_skewAxis) {
             skewAxis = _skewAxis->value().value;
         }
         
-        return CATransform3D::makeTransform(
+        return Transform2D::makeTransform(
             anchor,
             position,
             scale,
@@ -140,7 +140,7 @@ public:
         return nullptr;
     }
     
-    double opacity() {
+    float opacity() {
         if (_opacity) {
             return _opacity->value().value;
         } else {
@@ -164,7 +164,7 @@ public:
         }
     }
     
-    double tracking() {
+    float tracking() {
         if (_tracking) {
             return _tracking->value().value;
         } else {
@@ -172,7 +172,7 @@ public:
         }
     }
     
-    double strokeWidth() {
+    float strokeWidth() {
         if (_strokeWidth) {
             return _strokeWidth->value().value;
         } else {
@@ -212,20 +212,20 @@ public:
         return _parentTextNode;
     }
     
-    CATransform3D xform() {
+    Transform2D xform() {
         if (_xform.has_value()) {
             return _xform.value();
         } else if (_parentTextNode) {
             return _parentTextNode->xform();
         } else {
-            return CATransform3D::identity();
+            return Transform2D::identity();
         }
     }
-    void setXform(CATransform3D const &xform) {
+    void setXform(Transform2D const &xform) {
         _xform = xform;
     }
     
-    double opacity() {
+    float opacity() {
         if (_opacity.has_value()) {
             return _opacity.value();
         } else if (_parentTextNode) {
@@ -234,7 +234,7 @@ public:
             return 1.0;
         }
     }
-    void setOpacity(double opacity) {
+    void setOpacity(float opacity) {
         _opacity = opacity;
     }
     
@@ -264,7 +264,7 @@ public:
         _fillColor = fillColor;
     }
     
-    double tracking() {
+    float tracking() {
         if (_tracking.has_value()) {
             return _tracking.value();
         } else if (_parentTextNode) {
@@ -273,11 +273,11 @@ public:
             return 0.0;
         }
     }
-    void setTracking(double tracking) {
+    void setTracking(float tracking) {
         _tracking = tracking;
     }
     
-    double strokeWidth() {
+    float strokeWidth() {
         if (_strokeWidth.has_value()) {
             return _strokeWidth.value();
         } else if (_parentTextNode) {
@@ -286,11 +286,11 @@ public:
             return 0.0;
         }
     }
-    void setStrokeWidth(double strokeWidth) {
+    void setStrokeWidth(float strokeWidth) {
         _strokeWidth = strokeWidth;
     }
     
-    virtual bool hasOutputUpdates(double frame) override {
+    virtual bool hasOutputUpdates(float frame) override {
         // TODO Fix This
         return true;
     }
@@ -312,12 +312,12 @@ private:
     
     std::shared_ptr<CGPath> _outputPath;
     
-    std::optional<CATransform3D> _xform;
-    std::optional<double> _opacity;
+    std::optional<Transform2D> _xform;
+    std::optional<float> _opacity;
     std::optional<Color> _strokeColor;
     std::optional<Color> _fillColor;
-    std::optional<double> _tracking;
-    std::optional<double> _strokeWidth;
+    std::optional<float> _tracking;
+    std::optional<float> _strokeWidth;
 };
 
 class TextAnimatorNode: public AnimatorNode {
@@ -347,7 +347,7 @@ public:
         return true;
     }
     
-    virtual void rebuildOutputs(double frame) override {
+    virtual void rebuildOutputs(float frame) override {
         _textOutputNode->setXform(_textAnimatorProperties->caTransform());
         _textOutputNode->setOpacity(((float)_textAnimatorProperties->opacity()) * 0.01f);
         _textOutputNode->setStrokeColor(_textAnimatorProperties->strokeColor());

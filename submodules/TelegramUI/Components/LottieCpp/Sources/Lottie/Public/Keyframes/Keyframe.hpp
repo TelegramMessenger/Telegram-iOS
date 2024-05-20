@@ -65,7 +65,7 @@ public:
     }
     
 public:
-    T interpolate(Keyframe<T> const &to, double progress) {
+    T interpolate(Keyframe<T> const &to, float progress) {
         std::optional<Vector2D> spatialOutTangent2d;
         if (spatialOutTangent) {
             spatialOutTangent2d = Vector2D(spatialOutTangent->x, spatialOutTangent->y);
@@ -78,9 +78,9 @@ public:
     }
     
     /// Interpolates the keyTime into a value from 0-1
-    double interpolatedProgress(Keyframe<T> const &to, double keyTime) {
-        double startTime = time;
-        double endTime = to.time;
+    float interpolatedProgress(Keyframe<T> const &to, float keyTime) {
+        float startTime = time;
+        float endTime = to.time;
         if (keyTime <= startTime) {
             return 0.0;
         }
@@ -100,8 +100,8 @@ public:
         if (to.inTangent.has_value()) {
             inTanPoint = to.inTangent.value();
         }
-        double progress = remapDouble(keyTime, startTime, endTime, 0.0, 1.0);
-        if (!outTanPoint.isZero() || inTanPoint != Vector2D(1.0, 1.0)) {
+        float progress = remapFloat(keyTime, startTime, endTime, 0.0f, 1.0f);
+        if (!outTanPoint.isZero() || inTanPoint != Vector2D(1.0f, 1.0f)) {
             /// Cubic interpolation
             progress = cubicBezierInterpolate(progress, Vector2D::Zero(), outTanPoint, inTanPoint, Vector2D(1.0, 1.0));
         }
@@ -162,7 +162,10 @@ public:
             endValue = T(endValueData.value());
         }
         
-        time = getOptionalDouble(json.object_items(), "t");
+        if (const auto timeValue = getOptionalDouble(json.object_items(), "t")) {
+            time = (float)timeValue.value();
+        }
+        
         hold = getOptionalInt(json.object_items(), "h");
         
         if (const auto inTangentData = getOptionalObject(json.object_items(), "i")) {

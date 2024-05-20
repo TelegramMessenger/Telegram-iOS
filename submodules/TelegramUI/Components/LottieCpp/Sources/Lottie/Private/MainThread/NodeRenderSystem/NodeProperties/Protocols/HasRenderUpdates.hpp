@@ -5,7 +5,7 @@ namespace lottie {
 
 class HasRenderUpdates {
 public:
-    virtual bool hasRenderUpdates(double forFrame) = 0;
+    virtual bool hasRenderUpdates(float forFrame) = 0;
 };
 
 }

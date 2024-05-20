@@ -136,11 +136,11 @@ public:
         return _transformProperties;
     }
     
-    virtual bool shouldRebuildOutputs(double frame) override {
+    virtual bool shouldRebuildOutputs(float frame) override {
         return hasLocalUpdates() || hasUpstreamUpdates();
     }
     
-    virtual void rebuildOutputs(double frame) override {
+    virtual void rebuildOutputs(float frame) override {
         _opacity = ((float)_transformProperties->opacity()->value().value) * 0.01f;
         
         Vector2D position(0.0, 0.0);
@@ -157,7 +157,7 @@ public:
         
         Vector3D anchor = _transformProperties->anchor()->value();
         Vector3D scale = _transformProperties->scale()->value();
-        _localTransform = CATransform3D::makeTransform(
+        _localTransform = Transform2D::makeTransform(
             Vector2D(anchor.x, anchor.y),
             position,
             Vector2D(scale.x, scale.y),
@@ -181,7 +181,7 @@ public:
         return _opacity;
     }
     
-    CATransform3D const &globalTransform() {
+    Transform2D const &globalTransform() {
         return _globalTransform;
     }
     
@@ -191,8 +191,8 @@ private:
     std::shared_ptr<LayerTransformProperties> _transformProperties;
     
     float _opacity = 1.0;
-    CATransform3D _localTransform = CATransform3D::identity();
-    CATransform3D _globalTransform = CATransform3D::identity();
+    Transform2D _localTransform = Transform2D::identity();
+    Transform2D _globalTransform = Transform2D::identity();
     
 public:
     virtual LayerTransformNode *asLayerTransformNode() override {
