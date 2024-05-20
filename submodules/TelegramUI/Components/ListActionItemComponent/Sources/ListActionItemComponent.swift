@@ -113,8 +113,14 @@ public final class ListActionItemComponent: Component {
         case disabled
     }
     
+    public enum Alignment {
+        case `default`
+        case center
+    }
+    
     public let theme: PresentationTheme
     public let title: AnyComponent<Empty>
+    public let titleAlignment: Alignment
     public let contentInsets: UIEdgeInsets
     public let leftIcon: LeftIcon?
     public let icon: Icon?
@@ -125,6 +131,7 @@ public final class ListActionItemComponent: Component {
     public init(
         theme: PresentationTheme,
         title: AnyComponent<Empty>,
+        titleAlignment: Alignment = .default,
         contentInsets: UIEdgeInsets = UIEdgeInsets(top: 12.0, left: 0.0, bottom: 12.0, right: 0.0),
         leftIcon: LeftIcon? = nil,
         icon: Icon? = nil,
@@ -134,6 +141,7 @@ public final class ListActionItemComponent: Component {
     ) {
         self.theme = theme
         self.title = title
+        self.titleAlignment = titleAlignment
         self.contentInsets = contentInsets
         self.leftIcon = leftIcon
         self.icon = icon
@@ -147,6 +155,9 @@ public final class ListActionItemComponent: Component {
             return false
         }
         if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.titleAlignment != rhs.titleAlignment {
             return false
         }
         if lhs.contentInsets != rhs.contentInsets {
@@ -373,6 +384,11 @@ public final class ListActionItemComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - contentLeftInset - contentRightInset, height: availableSize.height)
             )
+            
+            if case .center = component.titleAlignment {
+                contentLeftInset = floor((availableSize.width - titleSize.width) / 2.0)
+            }
+            
             let titleFrame = CGRect(origin: CGPoint(x: contentLeftInset, y: contentHeight), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {

@@ -369,6 +369,9 @@ public func generateGradientTintedImage(image: UIImage?, colors: [UIColor], dire
             case .diagonal:
                 start = CGPoint(x: 0.0, y: 0.0)
                 end = CGPoint(x: imageRect.width, y: imageRect.height)
+            case .mirroredDiagonal:
+                start = CGPoint(x: imageRect.width, y: 0.0)
+                end = CGPoint(x: 0.0, y: imageRect.height)
             }
             
             context.drawLinearGradient(gradient, start: start, end: end, options: CGGradientDrawingOptions())
@@ -390,6 +393,7 @@ public enum GradientImageDirection {
     case vertical
     case horizontal
     case diagonal
+    case mirroredDiagonal
 }
 
 public func generateGradientImage(size: CGSize, scale: CGFloat = 0.0, colors: [UIColor], locations: [CGFloat], direction: GradientImageDirection = .vertical) -> UIImage? {
@@ -440,6 +444,9 @@ public func generateGradientFilledCircleImage(diameter: CGFloat, colors: NSArray
         case .diagonal:
             start = CGPoint(x: 0.0, y: 0.0)
             end = CGPoint(x: size.width, y: size.height)
+        case .mirroredDiagonal:
+            start = CGPoint(x: size.width, y: 0.0)
+            end = CGPoint(x: 0.0, y: size.height)
         }
         
         context.drawLinearGradient(gradient, start: start, end:end, options: CGGradientDrawingOptions())

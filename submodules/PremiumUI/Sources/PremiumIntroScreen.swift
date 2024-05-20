@@ -13,7 +13,6 @@ import SolidRoundedButtonComponent
 import MultilineTextComponent
 import MultilineTextWithEntitiesComponent
 import BundleIconComponent
-import SolidRoundedButtonComponent
 import BlurredBackgroundComponent
 import Markdown
 import InAppPurchaseManager
@@ -34,6 +33,7 @@ import EmojiStatusComponent
 import EntityKeyboard
 import EmojiActionIconComponent
 import ScrollComponent
+import PremiumStarComponent
 
 public enum PremiumSource: Equatable {
     public static func == (lhs: PremiumSource, rhs: PremiumSource) -> Bool {

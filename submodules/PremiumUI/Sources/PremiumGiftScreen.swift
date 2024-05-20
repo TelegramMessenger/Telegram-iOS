@@ -21,6 +21,7 @@ import TextFormat
 import UniversalMediaPlayer
 import InstantPageCache
 import ScrollComponent
+import PremiumStarComponent
 
 extension PremiumGiftSource {
     var identifier: String? {

@@ -70,6 +70,7 @@ import ChatMessageWallpaperBubbleContentNode
 import ChatMessageGiftBubbleContentNode
 import ChatMessageGiveawayBubbleContentNode
 import ChatMessageJoinedChannelBubbleContentNode
+import ChatMessageFactCheckBubbleContentNode
 import UIKitRuntimeUtils
 import ChatMessageTransitionNode
 import AnimatedStickerNode
@@ -208,8 +209,12 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 if let _ = invoice.extendedMedia {
                     result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
                 } else {
-                    skipText = true
-                    result.append((message, ChatMessageInvoiceBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                    if invoice.currency == "XTR" {
+                        result.append((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                    } else {
+                        skipText = true
+                        result.append((message, ChatMessageInvoiceBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                    }
                 }
                 needReactions = false
                 break inner
@@ -282,7 +287,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 break inner
             }
         }
-
+        
         if message.adAttribute != nil {
             result.removeAll()
 
@@ -293,6 +298,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         if isUnsupportedMedia {
             result.append((message, ChatMessageUnsupportedBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
             needReactions = false
+        } else {
+            for attribute in message.attributes {
+                if let attribute = attribute as? FactCheckMessageAttribute, case .Loaded = attribute.content {
+                    result.append((message, ChatMessageFactCheckBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                    break
+                }
+            }
         }
     }
     

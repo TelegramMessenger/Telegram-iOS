@@ -566,6 +566,7 @@ public enum PeerInfoControllerMode {
     case reaction(MessageId)
     case forumTopic(thread: ChatReplyThreadMessage)
     case recommendedChannels
+    case myProfile
 }
 
 public enum ContactListActionItemInlineIconPosition {
@@ -1040,6 +1041,10 @@ public protocol SharedAccountContext: AnyObject {
     func makeMessagesStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, messageId: EngineMessage.Id) -> ViewController
     func makeStoryStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: EnginePeer.Id, storyId: Int32, storyItem: EngineStoryItem, fromStory: Bool) -> ViewController
     
+    func makeStarsTransactionsScreen(context: AccountContext, starsContext: StarsContext) -> ViewController
+    func makeStarsPurchaseScreen(context: AccountContext, starsContext: StarsContext, options: [StarsTopUpOption], peerId: EnginePeer.Id?, requiredStars: Int32?) -> ViewController
+    func makeStarsTransferScreen(context: AccountContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>) -> ViewController
+
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     
     func navigateToCurrentCall()

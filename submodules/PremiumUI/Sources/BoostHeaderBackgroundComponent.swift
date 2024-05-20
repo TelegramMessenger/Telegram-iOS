@@ -11,6 +11,7 @@ import AvatarNode
 import TelegramCore
 import MultilineTextComponent
 import TelegramPresentationData
+import PremiumStarComponent
 
 private let sceneVersion: Int = 1
 

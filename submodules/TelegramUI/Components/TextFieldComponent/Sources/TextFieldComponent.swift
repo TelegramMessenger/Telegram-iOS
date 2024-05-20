@@ -84,7 +84,30 @@ public final class TextFieldComponent: Component {
     }
     
     public enum FormatMenuAvailability: Equatable {
-        case available
+        public enum Action: CaseIterable {
+            case bold
+            case italic
+            case monospace
+            case link
+            case strikethrough
+            case underline
+            case spoiler
+            case quote
+            case code
+            
+            public static var all: [Action] = [
+                .bold,
+                .italic,
+                .monospace,
+                .link,
+                .strikethrough,
+                .underline,
+                .spoiler,
+                .quote,
+                .code
+            ]
+        }
+        case available([Action])
         case locked
         case none
     }
@@ -517,84 +540,105 @@ public final class TextFieldComponent: Component {
                 updatedActions.insert(formatAction, at: 1)
                 return UIMenu(children: updatedActions)
             }
+            
+            guard case let .available(availableActions) = component.formatMenuAvailability else {
+                return UIMenu(children: suggestedActions)
+            }
                         
-            var actions: [UIAction] = [
-                UIAction(title: strings.TextFormat_Bold, image: nil) { [weak self] action in
+            var actions: [UIAction] = []
+            if availableActions.contains(.bold) {
+                actions.append(UIAction(title: strings.TextFormat_Bold, image: nil) { [weak self] action in
                     if let self {
                         self.toggleAttribute(key: ChatTextInputAttributes.bold)
                     }
-                },
-                UIAction(title: strings.TextFormat_Italic, image: nil) { [weak self] action in
+                })
+            }
+            if availableActions.contains(.italic) {
+                actions.append(UIAction(title: strings.TextFormat_Italic, image: nil) { [weak self] action in
                     if let self {
                         self.toggleAttribute(key: ChatTextInputAttributes.italic)
                     }
-                },
-                UIAction(title: strings.TextFormat_Monospace, image: nil) { [weak self] action in
+                })
+            }
+            if availableActions.contains(.monospace) {
+                actions.append(UIAction(title: strings.TextFormat_Monospace, image: nil) { [weak self] action in
                     if let self {
                         self.toggleAttribute(key: ChatTextInputAttributes.monospace)
                     }
-                },
-                UIAction(title: strings.TextFormat_Link, image: nil) { [weak self] action in
+                })
+            }
+            if availableActions.contains(.link) {
+                actions.append(UIAction(title: strings.TextFormat_Link, image: nil) { [weak self] action in
                     if let self {
                         self.openLinkEditing()
                     }
-                },
-                UIAction(title: strings.TextFormat_Strikethrough, image: nil) { [weak self] action in
+                })
+            }
+            if availableActions.contains(.strikethrough) {
+                actions.append(UIAction(title: strings.TextFormat_Strikethrough, image: nil) { [weak self] action in
                     if let self {
                         self.toggleAttribute(key: ChatTextInputAttributes.strikethrough)
                     }
-                },
-                UIAction(title: strings.TextFormat_Underline, image: nil) { [weak self] action in
+                })
+            }
+            if availableActions.contains(.underline) {
+                actions.append(UIAction(title: strings.TextFormat_Underline, image: nil) { [weak self] action in
                     if let self {
                         self.toggleAttribute(key: ChatTextInputAttributes.underline)
                     }
-                }
-            ]
-            actions.append(UIAction(title: strings.TextFormat_Spoiler, image: nil) { [weak self] action in
-                if let self {
-                    var animated = false
-                    let attributedText = self.inputState.inputText
-                    attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, _, _ in
-                        if let _ = attributes[ChatTextInputAttributes.spoiler] {
-                            animated = true
-                        }
-                    })
-                    
-                    self.toggleAttribute(key: ChatTextInputAttributes.spoiler)
-                    
-                    self.updateSpoilersRevealed(animated: animated)
-                }
-            })
-            actions.insert(UIAction(title: strings.TextFormat_Quote, image: nil) { [weak self] action in
-                if let self {
-                    var animated = false
-                    let attributedText = self.inputState.inputText
-                    attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, _, _ in
-                        if let _ = attributes[ChatTextInputAttributes.block] {
-                            animated = true
-                        }
-                    })
-                    
-                    self.toggleAttribute(key: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote))
-                    
-                    self.updateSpoilersRevealed(animated: animated)
-                }
-            }, at: 0)
-            actions.append(UIAction(title: strings.TextFormat_Code, image: nil) { [weak self] action in
-                if let self {
-                    var animated = false
-                    let attributedText = self.inputState.inputText
-                    attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, _, _ in
-                        if let _ = attributes[ChatTextInputAttributes.block] {
-                            animated = true
-                        }
-                    })
-                    
-                    self.toggleAttribute(key: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: nil)))
-                    
-                    self.updateSpoilersRevealed(animated: animated)
-                }
-            })
+                })
+            }
+            if availableActions.contains(.spoiler) {
+                actions.append(UIAction(title: strings.TextFormat_Spoiler, image: nil) { [weak self] action in
+                    if let self {
+                        var animated = false
+                        let attributedText = self.inputState.inputText
+                        attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, _, _ in
+                            if let _ = attributes[ChatTextInputAttributes.spoiler] {
+                                animated = true
+                            }
+                        })
+                        
+                        self.toggleAttribute(key: ChatTextInputAttributes.spoiler)
+                        
+                        self.updateSpoilersRevealed(animated: animated)
+                    }
+                })
+            }
+            if availableActions.contains(.quote) {
+                actions.insert(UIAction(title: strings.TextFormat_Quote, image: nil) { [weak self] action in
+                    if let self {
+                        var animated = false
+                        let attributedText = self.inputState.inputText
+                        attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, _, _ in
+                            if let _ = attributes[ChatTextInputAttributes.block] {
+                                animated = true
+                            }
+                        })
+                        
+                        self.toggleAttribute(key: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote))
+                        
+                        self.updateSpoilersRevealed(animated: animated)
+                    }
+                }, at: 0)
+            }
+            if availableActions.contains(.code) {
+                actions.append(UIAction(title: strings.TextFormat_Code, image: nil) { [weak self] action in
+                    if let self {
+                        var animated = false
+                        let attributedText = self.inputState.inputText
+                        attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, _, _ in
+                            if let _ = attributes[ChatTextInputAttributes.block] {
+                                animated = true
+                            }
+                        })
+                        
+                        self.toggleAttribute(key: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: nil)))
+                        
+                        self.updateSpoilersRevealed(animated: animated)
+                    }
+                })
+            }
             
             var updatedActions = suggestedActions
             let formatMenu = UIMenu(title: strings.TextFormat_Format, image: nil, children: actions)
@@ -1176,6 +1220,8 @@ public final class TextFieldComponent: Component {
                     let pointSize = floor(24.0 * 1.3)
                     return EmojiTextAttachmentView(context: component.context, userLocation: .other, emoji: emoji, file: emoji.file, cache: component.context.animationCache, renderer: component.context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
                 }
+                
+                self.chatInputTextNodeDidUpdateText()
             }
             
             let wasEditing = component.externalState.isEditing

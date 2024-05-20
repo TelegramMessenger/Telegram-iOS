@@ -791,7 +791,7 @@ public final class MessageInputPanelComponent: Component {
                         }
                     },
                     isOneLineWhenUnfocused: component.style == .media,
-                    formatMenuAvailability: component.isFormattingLocked ? .locked : .available,
+                    formatMenuAvailability: component.isFormattingLocked ? .locked : .available(TextFieldComponent.FormatMenuAvailability.Action.all),
                     lockedFormatAction: {
                         component.presentTextFormattingTooltip?()
                     },

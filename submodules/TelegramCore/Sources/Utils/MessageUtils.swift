@@ -375,6 +375,10 @@ public extension Message {
             return false
         }
     }
+    
+    func isAgeRestricted() -> Bool {
+        return false
+    }
 }
 
 public extension Message {

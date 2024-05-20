@@ -74,6 +74,16 @@ public extension TelegramEngine {
             return StarsContext(account: self.account, peerId: peerId)
         }
         
+        public func peerStarsState(peerId: EnginePeer.Id) -> Signal<StarsContext.State?, NoError> {
+            return _internal_requestStarsState(account: self.account, peerId: peerId, offset: nil)
+            |> map { state -> StarsContext.State? in
+                guard let state else {
+                    return nil
+                }
+                return StarsContext.State(balance: state.balance, transactions: state.transactions, canLoadMore: false, isLoading: false)
+            }
+        }
+        
         public func sendStarsPaymentForm(formId: Int64, source: BotPaymentInvoiceSource) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
             return _internal_sendStarsPaymentForm(account: self.account, formId: formId, source: source)
         }

@@ -4953,6 +4953,22 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func deleteFactCheck(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-774204404)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.deleteFactCheck", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func deleteHistory(flags: Int32, peer: Api.InputPeer, maxId: Int32, minDate: Int32?, maxDate: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1332768214)
@@ -5209,6 +5225,23 @@ public extension Api.functions.messages {
                         var result: Api.messages.ExportedChatInvite?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.ExportedChatInvite
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func editFactCheck(peer: Api.InputPeer, msgId: Int32, text: Api.TextWithEntities) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(92925557)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    text.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.editFactCheck", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("text", String(describing: text))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })
@@ -5916,6 +5949,26 @@ public extension Api.functions.messages {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func getFactCheck(peer: Api.InputPeer, msgId: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.FactCheck]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1177696786)
+                    peer.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(msgId.count))
+                    for item in msgId {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    return (FunctionDescription(name: "messages.getFactCheck", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.FactCheck]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.FactCheck]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.FactCheck.self)
                         }
                         return result
                     })
