@@ -723,7 +723,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
             displayProgress: params.displayProgress,
             animation: animation
         )
-        animation.animator.updateFrame(layer: lineView.layer, frame: lineFrame, completion: nil)
+        animation.animator.updateFrame(layer: self.lineView.layer, frame: lineFrame, completion: nil)
         
         if params.pattern != nil {
             var maxIndex = 0

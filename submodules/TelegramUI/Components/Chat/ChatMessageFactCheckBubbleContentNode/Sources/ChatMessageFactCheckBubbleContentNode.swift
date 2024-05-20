@@ -124,7 +124,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
         
         let locale = localeWithStrings(item.presentationData.strings)
         let countryName = displayCountryName(countryId, locale: locale)
-        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_FactCheck_Description(countryName).string, self.titleBadgeButton, nil)
+        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_FactCheck_Description(countryName).string, true, self.titleBadgeButton, nil)
     }
     
     @objc private func expandPressed() {
@@ -137,6 +137,13 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
     
     public override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if let expandButton = self.expandButton, expandButton.frame.contains(point) {
+            return ChatMessageBubbleContentTapAction(content: .ignore)
+        }
+        if let titleBadgeButton = self.titleBadgeButton, titleBadgeButton.frame.contains(point) {
+            return ChatMessageBubbleContentTapAction(content: .ignore)
+        }
+        
+        if self.statusNode.supernode != nil, let _ = self.statusNode.hitTest(self.view.convert(point, to: self.statusNode.view), with: nil) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         
@@ -157,9 +164,6 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag))
             }
-        }
-        if let titleBadgeButton = self.titleBadgeButton, titleBadgeButton.frame.contains(point) {
-            return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         return ChatMessageBubbleContentTapAction(content: .none)
     }
@@ -304,17 +308,11 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                 
                 let (titleLayout, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Message_FactCheck, font: textBoldFont, textColor: mainColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets, lineColor: mainColor))
                 
+                let titleBadgePadding: CGFloat = 5.0
+                let titleBadgeSpacing: CGFloat = 5.0
                 let titleBadgeString = NSAttributedString(string: item.presentationData.strings.Message_FactCheck_WhatIsThis, font: badgeFont, textColor: mainColor)
                 let (titleBadgeLayout, titleBadgeApply) = titleBadgeLayout(TextNodeLayoutArguments(attributedString: titleBadgeString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize))
                 
-             
-                
-//                var collapsedNumberOfLines = 3
-//                if measuredTextLayout.numberOfLines == 4 {
-//                    collapsedNumberOfLines = 4
-//                }
-//                let canExpand = collapsedNumberOfLines < measuredTextLayout.numberOfLines
-                               
                 var finalAttributedText = attributedText
                 if "".isEmpty {
                     finalAttributedText = stringWithAppliedEntities(rawText + "\u{00A0}\u{00A0}\u{00A0}", entities: rawEntities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont, message: nil)
@@ -376,7 +374,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                     ))
                 }
                 
-                var suggestedBoundingWidth: CGFloat = textFrameWithoutInsets.width
+                var suggestedBoundingWidth: CGFloat = max(textFrameWithoutInsets.width, titleFrameWithoutInsets.width + titleBadgeLayout.size.width + titleBadgeSpacing + titleBadgePadding * 2.0)
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
                     suggestedBoundingWidth = max(suggestedBoundingWidth, statusSuggestedWidthAndContinue.0)
                 }
@@ -386,7 +384,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                 return (suggestedBoundingWidth, { boundingWidth in
                     var boundingSize: CGSize
                     
-                    let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth)
+                    let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right)
                     
                     boundingSize = CGSize(width: boundingWidth, height: titleFrameWithoutInsets.height + textFrameWithoutInsets.size.height + textSpacing)
                     if let statusSizeAndApply = statusSizeAndApply {
@@ -399,6 +397,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                         if let strongSelf = self {
                             info?.setInvertOffsetDirection()
                             
+                            let isFirstTime = strongSelf.item == nil
                             let themeUpdated = strongSelf.item?.presentationData.theme.theme !== item.presentationData.theme.theme
                             
                             strongSelf.item = item
@@ -481,7 +480,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                                 var expandIconFrame: CGRect = .zero
                                 if let icon = strongSelf.expandIcon.image {
                                     expandIconFrame = CGRect(origin: CGPoint(x: boundingWidth - icon.size.width - 19.0, y: clippingTextFrame.maxY - icon.size.height - 5.0), size: icon.size)
-                                    if wasHidden {
+                                    if wasHidden || isFirstTime {
                                         strongSelf.expandIcon.position = expandIconFrame.center
                                     } else {
                                         animation.animator.updatePosition(layer: strongSelf.expandIcon.layer, position: expandIconFrame.center, completion: nil)
@@ -524,8 +523,6 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                                 titleLineWidth = titleFrame.width
                             }
                             
-                            let titleBadgePadding: CGFloat = 5.0
-                            let titleBadgeSpacing: CGFloat = 5.0
                             let titleBadgeFrame = CGRect(origin: CGPoint(x: titleFrame.minX + titleLineWidth + titleBadgeSpacing + titleBadgePadding, y: floorToScreenPixels(titleFrame.midY - titleBadgeLayout.size.height / 2.0) - 1.0), size: titleBadgeLayout.size)
                             let badgeBackgroundFrame = titleBadgeFrame.insetBy(dx: -titleBadgePadding, dy: -1.0 + UIScreenPixel)
                             
@@ -565,20 +562,46 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                             
                             let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top), size: CGSize(width: boundingWidth - backgroundInsets.left - backgroundInsets.right, height: titleFrameWithoutInsets.height + textSpacing + textFrameWithoutInsets.height + textSpacing))
                             
-                            animation.animator.updateFrame(layer: strongSelf.textClippingNode.layer, frame: clippingTextFrame, completion: nil)
+                            if isFirstTime {
+                                strongSelf.textClippingNode.frame = clippingTextFrame
+                            } else {
+                                animation.animator.updateFrame(layer: strongSelf.textClippingNode.layer, frame: clippingTextFrame, completion: nil)
+                            }
                             if let maskView = strongSelf.maskView, let maskOverlayView = strongSelf.maskOverlayView {
                                 animation.animator.updateFrame(layer: maskView.layer, frame: CGRect(origin: .zero, size: CGSize(width: boundingWidth, height: clippingTextFrame.size.height)), completion: nil)
                                 animation.animator.updateFrame(layer: maskOverlayView.layer, frame: CGRect(origin: .zero, size: CGSize(width: boundingWidth, height: clippingTextFrame.size.height)), completion: nil)
                             }
                             
-                            animation.animator.updateFrame(layer: backgroundView.layer, frame: backgroundFrame, completion: nil)
-                            backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: nil, thirdColor: nil, backgroundColor: nil, pattern: nil, patternTopRightPosition: nil, animation: animation)
+                            if isFirstTime {
+                                backgroundView.frame = backgroundFrame
+                            } else {
+                                animation.animator.updateFrame(layer: backgroundView.layer, frame: backgroundFrame, completion: nil)
+                            }
+                            backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: nil, thirdColor: nil, backgroundColor: nil, pattern: nil, patternTopRightPosition: nil, animation: isFirstTime ? .None : animation)
                             
                             if let statusSizeAndApply = statusSizeAndApply {
+                                strongSelf.statusNode.reactionSelected = { [weak strongSelf] _, value, sourceView in
+                                    guard let strongSelf, let item = strongSelf.item else {
+                                        return
+                                    }
+                                    item.controllerInteraction.updateMessageReaction(item.topMessage, .reaction(value), false, sourceView)
+                                }
+                                strongSelf.statusNode.openReactionPreview = { [weak strongSelf] gesture, sourceNode, value in
+                                    guard let strongSelf, let item = strongSelf.item else {
+                                        gesture?.cancel()
+                                        return
+                                    }
+                                    
+                                    item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
+                                }
+                                
                                 let statusFrame = CGRect(origin: CGPoint(x: boundingWidth - layoutConstants.text.bubbleInsets.right - statusSizeAndApply.0.width, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0)
-                                animation.animator.updatePosition(layer: strongSelf.statusNode.layer, position: statusFrame.center, completion: nil)
-                                strongSelf.statusNode.bounds = CGRect(origin: .zero, size: statusFrame.size)
-
+                                if isFirstTime {
+                                    strongSelf.statusNode.frame = statusFrame
+                                } else {
+                                    animation.animator.updateFrame(layer: strongSelf.statusNode.layer, frame: statusFrame, completion: nil)
+                                }
+                                
                                 if strongSelf.statusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.statusNode)
                                     statusSizeAndApply.1(.None)

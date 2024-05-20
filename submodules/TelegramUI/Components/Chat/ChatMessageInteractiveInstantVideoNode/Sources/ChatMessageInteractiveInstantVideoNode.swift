@@ -1556,7 +1556,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                             if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                                             } else if case .member = channel.participationStatus {
                                             } else {
-                                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, false, forwardInfoNode, nil)
                                                 return
                                             }
                                         }
@@ -1566,7 +1566,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                         item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info(nil) : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                         return
                                     } else if let _ = forwardInfo.authorSignature {
-                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
+                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, false, forwardInfoNode, nil)
                                         return
                                     }
                                 }

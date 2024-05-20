@@ -2118,7 +2118,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                                 } else if case .member = channel.participationStatus {
                                 } else {
-                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, false, forwardInfoNode, nil)
                                     return
                                 }
                             }
@@ -2126,7 +2126,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         } else if let peer = forwardInfo.source ?? forwardInfo.author {
                             item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info(nil) : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                         } else if let _ = forwardInfo.authorSignature {
-                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
+                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, false, forwardInfoNode, nil)
                         }
                     }
                     

@@ -1731,7 +1731,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, requestSelectMessagePollOptions: { _, _ in
         }, requestOpenMessagePollResults: { _, _ in
         }, openAppStorePage: {
-        }, displayMessageTooltip: { _, _, _, _ in
+        }, displayMessageTooltip: { _, _, _, _, _ in
         }, seekToTimecode: { _, _, _ in
         }, scheduleCurrentMessage: {
         }, sendScheduledMessagesNow: { _ in
