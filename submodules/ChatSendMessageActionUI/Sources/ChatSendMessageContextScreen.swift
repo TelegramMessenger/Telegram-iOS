@@ -179,6 +179,9 @@ final class ChatSendMessageContextScreenComponent: Component {
         private var animateOutToEmpty: Bool = false
         
         private var initializationDisplayLink: SharedDisplayLinkDriver.Link?
+        private var updateSourcePositionsDisplayLink: SharedDisplayLinkDriver.Link?
+        
+        private var stableSourceSendButtonFrame: CGRect?
         
         override init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
@@ -273,6 +276,21 @@ final class ChatSendMessageContextScreenComponent: Component {
             
             let environment = environment[EnvironmentType.self].value
             
+            if let previousEnvironment = self.environment, previousEnvironment.inputHeight != 0.0, environment.inputHeight == 0.0 {
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    let stableSourceSendButtonFrame = convertFrame(component.sourceSendButton.bounds, from: component.sourceSendButton.view, to: self)
+                    if self.stableSourceSendButtonFrame != stableSourceSendButtonFrame {
+                        self.stableSourceSendButtonFrame = stableSourceSendButtonFrame
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .spring(duration: 0.35))
+                        }
+                    }
+                }
+            }
+            
             var transition = transition
             
             var transitionIsImmediate = transition.animation.isImmediate
@@ -365,7 +383,19 @@ final class ChatSendMessageContextScreenComponent: Component {
                 self.addSubview(sendButton)
             }
             
-            let sourceSendButtonFrame = convertFrame(component.sourceSendButton.bounds, from: component.sourceSendButton.view, to: self)
+            let sourceSendButtonFrame: CGRect
+            switch self.presentationAnimationState {
+            case .animatedOut:
+                sourceSendButtonFrame = convertFrame(component.sourceSendButton.bounds, from: component.sourceSendButton.view, to: self)
+                self.stableSourceSendButtonFrame = sourceSendButtonFrame
+            default:
+                if let stableSourceSendButtonFrame = self.stableSourceSendButtonFrame {
+                    sourceSendButtonFrame = stableSourceSendButtonFrame
+                } else {
+                    sourceSendButtonFrame = convertFrame(component.sourceSendButton.bounds, from: component.sourceSendButton.view, to: self)
+                    self.stableSourceSendButtonFrame = sourceSendButtonFrame
+                }
+            }
             
             let sendButtonScale: CGFloat
             switch self.presentationAnimationState {
@@ -843,6 +873,8 @@ final class ChatSendMessageContextScreenComponent: Component {
                                 if !self.isUpdating {
                                     self.state?.updated(transition: .easeInOut(duration: 0.2))
                                 }
+                                
+                                self.endEditing(true)
                             })
                         }))
                     }
@@ -1012,6 +1044,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                     transition.setAlpha(view: actionsStackNode.view, alpha: 0.0)
                     transition.setScale(view: actionsStackNode.view, scale: 0.001)
                 }
+            }
+            
+            if let standaloneReactionAnimation, let targetView = messageItemView.effectIconView {
+                let effectSize = CGSize(width: 380.0, height: 380.0)
+                var effectFrame = effectSize.centered(around: targetView.convert(targetView.bounds.center, to: self))
+                effectFrame.origin.x -= effectFrame.width * 0.3
+                transition.setFrame(view: standaloneReactionAnimation.view, frame: effectFrame)
             }
             
             if let reactionContextNode = self.reactionContextNode {

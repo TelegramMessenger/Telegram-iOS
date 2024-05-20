@@ -638,6 +638,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var replyRecognizer: ChatSwipeToReplyRecognizer?
     private var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
+    private var fetchEffectDisposable: Disposable?
+    
     //private let debugNode: ASDisplayNode
     
     override public var visibility: ListViewItemNodeVisibility {
@@ -837,6 +839,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.fetchEffectDisposable?.dispose()
     }
 
     override public func cancelInsertionAnimations() {
@@ -5877,6 +5883,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var additionalAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
     
     private func playPremiumStickerAnimation(effect: AvailableMessageEffects.MessageEffect, force: Bool) {
+        guard let item = self.item else {
+            return
+        }
         if self.playedPremiumStickerAnimation && !force {
             return
         }
@@ -5884,10 +5893,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         if let effectAnimation = effect.effectAnimation {
             self.playEffectAnimation(resource: effectAnimation.resource, isStickerEffect: true)
+            if self.fetchEffectDisposable == nil {
+                self.fetchEffectDisposable = freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .other, fileReference: .standalone(media: effectAnimation), resource: effectAnimation.resource).startStrict()
+            }
         } else {
             let effectSticker = effect.effectSticker
             if let effectFile = effectSticker.videoThumbnails.first {
                 self.playEffectAnimation(resource: effectFile.resource, isStickerEffect: true)
+                if self.fetchEffectDisposable == nil {
+                    self.fetchEffectDisposable = freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .other, fileReference: .standalone(media: effectSticker), resource: effectFile.resource).startStrict()
+                }
             }
         }
     }

@@ -420,6 +420,15 @@ final class EmojiSearchSearchBarComponent: Component {
             }
         }
         
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let component = self.component else {
+                return nil
+            }
+            let _ = component
+            
+            return super.hitTest(point, with: event)
+        }
+        
         private func updateScrolling(transition: Transition, fromScrolling: Bool) {
             guard let component = self.component, let itemLayout = self.itemLayout else {
                 return
@@ -427,8 +436,12 @@ final class EmojiSearchSearchBarComponent: Component {
             
             let itemAlpha: CGFloat
             switch component.textInputState {
-            case .active:
-                itemAlpha = 0.0
+            case let .active(hasText):
+                if hasText {
+                    itemAlpha = 0.0
+                } else {
+                    itemAlpha = 1.0
+                }
             case .inactive:
                 itemAlpha = 1.0
             }
@@ -674,7 +687,7 @@ final class EmojiSearchSearchBarComponent: Component {
             if self.scrollView.bounds.size != availableSize {
                 transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize))
             }
-            if case .active = component.textInputState {
+            if case .active(true) = component.textInputState {
                 transition.setBoundsOrigin(view: self.scrollView, origin: CGPoint())
             }
             if self.scrollView.contentSize != itemLayout.contentSize {
