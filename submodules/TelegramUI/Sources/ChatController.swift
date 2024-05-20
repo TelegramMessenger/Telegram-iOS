@@ -3280,7 +3280,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 strongSelf.context.sharedContext.applicationBindings.openAppStorePage()
             }
-        }, displayMessageTooltip: { [weak self] messageId, text, node, nodeRect in
+        }, displayMessageTooltip: { [weak self] messageId, text, isFactCheck, node, nodeRect in
             if let strongSelf = self {
                 if let node = node {
                     strongSelf.messageTooltipController?.dismiss()
@@ -3288,17 +3288,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let padding: CGFloat
                     let timeout: Double
                     let balancedTextLayout: Bool
-                    if text.count > 140 {
+                    let alignment: TooltipController.Alignment
+                    let innerPadding: UIEdgeInsets
+                    if isFactCheck {
                         timeout = 5.0
                         padding = 20.0
                         balancedTextLayout = true
+                        alignment = .natural
+                        innerPadding = UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0)
                     } else {
                         timeout = 2.0
                         padding = 8.0
                         balancedTextLayout = false
+                        alignment = .center
+                        innerPadding = .zero
                     }
                     
-                    let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, balancedTextLayout: balancedTextLayout, isBlurred: true, timeout: timeout, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true, padding: padding)
+                    let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, balancedTextLayout: balancedTextLayout, alignment: alignment, isBlurred: true, timeout: timeout, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true, padding: padding, innerPadding: innerPadding)
                     strongSelf.messageTooltipController = tooltipController
                     tooltipController.dismissed = { [weak tooltipController] _ in
                         if let strongSelf = self, let tooltipController = tooltipController, strongSelf.messageTooltipController === tooltipController {
