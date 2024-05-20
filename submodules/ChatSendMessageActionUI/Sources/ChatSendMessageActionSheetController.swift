@@ -177,6 +177,7 @@ public func makeChatSendMessageActionSheetController(
     completion: @escaping () -> Void,
     sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void,
     schedule: @escaping (ChatSendMessageActionSheetController.SendParameters?) -> Void,
+    openPremiumPaywall: @escaping (ViewController) -> Void,
     reactionItems: [ReactionItem]? = nil,
     availableMessageEffects: AvailableMessageEffects? = nil,
     isPremium: Bool = false
@@ -221,6 +222,7 @@ public func makeChatSendMessageActionSheetController(
         completion: completion,
         sendMessage: sendMessage,
         schedule: schedule,
+        openPremiumPaywall: openPremiumPaywall,
         reactionItems: reactionItems,
         availableMessageEffects: availableMessageEffects,
         isPremium: isPremium

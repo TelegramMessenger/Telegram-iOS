@@ -574,7 +574,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             
             modalStyleOverlayTransitionFactor = max(modalStyleOverlayTransitionFactor, overlayContainer.controller.modalStyleOverlayTransitionFactor)
             
-            if overlayContainer.isReady {
+            if overlayContainer.isReady && !overlayContainer.isRemoved {
                 let wasNotAdded = overlayContainer.supernode == nil
                 
                 if overlayWantsToBeBelowKeyboard {
@@ -1529,26 +1529,26 @@ open class NavigationController: UINavigationController, ContainableController, 
             guard let strongSelf = self else {
                 return
             }
-            if inGlobal {
-                for i in 0 ..< strongSelf.globalOverlayContainers.count {
-                    let overlayContainer = strongSelf.globalOverlayContainers[i]
-                    if overlayContainer.controller === controller {
-                        overlayContainer.removeFromSupernode()
-                        strongSelf.globalOverlayContainers.remove(at: i)
-                        strongSelf.internalGlobalOverlayControllersUpdated()
-                        break
-                    }
+            
+            for i in 0 ..< strongSelf.globalOverlayContainers.count {
+                let overlayContainer = strongSelf.globalOverlayContainers[i]
+                if overlayContainer.controller === controller {
+                    overlayContainer.isRemoved = true
+                    overlayContainer.removeFromSupernode()
+                    strongSelf.globalOverlayContainers.remove(at: i)
+                    strongSelf.internalGlobalOverlayControllersUpdated()
+                    break
                 }
-            } else {
-                for i in 0 ..< strongSelf.overlayContainers.count {
-                    let overlayContainer = strongSelf.overlayContainers[i]
-                    if overlayContainer.controller === controller {
-                        overlayContainer.removeFromSupernode()
-                        strongSelf.overlayContainers.remove(at: i)
-                        strongSelf._overlayControllersPromise.set(strongSelf.overlayContainers.map({ $0.controller }))
-                        strongSelf.internalOverlayControllersUpdated()
-                        break
-                    }
+            }
+            for i in 0 ..< strongSelf.overlayContainers.count {
+                let overlayContainer = strongSelf.overlayContainers[i]
+                if overlayContainer.controller === controller {
+                    overlayContainer.isRemoved = true
+                    overlayContainer.removeFromSupernode()
+                    strongSelf.overlayContainers.remove(at: i)
+                    strongSelf._overlayControllersPromise.set(strongSelf.overlayContainers.map({ $0.controller }))
+                    strongSelf.internalOverlayControllersUpdated()
+                    break
                 }
             }
 

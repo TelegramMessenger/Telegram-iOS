@@ -11,7 +11,7 @@ swift_library(
     ],
     deps = [
         "//submodules/AsyncDisplayKit",
-        "//submodules/TelegramUI/Components/Chat/ChatMessageItemView",
+        "//submodules/AccountContext",
     ],
     visibility = [
         "//visibility:public",

@@ -1032,6 +1032,12 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                         schedule: { [weak textInputPanelNode] messageEffect in
                             textInputPanelNode?.sendMessage(.schedule, messageEffect)
                         },
+                        openPremiumPaywall: { [weak self] c in
+                            guard let self else {
+                                return
+                            }
+                            self.controller?.push(c)
+                        },
                         reactionItems: effectItems,
                         availableMessageEffects: availableMessageEffects,
                         isPremium: hasPremium

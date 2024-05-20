@@ -1844,9 +1844,11 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                     }
                                 }
                                 
-                                return context.availableMessageEffects
-                                |> take(1)
-                                |> mapToSignal { availableMessageEffects -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                                return combineLatest(
+                                    context.availableMessageEffects |> take(1),
+                                    hasPremium |> take(1)
+                                )
+                                |> mapToSignal { availableMessageEffects, hasPremium -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
                                     guard let availableMessageEffects else {
                                         return .single([])
                                     }
@@ -1895,13 +1897,30 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                                 tintMode = .primary
                                             }
                                             
+                                            let icon: EmojiPagerContentComponent.Item.Icon
+                                            if i == 0 {
+                                                if !hasPremium && item.isPremium {
+                                                    icon = .locked
+                                                } else {
+                                                    icon = .none
+                                                }
+                                            } else {
+                                                if !hasPremium && item.isPremium {
+                                                    icon = .locked
+                                                } else if let staticIcon = item.staticIcon {
+                                                    icon = .customFile(staticIcon)
+                                                } else {
+                                                    icon = .text(item.emoticon)
+                                                }
+                                            }
+                                            
                                             let animationData = EntityKeyboardAnimationData(file: itemFile, partialReference: .none)
                                             let resultItem = EmojiPagerContentComponent.Item(
                                                 animationData: animationData,
                                                 content: .animation(animationData),
                                                 itemFile: itemFile,
                                                 subgroupId: nil,
-                                                icon: .none,
+                                                icon: icon,
                                                 tintMode: tintMode
                                             )
                                             
@@ -2160,6 +2179,15 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                     let context = self.context
                     let resultSignal: Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError>
                     if self.isMessageEffects {
+                        let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                        |> map { peer -> Bool in
+                            guard case let .user(user) = peer else {
+                                return false
+                            }
+                            return user.isPremium
+                        }
+                        |> distinctUntilChanged
+                        
                         let keywords: Signal<[String], NoError> = .single(value.identifiers)
                         resultSignal = keywords
                         |> mapToSignal { keywords -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
@@ -2168,9 +2196,11 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                 allEmoticons[keyword] = keyword
                             }
                             
-                            return context.availableMessageEffects
-                            |> take(1)
-                            |> mapToSignal { availableMessageEffects -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
+                            return combineLatest(
+                                context.availableMessageEffects |> take(1),
+                                hasPremium |> take(1)
+                            )
+                            |> mapToSignal { availableMessageEffects, hasPremium -> Signal<(items: [EmojiPagerContentComponent.ItemGroup], isFinalResult: Bool), NoError> in
                                 guard let availableMessageEffects else {
                                     return .single(([], true))
                                 }
@@ -2219,13 +2249,30 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                             tintMode = .primary
                                         }
                                         
+                                        let icon: EmojiPagerContentComponent.Item.Icon
+                                        if i == 0 {
+                                            if !hasPremium && item.isPremium {
+                                                icon = .locked
+                                            } else {
+                                                icon = .none
+                                            }
+                                        } else {
+                                            if !hasPremium && item.isPremium {
+                                                icon = .locked
+                                            } else if let staticIcon = item.staticIcon {
+                                                icon = .customFile(staticIcon)
+                                            } else {
+                                                icon = .text(item.emoticon)
+                                            }
+                                        }
+                                        
                                         let animationData = EntityKeyboardAnimationData(file: itemFile, partialReference: .none)
                                         let resultItem = EmojiPagerContentComponent.Item(
                                             animationData: animationData,
                                             content: .animation(animationData),
                                             itemFile: itemFile,
                                             subgroupId: nil,
-                                            icon: .none,
+                                            icon: icon,
                                             tintMode: tintMode
                                         )
                                         

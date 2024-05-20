@@ -17,6 +17,6 @@ extension ChatControllerImpl {
             }
         }
         
-        messageItemNode?.playMessageEffect()
+        messageItemNode?.playMessageEffect(force: true)
     }
 }

@@ -1037,6 +1037,9 @@ public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
     func targetReactionView(value: MessageReaction.Reaction) -> UIView?
     func targetForStoryTransition(id: StoryId) -> UIView?
     func contentFrame() -> CGRect
+    func matchesMessage(id: MessageId) -> Bool
+    func cancelInsertionAnimations()
+    func messages() -> [Message]
 }
 
 public final class ChatControllerNavigationData: CustomViewControllerNavigationData {

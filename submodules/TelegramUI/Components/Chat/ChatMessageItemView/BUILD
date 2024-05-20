@@ -24,6 +24,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TextFormat",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItem",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageTransitionNode",
+        "//submodules/TelegramAnimatedStickerNode",
     ],
     visibility = [
         "//visibility:public",

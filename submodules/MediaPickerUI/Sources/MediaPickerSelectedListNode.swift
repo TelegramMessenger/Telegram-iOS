@@ -510,6 +510,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
     private let context: AccountContext
     private let persistentItems: Bool
     private let isExternalPreview: Bool
+    private let isObscuredExternalPreview: Bool
     var globalClippingRect: CGRect?
     var layoutType: ChatSendMessageContextScreenMediaPreviewLayoutType {
         return .media
@@ -539,10 +540,11 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
         return self.ready.get()
     }
     
-    init(context: AccountContext, persistentItems: Bool, isExternalPreview: Bool) {
+    init(context: AccountContext, persistentItems: Bool, isExternalPreview: Bool, isObscuredExternalPreview: Bool) {
         self.context = context
         self.persistentItems = persistentItems
         self.isExternalPreview = isExternalPreview
+        self.isObscuredExternalPreview = isObscuredExternalPreview
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.clipsToBounds = false
@@ -633,7 +635,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
             }
             
             for (identifier, itemNode) in strongSelf.itemNodes {
-                if let (transitionView, _, _) = strongSelf.getTransitionView(identifier) {
+                if !strongSelf.isObscuredExternalPreview, let (transitionView, _, _) = strongSelf.getTransitionView(identifier) {
                     itemNode.animateFrom(transitionView, transition: transition)
                 } else {
                     if strongSelf.isExternalPreview {
@@ -694,7 +696,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
         }
         
         for (identifier, itemNode) in self.itemNodes {
-            if let (transitionView, maybeDustNode, completion) = self.getTransitionView(identifier) {
+            if !self.isObscuredExternalPreview, let (transitionView, maybeDustNode, completion) = self.getTransitionView(identifier) {
                 itemNode.animateTo(transitionView, dustNode: maybeDustNode, transition: transition, completion: completion)
             } else {
                 if self.isExternalPreview {
