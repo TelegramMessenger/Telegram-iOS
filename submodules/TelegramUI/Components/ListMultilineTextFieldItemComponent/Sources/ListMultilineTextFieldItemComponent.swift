@@ -257,6 +257,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
                     externalState: self.textFieldExternalState,
                     fontSize: 17.0,
                     textColor: component.theme.list.itemPrimaryTextColor,
+                    accentColor: component.theme.list.itemPrimaryTextColor,
                     insets: UIEdgeInsets(top: verticalInset, left: sideInset - 8.0, bottom: verticalInset, right: sideInset - 8.0 + measureTextLimitInset),
                     hideKeyboard: false,
                     customInputView: nil,

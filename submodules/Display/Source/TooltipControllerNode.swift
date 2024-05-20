@@ -84,7 +84,7 @@ final class TooltipControllerNode: ASDisplayNode {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
         
-        let maxWidth = layout.size.width - 20.0
+        let maxWidth = layout.size.width - 20.0 - self.padding * 2.0
         
         let contentSize: CGSize
         
