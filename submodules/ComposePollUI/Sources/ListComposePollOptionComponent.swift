@@ -323,6 +323,7 @@ public final class ListComposePollOptionComponent: Component {
                     externalState: component.externalState ?? TextFieldComponent.ExternalState(),
                     fontSize: 17.0,
                     textColor: component.theme.list.itemPrimaryTextColor,
+                    accentColor: component.theme.list.itemPrimaryTextColor,
                     insets: UIEdgeInsets(top: verticalInset, left: 8.0, bottom: verticalInset, right: 8.0),
                     hideKeyboard: component.inputMode == .emoji,
                     customInputView: nil,

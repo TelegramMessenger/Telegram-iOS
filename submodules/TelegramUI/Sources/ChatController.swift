@@ -3284,7 +3284,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 if let node = node {
                     strongSelf.messageTooltipController?.dismiss()
-                    let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+                    
+                    let padding: CGFloat
+                    let timeout: Double
+                    let balancedTextLayout: Bool
+                    if text.count > 140 {
+                        timeout = 5.0
+                        padding = 20.0
+                        balancedTextLayout = true
+                    } else {
+                        timeout = 2.0
+                        padding = 8.0
+                        balancedTextLayout = false
+                    }
+                    
+                    let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, balancedTextLayout: balancedTextLayout, isBlurred: true, timeout: timeout, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true, padding: padding)
                     strongSelf.messageTooltipController = tooltipController
                     tooltipController.dismissed = { [weak tooltipController] _ in
                         if let strongSelf = self, let tooltipController = tooltipController, strongSelf.messageTooltipController === tooltipController {

@@ -211,6 +211,7 @@ private final class FactCheckAlertContentNode: AlertContentNode {
                 externalState: self.inputFieldExternalState,
                 fontSize: 14.0,
                 textColor: self.presentationTheme.actionSheet.inputTextColor,
+                accentColor: self.presentationTheme.actionSheet.controlAccentColor,
                 insets: UIEdgeInsets(top: 8.0, left: 2.0, bottom: 8.0, right: 2.0),
                 hideKeyboard: false,
                 customInputView: nil,
@@ -218,7 +219,7 @@ private final class FactCheckAlertContentNode: AlertContentNode {
                 isOneLineWhenUnfocused: false,
                 characterLimit: nil,
                 emptyLineHandling: .oneConsecutive,
-                formatMenuAvailability: .available([.bold, .italic, .monospace, .link, .strikethrough, .underline]),
+                formatMenuAvailability: .available([.bold, .italic, .link]),
                 returnKeyType: .done,
                 lockedFormatAction: {
                 },
