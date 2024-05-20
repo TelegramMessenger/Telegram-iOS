@@ -566,6 +566,7 @@ public enum PeerInfoControllerMode {
     case reaction(MessageId)
     case forumTopic(thread: ChatReplyThreadMessage)
     case recommendedChannels
+    case myProfile
 }
 
 public enum ContactListActionItemInlineIconPosition {

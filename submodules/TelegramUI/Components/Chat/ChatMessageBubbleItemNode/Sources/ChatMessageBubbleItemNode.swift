@@ -70,6 +70,7 @@ import ChatMessageWallpaperBubbleContentNode
 import ChatMessageGiftBubbleContentNode
 import ChatMessageGiveawayBubbleContentNode
 import ChatMessageJoinedChannelBubbleContentNode
+import ChatMessageFactCheckBubbleContentNode
 import UIKitRuntimeUtils
 import ChatMessageTransitionNode
 import AnimatedStickerNode
@@ -286,7 +287,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 break inner
             }
         }
-
+        
         if message.adAttribute != nil {
             result.removeAll()
 
@@ -297,6 +298,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         if isUnsupportedMedia {
             result.append((message, ChatMessageUnsupportedBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
             needReactions = false
+        } else {
+            for attribute in message.attributes {
+                if let attribute = attribute as? FactCheckMessageAttribute, case .Loaded = attribute.content {
+                    result.append((message, ChatMessageFactCheckBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                    break
+                }
+            }
         }
     }
     

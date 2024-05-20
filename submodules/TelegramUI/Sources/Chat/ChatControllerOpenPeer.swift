@@ -186,6 +186,9 @@ extension ChatControllerImpl {
                                         if case let .info(params) = navigation, let params, params.switchToRecommendedChannels {
                                             mode = .recommendedChannels
                                         }
+                                        if peer.id == strongSelf.context.account.peerId {
+                                            mode = .myProfile
+                                        }
                                         var expandAvatar = expandAvatar
                                         if peer.smallProfileImage == nil {
                                             expandAvatar = false

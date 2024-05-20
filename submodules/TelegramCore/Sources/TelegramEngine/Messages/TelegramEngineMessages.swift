@@ -692,6 +692,18 @@ public extension TelegramEngine {
             return _internal_searchForumTopics(account: self.account, peerId: peerId, query: query)
         }
         
+        public func editMessageFactCheck(messageId: EngineMessage.Id, text: String, entities: [MessageTextEntity]) -> Signal<Never, NoError> {
+            return _internal_editMessageFactCheck(account: self.account, messageId: messageId, text: text, entities: entities)
+        }
+        
+        public func deleteMessageFactCheck(messageId: EngineMessage.Id) -> Signal<Never, NoError> {
+            return _internal_deleteMessageFactCheck(account: self.account, messageId: messageId)
+        }
+        
+        public func getMessagesFactCheck(messageIds: [EngineMessage.Id]) -> Signal<Never, NoError> {
+            return _internal_getMessagesFactCheck(account: self.account, messageIds: messageIds)
+        }
+        
         public func debugAddHoles() -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 transaction.addHolesEverywhere(peerNamespaces: [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel], holeNamespace: Namespaces.Message.Cloud)

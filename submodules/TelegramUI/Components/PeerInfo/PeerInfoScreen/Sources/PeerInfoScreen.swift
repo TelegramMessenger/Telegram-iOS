@@ -3340,6 +3340,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openPhoneContextMenu: { _ in
         }, openAgeRestrictedMessageMedia: { _, _ in
         }, playMessageEffect: { _ in
+        }, editMessageFactCheck: { _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {

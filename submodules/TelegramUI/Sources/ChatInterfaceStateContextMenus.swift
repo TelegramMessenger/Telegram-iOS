@@ -178,6 +178,13 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: EngineCo
     return false
 }
 
+private func canEditFactCheck(appConfig: AppConfiguration) -> Bool {
+    if let data = appConfig.data, let value = data["can_edit_factcheck"] as? Bool {
+        return value
+    }
+    return false
+}
+
 private func canViewReadStats(message: Message, participantCount: Int?, isMessageRead: Bool, isPremium: Bool, appConfig: AppConfiguration) -> Bool {
     guard let peer = message.peers[message.id.peerId] else {
         return false
@@ -1695,6 +1702,51 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             clearCacheAsDelete = true
         }
+        
+        
+        if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info, canEditFactCheck(appConfig: appConfig) {
+            var hasFactCheck = false
+            for attribute in message.attributes {
+                if let _ = attribute as? FactCheckMessageAttribute {
+                    hasFactCheck = true
+                    break
+                }
+            }
+            
+            let title: String
+            if hasFactCheck {
+                title = chatPresentationInterfaceState.strings.Conversation_ContextMenuAddFactCheck
+            } else {
+                title = chatPresentationInterfaceState.strings.Conversation_ContextMenuEditFactCheck
+            }
+            actions.append(.action(ContextMenuActionItem(text: title, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/FactCheck"), color: theme.actionSheet.primaryTextColor)
+            }, action: { c, f in
+                f(.dismissWithoutContent)
+                
+                controllerInteraction.editMessageFactCheck(messages[0].id)
+            })))
+        }
+//        if message.id.peerId.isGroupOrChannel {
+//            //TODO:localize
+//            if message.isAgeRestricted() {
+//                actions.append(.action(ContextMenuActionItem(text: "Unmark as 18+", icon: { theme in
+//                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AgeUnmark"), color: theme.actionSheet.primaryTextColor)
+//                }, action: { c, _ in
+//                    c?.dismiss(completion: {
+//                        controllerInteraction.openMessageStats(messages[0].id)
+//                    })
+//                })))
+//            } else {
+//                actions.append(.action(ContextMenuActionItem(text: "Mark as 18+", icon: { theme in
+//                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AgeMark"), color: theme.actionSheet.primaryTextColor)
+//                }, action: { c, _ in
+//                    c?.dismiss(completion: {
+//                        controllerInteraction.openMessageStats(messages[0].id)
+//                    })
+//                })))
+//            }
+//        }
         
         if isReplyThreadHead {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ViewInChannel, icon: { theme in

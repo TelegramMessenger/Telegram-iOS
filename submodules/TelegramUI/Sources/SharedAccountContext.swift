@@ -1777,6 +1777,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, openPhoneContextMenu: { _ in
         }, openAgeRestrictedMessageMedia: { _, _ in
         }, playMessageEffect: { _ in
+        }, editMessageFactCheck: { _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -2651,7 +2652,8 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         var callMessages: [Message] = []
         var hintGroupInCommon: PeerId?
         var forumTopicThread: ChatReplyThreadMessage?
-
+        var isMyProfile = false
+        
         switch mode {
         case let .nearbyPeer(distance):
             nearbyPeerDistance = distance
@@ -2665,10 +2667,12 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
             reactionSourceMessageId = messageId
         case let .forumTopic(thread):
             forumTopicThread = thread
+        case .myProfile:
+            isMyProfile = true
         default:
             break
         }
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, reactionSourceMessageId: reactionSourceMessageId, callMessages: callMessages, hintGroupInCommon: hintGroupInCommon, forumTopicThread: forumTopicThread)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, reactionSourceMessageId: reactionSourceMessageId, callMessages: callMessages, isMyProfile: isMyProfile, hintGroupInCommon: hintGroupInCommon, forumTopicThread: forumTopicThread)
     } else if peer is TelegramSecretChat {
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [])
     }

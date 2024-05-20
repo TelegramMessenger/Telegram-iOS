@@ -12206,3 +12206,14 @@ Sorry for the inconvenience.";
 "Chat.Context.Phone.CopyNumber" = "Copy Number";
 "Chat.Context.Phone.NotOnTelegram" = "This number is not on Telegram.";
 "Chat.Context.Phone.ViewProfile" = "View Profile";
+
+"Message.FactCheck" = "Fact Check";
+"Message.FactCheck.WhatIsThis" = "what's this?";
+
+"Conversation.FactCheck.Description" = "This clarification was provided by a fact checking agency assigned by the department of the government of your country (%@) responsible for combating misinformation.";
+
+"FactCheck.Title" = "Fact Check";
+"FactCheck.Placeholder" = "Add Fact Check";
+
+"Conversation.ContextMenuAddFactCheck" = "Add Fact Check";
+"Conversation.ContextMenuEditFactCheck" = "Edit Fact Check";

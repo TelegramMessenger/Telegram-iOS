@@ -557,6 +557,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     private let extendedMediaProcessingManager = ChatMessageVisibleThrottledProcessingManager(interval: 5.0)
     private let translationProcessingManager = ChatMessageThrottledProcessingManager(submitInterval: 1.0)
     private let refreshStoriesProcessingManager = ChatMessageThrottledProcessingManager()
+    private let factCheckProcessingManager = ChatMessageThrottledProcessingManager(submitInterval: 1.0)
     
     let prefetchManager: InChatPrefetchManager
     private var currentEarlierPrefetchMessages: [(Message, Media)] = []
@@ -816,6 +817,11 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             context?.account.viewTracker.refreshStoriesForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
         }
         self.translationProcessingManager.process = { [weak self, weak context] messageIds in
+            if let context = context, let toLang = self?.toLang {
+                let _ = translateMessageIds(context: context, messageIds: Array(messageIds.map(\.messageId)), toLang: toLang).startStandalone()
+            }
+        }
+        self.factCheckProcessingManager.process = { [weak self, weak context] messageIds in
             if let context = context, let toLang = self?.toLang {
                 let _ = translateMessageIds(context: context, messageIds: Array(messageIds.map(\.messageId)), toLang: toLang).startStandalone()
             }
@@ -2462,6 +2468,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             }
             
             var messageIdsToTranslate: [MessageId] = []
+            var messageIdsToFactCheck: [MessageId] = []
             if let translateToLanguage {
                 let extendedRange: Int = 2
                 var wideIndexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex - extendedRange, historyView.filteredEntries.count - 1 - visible.firstIndex + extendedRange)
@@ -2554,6 +2561,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                         var mediaRequiredValidation = false
                         var hasUnseenReactions = false
                         var storiesRequiredValidation = false
+                        var factCheckRequired = false
                         for attribute in message.attributes {
                             if attribute is ViewCountMessageAttribute {
                                 if message.id.namespace == Namespaces.Message.Cloud {
@@ -2575,6 +2583,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 }
                             } else if let _ = attribute as? ReplyStoryAttribute {
                                 storiesRequiredValidation = true
+                            } else if let attribute = attribute as? FactCheckMessageAttribute, case .Pending = attribute.content {
+                                factCheckRequired = true
                             }
                         }
                         
@@ -2635,6 +2645,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                         if hasUnseenReactions {
                             messageIdsWithUnseenReactions.append(message.id)
                         }
+                        if factCheckRequired {
+                            messageIdsToFactCheck.append(message.id)
+                        }
                         
                         if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                             isTopReplyThreadMessageShownValue = true
@@ -2656,6 +2669,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             var hasUnconsumedMention = false
                             var hasUnconsumedContent = false
                             var hasUnseenReactions = false
+                            var factCheckRequired = false
                             if message.tags.contains(.unseenPersonalMessage) {
                                 for attribute in message.attributes {
                                     if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
@@ -2685,6 +2699,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                     hasUnconsumedContent = true
                                 } else if let attribute = attribute as? ReactionsMessageAttribute, attribute.hasUnseen {
                                     hasUnseenReactions = true
+                                } else if let attribute = attribute as? FactCheckMessageAttribute, case .Pending = attribute.content {
+                                    factCheckRequired = true
                                 }
                             }
                             if hasUnconsumedMention && !hasUnconsumedContent {
@@ -2692,6 +2708,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             }
                             if hasUnseenReactions {
                                 messageIdsWithUnseenReactions.append(message.id)
+                            }
+                            if factCheckRequired {
+                                messageIdsToFactCheck.append(message.id)
                             }
                             if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                                 isTopReplyThreadMessageShownValue = true
@@ -2870,6 +2889,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             }
             if !messageIdsToTranslate.isEmpty {
                 self.translationProcessingManager.add(messageIdsToTranslate.map { MessageAndThreadId(messageId: $0, threadId: nil) })
+            }
+            if !messageIdsToFactCheck.isEmpty {
+                self.factCheckProcessingManager.add(messageIdsToFactCheck.map { MessageAndThreadId(messageId: $0, threadId: nil) })
             }
             if !visibleAdOpaqueIds.isEmpty {
                 for opaqueId in visibleAdOpaqueIds {

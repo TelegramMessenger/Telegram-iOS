@@ -224,6 +224,7 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramApplicationIcons.self, f: { TelegramApplicationIcons(decoder: $0) })
     declareEncodable(OutgoingQuickReplyMessageAttribute.self, f: { OutgoingQuickReplyMessageAttribute(decoder: $0) })
     declareEncodable(EffectMessageAttribute.self, f: { EffectMessageAttribute(decoder: $0) })
+    declareEncodable(FactCheckMessageAttribute.self, f: { FactCheckMessageAttribute(decoder: $0) })
     return
 }()
 

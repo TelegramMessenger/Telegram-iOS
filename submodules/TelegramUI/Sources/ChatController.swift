@@ -124,6 +124,7 @@ import ChatEmptyNode
 import ChatMediaInputStickerGridItem
 import AdsInfoScreen
 import MessageUI
+import PhoneNumberFormat
 
 public enum ChatControllerPeekActions {
     case standard
@@ -4662,14 +4663,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             phoneData.progress?.set(.single(true))
-            let _ = (self.context.engine.peers.resolvePeerByPhone(phone: phoneData.number)
-            |> deliverOnMainQueue).start(next: { [weak self] peer in
+            
+            let context = self.context
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+            |> mapToSignal { peer -> Signal<(String, EnginePeer?), NoError> in
+                guard let peer, case let .user(user) = peer else {
+                    return .complete()
+                }
+                var normalizedNumber = phoneData.number
+                if normalizedNumber.hasPrefix("0"), let accountPhone = user.phone, !accountPhone.hasPrefix("888") {
+                    normalizedNumber = enhancePhoneNumberWithCodeFromNumber(normalizedNumber, otherPhoneNumber: accountPhone, configuration: context.currentCountriesConfiguration.with { $0 })
+                }
+                normalizedNumber = formatPhoneNumber(context: context, number: cleanPhoneNumber(normalizedNumber))
+                return self.context.engine.peers.resolvePeerByPhone(phone: normalizedNumber)
+                |> map { peer -> (String, EnginePeer?) in
+                    return (normalizedNumber, peer)
+                }
+            } |> deliverOnMainQueue).start(next: { [weak self] number, peer in
                 guard let self else {
                     return
                 }
                 phoneData.progress?.set(.single(false))
                 
-                self.openPhoneContextMenu(number: phoneData.number, peer: peer, message: phoneData.message, contentNode: phoneData.contentNode, messageNode: phoneData.messageNode, frame: phoneData.messageNode.bounds, anyRecognizer: nil, location: nil)
+                self.openPhoneContextMenu(number: number, peer: peer, message: phoneData.message, contentNode: phoneData.contentNode, messageNode: phoneData.messageNode, frame: phoneData.messageNode.bounds, anyRecognizer: nil, location: nil)
             })
         }, openAgeRestrictedMessageMedia: { [weak self] message, reveal in
             guard let self else {
@@ -4690,6 +4706,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.playMessageEffect(message: message)
+        }, editMessageFactCheck: { [weak self] messageId in
+            guard let self else {
+                return
+            }
+            self.openEditMessageFactCheck(messageId: messageId)
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
