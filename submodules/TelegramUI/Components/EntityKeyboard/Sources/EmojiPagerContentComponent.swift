@@ -1384,6 +1384,7 @@ public final class EmojiPagerContentComponent: Component {
         
         private var component: EmojiPagerContentComponent?
         private weak var state: EmptyComponentState?
+        private var isUpdating: Bool = false
         private var pagerEnvironment: PagerComponentChildEnvironment?
         private var keyboardChildEnvironment: EntityKeyboardChildEnvironment?
         private var activeItemUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>?
@@ -4055,6 +4056,11 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         func update(component: EmojiPagerContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
             let previousComponent = self.component
             
             self.component = component
@@ -4580,6 +4586,10 @@ public final class EmojiPagerContentComponent: Component {
                                     self?.component?.inputInteractionHolder.inputInteraction?.requestUpdate(
                                         Transition(animation: .curve(duration: 0.4, curve: .spring)))
                                 }
+                            }
+                            
+                            if !strongSelf.isUpdating {
+                                strongSelf.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                             }
                         }
                     }, updateQuery: { [weak self] query in

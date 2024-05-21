@@ -76,6 +76,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
 
     private var enableSynchronousImageApply: Bool = false
     
+    private var wasPending: Bool = false
+    private var didChangeFromPendingToSent: Bool = false
+    
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
             let wasVisible = oldValue != .none
@@ -92,6 +95,8 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             if self.visibilityStatus != oldValue {
                 self.threadInfoNode?.visibility = self.visibilityStatus == true
                 self.replyInfoNode?.visibility = self.visibilityStatus == true
+                
+                self.updateVisibility()
             }
         }
     }
@@ -279,6 +284,13 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
     
     override public func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
         super.setupItem(item, synchronousLoad: synchronousLoad)
+        
+        if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal || item.message.id.namespace == Namespaces.Message.QuickReplyLocal {
+            self.wasPending = true
+        }
+        if self.wasPending && (item.message.id.namespace != Namespaces.Message.Local && item.message.id.namespace != Namespaces.Message.ScheduledLocal && item.message.id.namespace != Namespaces.Message.QuickReplyLocal) {
+            self.didChangeFromPendingToSent = true
+        }
         
         self.replyRecognizer?.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
         if self.isNodeLoaded {
@@ -1352,6 +1364,8 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                         
                         f()
                     }
+                    
+                    strongSelf.updateVisibility()
                 }
             }
             
@@ -2129,5 +2143,54 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         }
         
         return (image, self.imageNode.frame)
+    }
+    
+    private func updateVisibility() {
+        guard let item = self.item else {
+            return
+        }
+        
+        var isPlaying = true
+        if case .visible = self.visibility {
+        } else {
+            isPlaying = false
+        }
+        
+        if !isPlaying {
+            self.removeEffectAnimations()
+        }
+        
+        if isPlaying {
+            var alreadySeen = true
+            if item.message.flags.contains(.Incoming) {
+                if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
+                    if unreadRange.contains(item.message.id.id) {
+                        if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                            alreadySeen = false
+                        }
+                    }
+                }
+            } else {
+                if self.didChangeFromPendingToSent {
+                    if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                        alreadySeen = false
+                    }
+                }
+            }
+            
+            if !alreadySeen {
+                item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
+                
+                self.playMessageEffect(force: false)
+            }
+        }
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        if let result = self.dateAndStatusNode.messageEffectTargetView() {
+            return result
+        }
+        
+        return nil
     }
 }

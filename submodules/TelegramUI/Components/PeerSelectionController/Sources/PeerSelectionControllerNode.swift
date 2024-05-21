@@ -703,6 +703,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 }
             }, schedule: { [weak textInputPanelNode] messageEffect in
                 textInputPanelNode?.sendMessage(.schedule, messageEffect)
+            }, openPremiumPaywall: { [weak controller] c in
+                guard let controller else {
+                    return
+                }
+                controller.push(c)
             })
             strongSelf.presentInGlobalOverlay(controller, nil)
         }, openScheduledMessages: {

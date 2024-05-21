@@ -71,6 +71,7 @@ final class ChatSendMessageContextScreenComponent: Component {
     let completion: () -> Void
     let sendMessage: (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void
     let schedule: (ChatSendMessageActionSheetController.SendParameters?) -> Void
+    let openPremiumPaywall: (ViewController) -> Void
     let reactionItems: [ReactionItem]?
     let availableMessageEffects: AvailableMessageEffects?
     let isPremium: Bool
@@ -94,6 +95,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         completion: @escaping () -> Void,
         sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void,
         schedule: @escaping (ChatSendMessageActionSheetController.SendParameters?) -> Void,
+        openPremiumPaywall: @escaping (ViewController) -> Void,
         reactionItems: [ReactionItem]?,
         availableMessageEffects: AvailableMessageEffects?,
         isPremium: Bool
@@ -116,6 +118,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         self.completion = completion
         self.sendMessage = sendMessage
         self.schedule = schedule
+        self.openPremiumPaywall = openPremiumPaywall
         self.reactionItems = reactionItems
         self.availableMessageEffects = availableMessageEffects
         self.isPremium = isPremium
@@ -153,6 +156,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         
         private var sendButton: SendButton?
         private var messageItemView: MessageItemView?
+        private var internalWallpaperBackgroundNode: WallpaperBackgroundNode?
         private var actionsStackNode: ContextControllerActionsStackNode?
         private var reactionContextNode: ReactionContextNode?
         
@@ -174,6 +178,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         private var loadEffectAnimationDisposable: Disposable?
         
         private var animateInTimestamp: Double?
+        private var performedActionsOnAnimateOut: Bool = false
         private var presentationAnimationState: PresentationAnimationState = .initial
         private var appliedAnimationState: PresentationAnimationState = .initial
         private var animateOutToEmpty: Bool = false
@@ -226,13 +231,13 @@ final class ChatSendMessageContextScreenComponent: Component {
             }
             self.animateOutToEmpty = true
             
+            self.environment?.controller()?.dismiss()
+            
             let sendParameters = ChatSendMessageActionSheetController.SendParameters(
                 effect: self.selectedMessageEffect.flatMap({ ChatSendMessageActionSheetController.SendParameters.Effect(id: $0.id) }),
                 textIsAboveMedia: self.mediaCaptionIsAbove
             )
-            
             component.sendMessage(.generic, sendParameters)
-            self.environment?.controller()?.dismiss()
         }
         
         func animateIn() {
@@ -247,6 +252,15 @@ final class ChatSendMessageContextScreenComponent: Component {
         }
         
         func animateOut(completion: @escaping () -> Void) {
+            if let controller = self.environment?.controller() {
+                controller.forEachController { c in
+                    if let c = c as? UndoOverlayController {
+                        c.dismiss()
+                    }
+                    return true
+                }
+            }
+            
             if case .animatedOut = self.presentationAnimationState {
             } else {
                 self.presentationAnimationState = .animatedOut(completion: completion)
@@ -361,9 +375,14 @@ final class ChatSendMessageContextScreenComponent: Component {
                 )
             }
             
+            var isMessageVisible = component.mediaPreview != nil
+            
             let textString: NSAttributedString
             if let attributedText = component.textInputView.attributedText {
                 textString = attributedText
+                if textString.length != 0 {
+                    isMessageVisible = true
+                }
             } else {
                 textString = NSAttributedString(string: " ", font: Font.regular(17.0), textColor: .black)
             }
@@ -439,6 +458,8 @@ final class ChatSendMessageContextScreenComponent: Component {
                         }
                     }
                 )))
+                
+                items.append(.separator)
             }
             if !reminders {
                 items.append(.action(ContextMenuActionItem(
@@ -508,6 +529,10 @@ final class ChatSendMessageContextScreenComponent: Component {
                 )))
             }
             
+            if case .separator = items.last {
+                items.removeLast()
+            }
+            
             let actionsStackNode: ContextControllerActionsStackNode
             if let current = self.actionsStackNode {
                 actionsStackNode = current
@@ -536,7 +561,9 @@ final class ChatSendMessageContextScreenComponent: Component {
                         }
                     }
                 )
-                actionsStackNode.layer.anchorPoint = CGPoint(x: 1.0, y: 0.0)
+                if isMessageVisible {
+                    actionsStackNode.layer.anchorPoint = CGPoint(x: 1.0, y: 0.0)
+                }
                 
                 actionsStackNode.push(
                     item: ContextControllerActionsListStackItem(
@@ -568,6 +595,24 @@ final class ChatSendMessageContextScreenComponent: Component {
                 messageItemView = MessageItemView(frame: CGRect())
                 self.messageItemView = messageItemView
                 self.addSubview(messageItemView)
+            }
+            
+            let wallpaperBackgroundNode: WallpaperBackgroundNode
+            if let externalWallpaperBackgroundNode = component.wallpaperBackgroundNode {
+                wallpaperBackgroundNode = externalWallpaperBackgroundNode
+            } else if let current = self.internalWallpaperBackgroundNode {
+                wallpaperBackgroundNode = current
+                wallpaperBackgroundNode.frame = CGRect(origin: CGPoint(), size: availableSize)
+                wallpaperBackgroundNode.updateLayout(size: availableSize, displayMode: .aspectFill, transition: .immediate)
+            } else {
+                wallpaperBackgroundNode = createWallpaperBackgroundNode(context: component.context, forChatDisplay: true, useSharedAnimationPhase: false)
+                wallpaperBackgroundNode.frame = CGRect(origin: CGPoint(), size: availableSize)
+                wallpaperBackgroundNode.updateLayout(size: availableSize, displayMode: .aspectFill, transition: .immediate)
+                wallpaperBackgroundNode.updateBubbleTheme(bubbleTheme: presentationData.theme, bubbleCorners: presentationData.chatBubbleCorners)
+                wallpaperBackgroundNode.update(wallpaper: presentationData.chatWallpaper, animated: false)
+                self.internalWallpaperBackgroundNode = wallpaperBackgroundNode
+                self.insertSubview(wallpaperBackgroundNode.view, at: 0)
+                wallpaperBackgroundNode.alpha = 0.0
             }
             
             let localSourceTextInputViewFrame = convertFrame(component.textInputView.bounds, from: component.textInputView, to: self)
@@ -605,7 +650,7 @@ final class ChatSendMessageContextScreenComponent: Component {
             let messageItemSize = messageItemView.update(
                 context: component.context,
                 presentationData: presentationData,
-                backgroundNode: component.wallpaperBackgroundNode,
+                backgroundNode: wallpaperBackgroundNode,
                 textString: textString,
                 sourceTextInputView: component.textInputView as? ChatInputTextView,
                 emojiViewProvider: component.emojiViewProvider,
@@ -882,13 +927,23 @@ final class ChatSendMessageContextScreenComponent: Component {
                         guard let self, let component = self.component else {
                             return
                         }
+                        
+                        if let controller = self.environment?.controller() {
+                            controller.forEachController { c in
+                                if let c = c as? UndoOverlayController {
+                                    c.dismiss()
+                                }
+                                return true
+                            }
+                        }
+                        
                         //TODO:localize
                         let presentationData = component.updatedPresentationData?.initial ?? component.context.sharedContext.currentPresentationData.with({ $0 })
                         self.environment?.controller()?.present(UndoOverlayController(
                             presentationData: presentationData,
                             content: .premiumPaywall(
                                 title: nil,
-                                text: "Subscribe to [TelegramPremium]() to add this animated effect.",
+                                text: "Subscribe to [Telegram Premium]() to add this animated effect.",
                                 customUndoText: nil,
                                 timeout: nil,
                                 linkAction: nil
@@ -900,11 +955,12 @@ final class ChatSendMessageContextScreenComponent: Component {
                                 }
                                 if case .info = action {
                                     self.window?.endEditing(true)
+                                    self.animateOutToEmpty = true
+                                    self.environment?.controller()?.dismiss()
                                     
                                     //TODO:localize
                                     let premiumController = component.context.sharedContext.makePremiumIntroController(context: component.context, source: .animatedEmoji, forceDark: false, dismissed: nil)
-                                    let _ = premiumController
-                                    //parentNavigationController.pushViewController(premiumController)
+                                    component.openPremiumPaywall(premiumController)
                                 }
                                 return false
                             }
@@ -922,7 +978,10 @@ final class ChatSendMessageContextScreenComponent: Component {
             let sendButtonSize = CGSize(width: min(sourceSendButtonFrame.width, 44.0), height: sourceSendButtonFrame.height)
             var readySendButtonFrame = CGRect(origin: CGPoint(x: sourceSendButtonFrame.maxX - sendButtonSize.width, y: sourceSendButtonFrame.minY), size: sendButtonSize)
             
-            let sourceActionsStackFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 1.0 - actionsStackSize.width, y: sourceMessageItemFrame.maxY + messageActionsSpacing), size: actionsStackSize)
+            var sourceActionsStackFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 1.0 - actionsStackSize.width, y: sourceMessageItemFrame.maxY + messageActionsSpacing), size: actionsStackSize)
+            if !isMessageVisible {
+                sourceActionsStackFrame.origin.y = sourceSendButtonFrame.maxY - sourceActionsStackFrame.height - 5.0
+            }
             
             var readyMessageItemFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 8.0 - messageItemSize.width, y: readySendButtonFrame.maxY - 6.0 - messageItemSize.height), size: messageItemSize)
             if let mediaPreview = component.mediaPreview {
@@ -935,6 +994,9 @@ final class ChatSendMessageContextScreenComponent: Component {
             }
             
             var readyActionsStackFrame = CGRect(origin: CGPoint(x: readySendButtonFrame.minX + 1.0 - actionsStackSize.width, y: readyMessageItemFrame.maxY + messageActionsSpacing), size: actionsStackSize)
+            if !isMessageVisible {
+                readyActionsStackFrame.origin.y = readySendButtonFrame.maxY - readyActionsStackFrame.height - 5.0
+            }
             
             let bottomOverflow = readyActionsStackFrame.maxY - (availableSize.height - environment.safeInsets.bottom)
             if bottomOverflow > 0.0 {
@@ -1002,6 +1064,7 @@ final class ChatSendMessageContextScreenComponent: Component {
             }
             
             transition.setFrame(view: messageItemView, frame: messageItemFrame)
+            transition.setAlpha(view: messageItemView, alpha: isMessageVisible ? 1.0 : 0.0)
             messageItemView.updateClippingRect(
                 sourceMediaPreview: component.mediaPreview,
                 isAnimatedIn: self.presentationAnimationState.key == .animatedIn,
@@ -1010,7 +1073,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                 transition: transition
             )
             
-            transition.setPosition(view: actionsStackNode.view, position: CGPoint(x: actionsStackFrame.maxX, y: actionsStackFrame.minY))
+            transition.setPosition(view: actionsStackNode.view, position: CGPoint(x: actionsStackFrame.minX + actionsStackNode.layer.anchorPoint.x * actionsStackFrame.width, y: actionsStackFrame.minY + actionsStackNode.layer.anchorPoint.y * actionsStackFrame.height))
             transition.setBounds(view: actionsStackNode.view, bounds: CGRect(origin: CGPoint(), size: actionsStackFrame.size))
             if !transition.animation.isImmediate && previousAnimationState.key != self.presentationAnimationState.key {
                 switch self.presentationAnimationState {
@@ -1155,7 +1218,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                     component.sourceSendButton.isHidden = false
                     
                     transition.setAlpha(view: sendButton, alpha: 0.0)
-                    if let messageItemView = self.messageItemView {
+                    if let messageItemView = self.messageItemView, isMessageVisible {
                         transition.setAlpha(view: messageItemView, alpha: 0.0)
                     }
                 }
@@ -1168,13 +1231,16 @@ final class ChatSendMessageContextScreenComponent: Component {
                     return
                 }
                 if case let .animatedOut(completion) = self.presentationAnimationState {
-                    if let component = self.component, !self.animateOutToEmpty {
-                        if component.mediaPreview == nil {
-                            component.textInputView.isHidden = false
+                    if !self.performedActionsOnAnimateOut {
+                        self.performedActionsOnAnimateOut = true
+                        if let component = self.component, !self.animateOutToEmpty {
+                            if component.mediaPreview == nil {
+                                component.textInputView.isHidden = false
+                            }
+                            component.sourceSendButton.isHidden = false
                         }
-                        component.sourceSendButton.isHidden = false
+                        completion()
                     }
-                    completion()
                 }
             })
             
@@ -1226,6 +1292,7 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
         completion: @escaping () -> Void,
         sendMessage: @escaping (ChatSendMessageActionSheetController.SendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void,
         schedule: @escaping (ChatSendMessageActionSheetController.SendParameters?) -> Void,
+        openPremiumPaywall: @escaping (ViewController) -> Void,
         reactionItems: [ReactionItem]?,
         availableMessageEffects: AvailableMessageEffects?,
         isPremium: Bool
@@ -1253,6 +1320,7 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
                 completion: completion,
                 sendMessage: sendMessage,
                 schedule: schedule,
+                openPremiumPaywall: openPremiumPaywall,
                 reactionItems: reactionItems,
                 availableMessageEffects: availableMessageEffects,
                 isPremium: isPremium

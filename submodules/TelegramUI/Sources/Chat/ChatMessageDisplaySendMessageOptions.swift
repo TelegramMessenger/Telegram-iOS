@@ -140,8 +140,13 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
                     return
                 }
                 selfController.controllerInteraction?.scheduleCurrentMessage()
+            }, openPremiumPaywall: { [weak selfController] c in
+                guard let selfController else {
+                    return
+                }
+                selfController.push(c)
             },
-            reactionItems: effectItems,
+            reactionItems: (!textInputView.text.isEmpty || mediaPreview != nil) ? effectItems : nil,
             availableMessageEffects: availableMessageEffects,
             isPremium: hasPremium
         )

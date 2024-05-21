@@ -461,7 +461,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 if case .media = controller.subject {
                     persistentItems = true
                 }
-                let previewNode = MediaPickerSelectedListNode(context: controller.context, persistentItems: persistentItems, isExternalPreview: true)
+                var isObscuredExternalPreview = false
+                if case .selected = self.currentDisplayMode {
+                    isObscuredExternalPreview = true
+                }
+                let previewNode = MediaPickerSelectedListNode(context: controller.context, persistentItems: persistentItems, isExternalPreview: true, isObscuredExternalPreview: isObscuredExternalPreview)
                 let clippingRect = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: layout.size.width, height: max(0.0, layout.size.height - navigationHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom - 1.0)))
                 previewNode.globalClippingRect = self.view.convert(clippingRect, to: nil)
                 previewNode.interaction = self.controller?.interaction
@@ -1000,7 +1004,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     persistentItems = true
                 }
                 
-                let selectionNode = MediaPickerSelectedListNode(context: controller.context, persistentItems: persistentItems, isExternalPreview: false)
+                let selectionNode = MediaPickerSelectedListNode(context: controller.context, persistentItems: persistentItems, isExternalPreview: false, isObscuredExternalPreview: false)
                 selectionNode.alpha = animated ? 0.0 : 1.0
                 selectionNode.layer.allowsGroupOpacity = true
                 selectionNode.isUserInteractionEnabled = false

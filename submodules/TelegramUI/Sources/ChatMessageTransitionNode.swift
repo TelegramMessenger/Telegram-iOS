@@ -13,7 +13,6 @@ import ChatControllerInteraction
 import FeaturedStickersScreen
 import ChatTextInputMediaRecordingButton
 import ReplyAccessoryPanelNode
-import ChatMessageItemView
 import ChatMessageStickerItemNode
 import ChatMessageInstantVideoItemNode
 import ChatMessageAnimatedStickerItemNode
@@ -21,6 +20,7 @@ import ChatMessageTransitionNode
 import ChatMessageBubbleItemNode
 import ChatEmptyNode
 import ChatMediaInputStickerGridItem
+import AccountContext
 
 private func convertAnimatingSourceRect(_ rect: CGRect, fromView: UIView, toView: UIView?) -> CGRect {
     if let presentationLayer = fromView.layer.presentation() {
@@ -241,7 +241,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
     }
             
     final class DecorationItemNodeImpl: ASDisplayNode, ChatMessageTransitionNode.DecorationItemNode {
-        let itemNode: ChatMessageItemView
+        let itemNode: ChatMessageItemNodeProtocol
         let contentView: UIView
         private let getContentAreaInScreenSpace: () -> CGRect
         
@@ -251,7 +251,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         
         fileprivate weak var overlayController: OverlayTransitionContainerController?
         
-        init(itemNode: ChatMessageItemView, contentView: UIView, getContentAreaInScreenSpace: @escaping () -> CGRect) {
+        init(itemNode: ChatMessageItemNodeProtocol, contentView: UIView, getContentAreaInScreenSpace: @escaping () -> CGRect) {
             self.itemNode = itemNode
             self.contentView = contentView
             self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
@@ -291,17 +291,17 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
     }
     
     final class CustomOffsetHandlerImpl {
-        weak var itemNode: ChatMessageItemView?
+        weak var itemNode: ChatMessageItemNodeProtocol?
         let update: (CGFloat, ContainedViewLayoutTransition) -> Bool
         
-        init(itemNode: ChatMessageItemView, update: @escaping (CGFloat, ContainedViewLayoutTransition) -> Bool) {
+        init(itemNode: ChatMessageItemNodeProtocol, update: @escaping (CGFloat, ContainedViewLayoutTransition) -> Bool) {
             self.itemNode = itemNode
             self.update = update
         }
     }
 
     private final class AnimatingItemNode: ASDisplayNode {
-        let itemNode: ChatMessageItemView
+        let itemNode: ChatMessageItemNodeProtocol
         private let contextSourceNode: ContextExtractedContentContainingNode
         private let source: ChatMessageTransitionNodeImpl.Source
         private let getContentAreaInScreenSpace: () -> CGRect
@@ -315,7 +315,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         var animationEnded: (() -> Void)?
         var updateAfterCompletion: Bool = false
 
-        init(itemNode: ChatMessageItemView, contextSourceNode: ContextExtractedContentContainingNode, source: ChatMessageTransitionNodeImpl.Source, getContentAreaInScreenSpace: @escaping () -> CGRect) {
+        init(itemNode: ChatMessageItemNodeProtocol, contextSourceNode: ContextExtractedContentContainingNode, source: ChatMessageTransitionNodeImpl.Source, getContentAreaInScreenSpace: @escaping () -> CGRect) {
             self.itemNode = itemNode
             self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
 
@@ -962,7 +962,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         self.listNode.setCurrentSendAnimationCorrelationIds(correlationIds)
     }
     
-    public func add(decorationView: UIView, itemNode: ChatMessageItemView) -> DecorationItemNode {
+    public func add(decorationView: UIView, itemNode: ChatMessageItemNodeProtocol) -> DecorationItemNode {
         let decorationItemNode = DecorationItemNodeImpl(itemNode: itemNode, contentView: decorationView, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
         decorationItemNode.updateLayout(size: self.bounds.size)
        
@@ -980,7 +980,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         }
     }
     
-    public func addCustomOffsetHandler(itemNode: ChatMessageItemView, update: @escaping (CGFloat, ContainedViewLayoutTransition) -> Bool) -> Disposable {
+    public func addCustomOffsetHandler(itemNode: ChatMessageItemNodeProtocol, update: @escaping (CGFloat, ContainedViewLayoutTransition) -> Bool) -> Disposable {
         let handler = CustomOffsetHandlerImpl(itemNode: itemNode, update: update)
         self.customOffsetHandlers.append(handler)
         
@@ -994,7 +994,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         }
     }
 
-    private func beginAnimation(itemNode: ChatMessageItemView, source: Source) {
+    private func beginAnimation(itemNode: ChatMessageItemNodeProtocol, source: Source) {
         var contextSourceNode: ContextExtractedContentContainingNode?
         if let itemNode = itemNode as? ChatMessageBubbleItemNode {
             contextSourceNode = itemNode.mainContextSourceNode
@@ -1016,7 +1016,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                 let overlayController = OverlayTransitionContainerController()
                 overlayController.displayNode.addSubnode(animatingItemNode)
                 animatingItemNode.overlayController = overlayController
-                itemNode.item?.context.sharedContext.mainWindow?.presentInGlobalOverlay(overlayController)
+                self.listNode.context.sharedContext.mainWindow?.presentInGlobalOverlay(overlayController)
             default:
                 self.addSubnode(animatingItemNode)
             }
@@ -1031,8 +1031,8 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                     strongSelf.animatingItemNodes.remove(at: index)
                 }
 
-                if animatingItemNode.updateAfterCompletion, let item = animatingItemNode.itemNode.item {
-                    for (message, _) in item.content {
+                if animatingItemNode.updateAfterCompletion {
+                    for message in animatingItemNode.itemNode.messages() {
                         strongSelf.listNode.requestMessageUpdate(stableId: message.stableId)
                         break
                     }
@@ -1081,14 +1081,9 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         
         var messageItemNode: ListViewItemNode?
         self.listNode.forEachItemNode { itemNode in
-            if let itemNode = itemNode as? ChatMessageItemView {
-                if let item = itemNode.item {
-                    for (message, _) in item.content {
-                        if message.id == messageId {
-                            messageItemNode = itemNode
-                            break
-                        }
-                    }
+            if let itemNode = itemNode as? ChatMessageItemNodeProtocol {
+                if itemNode.matchesMessage(id: messageId) {
+                    messageItemNode = itemNode
                 }
             }
         }
@@ -1153,11 +1148,9 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
 
     func isAnimatingMessage(stableId: UInt32) -> Bool {
         for itemNode in self.animatingItemNodes {
-            if let item = itemNode.itemNode.item {
-                for (message, _) in item.content {
-                    if message.stableId == stableId {
-                        return true
-                    }
+            for message in itemNode.itemNode.messages() {
+                if message.stableId == stableId {
+                    return true
                 }
             }
         }
@@ -1166,11 +1159,9 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
 
     func scheduleUpdateMessageAfterAnimationCompleted(stableId: UInt32) {
         for itemNode in self.animatingItemNodes {
-            if let item = itemNode.itemNode.item {
-                for (message, _) in item.content {
-                    if message.stableId == stableId {
-                        itemNode.updateAfterCompletion = true
-                    }
+            for message in itemNode.itemNode.messages() {
+                if message.stableId == stableId {
+                    itemNode.updateAfterCompletion = true
                 }
             }
         }
@@ -1178,11 +1169,9 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
 
     func hasScheduledUpdateMessageAfterAnimationCompleted(stableId: UInt32) -> Bool {
         for itemNode in self.animatingItemNodes {
-            if let item = itemNode.itemNode.item {
-                for (message, _) in item.content {
-                    if message.stableId == stableId {
-                        return itemNode.updateAfterCompletion
-                    }
+            for message in itemNode.itemNode.messages() {
+                if message.stableId == stableId {
+                    return itemNode.updateAfterCompletion
                 }
             }
         }

@@ -639,10 +639,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var replyRecognizer: ChatSwipeToReplyRecognizer?
     private var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
-    private var fetchEffectDisposable: Disposable?
-    
-    //private let debugNode: ASDisplayNode
-    
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
             if self.visibility != oldValue {
@@ -843,7 +839,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     }
     
     deinit {
-        self.fetchEffectDisposable?.dispose()
     }
 
     override public func cancelInsertionAnimations() {
@@ -5879,172 +5874,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return false
     }
     
-    private var forceStopAnimations: Bool = false
-    private var playedPremiumStickerAnimation: Bool = false
-    private var additionalAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
-    
-    private func playPremiumStickerAnimation(effect: AvailableMessageEffects.MessageEffect, force: Bool) {
-        guard let item = self.item else {
-            return
-        }
-        if self.playedPremiumStickerAnimation && !force {
-            return
-        }
-        self.playedPremiumStickerAnimation = true
-        
-        if let effectAnimation = effect.effectAnimation {
-            self.playEffectAnimation(resource: effectAnimation.resource, isStickerEffect: true)
-            if self.fetchEffectDisposable == nil {
-                self.fetchEffectDisposable = freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .other, fileReference: .standalone(media: effectAnimation), resource: effectAnimation.resource).startStrict()
-            }
-        } else {
-            let effectSticker = effect.effectSticker
-            if let effectFile = effectSticker.videoThumbnails.first {
-                self.playEffectAnimation(resource: effectFile.resource, isStickerEffect: true)
-                if self.fetchEffectDisposable == nil {
-                    self.fetchEffectDisposable = freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .other, fileReference: .standalone(media: effectSticker), resource: effectFile.resource).startStrict()
-                }
-            }
-        }
-    }
-    
-    private func playEffectAnimation(resource: MediaResource, isStickerEffect: Bool = false) {
-        guard let item = self.item else {
-            return
-        }
-        guard let transitionNode = item.controllerInteraction.getMessageTransitionNode() as? ChatMessageTransitionNode else {
-            return
-        }
-        
-        let source = AnimatedStickerResourceSource(account: item.context.account, resource: resource, fitzModifier: nil)
-        
-        let animationSize = CGSize(width: 380.0, height: 380.0)
-        let animationNodeFrame: CGRect
-        
-        var messageEffectView: UIView?
-        for contentNode in self.contentNodes {
-            if let result = contentNode.messageEffectTargetView() {
-                messageEffectView = result
-                break
-            }
-        }
-        if messageEffectView == nil {
-            if let mosaicStatusNode = self.mosaicStatusNode, let result = mosaicStatusNode.messageEffectTargetView() {
-                messageEffectView = result
-            }
-        }
-        
-        if let messageEffectView {
-            animationNodeFrame = animationSize.centered(around: messageEffectView.convert(messageEffectView.bounds, to: self.view).center)
-        } else {
-            animationNodeFrame = animationSize.centered(around: self.backgroundNode.frame.center)
-        }
-        
-        if self.additionalAnimationNodes.count >= 4 {
-            return
-        }
-        
-        let incomingMessage = item.message.effectivelyIncoming(item.context.account.peerId)
-
-        do {
-            let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
-            
-            let additionalAnimationNode: AnimatedStickerNode
-            var effectiveScale: CGFloat = 1.0
-            #if targetEnvironment(simulator)
-            additionalAnimationNode = DirectAnimatedStickerNode()
-            effectiveScale = 1.4
-            #else
-            if "".isEmpty {
-                additionalAnimationNode = DirectAnimatedStickerNode()
-                effectiveScale = 1.4
-            } else {
-                additionalAnimationNode = LottieMetalAnimatedStickerNode()
-            }
-            #endif
-            additionalAnimationNode.updateLayout(size: animationSize)
-            additionalAnimationNode.setup(source: source, width: Int(animationSize.width * effectiveScale), height: Int(animationSize.height * effectiveScale), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
-            var animationFrame: CGRect
-            if isStickerEffect {
-                let offsetScale: CGFloat = 0.3
-                animationFrame = animationNodeFrame.offsetBy(dx: incomingMessage ? animationNodeFrame.width * offsetScale : -animationNodeFrame.width * offsetScale, dy: -10.0)
-            } else {
-                animationFrame = animationNodeFrame.insetBy(dx: -animationNodeFrame.width, dy: -animationNodeFrame.height)
-                    .offsetBy(dx: incomingMessage ? animationNodeFrame.width - 10.0 : -animationNodeFrame.width + 10.0, dy: 0.0)
-                animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
-            }
-            
-            animationFrame = animationFrame.offsetBy(dx: 0.0, dy: self.insets.top)
-            additionalAnimationNode.frame = animationFrame
-            if incomingMessage {
-                additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-            }
-
-            let decorationNode = transitionNode.add(decorationView: additionalAnimationNode.view, itemNode: self)
-            additionalAnimationNode.completed = { [weak self, weak decorationNode, weak transitionNode] _ in
-                guard let decorationNode = decorationNode else {
-                    return
-                }
-                self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
-                transitionNode?.remove(decorationNode: decorationNode)
-            }
-            additionalAnimationNode.isPlayingChanged = { [weak self, weak decorationNode, weak transitionNode] isPlaying in
-                if !isPlaying {
-                    guard let decorationNode = decorationNode else {
-                        return
-                    }
-                    self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
-                    transitionNode?.remove(decorationNode: decorationNode)
-                }
-            }
-
-            self.additionalAnimationNodes.append(decorationNode)
-
-            additionalAnimationNode.visibility = true
-        }
-    }
-    
-    private func removeAdditionalAnimations() {
-        for decorationNode in self.additionalAnimationNodes {
-            if let additionalAnimationNode = decorationNode.contentView.asyncdisplaykit_node as? AnimatedStickerNode {
-                additionalAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak additionalAnimationNode] _ in
-                    additionalAnimationNode?.visibility = false
-                })
-            }
-        }
-    }
-    
-    private func currentMessageEffect() -> AvailableMessageEffects.MessageEffect? {
-        guard let item = self.item else {
-            return nil
-        }
-        var messageEffect: AvailableMessageEffects.MessageEffect?
-        for attribute in item.message.attributes {
-            if let attribute = attribute as? EffectMessageAttribute {
-                if let availableMessageEffects = item.associatedData.availableMessageEffects {
-                    for effect in availableMessageEffects.messageEffects {
-                        if effect.id == attribute.id {
-                            messageEffect = effect
-                            break
-                        }
-                    }
-                }
-                break
-            }
-        }
-        return messageEffect
-    }
-    
-    private func playMessageEffect(force: Bool) {
-        if let messageEffect = self.currentMessageEffect() {
-            self.playPremiumStickerAnimation(effect: messageEffect, force: force)
-        }
-    }
-    
-    override public func playMessageEffect() {
-        self.playMessageEffect(force: true)
-    }
-    
     private func updateVisibility() {
         guard let item = self.item else {
             return
@@ -6059,12 +5888,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             isPlaying = false
         }
         
-        if self.forceStopAnimations {
-            isPlaying = false
-        }
-        
         if !isPlaying {
-            self.removeAdditionalAnimations()
+            self.removeEffectAnimations()
         }
         
         if isPlaying {
@@ -6091,5 +5916,18 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 self.playMessageEffect(force: false)
             }
         }
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        for contentNode in self.contentNodes {
+            if let result = contentNode.messageEffectTargetView() {
+                return result
+            }
+        }
+        if let mosaicStatusNode = self.mosaicStatusNode, let result = mosaicStatusNode.messageEffectTargetView() {
+            return result
+        }
+        
+        return nil
     }
 }

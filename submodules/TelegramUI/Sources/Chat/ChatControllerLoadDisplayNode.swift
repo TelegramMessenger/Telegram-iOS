@@ -2124,6 +2124,11 @@ extension ChatControllerImpl {
                     }
                 }
                 
+                var invertedMediaAttribute: InvertMediaMessageAttribute?
+                if let attribute = message.attributes.first(where: { $0 is InvertMediaMessageAttribute }) {
+                    invertedMediaAttribute = attribute as? InvertMediaMessageAttribute
+                }
+                
                 let text = trimChatInputText(convertMarkdownToAttributes(editMessage.inputState.inputText))
                 
                 let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
@@ -2209,7 +2214,7 @@ extension ChatControllerImpl {
                             let currentWebpagePreviewAttribute = currentMessage.webpagePreviewAttribute ?? WebpagePreviewMessageAttribute(leadingPreview: false, forceLargeMedia: nil, isManuallyAdded: true, isSafe: false)
                             
                             if currentMessage.text != text.string || currentEntities != entities || updatingMedia || webpagePreviewAttribute != currentWebpagePreviewAttribute || disableUrlPreview {
-                                strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview)
+                                strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, invertMediaAttribute: invertedMediaAttribute, disableUrlPreview: disableUrlPreview)
                             }
                         }
                         

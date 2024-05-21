@@ -448,7 +448,7 @@ private var nextClientId: Int32 = 1
 public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHistoryListNode {
     static let fixedAdMessageStableId: UInt32 = UInt32.max - 5000
     
-    private let context: AccountContext
+    public let context: AccountContext
     private let chatLocation: ChatLocation
     private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     private let source: ChatHistoryListSource

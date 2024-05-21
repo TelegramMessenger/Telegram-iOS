@@ -429,6 +429,15 @@ final class EmojiSearchSearchBarComponent: Component {
             return super.hitTest(point, with: event)
         }
         
+        func leftTextPosition() -> CGFloat {
+            guard let itemLayout = self.itemLayout else {
+                return 0.0
+            }
+            
+            let visibleBounds = self.scrollView.bounds
+            return (itemLayout.itemStartX - itemLayout.textSpacing) + visibleBounds.minX
+        }
+        
         private func updateScrolling(transition: Transition, fromScrolling: Bool) {
             guard let component = self.component, let itemLayout = self.itemLayout else {
                 return

@@ -593,8 +593,8 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Underline))
         case let .messageEntityStrike(offset, length):
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Strikethrough))
-        case let .messageEntityBlockquote(_, offset, length):
-            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BlockQuote))
+        case let .messageEntityBlockquote(flags, offset, length):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BlockQuote(isCollapsed: (flags & (1 << 0)) != 0)))
         case let .messageEntityBankCard(offset, length):
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .BankCard))
         case let .messageEntitySpoiler(offset, length):

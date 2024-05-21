@@ -213,6 +213,20 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         }
     }
     
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let textField = self.textField, let text = textField.text, text.isEmpty {
+            if self.bounds.contains(point), let placeholderContentView = self.placeholderContent.view as? EmojiSearchSearchBarComponent.View {
+                let leftTextPosition = placeholderContentView.leftTextPosition()
+                if point.x >= 0.0 && point.x <= placeholderContentView.frame.minX + leftTextPosition {
+                    if let result = placeholderContentView.hitTest(self.convert(point, to: placeholderContentView), with: event) {
+                        return result
+                    }
+                }
+            }
+        }
+        return super.hitTest(point, with: event)
+    }
+    
     private func activateTextInput() {
         guard let params = self.params else {
             return
@@ -226,7 +240,11 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             textField.autocorrectionType = .no
             textField.returnKeyType = .search
             self.textField = textField
-            self.insertSubview(textField, belowSubview: self.clearIconView)
+            if let placeholderContentView = self.placeholderContent.view {
+                self.insertSubview(textField, belowSubview: placeholderContentView)
+            } else {
+                self.insertSubview(textField, belowSubview: self.clearIconView)
+            }
             textField.delegate = self
             textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
         }
@@ -244,15 +262,15 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     }
     
     @objc private func cancelPressed() {
+        let textField = self.textField
+        self.textField = nil
+        
         self.currentPresetSearchTerm = nil
         self.updateQuery(nil)
         
         self.clearIconView.isHidden = true
         self.clearIconTintView.isHidden = true
         self.clearIconButton.isHidden = true
-            
-        let textField = self.textField
-        self.textField = nil
         
         self.deactivated(textField?.isFirstResponder ?? false)
         
@@ -601,7 +619,6 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         }
         let _ = hasText
         
-        /*self.tintTextView.view?.isHidden = hasText
-        self.textView.view?.isHidden = hasText*/
+        
     }
 }
