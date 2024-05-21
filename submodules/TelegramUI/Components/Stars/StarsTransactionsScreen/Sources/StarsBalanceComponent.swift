@@ -62,6 +62,7 @@ final class StarsBalanceComponent: Component {
         }
         
         func update(component: StarsBalanceComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let isFirstTime = self.component == nil
             self.component = component
             
             let sideInset: CGFloat = 16.0
@@ -76,17 +77,13 @@ final class StarsBalanceComponent: Component {
             ))
             
             let titleSize = self.title.update(
-                transition: .easeInOut(duration: 0.2),
+                transition: isFirstTime ? .immediate : .easeInOut(duration: 0.2),
                 component: AnyComponent(
                     AnimatedTextComponent(
                         font: Font.with(size: 48.0, design: .round, weight: .semibold),
                         color: component.theme.list.itemPrimaryTextColor,
                         items: animatedTextItems
                     )
-//                    MultilineTextComponent(
-//                        text: .plain(NSAttributedString(string: "\(component.count)", font: Font.with(size: 48.0, design: .round, weight: .semibold), textColor: component.theme.list.itemPrimaryTextColor)),
-//                        horizontalAlignment: .center
-//                    )
                 ),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)

@@ -2018,7 +2018,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             backgroundColor: gradientColors[i],
                             foregroundColor: .white,
                             iconName: perk.iconName
-                        )))),
+                        ))), false),
                         action: { [weak state] _ in
                             var demoSubject: PremiumDemoScreen.Subject
                             switch perk {
@@ -2185,7 +2185,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             backgroundColor: gradientColors[min(i, gradientColors.count - 1)],
                             foregroundColor: .white,
                             iconName: perk.iconName
-                        )))),
+                        ))), false),
                         action: { [weak state] _ in
                             let isPremium = state?.isPremium == true
                             if isPremium {
@@ -2369,7 +2369,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         backgroundColor: UIColor(rgb: 0x676bff),
                         foregroundColor: .white,
                         iconName: "Premium/BusinessPerk/Status"
-                    )))),
+                    ))), false),
                     icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(EmojiActionIconComponent(
                         context: context.component.context,
                         color: accentColor,
@@ -2410,7 +2410,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         backgroundColor: UIColor(rgb: 0x4492ff),
                         foregroundColor: .white,
                         iconName: "Premium/BusinessPerk/Tag"
-                    )))),
+                    ))), false),
                     action: { _ in
                         push(accountContext.sharedContext.makeFilterSettingsController(context: accountContext, modal: false, scrollToTags: true, dismissed: nil))
                     }
@@ -2441,7 +2441,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         backgroundColor: UIColor(rgb: 0x41a6a5),
                         foregroundColor: .white,
                         iconName: "Premium/Perk/Stories"
-                    )))),
+                    ))), false),
                     action: {  _ in
                         push(accountContext.sharedContext.makeMyStoriesController(context: accountContext, isArchive: false))
                     }

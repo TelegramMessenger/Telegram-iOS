@@ -3872,6 +3872,13 @@ func replayFinalState(
                         }
                     }
                     
+                    if let previousFactCheckAttribute = previousMessage.attributes.first(where: { $0 is FactCheckMessageAttribute }) as? FactCheckMessageAttribute, let updatedFactCheckAttribute = message.attributes.first(where: { $0 is FactCheckMessageAttribute }) as? FactCheckMessageAttribute {
+                        if case .Pending = updatedFactCheckAttribute.content, updatedFactCheckAttribute.hash == previousFactCheckAttribute.hash {
+                            updatedAttributes.removeAll(where: { $0 is FactCheckMessageAttribute })
+                            updatedAttributes.append(previousFactCheckAttribute)
+                        }
+                    }
+                    
                     if let message = locallyRenderedMessage(message: message, peers: peers) {
                         generatedEvent = reactionGeneratedEvent(previousMessage.reactionsAttribute, message.reactionsAttribute, message: message, transaction: transaction)
                     }

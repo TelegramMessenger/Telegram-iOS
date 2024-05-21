@@ -2622,12 +2622,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsTransactionsScreen(context: context, starsContext: starsContext)
     }
     
-    public func makeStarsPurchaseScreen(context: AccountContext, starsContext: StarsContext, options: [StarsTopUpOption], peerId: EnginePeer.Id?, requiredStars: Int32?) -> ViewController {
-        return StarsPurchaseScreen(context: context, starsContext: starsContext, options: options, peerId: peerId, requiredStars: requiredStars, modal: true)
+    public func makeStarsPurchaseScreen(context: AccountContext, starsContext: StarsContext, options: [StarsTopUpOption], peerId: EnginePeer.Id?, requiredStars: Int64?, completion: @escaping (Int64) -> Void) -> ViewController {
+        return StarsPurchaseScreen(context: context, starsContext: starsContext, options: options, peerId: peerId, requiredStars: requiredStars, modal: true, completion: completion)
     }
     
-    public func makeStarsTransferScreen(context: AccountContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>) -> ViewController {
-        return StarsTransferScreen(context: context, invoice: invoice, source: source, inputData: inputData)
+    public func makeStarsTransferScreen(context: AccountContext, starsContext: StarsContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>) -> ViewController {
+        return StarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: source, inputData: inputData)
+    }
+    
+    public func makeStarsTransactionScreen(context: AccountContext, transaction: StarsContext.State.Transaction) -> ViewController {
+        return StarsTransactionScreen(context: context, subject: .transaction(transaction), action: {})
     }
 }
 

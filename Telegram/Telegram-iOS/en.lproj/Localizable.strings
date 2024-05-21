@@ -12217,3 +12217,18 @@ Sorry for the inconvenience.";
 
 "Conversation.ContextMenuAddFactCheck" = "Add Fact Check";
 "Conversation.ContextMenuEditFactCheck" = "Edit Fact Check";
+
+"Stars.Purchase.GetStars" = "Get Stars";
+"Stars.Purchase.GetStarsInfo" = "Choose how many Stars you would like to buy.";
+
+"Stars.Purchase.Balance" = "Balance";
+
+"Stars.Purchase.StarsNeeded_1" = "%@ Star Needed";
+"Stars.Purchase.StarsNeeded_any" = "%@ Stars Needed";
+"Stars.Purchase.StarsNeededInfo" = "Buy Stars to use them on **%@** and other miniapps.";
+
+"Stars.Purchase.Stars_1" = "%@ Star";
+"Stars.Purchase.Stars_any" = "%@ Stars";
+"Stars.Purchase.ShowMore" = "Show More Options";
+"Stars.Purchase.Info" = "By proceeding and purchasing Stars, you agree with [Terms and Conditions]().";
+"Stars.Purchase.Terms_URL" = "https://telegram.org/tos";

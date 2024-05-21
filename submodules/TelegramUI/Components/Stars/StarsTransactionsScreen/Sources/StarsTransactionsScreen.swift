@@ -22,15 +22,18 @@ final class StarsTransactionsScreenComponent: Component {
     
     let context: AccountContext
     let starsContext: StarsContext
+    let openTransaction: (StarsContext.State.Transaction) -> Void
     let buy: () -> Void
     
     init(
         context: AccountContext,
         starsContext: StarsContext,
+        openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
         buy: @escaping () -> Void
     ) {
         self.context = context
         self.starsContext = starsContext
+        self.openTransaction = openTransaction
         self.buy = buy
     }
     
@@ -243,38 +246,6 @@ final class StarsTransactionsScreenComponent: Component {
                 }
             }
             
-            
-//            if let headerView = self.headerView.view, let navigationMetrics = self.navigationMetrics {
-//                var headerOffset: CGFloat = scrollBounds.minY
-//                
-//                let minY = navigationMetrics.statusBarHeight + floor((navigationMetrics.navigationHeight - navigationMetrics.statusBarHeight) / 2.0)
-//                
-//                let minOffset = headerView.center.y - minY
-//                
-//                headerOffset = min(headerOffset, minOffset)
-//                
-//                let animatedTransition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
-//                let navigationBackgroundAlpha: CGFloat = abs(headerOffset - minOffset) < 4.0 ? 1.0 : 0.0
-//                
-//                animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
-//                animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
-//                                
-//                let expansionDistance: CGFloat = 32.0
-//                var expansionDistanceFactor: CGFloat = abs(scrollBounds.maxY - self.scrollView.contentSize.height) / expansionDistance
-//                expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
-//                
-//                transition.setAlpha(layer: self.navigationSeparatorLayer, alpha: expansionDistanceFactor)
-//                if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
-//                    panelContainerView.updateNavigationMergeFactor(value: 1.0 - expansionDistanceFactor, transition: transition)
-//                }
-//                
-//                var offsetFraction: CGFloat = abs(headerOffset - minOffset) / 60.0
-//                offsetFraction = min(1.0, max(0.0, offsetFraction))
-//                transition.setScale(view: headerView, scale: 1.0 * offsetFraction + 0.8 * (1.0 - offsetFraction))
-//                
-//                transition.setBounds(view: self.headerOffsetContainer, bounds: CGRect(origin: CGPoint(x: 0.0, y: headerOffset), size: self.headerOffsetContainer.bounds.size))
-//            }
-            
             let _ = self.panelContainer.updateEnvironment(
                 transition: transition,
                 environment: {
@@ -409,12 +380,12 @@ final class StarsTransactionsScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: min(414.0, availableSize.width), height: 220.0)
             )
-            let starFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: starSize)
+            let starFrame = CGRect(origin: .zero, size: starSize)
             if let starView = self.starView.view {
                 if starView.superview == nil {
                     self.insertSubview(starView, aboveSubview: self.scrollView)
                 }
-                starTransition.setFrame(view: starView, frame: starFrame)
+                starTransition.setBounds(view: starView, bounds: starFrame)
             }
                        
             let titleSize = self.titleView.update(
@@ -543,38 +514,45 @@ final class StarsTransactionsScreenComponent: Component {
             )
             
             var panelItems: [StarsTransactionsPanelContainerComponent.Item] = []
-            panelItems.append(StarsTransactionsPanelContainerComponent.Item(
-                id: "all",
-                title: "All Transactions",
-                panel: AnyComponent(StarsTransactionsListPanelComponent(
-                    context: component.context,
-                    items: allItems,
-                    action: { _ in
-                    }
+            if !allItems.items.isEmpty {
+                panelItems.append(StarsTransactionsPanelContainerComponent.Item(
+                    id: "all",
+                    title: "All Transactions",
+                    panel: AnyComponent(StarsTransactionsListPanelComponent(
+                        context: component.context,
+                        items: allItems,
+                        action: { transaction in
+                            component.openTransaction(transaction)
+                        }
+                    ))
                 ))
-            ))
-            
-            panelItems.append(StarsTransactionsPanelContainerComponent.Item(
-                id: "incoming",
-                title: "Incoming",
-                panel: AnyComponent(StarsTransactionsListPanelComponent(
-                    context: component.context,
-                    items: incomingItems,
-                    action: { _ in
-                    }
-                ))
-            ))
-            
-            panelItems.append(StarsTransactionsPanelContainerComponent.Item(
-                id: "outgoing",
-                title: "Outgoing",
-                panel: AnyComponent(StarsTransactionsListPanelComponent(
-                    context: component.context,
-                    items: outgoingItems,
-                    action: { _ in
-                    }
-                ))
-            ))
+                
+                if !outgoingItems.items.isEmpty {
+                    panelItems.append(StarsTransactionsPanelContainerComponent.Item(
+                        id: "incoming",
+                        title: "Incoming",
+                        panel: AnyComponent(StarsTransactionsListPanelComponent(
+                            context: component.context,
+                            items: incomingItems,
+                            action: { transaction in
+                                component.openTransaction(transaction)
+                            }
+                        ))
+                    ))
+                    
+                    panelItems.append(StarsTransactionsPanelContainerComponent.Item(
+                        id: "outgoing",
+                        title: "Outgoing",
+                        panel: AnyComponent(StarsTransactionsListPanelComponent(
+                            context: component.context,
+                            items: outgoingItems,
+                            action: { transaction in
+                                component.openTransaction(transaction)
+                            }
+                        ))
+                    ))
+                }
+            }
             
             var panelTransition = transition
             if balanceUpdated {
@@ -655,30 +633,53 @@ final class StarsTransactionsScreenComponent: Component {
 
 public final class StarsTransactionsScreen: ViewControllerComponentContainer {
     private let context: AccountContext
+    private let starsContext: StarsContext
     
     private let options = Promise<[StarsTopUpOption]>()
     
     public init(context: AccountContext, starsContext: StarsContext, forceDark: Bool = false) {
         self.context = context
+        self.starsContext = starsContext
         
         var buyImpl: (() -> Void)?
-        super.init(context: context, component: StarsTransactionsScreenComponent(context: context, starsContext: starsContext, buy: {
-            buyImpl?()
-        }), navigationBarAppearance: .transparent)
+        var openTransactionImpl: ((StarsContext.State.Transaction) -> Void)?
+        super.init(context: context, component: StarsTransactionsScreenComponent(
+            context: context,
+            starsContext: starsContext,
+            openTransaction: { transaction in
+                openTransactionImpl?(transaction)
+            },
+            buy: {
+                buyImpl?()
+            }
+        ), navigationBarAppearance: .transparent)
         
         self.options.set(.single([]) |> then(context.engine.payments.starsTopUpOptions()))
+        
+        openTransactionImpl = { [weak self] transaction in
+            guard let self else {
+                return
+            }
+            let controller = context.sharedContext.makeStarsTransactionScreen(context: context, transaction: transaction)
+            self.push(controller)
+        }
         
         buyImpl = { [weak self] in
             guard let self else {
                 return
             }
             let _ = (self.options.get()
-                     |> take(1)
-                     |> deliverOnMainQueue).start(next: { [weak self] options in
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] options in
                 guard let self else {
                     return
                 }
-                let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: options, peerId: nil, requiredStars: nil)
+                let controller = context.sharedContext.makeStarsPurchaseScreen(context: context, starsContext: starsContext, options: options, peerId: nil, requiredStars: nil, completion: { [weak self] stars in
+                    guard let self else {
+                        return
+                    }
+                    self.starsContext.add(balance: stars)
+                })
                 self.push(controller)
             })
         }

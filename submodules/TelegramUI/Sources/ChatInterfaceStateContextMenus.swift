@@ -1723,8 +1723,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/FactCheck"), color: theme.actionSheet.primaryTextColor)
             }, action: { c, f in
                 c?.dismiss(completion: {
+                    controllerInteraction.editMessageFactCheck(messages[0].id)
                 })
-                controllerInteraction.editMessageFactCheck(messages[0].id)
             })))
         }
 //        if message.id.peerId.isGroupOrChannel {

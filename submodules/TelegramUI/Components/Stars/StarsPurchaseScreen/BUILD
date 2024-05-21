@@ -32,6 +32,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/TelegramUI/Components/ListActionItemComponent",
         "//submodules/TelegramUI/Components/ScrollComponent",
+        "//submodules/TelegramUI/Components/TextLoadingEffect",
         "//submodules/TelegramUI/Components/Premium/PremiumStarComponent",
         "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/Components/BundleIconComponent",

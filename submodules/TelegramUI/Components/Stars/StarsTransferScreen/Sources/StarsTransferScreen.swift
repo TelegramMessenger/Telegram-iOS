@@ -21,20 +21,26 @@ private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let starsContext: StarsContext
     let invoice: TelegramMediaInvoice
     let source: BotPaymentInvoiceSource
     let inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
+    let dismiss: () -> Void
     
     init(
         context: AccountContext,
+        starsContext: StarsContext,
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
-        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
+        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
+        dismiss: @escaping () -> Void
     ) {
         self.context = context
+        self.starsContext = starsContext
         self.invoice = invoice
         self.source = source
         self.inputData = inputData
+        self.dismiss = dismiss
     }
     
     static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
@@ -54,21 +60,27 @@ private final class SheetContent: CombinedComponent {
         
         private let context: AccountContext
         private let source: BotPaymentInvoiceSource
+        private let invoice: TelegramMediaInvoice
         
-        var peer: EnginePeer?
-        var peerDisposable: Disposable?
-        var balance: Int64?
-        var form: BotPaymentForm?
+        private(set) var peer: EnginePeer?
+        private var peerDisposable: Disposable?
+        private(set) var balance: Int64?
+        private(set) var form: BotPaymentForm?
+        
+        private var optionsDisposable: Disposable?
+        private(set) var options: [StarsTopUpOption] = []
         
         var inProgress = false
         
         init(
             context: AccountContext,
             source: BotPaymentInvoiceSource,
+            invoice: TelegramMediaInvoice,
             inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
         ) {
             self.context = context
             self.source = source
+            self.invoice = invoice
             
             super.init()
             
@@ -81,29 +93,51 @@ private final class SheetContent: CombinedComponent {
                 self.form = inputData?.1
                 self.peer = inputData?.2
                 self.updated(transition: .immediate)
+                
+                if self.optionsDisposable != nil {
+                    self.optionsDisposable = (context.engine.payments.starsTopUpOptions()
+                    |> deliverOnMainQueue).start(next: { [weak self] options in
+                        guard let self else {
+                            return
+                        }
+                        self.options = options
+                    })
+                }
             })
         }
         
         deinit {
             self.peerDisposable?.dispose()
+            self.optionsDisposable?.dispose()
         }
         
-        func buy(completion: @escaping () -> Void) {
-            guard let form else {
+        func buy(requestTopUp: (@escaping () -> Void) -> Void, completion: @escaping () -> Void) {
+            guard let form, let balance else {
                 return
             }
-            self.inProgress = true
-            self.updated()
             
-            let _ = (self.context.engine.payments.sendStarsPaymentForm(formId: form.id, source: self.source)
-            |> deliverOnMainQueue).start(next: { _ in
-                completion()
-            })
+            let action = {
+                self.inProgress = true
+                self.updated()
+                
+                let _ = (self.context.engine.payments.sendStarsPaymentForm(formId: form.id, source: self.source)
+                |> deliverOnMainQueue).start(next: { _ in
+                    completion()
+                })
+            }
+            
+            if balance < self.invoice.totalAmount {
+                requestTopUp({
+                    action()
+                })
+            } else {
+                action()
+            }
         }
     }
     
     func makeState() -> State {
-        return State(context: self.context, source: self.source, inputData: self.inputData)
+        return State(context: self.context, source: self.source, invoice: self.invoice, inputData: self.inputData)
     }
         
     static var body: Body {
@@ -143,11 +177,12 @@ private final class SheetContent: CombinedComponent {
                         context: context.component.context,
                         theme: environment.theme,
                         peers: [peer],
+                        photo: component.invoice.photo,
                         isVisible: true,
                         hasIdleAnimations: true,
                         hasScaleAnimation: false,
-                        color: UIColor(rgb: 0xf7ab04),
-                        offset: 40.0
+                        avatarSize: 90.0,
+                        color: UIColor(rgb: 0xf7ab04)
                     ),
                     availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                     transition: context.transition
@@ -169,7 +204,7 @@ private final class SheetContent: CombinedComponent {
                 component: Button(
                     content: AnyComponent(Image(image: closeImage)),
                     action: {
-//                        component.dismiss()
+                        component.dismiss()
                     }
                 ),
                 availableSize: CGSize(width: 30.0, height: 30.0),
@@ -205,7 +240,7 @@ private final class SheetContent: CombinedComponent {
             let amount = component.invoice.totalAmount
             let text = text.update(
                 component: BalancedTextComponent(
-                    text: .markdown(text: "Do you want to buy **\(component.invoice.title)** in **\(state.peer?.compactDisplayTitle ?? "levlam_bot")** for **\(amount) Stars**?", attributes: markdownAttributes),
+                    text: .markdown(text: "Do you want to buy **\(component.invoice.title)** in **\(state.peer?.compactDisplayTitle ?? "")** for **\(amount) Stars**?", attributes: markdownAttributes),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
@@ -220,11 +255,11 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += 24.0
             
             if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== theme {
-                state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: UIColor(rgb: 0xf09903))!, theme)
+                state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Premium/Stars/Star"), color: UIColor(rgb: 0xf09903))!, theme)
             }
             
-            let balanceAttributedString = parseMarkdownIntoAttributedString("Balance\n >  **\(state.balance ?? 0)**", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
-            if let range = balanceAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
+            let balanceAttributedString = parseMarkdownIntoAttributedString("Balance\n #  **\(state.balance ?? 0)**", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
+            if let range = balanceAttributedString.string.range(of: "#"), let chevronImage = state.cachedChevronImage?.0 {
                 balanceAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: balanceAttributedString.string))
                 balanceAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xf09903), range: NSRange(range, in: balanceAttributedString.string))
                 balanceAttributedString.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: balanceAttributedString.string))
@@ -233,8 +268,7 @@ private final class SheetContent: CombinedComponent {
                 component: MultilineTextComponent(
                     text: .plain(balanceAttributedString),
                     horizontalAlignment: .left,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.2
+                    maximumNumberOfLines: 0
                 ),
                 availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
                 transition: .immediate
@@ -255,10 +289,10 @@ private final class SheetContent: CombinedComponent {
             }
             
             let controller = environment.controller() as? StarsTransferScreen
-            
+                        
             let accountContext = component.context
+            let starsContext = component.starsContext
             let botTitle = state.peer?.compactDisplayTitle ?? ""
-            
             let invoice = component.invoice
             let button = button.update(
                 component: ButtonComponent(
@@ -275,7 +309,17 @@ private final class SheetContent: CombinedComponent {
                     isEnabled: true,
                     displaysProgress: state.inProgress,
                     action: { [weak state, weak controller] in
-                        state?.buy(completion: { [weak controller] in
+                        state?.buy(requestTopUp: { [weak controller] _ in
+                            let purchaseController = accountContext.sharedContext.makeStarsPurchaseScreen(
+                                context: accountContext,
+                                starsContext: starsContext,
+                                options: state?.options ?? [],
+                                peerId: state?.peer?.id,
+                                requiredStars: invoice.totalAmount,
+                                completion: { _ in }
+                            )
+                            controller?.push(purchaseController)
+                        }, completion: { [weak controller] in
                             let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
                             let resultController = UndoOverlayController(
                                 presentationData: presentationData,
@@ -308,17 +352,20 @@ private final class StarsTransferSheetComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     private let context: AccountContext
+    private let starsContext: StarsContext
     private let invoice: TelegramMediaInvoice
     private let source: BotPaymentInvoiceSource
     private let inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
     
     init(
         context: AccountContext,
+        starsContext: StarsContext,
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
         inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
     ) {
         self.context = context
+        self.starsContext = starsContext
         self.invoice = invoice
         self.source = source
         self.inputData = inputData
@@ -347,12 +394,21 @@ private final class StarsTransferSheetComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
+                        starsContext: context.component.starsContext,
                         invoice: context.component.invoice,
                         source: context.component.source,
-                        inputData: context.component.inputData
+                        inputData: context.component.inputData,
+                        dismiss: {
+                            animateOut.invoke(Action { _ in
+                                if let controller = controller() {
+                                    controller.dismiss(completion: nil)
+                                }
+                            })
+                        }
                     )),
                     backgroundColor: .blur(.light),
                     followContentSizeChanges: true,
+                    clipsContent: true,
                     animateOut: animateOut
                 ),
                 environment: {
@@ -395,6 +451,7 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
         
     public init(
         context: AccountContext,
+        starsContext: StarsContext,
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
         inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
@@ -405,6 +462,7 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
             context: context,
             component: StarsTransferSheetComponent(
                 context: context,
+                starsContext: starsContext,
                 invoice: invoice,
                 source: source,
                 inputData: inputData

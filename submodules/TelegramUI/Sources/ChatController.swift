@@ -2915,11 +2915,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return .single(nil)
                             })
                             if invoice.currency == "XTR" {
-                                let statePromise = Promise<StarsContext.State?>()
-                                statePromise.set(strongSelf.context.engine.payments.peerStarsState(peerId: strongSelf.context.account.peerId))
+                                let starsContext = strongSelf.context.engine.payments.peerStarsContext(peerId: strongSelf.context.account.peerId)
                                 let starsInputData = combineLatest(
                                     inputData.get(),
-                                    statePromise.get()
+                                    starsContext.state
                                 )
                                 |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
                                     if let data, let state {
@@ -2928,11 +2927,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         return nil
                                     }
                                 }
-                                let _ = (starsInputData |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+                                let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, invoice: invoice, source: .message(messageId), inputData: starsInputData)
+                                    let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(messageId), inputData: starsInputData)
                                     strongSelf.push(controller)
                                 })
                             } else {
@@ -4684,28 +4683,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             phoneData.progress?.set(.single(true))
             
-            let context = self.context
-            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
-            |> mapToSignal { peer -> Signal<(String, EnginePeer?), NoError> in
-                guard let peer, case let .user(user) = peer else {
-                    return .complete()
-                }
-                var normalizedNumber = phoneData.number
-                if normalizedNumber.hasPrefix("0"), let accountPhone = user.phone, !accountPhone.hasPrefix("888") {
-                    normalizedNumber = enhancePhoneNumberWithCodeFromNumber(normalizedNumber, otherPhoneNumber: accountPhone, configuration: context.currentCountriesConfiguration.with { $0 })
-                }
-                normalizedNumber = formatPhoneNumber(context: context, number: cleanPhoneNumber(normalizedNumber))
-                return self.context.engine.peers.resolvePeerByPhone(phone: normalizedNumber)
-                |> map { peer -> (String, EnginePeer?) in
-                    return (normalizedNumber, peer)
-                }
-            } |> deliverOnMainQueue).start(next: { [weak self] number, peer in
+            let _ = (self.context.engine.peers.resolvePeerByPhone(phone: phoneData.number)
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
                 guard let self else {
                     return
                 }
                 phoneData.progress?.set(.single(false))
                 
-                self.openPhoneContextMenu(number: number, peer: peer, message: phoneData.message, contentNode: phoneData.contentNode, messageNode: phoneData.messageNode, frame: phoneData.messageNode.bounds, anyRecognizer: nil, location: nil)
+                self.openPhoneContextMenu(number: phoneData.number, peer: peer, message: phoneData.message, contentNode: phoneData.contentNode, messageNode: phoneData.messageNode, frame: phoneData.messageNode.bounds, anyRecognizer: nil, location: nil)
             })
         }, openAgeRestrictedMessageMedia: { [weak self] message, reveal in
             guard let self else {

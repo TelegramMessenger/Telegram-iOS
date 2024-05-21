@@ -41,7 +41,7 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
             case .Strikethrough:
                 apiEntities.append(.messageEntityStrike(offset: offset, length: length))
             case .BlockQuote:
-                apiEntities.append(.messageEntityBlockquote(offset: offset, length: length))
+                apiEntities.append(.messageEntityBlockquote(flags: 0, offset: offset, length: length))
             case .Underline:
                 apiEntities.append(.messageEntityUnderline(offset: offset, length: length))
             case .BankCard:

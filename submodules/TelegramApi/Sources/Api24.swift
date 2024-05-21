@@ -1,4 +1,84 @@
 public extension Api {
+    enum StatsAbsValueAndPrev: TypeConstructorDescription {
+        case statsAbsValueAndPrev(current: Double, previous: Double)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsAbsValueAndPrev(let current, let previous):
+                    if boxed {
+                        buffer.appendInt32(-884757282)
+                    }
+                    serializeDouble(current, buffer: buffer, boxed: false)
+                    serializeDouble(previous, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsAbsValueAndPrev(let current, let previous):
+                return ("statsAbsValueAndPrev", [("current", current as Any), ("previous", previous as Any)])
+    }
+    }
+    
+        public static func parse_statsAbsValueAndPrev(_ reader: BufferReader) -> StatsAbsValueAndPrev? {
+            var _1: Double?
+            _1 = reader.readDouble()
+            var _2: Double?
+            _2 = reader.readDouble()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.StatsAbsValueAndPrev.statsAbsValueAndPrev(current: _1!, previous: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum StatsDateRangeDays: TypeConstructorDescription {
+        case statsDateRangeDays(minDate: Int32, maxDate: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .statsDateRangeDays(let minDate, let maxDate):
+                    if boxed {
+                        buffer.appendInt32(-1237848657)
+                    }
+                    serializeInt32(minDate, buffer: buffer, boxed: false)
+                    serializeInt32(maxDate, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .statsDateRangeDays(let minDate, let maxDate):
+                return ("statsDateRangeDays", [("minDate", minDate as Any), ("maxDate", maxDate as Any)])
+    }
+    }
+    
+        public static func parse_statsDateRangeDays(_ reader: BufferReader) -> StatsDateRangeDays? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.StatsDateRangeDays.statsDateRangeDays(minDate: _1!, maxDate: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum StatsGraph: TypeConstructorDescription {
         case statsGraph(flags: Int32, json: Api.DataJSON, zoomToken: String?)
         case statsGraphAsync(token: String)
@@ -1332,92 +1412,6 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.ThemeSettings.themeSettings(flags: _1!, baseTheme: _2!, accentColor: _3!, outboxAccentColor: _4, messageColors: _5, wallpaper: _6)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum Timezone: TypeConstructorDescription {
-        case timezone(id: String, name: String, utcOffset: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .timezone(let id, let name, let utcOffset):
-                    if boxed {
-                        buffer.appendInt32(-7173643)
-                    }
-                    serializeString(id, buffer: buffer, boxed: false)
-                    serializeString(name, buffer: buffer, boxed: false)
-                    serializeInt32(utcOffset, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .timezone(let id, let name, let utcOffset):
-                return ("timezone", [("id", id as Any), ("name", name as Any), ("utcOffset", utcOffset as Any)])
-    }
-    }
-    
-        public static func parse_timezone(_ reader: BufferReader) -> Timezone? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Timezone.timezone(id: _1!, name: _2!, utcOffset: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum TopPeer: TypeConstructorDescription {
-        case topPeer(peer: Api.Peer, rating: Double)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .topPeer(let peer, let rating):
-                    if boxed {
-                        buffer.appendInt32(-305282981)
-                    }
-                    peer.serialize(buffer, true)
-                    serializeDouble(rating, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .topPeer(let peer, let rating):
-                return ("topPeer", [("peer", peer as Any), ("rating", rating as Any)])
-    }
-    }
-    
-        public static func parse_topPeer(_ reader: BufferReader) -> TopPeer? {
-            var _1: Api.Peer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _2: Double?
-            _2 = reader.readDouble()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.TopPeer.topPeer(peer: _1!, rating: _2!)
             }
             else {
                 return nil

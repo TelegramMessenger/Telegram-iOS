@@ -313,12 +313,10 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                 let titleBadgeString = NSAttributedString(string: item.presentationData.strings.Message_FactCheck_WhatIsThis, font: badgeFont, textColor: mainColor)
                 let (titleBadgeLayout, titleBadgeApply) = titleBadgeLayout(TextNodeLayoutArguments(attributedString: titleBadgeString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize))
                 
-                var finalAttributedText = attributedText
-                if "".isEmpty {
-                    finalAttributedText = stringWithAppliedEntities(rawText + "\u{00A0}\u{00A0}\u{00A0}", entities: rawEntities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont, message: nil)
-                }
+                let finalAttributedText = stringWithAppliedEntities(rawText, entities: rawEntities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont, message: nil) as! NSMutableAttributedString
+                finalAttributedText.append(NSAttributedString(string: "__", font: textFont, textColor: .clear))
                 
-                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: finalAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets, lineColor: messageTheme.accentControlColor, customTruncationToken: NSAttributedString(string: "", font: textFont, textColor: .clear)))
+                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: finalAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets, lineColor: messageTheme.accentControlColor))
             
                 var canExpand = false
                 var clippedTextHeight: CGFloat = textLayout.size.height
@@ -336,6 +334,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                 var titleFrameWithoutInsets = CGRect(origin: CGPoint(x: titleFrame.origin.x + textInsets.left, y: titleFrame.origin.y + textInsets.top), size: CGSize(width: titleFrame.width - textInsets.left - textInsets.right, height: titleFrame.height - textInsets.top - textInsets.bottom))
                 titleFrameWithoutInsets = titleFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 
+                let topInset: CGFloat = 5.0
                 let textSpacing: CGFloat = 3.0
                 
                 let textFrame = CGRect(origin: CGPoint(x: titleFrame.origin.x, y: -textInsets.top + titleFrameWithoutInsets.height + textSpacing), size: textLayout.size)
@@ -386,7 +385,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                     
                     let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right)
                     
-                    boundingSize = CGSize(width: boundingWidth, height: titleFrameWithoutInsets.height + textFrameWithoutInsets.size.height + textSpacing)
+                    boundingSize = CGSize(width: boundingWidth, height: topInset + titleFrameWithoutInsets.height + textFrameWithoutInsets.size.height + textSpacing)
                     if let statusSizeAndApply = statusSizeAndApply {
                         boundingSize.height += statusSizeAndApply.0.height
                     }
@@ -460,13 +459,13 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                             }
                             
                             let _ = titleApply()
-                            strongSelf.titleNode.frame = titleFrame
+                            strongSelf.titleNode.frame = titleFrame.offsetBy(dx: 0.0, dy: topInset)
                             let _ = titleBadgeApply()
 
                             let _ = textApply()
                             strongSelf.textNode.frame = CGRect(origin: .zero, size: textFrame.size)
 
-                            var clippingTextFrame = textFrame
+                            var clippingTextFrame = textFrame.offsetBy(dx: 0.0, dy: topInset)
                             clippingTextFrame.size.height = clippedTextHeight - 3.0
                             
                             if canExpand {
@@ -523,7 +522,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                                 titleLineWidth = titleFrame.width
                             }
                             
-                            let titleBadgeFrame = CGRect(origin: CGPoint(x: titleFrame.minX + titleLineWidth + titleBadgeSpacing + titleBadgePadding, y: floorToScreenPixels(titleFrame.midY - titleBadgeLayout.size.height / 2.0) - 1.0), size: titleBadgeLayout.size)
+                            let titleBadgeFrame = CGRect(origin: CGPoint(x: titleFrame.minX + titleLineWidth + titleBadgeSpacing + titleBadgePadding, y: topInset + floorToScreenPixels(titleFrame.midY - titleBadgeLayout.size.height / 2.0) - 1.0), size: titleBadgeLayout.size)
                             let badgeBackgroundFrame = titleBadgeFrame.insetBy(dx: -titleBadgePadding, dy: -1.0 + UIScreenPixel)
                             
                             strongSelf.titleBadgeLabel.frame = titleBadgeFrame
@@ -560,7 +559,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                                 titleBadgeButton.setBackgroundImage(generateFilledCircleImage(diameter: badgeBackgroundFrame.height, color: mainColor.withMultipliedAlpha(0.1))?.stretchableImage(withLeftCapWidth: Int(badgeBackgroundFrame.height / 2), topCapHeight: Int(badgeBackgroundFrame.height / 2)), for: .normal)
                             }
                             
-                            let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top), size: CGSize(width: boundingWidth - backgroundInsets.left - backgroundInsets.right, height: titleFrameWithoutInsets.height + textSpacing + textFrameWithoutInsets.height + textSpacing))
+                            let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top + topInset), size: CGSize(width: boundingWidth - backgroundInsets.left - backgroundInsets.right, height: titleFrameWithoutInsets.height + textSpacing + textFrameWithoutInsets.height + textSpacing))
                             
                             if isFirstTime {
                                 strongSelf.textClippingNode.frame = clippingTextFrame
@@ -595,7 +594,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                                     item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
                                 }
                                 
-                                let statusFrame = CGRect(origin: CGPoint(x: boundingWidth - layoutConstants.text.bubbleInsets.right - statusSizeAndApply.0.width, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0)
+                                let statusFrame = CGRect(origin: CGPoint(x: boundingWidth - layoutConstants.text.bubbleInsets.right - statusSizeAndApply.0.width, y: topInset + textFrameWithoutInsets.maxY), size: statusSizeAndApply.0)
                                 if isFirstTime {
                                     strongSelf.statusNode.frame = statusFrame
                                 } else {

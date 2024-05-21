@@ -825,11 +825,10 @@ func openResolvedUrlImpl(
                         return .single(nil)
                     })
                     if invoice.currency == "XTR" {
-                        let statePromise = Promise<StarsContext.State?>()
-                        statePromise.set(context.engine.payments.peerStarsState(peerId: context.account.peerId))
+                        let starsContext = context.engine.payments.peerStarsContext(peerId: context.account.peerId)
                         let starsInputData = combineLatest(
                             inputData.get(),
-                            statePromise.get()
+                            starsContext.state
                         )
                         |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
                             if let data, let state {
@@ -838,8 +837,8 @@ func openResolvedUrlImpl(
                                 return nil
                             }
                         }
-                        let _ = (starsInputData |> take(1) |> deliverOnMainQueue).start(next: { _ in
-                            let controller = context.sharedContext.makeStarsTransferScreen(context: context, invoice: invoice, source: .slug(slug), inputData: starsInputData)
+                        let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                            let controller = context.sharedContext.makeStarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: .slug(slug), inputData: starsInputData)
                             navigationController.pushViewController(controller)
                         })
                     } else {

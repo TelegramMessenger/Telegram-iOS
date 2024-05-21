@@ -20,25 +20,29 @@ public final class GiftAvatarComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let peers: [EnginePeer]
+    let photo: TelegramMediaWebFile?
     let isVisible: Bool
     let hasIdleAnimations: Bool
     let hasScaleAnimation: Bool
+    let avatarSize: CGFloat
     let color: UIColor?
     let offset: CGFloat?
         
-    public init(context: AccountContext, theme: PresentationTheme, peers: [EnginePeer], isVisible: Bool, hasIdleAnimations: Bool, hasScaleAnimation: Bool = true, color: UIColor? = nil, offset: CGFloat? = nil) {
+    public init(context: AccountContext, theme: PresentationTheme, peers: [EnginePeer], photo: TelegramMediaWebFile? = nil, isVisible: Bool, hasIdleAnimations: Bool, hasScaleAnimation: Bool = true, avatarSize: CGFloat = 100.0, color: UIColor? = nil, offset: CGFloat? = nil) {
         self.context = context
         self.theme = theme
         self.peers = peers
+        self.photo = photo
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
         self.hasScaleAnimation = hasScaleAnimation
+        self.avatarSize = avatarSize
         self.color = color
         self.offset = offset
     }
     
     public static func ==(lhs: GiftAvatarComponent, rhs: GiftAvatarComponent) -> Bool {
-        return lhs.peers == rhs.peers && lhs.theme === rhs.theme && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations && lhs.hasScaleAnimation == rhs.hasScaleAnimation && lhs.offset == rhs.offset
+        return lhs.peers == rhs.peers && lhs.photo == rhs.photo && lhs.theme === rhs.theme && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations && lhs.hasScaleAnimation == rhs.hasScaleAnimation && lhs.avatarSize == rhs.avatarSize && lhs.offset == rhs.offset
     }
     
     public final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -316,7 +320,7 @@ public final class GiftAvatarComponent: Component {
                 self.mergedAvatarsNode = nil
                 self.avatarNode.isHidden = false
                 
-                let avatarSize = CGSize(width: 100.0, height: 100.0)
+                let avatarSize = CGSize(width: component.avatarSize, height: component.avatarSize)
                 if let peer = component.peers.first {
                     self.avatarNode.setSignal(peerAvatarCompleteImage(account: component.context.account, peer: peer, size: avatarSize, font: avatarPlaceholderFont(size: 43.0), fullSize: true))
                 }
