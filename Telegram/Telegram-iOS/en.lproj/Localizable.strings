@@ -12214,6 +12214,7 @@ Sorry for the inconvenience.";
 
 "FactCheck.Title" = "Fact Check";
 "FactCheck.Placeholder" = "Add Fact Check";
+"FactCheck.Remove" = "Remove";
 
 "Conversation.ContextMenuAddFactCheck" = "Add Fact Check";
 "Conversation.ContextMenuEditFactCheck" = "Edit Fact Check";
