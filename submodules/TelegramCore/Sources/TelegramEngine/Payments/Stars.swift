@@ -230,6 +230,8 @@ private extension StarsContext.State.Transaction {
                     return nil
                 }
                 parsedPeer = .peer(EnginePeer(peer))
+            case .starsTransactionPeerPremiumBot, .starsTransactionPeerUnsupported:
+                return nil
             }
             self.init(id: id, count: stars, date: date, peer: parsedPeer)
         }

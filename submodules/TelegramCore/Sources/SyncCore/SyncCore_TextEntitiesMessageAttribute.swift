@@ -18,7 +18,7 @@ public enum MessageTextEntityType: Equatable {
     case TextMention(peerId: PeerId)
     case PhoneNumber
     case Strikethrough
-    case BlockQuote
+    case BlockQuote(isCollapsed: Bool)
     case Underline
     case BankCard
     case Spoiler
@@ -66,7 +66,7 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
             case 13:
                 self.type = .Strikethrough
             case 14:
-                self.type = .BlockQuote
+                self.type = .BlockQuote(isCollapsed: decoder.decodeBoolForKey("cl", orElse: false))
             case 15:
                 self.type = .Underline
             case 16:
@@ -124,7 +124,7 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
             case 13:
                 self.type = .Strikethrough
             case 14:
-                self.type = .BlockQuote
+                self.type = .BlockQuote(isCollapsed: try container.decodeIfPresent(Bool.self, forKey: "cl") ?? false)
             case 15:
                 self.type = .Underline
             case 16:
@@ -180,8 +180,9 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
                 encoder.encodeInt32(12, forKey: "_rawValue")
             case .Strikethrough:
                 encoder.encodeInt32(13, forKey: "_rawValue")
-            case .BlockQuote:
+            case let .BlockQuote(isCollapsed):
                 encoder.encodeInt32(14, forKey: "_rawValue")
+                encoder.encodeBool(isCollapsed, forKey: "cl")
             case .Underline:
                 encoder.encodeInt32(15, forKey: "_rawValue")
             case .BankCard:
@@ -239,8 +240,9 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
                 try container.encode(12 as Int32, forKey: "_rawValue")
             case .Strikethrough:
                 try container.encode(13 as Int32, forKey: "_rawValue")
-            case .BlockQuote:
+            case let .BlockQuote(isCollapsed):
                 try container.encode(14 as Int32, forKey: "_rawValue")
+                try container.encode(isCollapsed, forKey: "cl")
             case .Underline:
                 try container.encode(15 as Int32, forKey: "_rawValue")
             case .BankCard:

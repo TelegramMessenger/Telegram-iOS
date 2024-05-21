@@ -710,6 +710,8 @@ public extension Api {
         case starsTransactionPeerAppStore
         case starsTransactionPeerFragment
         case starsTransactionPeerPlayMarket
+        case starsTransactionPeerPremiumBot
+        case starsTransactionPeerUnsupported
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -737,6 +739,18 @@ public extension Api {
                     }
                     
                     break
+                case .starsTransactionPeerPremiumBot:
+                    if boxed {
+                        buffer.appendInt32(621656824)
+                    }
+                    
+                    break
+                case .starsTransactionPeerUnsupported:
+                    if boxed {
+                        buffer.appendInt32(-1779253276)
+                    }
+                    
+                    break
     }
     }
     
@@ -750,6 +764,10 @@ public extension Api {
                 return ("starsTransactionPeerFragment", [])
                 case .starsTransactionPeerPlayMarket:
                 return ("starsTransactionPeerPlayMarket", [])
+                case .starsTransactionPeerPremiumBot:
+                return ("starsTransactionPeerPremiumBot", [])
+                case .starsTransactionPeerUnsupported:
+                return ("starsTransactionPeerUnsupported", [])
     }
     }
     
@@ -775,85 +793,11 @@ public extension Api {
         public static func parse_starsTransactionPeerPlayMarket(_ reader: BufferReader) -> StarsTransactionPeer? {
             return Api.StarsTransactionPeer.starsTransactionPeerPlayMarket
         }
-    
-    }
-}
-public extension Api {
-    enum StatsAbsValueAndPrev: TypeConstructorDescription {
-        case statsAbsValueAndPrev(current: Double, previous: Double)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsAbsValueAndPrev(let current, let previous):
-                    if boxed {
-                        buffer.appendInt32(-884757282)
-                    }
-                    serializeDouble(current, buffer: buffer, boxed: false)
-                    serializeDouble(previous, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsAbsValueAndPrev(let current, let previous):
-                return ("statsAbsValueAndPrev", [("current", current as Any), ("previous", previous as Any)])
-    }
-    }
-    
-        public static func parse_statsAbsValueAndPrev(_ reader: BufferReader) -> StatsAbsValueAndPrev? {
-            var _1: Double?
-            _1 = reader.readDouble()
-            var _2: Double?
-            _2 = reader.readDouble()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StatsAbsValueAndPrev.statsAbsValueAndPrev(current: _1!, previous: _2!)
-            }
-            else {
-                return nil
-            }
+        public static func parse_starsTransactionPeerPremiumBot(_ reader: BufferReader) -> StarsTransactionPeer? {
+            return Api.StarsTransactionPeer.starsTransactionPeerPremiumBot
         }
-    
-    }
-}
-public extension Api {
-    enum StatsDateRangeDays: TypeConstructorDescription {
-        case statsDateRangeDays(minDate: Int32, maxDate: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .statsDateRangeDays(let minDate, let maxDate):
-                    if boxed {
-                        buffer.appendInt32(-1237848657)
-                    }
-                    serializeInt32(minDate, buffer: buffer, boxed: false)
-                    serializeInt32(maxDate, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .statsDateRangeDays(let minDate, let maxDate):
-                return ("statsDateRangeDays", [("minDate", minDate as Any), ("maxDate", maxDate as Any)])
-    }
-    }
-    
-        public static func parse_statsDateRangeDays(_ reader: BufferReader) -> StatsDateRangeDays? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StatsDateRangeDays.statsDateRangeDays(minDate: _1!, maxDate: _2!)
-            }
-            else {
-                return nil
-            }
+        public static func parse_starsTransactionPeerUnsupported(_ reader: BufferReader) -> StarsTransactionPeer? {
+            return Api.StarsTransactionPeer.starsTransactionPeerUnsupported
         }
     
     }

@@ -1,4 +1,90 @@
 public extension Api {
+    enum Timezone: TypeConstructorDescription {
+        case timezone(id: String, name: String, utcOffset: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .timezone(let id, let name, let utcOffset):
+                    if boxed {
+                        buffer.appendInt32(-7173643)
+                    }
+                    serializeString(id, buffer: buffer, boxed: false)
+                    serializeString(name, buffer: buffer, boxed: false)
+                    serializeInt32(utcOffset, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .timezone(let id, let name, let utcOffset):
+                return ("timezone", [("id", id as Any), ("name", name as Any), ("utcOffset", utcOffset as Any)])
+    }
+    }
+    
+        public static func parse_timezone(_ reader: BufferReader) -> Timezone? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Timezone.timezone(id: _1!, name: _2!, utcOffset: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum TopPeer: TypeConstructorDescription {
+        case topPeer(peer: Api.Peer, rating: Double)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .topPeer(let peer, let rating):
+                    if boxed {
+                        buffer.appendInt32(-305282981)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeDouble(rating, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .topPeer(let peer, let rating):
+                return ("topPeer", [("peer", peer as Any), ("rating", rating as Any)])
+    }
+    }
+    
+        public static func parse_topPeer(_ reader: BufferReader) -> TopPeer? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Double?
+            _2 = reader.readDouble()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.TopPeer.topPeer(peer: _1!, rating: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum TopPeerCategory: TypeConstructorDescription {
         case topPeerCategoryBotsInline
         case topPeerCategoryBotsPM

@@ -2,7 +2,7 @@ public extension Api {
     indirect enum MessageEntity: TypeConstructorDescription {
         case inputMessageEntityMentionName(offset: Int32, length: Int32, userId: Api.InputUser)
         case messageEntityBankCard(offset: Int32, length: Int32)
-        case messageEntityBlockquote(offset: Int32, length: Int32)
+        case messageEntityBlockquote(flags: Int32, offset: Int32, length: Int32)
         case messageEntityBold(offset: Int32, length: Int32)
         case messageEntityBotCommand(offset: Int32, length: Int32)
         case messageEntityCashtag(offset: Int32, length: Int32)
@@ -39,10 +39,11 @@ public extension Api {
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
                     break
-                case .messageEntityBlockquote(let offset, let length):
+                case .messageEntityBlockquote(let flags, let offset, let length):
                     if boxed {
-                        buffer.appendInt32(34469328)
+                        buffer.appendInt32(-238245204)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
                     break
@@ -185,8 +186,8 @@ public extension Api {
                 return ("inputMessageEntityMentionName", [("offset", offset as Any), ("length", length as Any), ("userId", userId as Any)])
                 case .messageEntityBankCard(let offset, let length):
                 return ("messageEntityBankCard", [("offset", offset as Any), ("length", length as Any)])
-                case .messageEntityBlockquote(let offset, let length):
-                return ("messageEntityBlockquote", [("offset", offset as Any), ("length", length as Any)])
+                case .messageEntityBlockquote(let flags, let offset, let length):
+                return ("messageEntityBlockquote", [("flags", flags as Any), ("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityBold(let offset, let length):
                 return ("messageEntityBold", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityBotCommand(let offset, let length):
@@ -264,10 +265,13 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageEntity.messageEntityBlockquote(offset: _1!, length: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessageEntity.messageEntityBlockquote(flags: _1!, offset: _2!, length: _3!)
             }
             else {
                 return nil
