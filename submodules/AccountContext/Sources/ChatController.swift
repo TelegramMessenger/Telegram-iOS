@@ -990,6 +990,7 @@ public protocol ChatController: ViewController {
     
     var alwaysShowSearchResultsAsList: Bool { get set }
     var includeSavedPeersInSearchResults: Bool { get set }
+    var showListEmptyResults: Bool { get set }
     
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)

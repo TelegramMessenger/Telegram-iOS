@@ -138,6 +138,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     
     var alwaysShowSearchResultsAsList: Bool = false
     var includeSavedPeersInSearchResults: Bool = false
+    var showListEmptyResults: Bool = false
     
     private var skippedShowSearchResultsAsListAnimationOnce: Bool = false
     var inlineSearchResults: ComponentView<Empty>?
@@ -2539,11 +2540,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             let context = self.context
             let chatLocation = self.chatLocation
             
-            var showEmptyResults = false
-            if case let .customChatContents(contents) = self.chatPresentationInterfaceState.subject, case .hashTagSearch = contents.kind {
-                showEmptyResults = true
-            }
-            
             let _ = inlineSearchResults.update(
                 transition: inlineSearchResultsTransition,
                 component: AnyComponent(ChatInlineSearchResultsListComponent(
@@ -2560,13 +2556,23 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     contents: mappedContents,
                     insets: childContentInsets,
                     inputHeight: layout.inputHeight ?? 0.0,
-                    showEmptyResults: showEmptyResults,
+                    showEmptyResults: self.showListEmptyResults,
                     messageSelected: { [weak self] message in
                         guard let self else {
                             return
                         }
                         
-                        if let historyFilter = self.chatPresentationInterfaceState.historyFilter, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: historyFilter.customTag), let peerId = self.chatLocation.peerId, historyFilter.isActive {
+                        if case let .customChatContents(contents) = self.chatPresentationInterfaceState.subject, case .hashTagSearch = contents.kind {
+                            self.controller?.navigateToMessage(
+                                from: message.id,
+                                to: .index(message.index),
+                                scrollPosition: .center(.bottom),
+                                rememberInStack: false,
+                                forceInCurrentChat: false,
+                                forceNew: true,
+                                animated: true
+                            )
+                        } else if let historyFilter = self.chatPresentationInterfaceState.historyFilter, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: historyFilter.customTag), let peerId = self.chatLocation.peerId, historyFilter.isActive {
                             let _ = (self.context.engine.messages.searchMessages(
                                 location: .peer(peerId: peerId, fromId: nil, tags: nil, reactions: [reaction], threadId: self.chatLocation.threadId, minDate: nil, maxDate: nil),
                                 query: "",

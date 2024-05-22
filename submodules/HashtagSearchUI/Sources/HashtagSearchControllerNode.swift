@@ -45,7 +45,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         let cleanHashtag = query.replacingOccurrences(of: "#", with: "")
-        self.searchContentNode = HashtagSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, initialQuery: cleanHashtag, cancel: { [weak controller] in
+        self.searchContentNode = HashtagSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, initialQuery: cleanHashtag, hasCurrentChat: peer != nil, cancel: { [weak controller] in
             controller?.dismiss()
         })
         
@@ -59,6 +59,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         if let peer {
             self.currentController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
             self.currentController?.alwaysShowSearchResultsAsList = true
+            self.currentController?.showListEmptyResults = true
             self.currentController?.customNavigationController = navigationController
         } else {
             self.currentController = nil
@@ -70,12 +71,17 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.myChatContents = myChatContents
         self.myController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: myChatContents), botStart: nil, mode: .standard(.default))
         self.myController?.alwaysShowSearchResultsAsList = true
+        self.myController?.showListEmptyResults = true
         self.myController?.customNavigationController = navigationController
+        if peer == nil {
+            self.searchContentNode.selectedIndex = 1
+        }
         
         let globalChatContents = HashtagSearchGlobalChatContents(context: context, kind: .hashTagSearch, query: cleanHashtag, onlyMy: false)
         self.globalChatContents = globalChatContents
         self.globalController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: globalChatContents), botStart: nil, mode: .standard(.default))
         self.globalController?.alwaysShowSearchResultsAsList = true
+        self.globalController?.showListEmptyResults = true
         self.globalController?.customNavigationController = navigationController
         
         super.init()
@@ -88,10 +94,17 @@ final class HashtagSearchControllerNode: ASDisplayNode {
                 
         if controller.all {
             self.currentController?.displayNode.isHidden = true
-        } else {
-            self.currentController?.displayNode.isHidden = false
-            self.myController?.displayNode.isHidden = true
+            self.myController?.displayNode.isHidden = false
             self.globalController?.displayNode.isHidden = true
+        } else {
+            if let _ = peer {
+                self.currentController?.displayNode.isHidden = false
+                self.myController?.displayNode.isHidden = true
+                self.globalController?.displayNode.isHidden = true
+            } else {
+                self.myController?.displayNode.isHidden = false
+                self.globalController?.displayNode.isHidden = true
+            }
         }
         
         self.searchContentNode.indexUpdated = { [weak self] index in
@@ -140,7 +153,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             self?.searchQueryPromise.set(query)
         }
         
-        let _ = addRecentHashtagSearchQuery(engine: context.engine, string: query).startStandalone()
+        let _ = addRecentHashtagSearchQuery(engine: context.engine, string: query.replacingOccurrences(of: "#", with: "")).startStandalone()
         self.searchContentNode.onReturn = { query in
             let _ = addRecentHashtagSearchQuery(engine: context.engine, string: query).startStandalone()
         }

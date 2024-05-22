@@ -259,7 +259,11 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 id: "transaction",
                 title: "Transaction ID",
                 component: AnyComponent(
-                    MultilineTextComponent(text: .plain(NSAttributedString(string: transactionId, font: tableFont, textColor: tableTextColor)), truncationType: .middle)
+                    MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: transactionId, font: Font.monospace(15.0), textColor: tableTextColor)),
+                        truncationType: .end,
+                        maximumNumberOfLines: 0
+                    )
                 )
             ))
             

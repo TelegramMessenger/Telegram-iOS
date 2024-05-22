@@ -287,13 +287,13 @@ final class HashtagSearchRecentQueryItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.addSubnode(textNode)
                         }
                         
-                        let textFrame = CGRect(origin: CGPoint(x: leftInset, y: floorToScreenPixels((nodeLayout.contentSize.height - textLayout.size.height) / 2.0)), size: textLayout.size)
+                        let textFrame = CGRect(origin: CGPoint(x: leftInset + strongSelf.revealOffset, y: floorToScreenPixels((nodeLayout.contentSize.height - textLayout.size.height) / 2.0)), size: textLayout.size)
                         textNode.frame = textFrame
                         
                         if let icon = strongSelf.iconNode.image {
-                            strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: textFrame.minX - icon.size.width - 16.0, y: floorToScreenPixels((nodeLayout.contentSize.height - icon.size.height) / 2.0)), size: icon.size)
+                            strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: textFrame.minX - icon.size.width - 16.0 + strongSelf.revealOffset, y: floorToScreenPixels((nodeLayout.contentSize.height - icon.size.height) / 2.0)), size: icon.size)
                         }
-
+                        
                         let separatorHeight = UIScreenPixel
                         let topHighlightInset: CGFloat = separatorHeight
                         
@@ -304,7 +304,11 @@ final class HashtagSearchRecentQueryItemNode: ItemListRevealOptionsItemNode {
                         
                         strongSelf.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                         
-                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                        if item.clear {
+                            strongSelf.setRevealOptions((left: [], right: []))
+                        } else {
+                            strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.strings.Common_Delete, icon: .none, color: item.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                        }
                     }
                 })
             })
@@ -331,11 +335,15 @@ final class HashtagSearchRecentQueryItemNode: ItemListRevealOptionsItemNode {
         super.updateRevealOffset(offset: offset, transition: transition)
         
         if let params = self.layoutParams, let textNode = self.textNode {
-            let leftInset: CGFloat = 15.0 + params.leftInset
+            let leftInset: CGFloat = 62.0 + params.leftInset
             
             var textFrame = textNode.frame
             textFrame.origin.x = leftInset + offset
             transition.updateFrame(node: textNode, frame: textFrame)
+            
+            var iconFrame = self.iconNode.frame
+            iconFrame.origin.x = textFrame.minX - iconFrame.width - 16.0
+            transition.updateFrame(node: self.iconNode, frame: iconFrame)
         }
     }
     

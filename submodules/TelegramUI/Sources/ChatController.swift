@@ -614,6 +614,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    public var showListEmptyResults: Bool = false {
+        didSet {
+            self.chatDisplayNode.showListEmptyResults = self.showListEmptyResults
+        }
+    }
+    
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, botAppStart: ChatControllerInitialBotAppStart? = nil, mode: ChatControllerPresentationMode = .standard(.default), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = [], customChatNavigationStack: [EnginePeer.Id]? = nil) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
@@ -9525,9 +9531,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func openHashtag(_ hashtag: String, peerName: String?) {
-        guard let peerId = self.chatLocation.peerId else {
-            return
-        }
         let _ = self.presentVoiceMessageDiscardAlert(action: {
             if self.resolvePeerByNameDisposable == nil {
                 self.resolvePeerByNameDisposable = MetaDisposable()
@@ -9548,9 +9551,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return .single(nil)
                     }
                 }
-            } else {
+            } else if let peerId = self.chatLocation.peerId {
                 resolveSignal = self.context.account.postbox.loadedPeerWithId(peerId)
                 |> map(Optional.init)
+            } else {
+                resolveSignal = .single(nil)
             }
             var cancelImpl: (() -> Void)?
             let presentationData = self.presentationData
@@ -9695,11 +9700,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func openResolved(result: ResolvedUrl, sourceMessageId: MessageId?, progress: Promise<Bool>? = nil, forceExternal: Bool = false, concealed: Bool = false, commit: @escaping () -> Void = {}) {
-        guard let peerId = self.chatLocation.peerId else {
-            return
-        }
+        let urlContext: OpenURLContext
+        
         let message = sourceMessageId.flatMap { self.chatDisplayNode.historyNode.messageInCurrentHistoryView($0) }
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: peerId, message: message, updatedPresentationData: self.updatedPresentationData), navigationController: self.effectiveNavigationController, forceExternal: forceExternal, openPeer: { [weak self] peerId, navigation in
+        if let peerId = self.chatLocation.peerId {
+            urlContext = .chat(peerId: peerId, message: message, updatedPresentationData: self.updatedPresentationData)
+        } else {
+            urlContext = .generic
+        }
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: urlContext, navigationController: self.effectiveNavigationController, forceExternal: forceExternal, openPeer: { [weak self] peerId, navigation in
             guard let strongSelf = self else {
                 return
             }
@@ -9765,8 +9774,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 default:
                     break
                 }
-        }, sendFile: nil, 
-        sendSticker: { [weak self] f, sourceView, sourceRect in
+        }, sendFile: nil, sendSticker: { [weak self] f, sourceView, sourceRect in
             return self?.interfaceInteraction?.sendSticker(f, true, sourceView, sourceRect, nil, []) ?? false
         }, sendEmoji: { [weak self] text, attribute in
             guard let self, canSendMessagesToChat(self.presentationInterfaceState) else {

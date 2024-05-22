@@ -15,6 +15,7 @@ private let searchBarFont = Font.regular(17.0)
 final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
     private var theme: PresentationTheme
     private let strings: PresentationStrings
+    private let hasCurrentChat: Bool
     
     private let cancel: () -> Void
     
@@ -49,9 +50,10 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         }
     }
         
-    init(theme: PresentationTheme, strings: PresentationStrings, initialQuery: String, cancel: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, initialQuery: String, hasCurrentChat: Bool, cancel: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
+        self.hasCurrentChat = hasCurrentChat
         
         self.cancel = cancel
         
@@ -101,6 +103,13 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         self.searchBar.frame = searchBarFrame
         self.searchBar.updateLayout(boundingSize: searchBarFrame.size, leftInset: leftInset + sideInset, rightInset: rightInset + sideInset, transition: transition)
         
+        var items: [TabSelectorComponent.Item] = []
+        if self.hasCurrentChat {
+            items.append(TabSelectorComponent.Item(id: AnyHashable(0), title: self.strings.HashtagSearch_ThisChat))
+        }
+        items.append(TabSelectorComponent.Item(id: AnyHashable(1), title: self.strings.HashtagSearch_MyMessages))
+        items.append(TabSelectorComponent.Item(id: AnyHashable(2), title: self.strings.HashtagSearch_PublicPosts))
+        
         let tabSelectorSize = self.tabSelector.update(
             transition: Transition(transition),
             component: AnyComponent(TabSelectorComponent(
@@ -113,11 +122,7 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
                     spacing: 24.0,
                     lineSelection: true
                 ),
-                items: [
-                    TabSelectorComponent.Item(id: AnyHashable(0), title: self.strings.HashtagSearch_ThisChat),
-                    TabSelectorComponent.Item(id: AnyHashable(1), title: self.strings.HashtagSearch_MyMessages),
-                    TabSelectorComponent.Item(id: AnyHashable(2), title: self.strings.HashtagSearch_PublicPosts)
-                ],
+                items: items,
                 selectedId: AnyHashable(self.selectedIndex),
                 setSelectedId: { [weak self] id in
                     guard let self, let index = id.base as? Int else {

@@ -516,10 +516,12 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
 func _internal_searchHashtagPosts(account: Account, hashtag: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
     let remoteSearchResult = account.postbox.transaction { transaction -> (Int32, MessageIndex?, Api.InputPeer) in
         var lowerBound: MessageIndex?
+        var peer: Peer?
         if let state = state, let message = state.main.messages.last {
             lowerBound = message.index
+            peer = message.peers[message.id.peerId]
         }
-        if let lowerBound = lowerBound, let peer = transaction.getPeer(lowerBound.id.peerId), let inputPeer = apiInputPeer(peer) {
+        if let lowerBound = lowerBound, let peer, let inputPeer = apiInputPeer(peer) {
             return (state?.main.nextRate ?? 0, lowerBound, inputPeer)
         } else {
             return (0, lowerBound, .inputPeerEmpty)
