@@ -27,6 +27,8 @@ swift_library(
         "//submodules/ContactsPeerItem",
         "//submodules/ItemListUI",
         "//submodules/ChatListSearchItemHeader",
+        "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/Components/MultilineTextComponent",
     ],
     visibility = [
         "//visibility:public",

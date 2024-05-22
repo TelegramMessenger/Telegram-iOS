@@ -12194,6 +12194,13 @@ Sorry for the inconvenience.";
 "HashtagSearch.ThisChat" = "This Chat";
 "HashtagSearch.MyMessages" = "My Messages";
 "HashtagSearch.PublicPosts" = "Public Posts";
+"HashtagSearch.SearchPlaceholder" = "Hashtag search";
+
+"HashtagSearch.NoRecentQueries" = "Enter a hashtag to find messages\ncontaining it.";
+"HashtagSearch.ClearRecent" = "Clear History";
+
+"HashtagSearch.NoResults" = "No Results";
+"HashtagSearch.NoResultsQueryDescription" = "There were no results for %@.\nTry another hashtag.";
 
 "Chat.Context.Phone.AddToContacts" = "Add to Contacts";
 "Chat.Context.Phone.CreateNewContact" = "Create New Contact";
@@ -12233,3 +12240,5 @@ Sorry for the inconvenience.";
 "Stars.Purchase.ShowMore" = "Show More Options";
 "Stars.Purchase.Info" = "By proceeding and purchasing Stars, you agree with [Terms and Conditions]().";
 "Stars.Purchase.Terms_URL" = "https://telegram.org/tos";
+
+"Settings.Stars" = "Your Stars";

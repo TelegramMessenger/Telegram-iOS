@@ -103,6 +103,8 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
         } else if case let .customChatContents(customChatContents) = interfaceState.subject {
             let displayCount: Int
             switch customChatContents.kind {
+            case .hashTagSearch:
+                displayCount = 0
             case .quickReplyMessageInput:
                 displayCount = customChatContents.messageLimit ?? 20
             case .businessLinkSetup:

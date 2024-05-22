@@ -1988,6 +1988,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             actions.removeAll()
             
             switch customChatContents.kind {
+            case .hashTagSearch:
+                break
             case .quickReplyMessageInput:
                 if !messageText.isEmpty || (resourceAvailable && isImage) || diceEmoji != nil {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in

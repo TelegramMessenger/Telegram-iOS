@@ -1473,6 +1473,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     ignoreNameHiding = true
                 }
                 
+                if let subject = item.associatedData.subject, case let .customChatContents(contents) = subject, case .hashTagSearch = contents.kind {
+                    ignoreNameHiding = true
+                }
+                
                 displayAuthorInfo = !mergedTop.merged && allowAuthor && peerId.isGroupOrChannel && effectiveAuthor != nil
                 if let forwardInfo = firstMessage.forwardInfo, forwardInfo.psaType != nil {
                     displayAuthorInfo = false
@@ -1498,6 +1502,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                 }
             } else if incoming {
+                hasAvatar = true
+            }
+            
+            if let subject = item.associatedData.subject, case let .customChatContents(contents) = subject, case .hashTagSearch = contents.kind {
                 hasAvatar = true
             }
         }
@@ -2090,6 +2098,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if !displayHeader, case .peer = item.chatLocation, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
                 displayHeader = true
             }
+            if case let .customChatContents(contents) = item.associatedData.subject, case .hashTagSearch = contents.kind, let peer = item.message.peers[item.message.id.peerId] {
+                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    
+                } else {
+                    displayHeader = true
+                }
+            }
         }
         
         let firstNodeTopPosition: ChatMessageBubbleRelativePosition
@@ -2412,9 +2427,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     headerSize.height += 2.0
                 }
             }
+            
+            var hasThreadInfo = false
+            if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1 || item.associatedData.isRecentActions), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
+                hasThreadInfo = true
+            } else if case let .customChatContents(contents) = item.associatedData.subject, case .hashTagSearch = contents.kind {
+                hasThreadInfo = true
+            }
                         
             var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
-            if !isInstantVideo, case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1 || item.associatedData.isRecentActions), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
+            if !isInstantVideo, hasThreadInfo {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
                 }
@@ -2431,6 +2453,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         context: item.context,
                         controllerInteraction: item.controllerInteraction,
                         type: .bubble(incoming: incoming),
+                        peer: item.message.peers[item.message.id.peerId].flatMap(EnginePeer.init),
                         threadId: item.message.threadId ?? 1,
                         parentMessage: item.message,
                         constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude),

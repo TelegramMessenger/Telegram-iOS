@@ -979,16 +979,17 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: presentationData.strings.Settings_Premium, icon: PresentationResourcesSettings.premium, action: {
             interaction.openSettings(.premium)
         }))
-        //TODO:localize
-        let balanceText: String
-        if let balance = data.starsState?.balance, balance > 0 {
-            balanceText = "\(balance)"
-        } else {
-            balanceText = ""
+        if let starsState = data.starsState {
+            let balanceText: String
+            if starsState.balance > 0 {
+                balanceText = "\(starsState.balance)"
+            } else {
+                balanceText = ""
+            }
+            items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 102, label: .text(balanceText), text: presentationData.strings.Settings_Stars, icon: PresentationResourcesSettings.stars, action: {
+                interaction.openSettings(.stars)
+            }))
         }
-        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 102, label: .text(balanceText), text: "Your Stars", icon: PresentationResourcesSettings.stars, action: {
-            interaction.openSettings(.stars)
-        }))
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 103, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.Settings_Business, icon: PresentationResourcesSettings.business, action: {
             interaction.openSettings(.businessSetup)
         }))

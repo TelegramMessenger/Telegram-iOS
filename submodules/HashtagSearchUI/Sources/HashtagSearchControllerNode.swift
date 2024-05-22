@@ -1,6 +1,7 @@
 import Display
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
@@ -11,18 +12,28 @@ import ChatListSearchItemHeader
 final class HashtagSearchControllerNode: ASDisplayNode {
     private let context: AccountContext
     private weak var controller: HashtagSearchController?
-    private let query: String
+    private var query: String
+    
+    private let searchQueryPromise = ValuePromise<String>()
+    private var searchQueryDisposable: Disposable?
     
     private let navigationBar: NavigationBar?
 
-    private let segmentedControlNode: SegmentedControlNode
-    let listNode: ListView
-    let shimmerNode: ChatListSearchShimmerNode
+    private let searchContentNode: HashtagSearchNavigationContentNode
+    private let shimmerNode: ChatListSearchShimmerNode
+    private let recentListNode: HashtagSearchRecentListNode
     
-    let chatController: ChatController?
+    private let isSearching = Promise<Bool>()
+    private var isSearchingDisposable: Disposable?
+    
+    let currentController: ChatController?
+    let myController: ChatController?
+    let myChatContents: HashtagSearchGlobalChatContents?
+    
+    let globalController: ChatController?
+    let globalChatContents: HashtagSearchGlobalChatContents?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
-    private var enqueuedTransitions: [(ChatListSearchContainerTransition, Bool)] = []
     private var hasValidLayout = false
     
     init(context: AccountContext, controller: HashtagSearchController, peer: EnginePeer?, query: String, navigationBar: NavigationBar?, navigationController: NavigationController?) {
@@ -33,32 +44,40 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
+        let cleanHashtag = query.replacingOccurrences(of: "#", with: "")
+        self.searchContentNode = HashtagSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, initialQuery: cleanHashtag, cancel: { [weak controller] in
+            controller?.dismiss()
+        })
+        
         self.shimmerNode = ChatListSearchShimmerNode(key: .chats)
         self.shimmerNode.isUserInteractionEnabled = false
         self.shimmerNode.allowsGroupOpacity = true
         
-        self.listNode = ListView()
-        self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
-        }
-       
-        var items: [String] = []
-        if peer?.id == context.account.peerId {
-            items.append(presentationData.strings.Conversation_SavedMessages)
-        } else if let id = peer?.id, id.isReplies {
-            items.append(presentationData.strings.DialogList_Replies)
+        self.recentListNode = HashtagSearchRecentListNode(context: context)
+                
+        let navigationController = controller.navigationController as? NavigationController
+        if let peer {
+            self.currentController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
+            self.currentController?.alwaysShowSearchResultsAsList = true
+            self.currentController?.customNavigationController = navigationController
         } else {
-            items.append(peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) ?? "")
+            self.currentController = nil
         }
-        items.append(presentationData.strings.HashtagSearch_AllChats)
-        self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: presentationData.theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: controller.all ? 1 : 0)
         
-        if let peer = peer {
-            self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
-        } else {
-            self.chatController = nil
-        }
-    
+        self.isSearching.set(self.currentController?.searching.get() ?? .single(false))
+        
+        let myChatContents = HashtagSearchGlobalChatContents(context: context, kind: .hashTagSearch, query: cleanHashtag, onlyMy: true)
+        self.myChatContents = myChatContents
+        self.myController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: myChatContents), botStart: nil, mode: .standard(.default))
+        self.myController?.alwaysShowSearchResultsAsList = true
+        self.myController?.customNavigationController = navigationController
+        
+        let globalChatContents = HashtagSearchGlobalChatContents(context: context, kind: .hashTagSearch, query: cleanHashtag, onlyMy: false)
+        self.globalChatContents = globalChatContents
+        self.globalController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: globalChatContents), botStart: nil, mode: .standard(.default))
+        self.globalController?.alwaysShowSearchResultsAsList = true
+        self.globalController?.customNavigationController = navigationController
+        
         super.init()
         
         self.setViewBlock({
@@ -66,135 +85,206 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         })
         
         self.backgroundColor = presentationData.theme.chatList.backgroundColor
-        
-        self.addSubnode(self.listNode)
-//        self.addSubnode(self.shimmerNode)
-        
+                
         if controller.all {
-            self.chatController?.displayNode.isHidden = true
-            self.listNode.isHidden = false
+            self.currentController?.displayNode.isHidden = true
         } else {
-            self.chatController?.displayNode.isHidden = false
-            self.listNode.isHidden = true
+            self.currentController?.displayNode.isHidden = false
+            self.myController?.displayNode.isHidden = true
+            self.globalController?.displayNode.isHidden = true
         }
         
-        self.segmentedControlNode.selectedIndexChanged = { [weak self] index in
-            if let strongSelf = self {
-                if index == 0 {
-                    strongSelf.chatController?.displayNode.isHidden = false
-                    strongSelf.listNode.isHidden = true
-                } else {
-                    strongSelf.chatController?.displayNode.isHidden = true
-                    strongSelf.listNode.isHidden = false
-                }
+        self.searchContentNode.indexUpdated = { [weak self] index in
+            guard let self else {
+                return
+            }
+            self.searchContentNode.selectedIndex = index
+            if index == 0 {
+                self.currentController?.displayNode.isHidden = false
+                self.myController?.displayNode.isHidden = true
+                self.globalController?.displayNode.isHidden = true
+                self.isSearching.set(self.currentController?.searching.get() ?? .single(false))
+            } else if index == 1 {
+                self.currentController?.displayNode.isHidden = true
+                self.myController?.displayNode.isHidden = false
+                self.globalController?.displayNode.isHidden = true
+                self.isSearching.set(self.myChatContents?.searching ?? .single(false))
+            } else if index == 2 {
+                self.currentController?.displayNode.isHidden = true
+                self.myController?.displayNode.isHidden = true
+                self.globalController?.displayNode.isHidden = false
+                self.isSearching.set(self.globalChatContents?.searching ?? .single(false))
             }
         }
+               
+        self.recentListNode.setSearchQuery = { [weak self] query in
+            guard let self else {
+                return
+            }
+            self.searchContentNode.query = query
+            self.updateSearchQuery(query)
+        }
         
-        self.chatController?.isSelectingMessagesUpdated = { [weak self] isSelecting in
+        self.currentController?.isSelectingMessagesUpdated = { [weak self] isSelecting in
             if let strongSelf = self {
                 let button: UIBarButtonItem? = isSelecting ? UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .done, target: self, action: #selector(strongSelf.cancelPressed)) : nil
                 strongSelf.controller?.navigationItem.setRightBarButton(button, animated: true)
             }
         }
-    }
-    
-    @objc private func cancelPressed() {
-        self.chatController?.cancelSelectingMessages()
-    }
-    
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.backgroundColor = theme.chatList.backgroundColor
         
-        self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: theme))
+        navigationBar?.setContentNode(self.searchContentNode, animated: false)
         
-        self.listNode.forEachItemHeaderNode({ itemHeaderNode in
-            if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
-                itemHeaderNode.updateTheme(theme: theme)
+        self.addSubnode(self.shimmerNode)
+        
+        self.searchContentNode.setQueryUpdated { [weak self] query in
+            self?.searchQueryPromise.set(query)
+        }
+        
+        let _ = addRecentHashtagSearchQuery(engine: context.engine, string: query).startStandalone()
+        self.searchContentNode.onReturn = { query in
+            let _ = addRecentHashtagSearchQuery(engine: context.engine, string: query).startStandalone()
+        }
+        
+        let throttledSearchQuery = self.searchQueryPromise.get()
+        |> mapToSignal { query -> Signal<String, NoError> in
+            if !query.isEmpty {
+                return (.complete() |> delay(1.0, queue: Queue.mainQueue()))
+                |> then(.single(query))
+            } else {
+                return .single(query)
+            }
+        }
+        
+        self.searchQueryDisposable = (throttledSearchQuery
+        |> deliverOnMainQueue).start(next: { [weak self] query in
+            if let self {
+                self.updateSearchQuery(query)
+            }
+        })
+        
+        self.isSearchingDisposable = (self.isSearching.get()
+        |> deliverOnMainQueue).start(next: { [weak self] isSearching in
+            if let self {
+                self.searchContentNode.isSearching = isSearching
+                let transition: ContainedViewLayoutTransition = isSearching ? .immediate : .animated(duration: 0.2, curve: .easeInOut)
+                transition.updateAlpha(node: self.shimmerNode, alpha: isSearching ? 1.0 : 0.0)
             }
         })
     }
     
-    func enqueueTransition(_ transition: ChatListSearchContainerTransition, firstTime: Bool) {
-        self.enqueuedTransitions.append((transition, firstTime))
+    deinit {
+        self.searchQueryDisposable?.dispose()
+        self.isSearchingDisposable?.dispose()
+    }
+    
+    func updateSearchQuery(_ query: String) {
+        self.query = query
         
-        if self.hasValidLayout {
-            while !self.enqueuedTransitions.isEmpty {
-                self.dequeueTransition()
-            }
+        var cleanQuery = query
+        if cleanQuery.hasPrefix("#") {
+            cleanQuery.removeFirst()
+        }
+        if !cleanQuery.isEmpty {
+            self.currentController?.beginMessageSearch("#" + cleanQuery)
+            
+            self.myChatContents?.hashtagSearchUpdate(query: cleanQuery)
+            self.myController?.beginMessageSearch("#" + cleanQuery)
+            
+            self.globalChatContents?.hashtagSearchUpdate(query: cleanQuery)
+            self.globalController?.beginMessageSearch("#" + cleanQuery)
+        }
+        
+        if let (layout, navigationHeight) = self.containerLayout {
+            let _ = self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
         }
     }
     
-    private func dequeueTransition() {
-        if let (transition, _) = self.enqueuedTransitions.first {
-            self.enqueuedTransitions.remove(at: 0)
-            
-            let options = ListViewDeleteAndInsertOptions()
-            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in })
-        }
+    @objc private func cancelPressed() {
+        self.currentController?.cancelSelectingMessages()
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.backgroundColor = theme.chatList.backgroundColor
+        self.searchContentNode.updateTheme(theme)
     }
     
     func scrollToTop() {
-        if self.segmentedControlNode.selectedIndex == 0 {
-            self.chatController?.scrollToTop?()
+        if self.searchContentNode.selectedIndex == 0 {
+            self.currentController?.scrollToTop?()
+        } else if self.searchContentNode.selectedIndex == 2 {
+            self.globalController?.scrollToTop?()
         } else {
-            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+            self.myController?.scrollToTop?()
         }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        let isFirstTime = self.containerLayout == nil
         self.containerLayout = (layout, navigationBarHeight)
-        
-        if self.chatController != nil && self.segmentedControlNode.supernode == nil {
-            self.navigationBar?.additionalContentNode.addSubnode(self.segmentedControlNode)
-        }
-        
+                
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
         
         let toolbarHeight: CGFloat = 40.0
-        let panelY: CGFloat = insets.top - UIScreenPixel - 4.0
-        
-        let controlSize = self.segmentedControlNode.updateLayout(.stretchToFill(width: layout.size.width - 14.0 * 2.0), transition: transition)
-        transition.updateFrame(node: self.segmentedControlNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - controlSize.width) / 2.0), y: panelY + 2.0 + floor((toolbarHeight - controlSize.height) / 2.0)), size: controlSize))
-        
-        if let chatController = self.chatController {
-            insets.top += toolbarHeight - 4.0
-            let chatSize = CGSize(width: layout.size.width, height: layout.size.height)
-            transition.updateFrame(node: chatController.displayNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: chatSize))
-            chatController.containerLayoutUpdated(ContainerViewLayout(size: chatSize, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: insets.top, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
             
-            if chatController.displayNode.supernode == nil {
-                chatController.viewWillAppear(false)
-                self.insertSubnode(chatController.displayNode, at: 0)
-                chatController.viewDidAppear(false)
+        insets.top += toolbarHeight - 4.0
+        if let controller = self.currentController {
+            transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: layout.size))
+            controller.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: insets.top - 79.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
+            
+            if controller.displayNode.supernode == nil {
+                controller.viewWillAppear(false)
+                self.insertSubnode(controller.displayNode, at: 0)
+                controller.viewDidAppear(false)
                 
-                chatController.beginMessageSearch(self.query)
+                controller.beginMessageSearch(self.query)
             }
         }
         
-        self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
-        self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+        if let controller = self.myController {
+            transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: layout.size))
+            controller.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: insets.top - 89.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
+            
+            if controller.displayNode.supernode == nil {
+                controller.viewWillAppear(false)
+                self.insertSubnode(controller.displayNode, at: 0)
+                controller.viewDidAppear(false)
+                
+                controller.beginMessageSearch(self.query)
+            }
+        }
+        
+        if let controller = self.globalController {
+            transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: layout.size))
+            controller.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: insets.top - 89.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
+            
+            if controller.displayNode.supernode == nil {
+                controller.viewWillAppear(false)
+                self.insertSubnode(controller.displayNode, at: 0)
+                controller.viewDidAppear(false)
+                
+                controller.beginMessageSearch(self.query)
+            }
+        }
         
         let overflowInset: CGFloat = 0.0
         let topInset = navigationBarHeight
         self.shimmerNode.frame = CGRect(origin: CGPoint(x: overflowInset, y: topInset), size: CGSize(width: layout.size.width - overflowInset * 2.0, height: layout.size.height))
         self.shimmerNode.update(context: self.context, size: CGSize(width: layout.size.width - overflowInset * 2.0, height: layout.size.height), presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer, key: .chats, hasSelection: false, transition: transition)
         
-        insets.top += 4.0
+        if isFirstTime {
+            self.insertSubnode(self.recentListNode, aboveSubnode: self.shimmerNode)
+        }
         
-        let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve)
-        
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.recentListNode.frame = CGRect(origin: .zero, size: layout.size)
+        self.recentListNode.updateLayout(layout: ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: insets.top - 35.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
+        self.recentListNode.isHidden = !self.query.isEmpty
         
         if !self.hasValidLayout {
             self.hasValidLayout = true
-            while !self.enqueuedTransitions.isEmpty {
-                self.dequeueTransition()
-            }
         }
 
-        if self.chatController != nil {
+        if self.currentController != nil {
             return toolbarHeight
         } else {
             return 0.0

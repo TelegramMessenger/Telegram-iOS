@@ -263,8 +263,12 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 default:
                     break
                 }
-                if case .customChatContents = item.associatedData.subject {
-                    displayStatus = false
+                if case let .customChatContents(contents) = item.associatedData.subject {
+                    if case .hashTagSearch = contents.kind {
+                        displayStatus = true
+                    } else {
+                        displayStatus = false
+                    }
                 }
                 if displayStatus {
                     if incoming {

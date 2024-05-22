@@ -779,6 +779,8 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                 insets.top = -9.0
                 imageSpacing = 4.0
                 titleSpacing = 5.0
+            case .hashTagSearch:
+                break
             }
         }
         
@@ -838,6 +840,9 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                     }
                     
                     self.businessLink = link
+                case .hashTagSearch:
+                    titleString = ""
+                    strings = []
                 }
             } else {
                 titleString = interfaceState.strings.Conversation_CloudStorageInfo_Title

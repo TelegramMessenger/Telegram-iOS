@@ -219,7 +219,7 @@ private final class FactCheckAlertContentNode: AlertContentNode {
                 customInputView: nil,
                 resetText: nil,
                 isOneLineWhenUnfocused: false,
-                characterLimit: nil,
+                characterLimit: 1024,
                 emptyLineHandling: .oneConsecutive,
                 formatMenuAvailability: .available([.bold, .italic, .link]),
                 returnKeyType: .done,

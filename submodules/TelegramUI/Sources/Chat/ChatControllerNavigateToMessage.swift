@@ -29,7 +29,7 @@ extension ChatControllerImpl {
             guard let self else {
                 return
             }
-            self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId)
+            self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId && !params.forceNew, forceNew: params.forceNew)
         }
         
         let _ = (self.context.engine.data.get(
@@ -72,6 +72,7 @@ extension ChatControllerImpl {
         scrollPosition: ListViewScrollPosition = .center(.bottom),
         rememberInStack: Bool = true,
         forceInCurrentChat: Bool = false,
+        forceNew: Bool = false,
         dropStack: Bool = false,
         animated: Bool = true,
         completion: (() -> Void)? = nil,
@@ -104,11 +105,11 @@ extension ChatControllerImpl {
         if case let .peer(peerId) = self.chatLocation, messageLocation.peerId == peerId, !isPinnedMessages, !isScheduledMessages {
             forceInCurrentChat = true
         }
-        if case .customChatContents = self.chatLocation {
+        if case .customChatContents = self.chatLocation, !forceNew {
             forceInCurrentChat = true
         }
         
-        if isPinnedMessages, let messageId = messageLocation.messageId {
+        if isPinnedMessages || forceNew, let messageId = messageLocation.messageId {
             let _ = (combineLatest(
                 self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId)),
                 self.context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .local)

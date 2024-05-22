@@ -1269,11 +1269,14 @@ extension ChatControllerImpl {
                 donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, intentContext: .chat, peerIds: [peerId])
             } else if case let .customChatContents(customChatContents) = strongSelf.subject {
                 switch customChatContents.kind {
+                case .hashTagSearch:
+                    break
                 case .quickReplyMessageInput:
                     customChatContents.enqueueMessages(messages: messages)
                     strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                 case let .businessLinkSetup(link):
                     if messages.count > 1 {
+                        //TODO:localize
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: "The message text limit is 4096 characters", actions: [
                             TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})
                         ]), in: .window(.root))
@@ -1304,6 +1307,40 @@ extension ChatControllerImpl {
             }
             
             strongSelf.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
+        }
+        
+        if case let .customChatContents(customChatContents) = self.subject {
+            customChatContents.hashtagSearchResultsUpdate = { [weak self] searchResult in
+                guard let self else {
+                    return
+                }
+                let (results, state) = searchResult
+                let isEmpty = results.totalCount == 0
+                if isEmpty {
+                    self.alwaysShowSearchResultsAsList = true
+                }
+                self.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
+                    var updatedState = current
+                    if let data = current.search {
+                        let messageIndices = results.messages.map({ $0.index }).sorted()
+                        var currentIndex = messageIndices.last
+                        if let previousResultId = data.resultsState?.currentId {
+                            for index in messageIndices {
+                                if index.id >= previousResultId {
+                                    currentIndex = index
+                                break
+                                }
+                            }
+                        }
+                        updatedState = updatedState.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, state: state, totalCount: results.totalCount, completed: results.completed)))
+                    }
+                    if isEmpty {
+                        updatedState = updatedState.updatedDisplayHistoryFilterAsList(true)
+                    }
+                    return updatedState
+                })
+                self.searchResult.set(.single((results, state, .general(scope: .channels, tags: nil, minDate: nil, maxDate: nil))))
+            }
         }
         
         self.chatDisplayNode.requestUpdateChatInterfaceState = { [weak self] transition, saveInterfaceState, f in
@@ -1364,6 +1401,8 @@ extension ChatControllerImpl {
                 self?.enqueueGifData(data)
             case let .sticker(image, isMemoji):
                 self?.enqueueStickerImage(image, isMemoji: isMemoji)
+            case let .animatedSticker(data):
+                self?.enqueueAnimatedStickerData(data)
             }
         }
         self.chatDisplayNode.updateTypingActivity = { [weak self] value in
@@ -1442,7 +1481,9 @@ extension ChatControllerImpl {
                 return
             }
             
-            if let resultsState = self.presentationInterfaceState.search?.resultsState, !resultsState.messageIndices.isEmpty {
+            if case let .customChatContents(contents) = self.presentationInterfaceState.subject, case .hashTagSearch = contents.kind {
+                self.chatDisplayNode.historyNode.scrollToEndOfHistory()
+            } else if let resultsState = self.presentationInterfaceState.search?.resultsState, !resultsState.messageIndices.isEmpty {
                 if let currentId = resultsState.currentId, let index = resultsState.messageIndices.firstIndex(where: { $0.id == currentId }) {
                     if index != resultsState.messageIndices.count - 1 {
                         self.interfaceInteraction?.navigateMessageSearch(.later)

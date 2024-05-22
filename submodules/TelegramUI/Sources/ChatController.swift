@@ -113,6 +113,7 @@ import ChatNavigationButton
 import WebsiteType
 import ChatQrCodeScreen
 import PeerInfoScreen
+import MediaEditor
 import MediaEditorScreen
 import WallpaperGalleryScreen
 import WallpaperGridScreen
@@ -321,7 +322,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let editingMessage = ValuePromise<Float?>(nil, ignoreRepeated: true)
     let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
     let unblockingPeer = ValuePromise<Bool>(false, ignoreRepeated: true)
-    let searching = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public let searching = ValuePromise<Bool>(false, ignoreRepeated: true)
     let searchResult = Promise<(SearchMessagesResult, SearchMessagesState, SearchMessagesLocation)?>()
     let loadingMessage = Promise<ChatLoadingMessageSubject?>(nil)
     let performingInlineSearch = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -596,12 +597,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var networkSpeedEventsDisposable: Disposable?
     
+    var stickerVideoExport: MediaEditorVideoExport?
+    
     var messageComposeController: MFMessageComposeViewController?
     
     public var alwaysShowSearchResultsAsList: Bool = false {
         didSet {
             self.presentationInterfaceState = self.presentationInterfaceState.updatedDisplayHistoryFilterAsList(self.alwaysShowSearchResultsAsList)
             self.chatDisplayNode.alwaysShowSearchResultsAsList = self.alwaysShowSearchResultsAsList
+        }
+    }
+    
+    public var includeSavedPeersInSearchResults: Bool = false {
+        didSet {
+            self.chatDisplayNode.includeSavedPeersInSearchResults = self.includeSavedPeersInSearchResults
         }
     }
     
@@ -684,6 +693,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return interfaceState.withUpdatedEffectiveInputState(ChatTextInputState(inputText: chatInputStateStringWithAppliedEntities(link.message, entities: link.entities)))
                     })
                 }
+            case .hashTagSearch:
+                break
             }
         }
         
@@ -745,6 +756,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
             if case let .customChatContents(customChatContents) = strongSelf.presentationInterfaceState.subject {
                 switch customChatContents.kind {
+                case .hashTagSearch:
+                    return true
                 case let .quickReplyMessageInput(_, shortcutType):
                     if let historyView = strongSelf.chatDisplayNode.historyNode.originalHistoryView, historyView.entries.isEmpty {
                         
@@ -6449,6 +6462,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if case let .customChatContents(customChatContents) = self.subject {
                     switch customChatContents.kind {
+                    case .hashTagSearch:
+                        break
                     case let .quickReplyMessageInput(shortcut, shortcutType):
                         switch shortcutType {
                         case .generic:
@@ -9286,7 +9301,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }))
     }
-    
+
     func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false, silentPosting: Bool = false, resetTextInputState: Bool = true) {
         if !canSendMessagesToChat(self.presentationInterfaceState) {
             return
@@ -9385,14 +9400,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     func updateDownButtonVisibility() {
         let recordingMediaMessage = self.audioRecorderValue != nil || self.videoRecorderValue != nil || self.presentationInterfaceState.interfaceState.mediaDraftState != nil
         
-        if let search = self.presentationInterfaceState.search, let results = search.resultsState, results.messageIndices.count != 0 {
+        var ignoreSearchState = false
+        if case let .customChatContents(contents) = self.subject, case .hashTagSearch = contents.kind {
+            ignoreSearchState = true
+        }
+        
+        if !ignoreSearchState, let search = self.presentationInterfaceState.search, let results = search.resultsState, results.messageIndices.count != 0 {
             var resultIndex: Int?
             if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
                 resultIndex = index
             } else {
                 resultIndex = nil
             }
-            
             if let resultIndex {
                 self.chatDisplayNode.navigateButtons.directionButtonState = ChatHistoryNavigationButtons.DirectionState(
                     up: ChatHistoryNavigationButtons.ButtonState(isEnabled: resultIndex != 0),
@@ -9536,7 +9555,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var cancelImpl: (() -> Void)?
             let presentationData = self.presentationData
             let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
-                let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                     cancelImpl?()
                 }))
                 self?.present(controller, in: .window(.root))
@@ -9547,7 +9566,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             |> runOn(Queue.mainQueue())
-            |> delay(0.15, queue: Queue.mainQueue())
+            |> delay(0.25, queue: Queue.mainQueue())
             let progressDisposable = progressSignal.start()
             
             resolveSignal = resolveSignal

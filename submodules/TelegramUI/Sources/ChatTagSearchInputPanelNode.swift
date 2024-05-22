@@ -91,6 +91,8 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
     
     private var isUpdating: Bool = false
     
+    private var alwaysShowTotalMessagesCount = false
+    
     private var currentLayout: Layout?
     
     private var tagMessageCount: (tag: MemoryBuffer, count: Int?, disposable: Disposable?)?
@@ -103,7 +105,9 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    init(theme: PresentationTheme) {
+    init(theme: PresentationTheme, alwaysShowTotalMessagesCount: Bool) {
+        self.alwaysShowTotalMessagesCount = alwaysShowTotalMessagesCount
+        
         super.init()
     }
     
@@ -224,7 +228,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
                 canChangeListMode = true
                 
-                if params.interfaceState.displayHistoryFilterAsList {
+                if params.interfaceState.displayHistoryFilterAsList || self.alwaysShowTotalMessagesCount {
                     resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(
                         ".",
                         "."
@@ -332,36 +336,41 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             }
         }
         
-        var nextLeftX: CGFloat = 12.0
+        var nextLeftX: CGFloat = 16.0
         
-        let calendarButtonSize = self.calendarButton.update(
-            transition: .immediate,
-            component: AnyComponent(PlainButtonComponent(
-                content: AnyComponent(BundleIconComponent(
-                    name: "Chat/Input/Search/Calendar",
-                    tintColor: params.interfaceState.theme.rootController.navigationBar.accentTextColor
-                )),
-                effectAlignment: .center,
-                minSize: CGSize(width: 1.0, height: size.height),
-                contentInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
-                action: { [weak self] in
-                    guard let self else {
-                        return
+        if !self.alwaysShowTotalMessagesCount {
+            nextLeftX = 12.0
+            let calendarButtonSize = self.calendarButton.update(
+                transition: .immediate,
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(BundleIconComponent(
+                        name: "Chat/Input/Search/Calendar",
+                        tintColor: params.interfaceState.theme.rootController.navigationBar.accentTextColor
+                    )),
+                    effectAlignment: .center,
+                    minSize: CGSize(width: 1.0, height: size.height),
+                    contentInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.interfaceInteraction?.openCalendarSearch()
                     }
-                    self.interfaceInteraction?.openCalendarSearch()
+                )),
+                environment: {},
+                containerSize: size
+            )
+            let calendarButtonFrame = CGRect(origin: CGPoint(x: nextLeftX, y: floor((size.height - calendarButtonSize.height) * 0.5)), size: calendarButtonSize)
+            if let calendarButtonView = self.calendarButton.view {
+                if calendarButtonView.superview == nil {
+                    self.view.addSubview(calendarButtonView)
                 }
-            )),
-            environment: {},
-            containerSize: size
-        )
-        let calendarButtonFrame = CGRect(origin: CGPoint(x: nextLeftX, y: floor((size.height - calendarButtonSize.height) * 0.5)), size: calendarButtonSize)
-        if let calendarButtonView = self.calendarButton.view {
-            if calendarButtonView.superview == nil {
-                self.view.addSubview(calendarButtonView)
+                transition.setFrame(view: calendarButtonView, frame: calendarButtonFrame)
             }
-            transition.setFrame(view: calendarButtonView, frame: calendarButtonFrame)
+            nextLeftX += calendarButtonSize.width + 8.0
+        } else if let calendarButtonView = self.calendarButton.view {
+            calendarButtonView.removeFromSuperview()
         }
-        nextLeftX += calendarButtonSize.width + 8.0
         
         if displaySearchMembers {
             let membersButton: ComponentView<Empty>
