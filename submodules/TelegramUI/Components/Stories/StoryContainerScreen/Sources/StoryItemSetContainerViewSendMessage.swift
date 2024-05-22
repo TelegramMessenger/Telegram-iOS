@@ -1159,7 +1159,7 @@ final class StoryItemSetContainerSendMessage {
         controller.present(shareController, in: .window(.root))
     }
     
-    func performTranslateTextAction(view: StoryItemSetContainerComponent.View, text: String) {
+    func performTranslateTextAction(view: StoryItemSetContainerComponent.View, text: String, entities: [MessageTextEntity]) {
         guard let component = view.component else {
             return
         }
@@ -1190,7 +1190,7 @@ final class StoryItemSetContainerSendMessage {
             
             let _ = ApplicationSpecificNotice.incrementTranslationSuggestion(accountManager: component.context.sharedContext.accountManager, timestamp: Int32(Date().timeIntervalSince1970)).start()
             
-            let translateController = TranslateScreen(context: component.context, forceTheme: defaultDarkPresentationTheme, text: text, canCopy: true, fromLanguage: language, ignoredLanguages: translationSettings.ignoredLanguages)
+            let translateController = TranslateScreen(context: component.context, forceTheme: defaultDarkPresentationTheme, text: text, entities: entities, canCopy: true, fromLanguage: language, ignoredLanguages: translationSettings.ignoredLanguages)
             translateController.pushController = { [weak view] c in
                 guard let view, let component = view.component else {
                     return
@@ -1556,14 +1556,14 @@ final class StoryItemSetContainerSendMessage {
                                 completion(controller, mediaPickerContext)
                             }, updateMediaPickerContext: { [weak attachmentController] mediaPickerContext in
                                 attachmentController?.mediaPickerContext = mediaPickerContext
-                            }, completion: { [weak self, weak view] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
+                            }, completion: { [weak self, weak view] signals, silentPosting, scheduleTime, parameters, getAnimatedTransitionSource, completion in
                                 guard let self, let view else {
                                     return
                                 }
                                 if !inputText.string.isEmpty {
                                     self.clearInputText(view: view)
                                 }
-                                self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                                self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                             }
                         )
                     case .file:
@@ -1658,7 +1658,7 @@ final class StoryItemSetContainerSendMessage {
                         }
                         self.controllerNavigationDisposable.set((contactsController.result
                         |> deliverOnMainQueue).start(next: { [weak self, weak view] peers in
-                            guard let self, let view, let (peers, _, silent, scheduleTime, text) = peers else {
+                            guard let self, let view, let (peers, _, silent, scheduleTime, text, _) = peers else {
                                 return
                             }
                             
@@ -1762,7 +1762,7 @@ final class StoryItemSetContainerSendMessage {
                                         
                                         self.sendMessages(view: view, peer: targetPeer, messages: enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime)
                                     } else {
-                                        let contactController = component.context.sharedContext.makeDeviceContactInfoController(context: component.context, subject: .filter(peer: peerAndContactData.0?._asPeer(), contactId: nil, contactData: contactData, completion: { [weak self, weak view] peer, contactData in
+                                        let contactController = component.context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: component.context), environment: ShareControllerAppEnvironment(sharedContext: component.context.sharedContext), subject: .filter(peer: peerAndContactData.0?._asPeer(), contactId: nil, contactData: contactData, completion: { [weak self, weak view] peer, contactData in
                                             guard let self, let view else {
                                                 return
                                             }
@@ -1875,7 +1875,7 @@ final class StoryItemSetContainerSendMessage {
         bannedSendVideos: (Int32, Bool)?,
         present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void,
         updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void,
-        completion: @escaping ([Any], Bool, Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void
+        completion: @escaping ([Any], Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void
     ) {
         guard let component = view.component else {
             return
@@ -1936,8 +1936,8 @@ final class StoryItemSetContainerSendMessage {
             }
             return self.getCaptionPanelView(view: view, peer: peer, mediaPicker: controller)
         }
-        controller.legacyCompletion = { signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion in
-            completion(signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion)
+        controller.legacyCompletion = { signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion in
+            completion(signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion)
         }
         present(controller, mediaPickerContext)
     }
@@ -2240,14 +2240,14 @@ final class StoryItemSetContainerSendMessage {
                             present(controller, mediaPickerContext)
                         },
                         updateMediaPickerContext: { _ in },
-                        completion: { [weak self, weak view] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
+                        completion: { [weak self, weak view] signals, silentPosting, scheduleTime, parameters, getAnimatedTransitionSource, completion in
                             guard let self, let view else {
                                 return
                             }
                             if !inputText.string.isEmpty {
                                 self.clearInputText(view: view)
                             }
-                            self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                            self.enqueueMediaMessages(view: view, peer: peer, replyToMessageId: nil, replyToStoryId: focusedStoryId, signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                         }
                     )
                 }
@@ -2320,7 +2320,7 @@ final class StoryItemSetContainerSendMessage {
             return nil
         }
         //TODO:self.presentationInterfaceState.customEmojiAvailable
-        return component.context.sharedContext.makeGalleryCaptionPanelView(context: component.context, chatLocation: .peer(id: peer.id), isScheduledMessages: false, customEmojiAvailable: true, present: { [weak view] c in
+        return component.context.sharedContext.makeGalleryCaptionPanelView(context: component.context, chatLocation: .peer(id: peer.id), isScheduledMessages: false, isFile: false, customEmojiAvailable: true, present: { [weak view] c in
             guard let view else {
                 return
             }
@@ -2569,7 +2569,7 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    private func enqueueMediaMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyToMessageId: EngineMessage.Id?, replyToStoryId: StoryId?, signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
+    private func enqueueMediaMessages(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyToMessageId: EngineMessage.Id?, replyToStoryId: StoryId?, signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
         guard let component = view.component else {
             return
         }
@@ -2617,6 +2617,22 @@ final class StoryItemSetContainerSendMessage {
                                 var (correlationId, uniqueIds, completion) = addedTransitions[index]
                                 uniqueIds.append(uniqueId)
                                 addedTransitions[index] = (correlationId, uniqueIds, completion)
+                            }
+                        }
+                    }
+                    if let parameters {
+                        if let effect = parameters.effect {
+                            message = message.withUpdatedAttributes { attributes in
+                                var attributes = attributes
+                                attributes.append(EffectMessageAttribute(id: effect.id))
+                                return attributes
+                            }
+                        }
+                        if parameters.textIsAboveMedia {
+                            message = message.withUpdatedAttributes { attributes in
+                                var attributes = attributes
+                                attributes.append(InvertMediaMessageAttribute())
+                                return attributes
                             }
                         }
                     }
@@ -2711,12 +2727,17 @@ final class StoryItemSetContainerSendMessage {
                     if let navigationController = controller.navigationController as? NavigationController {
                         component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), attachBotStart: attachBotStart))
                     }
+                case let .withBotApp(botAppStart):
+                    if let navigationController = controller.navigationController as? NavigationController {
+                        component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), botAppStart: botAppStart))
+                    }
                 default:
                     break
                 }
             },
             sendFile: nil,
             sendSticker: nil,
+            sendEmoji: nil,
             requestMessageActionUrlAuth: nil,
             joinVoiceChat: nil,
             present: { [weak view] c, a in
@@ -2897,8 +2918,13 @@ final class StoryItemSetContainerSendMessage {
                 return
             }
             if !hashtag.isEmpty {
-                let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)
-                navigationController.pushViewController(searchController)
+                if "".isEmpty {
+                    let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, query: hashtag)
+                    navigationController.pushViewController(searchController)
+                } else {
+                    let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)
+                    navigationController.pushViewController(searchController)
+                }
             }
         }))
     }

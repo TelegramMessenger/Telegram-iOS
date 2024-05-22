@@ -794,6 +794,7 @@ public final class PendingMessageManager {
                 var scheduleTime: Int32?
                 var sendAsPeerId: PeerId?
                 var quickReply: OutgoingQuickReplyMessageAttribute?
+                var messageEffect: EffectMessageAttribute?
                 
                 var flags: Int32 = 0
                 
@@ -824,6 +825,10 @@ public final class PendingMessageManager {
                         sendAsPeerId = attribute.peerId
                     } else if let attribute = attribute as? OutgoingQuickReplyMessageAttribute {
                         quickReply = attribute
+                    } else if let attribute = attribute as? EffectMessageAttribute {
+                        messageEffect = attribute
+                    } else if let _ = attribute as? InvertMediaMessageAttribute {
+                        flags |= Int32(1 << 16)
                     }
                 }
                                 
@@ -1016,7 +1021,13 @@ public final class PendingMessageManager {
                         flags |= 1 << 17
                     }
                     
-                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut))
+                    var messageEffectId: Int64?
+                    if let messageEffect {
+                        flags |= 1 << 18
+                        messageEffectId = messageEffect.id
+                    }
+                    
+                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId))
                 }
                 
                 return sendMessageRequest
@@ -1192,6 +1203,7 @@ public final class PendingMessageManager {
                 var sendAsPeerId: PeerId?
                 var bubbleUpEmojiOrStickersets = false
                 var quickReply: OutgoingQuickReplyMessageAttribute?
+                var messageEffect: EffectMessageAttribute?
                 
                 var flags: Int32 = 0
         
@@ -1228,6 +1240,8 @@ public final class PendingMessageManager {
                         sendAsPeerId = attribute.peerId
                     } else if let attribute = attribute as? OutgoingQuickReplyMessageAttribute {
                         quickReply = attribute
+                    } else if let attribute = attribute as? EffectMessageAttribute {
+                        messageEffect = attribute
                     }
                 }
                 
@@ -1310,11 +1324,13 @@ public final class PendingMessageManager {
                                 replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
                             }
                         }
-                    
                         if let attribute = message.webpagePreviewAttribute {
                             if attribute.leadingPreview {
                                 flags |= 1 << 16
                             }
+                        }
+                        if message.invertMedia {
+                            flags |= 1 << 16
                         }
                     
                         var quickReplyShortcut: Api.InputQuickReplyShortcut?
@@ -1327,7 +1343,13 @@ public final class PendingMessageManager {
                             flags |= 1 << 17
                         }
                     
-                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut), info: .acknowledgement, tag: dependencyTag)
+                        var messageEffectId: Int64?
+                        if let messageEffect {
+                            flags |= 1 << 18
+                            messageEffectId = messageEffect.id
+                        }
+                    
+                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId), info: .acknowledgement, tag: dependencyTag)
                     case let .media(inputMedia, text):
                         if bubbleUpEmojiOrStickersets {
                             flags |= Int32(1 << 15)
@@ -1391,6 +1413,9 @@ public final class PendingMessageManager {
                                 flags |= 1 << 16
                             }
                         }
+                        if message.invertMedia {
+                            flags |= 1 << 16
+                        }
                     
                         var quickReplyShortcut: Api.InputQuickReplyShortcut?
                         if let quickReply {
@@ -1401,8 +1426,14 @@ public final class PendingMessageManager {
                             }
                             flags |= 1 << 17
                         }
+                    
+                        var messageEffectId: Int64?
+                        if let messageEffect {
+                            flags |= 1 << 18
+                            messageEffectId = messageEffect.id
+                        }
                         
-                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId), tag: dependencyTag)
                         |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):
                         var topMsgId: Int32?

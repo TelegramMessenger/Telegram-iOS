@@ -8,6 +8,7 @@ final class NavigationOverlayContainer: ASDisplayNode {
     let blocksInteractionUntilReady: Bool
     
     private(set) var isReady: Bool = false
+    var isRemoved: Bool = false
     var isReadyUpdated: (() -> Void)?
     private var isReadyDisposable: Disposable?
     

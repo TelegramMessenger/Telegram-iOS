@@ -974,6 +974,13 @@ private final class StoryContainerScreenComponent: Component {
                     }
                 } else {
                     if let result = subview.hitTest(self.convert(self.convert(point, to: subview), to: subview), with: event) {
+                        if let environment = self.environment, case .regular = environment.metrics.widthClass {
+                            if result.isDescendant(of: self.backgroundEffectView) {
+                                if let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
+                                    return itemSetView.view.view
+                                }
+                            }
+                        }
                         return result
                     }
                 }

@@ -856,7 +856,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
                         name: "Chat List/ComposeIcon",
                         tintColor: environment.theme.list.itemAccentColor
-                    )))),
+                    ))), false),
                     accessory: nil,
                     action: { [weak self] _ in
                         guard let self else {
@@ -933,7 +933,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                             image: checkIcon,
                             tintColor: !isSelected ? .clear : environment.theme.list.itemAccentColor,
                             contentMode: .center
-                        )))),
+                        ))), false),
                         accessory: nil,
                         action: { [weak self] _ in
                             guard let self else {
@@ -1203,7 +1203,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                                 image: checkIcon,
                                 tintColor: !self.hasAccessToAllChatsByDefault ? .clear : environment.theme.list.itemAccentColor,
                                 contentMode: .center
-                            )))),
+                            ))), false),
                             accessory: nil,
                             action: { [weak self] _ in
                                 guard let self else {
@@ -1233,7 +1233,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                                 image: checkIcon,
                                 tintColor: self.hasAccessToAllChatsByDefault ? .clear : environment.theme.list.itemAccentColor,
                                 contentMode: .center
-                            )))),
+                            ))), false),
                             accessory: nil,
                             action: { [weak self] _ in
                                 guard let self else {
@@ -1280,7 +1280,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
                     name: "Chat List/AddIcon",
                     tintColor: environment.theme.list.itemAccentColor
-                )))),
+                ))), false),
                 accessory: nil,
                 action: { [weak self] _ in
                     guard let self else {

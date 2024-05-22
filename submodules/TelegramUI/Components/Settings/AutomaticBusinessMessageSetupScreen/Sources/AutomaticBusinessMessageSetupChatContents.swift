@@ -215,6 +215,8 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
             initialShortcut = shortcut
         case .businessLinkSetup:
             initialShortcut = ""
+        case .hashTagSearch:
+            initialShortcut = ""
         }
         
         let queue = Queue()
@@ -251,9 +253,19 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
             }
         case .businessLinkSetup:
             break
+        case .hashTagSearch:
+            break
         }
     }
     
     func businessLinkUpdate(message: String, entities: [MessageTextEntity], title: String?) {
     }
+    
+    func loadMore() {
+    }
+    
+    func hashtagSearchUpdate(query: String) {
+    }
+    
+    var hashtagSearchResultsUpdate: ((SearchMessagesResult, SearchMessagesState)) -> Void = { _ in }
 }

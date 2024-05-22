@@ -21,6 +21,7 @@ import TextFormat
 import UniversalMediaPlayer
 import InstantPageCache
 import ScrollComponent
+import PremiumStarComponent
 
 extension PremiumGiftSource {
     var identifier: String? {
@@ -621,7 +622,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             let _ = (signal
                             |> deliverOnMainQueue).start(next: { resolvedUrl in
                                 context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
-                                }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak controller] c, arguments in
+                                }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak controller] c, arguments in
                                     controller?.push(c)
                                 }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
                             })

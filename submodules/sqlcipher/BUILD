@@ -28,6 +28,7 @@ objc_library(
         "-DSQLITE_OMIT_DEPRECATED",
         "-DNDEBUG=1",
         "-DSQLITE_MAX_MMAP_SIZE=0",
+        "-Wno-all",
     ],
     sdk_frameworks = [
       "Foundation",

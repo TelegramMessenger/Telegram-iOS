@@ -1375,8 +1375,10 @@ final class InstantPageControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 default:
                                     break
                             }
-                        }, sendFile: nil,
+                        }, 
+                        sendFile: nil,
                         sendSticker: nil,
+                        sendEmoji: nil,
                         requestMessageActionUrlAuth: nil,
                         joinVoiceChat: nil,
                         present: { c, a in

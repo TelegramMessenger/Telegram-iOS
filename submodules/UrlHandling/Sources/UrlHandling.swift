@@ -1204,7 +1204,11 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                     var url = url
                     let lowercasedUrl = url.lowercased()
                     if (lowercasedUrl.hasPrefix(scheme) && (lowercasedUrl.hasSuffix(".\(basePath)") || lowercasedUrl.contains(".\(basePath)/") || lowercasedUrl.contains(".\(basePath)?"))) {
-                        url = basePrefix + String(url[scheme.endIndex...]).replacingOccurrences(of: ".\(basePath)/", with: "").replacingOccurrences(of: ".\(basePath)", with: "")
+                        let restUrl = String(url[scheme.endIndex...])
+                        if let slashRange = restUrl.range(of: "/"), let baseRange = restUrl.range(of: basePath), slashRange.lowerBound < baseRange.lowerBound {
+                        } else {
+                            url = basePrefix + restUrl.replacingOccurrences(of: ".\(basePath)/", with: "/").replacingOccurrences(of: ".\(basePath)", with: "")
+                        }
                     }
                     if url.lowercased().hasPrefix(basePrefix) {
                         if let internalUrl = parseInternalUrl(sharedContext: context.sharedContext, query: String(url[basePrefix.endIndex...])) {

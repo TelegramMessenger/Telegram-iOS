@@ -29,6 +29,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
         "//submodules/WallpaperBackgroundNode",
         "//submodules/TelegramUI/Components/ChatControllerInteraction",
+        "//submodules/AvatarNode",
     ],
     visibility = [
         "//visibility:public",

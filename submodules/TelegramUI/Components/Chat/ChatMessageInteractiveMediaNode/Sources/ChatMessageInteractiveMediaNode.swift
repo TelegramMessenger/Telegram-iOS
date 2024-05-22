@@ -200,9 +200,22 @@ extension UIBezierPath {
 }
 
 private class ExtendedMediaOverlayNode: ASDisplayNode {
+    enum Icon {
+        case lock
+        case eye
+        
+        var image: UIImage {
+            switch self {
+            case .lock:
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: .white)!
+            case .eye:
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/AgeRestricted"), color: .white)!
+            }
+        }
+    }
     private let blurredImageNode: TransformImageNode
     private let dustNode: MediaDustNode
-    private let buttonNode: HighlightTrackingButtonNode
+    fileprivate let buttonNode: HighlightTrackingButtonNode
     private let highlightedBackgroundNode: ASDisplayNode
     private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
@@ -214,7 +227,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     var isRevealed = false
     var tapped: () -> Void = {}
     
-    init(hasImageOverlay: Bool, enableAnimations: Bool) {
+    init(hasImageOverlay: Bool, icon: Icon, enableAnimations: Bool) {
         self.blurredImageNode = TransformImageNode()
         self.blurredImageNode.contentAnimations = []
          
@@ -231,10 +244,11 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: .white)
+        self.iconNode.image = icon.image
         
         self.textNode = ImmediateTextNode()
-                
+        self.textNode.isUserInteractionEnabled = false
+        
         super.init()
                 
         if hasImageOverlay {
@@ -244,8 +258,8 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         self.addSubnode(self.buttonNode)
 
         self.buttonNode.addSubnode(self.highlightedBackgroundNode)
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.textNode)
+        self.buttonNode.addSubnode(self.iconNode)
+        self.buttonNode.addSubnode(self.textNode)
         
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -263,7 +277,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     }
     
     @objc private func buttonPressed() {
-        
+        self.tapped()
     }
         
     override func didLoad() {
@@ -284,10 +298,14 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         self.maskLayer = maskLayer
     }
     
-    func reveal() {
+    func reveal(animated: Bool = false) {
         self.isRevealed = true
-        self.blurredImageNode.removeFromSupernode()
-        self.dustNode.removeFromSupernode()
+        if animated {
+            self.dustNode.tap(at: CGPoint(x: self.dustNode.bounds.width / 2.0, y: self.dustNode.bounds.height / 2.0))
+        } else {
+            self.blurredImageNode.removeFromSupernode()
+            self.dustNode.removeFromSupernode()
+        }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -317,12 +335,20 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
 
             self.isRevealed = self.dustNode.isRevealed
             self.dustNode.revealed = { [weak self] in
-                self?.isRevealed = true
-                self?.blurredImageNode.removeFromSupernode()
+                guard let self else {
+                    return
+                }
+                self.isRevealed = true
+                self.blurredImageNode.removeFromSupernode()
+                self.buttonNode.removeFromSupernode()
             }
             self.dustNode.tapped = { [weak self] in
-                self?.isRevealed = true
-                self?.tapped()
+                guard let self else {
+                    return
+                }
+                if !self.isRevealed {
+                    self.tapped()
+                }
             }
         } else {
             self.blurredImageNode.isHidden = true
@@ -347,8 +373,8 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
                 self.buttonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - contentSize.width) / 2.0), y: floorToScreenPixels((size.height - contentSize.height) / 2.0)), size: contentSize)
                 self.highlightedBackgroundNode.frame = CGRect(origin: .zero, size: contentSize)
                 
-                self.iconNode.frame = CGRect(origin: CGPoint(x: self.buttonNode.frame.minX + padding, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - iconSize.height) / 2.0) + 1.0 - UIScreenPixel), size: iconSize)
-                self.textNode.frame = CGRect(origin: CGPoint(x: self.iconNode.frame.maxX + spacing, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - textSize.height) / 2.0)), size: textSize)
+                self.iconNode.frame = CGRect(origin: CGPoint(x: padding, y: floorToScreenPixels((contentSize.height - iconSize.height) / 2.0) + 1.0 - UIScreenPixel), size: iconSize)
+                self.textNode.frame = CGRect(origin: CGPoint(x: self.iconNode.frame.maxX + spacing, y: floorToScreenPixels((contentSize.height - textSize.height) / 2.0)), size: textSize)
             }
         }
         
@@ -456,7 +482,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     public var activateLocalContent: (InteractiveMediaNodeActivateContent) -> Void = { _ in }
     public var activatePinch: ((PinchSourceContainerNode) -> Void)?
     public var updateMessageReaction: ((Message, ChatControllerInteractionReaction, Bool, ContextExtractedContentContainingView?) -> Void)?
-        
+    public var playMessageEffect: ((Message) -> Void)?
+    public var activateAgeRestrictedMedia: (() -> Void)?
+    
     override public init() {
         self.pinchContainerNode = PinchSourceContainerNode()
 
@@ -635,6 +663,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     break
             }
         }
+    }
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        return result
     }
     
     @objc private func imageTap(_ recognizer: UITapGestureRecognizer) {
@@ -857,6 +890,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
 
             var statusSize = CGSize()
             var statusApply: ((ListViewItemUpdateAnimation) -> Void)?
+            
+            let messageEffect = message.messageEffect(availableMessageEffects: associatedData.availableMessageEffects)
 
             if let dateAndStatus = dateAndStatus {
                 let statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
@@ -874,6 +909,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     reactionPeers: dateAndStatus.dateReactionPeers,
                     displayAllReactionPeers: message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                     areReactionsTags: message.areReactionsTags(accountPeerId: context.account.peerId),
+                    messageEffect: messageEffect,
                     replyCount: dateAndStatus.dateReplies,
                     isPinned: dateAndStatus.isPinned,
                     hasAutoremove: message.isSelfExpiring,
@@ -1464,8 +1500,20 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     transition.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
                                     statusApply(transition)
                                 }
+                                
+                                if messageEffect != nil {
+                                    strongSelf.dateAndStatusNode.pressed = { [weak strongSelf] in
+                                        guard let strongSelf, let message = strongSelf.message else {
+                                            return
+                                        }
+                                        strongSelf.playMessageEffect?(message)
+                                    }
+                                } else {
+                                    strongSelf.dateAndStatusNode.pressed = nil
+                                }
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()
+                                strongSelf.dateAndStatusNode.pressed = nil
                             }
                             
                             if let statusNode = strongSelf.statusNode {
@@ -1846,7 +1894,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             backgroundColor = messageTheme.mediaDateAndStatusFillColor
         }
         
-        if let invoice = invoice {
+        if let invoice = invoice, invoice.currency != "XTR" {
             if let extendedMedia = invoice.extendedMedia {
                 if case let .preview(_, _, maybeVideoDuration) = extendedMedia, let videoDuration = maybeVideoDuration {
                     badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: stringForDuration(videoDuration, position: nil)), iconName: nil)
@@ -2195,6 +2243,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             badgeNode.removeFromSupernode()
         }
         
+        var icon: ExtendedMediaOverlayNode.Icon = .lock
         var displaySpoiler = false
         if let invoice = invoice, let extendedMedia = invoice.extendedMedia, case .preview = extendedMedia {
             displaySpoiler = true
@@ -2202,14 +2251,26 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             displaySpoiler = true
         } else if isSecretMedia {
             displaySpoiler = true
+        } else if message.isAgeRestricted() {
+            displaySpoiler = true
+            icon = .eye
         }
-    
+        
         if displaySpoiler {
             if self.extendedMediaOverlayNode == nil {
-                let extendedMediaOverlayNode = ExtendedMediaOverlayNode(hasImageOverlay: !isSecretMedia, enableAnimations: (self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true) && !isPreview)
+                let enableAnimations = (self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true) && !isPreview
+                let extendedMediaOverlayNode = ExtendedMediaOverlayNode(hasImageOverlay: !isSecretMedia, icon: icon,  enableAnimations: enableAnimations)
                 extendedMediaOverlayNode.tapped = { [weak self] in
-                    self?.internallyVisible = true
-                    self?.updateVisibility()
+                    guard let self else {
+                        return
+                    }
+                    if message.isAgeRestricted() {
+                        self.activateAgeRestrictedMedia?()
+                    } else {
+                        self.internallyVisible = true
+                        self.extendedMediaOverlayNode?.isRevealed = true
+                        self.updateVisibility()
+                    }
                 }
                 self.extendedMediaOverlayNode = extendedMediaOverlayNode
                 self.pinchContainerNode.contentNode.insertSubnode(extendedMediaOverlayNode, aboveSubnode: self.imageNode)
@@ -2228,21 +2289,26 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             
             self.extendedMediaOverlayNode?.isUserInteractionEnabled = tappable
             
-            var paymentText: String = ""
-            outer: for attribute in message.attributes {
-                if let attribute = attribute as? ReplyMarkupMessageAttribute {
-                    for row in attribute.rows {
-                        for button in row.buttons {
-                            if case .payment = button.action {
-                                paymentText = button.title
-                                break outer
+            var viewText: String = ""
+            if message.isAgeRestricted() {
+                //TODO: localize
+                viewText = "18+ Content"
+            } else {
+                outer: for attribute in message.attributes {
+                    if let attribute = attribute as? ReplyMarkupMessageAttribute {
+                        for row in attribute.rows {
+                            for button in row.buttons {
+                                if case .payment = button.action {
+                                    viewText = button.title
+                                    break outer
+                                }
                             }
                         }
+                        break
                     }
-                    break
                 }
             }
-            self.extendedMediaOverlayNode?.update(size: self.imageNode.frame.size, text: paymentText, imageSignal: self.currentBlurredImageSignal, imageFrame: self.imageNode.view.convert(self.imageNode.bounds, to: self.extendedMediaOverlayNode?.view), corners: self.currentImageArguments?.corners)
+            self.extendedMediaOverlayNode?.update(size: self.imageNode.frame.size, text: viewText, imageSignal: self.currentBlurredImageSignal, imageFrame: self.imageNode.view.convert(self.imageNode.bounds, to: self.extendedMediaOverlayNode?.view), corners: self.currentImageArguments?.corners)
         } else if let extendedMediaOverlayNode = self.extendedMediaOverlayNode {
             self.extendedMediaOverlayNode = nil
             extendedMediaOverlayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak extendedMediaOverlayNode] _ in
@@ -2263,6 +2329,10 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 secretTimer.invalidate()
             }
         }
+    }
+    
+    public func reveal() {
+        self.extendedMediaOverlayNode?.reveal(animated: true)
     }
     
     public static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ peerId: EnginePeer.Id?, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode, _ presentationContext: ChatPresentationContext) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> ChatMessageInteractiveMediaNode))) {
@@ -2443,5 +2513,15 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
         } else {
             return nil
         }
+    }
+    
+    public func ignoreTapActionAtPoint(_ point: CGPoint) -> Bool {
+        if let extendedMediaOverlayNode = self.extendedMediaOverlayNode {
+            let convertedPoint = self.view.convert(point, to: extendedMediaOverlayNode.view)
+            if extendedMediaOverlayNode.buttonNode.frame.contains(convertedPoint) {
+                return true
+            }
+        }
+        return false
     }
 }

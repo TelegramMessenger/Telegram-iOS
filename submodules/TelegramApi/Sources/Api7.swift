@@ -169,6 +169,56 @@ public extension Api {
     }
 }
 public extension Api {
+    enum FactCheck: TypeConstructorDescription {
+        case factCheck(flags: Int32, country: String?, text: Api.TextWithEntities?, hash: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .factCheck(let flags, let country, let text, let hash):
+                    if boxed {
+                        buffer.appendInt32(-1197736753)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(country!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {text!.serialize(buffer, true)}
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .factCheck(let flags, let country, let text, let hash):
+                return ("factCheck", [("flags", flags as Any), ("country", country as Any), ("text", text as Any), ("hash", hash as Any)])
+    }
+    }
+    
+        public static func parse_factCheck(_ reader: BufferReader) -> FactCheck? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_2 = parseString(reader) }
+            var _3: Api.TextWithEntities?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            } }
+            var _4: Int64?
+            _4 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.FactCheck.factCheck(flags: _1!, country: _2, text: _3, hash: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum FileHash: TypeConstructorDescription {
         case fileHash(offset: Int64, limit: Int32, hash: Buffer)
     

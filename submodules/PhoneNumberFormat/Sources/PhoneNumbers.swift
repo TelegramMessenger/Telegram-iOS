@@ -5,6 +5,17 @@ import TelegramCore
 
 private let phoneNumberUtil = NBPhoneNumberUtil()
 
+public func enhancePhoneNumberWithCodeFromNumber(_ phoneNumber: String, otherPhoneNumber: String, configuration: CountriesConfiguration) -> String {
+    guard let (_, code) = lookupCountryIdByNumber(otherPhoneNumber, configuration: configuration) else {
+        return phoneNumber
+    }
+    var cleanNumber = cleanPhoneNumber(phoneNumber)
+    while cleanNumber.hasPrefix("0") {
+        cleanNumber.removeFirst()
+    }
+    return "+\(code)\(cleanNumber)"
+}
+
 public func cleanPhoneNumber(_ text: String, removePlus: Bool = false) -> String {
     var result = ""
     for c in text {

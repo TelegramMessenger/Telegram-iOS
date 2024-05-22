@@ -109,8 +109,8 @@ public func updateChatTranslationStateInteractively(engine: TelegramEngine, peer
 @available(iOS 12.0, *)
 private let languageRecognizer = NLLanguageRecognizer()
 
-public func translateMessageIds(context: AccountContext, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, NoError> {
-    return context.account.postbox.transaction { transaction -> Signal<Void, NoError> in
+public func translateMessageIds(context: AccountContext, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Never, NoError> {
+    return context.account.postbox.transaction { transaction -> Signal<Never, NoError> in
         var messageIdsToTranslate: [EngineMessage.Id] = []
         var messageIdsSet = Set<EngineMessage.Id>()
         for messageId in messageIds {
@@ -126,13 +126,22 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
                         }
                     }
                 }
-                if !message.text.isEmpty && message.author?.id != context.account.peerId {
-                    if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
-                    } else {
-                        if !messageIdsSet.contains(messageId) {
-                            messageIdsToTranslate.append(messageId)
-                            messageIdsSet.insert(messageId)
-                        }
+                guard message.author?.id != context.account.peerId else {
+                    continue
+                }
+                if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == toLang {
+                    continue
+                }
+                
+                if !message.text.isEmpty {
+                    if !messageIdsSet.contains(messageId) {
+                        messageIdsToTranslate.append(messageId)
+                        messageIdsSet.insert(messageId)
+                    }
+                } else if let _ = message.media.first(where: { $0 is TelegramMediaPoll }) {
+                    if !messageIdsSet.contains(messageId) {
+                        messageIdsToTranslate.append(messageId)
+                        messageIdsSet.insert(messageId)
                     }
                 }
             } else {
@@ -143,7 +152,7 @@ public func translateMessageIds(context: AccountContext, messageIds: [EngineMess
             }
         }
         return context.engine.messages.translateMessages(messageIds: messageIdsToTranslate, toLang: toLang)
-        |> `catch` { _ -> Signal<Void, NoError> in
+        |> `catch` { _ -> Signal<Never, NoError> in
             return .complete()
         }
     } |> switchToLatest

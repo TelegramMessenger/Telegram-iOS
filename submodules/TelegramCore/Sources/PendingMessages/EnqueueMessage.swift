@@ -248,6 +248,10 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
             return true
         case _ as WebpagePreviewMessageAttribute:
             return true
+        case _ as InvertMediaMessageAttribute:
+            return true
+        case _ as EffectMessageAttribute:
+            return true
         default:
             return false
         }

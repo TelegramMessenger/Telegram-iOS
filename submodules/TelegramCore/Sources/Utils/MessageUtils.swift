@@ -375,6 +375,10 @@ public extension Message {
             return false
         }
     }
+    
+    func isAgeRestricted() -> Bool {
+        return false
+    }
 }
 
 public extension Message {
@@ -437,6 +441,16 @@ public extension Message {
         }
         return nil
     }
+    
+    var factCheckAttribute: FactCheckMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? FactCheckMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+    
     var inlineBotAttribute: InlineBusinessBotMessageAttribute? {
         for attribute in self.attributes {
             if let attribute = attribute as? InlineBusinessBotMessageAttribute {
@@ -518,6 +532,22 @@ public extension Message {
     var webpagePreviewAttribute: WebpagePreviewMessageAttribute? {
         for attribute in self.attributes {
             if let attribute = attribute as? WebpagePreviewMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+    var invertMedia: Bool {
+        for attribute in self.attributes {
+            if let _ = attribute as? InvertMediaMessageAttribute {
+                return true
+            }
+        }
+        return false
+    }
+    var invertMediaAttribute: InvertMediaMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? InvertMediaMessageAttribute {
                 return attribute
             }
         }

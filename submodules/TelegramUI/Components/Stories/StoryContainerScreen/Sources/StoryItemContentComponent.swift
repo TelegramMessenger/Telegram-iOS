@@ -569,7 +569,7 @@ final class StoryItemContentComponent: Component {
                 return
             }
             if apply {
-                videoNode.seek(timestamp)
+                videoNode.seek(min(timestamp, self.effectiveDuration - 0.3))
             }
             self.isSeeking = true
             self.updateVideoPlaybackProgress(timestamp)

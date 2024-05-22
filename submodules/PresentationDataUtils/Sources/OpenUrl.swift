@@ -5,11 +5,15 @@ import Postbox
 import AccountContext
 import OverlayStatusController
 import UrlWhitelist
+import TelegramPresentationData
 
-public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: String, concealed: Bool, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, present: @escaping (ViewController) -> Void, openResolved: @escaping (ResolvedUrl) -> Void, progress: Promise<Bool>? = nil) -> Disposable {
+public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: String, concealed: Bool, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, forceDark: Bool = false, present: @escaping (ViewController) -> Void, openResolved: @escaping (ResolvedUrl) -> Void, progress: Promise<Bool>? = nil, alertDisplayUpdated: ((ViewController?) -> Void)? = nil) -> Disposable {
     var concealed = concealed
     
-    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    if forceDark {
+        presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+    }
     
     let openImpl: () -> Disposable = {
         let disposable = MetaDisposable()
@@ -87,9 +91,15 @@ public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: 
         var displayUrl = rawDisplayUrl
         displayUrl = displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
         let disposable = MetaDisposable()
-        present(textAlertController(context: context, title: nil, text: presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+        
+        let alertController = textAlertController(context: context, forceTheme: forceDark ? presentationData.theme : nil, title: nil, text: presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
             disposable.set(openImpl())
-        })]))
+        })])
+        alertController.dismissed = {  _ in
+            alertDisplayUpdated?(nil)
+        }
+        present(alertController)
+        alertDisplayUpdated?(alertController)
         return disposable
     } else {
         return openImpl()

@@ -41,6 +41,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
     
     private let backgroundView: BlurredBackgroundView
     private(set) var vibrancyEffectView: UIVisualEffectView?
+    let vibrantExpandedContentContainer: UIView
     
     private let maskLayer: SimpleLayer
     private let backgroundClippingLayer: SimpleLayer
@@ -83,6 +84,8 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
             self.largeCircleLayer.cornerCurve = .circular
             self.smallCircleLayer.cornerCurve = .circular
         }
+        
+        self.vibrantExpandedContentContainer = UIView()
         
         super.init()
         
@@ -146,6 +149,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
                     let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
                     let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
                     self.vibrancyEffectView = vibrancyEffectView
+                    vibrancyEffectView.contentView.addSubview(self.vibrantExpandedContentContainer)
                     self.backgroundView.addSubview(vibrancyEffectView)
                 }
             }

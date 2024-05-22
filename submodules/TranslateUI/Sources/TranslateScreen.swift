@@ -11,6 +11,7 @@ import Speak
 import ComponentFlow
 import ViewControllerComponent
 import MultilineTextComponent
+import MultilineTextWithEntitiesComponent
 import BundleIconComponent
 import UndoUI
 
@@ -35,15 +36,17 @@ private final class TranslateScreenComponent: CombinedComponent {
     
     let context: AccountContext
     let text: String
+    let entities: [MessageTextEntity]
     let fromLanguage: String?
     let toLanguage: String
     let copyTranslation: ((String) -> Void)?
     let changeLanguage: (String, String, @escaping (String, String) -> Void) -> Void
     let expand: () -> Void
     
-    init(context: AccountContext, text: String, fromLanguage: String?, toLanguage: String, copyTranslation: ((String) -> Void)?, changeLanguage: @escaping (String, String, @escaping (String, String) -> Void) -> Void, expand: @escaping () -> Void) {
+    init(context: AccountContext, text: String, entities: [MessageTextEntity], fromLanguage: String?, toLanguage: String, copyTranslation: ((String) -> Void)?, changeLanguage: @escaping (String, String, @escaping (String, String) -> Void) -> Void, expand: @escaping () -> Void) {
         self.context = context
         self.text = text
+        self.entities = entities
         self.fromLanguage = fromLanguage
         self.toLanguage = toLanguage
         self.copyTranslation = copyTranslation
@@ -56,6 +59,9 @@ private final class TranslateScreenComponent: CombinedComponent {
             return false
         }
         if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.entities != rhs.entities {
             return false
         }
         if lhs.fromLanguage != rhs.fromLanguage {
@@ -102,7 +108,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.translatedText = text
+                strongSelf.translatedText = text?.0
                 strongSelf.updated(transition: .immediate)
             }, error: { error in
                 
@@ -127,7 +133,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.translatedText = text
+                strongSelf.translatedText = text?.0
                 strongSelf.updated(transition: .immediate)
             }, error: { error in
                 
@@ -995,7 +1001,7 @@ public class TranslateScreen: ViewController {
     
     public var wasDismissed: (() -> Void)?
     
-    public convenience init(context: AccountContext, forceTheme: PresentationTheme? = nil, text: String, canCopy: Bool, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false, ignoredLanguages: [String]? = nil) {
+    public convenience init(context: AccountContext, forceTheme: PresentationTheme? = nil, text: String, entities: [MessageTextEntity] = [], canCopy: Bool, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false, ignoredLanguages: [String]? = nil) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var baseLanguageCode = presentationData.strings.baseLanguageCode
@@ -1024,7 +1030,7 @@ public class TranslateScreen: ViewController {
         var copyTranslationImpl: ((String) -> Void)?
         var changeLanguageImpl: ((String, String, @escaping (String, String) -> Void) -> Void)?
         var expandImpl: (() -> Void)?
-        self.init(context: context, component: TranslateScreenComponent(context: context, text: text, fromLanguage: fromLanguage, toLanguage: toLanguage, copyTranslation: !canCopy ? nil : { text in
+        self.init(context: context, component: TranslateScreenComponent(context: context, text: text, entities: entities, fromLanguage: fromLanguage, toLanguage: toLanguage, copyTranslation: !canCopy ? nil : { text in
             copyTranslationImpl?(text)
         }, changeLanguage: { fromLang, toLang, completion in
             changeLanguageImpl?(fromLang, toLang, completion)

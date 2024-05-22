@@ -402,7 +402,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, AS
         if self.chatController == nil {
             let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: self.context.account.peerId), subject: nil, botStart: nil, mode: .standard(.embedded(invertDirection: false)))
             chatController.alwaysShowSearchResultsAsList = true
-            
+            chatController.includeSavedPeersInSearchResults = true
             self.chatController = chatController
             chatController.navigation_setNavigationController(self.navigationController())
             

@@ -419,3 +419,38 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
         return result
     }
 }
+
+public func effectMessageReactions(context: AccountContext) -> Signal<[ReactionItem], NoError> {
+    return context.engine.stickers.availableMessageEffects()
+    |> take(1)
+    |> map { availableMessageEffects -> [ReactionItem] in
+        guard let availableMessageEffects else {
+            return []
+        }
+        
+        var result: [ReactionItem] = []
+        var existingIds = Set<Int64>()
+        
+        for messageEffect in availableMessageEffects.messageEffects {
+            if existingIds.contains(messageEffect.id) {
+                continue
+            }
+            existingIds.insert(messageEffect.id)
+            
+            let mainFile: TelegramMediaFile = messageEffect.effectSticker
+            
+            result.append(ReactionItem(
+                reaction: ReactionItem.Reaction(rawValue: .custom(messageEffect.id)),
+                appearAnimation: mainFile,
+                stillAnimation: mainFile,
+                listAnimation: mainFile,
+                largeListAnimation: mainFile,
+                applicationAnimation: nil,
+                largeApplicationAnimation: nil,
+                isCustom: true
+            ))
+        }
+
+        return result
+    }
+}

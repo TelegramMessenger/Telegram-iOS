@@ -70,7 +70,12 @@ import ChatMessageWallpaperBubbleContentNode
 import ChatMessageGiftBubbleContentNode
 import ChatMessageGiveawayBubbleContentNode
 import ChatMessageJoinedChannelBubbleContentNode
+import ChatMessageFactCheckBubbleContentNode
 import UIKitRuntimeUtils
+import ChatMessageTransitionNode
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import LottieMetal
 
 private struct BubbleItemAttributes {
     var isAttachment: Bool
@@ -105,7 +110,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     let hideAllAdditionalInfo = item.presentationData.isPreview
     
     var hasSeparateCommentsButton = false
-    
+        
     outer: for (message, itemAttributes) in item.content {
         for attribute in message.attributes {
             if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
@@ -244,7 +249,11 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     messageWithCaptionToAdd = (message, itemAttributes)
                     skipText = true
                 } else {
-                    result.append((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)))
+                    if let _ = message.attributes.first(where: { $0 is InvertMediaMessageAttribute }) {
+                        result.insert((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)), at: 0)
+                    } else {
+                        result.append((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)))
+                    }
                     needReactions = false
                 }
             } else {
@@ -274,7 +283,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 break inner
             }
         }
-
+        
         if message.adAttribute != nil {
             result.removeAll()
 
@@ -285,12 +294,27 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         if isUnsupportedMedia {
             result.append((message, ChatMessageUnsupportedBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
             needReactions = false
+        } else {
+            for attribute in message.attributes {
+                if let attribute = attribute as? FactCheckMessageAttribute, case .Loaded = attribute.content {
+                    result.append((message, ChatMessageFactCheckBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                    needReactions = false
+                    break
+                }
+            }
         }
     }
     
     if let (messageWithCaptionToAdd, itemAttributes) = messageWithCaptionToAdd {
-        result.append((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
-        needReactions = false
+        if let _ = messageWithCaptionToAdd.attributes.first(where: { $0 is InvertMediaMessageAttribute }) {
+            if result.isEmpty {
+                needReactions = false
+            }
+            result.insert((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)), at: 0)
+        } else {
+            result.append((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+            needReactions = false
+        }
     }
     
     if let additionalContent = item.additionalContent {
@@ -601,14 +625,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var appliedForwardInfo: (Peer?, String?)?
     private var disablesComments = true
     
+    private var wasPending: Bool = false
+    private var didChangeFromPendingToSent: Bool = false
+    
     private var authorNameColor: UIColor?
     
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     
     private var replyRecognizer: ChatSwipeToReplyRecognizer?
     private var currentSwipeAction: ChatControllerInteractionSwipeAction?
-    
-    //private let debugNode: ASDisplayNode
     
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -626,6 +651,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 self.visibilityStatus = self.visibility != .none
+                
+                self.updateVisibility()
             }
         }
     }
@@ -761,24 +788,24 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         self.mainContextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtractedToContextPreview, _ in
-            guard let strongSelf = self, let _ = strongSelf.item else {
+            guard let self, let _ = self.item else {
                 return
             }
-            for contentNode in strongSelf.contentNodes {
+            for contentNode in self.contentNodes {
                 contentNode.willUpdateIsExtractedToContextPreview(isExtractedToContextPreview)
             }
         }
         self.mainContextSourceNode.isExtractedToContextPreviewUpdated = { [weak self] isExtractedToContextPreview in
-            guard let strongSelf = self else {
+            guard let self else {
                 return
             }
-            strongSelf.backgroundWallpaperNode.setMaskMode(strongSelf.backgroundMaskMode)
-            strongSelf.backgroundNode.setMaskMode(strongSelf.backgroundMaskMode)
-            if !isExtractedToContextPreview, let (rect, size) = strongSelf.absoluteRect {
-                strongSelf.updateAbsoluteRect(rect, within: size)
+            self.backgroundWallpaperNode.setMaskMode(self.backgroundMaskMode)
+            self.backgroundNode.setMaskMode(self.backgroundMaskMode)
+            if !isExtractedToContextPreview, let (rect, size) = self.absoluteRect {
+                self.updateAbsoluteRect(rect, within: size)
             }
-            
-            for contentNode in strongSelf.contentNodes {
+              
+            for contentNode in self.contentNodes {
                 contentNode.updateIsExtractedToContextPreview(isExtractedToContextPreview)
             }
         }
@@ -802,9 +829,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             strongSelf.applyAbsoluteOffsetSpringInternal(value: value, duration: duration, damping: damping)
         }
     }
-    
+        
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
     }
 
     override public func cancelInsertionAnimations() {
@@ -1141,18 +1171,23 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     let contentNodePoint = strongSelf.view.convert(point, to: contentNode.view)
                     let tapAction = contentNode.tapActionAtPoint(contentNodePoint, gesture: .tap, isEstimating: true)
                     switch tapAction.content {
-                        case .none:
-                            if let _ = strongSelf.item?.controllerInteraction.tapMessage {
-                                return .waitForSingleTap
-                            }
-                            break
-                        case .ignore:
-                            return .fail
-                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji:
+                    case .none:
+                        if let _ = strongSelf.item?.controllerInteraction.tapMessage {
                             return .waitForSingleTap
+                        }
+                        break
+                    case .ignore:
+                        return .fail
+                    case .url, .phone, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji:
+                        return .waitForSingleTap
                     }
                 }
+                
                 if !strongSelf.backgroundNode.frame.contains(point) {
+                    return .waitForDoubleTap
+                }
+                
+                if strongSelf.currentMessageEffect() != nil {
                     return .waitForDoubleTap
                 }
             }
@@ -1327,7 +1362,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
     }
     
-    private static func beginLayout(selfReference: Weak<ChatMessageBubbleItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool,
+    private static func beginLayout(
+        selfReference: Weak<ChatMessageBubbleItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool,
         currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))],
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         viaMeasureLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
@@ -1437,6 +1473,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     ignoreNameHiding = true
                 }
                 
+                if let subject = item.associatedData.subject, case let .customChatContents(contents) = subject, case .hashTagSearch = contents.kind {
+                    ignoreNameHiding = true
+                }
+                
                 displayAuthorInfo = !mergedTop.merged && allowAuthor && peerId.isGroupOrChannel && effectiveAuthor != nil
                 if let forwardInfo = firstMessage.forwardInfo, forwardInfo.psaType != nil {
                     displayAuthorInfo = false
@@ -1462,6 +1502,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                 }
             } else if incoming {
+                hasAvatar = true
+            }
+            
+            if let subject = item.associatedData.subject, case let .customChatContents(contents) = subject, case .hashTagSearch = contents.kind {
                 hasAvatar = true
             }
         }
@@ -2054,6 +2098,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if !displayHeader, case .peer = item.chatLocation, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
                 displayHeader = true
             }
+            if case let .customChatContents(contents) = item.associatedData.subject, case .hashTagSearch = contents.kind, let peer = item.message.peers[item.message.id.peerId] {
+                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    
+                } else {
+                    displayHeader = true
+                }
+            }
         }
         
         let firstNodeTopPosition: ChatMessageBubbleRelativePosition
@@ -2084,8 +2135,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             maximumNodeWidth = size.width
             
+            var hasText = false
+            for contentItem in contentNodeMessagesAndClasses {
+                if let _ = contentItem.1 as? ChatMessageTextBubbleContentNode.Type {
+                    hasText = true
+                }
+            }
+                        
             if case .customChatContents = item.associatedData.subject {
-            } else if mosaicRange.upperBound == contentPropertiesAndLayouts.count || contentPropertiesAndLayouts[contentPropertiesAndLayouts.count - 1].3.isAttachment {
+            } else if (mosaicRange.upperBound == contentPropertiesAndLayouts.count || contentPropertiesAndLayouts[contentPropertiesAndLayouts.count - 1].3.isAttachment) && !hasText {
                 let message = item.content.firstMessage
                 
                 var edited = false
@@ -2153,6 +2211,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     reactionPeers: dateReactionsAndPeers.peers,
                     displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                     areReactionsTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId),
+                    messageEffect: item.message.messageEffect(availableMessageEffects: item.associatedData.availableMessageEffects),
                     replyCount: dateReplies,
                     isPinned: message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                     hasAutoremove: message.isSelfExpiring,
@@ -2368,9 +2427,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     headerSize.height += 2.0
                 }
             }
+            
+            var hasThreadInfo = false
+            if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1 || item.associatedData.isRecentActions), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
+                hasThreadInfo = true
+            } else if case let .customChatContents(contents) = item.associatedData.subject, case .hashTagSearch = contents.kind {
+                hasThreadInfo = true
+            }
                         
             var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
-            if !isInstantVideo, case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1 || item.associatedData.isRecentActions), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
+            if !isInstantVideo, hasThreadInfo {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
                 }
@@ -2387,6 +2453,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         context: item.context,
                         controllerInteraction: item.controllerInteraction,
                         type: .bubble(incoming: incoming),
+                        peer: item.message.peers[item.message.id.peerId].flatMap(EnginePeer.init),
                         threadId: item.message.threadId ?? 1,
                         parentMessage: item.message,
                         constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude),
@@ -2737,7 +2804,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 let contentNodeFrame = framesAndPositions[mosaicIndex].0.offsetBy(dx: 0.0, dy: contentNodesHeight)
                 contentNodeFramesPropertiesAndApply.append((contentNodeFrame, properties, true, apply))
                 
-                if mosaicIndex == mosaicRange.upperBound - 1 {
+                if i == mosaicRange.upperBound - 1 {
                     contentNodesHeight += size.height
                     totalContentNodesHeight += size.height
                     
@@ -2988,6 +3055,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     ) -> Void {
         guard let strongSelf = selfReference.value else {
             return
+        }
+        
+        if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal || item.message.id.namespace == Namespaces.Message.QuickReplyLocal {
+            strongSelf.wasPending = true
+        }
+        if strongSelf.wasPending && (item.message.id.namespace != Namespaces.Message.Local && item.message.id.namespace != Namespaces.Message.ScheduledLocal && item.message.id.namespace != Namespaces.Message.QuickReplyLocal) {
+            strongSelf.didChangeFromPendingToSent = true
         }
         
         let themeUpdated = strongSelf.appliedItem?.presentationData.theme.theme !== item.presentationData.theme.theme
@@ -3423,6 +3497,18 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         credibilityIconView?.removeFromSuperview()
                     })
                 }
+                if let boostBadgeNode = strongSelf.boostBadgeNode {
+                    strongSelf.boostBadgeNode = nil
+                    boostBadgeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak boostBadgeNode] _ in
+                        boostBadgeNode?.removeFromSupernode()
+                    })
+                }
+                if let boostIconNode = strongSelf.boostIconNode {
+                    strongSelf.boostIconNode = nil
+                    boostIconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak boostIconNode] _ in
+                        boostIconNode?.removeFromSuperview()
+                    })
+                }
             } else {
                 strongSelf.nameNode?.removeFromSupernode()
                 strongSelf.nameNode = nil
@@ -3430,19 +3516,23 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.adminBadgeNode = nil
                 strongSelf.credibilityIconView?.removeFromSuperview()
                 strongSelf.credibilityIconView = nil
-                strongSelf.nameButtonNode?.removeFromSupernode()
-                strongSelf.nameButtonNode = nil
-                strongSelf.nameHighlightNode?.removeFromSupernode()
-                strongSelf.nameHighlightNode = nil
-                strongSelf.credibilityButtonNode?.removeFromSupernode()
-                strongSelf.credibilityButtonNode = nil
-                strongSelf.credibilityHighlightNode?.removeFromSupernode()
-                strongSelf.credibilityHighlightNode = nil
-                strongSelf.boostButtonNode?.removeFromSupernode()
-                strongSelf.boostButtonNode = nil
-                strongSelf.boostHighlightNode?.removeFromSupernode()
-                strongSelf.boostHighlightNode = nil
+                strongSelf.boostBadgeNode?.removeFromSupernode()
+                strongSelf.boostBadgeNode = nil
+                strongSelf.boostIconNode?.removeFromSuperview()
+                strongSelf.boostIconNode = nil
             }
+            strongSelf.nameButtonNode?.removeFromSupernode()
+            strongSelf.nameButtonNode = nil
+            strongSelf.nameHighlightNode?.removeFromSupernode()
+            strongSelf.nameHighlightNode = nil
+            strongSelf.credibilityButtonNode?.removeFromSupernode()
+            strongSelf.credibilityButtonNode = nil
+            strongSelf.credibilityHighlightNode?.removeFromSupernode()
+            strongSelf.credibilityHighlightNode = nil
+            strongSelf.boostButtonNode?.removeFromSupernode()
+            strongSelf.boostButtonNode = nil
+            strongSelf.boostHighlightNode?.removeFromSupernode()
+            strongSelf.boostHighlightNode = nil
         }
             
         let timingFunction = kCAMediaTimingFunctionSpring        
@@ -3934,6 +4024,17 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             let absoluteOrigin = mosaicStatusOrigin.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
             statusNodeAnimation.animator.updateFrame(layer: mosaicStatusNode.layer, frame: CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size), completion: nil)
+            
+            if item.message.messageEffect(availableMessageEffects: item.associatedData.availableMessageEffects) != nil {
+                mosaicStatusNode.pressed = { [weak strongSelf] in
+                    guard let strongSelf, let item = strongSelf.item else {
+                        return
+                    }
+                    item.controllerInteraction.playMessageEffect(item.message)
+                }
+            } else {
+                mosaicStatusNode.pressed = nil
+            }
         } else if let mosaicStatusNode = strongSelf.mosaicStatusNode {
             strongSelf.mosaicStatusNode = nil
             mosaicStatusNode.removeFromSupernode()
@@ -4208,6 +4309,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         strongSelf.updateSearchTextHighlightState()
         
+        strongSelf.updateVisibility()
+        
         if let (_, f) = strongSelf.awaitingAppliedReaction {
             strongSelf.awaitingAppliedReaction = nil
             
@@ -4463,7 +4566,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                     if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                                     } else if case .member = channel.participationStatus {
                                     } else if !item.message.id.peerId.isReplies {
-                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, false, forwardInfoNode, nil)
                                         return
                                     }
                                 }
@@ -4475,7 +4578,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 if let textNode = forwardInfoNode.nameNode {
                                     subRect = textNode.frame
                                 }
-                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, subRect)
+                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, false, forwardInfoNode, subRect)
                             }
                         }
                         
@@ -4541,6 +4644,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url.url, concealed: url.concealed, message: item.content.firstMessage, allowInlineWebpageResolution: url.allowInlineWebpageResolution, progress: tapAction.activate?()))
                             }, contextMenuOnLongPress: !tapAction.hasLongTapAction))
                         }
+                    case let .phone(number):
+                        return .action(InternalBubbleTapAction.Action({ [weak self] in
+                            guard let self, let item = self.item, let contentNode = self.contextContentNodeForPhoneNumber(number) else {
+                                return
+                            }
+                            
+                            self.addSubnode(contentNode)
+                            
+                            item.controllerInteraction.openPhoneContextMenu(ChatControllerInteraction.OpenPhone(number: number, message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
+                        }, contextMenuOnLongPress: !tapAction.hasLongTapAction))
                     case let .peerMention(peerId, _, openProfile):
                         return .action(InternalBubbleTapAction.Action { [weak self] in
                             if let item = self?.item {
@@ -4615,7 +4728,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     case let .tooltip(text, node, rect):
                         if let item = self.item {
                             return .optionalAction({
-                                let _ = item.controllerInteraction.displayMessageTooltip(item.message.id, text, node, rect)
+                                let _ = item.controllerInteraction.displayMessageTooltip(item.message.id, text, false, node, rect)
                             })
                         }
                     case let .openPollResults(option):
@@ -4642,6 +4755,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 item.controllerInteraction.displayEmojiPackTooltip(file, item.message)
                             })
                         }
+                    }
+                }
+                if self.currentMessageEffect() != nil {
+                    if self.backgroundNode.frame.contains(location) {
+                        return .action(InternalBubbleTapAction.Action({ [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.playMessageEffect(force: true)
+                        }, contextMenuOnLongPress: true))
                     }
                 }
                 return nil
@@ -4693,6 +4816,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             } else {
                                 disableDefaultPressAnimation = true
                             }
+                        case let .phone(number):
+                            return .action(InternalBubbleTapAction.Action({ [weak self] in
+                                guard let self, let item = self.item, let contentNode = self.contextContentNodeForPhoneNumber(number) else {
+                                    return
+                                }
+                                
+                                self.addSubnode(contentNode)
+                                
+                                item.controllerInteraction.openPhoneContextMenu(ChatControllerInteraction.OpenPhone(number: number, message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
+                            }, contextMenuOnLongPress: !tapAction.hasLongTapAction))
                         case let .peerMention(peerId, mention, _):
                             return .action(InternalBubbleTapAction.Action {
                                 item.controllerInteraction.longTap(.peerMention(peerId, mention), message)
@@ -4760,6 +4893,39 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return nil
     }
     
+    private func contextContentNodeForPhoneNumber(_ number: String) -> ContextExtractedContentContainingNode? {
+        guard let item = self.item else {
+            return nil
+        }
+        let containingNode = ContextExtractedContentContainingNode()
+        
+        let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
+        
+        let textNode = ImmediateTextNode()
+        textNode.attributedText = NSAttributedString(string: number, font: Font.regular(item.presentationData.fontSize.baseDisplaySize), textColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.linkTextColor : item.presentationData.theme.theme.chat.message.outgoing.linkTextColor)
+        let textSize = textNode.updateLayout(CGSize(width: 1000.0, height: 100.0))
+        
+        let backgroundNode = ASDisplayNode()
+        backgroundNode.backgroundColor = (incoming ? item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill : item.presentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper.fill).first ?? .black
+        backgroundNode.clipsToBounds = true
+        backgroundNode.cornerRadius = 10.0
+        
+        let insets = UIEdgeInsets(top: 5.0, left: 8.0, bottom: 5.0, right: 8.0)
+        let backgroundSize = CGSize(width: textSize.width + insets.left + insets.right, height: textSize.height + insets.top + insets.bottom)
+        backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: backgroundSize)
+        textNode.frame = CGRect(origin: CGPoint(x: insets.left, y: insets.top), size: textSize)
+        backgroundNode.addSubnode(textNode)
+        
+        containingNode.frame = CGRect(origin: CGPoint(x: self.backgroundNode.frame.minX + 3.0, y: 1.0), size: CGSize(width: backgroundSize.width, height: backgroundSize.height + 20.0))
+        containingNode.contentNode.frame = CGRect(origin: .zero, size: backgroundSize)
+        containingNode.contentRect = CGRect(origin: .zero, size: backgroundSize)
+        containingNode.contentNode.addSubnode(backgroundNode)
+        
+        containingNode.contentNode.alpha = 0.0
+        
+        return containingNode
+    }
+    
     private func traceSelectionNodes(parent: ASDisplayNode, point: CGPoint) -> ASDisplayNode? {
         if let parent = parent as? FileMessageSelectionNode, parent.bounds.contains(point) {
             return parent
@@ -4824,6 +4990,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         if !self.backgroundNode.frame.contains(point) {
             if let actionButtonsNode = self.actionButtonsNode, let result = actionButtonsNode.hitTest(self.view.convert(point, to: actionButtonsNode.view), with: event) {
+                return result
+            }
+        }
+        
+        if let mosaicStatusNode = self.mosaicStatusNode {
+            if let result = mosaicStatusNode.hitTest(self.view.convert(point, to: mosaicStatusNode.view), with: event) {
                 return result
             }
         }
@@ -5533,6 +5705,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         for contentNode in self.contentNodes {
             contentNode.unreadMessageRangeUpdated()
         }
+        
+        self.updateVisibility()
     }
     
     public func animateQuizInvalidOptionSelected() {
@@ -5717,5 +5891,62 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         }
         return false
+    }
+    
+    private func updateVisibility() {
+        guard let item = self.item else {
+            return
+        }
+        
+        var isPlaying = true
+        if case let .visible(_, subRect) = self.visibility {
+            if subRect.minY > 32.0 {
+                isPlaying = false
+            }
+        } else {
+            isPlaying = false
+        }
+        
+        if !isPlaying {
+            self.removeEffectAnimations()
+        }
+        
+        if isPlaying {
+            var alreadySeen = true
+            if item.message.flags.contains(.Incoming) {
+                if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
+                    if unreadRange.contains(item.message.id.id) {
+                        if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                            alreadySeen = false
+                        }
+                    }
+                }
+            } else {
+                if self.didChangeFromPendingToSent {
+                    if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                        alreadySeen = false
+                    }
+                }
+            }
+            
+            if !alreadySeen {
+                item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
+                
+                self.playMessageEffect(force: false)
+            }
+        }
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        for contentNode in self.contentNodes {
+            if let result = contentNode.messageEffectTargetView() {
+                return result
+            }
+        }
+        if let mosaicStatusNode = self.mosaicStatusNode, let result = mosaicStatusNode.messageEffectTargetView() {
+            return result
+        }
+        
+        return nil
     }
 }

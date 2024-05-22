@@ -141,6 +141,8 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var wasPending: Bool = false
     private var didChangeFromPendingToSent: Bool = false
     
+    private var fetchEffectDisposable: Disposable?
+    
     required public init(rotated: Bool) {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
@@ -593,7 +595,9 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let isPlaying = self.visibilityStatus == true && !self.forceStopAnimations
         if !isPlaying {
             self.removeAdditionalAnimations()
+            self.removeEffectAnimations()
         }
+        
         if let animationNode = self.animationNode as? AnimatedStickerNode {
             if self.isPlaying != isPlaying || (isPlaying && !self.didSetUpAnimationNode) {
                 self.isPlaying = isPlaying
@@ -623,6 +627,23 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if isPlaying, let animationNode = self.animationNode as? AnimatedStickerNode {
+            var effectAlreadySeen = true
+            if item.message.flags.contains(.Incoming) {
+                if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
+                    if unreadRange.contains(item.message.id.id) {
+                        if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                            effectAlreadySeen = false
+                        }
+                    }
+                }
+            } else {
+                if self.didChangeFromPendingToSent {
+                    if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
+                        effectAlreadySeen = false
+                    }
+                }
+            }
+            
             var alreadySeen = true
             if isEmoji && self.emojiString == nil {
                 if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
@@ -658,6 +679,10 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     animationNode.seekTo(.start)
                     animationNode.playOnce()
                 }
+            }
+            
+            if !effectAlreadySeen {
+                self.playMessageEffect(force: false)
             }
         }
     }
@@ -1030,6 +1055,8 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 isReplyThread = true
             }
             
+            let messageEffect = item.message.messageEffect(availableMessageEffects: item.associatedData.availableMessageEffects)
+            
             let statusSuggestedWidthAndContinue = makeDateAndStatusLayout(ChatMessageDateAndStatusNode.Arguments(
                 context: item.context,
                 presentationData: item.presentationData,
@@ -1045,6 +1072,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 reactionPeers: dateReactionsAndPeers.peers,
                 displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                 areReactionsTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId),
+                messageEffect: messageEffect,
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                 hasAutoremove: item.message.isSelfExpiring,
@@ -1128,6 +1156,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     context: item.context,
                     controllerInteraction: item.controllerInteraction,
                     type: .standalone,
+                    peer: nil,
                     threadId: item.message.threadId ?? 1,
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: availableContentWidth, height: CGFloat.greatestFiniteMagnitude),
@@ -1756,6 +1785,13 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                             item.controllerInteraction.displayImportedMessageTooltip(strongSelf.dateAndStatusNode)
                         }
+                    } else if messageEffect != nil {
+                        strongSelf.dateAndStatusNode.pressed = {
+                            guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
+                                return
+                            }
+                            item.controllerInteraction.playMessageEffect(item.message)
+                        }
                     } else {
                         strongSelf.dateAndStatusNode.pressed = nil
                     }
@@ -2083,7 +2119,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                                 } else if case .member = channel.participationStatus {
                                 } else {
-                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, false, forwardInfoNode, nil)
                                     return
                                 }
                             }
@@ -2091,7 +2127,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         } else if let peer = forwardInfo.source ?? forwardInfo.author {
                             item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info(nil) : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                         } else if let _ = forwardInfo.authorSignature {
-                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
+                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, false, forwardInfoNode, nil)
                         }
                     }
                     
@@ -2985,6 +3021,14 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         return (image, self.imageNode.frame)
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        if let result = self.dateAndStatusNode.messageEffectTargetView() {
+            return result
+        }
+        
+        return nil
     }
 }
 

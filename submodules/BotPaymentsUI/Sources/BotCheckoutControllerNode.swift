@@ -970,7 +970,13 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     strongSelf.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 } else {
                     var dismissImpl: (() -> Void)?
-                    let controller = BotCheckoutWebInteractionController(context: context, url: customUrl ?? paymentForm.url, intent: .addPaymentMethod(customTitle: customTitle, completion: { [weak self] token in
+                    let url: String
+                    if let customUrl {
+                        url = customUrl
+                    } else {
+                        url = paymentForm.url ?? ""
+                    }
+                    let controller = BotCheckoutWebInteractionController(context: context, url: url, intent: .addPaymentMethod(customTitle: customTitle, completion: { [weak self] token in
                         dismissImpl?()
                         
                         guard let strongSelf = self else {
@@ -1455,12 +1461,12 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         }
         
         if !liabilityNoticeAccepted {
-            let botPeer: Signal<EnginePeer?, NoError> = context.engine.data.get(
+            let botPeer: Signal<EnginePeer?, NoError> = self.context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: paymentForm.paymentBotId)
             )
-            let providerPeer: Signal<EnginePeer?, NoError> = context.engine.data.get(
-                TelegramEngine.EngineData.Item.Peer.Peer(id: paymentForm.providerId)
-            )
+            let providerPeer: Signal<EnginePeer?, NoError> = paymentForm.providerId.flatMap { 
+                self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: $0))
+            } ?? .single(nil)
             let _ = (combineLatest(
                 ApplicationSpecificNotice.getBotPaymentLiability(accountManager: self.context.sharedContext.accountManager, peerId: paymentForm.paymentBotId),
                 botPeer,

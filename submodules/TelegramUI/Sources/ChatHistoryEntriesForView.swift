@@ -161,8 +161,10 @@ func chatHistoryEntriesForView(
             }
         }
         
-        if skipViewOnceMedia, message.minAutoremoveOrClearTimeout != nil {
-            continue loop
+        if skipViewOnceMedia, let minAutoremoveOrClearTimeout = message.minAutoremoveOrClearTimeout {
+            if minAutoremoveOrClearTimeout <= 60 {
+                continue loop
+            }
         }
         
         var contentTypeHint: ChatMessageEntryContentType = .generic

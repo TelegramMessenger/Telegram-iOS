@@ -774,7 +774,7 @@ final class ChatbotSetupScreenComponent: Component {
                                 image: checkIcon,
                                 tintColor: !self.hasAccessToAllChatsByDefault ? .clear : environment.theme.list.itemAccentColor,
                                 contentMode: .center
-                            )))),
+                            ))), false),
                             accessory: nil,
                             action: { [weak self] _ in
                                 guard let self else {
@@ -804,7 +804,7 @@ final class ChatbotSetupScreenComponent: Component {
                                 image: checkIcon,
                                 tintColor: self.hasAccessToAllChatsByDefault ? .clear : environment.theme.list.itemAccentColor,
                                 contentMode: .center
-                            )))),
+                            ))), false),
                             accessory: nil,
                             action: { [weak self] _ in
                                 guard let self else {

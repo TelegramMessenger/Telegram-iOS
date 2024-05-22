@@ -5,6 +5,7 @@ import AsyncDisplayKit
 final class TooltipControllerNode: ASDisplayNode {
     private let baseFontSize: CGFloat
     private let balancedTextLayout: Bool
+    private let alignment: TooltipController.Alignment
     
     private let dismiss: (Bool) -> Void
     
@@ -26,9 +27,10 @@ final class TooltipControllerNode: ASDisplayNode {
     private var dismissedByTouchOutside = false
     private var dismissByTapOutsideSource = false
     
-    init(content: TooltipControllerContent, baseFontSize: CGFloat, balancedTextLayout: Bool, isBlurred: Bool, dismiss: @escaping (Bool) -> Void, dismissByTapOutside: Bool, dismissByTapOutsideSource: Bool) {
+    init(content: TooltipControllerContent, baseFontSize: CGFloat, balancedTextLayout: Bool, alignment: TooltipController.Alignment, isBlurred: Bool, dismiss: @escaping (Bool) -> Void, dismissByTapOutside: Bool, dismissByTapOutsideSource: Bool) {
         self.baseFontSize = baseFontSize
         self.balancedTextLayout = balancedTextLayout
+        self.alignment = alignment
         
         self.dismissByTapOutside = dismissByTapOutside
         self.dismissByTapOutsideSource = dismissByTapOutsideSource
@@ -45,7 +47,7 @@ final class TooltipControllerNode: ASDisplayNode {
         if case let .attributedText(text) = content {
             self.textNode.attributedText = text
         } else {
-            self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(floor(baseFontSize * 14.0 / 17.0)), textColor: .white, paragraphAlignment: .center)
+            self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(floor(baseFontSize * 14.0 / 17.0)), textColor: .white, paragraphAlignment: alignment == .center ? .center : .natural)
         }
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
@@ -75,7 +77,7 @@ final class TooltipControllerNode: ASDisplayNode {
             })
             self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
         }
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(floor(self.baseFontSize * 14.0 / 17.0)), textColor: .white, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(floor(self.baseFontSize * 14.0 / 17.0)), textColor: .white, paragraphAlignment: self.alignment == .center ? .center : .natural)
         if let layout = self.validLayout {
             self.containerLayoutUpdated(layout, transition: transition)
         }
@@ -84,7 +86,7 @@ final class TooltipControllerNode: ASDisplayNode {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
         
-        let maxWidth = layout.size.width - 20.0
+        let maxWidth = layout.size.width - 20.0 - self.padding * 2.0
         
         let contentSize: CGSize
         

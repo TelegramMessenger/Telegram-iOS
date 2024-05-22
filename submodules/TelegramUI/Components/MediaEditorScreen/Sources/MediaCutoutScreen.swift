@@ -17,6 +17,7 @@ import LottieAnimationComponent
 import MessageInputPanelComponent
 import DustEffect
 import PlainButtonComponent
+import ImageObjectSeparation
 
 private final class MediaCutoutScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -118,7 +119,7 @@ private final class MediaCutoutScreenComponent: Component {
             }
             
             component.mediaEditor.processImage { [weak self] originalImage, _ in
-                cutoutImage(from: originalImage, values: nil, target: .point(point), includeExtracted: false, completion: { [weak self] results in
+                cutoutImage(from: originalImage, crop: nil, target: .point(point), includeExtracted: false, completion: { [weak self] results in
                     Queue.mainQueue().async {
                         if let self, let _ = self.component, let result = results.first, let maskImage = result.maskImage, let controller = self.environment?.controller() as? MediaCutoutScreen {
                             if case let .image(mask, _) = maskImage {
@@ -427,7 +428,7 @@ private final class MediaCutoutScreenComponent: Component {
                 if isFirstTime {
                     let values = component.mediaEditor.values
                     component.mediaEditor.processImage { originalImage, editedImage in
-                        cutoutImage(from: originalImage, editedImage: editedImage, values: values, target: .all, completion: { results in
+                        cutoutImage(from: originalImage, editedImage: editedImage, crop: values.cropValues, target: .all, completion: { results in
                             Queue.mainQueue().async {
                                 if !results.isEmpty {
                                     for result in results {

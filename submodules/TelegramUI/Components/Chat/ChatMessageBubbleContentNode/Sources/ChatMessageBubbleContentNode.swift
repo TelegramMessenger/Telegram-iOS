@@ -141,6 +141,7 @@ public struct ChatMessageBubbleContentTapAction {
     public enum Content {
         case none
         case url(Url)
+        case phone(String)
         case textMention(String)
         case peerMention(peerId: PeerId, mention: String, openProfile: Bool)
         case botCommand(String)
@@ -292,6 +293,10 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
     }
     
     open func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+        return nil
+    }
+    
+    open func messageEffectTargetView() -> UIView? {
         return nil
     }
     

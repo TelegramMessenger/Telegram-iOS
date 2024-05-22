@@ -430,6 +430,7 @@ enum ChatTextInputPanelPasteData {
     case video(Data)
     case gif(Data)
     case sticker(UIImage, Bool)
+    case animatedSticker(Data)
 }
 
 final class ChatTextViewForOverlayContent: UIView, ChatInputPanelViewForOverlayContent {
@@ -1497,6 +1498,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         var displayMediaButton = true
         if case let .customChatContents(customChatContents) = interfaceState.subject {
             switch customChatContents.kind {
+            case .hashTagSearch:
+                break
             case .quickReplyMessageInput:
                 break
             case .businessLinkSetup:
@@ -1863,6 +1866,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 }
                 if case let .customChatContents(customChatContents) = interfaceState.subject {
                     switch customChatContents.kind {
+                    case .hashTagSearch:
+                        placeholder = ""
                     case let .quickReplyMessageInput(_, shortcutType):
                         switch shortcutType {
                         case .generic:
@@ -1895,6 +1900,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             if let interfaceState = self.presentationInterfaceState {
                 if case let .customChatContents(customChatContents) = interfaceState.subject {
                     switch customChatContents.kind {
+                    case .hashTagSearch:
+                        break
                     case .quickReplyMessageInput:
                         break
                     case .businessLinkSetup:
@@ -3377,7 +3384,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 return (sourceView, sourceRect)
             })
             //strongSelf.peekController = controller
-            strongSelf.interfaceInteraction?.presentController(controller, nil)
+            strongSelf.interfaceInteraction?.presentGlobalOverlayController(controller, nil)
             return controller
         }, updateContent: { [weak self] content in
             guard let strongSelf = self else {
@@ -3673,6 +3680,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             
             if case let .customChatContents(customChatContents) = presentationInterfaceState.subject {
                 switch customChatContents.kind {
+                case .hashTagSearch:
+                    break
                 case .quickReplyMessageInput:
                     break
                 case .businessLinkSetup:
@@ -3791,6 +3800,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         if let interfaceState = self.presentationInterfaceState {
             if case let .customChatContents(customChatContents) = interfaceState.subject {
                 switch customChatContents.kind {
+                case .hashTagSearch:
+                    break
                 case .quickReplyMessageInput:
                     break
                 case .businessLinkSetup:
@@ -3894,6 +3905,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             var sendButtonHasApplyIcon = interfaceState.interfaceState.editMessage != nil
             if case let .customChatContents(customChatContents) = interfaceState.subject {
                 switch customChatContents.kind {
+                case .hashTagSearch:
+                    break
                 case .quickReplyMessageInput:
                     break
                 case .businessLinkSetup:
@@ -4378,6 +4391,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             return false
         } else if let data = pasteboard.data(forPasteboardType: "public.mpeg-4") {
             self.paste(.video(data))
+            return false
+        } else if let data = pasteboard.data(forPasteboardType: "public.heics") {
+            self.paste(.animatedSticker(data))
             return false
         } else {
             var isPNG = false

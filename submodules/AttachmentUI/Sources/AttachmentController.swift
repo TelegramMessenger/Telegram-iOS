@@ -14,6 +14,7 @@ import MediaResources
 import LegacyMessageInputPanel
 import LegacyMessageInputPanelInputView
 import AttachmentTextInputPanelNode
+import ChatSendMessageActionUI
 
 public enum AttachmentButtonType: Equatable {
     case gallery
@@ -97,6 +98,7 @@ public protocol AttachmentContainable: ViewController {
     var isContainerExpanded: () -> Bool { get set }
     var isPanGestureEnabled: (() -> Bool)? { get }
     var mediaPickerContext: AttachmentMediaPickerContext? { get }
+    var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? { get }
     
     func isContainerPanningUpdated(_ panning: Bool)
     
@@ -131,6 +133,10 @@ public extension AttachmentContainable {
     var isPanGestureEnabled: (() -> Bool)? {
         return nil
     }
+    
+    var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? {
+        return nil
+    }
 }
 
 public enum AttachmentMediaPickerSendMode {
@@ -148,14 +154,18 @@ public protocol AttachmentMediaPickerContext {
     var selectionCount: Signal<Int, NoError> { get }
     var caption: Signal<NSAttributedString?, NoError> { get }
     
+    var hasCaption: Bool { get }
+    var captionIsAboveMedia: Signal<Bool, NoError> { get }
+    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void
+    
     var loadingProgress: Signal<CGFloat?, NoError> { get }
     var mainButtonState: Signal<AttachmentMainButtonState?, NoError> { get }
     
     func mainButtonAction()
     
     func setCaption(_ caption: NSAttributedString)
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode)
-    func schedule()
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?)
+    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?)
 }
 
 private func generateShadowImage() -> UIImage? {
@@ -243,7 +253,7 @@ public class AttachmentController: ViewController {
         
         private var selectionCount: Int = 0
         
-        fileprivate var mediaPickerContext: AttachmentMediaPickerContext? {
+        var mediaPickerContext: AttachmentMediaPickerContext? {
             didSet {
                 if let mediaPickerContext = self.mediaPickerContext {
                     self.captionDisposable.set((mediaPickerContext.caption
@@ -311,7 +321,7 @@ public class AttachmentController: ViewController {
             
             self.container = AttachmentContainer()
             self.container.canHaveKeyboardFocus = true
-            self.panel = AttachmentPanel(context: controller.context, chatLocation: controller.chatLocation, isScheduledMessages: controller.isScheduledMessages, updatedPresentationData: controller.updatedPresentationData, makeEntityInputView: makeEntityInputView)
+            self.panel = AttachmentPanel(controller: controller, context: controller.context, chatLocation: controller.chatLocation, isScheduledMessages: controller.isScheduledMessages, updatedPresentationData: controller.updatedPresentationData, makeEntityInputView: makeEntityInputView)
             self.panel.fromMenu = controller.fromMenu
             self.panel.isStandalone = controller.isStandalone
             
@@ -417,17 +427,17 @@ public class AttachmentController: ViewController {
                 }
             }
             
-            self.panel.sendMessagePressed = { [weak self] mode in
+            self.panel.sendMessagePressed = { [weak self] mode, parameters in
                 if let strongSelf = self {
                     switch mode {
                     case .generic:
-                        strongSelf.mediaPickerContext?.send(mode: .generic, attachmentMode: .media)
+                        strongSelf.mediaPickerContext?.send(mode: .generic, attachmentMode: .media, parameters: parameters)
                     case .silent:
-                        strongSelf.mediaPickerContext?.send(mode: .silently, attachmentMode: .media)
+                        strongSelf.mediaPickerContext?.send(mode: .silently, attachmentMode: .media, parameters: parameters)
                     case .schedule:
-                        strongSelf.mediaPickerContext?.schedule()
+                        strongSelf.mediaPickerContext?.schedule(parameters: parameters)
                     case .whenOnline:
-                        strongSelf.mediaPickerContext?.send(mode: .whenOnline, attachmentMode: .media)
+                        strongSelf.mediaPickerContext?.send(mode: .whenOnline, attachmentMode: .media, parameters: parameters)
                     }
                 }
             }
@@ -454,6 +464,14 @@ public class AttachmentController: ViewController {
                 if let strongSelf = self {
                     strongSelf.controller?.presentInGlobalOverlay(c, with: nil)
                 }
+            }
+            
+            self.panel.getCurrentSendMessageContextMediaPreview = { [weak self] in
+                guard let self, let currentController = self.currentControllers.last else {
+                    return nil
+                }
+                
+                return currentController.getCurrentSendMessageContextMediaPreview?()
             }
         }
         
@@ -691,7 +709,7 @@ public class AttachmentController: ViewController {
             } else {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
                 
-                let targetPosition = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+                let targetPosition = self.container.position
                 let startPosition = targetPosition.offsetBy(dx: 0.0, dy: layout.size.height)
                 
                 self.container.position = startPosition

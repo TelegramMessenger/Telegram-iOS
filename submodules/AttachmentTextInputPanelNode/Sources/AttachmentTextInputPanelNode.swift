@@ -269,7 +269,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
 
     private var validLayout: (CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool)?
     
-    public var sendMessage: (AttachmentTextInputPanelSendMode) -> Void = { _ in }
+    public var sendMessage: (AttachmentTextInputPanelSendMode, ChatSendMessageActionSheetController.SendParameters?) -> Void = { _, _ in }
     public var updateHeight: (Bool) -> Void = { _ in }
 
     private var updatingInputState = false
@@ -1843,7 +1843,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             sendPressed(effectiveInputText)
             return
         }
-        self.sendMessage(.generic)
+        self.sendMessage(.generic, nil)
     }
     
     @objc func textInputBackgroundViewTap(_ recognizer: UITapGestureRecognizer) {

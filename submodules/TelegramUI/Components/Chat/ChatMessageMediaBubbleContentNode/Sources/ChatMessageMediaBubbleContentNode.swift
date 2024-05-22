@@ -42,20 +42,28 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.interactiveImageNode)
         
         self.interactiveImageNode.activateLocalContent = { [weak self] mode in
-            if let strongSelf = self {
-                if let item = strongSelf.item {
-                    let openChatMessageMode: ChatControllerInteractionOpenMessageMode
-                    switch mode {
-                        case .default:
-                            openChatMessageMode = .default
-                        case .stream:
-                            openChatMessageMode = .stream
-                        case .automaticPlayback:
-                            openChatMessageMode = .automaticPlayback
-                    }
-                    let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: openChatMessageMode))
-                }
+            guard let self, let item = self.item else {
+                return
             }
+            let openChatMessageMode: ChatControllerInteractionOpenMessageMode
+            switch mode {
+                case .default:
+                    openChatMessageMode = .default
+                case .stream:
+                    openChatMessageMode = .stream
+                case .automaticPlayback:
+                    openChatMessageMode = .automaticPlayback
+            }
+            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: openChatMessageMode))
+        }
+        
+        self.interactiveImageNode.activateAgeRestrictedMedia = { [weak self] in
+            guard let self, let item = self.item else {
+                return
+            }
+            let _ = item.controllerInteraction.openAgeRestrictedMessageMedia(item.message, { [weak self] in
+                self?.interactiveImageNode.reveal()
+            })
         }
         
         self.interactiveImageNode.updateMessageReaction = { [weak self] message, value, force, sourceView in
@@ -70,6 +78,12 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 return
             }
             strongSelf.item?.controllerInteraction.activateMessagePinch(sourceNode)
+        }
+        self.interactiveImageNode.playMessageEffect = { [weak self] message in
+            guard let strongSelf = self, let _ = strongSelf.item else {
+                return
+            }
+            strongSelf.item?.controllerInteraction.playMessageEffect(message)
         }
     }
     
@@ -403,8 +417,6 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                                     }
                                     item.controllerInteraction.displayImportedMessageTooltip(strongSelf.interactiveImageNode.dateAndStatusNode)
                                 }
-                            } else {
-                                strongSelf.interactiveImageNode.dateAndStatusNode.pressed = nil
                             }
                         }
                     })
@@ -466,6 +478,9 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+        if self.interactiveImageNode.ignoreTapActionAtPoint(point) {
+            return ChatMessageBubbleContentTapAction(content: .ignore)
+        }
         return ChatMessageBubbleContentTapAction(content: .none)
     }
     
@@ -507,6 +522,13 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.interactiveImageNode.dateAndStatusNode.isHidden {
             return self.interactiveImageNode.dateAndStatusNode.reactionView(value: value)
+        }
+        return nil
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        if !self.interactiveImageNode.dateAndStatusNode.isHidden {
+            return self.interactiveImageNode.dateAndStatusNode.messageEffectTargetView()
         }
         return nil
     }

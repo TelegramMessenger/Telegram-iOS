@@ -52,7 +52,7 @@ public class InvisibleInkDustView: UIView {
     private var animColor: CGColor?
     private let enableAnimations: Bool
     
-    private weak var textNode: TextNode?
+    private weak var textNode: ASDisplayNode?
     private let textMaskNode: ASDisplayNode
     private let textSpotNode: ASImageNode
     
@@ -69,7 +69,7 @@ public class InvisibleInkDustView: UIView {
     public var isRevealed = false
     private var isExploding = false
     
-    public init(textNode: TextNode?, enableAnimations: Bool) {
+    public init(textNode: ASDisplayNode?, enableAnimations: Bool) {
         self.textNode = textNode
         self.enableAnimations = enableAnimations
         
@@ -368,7 +368,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     private var animColor: CGColor?
     private let enableAnimations: Bool
     
-    private weak var textNode: TextNode?
+    private weak var textNode: ASDisplayNode?
     private let textMaskNode: ASDisplayNode
     private let textSpotNode: ASImageNode
     
@@ -385,7 +385,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     public var isRevealed = false
     private var isExploding = false
     
-    public init(textNode: TextNode?, enableAnimations: Bool) {
+    public init(textNode: ASDisplayNode?, enableAnimations: Bool) {
         self.textNode = textNode
         self.enableAnimations = enableAnimations
         

@@ -140,7 +140,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
         self.contentNode.activateAction = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
                 if let _ = item.message.adAttribute {
-                    item.controllerInteraction.activateAdAction(item.message.id)
+                    item.controllerInteraction.activateAdAction(item.message.id, strongSelf.contentNode.makeProgress())
                 } else {
                     var webPageContent: TelegramMediaWebpageLoadedContent?
                     for media in item.message.media {
@@ -748,5 +748,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
     
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         return self.contentNode.reactionTargetView(value: value)
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        return self.contentNode.messageEffectTargetView()
     }
 }

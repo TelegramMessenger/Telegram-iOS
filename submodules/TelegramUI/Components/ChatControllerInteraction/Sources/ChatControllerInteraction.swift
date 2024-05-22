@@ -97,11 +97,13 @@ public struct NavigateToMessageParams {
     public var timestamp: Double?
     public var quote: Quote?
     public var progress: Promise<Bool>?
+    public var forceNew: Bool
     
-    public init(timestamp: Double?, quote: Quote?, progress: Promise<Bool>? = nil) {
+    public init(timestamp: Double?, quote: Quote?, progress: Promise<Bool>? = nil, forceNew: Bool = false) {
         self.timestamp = timestamp
         self.quote = quote
         self.progress = progress
+        self.forceNew = forceNew
     }
 }
 
@@ -112,6 +114,14 @@ public struct OpenMessageParams {
     public init(mode: ChatControllerInteractionOpenMessageMode, progress: Promise<Bool>? = nil) {
         self.mode = mode
         self.progress = progress
+    }
+}
+
+public final class ChatSendMessageEffect {
+    public let id: Int64
+    
+    public init(id: Int64) {
+        self.id = id
     }
 }
 
@@ -140,6 +150,22 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         }
     }
     
+    public struct OpenPhone {
+        public var number: String
+        public var message: Message
+        public var contentNode: ContextExtractedContentContainingNode
+        public var messageNode: ASDisplayNode
+        public var progress: Promise<Bool>?
+        
+        public init(number: String, message: Message, contentNode: ContextExtractedContentContainingNode, messageNode: ASDisplayNode, progress: Promise<Bool>? = nil) {
+            self.number = number
+            self.message = message
+            self.contentNode = contentNode
+            self.messageNode = messageNode
+            self.progress = progress
+        }
+    }
+    
     public let openMessage: (Message, OpenMessageParams) -> Bool
     public let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void
     public let openPeerMention: (String, Promise<Bool>?) -> Void
@@ -154,7 +180,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let tapMessage: ((Message) -> Void)?
     public let clickThroughMessage: () -> Void
     public let toggleMessagesSelection: ([MessageId], Bool) -> Void
-    public let sendCurrentMessage: (Bool) -> Void
+    public let sendCurrentMessage: (Bool, ChatSendMessageEffect?) -> Void
     public let sendMessage: (String) -> Void
     public let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
     public let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void
@@ -193,7 +219,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let requestSelectMessagePollOptions: (MessageId, [Data]) -> Void
     public let requestOpenMessagePollResults: (MessageId, MediaId) -> Void
     public let openAppStorePage: () -> Void
-    public let displayMessageTooltip: (MessageId, String, ASDisplayNode?, CGRect?) -> Void
+    public let displayMessageTooltip: (MessageId, String, Bool, ASDisplayNode?, CGRect?) -> Void
     public let seekToTimecode: (Message, Double, Bool) -> Void
     public let scheduleCurrentMessage: () -> Void
     public let sendScheduledMessagesNow: ([MessageId]) -> Void
@@ -224,7 +250,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openLargeEmojiInfo: (String, String?, TelegramMediaFile) -> Void
     public let openJoinLink: (String) -> Void
     public let openWebView: (String, String, Bool, ChatOpenWebViewSource) -> Void
-    public let activateAdAction: (EngineMessage.Id) -> Void
+    public let activateAdAction: (EngineMessage.Id, Promise<Bool>?) -> Void
     public let openRequestedPeerSelection: (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32, Int32) -> Void
     public let saveMediaToFiles: (EngineMessage.Id) -> Void
     public let openNoAdsDemo: () -> Void
@@ -234,6 +260,10 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openRecommendedChannelContextMenu: (EnginePeer, UIView, ContextGesture?) -> Void
     public let openGroupBoostInfo: (EnginePeer.Id?, Int) -> Void
     public let openStickerEditor: () -> Void
+    public let openPhoneContextMenu: (OpenPhone) -> Void
+    public let openAgeRestrictedMessageMedia: (Message, @escaping () -> Void) -> Void
+    public let playMessageEffect: (Message) -> Void
+    public let editMessageFactCheck: (MessageId) -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -279,7 +309,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         tapMessage: ((Message) -> Void)?,
         clickThroughMessage: @escaping () -> Void,
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
-        sendCurrentMessage: @escaping (Bool) -> Void,
+        sendCurrentMessage: @escaping (Bool, ChatSendMessageEffect?) -> Void,
         sendMessage: @escaping (String) -> Void,
         sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
         sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute, Bool) -> Void,
@@ -318,7 +348,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         requestSelectMessagePollOptions: @escaping (MessageId, [Data]) -> Void,
         requestOpenMessagePollResults: @escaping (MessageId, MediaId) -> Void,
         openAppStorePage: @escaping () -> Void,
-        displayMessageTooltip: @escaping (MessageId, String, ASDisplayNode?, CGRect?) -> Void,
+        displayMessageTooltip: @escaping (MessageId, String, Bool, ASDisplayNode?, CGRect?) -> Void,
         seekToTimecode: @escaping (Message, Double, Bool) -> Void,
         scheduleCurrentMessage: @escaping () -> Void,
         sendScheduledMessagesNow: @escaping ([MessageId]) -> Void,
@@ -349,7 +379,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         openLargeEmojiInfo: @escaping (String, String?, TelegramMediaFile) -> Void,
         openJoinLink: @escaping (String) -> Void,
         openWebView: @escaping (String, String, Bool, ChatOpenWebViewSource) -> Void,
-        activateAdAction: @escaping (EngineMessage.Id) -> Void,
+        activateAdAction: @escaping (EngineMessage.Id, Promise<Bool>?) -> Void,
         openRequestedPeerSelection: @escaping (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32, Int32) -> Void,
         saveMediaToFiles: @escaping (EngineMessage.Id) -> Void,
         openNoAdsDemo: @escaping () -> Void,
@@ -359,6 +389,10 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         openRecommendedChannelContextMenu: @escaping (EnginePeer, UIView, ContextGesture?) -> Void,
         openGroupBoostInfo: @escaping (EnginePeer.Id?, Int) -> Void,
         openStickerEditor: @escaping () -> Void,
+        openPhoneContextMenu: @escaping (OpenPhone) -> Void,
+        openAgeRestrictedMessageMedia: @escaping (Message, @escaping () -> Void) -> Void,
+        playMessageEffect: @escaping (Message) -> Void,
+        editMessageFactCheck: @escaping (MessageId) -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -464,6 +498,10 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.openRecommendedChannelContextMenu = openRecommendedChannelContextMenu
         self.openGroupBoostInfo = openGroupBoostInfo
         self.openStickerEditor = openStickerEditor
+        self.openPhoneContextMenu = openPhoneContextMenu
+        self.openAgeRestrictedMessageMedia = openAgeRestrictedMessageMedia
+        self.playMessageEffect = playMessageEffect
+        self.editMessageFactCheck = editMessageFactCheck
         
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures

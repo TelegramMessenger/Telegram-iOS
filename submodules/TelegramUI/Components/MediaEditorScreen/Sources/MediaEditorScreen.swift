@@ -47,6 +47,7 @@ import StickerPeekUI
 import StickerPackEditTitleController
 import StickerPickerScreen
 import UIKitRuntimeUtils
+import ImageObjectSeparation
 
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
@@ -2008,7 +2009,7 @@ final class MediaEditorScreenComponent: Component {
                               
                 if let subject = controller.node.subject, case .empty = subject {
                     
-                } else if let canCutout = controller.node.canCutout {
+                } else if case let .known(canCutout, _, hasTransparency) = controller.node.stickerCutoutStatus {
                     if controller.node.isCutout || controller.node.stickerMaskDrawingView?.internalState.canUndo == true {
                         hasUndoButton = true
                     }
@@ -2020,7 +2021,7 @@ final class MediaEditorScreenComponent: Component {
                             hasRestoreButton = true
                         }
                     }
-                    if hasUndoButton || controller.node.hasTransparency {
+                    if hasUndoButton || hasTransparency {
                         hasOutlineButton = true
                     }
                 }
@@ -2409,6 +2410,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             case generic
             case addingToPack
             case editing
+            case businessIntro
         }
         
         case storyEditor
@@ -2537,8 +2539,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var isDismissed = false
         private var isDismissBySwipeSuppressed = false
         
-        fileprivate var canCutout: Bool?
-        fileprivate var hasTransparency = false
+        fileprivate var stickerCutoutStatus: MediaEditor.CutoutStatus = .unknown
+        private var stickerCutoutStatusDisposable: Disposable?
         fileprivate var isCutout = false
         
         private (set) var hasAnyChanges = false
@@ -2807,6 +2809,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.appInForegroundDisposable?.dispose()
             self.playbackPositionDisposable?.dispose()
             self.availableReactionsDisposable?.dispose()
+            self.stickerCutoutStatusDisposable?.dispose()
         }
         
         private func setup(with subject: MediaEditorScreen.Subject) {
@@ -2939,15 +2942,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                     controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                 }
-            }           
-            mediaEditor.canCutoutUpdated = { [weak self] canCutout, hasTransparency in
+            }
+            self.stickerCutoutStatusDisposable = (mediaEditor.cutoutStatus
+            |> deliverOnMainQueue).start(next: { [weak self] cutoutStatus in
                 guard let self else {
                     return
                 }
-                self.canCutout = canCutout
-                self.hasTransparency = hasTransparency
+                self.stickerCutoutStatus = cutoutStatus
                 self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
-            }
+            })
             mediaEditor.maskUpdated = { [weak self] mask, apply in
                 guard let self else {
                     return
@@ -3106,6 +3109,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if controller.isEmbeddedEditor == true {
                 mediaEditor.onFirstDisplay = { [weak self] in
                     if let self {
+                        if let transitionInView = self.transitionInView  {
+                            self.transitionInView = nil
+                            transitionInView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak transitionInView] _ in
+                                transitionInView?.removeFromSuperview()
+                            })
+                        }
+                        
                         if effectiveSubject.isPhoto {
                             self.previewContainerView.layer.allowsGroupOpacity = true
                             self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
@@ -3762,6 +3772,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             if let transitionOut = controller.transitionOut(finished, isNew), let destinationView = transitionOut.destinationView {
                 var destinationTransitionView: UIView?
+                var destinationTransitionRect: CGRect = .zero
                 if !finished {
                     if let transitionIn = controller.transitionIn, case let .gallery(galleryTransitionIn) = transitionIn, let sourceImage = galleryTransitionIn.sourceImage, isNew != true {
                         let sourceSuperView = galleryTransitionIn.sourceView?.superview?.superview
@@ -3771,6 +3782,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         destinationTransitionOutView.frame = self.previewContainerView.convert(self.previewContainerView.bounds, to: sourceSuperView)
                         sourceSuperView?.addSubview(destinationTransitionOutView)
                         destinationTransitionView = destinationTransitionOutView
+                        destinationTransitionRect = galleryTransitionIn.sourceRect
                     }
                     if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                         view.animateOut(to: .gallery)
@@ -3850,7 +3862,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let destinationTransitionView {
                     self.previewContainerView.layer.allowsGroupOpacity = true
                     self.previewContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
-                    destinationTransitionView.layer.animateFrame(from: destinationTransitionView.frame, to: destinationView.convert(destinationView.bounds, to: destinationTransitionView.superview), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak destinationTransitionView] _ in
+                    destinationTransitionView.layer.animateFrame(from: destinationTransitionView.frame, to: destinationView.convert(destinationTransitionRect, to: destinationTransitionView.superview), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak destinationTransitionView] _ in
                         destinationTransitionView?.removeFromSuperview()
                     })
                 }
@@ -4922,8 +4934,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 }
                             }
                         },
-                        cutoutUndo: { [weak self, weak controller] in
-                            if let self, let controller, let mediaEditor = self.mediaEditor, let stickerMaskDrawingView = self.stickerMaskDrawingView {
+                        cutoutUndo: { [weak self] in
+                            if let self, let mediaEditor = self.mediaEditor, let stickerMaskDrawingView = self.stickerMaskDrawingView {
                                 if self.entitiesView.hasSelection {
                                     self.entitiesView.selectEntity(nil)
                                 }
@@ -4934,12 +4946,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         mediaEditor.setSegmentationMask(drawingImage)
                                     }
                                     
-                                    if self.isDisplayingTool == .cutoutRestore && !stickerMaskDrawingView.internalState.canUndo && !controller.node.isCutout {
+                                    if self.isDisplayingTool == .cutoutRestore && !stickerMaskDrawingView.internalState.canUndo && !self.isCutout {
                                         self.cutoutScreen?.mode = .erase
                                         self.isDisplayingTool = .cutoutErase
                                         self.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.25))
                                     }
-                                } else if controller.node.isCutout {
+                                } else if self.isCutout {
                                     let action = { [weak self, weak mediaEditor] in
                                         guard let self, let mediaEditor else {
                                             return
@@ -6492,6 +6504,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         var file = stickerFile(resource: resource, thumbnailResource: thumbnailResource, size: Int64(0), dimensions: PixelDimensions(image.size), duration: self.preferredStickerDuration(), isVideo: isVideo)
         
         var menuItems: [ContextMenuItem] = []
+        var hasEmojiSelection = true
         if case let .stickerEditor(mode) = self.mode {
             switch mode {
             case .generic:
@@ -6558,7 +6571,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     contextItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
                     }, iconPosition: .left, action: { c, _ in
-                        c.popItems()
+                        c?.popItems()
                     })))
                     
                     contextItems.append(.separator)
@@ -6619,7 +6632,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         tipSignal: nil,
                         dismissed: nil
                     )
-                    c.pushItems(items: .single(items))
+                    c?.pushItems(items: .single(items))
                 })))
             case .editing:
                 menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_ReplaceSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
@@ -6660,6 +6673,24 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.uploadSticker(file, action: .upload)
                     })
                 })))
+            case .businessIntro:
+                hasEmojiSelection = false
+                menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_SetAsIntroSticker, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
+                    guard let self else {
+                        return
+                    }
+                    f(.default)
+                    
+                    let _ = (imagesReady.get()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.uploadSticker(file, action: .upload)
+                    })
+                })))
             }
         }
         
@@ -6680,14 +6711,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 theme: presentationData.theme,
                 strings: presentationData.strings,
                 item: .portal(portalView),
-                isCreating: true,
+                isCreating: hasEmojiSelection,
                 selectedEmoji: self.stickerSelectedEmoji,
                 selectedEmojiUpdated: { [weak self] selectedEmoji in
                     if let self {
                         self.stickerSelectedEmoji = selectedEmoji
                     }
                 },
-                recommendedEmoji: stickerRecommendedEmoji,
+                recommendedEmoji: self.stickerRecommendedEmoji,
                 menu: menuItems,
                 openPremiumIntro: {}
             ), 
@@ -6934,7 +6965,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             case .addToStickerPack, .createStickerPack:
                                 if let (packReference, packTitle) = packReferenceAndTitle, let navigationController = self.navigationController as? NavigationController {
                                     Queue.mainQueue().after(0.2) {
-                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker)
+                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker, actionPerformed: nil)
                                         (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                         
                                         Queue.mainQueue().after(0.1) {

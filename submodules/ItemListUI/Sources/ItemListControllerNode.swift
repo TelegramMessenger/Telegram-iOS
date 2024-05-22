@@ -905,11 +905,7 @@ open class ItemListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                         if let validLayout = self.validLayout {
                             updatedNode.updateLayout(layout: validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
                         }
-                        if self.rightOverlayNode.supernode != nil {
-                            self.insertSubnode(updatedNode, aboveSubnode: self.rightOverlayNode)
-                        } else {
-                            self.insertSubnode(updatedNode, aboveSubnode: self.listNode)
-                        }
+                        self.addSubnode(updatedNode)
                         updatedNode.activate()
                     }
                 } else {

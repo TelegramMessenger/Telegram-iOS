@@ -31,7 +31,7 @@ public final class ChatShareMessageTagView: UIView, UndoOverlayControllerAdditio
             context: context,
             animationCache: context.animationCache,
             presentationData: presentationData,
-            items: reactionItems.map(ReactionContextItem.reaction),
+            items: reactionItems.map { ReactionContextItem.reaction(item: $0, icon: .none) },
             selectedItems: Set(),
             title: isSingleMessage ? presentationData.strings.Chat_ForwardToSavedMessageTagSelectionTitle : presentationData.strings.Chat_ForwardToSavedMessagesTagSelectionTitle,
             reactionsLocked: false,

@@ -570,7 +570,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                                 .action(ContextMenuActionItem(text: self.presentationData.strings.Common_Back, icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
                                                 }, iconPosition: .left, action: { c ,f in
-                                                    c.popItems()
+                                                    c?.popItems()
                                                 })),
                                                 .separator,
                                                 .action(ContextMenuActionItem(text: self.presentationData.strings.Stickers_Delete_ForEveryone, textColor: .destructive, icon: { _ in return nil }, action: { [weak self] _ ,f in
@@ -591,7 +591,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                                     }
                                                 }))
                                             ]
-                                            c.pushItems(items: .single(ContextController.Items(content: .list(contextItems))))
+                                            c?.pushItems(items: .single(ContextController.Items(content: .list(contextItems))))
                                         }
                                     })))
                                 }
@@ -952,15 +952,13 @@ private final class StickerPackContainer: ASDisplayNode {
             }
             
             let content = StickerPreviewPeekContent(context: context, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: isLocked, menu: menuItems, openPremiumIntro: { [weak self] in
-                guard let self else {
+                guard let strongSelf = self else {
                     return
                 }
-                guard let controller = self.controller else {
-                    return
-                }
-                
-                let premiumController = PremiumIntroScreen(context: context, source: .stickers)
-                controller.push(premiumController)
+                let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                let navigationController = strongSelf.controller?.parentNavigationController
+                strongSelf.controller?.dismiss(animated: false, completion: nil)
+                navigationController?.pushViewController(controller)
             })
             
             return (strongSelf.view, itemLayer.convert(itemLayer.bounds, to: strongSelf.view.layer), content)
@@ -1164,7 +1162,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                 self?.togglePackInstalled()
                             }))
                         ]
-                        c.setItems(.single(ContextController.Items(content: .list(contextItems))), minHeight: nil, animated: true)
+                        c?.setItems(.single(ContextController.Items(content: .list(contextItems))), minHeight: nil, animated: true)
                     } else {
                         f(.default)
                         self.presentDeletePack()
@@ -1259,6 +1257,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 let editorController = context.sharedContext.makeStickerEditorScreen(
                     context: context,
                     source: result,
+                    intro: false,
                     transitionArguments: transitionView.flatMap { ($0, transitionRect, transitionImage) },
                     completion: { file, emoji, commit in
                         dismissImpl?()
@@ -1363,6 +1362,7 @@ private final class StickerPackContainer: ASDisplayNode {
         let controller = context.sharedContext.makeStickerEditorScreen(
             context: context,
             source: (initialFile, emoji),
+            intro: false,
             transitionArguments: nil,
             completion: { file, emoji, commit in
                 let sticker = ImportSticker(
@@ -1986,7 +1986,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     actionAreaBottomInset = 2.0
                 }
             }
-            if let (info, _, isInstalled) = self.currentStickerPack, isInstalled, (!info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)) {
+            if let (info, _, isInstalled) = self.currentStickerPack, isInstalled, (!info.flags.contains(.isCreator) || info.flags.contains(.isEmoji)) {
                 buttonHeight = 42.0
                 actionAreaTopInset = 1.0
                 actionAreaBottomInset = 2.0

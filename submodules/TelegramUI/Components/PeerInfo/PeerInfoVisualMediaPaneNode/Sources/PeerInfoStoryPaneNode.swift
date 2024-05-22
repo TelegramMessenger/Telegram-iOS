@@ -33,6 +33,8 @@ import ShareController
 import UndoUI
 import PlainButtonComponent
 import ComponentDisplayAdapters
+import MediaEditorScreen
+import AvatarNode
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white
@@ -87,6 +89,7 @@ private final class VisualMediaItem: SparseItemGrid.Item {
     let localMonthTimestamp: Int32
     let peer: PeerReference
     let story: EngineStoryItem
+    let authorPeer: EnginePeer?
     let isPinned: Bool
 
     override var id: AnyHashable {
@@ -101,10 +104,11 @@ private final class VisualMediaItem: SparseItemGrid.Item {
         return VisualMediaHoleAnchor(index: self.index, storyId: self.story.id, localMonthTimestamp: self.localMonthTimestamp)
     }
     
-    init(index: Int, peer: PeerReference, story: EngineStoryItem, isPinned: Bool, localMonthTimestamp: Int32) {
+    init(index: Int, peer: PeerReference, story: EngineStoryItem, authorPeer: EnginePeer?, isPinned: Bool, localMonthTimestamp: Int32) {
         self.indexValue = index
         self.peer = peer
         self.story = story
+        self.authorPeer = authorPeer
         self.isPinned = isPinned
         self.localMonthTimestamp = localMonthTimestamp
     }
@@ -139,6 +143,10 @@ private struct Month: Equatable {
 
 private let durationFont: UIFont = {
     Font.semibold(11.0)
+}()
+
+private let avatarFont: UIFont = {
+    avatarPlaceholderFont(size: 10.0)
 }()
 
 private let minDurationImage: UIImage = {
@@ -190,6 +198,22 @@ private let topRightShadowImage: UIImage = {
         
         context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
         context.scaleBy(x: 1.0, y: -1.0)
+        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+        
+        UIGraphicsPushContext(context)
+        baseImage.draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
+    })
+    return image!
+}()
+
+private let topLeftShadowImage: UIImage = {
+    let baseImage = UIImage(bundleImageName: "Peer Info/MediaGridShadow")!
+    let image = generateImage(baseImage.size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+        context.scaleBy(x: -1.0, y: -1.0)
         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
         
         UIGraphicsPushContext(context)
@@ -274,7 +298,11 @@ private enum ItemTopRightIcon {
     case pinned
 }
 
-private final class DurationLayer: CALayer {
+private final class DurationLayer: SimpleLayer {
+    private var authorPeerId: EnginePeer.Id?
+    private var avatarLayer: SimpleLayer?
+    private var disposable: Disposable?
+    
     override init() {
         super.init()
 
@@ -284,6 +312,10 @@ private final class DurationLayer: CALayer {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.disposable?.dispose()
     }
 
     override func action(forKey event: String) -> CAAction? {
@@ -384,34 +416,97 @@ private final class DurationLayer: CALayer {
             self.contents = image?.cgImage
         }
     }
+    
+    func copyAuthor(from other: DurationLayer) {
+        self.contents = other.contents
+        
+        let avatarLayer: SimpleLayer
+        if let current = self.avatarLayer {
+            avatarLayer = current
+        } else {
+            avatarLayer = SimpleLayer()
+            self.avatarLayer = avatarLayer
+            self.addSublayer(avatarLayer)
+            
+            avatarLayer.frame = CGRect(origin: CGPoint(x: -11.0, y: 2.0), size: CGSize(width: 13.0, height: 13.0))
+            avatarLayer.cornerRadius = 13.0 * 0.5
+            avatarLayer.masksToBounds = true
+        }
+        avatarLayer.contents = other.avatarLayer?.contents
+    }
+    
+    func update(directMediaImageCache: DirectMediaImageCache, author: EnginePeer, synchronous: SparseItemGrid.Synchronous) {
+        let avatarLayer: SimpleLayer
+        if let current = self.avatarLayer {
+            avatarLayer = current
+        } else {
+            avatarLayer = SimpleLayer()
+            self.avatarLayer = avatarLayer
+            self.addSublayer(avatarLayer)
+            
+            avatarLayer.frame = CGRect(origin: CGPoint(x: -11.0, y: 2.0), size: CGSize(width: 13.0, height: 13.0))
+            avatarLayer.cornerRadius = 13.0 * 0.5
+            avatarLayer.masksToBounds = true
+        }
+        
+        if self.authorPeerId != author.id {
+            let string = NSAttributedString(string: author.debugDisplayTitle, font: durationFont, textColor: .white)
+            let bounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+            let textSize = CGSize(width: ceil(bounds.width), height: ceil(bounds.height))
+            let sideInset: CGFloat = 6.0
+            let verticalInset: CGFloat = 2.0
+            let image = generateImage(CGSize(width: textSize.width + sideInset * 2.0, height: textSize.height + verticalInset * 2.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                context.setBlendMode(.normal)
+                
+                context.setShadow(offset: CGSize(width: 0.0, height: 0.0), blur: 2.5, color: UIColor(rgb: 0x000000, alpha: 0.22).cgColor)
+                
+                UIGraphicsPushContext(context)
+                string.draw(in: bounds.offsetBy(dx: sideInset, dy: verticalInset))
+                UIGraphicsPopContext()
+            })
+            self.contents = image?.cgImage
+            
+            if let smallProfileImage = author.smallProfileImage, let peerReference = PeerReference(author._asPeer()) {
+                if let result = directMediaImageCache.getAvatarImage(peer: peerReference, resource: MediaResourceReference.avatar(peer: peerReference, resource: smallProfileImage.resource), immediateThumbnail: smallProfileImage.immediateThumbnailData, size: 24, includeBlurred: true, synchronous: synchronous == .full) {
+                    if let image = result.image {
+                        avatarLayer.contents = image.cgImage
+                    } else if let image = result.blurredImage {
+                        avatarLayer.contents = image.cgImage
+                    }
+                    if let loadSignal = result.loadSignal {
+                        self.disposable?.dispose()
+                        self.disposable = (loadSignal
+                        |> deliverOnMainQueue).start(next: { [weak self] image in
+                            guard let self else {
+                                return
+                            }
+                            self.avatarLayer?.contents = image?.cgImage
+                        })
+                    }
+                }
+            } else {
+                self.avatarLayer?.contents = generateImage(CGSize(width: 24.0, height: 24.0), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    
+                    drawPeerAvatarLetters(context: context, size: size, font: avatarFont, letters: author.displayLetters, peerId: author.id, nameColor: author.nameColor)
+                })?.cgImage
+            }
+        }
+    }
 }
 
-private protocol ItemLayer: SparseItemGridLayer {
-    var item: VisualMediaItem? { get set }
-    var durationLayer: DurationLayer? { get set }
-    var minFactor: CGFloat { get set }
-    var selectionLayer: GridMessageSelectionLayer? { get set }
-    var disposable: Disposable? { get set }
-
-    var hasContents: Bool { get set }
-    func setSpoilerContents(_ contents: Any?)
-    
-    func updateDuration(viewCount: Int32?, duration: Int32?, topRightIcon: ItemTopRightIcon?, isMin: Bool, minFactor: CGFloat)
-    func updateSelection(theme: CheckNodeTheme, isSelected: Bool?, animated: Bool)
-    func updateHasSpoiler(hasSpoiler: Bool)
-    
-    func bind(item: VisualMediaItem)
-    func unbind()
-}
-
-private final class GenericItemLayer: CALayer, ItemLayer {
+private final class ItemLayer: CALayer, SparseItemGridLayer {
     var item: VisualMediaItem?
     var viewCountLayer: DurationLayer?
     var durationLayer: DurationLayer?
     var privacyTypeLayer: DurationLayer?
+    var authorLayer: DurationLayer?
     var leftShadowLayer: SimpleLayer?
     var rightShadowLayer: SimpleLayer?
     var topRightShadowLayer: SimpleLayer?
+    var topLeftShadowLayer: SimpleLayer?
     var minFactor: CGFloat = 1.0
     var selectionLayer: GridMessageSelectionLayer?
     var dustLayer: MediaDustLayer?
@@ -457,7 +552,7 @@ private final class GenericItemLayer: CALayer, ItemLayer {
         self.item = item
     }
 
-    func updateDuration(viewCount: Int32?, duration: Int32?, topRightIcon: ItemTopRightIcon?, isMin: Bool, minFactor: CGFloat) {
+    func updateDuration(viewCount: Int32?, duration: Int32?, topRightIcon: ItemTopRightIcon?, author: EnginePeer?, isMin: Bool, minFactor: CGFloat, directMediaImageCache: DirectMediaImageCache, synchronous: SparseItemGrid.Synchronous) {
         self.minFactor = minFactor
         
         if let viewCount {
@@ -510,6 +605,23 @@ private final class GenericItemLayer: CALayer, ItemLayer {
             privacyTypeLayer.removeFromSuperlayer()
         }
         
+        if let author {
+            if let authorLayer = self.authorLayer {
+                authorLayer.update(directMediaImageCache: directMediaImageCache, author: author, synchronous: synchronous)
+            } else {
+                let authorLayer = DurationLayer()
+                authorLayer.contentsGravity = .bottomLeft
+                authorLayer.update(directMediaImageCache: directMediaImageCache, author: author, synchronous: synchronous)
+                self.addSublayer(authorLayer)
+                authorLayer.frame = CGRect(origin: CGPoint(x: 17.0, y: 3.0), size: CGSize())
+                authorLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
+                self.authorLayer = authorLayer
+            }
+        } else if let authorLayer = self.authorLayer {
+            self.authorLayer = nil
+            authorLayer.removeFromSuperlayer()
+        }
+        
         let size = self.bounds.size
         
         if self.viewCountLayer != nil {
@@ -559,6 +671,22 @@ private final class GenericItemLayer: CALayer, ItemLayer {
                 topRightShadowLayer.removeFromSuperlayer()
             }
         }
+        
+        if self.authorLayer != nil {
+            if self.topLeftShadowLayer == nil {
+                let topLeftShadowLayer = SimpleLayer()
+                self.topLeftShadowLayer = topLeftShadowLayer
+                self.insertSublayer(topLeftShadowLayer, at: 0)
+                topLeftShadowLayer.contents = topLeftShadowImage.cgImage
+                let shadowSize = CGSize(width: min(size.width, topLeftShadowImage.size.width), height: min(size.height, topLeftShadowImage.size.height))
+                topLeftShadowLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: shadowSize)
+            }
+        } else {
+            if let topLeftShadowLayer = self.topLeftShadowLayer {
+                self.topLeftShadowLayer = nil
+                topLeftShadowLayer.removeFromSuperlayer()
+            }
+        }
     }
 
     func updateSelection(theme: CheckNodeTheme, isSelected: Bool?, animated: Bool) {
@@ -595,6 +723,15 @@ private final class GenericItemLayer: CALayer, ItemLayer {
                 let previousAlpha = privacyTypeLayer.opacity
                 privacyTypeLayer.opacity = privacyAlpha
                 privacyTypeLayer.animateAlpha(from: CGFloat(previousAlpha), to: CGFloat(privacyAlpha), duration: 0.2)
+            }
+        }
+        
+        if let authorLayer = self.authorLayer {
+            let authorAlpha: Float = isSelected == nil ? 1.0 : 0.0
+            if authorAlpha != authorLayer.opacity {
+                let previousAlpha = authorLayer.opacity
+                authorLayer.opacity = authorAlpha
+                authorLayer.animateAlpha(from: CGFloat(previousAlpha), to: CGFloat(authorAlpha), duration: 0.2)
             }
         }
     }
@@ -635,6 +772,9 @@ private final class GenericItemLayer: CALayer, ItemLayer {
         if let privacyTypeLayer = self.privacyTypeLayer {
             privacyTypeLayer.frame = CGRect(origin: CGPoint(x: size.width - 2.0, y: 3.0), size: CGSize())
         }
+        if let authorLayer = self.authorLayer {
+            authorLayer.frame = CGRect(origin: CGPoint(x: 17.0, y: 3.0), size: CGSize())
+        }
         
         if let leftShadowLayer = self.leftShadowLayer {
             let shadowSize = CGSize(width: min(size.width, leftShadowImage.size.width), height: min(size.height, leftShadowImage.size.height))
@@ -651,6 +791,11 @@ private final class GenericItemLayer: CALayer, ItemLayer {
             topRightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: 0.0), size: shadowSize)
         }
         
+        if let topLeftShadowLayer = self.topLeftShadowLayer {
+            let shadowSize = CGSize(width: min(size.width, topLeftShadowImage.size.width), height: min(size.height, topLeftShadowImage.size.height))
+            topLeftShadowLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: shadowSize)
+        }
+        
         if let binding = binding as? SparseItemGridBindingImpl, let item = item as? VisualMediaItem, let previousItem = self.item {
             if previousItem.story.media.id != item.story.media.id {
                 binding.bindLayers(items: [item], layers: [displayItem], size: size, insets: insets, synchronous: .none)
@@ -664,7 +809,7 @@ private final class GenericItemLayer: CALayer, ItemLayer {
                     }
                     
                     if let selectedMedia {
-                        binding.updateLayerData(story: item.story, item: item, selectedMedia: selectedMedia, layer: layer)
+                        binding.updateLayerData(story: item.story, item: item, selectedMedia: selectedMedia, layer: layer, synchronous: .none)
                     }
                 }
             }
@@ -677,13 +822,16 @@ private final class ItemTransitionView: UIView {
     private var copyDurationLayer: SimpleLayer?
     private var copyViewCountLayer: SimpleLayer?
     private var copyPrivacyTypeLayer: SimpleLayer?
+    private var copyAuthorLayer: SimpleLayer?
     private var copyLeftShadowLayer: SimpleLayer?
     private var copyRightShadowLayer: SimpleLayer?
     private var copyTopRightShadowLayer: SimpleLayer?
+    private var copyTopLeftShadowLayer: SimpleLayer?
     
     private var viewCountLayerBottomLeftPosition: CGPoint?
     private var durationLayerBottomLeftPosition: CGPoint?
     private var privacyTypeLayerTopRightPosition: CGPoint?
+    private var authorLayerTopLeftPosition: CGPoint?
     
     var selectionLayer: GridMessageSelectionLayer?
     
@@ -698,16 +846,20 @@ private final class ItemTransitionView: UIView {
             var viewCountLayer: CALayer?
             var durationLayer: CALayer?
             var privacyTypeLayer: CALayer?
+            var authorLayer: CALayer?
             var leftShadowLayer: CALayer?
             var rightShadowLayer: CALayer?
             var topRightShadowLayer: CALayer?
-            if let itemLayer = itemLayer as? GenericItemLayer {
+            var topLeftShadowLayer: CALayer?
+            if let itemLayer = itemLayer as? ItemLayer {
                 viewCountLayer = itemLayer.viewCountLayer
                 durationLayer = itemLayer.durationLayer
                 privacyTypeLayer = itemLayer.privacyTypeLayer
+                authorLayer = itemLayer.authorLayer
                 leftShadowLayer = itemLayer.leftShadowLayer
                 rightShadowLayer = itemLayer.rightShadowLayer
                 topRightShadowLayer = itemLayer.topRightShadowLayer
+                topLeftShadowLayer = itemLayer.topLeftShadowLayer
                 self.layer.contents = itemLayer.contents
             }
             
@@ -744,6 +896,17 @@ private final class ItemTransitionView: UIView {
                 self.copyTopRightShadowLayer = copyLayer
             }
             
+            if let topLeftShadowLayer {
+                let copyLayer = SimpleLayer()
+                copyLayer.contents = topLeftShadowLayer.contents
+                copyLayer.contentsRect = topLeftShadowLayer.contentsRect
+                copyLayer.contentsGravity = topLeftShadowLayer.contentsGravity
+                copyLayer.contentsScale = topLeftShadowLayer.contentsScale
+                copyLayer.frame = topLeftShadowLayer.frame
+                self.layer.addSublayer(copyLayer)
+                self.copyTopLeftShadowLayer = copyLayer
+            }
+            
             if let viewCountLayer {
                 let copyViewCountLayer = SimpleLayer()
                 copyViewCountLayer.contents = viewCountLayer.contents
@@ -768,6 +931,19 @@ private final class ItemTransitionView: UIView {
                 self.copyPrivacyTypeLayer = copyPrivacyTypeLayer
                 
                 self.privacyTypeLayerTopRightPosition = CGPoint(x: itemLayer.bounds.width - privacyTypeLayer.frame.maxX, y: privacyTypeLayer.frame.minY)
+            }
+            
+            if let authorLayer = authorLayer as? DurationLayer {
+                let copyAuthorLayer = DurationLayer()
+                copyAuthorLayer.contentsRect = authorLayer.contentsRect
+                copyAuthorLayer.contentsGravity = authorLayer.contentsGravity
+                copyAuthorLayer.contentsScale = authorLayer.contentsScale
+                copyAuthorLayer.frame = authorLayer.frame
+                copyAuthorLayer.copyAuthor(from: authorLayer)
+                self.layer.addSublayer(copyAuthorLayer)
+                self.copyAuthorLayer = copyAuthorLayer
+                
+                self.authorLayerTopLeftPosition = CGPoint(x: authorLayer.frame.minX, y: authorLayer.frame.minY)
             }
             
             if let durationLayer {
@@ -804,6 +980,10 @@ private final class ItemTransitionView: UIView {
             transition.setFrame(layer: privacyTypeLayer, frame: CGRect(origin: CGPoint(x: size.width - privacyTypeLayerTopRightPosition.x, y: privacyTypeLayerTopRightPosition.y), size: privacyTypeLayer.bounds.size))
         }
         
+        if let authorLayer = self.copyAuthorLayer, let authorLayerTopLeftPosition = self.authorLayerTopLeftPosition {
+            transition.setFrame(layer: authorLayer, frame: CGRect(origin: CGPoint(x: authorLayerTopLeftPosition.x, y: authorLayerTopLeftPosition.y), size: authorLayer.bounds.size))
+        }
+        
         if let copyLeftShadowLayer = self.copyLeftShadowLayer {
             transition.setFrame(layer: copyLeftShadowLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - copyLeftShadowLayer.bounds.height), size: copyLeftShadowLayer.bounds.size))
         }
@@ -814,6 +994,10 @@ private final class ItemTransitionView: UIView {
         
         if let copyTopRightShadowLayer = self.copyTopRightShadowLayer {
             transition.setFrame(layer: copyTopRightShadowLayer, frame: CGRect(origin: CGPoint(x: size.width - copyTopRightShadowLayer.bounds.width, y: 0.0), size: copyTopRightShadowLayer.bounds.size))
+        }
+        
+        if let copyTopLeftShadowLayer = self.copyTopLeftShadowLayer {
+            transition.setFrame(layer: copyTopLeftShadowLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: copyTopLeftShadowLayer.bounds.size))
         }
     }
     
@@ -853,12 +1037,20 @@ private final class ItemTransitionView: UIView {
                 copyPrivacyTypeLayer.animateAlpha(from: CGFloat(previousAlpha), to: CGFloat(privacyAlpha), duration: 0.2)
             }
         }
+        
+        if let copyAuthorLayer = self.copyAuthorLayer {
+            let privacyAlpha: Float = isSelected == nil ? 1.0 : 0.0
+            if privacyAlpha != copyAuthorLayer.opacity {
+                let previousAlpha = copyAuthorLayer.opacity
+                copyAuthorLayer.opacity = privacyAlpha
+                copyAuthorLayer.animateAlpha(from: CGFloat(previousAlpha), to: CGFloat(privacyAlpha), duration: 0.2)
+            }
+        }
     }
 }
 
 private final class SparseItemGridBindingImpl: SparseItemGridBinding {
     let context: AccountContext
-    let chatLocation: ChatLocation
     let directMediaImageCache: DirectMediaImageCache
     let captureProtected: Bool
     let displayPrivacy: Bool
@@ -880,9 +1072,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
 
     private var shimmerImages: [CGFloat: UIImage] = [:]
 
-    init(context: AccountContext, chatLocation: ChatLocation, directMediaImageCache: DirectMediaImageCache, captureProtected: Bool, displayPrivacy: Bool) {
+    init(context: AccountContext, directMediaImageCache: DirectMediaImageCache, captureProtected: Bool, displayPrivacy: Bool) {
         self.context = context
-        self.chatLocation = chatLocation
         self.directMediaImageCache = directMediaImageCache
         self.captureProtected = false
         self.displayPrivacy = displayPrivacy
@@ -911,11 +1102,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
 
     func createLayer(item: SparseItemGrid.Item) -> SparseItemGridLayer? {
         if let item = item as? VisualMediaItem, item.story.isForwardingDisabled {
-            let layer = GenericItemLayer()
+            let layer = ItemLayer()
             setLayerDisableScreenshots(layer, true)
             return layer
         } else {
-            return GenericItemLayer()
+            return ItemLayer()
         }
     }
 
@@ -1013,7 +1204,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                             }
                             
                             if let contents = layer.getContents(), !synchronousValue {
-                                let copyLayer = GenericItemLayer()
+                                let copyLayer = ItemLayer()
                                 copyLayer.contents = contents
                                 copyLayer.contentsRect = layer.contentsRect
                                 copyLayer.frame = layer.bounds
@@ -1057,7 +1248,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                     }
                 }
                 
-                self.updateLayerData(story: story, item: item, selectedMedia: selectedMedia, layer: layer)
+                self.updateLayerData(story: story, item: item, selectedMedia: selectedMedia, layer: layer, synchronous: synchronous)
             }
             
             var isSelected: Bool?
@@ -1070,7 +1261,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
         }
     }
     
-    func updateLayerData(story: EngineStoryItem, item: VisualMediaItem, selectedMedia: Media, layer: ItemLayer) {
+    func updateLayerData(story: EngineStoryItem, item: VisualMediaItem, selectedMedia: Media, layer: ItemLayer, synchronous: SparseItemGrid.Synchronous) {
         var viewCount: Int32?
         if let value = story.views?.seenCount {
             viewCount = Int32(value)
@@ -1101,7 +1292,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
             isMin = layer.bounds.width < 80.0
         }
         
-        layer.updateDuration(viewCount: viewCount, duration: duration, topRightIcon: topRightIcon, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0))
+        layer.updateDuration(viewCount: viewCount, duration: duration, topRightIcon: topRightIcon, author: item.authorPeer, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0), directMediaImageCache: self.directMediaImageCache, synchronous: synchronous)
     }
 
     func unbindLayer(layer: SparseItemGridLayer) {
@@ -1180,8 +1371,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     }
     
     private let context: AccountContext
-    private let peerId: PeerId
-    private let chatLocation: ChatLocation
+    private let peerId: PeerId?
+    private let searchQuery: String?
     private let isSaved: Bool
     private let isArchive: Bool
     private let isProfileEmbedded: Bool
@@ -1264,8 +1455,9 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         return self.itemGrid.coveringInsetOffset
     }
         
-    private let listDisposable = MetaDisposable()
+    private var listDisposable: Disposable?
     private var hiddenMediaDisposable: Disposable?
+    private let updateDisposable = MetaDisposable()
     
     private var numberOfItemsToRequest: Int = 50
     private var isRequestingView: Bool = false
@@ -1299,10 +1491,10 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     private weak var contextControllerToDismissOnSelection: ContextControllerProtocol?
     private weak var tempContextContentItemNode: TempExtractedItemNode?
         
-    public init(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, isProfileEmbedded: Bool, canManageStories: Bool, navigationController: @escaping () -> NavigationController?, listContext: PeerStoryListContext?) {
+    public init(context: AccountContext, peerId: PeerId?, searchQuery: String? = nil, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, isProfileEmbedded: Bool, canManageStories: Bool, navigationController: @escaping () -> NavigationController?, listContext: PeerStoryListContext?) {
         self.context = context
         self.peerId = peerId
-        self.chatLocation = chatLocation
+        self.searchQuery = searchQuery
         self.contentType = contentType
         self.contentTypePromise = ValuePromise<ContentType>(contentType)
         self.navigationController = navigationController
@@ -1321,31 +1513,32 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
 
         self.itemGridBinding = SparseItemGridBindingImpl(
             context: context,
-            chatLocation: .peer(id: peerId),
             directMediaImageCache: self.directMediaImageCache,
             captureProtected: captureProtected,
             displayPrivacy: isProfileEmbedded
         )
 
-        self.listSource = listContext ?? PeerStoryListContext(account: context.account, peerId: peerId, isArchived: self.isArchive)
+        self.listSource = listContext ?? PeerStoryListContext(account: context.account, peerId: peerId ?? context.account.peerId, isArchived: self.isArchive)
         self.calendarSource = nil
         
         super.init()
 
-        let _ = (ApplicationSpecificNotice.getSharedMediaScrollingTooltip(accountManager: context.sharedContext.accountManager)
-        |> deliverOnMainQueue).start(next: { [weak self] count in
-            guard let strongSelf = self else {
-                return
-            }
-            if count < 1 {
-                strongSelf.itemGrid.updateScrollingAreaTooltip(tooltip: SparseItemGridScrollingArea.DisplayTooltip(animation: "anim_infotip", text: strongSelf.itemGridBinding.chatPresentationData.strings.SharedMedia_FastScrollTooltip, completed: {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let _ = ApplicationSpecificNotice.incrementSharedMediaScrollingTooltip(accountManager: strongSelf.context.sharedContext.accountManager, count: 1).start()
-                }))
-            }
-        })
+        if self.peerId != nil {
+            let _ = (ApplicationSpecificNotice.getSharedMediaScrollingTooltip(accountManager: context.sharedContext.accountManager)
+                     |> deliverOnMainQueue).start(next: { [weak self] count in
+                guard let strongSelf = self else {
+                    return
+                }
+                if count < 1 {
+                    strongSelf.itemGrid.updateScrollingAreaTooltip(tooltip: SparseItemGridScrollingArea.DisplayTooltip(animation: "anim_infotip", text: strongSelf.itemGridBinding.chatPresentationData.strings.SharedMedia_FastScrollTooltip, completed: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let _ = ApplicationSpecificNotice.incrementSharedMediaScrollingTooltip(accountManager: strongSelf.context.sharedContext.accountManager, count: 1).start()
+                    }))
+                }
+            })
+        }
 
         self.itemGridBinding.loadHoleImpl = { [weak self] hole, location in
             guard let strongSelf = self else {
@@ -1377,10 +1570,10 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 return
             }
             
-            //TODO:selection
+            //TODO:localize
             let listContext = PeerStoryListContentContextImpl(
                 context: self.context,
-                peerId: self.peerId,
+                peerId: self.peerId ?? self.context.account.peerId,
                 listContext: self.listSource,
                 initialId: item.story.id
             )
@@ -1756,15 +1949,16 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         self.requestHistoryAroundVisiblePosition(synchronous: false, reloadAtTop: false)
         
         if peerId == context.account.peerId && !isArchive {
-            self.preloadArchiveListContext = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: true)
+            self.preloadArchiveListContext = PeerStoryListContext(account: context.account, peerId: context.account.peerId, isArchived: true)
         }
     }
     
     deinit {
-        self.listDisposable.dispose()
+        self.listDisposable?.dispose()
         self.hiddenMediaDisposable?.dispose()
         self.animationTimer?.invalidate()
         self.presentationDataDisposable?.dispose()
+        self.updateDisposable.dispose()
     }
 
     public func loadHole(anchor: SparseItemGrid.HoleAnchor, at location: SparseItemGrid.HoleLocation) -> Signal<Never, NoError> {
@@ -1783,197 +1977,227 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     }
     
     private func openContextMenu(item: EngineStoryItem, itemLayer: ItemLayer, rect: CGRect, gesture: ContextGesture?) {
-        let _ = (self.context.engine.data.get(
-            TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)
-        )
-        |> deliverOnMainQueue).start(next: { [weak self] _ in
-            guard let self else {
-                return
-            }
-            guard let parentController = self.parentController else {
-                return
-            }
+        guard let parentController = self.parentController else {
+            return
+        }
+        
+        let canManage = self.canManageStories
+        
+        var items: [ContextMenuItem] = []
+        
+        if canManage, let peerId = self.peerId {
+            items.append(.action(ContextMenuActionItem(text: !self.isArchive ? self.presentationData.strings.StoryList_ItemAction_Archive : self.presentationData.strings.StoryList_ItemAction_Unarchive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: self.isArchive ? "Chat/Context Menu/Archive" : "Chat/Context Menu/Unarchive"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                guard let self else {
+                    f(.default)
+                    return
+                }
+                
+                if self.isArchive {
+                    f(.default)
+                } else {
+                    f(.dismissWithoutContent)
+                }
+                
+                let _ = self.context.engine.messages.updateStoriesArePinned(peerId: peerId, ids: [item.id: item], isPinned: self.isArchive ? true : false).startStandalone()
+                self.parentController?.present(UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: nil, text: self.isArchive ? self.presentationData.strings.StoryList_ToastUnarchived_Text(1) : self.presentationData.strings.StoryList_ToastArchived_Text(1), cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            })))
             
-            let canManage = self.canManageStories
-            
-            var items: [ContextMenuItem] = []
-            
-            if canManage {
-                items.append(.action(ContextMenuActionItem(text: !self.isArchive ? self.presentationData.strings.StoryList_ItemAction_Archive : self.presentationData.strings.StoryList_ItemAction_Unarchive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: self.isArchive ? "Chat/Context Menu/Archive" : "Chat/Context Menu/Unarchive"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+            if !self.isArchive {
+                let isPinned = self.pinnedIds.contains(item.id)
+                items.append(.action(ContextMenuActionItem(text: isPinned ? self.presentationData.strings.StoryList_ItemAction_Unpin : self.presentationData.strings.StoryList_ItemAction_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { [weak self, weak itemLayer] _, f in
+                    itemLayer?.isHidden = false
                     guard let self else {
                         f(.default)
                         return
                     }
                     
-                    if self.isArchive {
+                    if !isPinned && self.pinnedIds.count >= 3 {
                         f(.default)
-                    } else {
-                        f(.dismissWithoutContent)
-                    }
-                    
-                    let _ = self.context.engine.messages.updateStoriesArePinned(peerId: self.peerId, ids: [item.id: item], isPinned: self.isArchive ? true : false).startStandalone()
-                    self.parentController?.present(UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: nil, text: self.isArchive ? self.presentationData.strings.StoryList_ToastUnarchived_Text(1) : self.presentationData.strings.StoryList_ToastArchived_Text(1), cancel: nil, destructive: false), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-                })))
-                
-                if !self.isArchive {
-                    let isPinned = self.pinnedIds.contains(item.id)
-                    items.append(.action(ContextMenuActionItem(text: isPinned ? self.presentationData.strings.StoryList_ItemAction_Unpin : self.presentationData.strings.StoryList_ItemAction_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { [weak self, weak itemLayer] _, f in
-                        itemLayer?.isHidden = false
-                        guard let self else {
-                            f(.default)
-                            return
-                        }
-                        
-                        if !isPinned && self.pinnedIds.count >= 3 {
-                            f(.default)
-                            
-                            let presentationData = self.presentationData
-                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.StoryList_ToastPinLimit_Text(Int32(3)), timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-                            
-                            return
-                        }
-                        
-                        f(.dismissWithoutContent)
-                        
-                        var updatedPinnedIds = self.pinnedIds
-                        if isPinned {
-                            updatedPinnedIds.remove(item.id)
-                        } else {
-                            updatedPinnedIds.insert(item.id)
-                        }
-                        let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: self.peerId, ids: Array(updatedPinnedIds)).startStandalone()
                         
                         let presentationData = self.presentationData
+                        self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.StoryList_ToastPinLimit_Text(Int32(3)), timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         
-                        let toastTitle: String?
-                        let toastText: String
-                        if isPinned {
-                            toastTitle = nil
-                            toastText = presentationData.strings.StoryList_ToastUnpinned_Text(1)
-                        } else {
-                            toastTitle = presentationData.strings.StoryList_ToastPinned_Title(1)
-                            toastText = presentationData.strings.StoryList_ToastPinned_Text(1)
-                        }
-                        self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: isPinned ? "anim_toastunpin" : "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-                    })))
-                }
-                
-                /*items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Edit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                 c.dismiss(completion: {
-                 guard let self else {
-                 return
-                 }
-                 let _ = self
-                 
-                 
-                 })
-                 })))*/
-            }
-            
-            if !item.isForwardingDisabled, case .everyone = item.privacy?.base {
-                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Forward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
-                    c.dismiss(completion: {
-                        guard let self else {
-                            return
-                        }
-                        
-                        let _ = (self.context.engine.data.get(
-                            TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)
-                        )
-                                 |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
-                            guard let self else {
-                                return
-                            }
-                            guard let peer, let peerReference = PeerReference(peer._asPeer()) else {
-                                return
-                            }
-                            
-                            let shareController = ShareController(
-                                context: self.context,
-                                subject: .media(.story(peer: peerReference, id: item.id, media: TelegramMediaStory(storyId: StoryId(peerId: self.peerId, id: item.id), isMention: false))),
-                                presetText: nil,
-                                preferredAction: .default,
-                                showInChat: nil,
-                                fromForeignApp: false,
-                                segmentedValues: nil,
-                                externalShare: false,
-                                immediateExternalShare: false,
-                                switchableAccounts: [],
-                                immediatePeerId: nil,
-                                updatedPresentationData: nil,
-                                forceTheme: nil,
-                                forcedActionTitle: nil,
-                                shareAsLink: false,
-                                collectibleItemInfo: nil
-                            )
-                            self.parentController?.present(shareController, in: .window(.root))
-                        })
-                    })
-                })))
-            }
-            
-            if canManage {
-                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
-                    c.dismiss(completion: {
-                        guard let self else {
-                            return
-                        }
-                        
-                        self.presentDeleteConfirmation(ids: Set([item.id]))
-                    })
-                })))
-            }
-            
-            if self.canManageStories {
-                if !items.isEmpty {
-                    items.append(.separator)
-                }
-                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.actionSheet.primaryTextColor)
-                }, action: { [weak self] c, f in
-                    guard let self, let parentController = self.parentController as? PeerInfoScreen else {
-                        f(.default)
                         return
                     }
                     
-                    self.contextControllerToDismissOnSelection = c
-                    parentController.toggleStorySelection(ids: [item.id], isSelected: true)
+                    f(.dismissWithoutContent)
                     
-                    DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.5, execute: { [weak self] in
-                        guard let self, let contextControllerToDismissOnSelection = self.contextControllerToDismissOnSelection else {
-                            return
-                        }
-                        if let contextControllerToDismissOnSelection = contextControllerToDismissOnSelection as? ContextController {
-                            contextControllerToDismissOnSelection.dismissWithCustomTransition(transition: .animated(duration: 0.4, curve: .spring), completion: nil)
-                        }
-                    })
+                    var updatedPinnedIds = self.pinnedIds
+                    if isPinned {
+                        updatedPinnedIds.remove(item.id)
+                    } else {
+                        updatedPinnedIds.insert(item.id)
+                    }
+                    let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: peerId, ids: Array(updatedPinnedIds)).startStandalone()
+                    
+                    let presentationData = self.presentationData
+                    
+                    let toastTitle: String?
+                    let toastText: String
+                    if isPinned {
+                        toastTitle = nil
+                        toastText = presentationData.strings.StoryList_ToastUnpinned_Text(1)
+                    } else {
+                        toastTitle = presentationData.strings.StoryList_ToastPinned_Title(1)
+                        toastText = presentationData.strings.StoryList_ToastPinned_Text(1)
+                    }
+                    self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: isPinned ? "anim_toastunpin" : "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                 })))
             }
             
-            if items.isEmpty {
-                return
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Edit, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                c?.dismiss(completion: {
+                    guard let self else {
+                        return
+                    }
+                    let _ = (self.context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                    )
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                        guard let self, let peer else {
+                            return
+                        }
+                        
+                        var foundItemLayer: SparseItemGridLayer?
+                        var sourceImage: UIImage?
+                        self.itemGrid.forEachVisibleItem { gridItem in
+                            guard let itemLayer = gridItem.layer as? ItemLayer else {
+                                return
+                            }
+                            if let listItem = itemLayer.item, listItem.story.id == item.id {
+                                foundItemLayer = itemLayer
+                                if let contents = itemLayer.contents, CFGetTypeID(contents as CFTypeRef) == CGImage.typeID {
+                                    sourceImage = UIImage(cgImage: contents as! CGImage)
+                                }
+                            }
+                        }
+                        
+                        guard let controller = MediaEditorScreen.makeEditStoryController(
+                            context: self.context,
+                            peer: peer,
+                            storyItem: item,
+                            videoPlaybackPosition: nil,
+                            repost: false,
+                            transitionIn: .gallery(MediaEditorScreen.TransitionIn.GalleryTransitionIn(sourceView: self.itemGrid.view, sourceRect: foundItemLayer?.frame ?? .zero, sourceImage: sourceImage)),
+                            transitionOut: MediaEditorScreen.TransitionOut(destinationView: self.itemGrid.view, destinationRect: foundItemLayer?.frame ?? .zero, destinationCornerRadius: 0.0),
+                            update: { [weak self] disposable in
+                                guard let self else {
+                                    return
+                                }
+                                self.updateDisposable.set(disposable)
+                            }
+                        ) else {
+                            return
+                        }
+                        self.parentController?.push(controller)
+                    })
+                })
+            })))
+        }
+        
+        if !item.isForwardingDisabled, case .everyone = item.privacy?.base {
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Forward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                c?.dismiss(completion: {
+                    guard let self, let peerId = self.peerId else {
+                        return
+                    }
+                    
+                    let _ = (self.context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                    )
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                        guard let self else {
+                            return
+                        }
+                        guard let peer, let peerReference = PeerReference(peer._asPeer()) else {
+                            return
+                        }
+                        
+                        let shareController = ShareController(
+                            context: self.context,
+                            subject: .media(.story(peer: peerReference, id: item.id, media: TelegramMediaStory(storyId: StoryId(peerId: peer.id, id: item.id), isMention: false))),
+                            presetText: nil,
+                            preferredAction: .default,
+                            showInChat: nil,
+                            fromForeignApp: false,
+                            segmentedValues: nil,
+                            externalShare: false,
+                            immediateExternalShare: false,
+                            switchableAccounts: [],
+                            immediatePeerId: nil,
+                            updatedPresentationData: nil,
+                            forceTheme: nil,
+                            forcedActionTitle: nil,
+                            shareAsLink: false,
+                            collectibleItemInfo: nil
+                        )
+                        self.parentController?.present(shareController, in: .window(.root))
+                    })
+                })
+            })))
+        }
+        
+        if canManage {
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryList_ItemAction_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak self] c, _ in
+                c?.dismiss(completion: {
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.presentDeleteConfirmation(ids: Set([item.id]))
+                })
+            })))
+        }
+        
+        if self.canManageStories {
+            if !items.isEmpty {
+                items.append(.separator)
             }
-            
-            let tempSourceNode = TempExtractedItemNode(
-                item: item,
-                itemLayer: itemLayer
-            )
-            tempSourceNode.frame = rect
-            tempSourceNode.update(size: rect.size)
-            
-            let scaleSide = itemLayer.bounds.width
-            let minScale: CGFloat = max(0.7, (scaleSide - 15.0) / scaleSide)
-            let currentScale = minScale
-            
-            ContainedViewLayoutTransition.immediate.updateSublayerTransformScale(node: tempSourceNode.contextSourceNode.contentNode, scale: currentScale)
-            ContainedViewLayoutTransition.immediate.updateTransformScale(layer: itemLayer, scale: 1.0)
-            
-            self.tempContextContentItemNode = tempSourceNode
-            self.addSubnode(tempSourceNode)
-            
-            let contextController = ContextController(presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: parentController, sourceNode: tempSourceNode.contextSourceNode, keepInPlace: false, blurBackground: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-            parentController.presentInGlobalOverlay(contextController)
-        })
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.actionSheet.primaryTextColor)
+            }, action: { [weak self] c, f in
+                guard let self, let parentController = self.parentController as? PeerInfoScreen else {
+                    f(.default)
+                    return
+                }
+                
+                self.contextControllerToDismissOnSelection = c
+                parentController.toggleStorySelection(ids: [item.id], isSelected: true)
+                
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.5, execute: { [weak self] in
+                    guard let self, let contextControllerToDismissOnSelection = self.contextControllerToDismissOnSelection else {
+                        return
+                    }
+                    if let contextControllerToDismissOnSelection = contextControllerToDismissOnSelection as? ContextController {
+                        contextControllerToDismissOnSelection.dismissWithCustomTransition(transition: .animated(duration: 0.4, curve: .spring), completion: nil)
+                    }
+                })
+            })))
+        }
+        
+        if items.isEmpty {
+            return
+        }
+        
+        let tempSourceNode = TempExtractedItemNode(
+            item: item,
+            itemLayer: itemLayer
+        )
+        tempSourceNode.frame = rect
+        tempSourceNode.update(size: rect.size)
+        
+        let scaleSide = itemLayer.bounds.width
+        let minScale: CGFloat = max(0.7, (scaleSide - 15.0) / scaleSide)
+        let currentScale = minScale
+        
+        ContainedViewLayoutTransition.immediate.updateSublayerTransformScale(node: tempSourceNode.contextSourceNode.contentNode, scale: currentScale)
+        ContainedViewLayoutTransition.immediate.updateTransformScale(layer: itemLayer, scale: 1.0)
+        
+        self.tempContextContentItemNode = tempSourceNode
+        self.addSubnode(tempSourceNode)
+        
+        let contextController = ContextController(presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: parentController, sourceNode: tempSourceNode.contextSourceNode, keepInPlace: false, blurBackground: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+        parentController.presentInGlobalOverlay(contextController)
     }
 
     public func updateContentType(contentType: ContentType) {
@@ -2012,9 +2236,38 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         self.isRequestingView = true
         var firstTime = true
         let queue = Queue()
+        
+        let authorPeer: Signal<EnginePeer?, NoError>
+        if self.searchQuery != nil {
+            authorPeer = self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId)
+            )
+        } else {
+            authorPeer = .single(nil)
+        }
+        
+        var state = self.listSource.state
+        if self.peerId == nil && self.listDisposable == nil {
+            state = .single(PeerStoryListContext.State(
+                peerReference: nil,
+                items: [],
+                pinnedIds: Set(),
+                totalCount: 0,
+                loadMoreToken: 0,
+                isCached: false,
+                hasCache: false,
+                allEntityFiles: [:]
+            )) |> then(state |> delay(2.0, queue: .mainQueue()))
+        }
+        
+        self.listDisposable?.dispose()
+        self.listDisposable = nil
 
-        self.listDisposable.set((self.listSource.state
-        |> deliverOn(queue)).start(next: { [weak self] state in
+        self.listDisposable = (combineLatest(
+            state,
+            authorPeer
+        )
+        |> deliverOn(queue)).startStrict(next: { [weak self] state, authorPeer in
             guard let self else {
                 return
             }
@@ -2044,6 +2297,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         index: mappedItems.count,
                         peer: peerReference,
                         story: item,
+                        authorPeer: authorPeer,
                         isPinned: state.pinnedIds.contains(item.id),
                         localMonthTimestamp: Month(localTimestamp: item.timestamp + timezoneOffset).packedValue
                     ))
@@ -2084,7 +2338,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 strongSelf.updateHistory(items: items, pinnedIds: state.pinnedIds, synchronous: currentSynchronous, reloadAtTop: currentReloadAtTop)
                 strongSelf.isRequestingView = false
             }
-        }))
+        })
     }
     
     private func updateHistory(items: SparseItemGrid.Items, pinnedIds: Set<Int32>, synchronous: Bool, reloadAtTop: Bool) {
@@ -2405,6 +2659,10 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     }
     
     private func presentDeleteConfirmation(ids: Set<Int32>) {
+        guard let peerId = self.peerId else {
+            return
+        }
+        
         let presentationData = self.presentationData
         let controller = ActionSheetController(presentationData: presentationData)
         let dismissAction: () -> Void = { [weak controller] in
@@ -2427,7 +2685,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         parentController.cancelItemSelection()
                     }
                     
-                    let _ = self.context.engine.messages.deleteStories(peerId: self.peerId, ids: Array(ids)).startStandalone()
+                    let _ = self.context.engine.messages.deleteStories(peerId: peerId, ids: Array(ids)).startStandalone()
                 })
             ]),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -2439,7 +2697,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         self.currentParams = (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData)
         
         var bottomInset = bottomInset
-        if self.isProfileEmbedded, let selectedIds = self.itemInteraction.selectedIds, self.canManageStories {
+        if self.isProfileEmbedded, let selectedIds = self.itemInteraction.selectedIds, self.canManageStories, let peerId = self.peerId {
             let selectionPanel: ComponentView<Empty>
             var selectionPanelTransition = Transition(transition)
             if let current = self.selectionPanel {
@@ -2473,7 +2731,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                             let toastText = presentationData.strings.StoryList_ToastPinLimit_Text(3)
                             self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_infotip", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: nil, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         } else {
-                            let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: self.peerId, ids: Array(updatedPinnedIds)).startStandalone()
+                            let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: peerId, ids: Array(updatedPinnedIds)).startStandalone()
                             
                             let presentationData = self.presentationData
                             
@@ -2491,7 +2749,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         for id in selectedIds {
                             updatedPinnedIds.remove(id)
                         }
-                        let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: self.peerId, ids: Array(updatedPinnedIds)).startStandalone()
+                        let _ = self.context.engine.messages.updatePinnedToTopStories(peerId: peerId, ids: Array(updatedPinnedIds)).startStandalone()
                         
                         let presentationData = self.presentationData
                         
@@ -2522,7 +2780,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         parentController.cancelItemSelection()
                     }
                     
-                    let _ = self.context.engine.messages.updateStoriesArePinned(peerId: self.peerId, ids: items, isPinned: self.isArchive ? true : false).startStandalone()
+                    let _ = self.context.engine.messages.updateStoriesArePinned(peerId: peerId, ids: items, isPinned: self.isArchive ? true : false).startStandalone()
                     
                     let text: String
                     if self.isArchive {

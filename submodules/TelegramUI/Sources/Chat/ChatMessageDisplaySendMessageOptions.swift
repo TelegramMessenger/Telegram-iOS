@@ -9,6 +9,16 @@ import TelegramCore
 import TelegramNotices
 import ChatSendMessageActionUI
 import AccountContext
+import TopMessageReactions
+import ReactionSelectionNode
+import ChatControllerInteraction
+import ChatSendAudioMessageContextPreview
+
+extension ChatSendMessageEffect {
+    convenience init(_ effect: ChatSendMessageActionSheetController.SendParameters.Effect) {
+        self.init(id: effect.id)
+    }
+}
 
 func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, node: ASDisplayNode, gesture: ContextGesture) {
     guard let peerId = selfController.chatLocation.peerId, let textInputView = selfController.chatDisplayNode.textInputView(), let layout = selfController.validLayout else {
@@ -28,9 +38,30 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
         hasEntityKeyboard = true
     }
     
-    let _ = (selfController.context.account.viewTracker.peerView(peerId)
-    |> take(1)
-    |> deliverOnMainQueue).startStandalone(next: { [weak selfController] peerView in
+    let effectItems: Signal<[ReactionItem]?, NoError>
+    if peerId != selfController.context.account.peerId && peerId.namespace == Namespaces.Peer.CloudUser {
+        effectItems = effectMessageReactions(context: selfController.context)
+        |> map(Optional.init)
+    } else {
+        effectItems = .single(nil)
+    }
+    
+    let availableMessageEffects = selfController.context.availableMessageEffects |> take(1)
+    let hasPremium = selfController.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: selfController.context.account.peerId))
+    |> map { peer -> Bool in
+        guard case let .user(user) = peer else {
+            return false
+        }
+        return user.isPremium
+    }
+    
+    let _ = (combineLatest(
+        selfController.context.account.viewTracker.peerView(peerId) |> take(1),
+        effectItems,
+        availableMessageEffects,
+        hasPremium
+    )
+    |> deliverOnMainQueue).startStandalone(next: { [weak selfController] peerView, effectItems, availableMessageEffects, hasPremium in
         guard let selfController, let peer = peerViewMainPeer(peerView) else {
             return
         }
@@ -49,38 +80,76 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
             let _ = ApplicationSpecificNotice.incrementSendWhenOnlineTip(accountManager: selfController.context.sharedContext.accountManager, count: 4).startStandalone()
         }
         
-        let controller = ChatSendMessageActionSheetController(context: selfController.context, updatedPresentationData: selfController.updatedPresentationData, peerId: selfController.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: selfController.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputView: textInputView, canSendWhenOnline: sendWhenOnlineAvailable, completion: { [weak selfController] in
-            guard let selfController else {
-                return
+        var mediaPreview: ChatSendMessageContextScreenMediaPreview?
+        if let videoRecorderValue = selfController.videoRecorderValue {
+            mediaPreview = videoRecorderValue.makeSendMessageContextPreview()
+        }
+        if let mediaDraftState = selfController.presentationInterfaceState.interfaceState.mediaDraftState {
+            if case let .audio(audio) = mediaDraftState {
+                mediaPreview = ChatSendAudioMessageContextPreview(
+                    context: selfController.context,
+                    presentationData: selfController.presentationData,
+                    wallpaperBackgroundNode: selfController.chatDisplayNode.backgroundNode,
+                    waveform: audio.waveform
+                )
             }
-            selfController.supportedOrientations = previousSupportedOrientations
-        }, sendMessage: { [weak selfController] mode in
-            guard let selfController else {
-                return
-            }
-            switch mode {
-            case .generic:
-                selfController.controllerInteraction?.sendCurrentMessage(false)
-            case .silently:
-                selfController.controllerInteraction?.sendCurrentMessage(true)
-            case .whenOnline:
-                selfController.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp) { [weak selfController] in
-                    guard let selfController else {
-                        return
-                    }
-                    selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: selfController.presentationInterfaceState.subject != .scheduledMessages, {
-                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
-                    })
-                    selfController.openScheduledMessages()
+        }
+        
+        let controller = makeChatSendMessageActionSheetController(
+            context: selfController.context,
+            updatedPresentationData: selfController.updatedPresentationData,
+            peerId: selfController.presentationInterfaceState.chatLocation.peerId,
+            forwardMessageIds: selfController.presentationInterfaceState.interfaceState.forwardMessageIds,
+            hasEntityKeyboard: hasEntityKeyboard,
+            gesture: gesture,
+            sourceSendButton: node,
+            textInputView: textInputView,
+            mediaPreview: mediaPreview,
+            emojiViewProvider: selfController.chatDisplayNode.textInputPanelNode?.emojiViewProvider,
+            wallpaperBackgroundNode: selfController.chatDisplayNode.backgroundNode,
+            canSendWhenOnline: sendWhenOnlineAvailable,
+            completion: { [weak selfController] in
+                guard let selfController else {
+                    return
                 }
-            }
-        }, schedule: { [weak selfController] in
-            guard let selfController else {
-                return
-            }
-            selfController.controllerInteraction?.scheduleCurrentMessage()
-        })
-        controller.emojiViewProvider = selfController.chatDisplayNode.textInputPanelNode?.emojiViewProvider
+                selfController.supportedOrientations = previousSupportedOrientations
+            },
+            sendMessage: { [weak selfController] mode, parameters in
+                guard let selfController else {
+                    return
+                }
+                switch mode {
+                case .generic:
+                    selfController.controllerInteraction?.sendCurrentMessage(false, parameters?.effect.flatMap(ChatSendMessageEffect.init))
+                case .silently:
+                    selfController.controllerInteraction?.sendCurrentMessage(true, parameters?.effect.flatMap(ChatSendMessageEffect.init))
+                case .whenOnline:
+                    selfController.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp, messageEffect: parameters?.effect.flatMap(ChatSendMessageEffect.init)) { [weak selfController] in
+                        guard let selfController else {
+                            return
+                        }
+                        selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: selfController.presentationInterfaceState.subject != .scheduledMessages, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
+                        })
+                        selfController.openScheduledMessages()
+                    }
+                }
+            },
+            schedule: { [weak selfController] effect in
+                guard let selfController else {
+                    return
+                }
+                selfController.controllerInteraction?.scheduleCurrentMessage()
+            }, openPremiumPaywall: { [weak selfController] c in
+                guard let selfController else {
+                    return
+                }
+                selfController.push(c)
+            },
+            reactionItems: (!textInputView.text.isEmpty || mediaPreview != nil) ? effectItems : nil,
+            availableMessageEffects: availableMessageEffects,
+            isPremium: hasPremium
+        )
         selfController.sendMessageActionsController = controller
         if layout.isNonExclusive {
             selfController.present(controller, in: .window(.root))

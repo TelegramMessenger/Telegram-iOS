@@ -416,7 +416,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
                     name: "Item List/AddLinkIcon",
                     tintColor: environment.theme.list.itemAccentColor
-                )))),
+                ))), false),
                 accessory: nil,
                 action: { [weak self] _ in
                     guard let self else {
@@ -550,7 +550,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                             textColor: .primary,
                             icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) },
                             action: { [weak self] c, _ in
-                                c.dismiss(completion: {
+                                c?.dismiss(completion: {
                                     guard let self else {
                                         return
                                     }
@@ -563,7 +563,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                             textColor: .destructive,
                             icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) },
                             action: { [weak self] c, _ in
-                                c.dismiss(completion: {
+                                c?.dismiss(completion: {
                                     guard let self else {
                                         return
                                     }

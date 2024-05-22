@@ -85,4 +85,12 @@ final class BusinessLinkChatContents: ChatCustomContentsProtocol {
             ))
         }
     }
+    
+    func loadMore() {
+    }
+    
+    func hashtagSearchUpdate(query: String) {   
+    }
+    
+    var hashtagSearchResultsUpdate: ((SearchMessagesResult, SearchMessagesState)) -> Void = { _ in }
 }

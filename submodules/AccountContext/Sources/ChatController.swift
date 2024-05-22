@@ -44,6 +44,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let currentlyPlayingMessageId: EngineMessage.Index?
     public let isCopyProtectionEnabled: Bool
     public let availableReactions: AvailableReactions?
+    public let availableMessageEffects: AvailableMessageEffects?
     public let savedMessageTags: SavedMessageTags?
     public let defaultReaction: MessageReaction.Reaction?
     public let isPremium: Bool
@@ -75,6 +76,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         currentlyPlayingMessageId: EngineMessage.Index? = nil,
         isCopyProtectionEnabled: Bool = false,
         availableReactions: AvailableReactions?,
+        availableMessageEffects: AvailableMessageEffects?,
         savedMessageTags: SavedMessageTags?,
         defaultReaction: MessageReaction.Reaction?,
         isPremium: Bool,
@@ -105,6 +107,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.currentlyPlayingMessageId = currentlyPlayingMessageId
         self.isCopyProtectionEnabled = isCopyProtectionEnabled
         self.availableReactions = availableReactions
+        self.availableMessageEffects = availableMessageEffects
         self.savedMessageTags = savedMessageTags
         self.defaultReaction = defaultReaction
         self.isPremium = isPremium
@@ -968,6 +971,7 @@ public protocol ChatController: ViewController {
     var chatLocation: ChatLocation { get }
     var canReadHistory: ValuePromise<Bool> { get }
     var parentController: ViewController? { get set }
+    var customNavigationController: NavigationController? { get set }
     
     var purposefulAction: (() -> Void)? { get set }
     
@@ -982,7 +986,11 @@ public protocol ChatController: ViewController {
     
     var visibleContextController: ViewController? { get }
     
+    var searching: ValuePromise<Bool> { get }
+    
     var alwaysShowSearchResultsAsList: Bool { get set }
+    var includeSavedPeersInSearchResults: Bool { get set }
+    var showListEmptyResults: Bool { get set }
     
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)
@@ -1033,6 +1041,9 @@ public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
     func targetReactionView(value: MessageReaction.Reaction) -> UIView?
     func targetForStoryTransition(id: StoryId) -> UIView?
     func contentFrame() -> CGRect
+    func matchesMessage(id: MessageId) -> Bool
+    func cancelInsertionAnimations()
+    func messages() -> [Message]
 }
 
 public final class ChatControllerNavigationData: CustomViewControllerNavigationData {
@@ -1095,6 +1106,7 @@ public enum ChatQuickReplyShortcutType {
 public enum ChatCustomContentsKind: Equatable {
     case quickReplyMessageInput(shortcut: String, shortcutType: ChatQuickReplyShortcutType)
     case businessLinkSetup(link: TelegramBusinessChatLinks.Link)
+    case hashTagSearch
 }
 
 public protocol ChatCustomContentsProtocol: AnyObject {
@@ -1108,6 +1120,11 @@ public protocol ChatCustomContentsProtocol: AnyObject {
     
     func quickReplyUpdateShortcut(value: String)
     func businessLinkUpdate(message: String, entities: [MessageTextEntity], title: String?)
+    
+    func loadMore()
+    
+    func hashtagSearchUpdate(query: String)
+    var hashtagSearchResultsUpdate: ((SearchMessagesResult, SearchMessagesState)) -> Void { get set }
 }
 
 public enum ChatHistoryListDisplayHeaders {

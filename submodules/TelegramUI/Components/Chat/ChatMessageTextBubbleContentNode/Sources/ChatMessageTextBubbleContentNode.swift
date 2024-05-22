@@ -263,8 +263,12 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 default:
                     break
                 }
-                if case .customChatContents = item.associatedData.subject {
-                    displayStatus = false
+                if case let .customChatContents(contents) = item.associatedData.subject {
+                    if case .hashTagSearch = contents.kind {
+                        displayStatus = true
+                    } else {
+                        displayStatus = false
+                    }
                 }
                 if displayStatus {
                     if incoming {
@@ -290,11 +294,14 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var isSeekableWebMedia = false
                 var isUnsupportedMedia = false
                 var story: Stories.Item?
+                var invoice: TelegramMediaInvoice?
                 for media in item.message.media {
                     if let file = media as? TelegramMediaFile, let duration = file.duration {
                         mediaDuration = Double(duration)
                     }
-                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, webEmbedType(content: content).supportsSeeking {
+                    if let media = media as? TelegramMediaInvoice, media.currency == "XTR" {
+                        invoice = media
+                    } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, webEmbedType(content: content).supportsSeeking {
                         isSeekableWebMedia = true
                     } else if media is TelegramMediaUnsupported {
                         isUnsupportedMedia = true
@@ -308,7 +315,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 var isTranslating = false
-                if let story {
+                if let invoice {
+                    rawText = invoice.description
+                } else if let story {
                     rawText = story.text
                     messageEntities = story.entities
                 } else if isUnsupportedMedia {
@@ -578,6 +587,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                         areReactionsTags: item.topMessage.areReactionsTags(accountPeerId: item.context.account.peerId),
+                        messageEffect: item.topMessage.messageEffect(availableMessageEffects: item.associatedData.availableMessageEffects),
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && (!item.associatedData.isInPinnedListMode || isReplyThread),
                         hasAutoremove: item.message.isSelfExpiring,
@@ -856,7 +866,15 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     urlRange = urlRangeValue
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
-                return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed)), activate: { [weak self] in
+                
+                var content: ChatMessageBubbleContentTapAction.Content
+                if url.hasPrefix("tel:") {
+                    content = .phone(url.replacingOccurrences(of: "tel:", with: ""))
+                } else {
+                    content = .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed))
+                }
+                
+                return ChatMessageBubbleContentTapAction(content: content, activate: { [weak self] in
                     guard let self else {
                         return nil
                     }
@@ -930,6 +948,12 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return ChatMessageBubbleContentTapAction(content: .copy(pre))
             } else if let code = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Code)] as? String {
                 return ChatMessageBubbleContentTapAction(content: .copy(code))
+            } else if let _ = attributes[NSAttributedString.Key(rawValue: "Attribute__Blockquote")] {
+                if let text = self.textNode.textNode.attributeSubstring(name: "Attribute__Blockquote", index: index) {
+                    return ChatMessageBubbleContentTapAction(content: .copy(text.1))
+                } else {
+                    return ChatMessageBubbleContentTapAction(content: .none)
+                }
             } else if let emoji = attributes[NSAttributedString.Key(rawValue: ChatTextInputAttributes.customEmoji.rawValue)] as? ChatTextInputTextCustomEmojiAttribute, let file = emoji.file {
                 return ChatMessageBubbleContentTapAction(content: .customEmoji(file))
             } else {
@@ -992,6 +1016,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             })
         }
     }
+    
     override public func updateTouchesAtPoint(_ point: CGPoint?) {
         if let item = self.item {
             var rects: [CGRect]?
@@ -1348,6 +1373,13 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if let statusNode = self.statusNode, !statusNode.isHidden {
             return statusNode.reactionView(value: value)
+        }
+        return nil
+    }
+    
+    override public func messageEffectTargetView() -> UIView? {
+        if let statusNode = self.statusNode, !statusNode.isHidden {
+            return statusNode.messageEffectTargetView()
         }
         return nil
     }

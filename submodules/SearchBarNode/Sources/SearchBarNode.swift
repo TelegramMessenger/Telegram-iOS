@@ -16,6 +16,10 @@ private func generateLoupeIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: color)
 }
 
+private func generateHashtagIcon(color: UIColor) -> UIImage? {
+    return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Hashtag"), color: color)
+}
+
 private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
 }
@@ -844,6 +848,12 @@ public enum SearchBarStyle {
 }
 
 public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
+    public enum Icon {
+        case loupe
+        case hashtag
+    }
+    public let icon: Icon
+    
     public var cancel: (() -> Void)?
     public var textUpdated: ((String, String?) -> Void)?
     public var textReturned: ((String) -> Void)?
@@ -947,10 +957,11 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     private var strings: PresentationStrings?
     private let cancelText: String?
     
-    public init(theme: SearchBarNodeTheme, strings: PresentationStrings, fieldStyle: SearchBarStyle = .legacy, forceSeparator: Bool = false, displayBackground: Bool = true, cancelText: String? = nil) {
+    public init(theme: SearchBarNodeTheme, strings: PresentationStrings, fieldStyle: SearchBarStyle = .legacy, icon: Icon = .loupe, forceSeparator: Bool = false, displayBackground: Bool = true, cancelText: String? = nil) {
         self.fieldStyle = fieldStyle
         self.forceSeparator = forceSeparator
         self.cancelText = cancelText
+        self.icon = icon
         
         self.backgroundNode = NavigationBackgroundNode(color: theme.background)
         self.backgroundNode.isUserInteractionEnabled = false
@@ -1036,7 +1047,14 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             self.textBackgroundNode.backgroundColor = theme.inputFill
             self.textField.textColor = theme.primaryText
             self.clearButton.setImage(generateClearIcon(color: theme.inputClear), for: [])
-            self.iconNode.image = generateLoupeIcon(color: theme.inputIcon)
+            let icon: UIImage?
+            switch self.icon {
+            case .loupe:
+                icon = generateLoupeIcon(color: theme.inputIcon)
+            case .hashtag:
+                icon = generateHashtagIcon(color: theme.inputIcon)
+            }
+            self.iconNode.image = icon
             self.textField.keyboardAppearance = theme.keyboard.keyboardAppearance
             self.textField.tintColor = theme.accent
             

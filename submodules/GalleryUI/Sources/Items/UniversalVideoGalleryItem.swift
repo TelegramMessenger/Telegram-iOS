@@ -2503,11 +2503,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 return optionsRateImage(rate: speedIconText, isLarge: false, color: theme.contextMenu.primaryColor)
             }, action: { c, _ in
                 guard let strongSelf = self else {
-                    c.dismiss(completion: nil)
+                    c?.dismiss(completion: nil)
                     return
                 }
 
-                c.setItems(strongSelf.contextMenuSpeedItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+                c?.setItems(strongSelf.contextMenuSpeedItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
             })))
             
             items.append(.separator)
@@ -2633,10 +2633,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
             }, iconPosition: .left, action: { c, _ in
                 guard let strongSelf = self else {
-                    c.dismiss(completion: nil)
+                    c?.dismiss(completion: nil)
                     return
                 }
-                c.setItems(strongSelf.contextMenuMainItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+                c?.setItems(strongSelf.contextMenuMainItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
             })))
 
             let sliderValuePromise = ValuePromise<Double?>(nil)

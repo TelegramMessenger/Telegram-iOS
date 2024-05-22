@@ -1054,7 +1054,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 if case let .channel(channel) = peer, channel.flags.contains(.isForum), let threadId {
-                    let _ = self.context.sharedContext.navigateToForumThread(context: self.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .never).startStandalone()
+                    let _ = self.context.sharedContext.navigateToForumThread(context: self.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: scrollToEndIfExists, keepStack: .never).startStandalone()
                     self.chatListDisplayNode.clearHighlightAnimated(true)
                 } else {
                     var navigationAnimationOptions: NavigationAnimationOptions = []
@@ -1201,7 +1201,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 navigationAnimationOptions = .removeOnMasterDetails
                             }
                             if case let .channel(channel) = actualPeer, channel.flags.contains(.isForum), let threadId {
-                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, keepStack: .never).startStandalone()
+                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .never).startStandalone()
                             } else {
                                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), purposefulAction: {
                                     if deactivateOnAction {
@@ -1234,7 +1234,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 navigationAnimationOptions = .removeOnMasterDetails
                             }
                             if case let .channel(channel) = peer, channel.flags.contains(.isForum), let threadId {
-                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .never).startStandalone()
+                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, scrollToEndIfExists: false, keepStack: .never).startStandalone()
                             } else {
                                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), purposefulAction: { [weak self] in
                                     self?.deactivateSearch(animated: false)
@@ -1312,7 +1312,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: iconColor, iconFileId: fileId)
                         |> deliverOnMainQueue).startStandalone(next: { topicId in
-                            let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, keepStack: .never).startStandalone()
+                            let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, scrollToEndIfExists: false, keepStack: .never).startStandalone()
                         }, error: { _ in
                             controller?.isInProgress = false
                         })
@@ -1592,7 +1592,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_EditFolder, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
                     }, action: { c, f in
-                        c.dismiss(completion: {
+                        c?.dismiss(completion: {
                             guard let strongSelf = self else {
                                 return
                             }
@@ -1635,7 +1635,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_AddChatsToFolder, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
                         }, action: { c, f in
-                            c.dismiss(completion: {
+                            c?.dismiss(completion: {
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -1728,7 +1728,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_ReadAll, textColor: .primary, icon: { theme in
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReadAll"), color: theme.contextMenu.primaryColor)
                                         }, action: { c, f in
-                                            c.dismiss(completion: {
+                                            c?.dismiss(completion: {
                                                 guard let strongSelf = self else {
                                                     return
                                                 }
@@ -1743,7 +1743,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                 items.append(.action(ContextMenuActionItem(text: filterPeersAreMuted.areMuted ? strongSelf.presentationData.strings.ChatList_ContextUnmuteAll : strongSelf.presentationData.strings.ChatList_ContextMuteAll, textColor: .primary, badge: nil, icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: filterPeersAreMuted.areMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
                                                 }, action: { c, f in
-                                                    c.dismiss(completion: {
+                                                    c?.dismiss(completion: {
                                                     })
                                                     
                                                     guard let strongSelf = self else {
@@ -1786,7 +1786,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_ContextMenuShare, textColor: .primary, badge: data.hasSharedLinks ? nil : ContextMenuActionBadge(value: strongSelf.presentationData.strings.ChatList_ContextMenuBadgeNew, color: .accent, style: .label), icon: { theme in
                                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                                                 }, action: { c, f in
-                                                    c.dismiss(completion: {
+                                                    c?.dismiss(completion: {
                                                         guard let strongSelf = self else {
                                                             return
                                                         }
@@ -1807,7 +1807,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_RemoveFolder, textColor: .destructive, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                         }, action: { c, f in
-                            c.dismiss(completion: {
+                            c?.dismiss(completion: {
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -1819,7 +1819,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_EditFolders, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
                     }, action: { c, f in
-                        c.dismiss(completion: {
+                        c?.dismiss(completion: {
                             guard let strongSelf = self else {
                                 return
                             }
@@ -1833,7 +1833,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_ReorderTabs, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
                     }, action: { c, f in
-                        c.dismiss(completion: {
+                        c?.dismiss(completion: {
                             guard let strongSelf = self else {
                                 return
                             }
@@ -2893,7 +2893,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextAddStory, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
-                            c.dismiss(completion: {
+                            c?.dismiss(completion: {
                                 guard let self else {
                                     return
                                 }
@@ -2905,7 +2905,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextSavedStories, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
-                            c.dismiss(completion: {
+                            c?.dismiss(completion: {
                                 guard let self else {
                                     return
                                 }
@@ -2917,7 +2917,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextArchivedStories, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
-                            c.dismiss(completion: {
+                            c?.dismiss(completion: {
                                 guard let self else {
                                     return
                                 }
@@ -2939,7 +2939,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         items.append(.action(ContextMenuActionItem(text: openTitle, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: openIcon), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
-                            c.dismiss(completion: {
+                            c?.dismiss(completion: {
                                 guard let self else {
                                     return
                                 }
@@ -3008,7 +3008,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextOpenChat, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MessageBubble"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
-                            c.dismiss(completion: {
+                            c?.dismiss(completion: {
                                 guard let self, let navigationController = self.navigationController as? NavigationController else {
                                     return
                                 }
@@ -3020,7 +3020,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextOpenProfile, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
-                            c.dismiss(completion: {
+                            c?.dismiss(completion: {
                                 guard let self else {
                                     return
                                 }
@@ -3566,7 +3566,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: iconColor, iconFileId: fileId)
                         |> deliverOnMainQueue).startStandalone(next: { topicId in
                             if let navigationController = (sourceController.navigationController as? NavigationController) {
-                                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, keepStack: .never).startStandalone()
+                                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, scrollToEndIfExists: false, keepStack: .never).startStandalone()
                             }
                         }, error: { _ in
                             controller?.isInProgress = false
@@ -5705,7 +5705,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             items.append(.action(ContextMenuActionItem(text: presetList.isEmpty ? strongSelf.presentationData.strings.ChatList_AddFolder : strongSelf.presentationData.strings.ChatList_EditFolders, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: presetList.isEmpty ? "Chat/Context Menu/Add" : "Chat/Context Menu/ItemList"), color: theme.contextMenu.primaryColor)
             }, action: { c, f in
-                c.dismiss(completion: {
+                c?.dismiss(completion: {
                     guard let strongSelf = self else {
                         return
                     }

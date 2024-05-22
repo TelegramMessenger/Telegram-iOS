@@ -564,6 +564,8 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 isReplyThread = true
             }
             
+            let messageEffect = item.topMessage.messageEffect(availableMessageEffects: item.associatedData.availableMessageEffects)
+            
             let statusSuggestedWidthAndContinue = makeDateAndStatusLayout(ChatMessageDateAndStatusNode.Arguments(
                 context: item.context,
                 presentationData: item.presentationData,
@@ -579,6 +581,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 reactionPeers: dateReactionsAndPeers.peers,
                 displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                 areReactionsTags: item.topMessage.areReactionsTags(accountPeerId: item.context.account.peerId),
+                messageEffect: messageEffect,
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                 hasAutoremove: item.message.isSelfExpiring,
@@ -995,6 +998,13 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 return
                             }
                             item.controllerInteraction.displayImportedMessageTooltip(strongSelf.dateAndStatusNode)
+                        }
+                    } else if messageEffect != nil {
+                        strongSelf.dateAndStatusNode.pressed = { [weak strongSelf] in
+                            guard let strongSelf, let item = strongSelf.item else {
+                                return
+                            }
+                            item.controllerInteraction.playMessageEffect(item.message)
                         }
                     } else {
                         strongSelf.dateAndStatusNode.pressed = nil
@@ -1546,7 +1556,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                             if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                                             } else if case .member = channel.participationStatus {
                                             } else {
-                                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, false, forwardInfoNode, nil)
                                                 return
                                             }
                                         }
@@ -1556,7 +1566,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                         item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info(nil) : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                         return
                                     } else if let _ = forwardInfo.authorSignature {
-                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
+                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, false, forwardInfoNode, nil)
                                         return
                                     }
                                 }
@@ -1628,6 +1638,11 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
         if let statusNode = self.statusNode, statusNode.supernode != nil, !statusNode.isHidden, statusNode.frame.contains(point) {
             return self.view
+        }
+        if self.dateAndStatusNode.supernode != nil, !self.dateAndStatusNode.isHidden {
+            if let result = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: event) {
+                return result
+            }
         }
 
         if let videoNode = self.videoNode, videoNode.view.frame.contains(point) {

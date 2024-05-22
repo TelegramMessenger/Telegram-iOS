@@ -361,6 +361,7 @@ final class ChatManagingBotTitlePanelNode: ChatTitleAccessoryPanelNode {
                         },
                         sendFile: nil,
                         sendSticker: nil,
+                        sendEmoji: nil,
                         requestMessageActionUrlAuth: nil,
                         joinVoiceChat: nil,
                         present: { [weak chatController] c, a in

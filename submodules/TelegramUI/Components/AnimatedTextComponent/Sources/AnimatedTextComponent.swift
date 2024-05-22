@@ -123,7 +123,7 @@ public final class AnimatedTextComponent: Component {
                             color: component.color
                         )),
                         environment: {},
-                        containerSize: CGSize(width: 100.0, height: 100.0)
+                        containerSize: CGSize(width: availableSize.width, height: 100.0)
                     )
                     let characterFrame = CGRect(origin: CGPoint(x: size.width, y: 0.0), size: characterSize)
                     if let characterComponentView = characterView.view {

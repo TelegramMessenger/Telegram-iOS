@@ -208,6 +208,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 hasTrending: hasTrending,
                 forceHasPremium: false,
                 hasEdit: hasEdit,
+                hasAdd: hasEdit,
                 subject: .chatStickers,
                 hideBackground: hideBackground
             )
@@ -1397,7 +1398,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         parentNavigationController: interaction.getNavigationController(),
                         sendSticker: { [weak interaction] fileReference, sourceView, sourceRect in
                             return interaction?.sendSticker(fileReference, false, false, nil, false, sourceView, sourceRect, nil, []) ?? false
-                        }
+                        },
+                        actionPerformed: nil
                     )
                     interaction.presentController(controller, nil)
                 })
@@ -1825,6 +1827,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         if case let .customChatContents(customChatContents) = interfaceState.subject {
             switch customChatContents.kind {
             case .quickReplyMessageInput:
+                break
+            case .hashTagSearch:
                 break
             case .businessLinkSetup:
                 stickerContent = nil
@@ -2880,7 +2884,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                                 let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: false, parentNavigationController: interaction.navigationController(), sendSticker: { file, sourceView, sourceRect in
                                                     sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
                                                     return true
-                                                })
+                                                }, actionPerformed: nil)
                                                 
                                                 interaction.navigationController()?.view.window?.endEditing(true)
                                                 interaction.presentController(controller, nil)

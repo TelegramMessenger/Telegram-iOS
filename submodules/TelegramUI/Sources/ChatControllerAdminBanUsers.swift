@@ -488,7 +488,7 @@ extension ChatControllerImpl {
                                 f(.dismissWithoutContent)
                                 commit()
                             } else {
-                                c.dismiss(completion: {
+                                c?.dismiss(completion: {
                                     DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
                                         commit()
                                     })
@@ -541,7 +541,7 @@ extension ChatControllerImpl {
                             f(.dismissWithoutContent)
                             commit()
                         } else {
-                            c.dismiss(completion: {
+                            c?.dismiss(completion: {
                                 DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
                                     commit()
                                 })

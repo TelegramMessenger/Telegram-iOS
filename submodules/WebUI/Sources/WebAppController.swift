@@ -234,24 +234,22 @@ public struct WebAppParameters {
     }
 }
 
-public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) -> [String: Any] {
-    let backgroundColor = presentationTheme.list.plainBackgroundColor.rgb
-    let secondaryBackgroundColor = presentationTheme.list.blocksBackgroundColor.rgb
+public func generateWebAppThemeParams(_ theme: PresentationTheme) -> [String: Any] {
     return [
-        "bg_color": Int32(bitPattern: backgroundColor),
-        "secondary_bg_color": Int32(bitPattern: secondaryBackgroundColor),
-        "text_color": Int32(bitPattern: presentationTheme.list.itemPrimaryTextColor.rgb),
-        "hint_color": Int32(bitPattern: presentationTheme.list.itemSecondaryTextColor.rgb),
-        "link_color": Int32(bitPattern: presentationTheme.list.itemAccentColor.rgb),
-        "button_color": Int32(bitPattern: presentationTheme.list.itemCheckColors.fillColor.rgb),
-        "button_text_color": Int32(bitPattern: presentationTheme.list.itemCheckColors.foregroundColor.rgb),
-        "header_bg_color": Int32(bitPattern: presentationTheme.rootController.navigationBar.opaqueBackgroundColor.rgb),
-        "accent_text_color": Int32(bitPattern: presentationTheme.list.itemAccentColor.rgb),
-        "section_bg_color": Int32(bitPattern: presentationTheme.list.itemBlocksBackgroundColor.rgb),
-        "section_header_text_color": Int32(bitPattern: presentationTheme.list.freeTextColor.rgb),
-        "subtitle_text_color": Int32(bitPattern: presentationTheme.list.itemSecondaryTextColor.rgb),
-        "destructive_text_color": Int32(bitPattern: presentationTheme.list.itemDestructiveColor.rgb),
-        "section_separator_color": Int32(bitPattern: presentationTheme.list.itemBlocksSeparatorColor.rgb)
+        "bg_color": Int32(bitPattern: theme.list.plainBackgroundColor.rgb),
+        "secondary_bg_color": Int32(bitPattern: theme.list.blocksBackgroundColor.rgb),
+        "text_color": Int32(bitPattern: theme.list.itemPrimaryTextColor.rgb),
+        "hint_color": Int32(bitPattern: theme.list.itemSecondaryTextColor.rgb),
+        "link_color": Int32(bitPattern: theme.list.itemAccentColor.rgb),
+        "button_color": Int32(bitPattern: theme.list.itemCheckColors.fillColor.rgb),
+        "button_text_color": Int32(bitPattern: theme.list.itemCheckColors.foregroundColor.rgb),
+        "header_bg_color": Int32(bitPattern: theme.rootController.navigationBar.opaqueBackgroundColor.rgb),
+        "accent_text_color": Int32(bitPattern: theme.list.itemAccentColor.rgb),
+        "section_bg_color": Int32(bitPattern: theme.list.itemBlocksBackgroundColor.rgb),
+        "section_header_text_color": Int32(bitPattern: theme.list.freeTextColor.rgb),
+        "subtitle_text_color": Int32(bitPattern: theme.list.itemSecondaryTextColor.rgb),
+        "destructive_text_color": Int32(bitPattern: theme.list.itemDestructiveColor.rgb),
+        "section_separator_color": Int32(bitPattern: theme.list.itemBlocksSeparatorColor.rgb)
     ]
 }
 
@@ -859,14 +857,31 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             return .single(nil)
                         }
                         |> deliverOnMainQueue).start(next: { [weak self] invoice in
-                            if let strongSelf = self, let invoice = invoice {
+                            if let strongSelf = self, let invoice, let navigationController = strongSelf.controller?.getNavigationController() {
                                 let inputData = Promise<BotCheckoutController.InputData?>()
                                 inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .slug(slug))
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
                                     return .single(nil)
                                 })
-                                if let navigationController = strongSelf.controller?.getNavigationController() {
+                                if invoice.currency == "XTR" {
+                                    let starsContext = strongSelf.context.engine.payments.peerStarsContext(peerId: strongSelf.context.account.peerId)
+                                    let starsInputData = combineLatest(
+                                        inputData.get(),
+                                        starsContext.state
+                                    )
+                                    |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
+                                        if let data, let state {
+                                            return (state, data.form, data.botPeer)
+                                        } else {
+                                            return nil
+                                        }
+                                    }
+                                    let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                                        let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .slug(slug), inputData: starsInputData)
+                                        navigationController.pushViewController(controller)
+                                    })
+                                } else {
                                     let checkoutController = BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
                                         self?.sendInvoiceClosedEvent(slug: slug, result: .paid)
                                     }, cancelled: { [weak self] in
@@ -1912,7 +1927,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Settings, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in
-                    c.dismiss(completion: nil)
+                    c?.dismiss(completion: nil)
                     
                     if let strongSelf = self {
                         strongSelf.controllerNode.sendSettingsButtonEvent()
@@ -1924,7 +1939,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_OpenBot, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Bots"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in
-                    c.dismiss(completion: nil)
+                    c?.dismiss(completion: nil)
                     
                     guard let strongSelf = self else {
                         return
@@ -1948,7 +1963,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_ReloadPage, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reload"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] c, _ in
-                c.dismiss(completion: nil)
+                c?.dismiss(completion: nil)
                 
                 self?.controllerNode.webView?.reload()
             })))
@@ -1956,7 +1971,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_TermsOfUse, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] c, _ in
-                c.dismiss(completion: nil)
+                c?.dismiss(completion: nil)
                 
                 guard let self, let navigationController = self.getNavigationController() else {
                     return
@@ -1966,7 +1981,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 let _ = (cachedWebAppTermsPage(context: context)
                 |> deliverOnMainQueue).startStandalone(next: { resolvedUrl in
                     context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: true, openPeer: { peer, navigation in
-                    }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak self] c, arguments in
+                    }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak self] c, arguments in
                         self?.push(c)
                     }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
                 })
@@ -1976,7 +1991,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_RemoveBot, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                 }, action: { [weak self] c, _ in
-                    c.dismiss(completion: nil)
+                    c?.dismiss(completion: nil)
                     
                     if let strongSelf = self {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -2077,6 +2092,17 @@ final class WebAppPickerContext: AttachmentMediaPickerContext {
         return .single(nil)
     }
     
+    var hasCaption: Bool {
+        return false
+    }
+    
+    var captionIsAboveMedia: Signal<Bool, NoError> {
+        return .single(false)
+    }
+    
+    func setCaptionIsAboveMedia(_ captionIsAboveMedia: Bool) -> Void {
+    }
+    
     public var loadingProgress: Signal<CGFloat?, NoError> {
         return self.controller?.controllerNode.loadingProgressPromise.get() ?? .single(nil)
     }
@@ -2092,10 +2118,10 @@ final class WebAppPickerContext: AttachmentMediaPickerContext {
     func setCaption(_ caption: NSAttributedString) {
     }
     
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
+    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode, parameters: ChatSendMessageActionSheetController.SendParameters?) {
     }
     
-    func schedule() {
+    func schedule(parameters: ChatSendMessageActionSheetController.SendParameters?) {
     }
     
     func mainButtonAction() {

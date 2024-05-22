@@ -781,6 +781,7 @@ public final class MessageInputPanelComponent: Component {
                     externalState: self.textFieldExternalState,
                     fontSize: 17.0,
                     textColor: UIColor(rgb: 0xffffff),
+                    accentColor: UIColor(rgb: 0xffffff),
                     insets: UIEdgeInsets(top: 9.0, left: 8.0, bottom: 10.0, right: 48.0),
                     hideKeyboard: component.hideKeyboard,
                     customInputView: component.customInputView,
@@ -791,7 +792,7 @@ public final class MessageInputPanelComponent: Component {
                         }
                     },
                     isOneLineWhenUnfocused: component.style == .media,
-                    formatMenuAvailability: component.isFormattingLocked ? .locked : .available,
+                    formatMenuAvailability: component.isFormattingLocked ? .locked : .available(TextFieldComponent.FormatMenuAvailability.Action.all),
                     lockedFormatAction: {
                         component.presentTextFormattingTooltip?()
                     },

@@ -39,6 +39,8 @@ swift_library(
         "//submodules/TelegramUI/Components/MediaEditor",
         "//submodules/LegacyMediaPickerUI",
         "//submodules/TelegramAudio",
+        "//submodules/ChatSendMessageActionUI",
+        "//submodules/TelegramUI/Components/ChatControllerInteraction",
     ],
     visibility = [
         "//visibility:public",

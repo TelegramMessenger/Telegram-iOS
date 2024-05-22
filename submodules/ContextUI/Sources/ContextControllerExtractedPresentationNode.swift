@@ -451,7 +451,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             reactionContextNode.updateIsIntersectingContent(isIntersectingContent: isIntersectingContent, transition: .animated(duration: 0.25, curve: .easeInOut))
             
             if !reactionContextNode.isExpanded && reactionContextNode.canBeExpanded {
-                if topOverscroll > 30.0 && self.scroller.isDragging {
+                if topOverscroll > 30.0 && self.scroller.isTracking {
                     self.scroller.panGestureRecognizer.state = .cancelled
                     reactionContextNode.expand()
                 } else {
@@ -1064,6 +1064,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if let contentNode = itemContentNode {
                 var contentFrame = CGRect(origin: CGPoint(x: contentParentGlobalFrame.minX + contentRect.minX - contentNode.containingItem.contentRect.minX, y: contentRect.minY - contentNode.containingItem.contentRect.minY + contentVerticalOffset + additionalVisibleOffsetY), size: contentNode.containingItem.view.bounds.size)
                 if case let .extracted(extracted) = self.source {
+                    if extracted.adjustContentHorizontally {
+                        contentFrame.origin.x = combinedActionsFrame.minX
+                    }
                     if extracted.centerVertically {
                         if combinedActionsFrame.height.isZero {
                             contentFrame.origin.y = floorToScreenPixels((layout.size.height -  contentFrame.height) / 2.0)
@@ -1160,7 +1163,10 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 let contentX = contentParentGlobalFrame.minX + contentRect.minX - contentNode.containingItem.contentRect.minX
                 let contentWidth = contentNode.containingItem.view.bounds.size.width
                 let contentHeight = contentNode.containingItem.view.bounds.size.height
-                if case let .extracted(extracted) = self.source, extracted.centerVertically {
+                if case let .extracted(extracted) = self.source, extracted.adjustContentHorizontally {
+                    let fixedContentX = self.actionsContainerNode.frame.minX
+                    animationInContentXDistance = fixedContentX - contentX
+                } else if case let .extracted(extracted) = self.source, extracted.centerVertically {
                     if actionsSize.height.isZero {
                         var initialContentRect = contentRect
                         initialContentRect.origin.y += extracted.initialAppearanceOffset.y
@@ -1429,7 +1435,10 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 var animationInContentXDistance: CGFloat = 0.0
                 let contentX = contentParentGlobalFrame.minX + contentRect.minX - contentNode.containingItem.contentRect.minX
                 let contentWidth = contentNode.containingItem.view.bounds.size.width
-                if case let .extracted(extracted) = self.source, extracted.centerVertically {
+                if case let .extracted(extracted) = self.source, extracted.adjustContentHorizontally {
+                    let fixedContentX = self.actionsContainerNode.frame.minX
+                    animationInContentXDistance = contentX - fixedContentX
+                } else if case let .extracted(extracted) = self.source, extracted.centerVertically {
                     if actionsSize.height.isZero {
 //                        let fixedContentY = floorToScreenPixels((layout.size.height - contentHeight) / 2.0)
                         animationInContentYDistance = 0.0 //contentY - fixedContentY
