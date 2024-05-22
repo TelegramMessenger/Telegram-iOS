@@ -12226,6 +12226,13 @@ Sorry for the inconvenience.";
 "Conversation.ContextMenuAddFactCheck" = "Add Fact Check";
 "Conversation.ContextMenuEditFactCheck" = "Edit Fact Check";
 
+"Stars.Intro.Title" = "Telegram Stars";
+"Stars.Intro.Description" = "Buy Stars to unlock content and services in miniapps on Telegram.";
+"Stars.Intro.Balance" = "Balance";
+"Stars.Intro.AllTransactions" = "All Transactions";
+"Stars.Intro.Incoming" = "Incoming";
+"Stars.Intro.Outgoing" = "Outgoing";
+
 "Stars.Purchase.GetStars" = "Get Stars";
 "Stars.Purchase.GetStarsInfo" = "Choose how many Stars you would like to buy.";
 
@@ -12240,5 +12247,24 @@ Sorry for the inconvenience.";
 "Stars.Purchase.ShowMore" = "Show More Options";
 "Stars.Purchase.Info" = "By proceeding and purchasing Stars, you agree with [Terms and Conditions]().";
 "Stars.Purchase.Terms_URL" = "https://telegram.org/tos";
+
+"Stars.Transaction.To" = "To";
+"Stars.Transaction.Id" = "Transaction ID";
+"Stars.Transaction.Date" = "Date";
+"Stars.Transaction.Terms" = "Review the [Terms of Service]() for Stars.";
+"Stars.Transaction.Terms_URL" = "https://telegram.org/tos";
+"Stars.Transaction.CopiedId" = "Transaction ID copied to clipboard.";
+
+"Stars.Transfer.Title" = "Confirm Your Purchase";
+"Stars.Transfer.Info" = "Do you want to buy **%1$@** in **%2$@** for **%3$@**?";
+"Stars.Transfer.Info.Stars_1" = "%@ Star";
+"Stars.Transfer.Info.Stars_any" = "%@ Stars";
+"Stars.Transfer.Pay" = "Confirm and Pay";
+"Stars.Transfer.PurchasedTitle" = "Purchase Completed";
+"Stars.Transfer.PurchasedText" = "You acquired **%1$@** in **%2$@** for **%3$@**.";
+"Stars.Transfer.Purchased.Stars_1" = "%@ Star";
+"Stars.Transfer.Purchased.Stars_any" = "%@ Stars";
+
+"Stars.Transfer.Balance" = "Balance";
 
 "Settings.Stars" = "Your Stars";

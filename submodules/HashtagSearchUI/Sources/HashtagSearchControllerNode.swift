@@ -64,9 +64,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         } else {
             self.currentController = nil
         }
-        
-        self.isSearching.set(self.currentController?.searching.get() ?? .single(false))
-        
+                
         let myChatContents = HashtagSearchGlobalChatContents(context: context, kind: .hashTagSearch, query: cleanHashtag, onlyMy: true)
         self.myChatContents = myChatContents
         self.myController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: myChatContents), botStart: nil, mode: .standard(.default))
@@ -96,14 +94,20 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             self.currentController?.displayNode.isHidden = true
             self.myController?.displayNode.isHidden = false
             self.globalController?.displayNode.isHidden = true
+            
+            self.isSearching.set(self.myChatContents?.searching ?? .single(false))
         } else {
             if let _ = peer {
                 self.currentController?.displayNode.isHidden = false
                 self.myController?.displayNode.isHidden = true
                 self.globalController?.displayNode.isHidden = true
+                
+                self.isSearching.set(self.currentController?.searching.get() ?? .single(false))
             } else {
                 self.myController?.displayNode.isHidden = false
                 self.globalController?.displayNode.isHidden = true
+                
+                self.isSearching.set(self.myChatContents?.searching ?? .single(false))
             }
         }
         

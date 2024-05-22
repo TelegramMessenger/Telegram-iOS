@@ -392,7 +392,7 @@ final class StarsTransactionsScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Telegram Stars", font: Font.bold(28.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                        text: .plain(NSAttributedString(string: environment.strings.Stars_Intro_Title, font: Font.bold(28.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                         horizontalAlignment: .center,
                         truncationType: .end,
                         maximumNumberOfLines: 1
@@ -415,8 +415,8 @@ final class StarsTransactionsScreenComponent: Component {
             let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
                 return (TelegramTextAttributes.URL, contents)
             })
-            let balanceAttributedString = parseMarkdownIntoAttributedString(" Balance\n >  **\(starsState?.balance ?? 0)**", attributes: markdownAttributes, textAlignment: .right).mutableCopy() as! NSMutableAttributedString
-            if let range = balanceAttributedString.string.range(of: ">"), let chevronImage = generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: UIColor(rgb: 0xf09903)) {
+            let balanceAttributedString = parseMarkdownIntoAttributedString(" \(environment.strings.Stars_Intro_Balance)\n #  **\(self.starsState?.balance ?? 0)**", attributes: markdownAttributes, textAlignment: .right).mutableCopy() as! NSMutableAttributedString
+            if let range = balanceAttributedString.string.range(of: "#"), let chevronImage = generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: UIColor(rgb: 0xf09903)) {
                 balanceAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: balanceAttributedString.string))
                 balanceAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xf09903), range: NSRange(range, in: balanceAttributedString.string))
                 balanceAttributedString.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: balanceAttributedString.string))
@@ -446,7 +446,7 @@ final class StarsTransactionsScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(
                     BalancedTextComponent(
-                        text: .plain(NSAttributedString(string: "Buy Stars to unlock content and services in miniapps on Telegram.", font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                        text: .plain(NSAttributedString(string: environment.strings.Stars_Intro_Description, font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.2
@@ -501,7 +501,6 @@ final class StarsTransactionsScreenComponent: Component {
             contentHeight += balanceSize.height
             contentHeight += 44.0
             
-            //TODO: localize
             let transactions = self.starsState?.transactions ?? []
             let allItems = StarsTransactionsListPanelComponent.Items(
                 items: transactions.map { StarsTransactionsListPanelComponent.Item(transaction: $0) }
@@ -517,7 +516,7 @@ final class StarsTransactionsScreenComponent: Component {
             if !allItems.items.isEmpty {
                 panelItems.append(StarsTransactionsPanelContainerComponent.Item(
                     id: "all",
-                    title: "All Transactions",
+                    title: environment.strings.Stars_Intro_AllTransactions,
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         items: allItems,
@@ -530,7 +529,7 @@ final class StarsTransactionsScreenComponent: Component {
                 if !outgoingItems.items.isEmpty {
                     panelItems.append(StarsTransactionsPanelContainerComponent.Item(
                         id: "incoming",
-                        title: "Incoming",
+                        title: environment.strings.Stars_Intro_Incoming,
                         panel: AnyComponent(StarsTransactionsListPanelComponent(
                             context: component.context,
                             items: incomingItems,
@@ -542,7 +541,7 @@ final class StarsTransactionsScreenComponent: Component {
                     
                     panelItems.append(StarsTransactionsPanelContainerComponent.Item(
                         id: "outgoing",
-                        title: "Outgoing",
+                        title: environment.strings.Stars_Intro_Outgoing,
                         panel: AnyComponent(StarsTransactionsListPanelComponent(
                             context: component.context,
                             items: outgoingItems,

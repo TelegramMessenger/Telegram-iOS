@@ -156,7 +156,7 @@ private final class SheetContent: CombinedComponent {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let theme = presentationData.theme
-//            let strings = presentationData.strings
+            let strings = presentationData.strings
             
 //            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
@@ -216,10 +216,9 @@ private final class SheetContent: CombinedComponent {
             
             let constrainedTitleWidth = context.availableSize.width - 16.0 * 2.0
             
-            
             contentSize.height += 130.0
             let title = title.update(
-                component: Text(text: "Confirm Your Purchase", font: Font.bold(24.0), color: theme.list.itemPrimaryTextColor),
+                component: Text(text: strings.Stars_Transfer_Title, font: Font.bold(24.0), color: theme.list.itemPrimaryTextColor),
                 availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
                 transition: .immediate
             )
@@ -240,7 +239,14 @@ private final class SheetContent: CombinedComponent {
             let amount = component.invoice.totalAmount
             let text = text.update(
                 component: BalancedTextComponent(
-                    text: .markdown(text: "Do you want to buy **\(component.invoice.title)** in **\(state.peer?.compactDisplayTitle ?? "")** for **\(amount) Stars**?", attributes: markdownAttributes),
+                    text: .markdown(
+                        text: strings.Stars_Transfer_Info(
+                            component.invoice.title,
+                            state.peer?.compactDisplayTitle ?? "",
+                            strings.Stars_Transfer_Info_Stars(Int32(amount))
+                        ).string,
+                        attributes: markdownAttributes
+                    ),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
@@ -258,7 +264,7 @@ private final class SheetContent: CombinedComponent {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Premium/Stars/Star"), color: UIColor(rgb: 0xf09903))!, theme)
             }
             
-            let balanceAttributedString = parseMarkdownIntoAttributedString("Balance\n #  **\(state.balance ?? 0)**", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
+            let balanceAttributedString = parseMarkdownIntoAttributedString("\(strings.Stars_Transfer_Balance)\n #  **\(state.balance ?? 0)**", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = balanceAttributedString.string.range(of: "#"), let chevronImage = state.cachedChevronImage?.0 {
                 balanceAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: balanceAttributedString.string))
                 balanceAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xf09903), range: NSRange(range, in: balanceAttributedString.string))
@@ -281,8 +287,8 @@ private final class SheetContent: CombinedComponent {
                 state.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: .white)!, theme)
             }
             
-            let buttonAttributedString = NSMutableAttributedString(string: "Confirm and Pay   >  \(amount)", font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)
-            if let range = buttonAttributedString.string.range(of: ">"), let starImage = state.cachedStarImage?.0 {
+            let buttonAttributedString = NSMutableAttributedString(string: "\(strings.Stars_Transfer_Pay)   #  \(amount)", font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)
+            if let range = buttonAttributedString.string.range(of: "#"), let starImage = state.cachedStarImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff), range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: buttonAttributedString.string))
@@ -323,7 +329,13 @@ private final class SheetContent: CombinedComponent {
                             let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
                             let resultController = UndoOverlayController(
                                 presentationData: presentationData,
-                                content: .image(image: UIImage(bundleImageName: "Premium/Stars/Star")!, title: "Purchase Completed", text: "You acquired **\(invoice.title)** in **\(botTitle)** for **\(invoice.totalAmount) Stars**.", round: false, undoText: nil),
+                                content: .image(
+                                    image: UIImage(bundleImageName: "Premium/Stars/Star")!,
+                                    title: presentationData.strings.Stars_Transfer_PurchasedTitle,
+                                    text: presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string,
+                                    round: false,
+                                    undoText: nil
+                                ),
                                 elevatedLayout: true,
                                 action: { _ in return true})
                             controller?.present(resultController, in: .window(.root))

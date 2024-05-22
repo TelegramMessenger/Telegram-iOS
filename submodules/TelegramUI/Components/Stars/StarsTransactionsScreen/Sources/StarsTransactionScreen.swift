@@ -169,8 +169,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 } else {
                     descriptionText = "+ \(transaction.count) ⭐️"
                 }
-                additionalText = "You can dispute this transaction [here]()."
-                buttonText = "OK"
+                additionalText = strings.Stars_Transaction_Terms
+                buttonText = strings.Common_OK
                 
                 transactionId = transaction.id
                 date = transaction.date
@@ -207,7 +207,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     avatarSize: 90.0,
                     color: UIColor(rgb: 0xf7ab04)
                 ),
-//                    PremiumStarComponent(isIntro: false, isVisible: true, hasIdleAnimations: true),
                 availableSize: CGSize(width: context.availableSize.width, height: 200.0),
                 transition: .immediate
             )
@@ -238,7 +237,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             if let toPeer {
                 tableItems.append(.init(
                     id: "to",
-                    title: strings.GiftLink_To,
+                    title: strings.Stars_Transaction_Date,
                     component: AnyComponent(
                         Button(
                             content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: toPeer)),
@@ -257,7 +256,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
 
             tableItems.append(.init(
                 id: "transaction",
-                title: "Transaction ID",
+                title: strings.Stars_Transaction_Id,
                 component: AnyComponent(
                     MultilineTextComponent(
                         text: .plain(NSAttributedString(string: transactionId, font: Font.monospace(15.0), textColor: tableTextColor)),
@@ -269,7 +268,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             tableItems.append(.init(
                 id: "date",
-                title: strings.GiftLink_Date,
+                title: strings.Stars_Transaction_Date,
                 component: AnyComponent(
                     MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
                 )
@@ -299,7 +298,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         }
                     },
                     tapAction: { attributes, _ in
-        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                        component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_Transaction_Terms_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                     }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
