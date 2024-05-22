@@ -441,6 +441,16 @@ public extension Message {
         }
         return nil
     }
+    
+    var factCheckAttribute: FactCheckMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? FactCheckMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+    
     var inlineBotAttribute: InlineBusinessBotMessageAttribute? {
         for attribute in self.attributes {
             if let attribute = attribute as? InlineBusinessBotMessageAttribute {
