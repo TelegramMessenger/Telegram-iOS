@@ -266,7 +266,16 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
             )
             
             let star = star.update(
-                component: PremiumStarComponent(isIntro: false, isVisible: true, hasIdleAnimations: true),
+                component: PremiumStarComponent(
+                    isIntro: false,
+                    isVisible: true,
+                    hasIdleAnimations: true,
+                    colors: [
+                        UIColor(rgb: 0x6a94ff),
+                        UIColor(rgb: 0x9472fd),
+                        UIColor(rgb: 0xe26bd3)
+                    ]
+                ),
                 availableSize: CGSize(width: context.availableSize.width, height: 200.0),
                 transition: .immediate
             )

@@ -656,46 +656,64 @@ public extension Api {
 }
 public extension Api {
     enum StarsTransaction: TypeConstructorDescription {
-        case starsTransaction(id: String, stars: Int64, date: Int32, peer: Api.StarsTransactionPeer)
+        case starsTransaction(flags: Int32, id: String, stars: Int64, date: Int32, peer: Api.StarsTransactionPeer, title: String?, description: String?, photo: Api.WebDocument?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starsTransaction(let id, let stars, let date, let peer):
+                case .starsTransaction(let flags, let id, let stars, let date, let peer, let title, let description, let photo):
                     if boxed {
-                        buffer.appendInt32(1600878860)
+                        buffer.appendInt32(-865044046)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(id, buffer: buffer, boxed: false)
                     serializeInt64(stars, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(description!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {photo!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starsTransaction(let id, let stars, let date, let peer):
-                return ("starsTransaction", [("id", id as Any), ("stars", stars as Any), ("date", date as Any), ("peer", peer as Any)])
+                case .starsTransaction(let flags, let id, let stars, let date, let peer, let title, let description, let photo):
+                return ("starsTransaction", [("flags", flags as Any), ("id", id as Any), ("stars", stars as Any), ("date", date as Any), ("peer", peer as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any)])
     }
     }
     
         public static func parse_starsTransaction(_ reader: BufferReader) -> StarsTransaction? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Api.StarsTransactionPeer?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Api.StarsTransactionPeer?
             if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.StarsTransactionPeer
+                _5 = Api.parse(reader, signature: signature) as? Api.StarsTransactionPeer
             }
+            var _6: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = parseString(reader) }
+            var _7: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_7 = parseString(reader) }
+            var _8: Api.WebDocument?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.WebDocument
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.StarsTransaction.starsTransaction(id: _1!, stars: _2!, date: _3!, peer: _4!)
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.StarsTransaction.starsTransaction(flags: _1!, id: _2!, stars: _3!, date: _4!, peer: _5!, title: _6, description: _7, photo: _8)
             }
             else {
                 return nil

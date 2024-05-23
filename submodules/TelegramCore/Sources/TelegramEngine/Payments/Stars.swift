@@ -183,7 +183,7 @@ private final class StarsContextImpl {
     func add(balance: Int64) {
         if var state = self._state {
             var transactions = state.transactions
-            transactions.insert(.init(id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore), at: 0)
+            transactions.insert(.init(id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil), at: 0)
             
             state.balance = state.balance + balance
             self._state = state
@@ -216,7 +216,7 @@ private final class StarsContextImpl {
 private extension StarsContext.State.Transaction {
     init?(apiTransaction: Api.StarsTransaction, transaction: Transaction) {
         switch apiTransaction {
-        case let .starsTransaction(id, stars, date, transactionPeer):
+        case let .starsTransaction(_, id, stars, date, transactionPeer, title, description, photo):
             let parsedPeer: StarsContext.State.Transaction.Peer
             switch transactionPeer {
             case .starsTransactionPeerAppStore:
@@ -235,7 +235,7 @@ private extension StarsContext.State.Transaction {
                 }
                 parsedPeer = .peer(EnginePeer(peer))
             }
-            self.init(id: id, count: stars, date: date, peer: parsedPeer)
+            self.init(id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init))
         }
     }
 }
@@ -256,12 +256,26 @@ public final class StarsContext {
             public let count: Int64
             public let date: Int32
             public let peer: Peer
+            public let title: String?
+            public let description: String?
+            public let photo: TelegramMediaWebFile?
             
-            init(id: String, count: Int64, date: Int32, peer: Peer) {
+            init(
+                id: String,
+                count: Int64,
+                date: Int32,
+                peer: Peer,
+                title: String?,
+                description: String?,
+                photo: TelegramMediaWebFile?
+            ) {
                 self.id = id
                 self.count = count
                 self.date = date
                 self.peer = peer
+                self.title = title
+                self.description = description
+                self.photo = photo
             }
         }
         

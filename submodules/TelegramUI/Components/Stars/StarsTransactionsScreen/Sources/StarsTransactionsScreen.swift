@@ -371,10 +371,10 @@ final class StarsTransactionsScreenComponent: Component {
                     isVisible: true,
                     hasIdleAnimations: true,
                     colors: [
-                        UIColor(rgb: 0xea8904),
+                        UIColor(rgb: 0xe57d02),
                         UIColor(rgb: 0xf09903),
-                        UIColor(rgb: 0xfec209),
-                        UIColor(rgb: 0xfed31a)
+                        UIColor(rgb: 0xf9b004),
+                        UIColor(rgb: 0xfdd219)
                     ]
                 )),
                 environment: {},

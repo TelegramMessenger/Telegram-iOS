@@ -693,6 +693,27 @@ func _internal_requestBotPaymentReceipt(account: Account, messageId: MessageId) 
                     let botPaymentId = PeerId.init(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId))
 
                     return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle, invoiceMedia: invoiceMedia, tipAmount: tipAmount, botPaymentId: botPaymentId)
+                case let .paymentReceiptStars(_, _, botId, title, description, photo, invoice, currency, totalAmount, users: users):
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                    
+                    let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                    
+                    let invoiceMedia = TelegramMediaInvoice(
+                        title: title,
+                        description: description,
+                        photo: photo.flatMap(TelegramMediaWebFile.init),
+                        receiptMessageId: nil,
+                        currency: currency,
+                        totalAmount: totalAmount,
+                        startParam: "",
+                        extendedMedia: nil,
+                        flags: [],
+                        version: TelegramMediaInvoice.lastVersion
+                    )
+                    
+                    let botPaymentId = PeerId.init(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId))
+                    return BotPaymentReceipt(invoice: parsedInvoice, info: nil, shippingOption: nil, credentialsTitle: "", invoiceMedia: invoiceMedia, tipAmount: nil, botPaymentId: botPaymentId)
                 }
             }
             |> castError(RequestBotPaymentReceiptError.self)
