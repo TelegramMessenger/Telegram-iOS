@@ -731,6 +731,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     context: item.context,
                     controllerInteraction: item.controllerInteraction,
                     type: .standalone,
+                    peer: nil,
                     threadId: item.message.threadId ?? 1,
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),

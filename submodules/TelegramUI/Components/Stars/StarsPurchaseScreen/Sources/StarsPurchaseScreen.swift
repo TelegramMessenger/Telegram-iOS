@@ -45,7 +45,8 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
     let context: AccountContext
     let options: [StarsTopUpOption]
     let peerId: EnginePeer.Id?
-    let requiredStars: Int32?
+    let requiredStars: Int64?
+    let selectedProductId: String?
     let forceDark: Bool
     let products: [StarsProduct]?
     let expanded: Bool
@@ -56,7 +57,8 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
         context: AccountContext,
         options: [StarsTopUpOption],
         peerId: EnginePeer.Id?,
-        requiredStars: Int32?,
+        requiredStars: Int64?,
+        selectedProductId: String?,
         forceDark: Bool,
         products: [StarsProduct]?,
         expanded: Bool,
@@ -67,6 +69,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
         self.options = options
         self.peerId = peerId
         self.requiredStars = requiredStars
+        self.selectedProductId = selectedProductId
         self.forceDark = forceDark
         self.products = products
         self.expanded = expanded
@@ -85,6 +88,9 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             return false
         }
         if lhs.requiredStars != rhs.requiredStars {
+            return false
+        }
+        if lhs.selectedProductId != rhs.selectedProductId {
             return false
         }
         if lhs.forceDark != rhs.forceDark {
@@ -157,6 +163,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             state.products = context.component.products
             
             let theme = environment.theme
+            let strings = environment.strings
             let presentationData = context.component.context.sharedContext.currentPresentationData.with { $0 }
             
             let availableWidth = context.availableSize.width
@@ -202,13 +209,12 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
             
-            //TODO:localize
             let textString: String
-//            if let peer = state.peer, let requiredStars = context.component.requiredStars {
-//                textString = "\(peer.compactDisplayTitle) requests \(requiredStars) Stars.\n\nAvailable balance: **1000 Stars**.\n\nBuy **Stars** to unlock **content and services** in miniapps on **Telegram**."
-//            } else {
-            textString = "Choose how many Stars you would like to buy."
-//            }
+            if let _ = context.component.requiredStars {
+                textString = strings.Stars_Purchase_StarsNeededInfo(state.peer?.compactDisplayTitle ?? "").string
+            } else {
+                textString = strings.Stars_Purchase_GetStarsInfo
+            }
             
             let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: accentColor), linkAttribute: { contents in
                 return (TelegramTextAttributes.URL, contents)
@@ -272,21 +278,23 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             ]
             
             let externalStateUpdated = context.component.stateUpdated
-            let layoutPerks = {
-                size.height += 8.0
-                                
-                var i = 0
-                var items: [AnyComponentWithIdentity<Empty>] = []
-                                                
-                guard let products = state.products else {
-                    return
-                }
+            
+            size.height += 8.0
+                            
+            var i = 0
+            var items: [AnyComponentWithIdentity<Empty>] = []
+                                            
+            if let products = state.products {
                 for product in products {
+                    if let requiredStars = context.component.requiredStars, requiredStars > product.option.count {
+                        continue
+                    }
+                    
                     if !context.component.expanded && !initialValues.contains(product.option.count) {
                         continue
                     }
-                        
-                    let title = "\(product.option.count) Stars"
+                    
+                    let title = strings.Stars_Purchase_Stars(Int32(product.option.count))
                     let price = product.price
                     
                     let titleComponent = AnyComponent(MultilineTextComponent(
@@ -298,6 +306,15 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                         maximumNumberOfLines: 0
                     ))
                     
+                    let backgroundComponent: AnyComponent<Empty>?
+                    if product.storeProduct.id == context.component.selectedProductId {
+                        backgroundComponent = AnyComponent(
+                            ItemLoadingComponent(color: environment.theme.list.itemAccentColor)
+                        )
+                    } else {
+                        backgroundComponent = nil
+                    }
+                    
                     let buy = context.component.buy
                     items.append(AnyComponentWithIdentity(
                         id: product.id,
@@ -307,11 +324,12 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                             footer: nil,
                             items: [AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
                                 theme: environment.theme,
+                                background: backgroundComponent,
                                 title: titleComponent,
                                 contentInsets: UIEdgeInsets(top: 12.0, left: -6.0, bottom: 12.0, right: 0.0),
                                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(StarsIconComponent(
                                     count: stars[product.option.count] ?? 1
-                                )))),
+                                ))), true),
                                 accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
                                         string: price,
@@ -322,66 +340,71 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                                 ))), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 16.0))),
                                 action: { _ in
                                     buy(product)
+                                },
+                                highlighting: .disabled,
+                                updateIsHighlighted: { view, isHighlighted in
+                                    let transition: Transition = .easeInOut(duration: 0.25)
+                                    if let superview = view.superview {
+                                        transition.setScale(view: superview, scale: isHighlighted ? 0.9 : 1.0)
+                                    }
                                 }
                             )))]
                         ))
                     ))
                     i += 1
                 }
-                
-                if !context.component.expanded {
-                    let titleComponent = AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: "Show More Options",
-                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                            textColor: environment.theme.list.itemAccentColor
-                        )),
-                        horizontalAlignment: .center,
-                        maximumNumberOfLines: 0
-                    ))
-                    
-                    let titleCombinedComponent = AnyComponent(HStack([
-                        AnyComponentWithIdentity(id: AnyHashable(0), component: titleComponent),
-                        AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(BundleIconComponent(name: "Chat/Input/Search/DownButton", tintColor: environment.theme.list.itemAccentColor)))
-                    ], spacing: 1.0))
-                    
-                    items.append(AnyComponentWithIdentity(
-                        id: items.count,
-                        component: AnyComponent(ListSectionComponent(
-                            theme: environment.theme,
-                            header: nil,
-                            footer: nil,
-                            items: [AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
-                                theme: environment.theme,
-                                title: titleCombinedComponent,
-                                titleAlignment: .center,
-                                contentInsets: UIEdgeInsets(top: 7.0, left: 0.0, bottom: 7.0, right: 0.0),
-                                leftIcon: nil,
-                                accessory: .none,
-                                action: { _ in
-                                    externalStateUpdated(.easeInOut(duration: 0.3))
-                                }
-                            )))]
-                        ))
-                    ))
-                }
- 
-                let list = list.update(
-                    component: VStack(items, spacing: 16.0),
-                    environment: {},
-                    availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
-                    transition: context.transition
-                )
-                context.add(list
-                    .position(CGPoint(x: availableWidth / 2.0, y: size.height + list.size.height / 2.0))
-                )
-                size.height += list.size.height
-                
-                size.height += 23.0
             }
             
-            layoutPerks()
+            if !context.component.expanded {
+                let titleComponent = AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: strings.Stars_Purchase_ShowMore,
+                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                        textColor: environment.theme.list.itemAccentColor
+                    )),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 0
+                ))
+                
+                let titleCombinedComponent = AnyComponent(HStack([
+                    AnyComponentWithIdentity(id: AnyHashable(0), component: titleComponent),
+                    AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(BundleIconComponent(name: "Chat/Input/Search/DownButton", tintColor: environment.theme.list.itemAccentColor)))
+                ], spacing: 1.0))
+                
+                items.append(AnyComponentWithIdentity(
+                    id: items.count,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: nil,
+                        footer: nil,
+                        items: [AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                            theme: environment.theme,
+                            title: titleCombinedComponent,
+                            titleAlignment: .center,
+                            contentInsets: UIEdgeInsets(top: 7.0, left: 0.0, bottom: 7.0, right: 0.0),
+                            leftIcon: nil,
+                            accessory: .none,
+                            action: { _ in
+                                externalStateUpdated(.easeInOut(duration: 0.3))
+                            }
+                        )))]
+                    ))
+                ))
+            }
+
+            let list = list.update(
+                component: VStack(items, spacing: 16.0),
+                environment: {},
+                availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
+                transition: context.transition
+            )
+            context.add(list
+                .position(CGPoint(x: availableWidth / 2.0, y: size.height + list.size.height / 2.0))
+            )
+            size.height += list.size.height
             
+            size.height += 23.0
+
             
             let termsFont = Font.regular(13.0)
             let termsTextColor = environment.theme.list.freeTextColor
@@ -390,9 +413,10 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             })
             let textSideInset: CGFloat = 16.0
             
+            let component = context.component
             let termsText = termsText.update(
                 component: BalancedTextComponent(
-                    text: .markdown(text: "By proceeding and purchasing Stars, you agree with [Terms and Conditions]().", attributes: termsMarkdownAttributes),
+                    text: .markdown(text: strings.Stars_Purchase_Info, attributes: termsMarkdownAttributes),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2,
@@ -405,7 +429,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                         }
                     },
                     tapAction: { attributes, _ in
-                        
+                        component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_Purchase_Terms_URL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                     }
                 ),
                 environment: {},
@@ -432,22 +456,22 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
     let starsContext: StarsContext
     let options: [StarsTopUpOption]
     let peerId: EnginePeer.Id?
-    let requiredStars: Int32?
+    let requiredStars: Int64?
     let forceDark: Bool
     let updateInProgress: (Bool) -> Void
     let present: (ViewController) -> Void
-    let completion: () -> Void
+    let completion: (Int64) -> Void
     
     init(
         context: AccountContext,
         starsContext: StarsContext,
         options: [StarsTopUpOption],
         peerId: EnginePeer.Id?,
-        requiredStars: Int32?,
+        requiredStars: Int64?,
         forceDark: Bool,
         updateInProgress: @escaping (Bool) -> Void,
         present: @escaping (ViewController) -> Void,
-        completion: @escaping () -> Void
+        completion: @escaping (Int64) -> Void
     ) {
         self.context = context
         self.starsContext = starsContext
@@ -486,14 +510,14 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
         private let context: AccountContext
         private let updateInProgress: (Bool) -> Void
         private let present: (ViewController) -> Void
-        private let completion: () -> Void
+        private let completion: (Int64) -> Void
         
         var topContentOffset: CGFloat?
         var bottomContentOffset: CGFloat?
         
         var hasIdleAnimations = true
         
-        var inProgress = false
+        var progressProduct: StarsProduct?
         
         private(set) var promoConfiguration: PremiumPromoConfiguration?
         
@@ -514,7 +538,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
             initialOptions: [StarsTopUpOption],
             updateInProgress: @escaping (Bool) -> Void,
             present: @escaping (ViewController) -> Void,
-            completion: @escaping () -> Void
+            completion: @escaping (Int64) -> Void
         ) {
             self.context = context
             self.updateInProgress = updateInProgress
@@ -569,13 +593,13 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
         }
         
         func buy(product: StarsProduct) {
-            guard let inAppPurchaseManager = self.context.inAppPurchaseManager, !self.inProgress else {
+            guard let inAppPurchaseManager = self.context.inAppPurchaseManager, self.progressProduct == nil else {
                 return
             }
             
-            self.inProgress = true
+            self.progressProduct = product
             self.updateInProgress(true)
-            self.updated(transition: .immediate)
+            self.updated(transition: .easeInOut(duration: 0.2))
             
             let (currency, amount) = product.storeProduct.priceCurrencyAndAmount
             let purpose: AppStoreTransactionPurpose = .stars(count: product.option.count, currency: currency, amount: amount)
@@ -588,17 +612,16 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                         strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(product.storeProduct, purpose: purpose)
                         |> deliverOnMainQueue).start(next: { [weak self] status in
                             if let self, case .purchased = status {
-                                self.inProgress = false
                                 self.updateInProgress(false)
                                 
-                                self.updated(transition: .easeInOut(duration: 0.25))
-                                self.completion()
+                                self.updated(transition: .easeInOut(duration: 0.2))
+                                self.completion(product.option.count)
                             }
                         }, error: { [weak self] error in
                             if let strongSelf = self {
-                                strongSelf.inProgress = false
+                                strongSelf.progressProduct = nil
                                 strongSelf.updateInProgress(false)
-                                strongSelf.updated(transition: .immediate)
+                                strongSelf.updated(transition: .easeInOut(duration: 0.2))
 
                                 var errorText: String?
                                 switch error {
@@ -623,9 +646,9 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                             }
                         }))
                     } else {
-                        strongSelf.inProgress = false
+                        strongSelf.progressProduct = nil
                         strongSelf.updateInProgress(false)
-                        strongSelf.updated(transition: .immediate)
+                        strongSelf.updated(transition: .easeInOut(duration: 0.2))
                     }
                 }
             })
@@ -657,6 +680,8 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
         return { context in
             let environment = context.environment[EnvironmentType.self].value
             let state = context.state
+            
+            let strings = environment.strings
                         
             let background = background.update(component: Rectangle(color: environment.theme.list.blocksBackgroundColor), environment: {}, availableSize: context.availableSize, transition: context.transition)
             
@@ -697,10 +722,16 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             
-            //TODO:localize
+            let titleText: String
+            if let requiredStars = context.component.requiredStars {
+                titleText = strings.Stars_Purchase_StarsNeeded(Int32(requiredStars))
+            } else {
+                titleText = strings.Stars_Purchase_GetStars
+            }
+            
             let title = title.update(
                 component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Get Stars", font: Font.bold(28.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: titleText, font: Font.bold(28.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center,
                     truncationType: .end,
                     maximumNumberOfLines: 1
@@ -722,11 +753,11 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: UIColor(rgb: 0xf09903))!, environment.theme)
             }
             
-            let balanceAttributedString = parseMarkdownIntoAttributedString("Balance:  *  **\(state.starsState?.balance ?? 0)**", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
-            if let range = balanceAttributedString.string.range(of: "*"), let chevronImage = state.cachedChevronImage?.0 {
+            let balanceAttributedString = parseMarkdownIntoAttributedString(" \(strings.Stars_Purchase_Balance)\n #  **\(state.starsState?.balance ?? 0)**", attributes: markdownAttributes, textAlignment: .right).mutableCopy() as! NSMutableAttributedString
+            if let range = balanceAttributedString.string.range(of: "#"), let chevronImage = state.cachedChevronImage?.0 {
                 balanceAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: balanceAttributedString.string))
                 balanceAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xf09903), range: NSRange(range, in: balanceAttributedString.string))
-                balanceAttributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: balanceAttributedString.string))
+                balanceAttributedString.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: balanceAttributedString.string))
             }
             let balanceText = balanceText.update(
                 component: MultilineTextComponent(
@@ -745,11 +776,12 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                         options: context.component.options,
                         peerId: context.component.peerId,
                         requiredStars: context.component.requiredStars,
+                        selectedProductId: state.progressProduct?.storeProduct.id,
                         forceDark: context.component.forceDark,
                         products: state.products,
                         expanded: state.isExpanded,
                         stateUpdated: { [weak state] transition in
-                            scrollAction.invoke(CGPoint(x: 0.0, y: 176.0))
+                            scrollAction.invoke(CGPoint(x: 0.0, y: 170.0))
                             state?.isExpanded = true
                             state?.updated(transition: transition)
                         },
@@ -768,8 +800,8 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                     contentOffsetWillCommit: { targetContentOffset in
                         if targetContentOffset.pointee.y < 100.0 {
                             targetContentOffset.pointee = CGPoint(x: 0.0, y: 0.0)
-                        } else if targetContentOffset.pointee.y < 176.0 {
-                            targetContentOffset.pointee = CGPoint(x: 0.0, y: 176.0)
+                        } else if targetContentOffset.pointee.y < 170.0 {
+                            targetContentOffset.pointee = CGPoint(x: 0.0, y: 170.0)
                         }
                     },
                     resetScroll: scrollAction
@@ -855,9 +887,10 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
         starsContext: StarsContext,
         options: [StarsTopUpOption],
         peerId: EnginePeer.Id?,
-        requiredStars: Int32?,
+        requiredStars: Int64?,
         modal: Bool = true,
-        forceDark: Bool = false
+        forceDark: Bool = false,
+        completion: @escaping (Int64) -> Void = { _ in }
     ) {
         self.context = context
         self.starsContext = starsContext
@@ -865,7 +898,7 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
             
         var updateInProgressImpl: ((Bool) -> Void)?
         var presentImpl: ((ViewController) -> Void)?
-        var completionImpl: (() -> Void)?
+        var completionImpl: ((Int64) -> Void)?
         super.init(context: context, component: StarsPurchaseScreenComponent(
             context: context,
             starsContext: starsContext,
@@ -879,8 +912,8 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
             present: { c in
                 presentImpl?(c)
             },
-            completion: {
-                completionImpl?()
+            completion: { stars in
+                completionImpl?(stars)
             }
         ), navigationBarAppearance: .transparent, presentationMode: modal ? .modal : .default, theme: forceDark ? .dark : .default)
         
@@ -906,9 +939,11 @@ public final class StarsPurchaseScreen: ViewControllerComponentContainer {
                 self.present(c, in: .window(.root))
             }
         }
-        completionImpl = { [weak self] in
+        completionImpl = { [weak self] stars in
             if let self {
                 self.animateSuccess()
+                
+                completion(stars)
             }
         }
     }
@@ -996,12 +1031,13 @@ func generateStarsIcon(count: Int) -> UIImage {
         
         var originX = floorToScreenPixels((size.width - totalWidth) / 2.0)
         
-        if let cgImage = image.cgImage, let partCGImage = partImage.cgImage {
+        let mainImage = UIImage(bundleImageName: "Premium/Stars/Star")
+        if let cgImage = mainImage?.cgImage, let partCGImage = partImage.cgImage {
             context.draw(cgImage, in: CGRect(origin: CGPoint(x: originX, y: 0.0), size: imageSize), byTiling: false)
             originX += spacing
             
             for _ in 0 ..< count - 1 {
-                context.draw(partCGImage, in: CGRect(origin: CGPoint(x: originX, y: 0.0), size: imageSize), byTiling: false)
+                context.draw(partCGImage, in: CGRect(origin: CGPoint(x: originX, y: UIScreenPixel), size: imageSize), byTiling: false)
                 originX += spacing
             }
         }

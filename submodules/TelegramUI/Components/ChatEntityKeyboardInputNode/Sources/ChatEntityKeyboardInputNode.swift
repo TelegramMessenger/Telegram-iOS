@@ -1828,6 +1828,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             switch customChatContents.kind {
             case .quickReplyMessageInput:
                 break
+            case .hashTagSearch:
+                break
             case .businessLinkSetup:
                 stickerContent = nil
                 gifContent = nil

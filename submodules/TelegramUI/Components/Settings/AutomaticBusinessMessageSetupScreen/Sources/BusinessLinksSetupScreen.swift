@@ -416,7 +416,7 @@ final class BusinessLinksSetupScreenComponent: Component {
                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
                     name: "Item List/AddLinkIcon",
                     tintColor: environment.theme.list.itemAccentColor
-                )))),
+                ))), false),
                 accessory: nil,
                 action: { [weak self] _ in
                     guard let self else {

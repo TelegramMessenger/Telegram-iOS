@@ -20,7 +20,11 @@ extension ChatControllerImpl {
             guard let self else {
                 return
             }
-            let _ = self.context.engine.messages.editMessageFactCheck(messageId: messageId, text: text, entities: entities).startStandalone()
+            if !currentText.isEmpty && text.isEmpty {
+                let _ = self.context.engine.messages.deleteMessageFactCheck(messageId: messageId).startStandalone()
+            } else {
+                let _ = self.context.engine.messages.editMessageFactCheck(messageId: messageId, text: text, entities: entities).startStandalone()
+            }
         })
         self.present(controller, in: .window(.root))
     }

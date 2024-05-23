@@ -225,13 +225,15 @@ private extension StarsContext.State.Transaction {
                 parsedPeer = .playMarket
             case .starsTransactionPeerFragment:
                 parsedPeer = .fragment
+            case .starsTransactionPeerPremiumBot:
+                parsedPeer = .premiumBot
+            case .starsTransactionPeerUnsupported:
+                parsedPeer = .unsupported
             case let .starsTransactionPeer(apiPeer):
                 guard let peer = transaction.getPeer(apiPeer.peerId) else {
                     return nil
                 }
                 parsedPeer = .peer(EnginePeer(peer))
-            case .starsTransactionPeerPremiumBot, .starsTransactionPeerUnsupported:
-                return nil
             }
             self.init(id: id, count: stars, date: date, peer: parsedPeer)
         }
@@ -245,6 +247,8 @@ public final class StarsContext {
                 case appStore
                 case playMarket
                 case fragment
+                case premiumBot
+                case unsupported
                 case peer(EnginePeer)
             }
             

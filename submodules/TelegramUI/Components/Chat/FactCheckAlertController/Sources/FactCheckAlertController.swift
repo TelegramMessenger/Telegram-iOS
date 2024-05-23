@@ -20,6 +20,7 @@ private final class FactCheckAlertContentNode: AlertContentNode {
     private var presentationTheme: PresentationTheme
     private let strings: PresentationStrings
     private let text: String
+    private let initialValue: String
 
     private let titleView = ComponentView<Empty>()
     
@@ -58,6 +59,7 @@ private final class FactCheckAlertContentNode: AlertContentNode {
         self.presentationTheme = presentationTheme
         self.strings = strings
         self.text = text
+        self.initialValue = value
         
         if !value.isEmpty {
             self.inputFieldExternalState.initialText = chatInputStateStringWithAppliedEntities(value, entities: entities)
@@ -217,7 +219,7 @@ private final class FactCheckAlertContentNode: AlertContentNode {
                 customInputView: nil,
                 resetText: nil,
                 isOneLineWhenUnfocused: false,
-                characterLimit: nil,
+                characterLimit: 1024,
                 emptyLineHandling: .oneConsecutive,
                 formatMenuAvailability: .available([.bold, .italic, .link]),
                 returnKeyType: .done,
@@ -271,7 +273,23 @@ private final class FactCheckAlertContentNode: AlertContentNode {
         }
         
         if let lastActionNode = self.actionNodes.last {
-            lastActionNode.actionEnabled = self.inputFieldExternalState.hasText
+            if self.initialValue.isEmpty {
+                lastActionNode.actionEnabled = self.inputFieldExternalState.hasText
+            } else {
+                if self.inputFieldExternalState.hasText {
+                    lastActionNode.action = TextAlertAction(
+                        type: .defaultAction,
+                        title: self.strings.Common_Done,
+                        action: lastActionNode.action.action
+                    )
+                } else {
+                    lastActionNode.action = TextAlertAction(
+                        type: .defaultDestructiveAction,
+                        title: self.strings.FactCheck_Remove,
+                        action: lastActionNode.action.action
+                    )
+                }
+            }
         }
                         
         let resultSize = CGSize(width: resultWidth, height: titleSize.height + spacing + inputFieldSize.height + 17.0 + actionsHeight + insets.top + insets.bottom)

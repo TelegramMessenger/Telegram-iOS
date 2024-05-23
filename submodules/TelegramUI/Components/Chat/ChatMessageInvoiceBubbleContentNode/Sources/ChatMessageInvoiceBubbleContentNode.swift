@@ -62,7 +62,7 @@ public final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContent
                 if let image = invoice.photo {
                     automaticDownloadSettings = MediaAutoDownloadSettings.defaultSettings
                     mediaAndFlags = ([image], [.preferMediaBeforeText])
-                } else {
+                } else if invoice.currency != "XTR" {
                     let invoiceLabel = item.presentationData.strings.Message_InvoiceLabel
                     var invoiceText = "\(formatCurrencyAmount(invoice.totalAmount, currency: invoice.currency)) "
                     invoiceText += invoiceLabel

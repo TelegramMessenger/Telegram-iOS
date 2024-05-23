@@ -62,6 +62,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
     public let content: AnyComponent<ChildEnvironmentType>
     public let backgroundColor: BackgroundColor
     public let followContentSizeChanges: Bool
+    public let clipsContent: Bool
     public let externalState: ExternalState?
     public let animateOut: ActionSlot<Action<()>>
     
@@ -69,12 +70,14 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         content: AnyComponent<ChildEnvironmentType>,
         backgroundColor: BackgroundColor,
         followContentSizeChanges: Bool = false,
+        clipsContent: Bool = false,
         externalState: ExternalState? = nil,
         animateOut: ActionSlot<Action<()>>
     ) {
         self.content = content
         self.backgroundColor = backgroundColor
         self.followContentSizeChanges = followContentSizeChanges
+        self.clipsContent = clipsContent
         self.externalState = externalState
         self.animateOut = animateOut
     }
@@ -349,6 +352,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
                 if contentView.superview == nil {
                     self.scrollView.addSubview(contentView)
                 }
+                contentView.clipsToBounds = component.clipsContent
                 if sheetEnvironment.isCentered {
                     let y: CGFloat = floorToScreenPixels((availableSize.height - contentSize.height) / 2.0)
                     transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - contentSize.width) / 2.0), y: -y), size: contentSize), completion: nil)

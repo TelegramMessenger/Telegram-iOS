@@ -231,9 +231,10 @@ class PremiumCoinComponent: Component {
             self.sceneView.scene = scene
             self.sceneView.delegate = self
             
-            self.didSetReady = true
-            self._ready.set(.single(true))
-            self.onReady()
+            let _ = self.sceneView.snapshot()
+//            self.didSetReady = true
+//            self._ready.set(.single(true))
+//            self.onReady()
         }
         
         private var didSetReady = false

@@ -425,7 +425,7 @@ final class BusinessRecipientListScreenComponent: Component {
                 leftIcon: .custom(AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
                     name: "Chat List/AddIcon",
                     tintColor: environment.theme.list.itemAccentColor
-                )))),
+                ))), false),
                 accessory: nil,
                 action: { [weak self] _ in
                     guard let self else {

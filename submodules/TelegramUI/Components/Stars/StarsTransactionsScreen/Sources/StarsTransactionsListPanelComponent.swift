@@ -226,6 +226,12 @@ final class StarsTransactionsListPanelComponent: Component {
                     case .fragment:
                         itemTitle = "Fragment"
                         itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
+                    case .premiumBot:
+                        itemTitle = "Premium Bot"
+                        itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
+                    case .unsupported:
+                        itemTitle = "Unsupported"
+                        itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
                     }
                     itemSubtitle = stringForMediumCompactDate(timestamp: item.transaction.date, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
                     
@@ -245,15 +251,15 @@ final class StarsTransactionsListPanelComponent: Component {
                                 AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
                                         string: itemSubtitle,
-                                        font: Font.regular(floor(fontBaseDisplaySize * 14.0 / 17.0)),
+                                        font: Font.regular(floor(fontBaseDisplaySize * 15.0 / 17.0)),
                                         textColor: environment.theme.list.itemSecondaryTextColor
                                     )),
                                     maximumNumberOfLines: 0,
                                     lineSpacing: 0.18
                                 )))
-                            ], alignment: .left, spacing: 2.0)),
-                            contentInsets: UIEdgeInsets(top: 11.0, left: 0.0, bottom: 11.0, right: 0.0),
-                            leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(AvatarComponent(context: component.context, theme: environment.theme, peer: item.transaction.peer)))),
+                            ], alignment: .left, spacing: 3.0)),
+                            contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
+                            leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(AvatarComponent(context: component.context, theme: environment.theme, peer: item.transaction.peer))), false),
                             icon: nil,
                             accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(LabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
                             action: { [weak self] _ in
@@ -324,13 +330,14 @@ final class StarsTransactionsListPanelComponent: Component {
                         AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
                                 string: "abc",
-                                font: Font.regular(floor(fontBaseDisplaySize * 13.0 / 17.0)),
+                                font: Font.regular(floor(fontBaseDisplaySize * 15.0 / 17.0)),
                                 textColor: environment.theme.list.itemSecondaryTextColor
                             )),
                             maximumNumberOfLines: 0,
                             lineSpacing: 0.18
                         )))
-                    ], alignment: .left, spacing: 2.0)),
+                    ], alignment: .left, spacing: 3.0)),
+                    contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
                     leftIcon: nil,
                     icon: nil,
                     accessory: nil,
@@ -475,6 +482,16 @@ private final class AvatarComponent: Component {
                 self.iconView.isHidden = false
                 self.avatarNode.isHidden = true
             case .fragment:
+                self.backgroundView.image = gradientImage
+                self.backgroundView.isHidden = false
+                self.iconView.isHidden = false
+                self.avatarNode.isHidden = true
+            case .premiumBot:
+                self.backgroundView.image = gradientImage
+                self.backgroundView.isHidden = false
+                self.iconView.isHidden = false
+                self.avatarNode.isHidden = true
+            case .unsupported:
                 self.backgroundView.image = gradientImage
                 self.backgroundView.isHidden = false
                 self.iconView.isHidden = false

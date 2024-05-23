@@ -865,9 +865,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     return .single(nil)
                                 })
                                 if invoice.currency == "XTR" {
+                                    let starsContext = strongSelf.context.engine.payments.peerStarsContext(peerId: strongSelf.context.account.peerId)
                                     let starsInputData = combineLatest(
                                         inputData.get(),
-                                        strongSelf.context.engine.payments.peerStarsState(peerId: strongSelf.context.account.peerId)
+                                        starsContext.state
                                     )
                                     |> map { data, state -> (StarsContext.State, BotPaymentForm, EnginePeer?)? in
                                         if let data, let state {
@@ -876,8 +877,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                             return nil
                                         }
                                     }
-                                    let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: starsInputData)
-                                    navigationController.pushViewController(controller)
+                                    let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                                        let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .slug(slug), inputData: starsInputData)
+                                        navigationController.pushViewController(controller)
+                                    })
                                 } else {
                                     let checkoutController = BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
                                         self?.sendInvoiceClosedEvent(slug: slug, result: .paid)
