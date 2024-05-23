@@ -557,14 +557,14 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     @objc func formatAttributesQuote(_ sender: Any) {
         self.inputMenu.back()
         if let item = self.item {
-            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote))
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: false))
         }
     }
     
     @objc func formatAttributesCodeBlock(_ sender: Any) {
         self.inputMenu.back()
         if let item = self.item {
-            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: nil)))
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: nil), isCollapsed: false))
         }
     }
     

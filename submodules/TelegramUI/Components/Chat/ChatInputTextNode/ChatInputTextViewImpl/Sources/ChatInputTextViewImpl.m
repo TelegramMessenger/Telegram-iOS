@@ -46,6 +46,10 @@
     return self;
 }
 
+- (BOOL)touchesShouldCancelInContentView:(UIView *)view {
+    return false;
+}
+
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
     return true;
 }

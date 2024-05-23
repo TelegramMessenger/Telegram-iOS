@@ -59,7 +59,7 @@ public func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, att
                     for (key, value) in attributes {
                         if let value = value as? ChatTextInputTextQuoteAttribute {
                             result.removeAttribute(key, range: range)
-                            result.addAttribute(key, value: ChatTextInputTextQuoteAttribute(kind: value.kind), range: range)
+                            result.addAttribute(key, value: ChatTextInputTextQuoteAttribute(kind: value.kind, isCollapsed: value.isCollapsed), range: range)
                         }
                     }
                 }
@@ -72,7 +72,7 @@ public func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, att
         
         if addAttribute {
             if attribute == ChatTextInputAttributes.block {
-                result.addAttribute(attribute, value: value ?? ChatTextInputTextQuoteAttribute(kind: .quote), range: nsRange)
+                result.addAttribute(attribute, value: value ?? ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: false), range: nsRange)
                 var selectionIndex = nsRange.upperBound
                 if nsRange.upperBound != result.length && (result.string as NSString).character(at: nsRange.upperBound) != 0x0a {
                     result.insert(NSAttributedString(string: "\n"), at: nsRange.upperBound)
@@ -197,6 +197,6 @@ public func chatTextInputAddQuoteAttribute(_ state: ChatTextInputState, selectio
     for (attribute, range) in attributesToRemove {
         result.removeAttribute(attribute, range: range)
     }
-    result.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: kind), range: nsRange)
+    result.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: kind, isCollapsed: false), range: nsRange)
     return ChatTextInputState(inputText: result, selectionRange: selectionRange)
 }

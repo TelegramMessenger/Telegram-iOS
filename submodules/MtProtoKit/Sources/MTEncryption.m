@@ -588,7 +588,7 @@ bool MTCheckIsSafePrime(id<EncryptionProvider> provider, NSData *numberBytes, id
     id<MTBignum> bnNumber = [context create];
     [context assignBinTo:bnNumber value:numberBytes];
     
-    int result = [context isPrime:bnNumber numberOfChecks:30];
+    int result = [context isPrime:bnNumber numberOfChecks:64];
     
     if (result == 1) {
         id<MTBignum> bnNumberOne = [context create];
@@ -600,7 +600,7 @@ bool MTCheckIsSafePrime(id<EncryptionProvider> provider, NSData *numberBytes, id
         id<MTBignum> bnNumberMinusOneDivByTwo = [context create];
         [context rightShift1Bit:bnNumberMinusOneDivByTwo a:bnNumberMinusOne];
         
-        result = [context isPrime:bnNumberMinusOneDivByTwo numberOfChecks:30];
+        result = [context isPrime:bnNumberMinusOneDivByTwo numberOfChecks:64];
     }
     
     [keychain setObject:@(result == 1) forKey:primeKey group:@"primes"];
