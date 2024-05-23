@@ -112,12 +112,10 @@ public final class TextLoadingEffectView: UIView {
         self.borderBackgroundView.layer.add(animation, forKey: "shimmer")
     }
     
-    public func update(color: UIColor, textNode: TextNode, range: NSRange) {
+    public func update(color: UIColor, textNode: TextNodeProtocol, range: NSRange) {
         var rectsSet: [CGRect] = []
-        if let cachedLayout = textNode.cachedLayout {
-            if let rects = cachedLayout.rangeRects(in: range)?.rects, !rects.isEmpty {
-                rectsSet = rects
-            }
+        if let rects = textNode.textRangeRects(in: range)?.rects, !rects.isEmpty {
+            rectsSet = rects
         }
         
         let maskFrame = CGRect(origin: CGPoint(), size: textNode.bounds.size).insetBy(dx: -4.0, dy: -4.0)

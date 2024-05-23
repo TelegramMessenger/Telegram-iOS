@@ -249,9 +249,11 @@ public final class ChatTextInputTextQuoteAttribute: NSObject {
     }
     
     public let kind: Kind
+    public let isCollapsed: Bool
     
-    public init(kind: Kind) {
+    public init(kind: Kind, isCollapsed: Bool) {
         self.kind = kind
+        self.isCollapsed = isCollapsed
         
         super.init()
     }
@@ -262,6 +264,9 @@ public final class ChatTextInputTextQuoteAttribute: NSObject {
         }
         
         if self.kind != other.kind {
+            return false
+        }
+        if self.isCollapsed != other.isCollapsed {
             return false
         }
         
@@ -646,7 +651,7 @@ private func refreshBlockQuotes(text: NSString, initialAttributedText: NSAttribu
     if !quoteRangesEqual(quoteRanges, initialQuoteRanges) {
         attributedText.removeAttribute(ChatTextInputAttributes.block, range: fullRange)
         for (range, attribute) in quoteRanges {
-            attributedText.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: attribute.kind), range: range)
+            attributedText.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: attribute.kind, isCollapsed: attribute.isCollapsed), range: range)
         }
     }
 }
@@ -1067,7 +1072,7 @@ public func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttribu
                         substring = substring.substring(with: NSRange(location: 0, length: substring.length - 1)) as NSString
                     }
                     
-                    result.append(NSAttributedString(string: substring as String, attributes: [ChatTextInputAttributes.block: ChatTextInputTextQuoteAttribute(kind: .code(language: language))]))
+                    result.append(NSAttributedString(string: substring as String, attributes: [ChatTextInputAttributes.block: ChatTextInputTextQuoteAttribute(kind: .code(language: language), isCollapsed: false)]))
                     offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 1).length, text.count), 6))
                 }
             }

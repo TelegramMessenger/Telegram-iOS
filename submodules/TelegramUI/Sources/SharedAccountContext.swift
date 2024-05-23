@@ -1638,6 +1638,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             controllerInteraction: controllerInteraction as! ChatControllerInteraction,
             selectedMessages: selectedMessages,
             mode: mode,
+            isChatPreview: false,
             messageTransitionNode: { return nil }
         )
     }

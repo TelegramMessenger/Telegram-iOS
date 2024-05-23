@@ -277,6 +277,8 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
                 return true
             case _ as MediaSpoilerMessageAttribute:
                 return true
+            case _ as InvertMediaMessageAttribute:
+                return true
             case let attribute as ReplyMessageAttribute:
                 if attribute.quote != nil {
                     return true

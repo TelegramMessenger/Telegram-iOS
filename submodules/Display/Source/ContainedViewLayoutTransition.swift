@@ -1822,6 +1822,8 @@ public protocol ControlledTransitionAnimator: AnyObject {
     func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)?)
     func updateCornerRadius(layer: CALayer, cornerRadius: CGFloat, completion: ((Bool) -> Void)?)
     func updateContentsRect(layer: CALayer, contentsRect: CGRect, completion: ((Bool) -> Void)?)
+    func updateTransform(layer: CALayer, transform: CATransform3D, completion: ((Bool) -> Void)?)
+    func updateBackgroundColor(layer: CALayer, color: UIColor, completion: ((Bool) -> Void)?)
 }
 
 protocol AnyValueProviding {
@@ -1962,6 +1964,83 @@ extension CGRect: AnyValueProviding {
                     preconditionFailure()
                 }
                 return self.interpolate(with: otherValue, fraction: fraction).anyValue
+            }
+        )
+    }
+}
+
+extension CATransform3D: Equatable {
+    public static func ==(lhs: CATransform3D, rhs: CATransform3D) -> Bool {
+        return CATransform3DEqualToTransform(lhs, rhs)
+    }
+}
+
+extension CATransform3D: AnyValueProviding {
+    func interpolate(with other: CATransform3D, fraction: CGFloat) -> CATransform3D {
+        return CATransform3D(
+            m11: self.m11.interpolate(with: other.m11, fraction: fraction),
+            m12: self.m12.interpolate(with: other.m12, fraction: fraction),
+            m13: self.m13.interpolate(with: other.m13, fraction: fraction),
+            m14: self.m14.interpolate(with: other.m14, fraction: fraction),
+            m21: self.m21.interpolate(with: other.m21, fraction: fraction),
+            m22: self.m22.interpolate(with: other.m22, fraction: fraction),
+            m23: self.m23.interpolate(with: other.m23, fraction: fraction),
+            m24: self.m24.interpolate(with: other.m24, fraction: fraction),
+            m31: self.m31.interpolate(with: other.m31, fraction: fraction),
+            m32: self.m32.interpolate(with: other.m32, fraction: fraction),
+            m33: self.m33.interpolate(with: other.m33, fraction: fraction),
+            m34: self.m34.interpolate(with: other.m34, fraction: fraction),
+            m41: self.m41.interpolate(with: other.m41, fraction: fraction),
+            m42: self.m42.interpolate(with: other.m42, fraction: fraction),
+            m43: self.m43.interpolate(with: other.m43, fraction: fraction),
+            m44: self.m44.interpolate(with: other.m44, fraction: fraction)
+        )
+    }
+    
+    var anyValue: ControlledTransitionProperty.AnyValue {
+        return ControlledTransitionProperty.AnyValue(
+            value: self,
+            nsValue: NSValue(caTransform3D: self),
+            stringValue: { "\(self)" },
+            isEqual: { other in
+                if let otherValue = other.value as? CATransform3D {
+                    return self == otherValue
+                } else {
+                    return false
+                }
+            },
+            interpolate: { other, fraction in
+                guard let otherValue = other.value as? CATransform3D else {
+                    preconditionFailure()
+                }
+                return self.interpolate(with: otherValue, fraction: fraction).anyValue
+            }
+        )
+    }
+}
+
+extension CGColor: AnyValueProviding {
+    func interpolate(with other: CGColor, fraction: CGFloat) -> CGColor {
+        return UIColor(cgColor: self).mixedWith(UIColor(cgColor: other), alpha: fraction).cgColor
+    }
+    
+    var anyValue: ControlledTransitionProperty.AnyValue {
+        return ControlledTransitionProperty.AnyValue(
+            value: self,
+            nsValue: self,
+            stringValue: { "\(self)" },
+            isEqual: { other in
+                if CFGetTypeID(other.value as CFTypeRef) == CGColor.typeID {
+                    return self == (other.value as! CGColor)
+                } else {
+                    return false
+                }
+            },
+            interpolate: { other, fraction in
+                guard CFGetTypeID(other.value as CFTypeRef) == CGColor.typeID else {
+                    preconditionFailure()
+                }
+                return self.interpolate(with: other.value as! CGColor, fraction: fraction).anyValue
             }
         )
     }
@@ -2232,6 +2311,76 @@ public final class ControlledTransition {
             self.updateBounds(layer: layer, bounds: CGRect(origin: CGPoint(), size: frame.size), completion: nil)
         }
         
+        public func updateTransform(layer: CALayer, transform: CATransform3D, completion: ((Bool) -> Void)?) {
+            if layer.transform == transform {
+                return
+            }
+            let fromValue: CATransform3D
+            if let animationKeys = layer.animationKeys(), animationKeys.contains(where: { key in
+                guard let animation = layer.animation(forKey: key) as? CAPropertyAnimation else {
+                    return false
+                }
+                if animation.keyPath == "transform" {
+                    return true
+                } else {
+                    return false
+                }
+            }) {
+                fromValue = layer.presentation()?.transform ?? layer.transform
+            } else {
+                fromValue = layer.transform
+            }
+            layer.transform = transform
+            self.add(animation: ControlledTransitionProperty(
+                layer: layer,
+                path: "transform",
+                fromValue: fromValue,
+                toValue: transform,
+                completion: completion
+            ))
+        }
+        
+        public func updateBackgroundColor(layer: CALayer, color: UIColor, completion: ((Bool) -> Void)?) {
+            if let currentColor = layer.backgroundColor, currentColor == color.cgColor {
+                if let completion = completion {
+                    completion(true)
+                }
+                return
+            }
+            
+            let fromValue: CGColor?
+            if let animationKeys = layer.animationKeys(), animationKeys.contains(where: { key in
+                guard let animation = layer.animation(forKey: key) as? CAPropertyAnimation else {
+                    return false
+                }
+                if animation.keyPath == "backgroundColor" {
+                    return true
+                } else {
+                    return false
+                }
+            }) {
+                fromValue = layer.presentation()?.backgroundColor ?? layer.backgroundColor
+            } else {
+                fromValue = layer.backgroundColor
+            }
+            
+            var mappedFromValue: UIColor
+            if let fromValue {
+                mappedFromValue = UIColor(cgColor: fromValue)
+            } else {
+                mappedFromValue = .clear
+            }
+            
+            layer.backgroundColor = color.cgColor
+            self.add(animation: ControlledTransitionProperty(
+                layer: layer,
+                path: "backgroundColor",
+                fromValue: mappedFromValue.cgColor,
+                toValue: color.cgColor,
+                completion: completion
+            ))
+        }
+        
         public func updateCornerRadius(layer: CALayer, cornerRadius: CGFloat, completion: ((Bool) -> Void)?) {
             if layer.cornerRadius == cornerRadius {
                 return
@@ -2303,6 +2452,14 @@ public final class ControlledTransition {
         
         public func updatePosition(layer: CALayer, position: CGPoint, completion: ((Bool) -> Void)?) {
             self.transition.updatePosition(layer: layer, position: position, completion: completion)
+        }
+        
+        public func updateTransform(layer: CALayer, transform: CATransform3D, completion: ((Bool) -> Void)?) {
+            self.transition.updateTransform(layer: layer, transform: CATransform3DGetAffineTransform(transform), completion: completion)
+        }
+        
+        public func updateBackgroundColor(layer: CALayer, color: UIColor, completion: ((Bool) -> Void)?) {
+            self.transition.updateBackgroundColor(layer: layer, color: color, completion: completion)
         }
         
         public func animatePosition(layer: CALayer, from fromValue: CGPoint, to toValue: CGPoint, completion: ((Bool) -> Void)?) {

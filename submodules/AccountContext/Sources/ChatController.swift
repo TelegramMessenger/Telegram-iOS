@@ -400,7 +400,7 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
     case strikethrough
     case underline
     case spoiler
-    case quote
+    case quote(isCollapsed: Bool)
     case codeBlock(language: String?)
 
     public init(from decoder: Decoder) throws {
@@ -430,7 +430,7 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
         case 8:
             self = .spoiler
         case 9:
-            self = .quote
+            self = .quote(isCollapsed: try container.decodeIfPresent(Bool.self, forKey: "isCollapsed") ?? false)
         case 10:
             self = .codeBlock(language: try container.decodeIfPresent(String.self, forKey: "l"))
         default:
@@ -464,8 +464,9 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
             try container.encode(7 as Int32, forKey: "t")
         case .spoiler:
             try container.encode(8 as Int32, forKey: "t")
-        case .quote:
+        case let .quote(isCollapsed):
             try container.encode(9 as Int32, forKey: "t")
+            try container.encode(isCollapsed, forKey: "isCollapsed")
         case let .codeBlock(language):
             try container.encode(10 as Int32, forKey: "t")
             try container.encodeIfPresent(language, forKey: "l")
@@ -545,7 +546,7 @@ public struct ChatTextInputStateText: Codable, Equatable {
                 } else if key == ChatTextInputAttributes.block, let value = value as? ChatTextInputTextQuoteAttribute {
                     switch value.kind {
                     case .quote:
-                        parsedAttributes.append(ChatTextInputStateTextAttribute(type: .quote, range: range.location ..< (range.location + range.length)))
+                        parsedAttributes.append(ChatTextInputStateTextAttribute(type: .quote(isCollapsed: value.isCollapsed), range: range.location ..< (range.location + range.length)))
                     case let .code(language):
                         parsedAttributes.append(ChatTextInputStateTextAttribute(type: .codeBlock(language: language), range: range.location ..< (range.location + range.length)))
                     }
@@ -593,10 +594,10 @@ public struct ChatTextInputStateText: Codable, Equatable {
                 result.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case .spoiler:
                 result.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
-            case .quote:
-                result.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+            case let .quote(isCollapsed):
+                result.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: isCollapsed), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case let .codeBlock(language):
-                result.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: language)), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+                result.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: language), isCollapsed: false), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             }
         }
         return result

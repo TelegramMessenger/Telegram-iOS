@@ -622,7 +622,7 @@ public final class TextFieldComponent: Component {
                             }
                         })
                         
-                        self.toggleAttribute(key: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote))
+                        self.toggleAttribute(key: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: false))
                         
                         self.updateSpoilersRevealed(animated: animated)
                     }
@@ -639,7 +639,7 @@ public final class TextFieldComponent: Component {
                             }
                         })
                         
-                        self.toggleAttribute(key: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: nil)))
+                        self.toggleAttribute(key: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: nil), isCollapsed: false))
                         
                         self.updateSpoilersRevealed(animated: animated)
                     }
@@ -1438,7 +1438,7 @@ extension TextFieldComponent.InputState {
                         for (key, value) in attributes {
                             if let value = value as? ChatTextInputTextQuoteAttribute {
                                 result.removeAttribute(key, range: range)
-                                result.addAttribute(key, value: ChatTextInputTextQuoteAttribute(kind: value.kind), range: range)
+                                result.addAttribute(key, value: ChatTextInputTextQuoteAttribute(kind: value.kind, isCollapsed: value.isCollapsed), range: range)
                             }
                         }
                     }
@@ -1451,7 +1451,7 @@ extension TextFieldComponent.InputState {
             
             if addAttribute {
                 if attribute == ChatTextInputAttributes.block {
-                    result.addAttribute(attribute, value: value ?? ChatTextInputTextQuoteAttribute(kind: .quote), range: nsRange)
+                    result.addAttribute(attribute, value: value ?? ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: false), range: nsRange)
                     var selectionIndex = nsRange.upperBound
                     if nsRange.upperBound != result.length && (result.string as NSString).character(at: nsRange.upperBound) != 0x0a {
                         result.insert(NSAttributedString(string: "\n"), at: nsRange.upperBound)
