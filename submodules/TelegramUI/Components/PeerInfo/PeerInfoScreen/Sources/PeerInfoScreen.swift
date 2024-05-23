@@ -11770,7 +11770,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             hasBirthdayToday = true
         }
         
-        if hasBirthdayToday, let age = ageForBirthday(birthday), age > 0 {
+        if hasBirthdayToday {
             Queue.mainQueue().after(0.3) {
                 var birthdayItemFrame: CGRect?
                 if let section = self.regularSections[InfoSection.peerInfo] {

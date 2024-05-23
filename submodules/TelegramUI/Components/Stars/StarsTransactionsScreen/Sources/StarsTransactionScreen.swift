@@ -29,19 +29,22 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     let action: () -> Void
     let cancel: (Bool) -> Void
     let openPeer: (EnginePeer) -> Void
+    let copyTransactionId: () -> Void
     
     init(
         context: AccountContext,
         subject: StarsTransactionScreen.Subject,
         action: @escaping () -> Void,
         cancel: @escaping  (Bool) -> Void,
-        openPeer: @escaping (EnginePeer) -> Void
+        openPeer: @escaping (EnginePeer) -> Void,
+        copyTransactionId: @escaping () -> Void
     ) {
         self.context = context
         self.subject = subject
         self.action = action
         self.cancel = cancel
         self.openPeer = openPeer
+        self.copyTransactionId = copyTransactionId
     }
     
     static func ==(lhs: StarsTransactionSheetContent, rhs: StarsTransactionSheetContent) -> Bool {
@@ -163,7 +166,21 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let gloss = false
             switch subject {
             case let .transaction(transaction):
-                titleText = "Product Title"
+                switch transaction.peer {
+                case .peer:
+                    titleText = "Product Title"
+                case .appStore:
+                    titleText = "In-app Purchase"
+                case .playMarket:
+                    titleText = "Play Market"
+                case .premiumBot:
+                    titleText = "Premium Bot"
+                case .fragment:
+                    titleText = "Fragment"
+                case .unsupported:
+                    titleText = "Unsupported"
+                }
+
                 if transaction.count < 0 {
                     descriptionText = "- \(transaction.count * -1) ⭐️"
                 } else {
@@ -185,7 +202,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
                         string: titleText,
-                        font: Font.semibold(24.0),
+                        font: Font.bold(25.0),
                         textColor: theme.actionSheet.primaryTextColor,
                         paragraphAlignment: .center
                     )),
@@ -211,16 +228,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 transition: .immediate
             )
             
-            let textFont = Font.regular(15.0)
-            let boldTextFont = Font.semibold(15.0)
-            let textColor = theme.actionSheet.primaryTextColor
-            let linkColor = theme.actionSheet.controlAccentColor
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
-                return (TelegramTextAttributes.URL, contents)
-            })
             let description = description.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: descriptionText, font: boldTextFont, textColor: descriptionText.hasPrefix("-") ? theme.list.itemDestructiveColor : theme.list.itemDisclosureActions.constructive.fillColor)),
+                    text: .plain(NSAttributedString(string: descriptionText, font: Font.semibold(17.0), textColor: descriptionText.hasPrefix("-") ? theme.list.itemDestructiveColor : theme.list.itemDisclosureActions.constructive.fillColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
@@ -240,7 +250,13 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     title: strings.Stars_Transaction_Date,
                     component: AnyComponent(
                         Button(
-                            content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: toPeer)),
+                            content: AnyComponent(
+                                PeerCellComponent(
+                                    context: component.context,
+                                    textColor: tableLinkColor,
+                                    peer: toPeer
+                                )
+                            ),
                             action: {
                                 if toPeer.id != accountContext.account.peerId {
                                     component.openPeer(toPeer)
@@ -258,12 +274,16 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 id: "transaction",
                 title: strings.Stars_Transaction_Id,
                 component: AnyComponent(
-                    MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: transactionId, font: Font.monospace(15.0), textColor: tableTextColor)),
-                        truncationType: .end,
-                        maximumNumberOfLines: 0
+                    TransactionCellComponent(
+                        textColor: tableTextColor,
+                        accentColor: tableLinkColor,
+                        transactionId: transactionId,
+                        copy: {
+                            component.copyTransactionId()
+                        }
                     )
-                )
+                ),
+                insets: UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 5.0)
             ))
             
             tableItems.append(.init(
@@ -283,6 +303,13 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 transition: .immediate
             )
             
+            let textFont = Font.regular(15.0)
+            let boldTextFont = Font.semibold(15.0)
+            let textColor = theme.actionSheet.secondaryTextColor
+            let linkColor = theme.actionSheet.controlAccentColor
+            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
+                return (TelegramTextAttributes.URL, contents)
+            })
             let additional = additional.update(
                 component: BalancedTextComponent(
                     text: .markdown(text: additionalText, attributes: markdownAttributes),
@@ -319,16 +346,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     animationName: nil,
                     iconPosition: .left,
                     isLoading: state.inProgress,
-                    action: { [weak state] in
-                        if gloss {
-                            component.action()
-                            if let state {
-                                state.inProgress = true
-                                state.updated()
-                            }
-                        } else {
-                            component.cancel(true)
-                        }
+                    action: {
+                        component.cancel(true)
                     }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
@@ -336,7 +355,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
             
             context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: 28.0 + 125.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: 31.0 + 125.0))
             )
             
             context.add(star
@@ -344,12 +363,12 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
             
             var originY: CGFloat = 0.0
-            originY += star.size.height - 32.0
+            originY += star.size.height - 23.0
             
             context.add(description
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + description.size.height / 2.0))
             )
-            originY += description.size.height + 21.0
+            originY += description.size.height + 20.0
                         
             context.add(table
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
@@ -384,17 +403,20 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     let subject: StarsTransactionScreen.Subject
     let action: () -> Void
     let openPeer: (EnginePeer) -> Void
+    let copyTransactionId: () -> Void
     
     init(
         context: AccountContext,
         subject: StarsTransactionScreen.Subject,
         action: @escaping () -> Void,
-        openPeer: @escaping (EnginePeer) -> Void
+        openPeer: @escaping (EnginePeer) -> Void,
+        copyTransactionId: @escaping () -> Void
     ) {
         self.context = context
         self.subject = subject
         self.action = action
         self.openPeer = openPeer
+        self.copyTransactionId = copyTransactionId
     }
     
     static func ==(lhs: StarsTransactionSheetComponent, rhs: StarsTransactionSheetComponent) -> Bool {
@@ -411,6 +433,8 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         let sheet = Child(SheetComponent<EnvironmentType>.self)
         let animateOut = StoredActionSlot(Action<Void>.self)
         
+        let sheetExternalState = SheetComponent<EnvironmentType>.ExternalState()
+        
         return { context in
             let environment = context.environment[EnvironmentType.self]
             let controller = environment.controller
@@ -423,20 +447,23 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
                         action: context.component.action,
                         cancel: { animate in
                             if animate {
-                                animateOut.invoke(Action { _ in
-                                    if let controller = controller() {
-                                        controller.dismiss(completion: nil)
-                                    }
-                                })
+                                if let controller = controller() as? StarsTransactionScreen {
+                                    controller.dismissAllTooltips()
+                                    animateOut.invoke(Action { [weak controller] _ in
+                                        controller?.dismiss(completion: nil)
+                                    })
+                                }
                             } else if let controller = controller() {
                                 controller.dismiss(animated: false, completion: nil)
                             }
                         },
-                        openPeer: context.component.openPeer
+                        openPeer: context.component.openPeer,
+                        copyTransactionId: context.component.copyTransactionId
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     followContentSizeChanges: true,
                     clipsContent: true,
+                    externalState: sheetExternalState,
                     animateOut: animateOut
                 ),
                 environment: {
@@ -448,13 +475,15 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
                         regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
                             if animated {
-                                animateOut.invoke(Action { _ in
-                                    if let controller = controller() {
+                                if let controller = controller() as? StarsTransactionScreen {
+                                    controller.dismissAllTooltips()
+                                    animateOut.invoke(Action { _ in
                                         controller.dismiss(completion: nil)
-                                    }
-                                })
+                                    })
+                                }
                             } else {
-                                if let controller = controller() {
+                                if let controller = controller() as? StarsTransactionScreen {
+                                    controller.dismissAllTooltips()
                                     controller.dismiss(completion: nil)
                                 }
                             }
@@ -468,6 +497,22 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
             context.add(sheet
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
             )
+            
+            if let controller = controller(), !controller.automaticallyControlPresentationContextLayout {
+                let layout = ContainerViewLayout(
+                    size: context.availableSize,
+                    metrics: environment.metrics,
+                    deviceMetrics: environment.deviceMetrics,
+                    intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: max(environment.safeInsets.bottom, sheetExternalState.contentHeight), right: 0.0),
+                    safeInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: 0.0, right: environment.safeInsets.right),
+                    additionalInsets: .zero,
+                    statusBarHeight: environment.statusBarHeight,
+                    inputHeight: nil,
+                    inputHeightIsInteractivellyChanging: false,
+                    inVoiceOver: false
+                )
+                controller.presentationContext.containerLayoutUpdated(layout, transition: context.transition.containedViewLayoutTransition)
+            }
             
             return context.availableSize
         }
@@ -493,6 +538,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         self.context = context
         
         var openPeerImpl: ((EnginePeer) -> Void)?
+        var copyTransactionIdImpl: (() -> Void)?
         super.init(
             context: context,
             component: StarsTransactionSheetComponent(
@@ -501,6 +547,9 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 action: action,
                 openPeer: { peerId in
                     openPeerImpl?(peerId)
+                },
+                copyTransactionId: {
+                    copyTransactionIdImpl?()
                 }
             ),
             navigationBarAppearance: .none,
@@ -509,11 +558,14 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         )
         
         self.navigationPresentation = .flatModal
+        self.automaticallyControlPresentationContextLayout = false
         
         openPeerImpl = { [weak self] peer in
             guard let self, let navigationController = self.navigationController as? NavigationController else {
                 return
             }
+            self.dismissAllTooltips()
+            
             let _ = (context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id)
             )
@@ -523,6 +575,16 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 }
                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: false, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: nil, animated: true))
             })
+        }
+        
+        copyTransactionIdImpl = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.dismissAllTooltips()
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            self.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Stars_Transaction_CopiedId), elevatedLayout: false, position: .bottom, action: { _ in return true }), in: .current)
         }
     }
     
@@ -546,6 +608,8 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
     }
     
     public func dismissAnimated() {
+        self.dismissAllTooltips()
+
         if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
             view.dismissAnimated()
         }
@@ -571,11 +635,13 @@ private final class TableComponent: CombinedComponent {
         public let id: AnyHashable
         public let title: String
         public let component: AnyComponent<Empty>
+        public let insets: UIEdgeInsets?
 
-        public init<IdType: Hashable>(id: IdType, title: String, component: AnyComponent<Empty>) {
+        public init<IdType: Hashable>(id: IdType, title: String, component: AnyComponent<Empty>, insets: UIEdgeInsets? = nil) {
             self.id = AnyHashable(id)
             self.title = title
             self.component = component
+            self.insets = insets
         }
 
         public static func == (lhs: Item, rhs: Item) -> Bool {
@@ -586,6 +652,9 @@ private final class TableComponent: CombinedComponent {
                 return false
             }
             if lhs.component != rhs.component {
+                return false
+            }
+            if lhs.insets != rhs.insets {
                 return false
             }
             return true
@@ -637,7 +706,7 @@ private final class TableComponent: CombinedComponent {
             var leftColumnWidth: CGFloat = 0.0
             
             var updatedTitleChildren: [_UpdatedChildComponent] = []
-            var updatedValueChildren: [_UpdatedChildComponent] = []
+            var updatedValueChildren: [(_UpdatedChildComponent, UIEdgeInsets)] = []
             var updatedBorderChildren: [_UpdatedChildComponent] = []
             
             for item in context.component.items {
@@ -664,12 +733,19 @@ private final class TableComponent: CombinedComponent {
             
             for item in context.component.items {
                 let titleChild = updatedTitleChildren[i]
+                
+                let insets: UIEdgeInsets
+                if let customInsets = item.insets {
+                    insets = customInsets
+                } else {
+                    insets = UIEdgeInsets(top: 0.0, left: horizontalPadding, bottom: 0.0, right: horizontalPadding)
+                }
                 let valueChild = valueChildren[item.id].update(
                     component: item.component,
-                    availableSize: CGSize(width: rightColumnWidth - horizontalPadding * 2.0, height: context.availableSize.height),
+                    availableSize: CGSize(width: rightColumnWidth - insets.left - insets.right, height: context.availableSize.height),
                     transition: context.transition
                 )
-                updatedValueChildren.append(valueChild)
+                updatedValueChildren.append((valueChild, insets))
                 
                 let rowHeight = max(40.0, max(titleChild.size.height, valueChild.size.height) + verticalPadding * 2.0)
                 rowHeights[i] = rowHeight
@@ -742,11 +818,11 @@ private final class TableComponent: CombinedComponent {
             
             i = 0
             var originY: CGFloat = 0.0
-            for (titleChild, valueChild) in zip(updatedTitleChildren, updatedValueChildren) {
+            for (titleChild, (valueChild, valueInsets)) in zip(updatedTitleChildren, updatedValueChildren) {
                 let rowHeight = rowHeights[i] ?? 0.0
                 
                 let titleFrame = CGRect(origin: CGPoint(x: horizontalPadding, y: originY + verticalPadding), size: titleChild.size)
-                let valueFrame = CGRect(origin: CGPoint(x: leftColumnWidth + horizontalPadding, y: originY + verticalPadding), size: valueChild.size)
+                let valueFrame = CGRect(origin: CGPoint(x: leftColumnWidth + valueInsets.left, y: originY + verticalPadding), size: valueChild.size)
                 
                 context.add(titleChild
                     .position(titleFrame.center)
@@ -866,6 +942,113 @@ private final class PeerCellComponent: Component {
     }
 }
 
+private final class TransactionCellComponent: Component {
+    let textColor: UIColor
+    let accentColor: UIColor
+    let transactionId: String
+    let copy: () -> Void
+
+    init(textColor: UIColor, accentColor: UIColor, transactionId: String, copy: @escaping () -> Void) {
+        self.textColor = textColor
+        self.accentColor = accentColor
+        self.transactionId = transactionId
+        self.copy = copy
+    }
+
+    static func ==(lhs: TransactionCellComponent, rhs: TransactionCellComponent) -> Bool {
+        if lhs.textColor !== rhs.textColor {
+            return false
+        }
+        if lhs.accentColor != rhs.accentColor {
+            return false
+        }
+        if lhs.transactionId != rhs.transactionId {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        private let text = ComponentView<Empty>()
+        private let button = ComponentView<Empty>()
+        
+        private var component: TransactionCellComponent?
+        private weak var state: EmptyComponentState?
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: TransactionCellComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.component = component
+            self.state = state
+                                    
+            let spacing: CGFloat = 6.0
+            
+            let buttonSize = self.button.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    Button(
+                        content: AnyComponent(
+                            BundleIconComponent(name: "Chat/Context Menu/Copy", tintColor: component.accentColor)
+                        ),
+                        action: {
+                            component.copy()
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: availableSize.height)
+            )
+            
+            let textSize = self.text.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: component.transactionId, font: Font.monospace(15.0), textColor: component.textColor, paragraphAlignment: .left)),
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.2
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - buttonSize.width - spacing, height: availableSize.height)
+            )
+            
+            let size = CGSize(width: textSize.width + spacing + buttonSize.width, height: textSize.height)
+            
+            
+            let buttonFrame = CGRect(origin: CGPoint(x: textSize.width + spacing, y: floorToScreenPixels((size.height - buttonSize.height) / 2.0)), size: buttonSize)
+            if let buttonView = self.button.view {
+                if buttonView.superview == nil {
+                    self.addSubview(buttonView)
+                }
+                transition.setFrame(view: buttonView, frame: buttonFrame)
+            }
+            
+            let textFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
+            if let textView = self.text.view {
+                if textView.superview == nil {
+                    self.addSubview(textView)
+                }
+                transition.setFrame(view: textView, frame: textFrame)
+            }
+            
+            return size
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
 
 private func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in

@@ -63,7 +63,9 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         
         super.init()
         
-        self.addSubnode(self.searchBar)
+        if hasCurrentChat {
+            self.addSubnode(self.searchBar)
+        }
         
         self.searchBar.cancel = { [weak self] in
             self?.searchBar.deactivate(clear: false)
@@ -79,6 +81,10 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         }
     }
     
+    override var mode: NavigationBarContentMode {
+        return self.hasCurrentChat ? .replacement : .expansion
+    }
+    
     func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
         self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: self.strings)
@@ -89,7 +95,11 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
     }
     
     override var nominalHeight: CGFloat {
-        return 54.0 + 44.0
+        if self.hasCurrentChat {
+            return 54.0 + 44.0
+        } else {
+            return 45.0
+        }
     }
     
     private var validLayout: (CGSize, CGFloat, CGFloat)?
@@ -119,7 +129,7 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
                 ),
                 customLayout: TabSelectorComponent.CustomLayout(
                     font: Font.medium(14.0),
-                    spacing: 24.0,
+                    spacing: self.hasCurrentChat ? 24.0 : 8.0,
                     lineSelection: true
                 ),
                 items: items,
@@ -135,7 +145,13 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
             environment: {},
             containerSize: CGSize(width: size.width, height: 44.0)
         )
-        let tabSelectorFrame = CGRect(origin: CGPoint(x: floor((size.width - tabSelectorSize.width) / 2.0), y: size.height - tabSelectorSize.height - 9.0), size: tabSelectorSize)
+        let tabSelectorFrameOriginX: CGFloat
+        if self.hasCurrentChat || "".isEmpty {
+            tabSelectorFrameOriginX = floorToScreenPixels((size.width - tabSelectorSize.width) / 2.0)
+        } else {
+            tabSelectorFrameOriginX = 4.0
+        }
+        let tabSelectorFrame = CGRect(origin: CGPoint(x: tabSelectorFrameOriginX, y: size.height - tabSelectorSize.height - 9.0), size: tabSelectorSize)
         if let tabSelectorView = self.tabSelector.view {
             if tabSelectorView.superview == nil {
                 self.view.addSubview(tabSelectorView)
