@@ -258,7 +258,7 @@ final class StarsTransactionsListPanelComponent: Component {
                             AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
                                     string: itemSubtitle,
-                                    font: Font.regular(fontBaseDisplaySize),
+                                    font: Font.regular(fontBaseDisplaySize * 16.0 / 17.0),
                                     textColor: environment.theme.list.itemPrimaryTextColor
                                 )),
                                 maximumNumberOfLines: 1
@@ -352,7 +352,7 @@ final class StarsTransactionsListPanelComponent: Component {
                         AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
                                 string: "abc",
-                                font: Font.regular(fontBaseDisplaySize),
+                                font: Font.regular(fontBaseDisplaySize * 16.0 / 17.0),
                                 textColor: environment.theme.list.itemPrimaryTextColor
                             )),
                             maximumNumberOfLines: 1

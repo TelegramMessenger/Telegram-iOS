@@ -211,11 +211,18 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             buttonText = strings.Common_OK
             
             if count < 0 {
-                descriptionText = "- \(count * -1) ⭐️"
+                descriptionText = " - \(count * -1)  #   "
             } else {
-                descriptionText = "+ \(count) ⭐️"
+                descriptionText = " + \(count)  #   "
             }
             
+            let descriptionAttributedText = NSMutableAttributedString(string: descriptionText, font: Font.semibold(18.0), textColor: descriptionText.hasPrefix("-") ? theme.list.itemDestructiveColor : theme.list.itemDisclosureActions.constructive.fillColor)
+            if let range = descriptionAttributedText.string.range(of: "#"), let chevronImage = generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: UIColor(rgb: 0xf09903)) {
+                descriptionAttributedText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: descriptionAttributedText.string))
+                descriptionAttributedText.addAttribute(.foregroundColor, value: UIColor(rgb: 0xf09903), range: NSRange(range, in: descriptionAttributedText.string))
+                descriptionAttributedText.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: descriptionAttributedText.string))
+            }
+                                                               
             let title = title.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
@@ -249,7 +256,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             let description = description.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: descriptionText, font: Font.semibold(17.0), textColor: descriptionText.hasPrefix("-") ? theme.list.itemDestructiveColor : theme.list.itemDisclosureActions.constructive.fillColor)),
+                    text: .plain(descriptionAttributedText),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
