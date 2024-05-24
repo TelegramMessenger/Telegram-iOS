@@ -550,16 +550,22 @@ public struct ChatTextInputStateText: Codable, Equatable {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .underline, range: range.location ..< (range.location + range.length)))
                 } else if key == ChatTextInputAttributes.spoiler {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .spoiler, range: range.location ..< (range.location + range.length)))
-                } else if key == ChatTextInputAttributes.block, let value = value as? ChatTextInputTextQuoteAttribute {
-                    switch value.kind {
-                    case .quote:
-                        parsedAttributes.append(ChatTextInputStateTextAttribute(type: .quote(isCollapsed: value.isCollapsed), range: range.location ..< (range.location + range.length)))
-                    case let .code(language):
-                        parsedAttributes.append(ChatTextInputStateTextAttribute(type: .codeBlock(language: language), range: range.location ..< (range.location + range.length)))
-                    }
-                } else if key == ChatTextInputAttributes.collapsedBlock, let value = value as? NSAttributedString {
-                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .collapsedQuote(text: ChatTextInputStateText(attributedText: value)), range: range.location ..< (range.location + range.length)))
                 }
+            }
+        })
+        attributedText.enumerateAttribute(ChatTextInputAttributes.block, in: NSRange(location: 0, length: attributedText.length), options: [], using: { value, range, _ in
+            if let value = value as? ChatTextInputTextQuoteAttribute {
+                switch value.kind {
+                case .quote:
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .quote(isCollapsed: value.isCollapsed), range: range.location ..< (range.location + range.length)))
+                case let .code(language):
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .codeBlock(language: language), range: range.location ..< (range.location + range.length)))
+                }
+            }
+        })
+        attributedText.enumerateAttribute(ChatTextInputAttributes.collapsedBlock, in: NSRange(location: 0, length: attributedText.length), options: [], using: { value, range, _ in
+            if let value = value as? NSAttributedString {
+                parsedAttributes.append(ChatTextInputStateTextAttribute(type: .collapsedQuote(text: ChatTextInputStateText(attributedText: value)), range: range.location ..< (range.location + range.length)))
             }
         })
         self.attributes = parsedAttributes

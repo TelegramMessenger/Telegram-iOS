@@ -470,7 +470,8 @@ public final class ChatInterfaceState: Codable, Equatable {
         if self.composeInputState.inputText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && self.replyMessageSubject == nil {
             return nil
         } else {
-            return SynchronizeableChatInputState(replySubject: self.replyMessageSubject?.subjectModel, text: self.composeInputState.inputText.string, entities: generateChatInputTextEntities(self.composeInputState.inputText), timestamp: self.timestamp, textSelection: self.composeInputState.selectionRange)
+            let sourceText = expandedInputStateAttributedString(self.composeInputState.inputText)
+            return SynchronizeableChatInputState(replySubject: self.replyMessageSubject?.subjectModel, text: sourceText.string, entities: generateChatInputTextEntities(sourceText), timestamp: self.timestamp, textSelection: self.composeInputState.selectionRange)
         }
     }
 
