@@ -317,7 +317,7 @@ public class ShareRootControllerImpl {
             presentationDataPromise.set(.single(presentationData))
             
             var immediatePeerId: PeerId?
-            if !"".isEmpty, #available(iOS 13.2, *), let sendMessageIntent = self.getExtensionContext()?.intent as? INSendMessageIntent {
+            if #available(iOS 13.2, *), let sendMessageIntent = self.getExtensionContext()?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
                     if let peerId = Int64(string) {
