@@ -548,13 +548,11 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 range = (mutableString.string as NSString).range(of: "{amount}")
                 if range.location != NSNotFound {
                     if currency == "XTR" {
-                        let amountAttributedString = NSMutableAttributedString(string: "  >  \(totalAmount)", font: titleBoldFont, textColor: primaryTextColor)
-                        if let range = amountAttributedString.string.range(of: ">"), let starImage = generateScaledImage(image: UIImage(bundleImageName: "Premium/Stars/Star"), size: CGSize(width: 16.0, height: 16.0), opaque: false)?.withRenderingMode(.alwaysTemplate) {
-                            amountAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: amountAttributedString.string))
-                            amountAttributedString.addAttribute(.foregroundColor, value: primaryTextColor, range: NSRange(range, in: amountAttributedString.string))
+                        let amountAttributedString = NSMutableAttributedString(string: "#\(totalAmount)", font: titleBoldFont, textColor: primaryTextColor)
+                        if let range = amountAttributedString.string.range(of: "#") {
+                            amountAttributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars), range: NSRange(range, in: amountAttributedString.string))
                             amountAttributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: amountAttributedString.string))
                         }
-                        
                         mutableString.replaceCharacters(in: range, with: amountAttributedString)
                     } else {
                         mutableString.replaceCharacters(in: range, with: NSAttributedString(string: formatCurrencyAmount(totalAmount, currency: currency), font: titleBoldFont, textColor: primaryTextColor))

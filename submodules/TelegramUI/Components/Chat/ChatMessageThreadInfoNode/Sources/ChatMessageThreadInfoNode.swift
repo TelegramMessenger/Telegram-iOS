@@ -494,7 +494,12 @@ public class ChatMessageThreadInfoNode: ASDisplayNode {
                         node.contentNode.addSubnode(avatarNode)
                     }
                     avatarNode.frame = CGRect(origin: CGPoint(x: -1.0, y: -3.0), size: CGSize(width: 26.0, height: 26.0))
-                    avatarNode.setPeer(context: arguments.context, theme: arguments.presentationData.theme.theme, peer: peer)
+                    
+                    var overrideImage: AvatarNodeImageOverride?
+                    if peer.id.isReplies {
+                        overrideImage = .repliesIcon
+                    }
+                    avatarNode.setPeer(context: arguments.context, theme: arguments.presentationData.theme.theme, peer: peer, overrideImage: overrideImage)
                 } else {
                     let titleTopicIconView: ComponentHostView<Empty>
                     if let current = node.titleTopicIconView {

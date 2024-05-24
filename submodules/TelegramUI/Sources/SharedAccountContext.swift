@@ -1638,6 +1638,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             controllerInteraction: controllerInteraction as! ChatControllerInteraction,
             selectedMessages: selectedMessages,
             mode: mode,
+            isChatPreview: false,
             messageTransitionNode: { return nil }
         )
     }
@@ -2632,6 +2633,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeStarsTransactionScreen(context: AccountContext, transaction: StarsContext.State.Transaction) -> ViewController {
         return StarsTransactionScreen(context: context, subject: .transaction(transaction), action: {})
+    }
+    
+    public func makeStarsReceiptScreen(context: AccountContext, receipt: BotPaymentReceipt) -> ViewController {
+        return StarsTransactionScreen(context: context, subject: .receipt(receipt), action: {})
     }
 }
 

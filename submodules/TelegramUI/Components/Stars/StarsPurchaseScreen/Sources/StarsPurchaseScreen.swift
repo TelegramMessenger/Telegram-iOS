@@ -42,7 +42,17 @@ private struct StarsProduct: Equatable {
 private final class StarsPurchaseScreenContentComponent: CombinedComponent {
     typealias EnvironmentType = (ViewControllerComponentContainer.Environment, ScrollChildEnvironment)
     
+    public class ExternalState {
+        public var descriptionHeight: CGFloat = 0.0
+        
+        public init() {
+            
+        }
+    }
+    
     let context: AccountContext
+    let externalState: ExternalState
+    let containerSize: CGSize
     let options: [StarsTopUpOption]
     let peerId: EnginePeer.Id?
     let requiredStars: Int64?
@@ -55,6 +65,8 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
     
     init(
         context: AccountContext,
+        externalState: ExternalState,
+        containerSize: CGSize,
         options: [StarsTopUpOption],
         peerId: EnginePeer.Id?,
         requiredStars: Int64?,
@@ -66,6 +78,8 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
         buy: @escaping (StarsProduct) -> Void
     ) {
         self.context = context
+        self.externalState = externalState
+        self.containerSize = containerSize
         self.options = options
         self.peerId = peerId
         self.requiredStars = requiredStars
@@ -79,6 +93,9 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
     
     static func ==(lhs: StarsPurchaseScreenContentComponent, rhs: StarsPurchaseScreenContentComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.containerSize != rhs.containerSize {
             return false
         }
         if lhs.options != rhs.options {
@@ -251,6 +268,8 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             )
             size.height += text.size.height
             size.height += 21.0
+            
+            context.component.externalState.descriptionHeight = text.size.height
                
             let initialValues: [Int64] = [
                 15,
@@ -443,6 +462,10 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             size.height += 10.0
             
             size.height += scrollEnvironment.insets.bottom
+            
+            if context.component.expanded {
+                size.height = max(size.height, component.containerSize.height + 150.0 + text.size.height)
+            }
             
             return size
         }
@@ -676,6 +699,8 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
         let balanceText = Child(MultilineTextComponent.self)
         
         let scrollAction = ActionSlot<CGPoint?>()
+        
+        let contentExternalState = StarsPurchaseScreenContentComponent.ExternalState()
                 
         return { context in
             let environment = context.environment[EnvironmentType.self].value
@@ -696,10 +721,10 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                     isVisible: starIsVisible,
                     hasIdleAnimations: state.hasIdleAnimations,
                     colors: [
-                        UIColor(rgb: 0xea8904),
+                        UIColor(rgb: 0xe57d02),
                         UIColor(rgb: 0xf09903),
-                        UIColor(rgb: 0xfec209),
-                        UIColor(rgb: 0xfed31a)
+                        UIColor(rgb: 0xf9b004),
+                        UIColor(rgb: 0xfdd219)
                     ]
                 ),
                 availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
@@ -773,6 +798,8 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                 component: ScrollComponent<EnvironmentType>(
                     content: AnyComponent(StarsPurchaseScreenContentComponent(
                         context: context.component.context,
+                        externalState: contentExternalState,
+                        containerSize: context.availableSize,
                         options: context.component.options,
                         peerId: context.component.peerId,
                         requiredStars: context.component.requiredStars,
@@ -781,7 +808,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                         products: state.products,
                         expanded: state.isExpanded,
                         stateUpdated: { [weak state] transition in
-                            scrollAction.invoke(CGPoint(x: 0.0, y: 170.0))
+                            scrollAction.invoke(CGPoint(x: 0.0, y: 150.0 + contentExternalState.descriptionHeight))
                             state?.isExpanded = true
                             state?.updated(transition: transition)
                         },
@@ -798,10 +825,11 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                         }
                     },
                     contentOffsetWillCommit: { targetContentOffset in
+                        let anchorOffset = 150.0 + contentExternalState.descriptionHeight
                         if targetContentOffset.pointee.y < 100.0 {
                             targetContentOffset.pointee = CGPoint(x: 0.0, y: 0.0)
-                        } else if targetContentOffset.pointee.y < 170.0 {
-                            targetContentOffset.pointee = CGPoint(x: 0.0, y: 170.0)
+                        } else if targetContentOffset.pointee.y < anchorOffset {
+                            targetContentOffset.pointee = CGPoint(x: 0.0, y: anchorOffset)
                         }
                     },
                     resetScroll: scrollAction

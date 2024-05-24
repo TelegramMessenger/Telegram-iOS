@@ -605,10 +605,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         var historyNodeRotated = true
+        var isChatPreview = false
         switch chatPresentationInterfaceState.mode {
         case let .standard(standardMode):
             if case .embedded(true) = standardMode {
                 historyNodeRotated = false
+            } else if case .previewing = standardMode {
+                isChatPreview = true
             }
         default:
             break
@@ -617,7 +620,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.controllerInteraction.chatIsRotated = historyNodeRotated
 
         var getMessageTransitionNode: (() -> ChatMessageTransitionNodeImpl?)?
-        self.historyNode = ChatHistoryListNodeImpl(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tag: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), rotated: historyNodeRotated, messageTransitionNode: {
+        self.historyNode = ChatHistoryListNodeImpl(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tag: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), rotated: historyNodeRotated, isChatPreview: isChatPreview, messageTransitionNode: {
             return getMessageTransitionNode?()
         })
 
@@ -2813,7 +2816,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     }
                     self.skippedShowSearchResultsAsListAnimationOnce = true
                     inlineSearchResultsView.layer.allowsGroupOpacity = true
-                    self.contentContainerNode.view.insertSubview(inlineSearchResultsView, aboveSubview: self.historyNodeContainer.view)
+                    if let inlineSearchResultsView = self.inlineSearchResults?.view {
+                        self.contentContainerNode.view.insertSubview(inlineSearchResultsView, aboveSubview: inlineSearchResultsView)
+                    } else {
+                        self.contentContainerNode.view.insertSubview(inlineSearchResultsView, aboveSubview: self.historyNodeContainer.view)
+                    }
                 }
                 inlineSearchResultsTransition.setFrame(view: inlineSearchResultsView, frame: CGRect(origin: CGPoint(), size: layout.size))
                 
@@ -3887,7 +3894,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 
                 var messages: [EnqueueMessage] = []
                 
-                let effectiveInputText = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
+                let effectiveInputText = expandedInputStateAttributedString(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)
                 
                 let peerSpecificEmojiPack = (self.controller?.peerView?.cachedData as? CachedChannelData)?.emojiPack
                 

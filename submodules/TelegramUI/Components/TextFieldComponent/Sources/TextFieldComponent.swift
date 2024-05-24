@@ -314,13 +314,17 @@ public final class TextFieldComponent: Component {
             let inputState = f(self.inputState)
             
             let currentAttributedText = self.textView.attributedText
-            let updatedAttributedText = textAttributedStringForStateText(inputState.inputText, fontSize: component.fontSize, textColor: component.textColor, accentTextColor: component.accentColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+            let updatedAttributedText = textAttributedStringForStateText(context: component.context, stateText:  inputState.inputText, fontSize: component.fontSize, textColor: component.textColor, accentTextColor: component.accentColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+            })
             if currentAttributedText != updatedAttributedText {
                 self.textView.attributedText = updatedAttributedText
             }
             self.textView.selectedRange = NSMakeRange(inputState.selectionRange.lowerBound, inputState.selectionRange.count)
             
-            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.accentColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+            refreshChatTextInputAttributes(context: component.context, textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.accentColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+            })
             
             self.updateEntities()
             
@@ -452,7 +456,9 @@ public final class TextFieldComponent: Component {
             guard let component = self.component else {
                 return
             }
-            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.accentColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+            refreshChatTextInputAttributes(context: component.context, textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.accentColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+            })
             refreshChatTextInputTypingAttributes(self.textView, textColor: component.textColor, baseFontSize: component.fontSize)
             self.textView.updateTextContainerInset()
             
@@ -622,7 +628,7 @@ public final class TextFieldComponent: Component {
                             }
                         })
                         
-                        self.toggleAttribute(key: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote))
+                        self.toggleAttribute(key: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: false))
                         
                         self.updateSpoilersRevealed(animated: animated)
                     }
@@ -639,7 +645,7 @@ public final class TextFieldComponent: Component {
                             }
                         })
                         
-                        self.toggleAttribute(key: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: nil)))
+                        self.toggleAttribute(key: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: nil), isCollapsed: false))
                         
                         self.updateSpoilersRevealed(animated: animated)
                     }
@@ -957,7 +963,9 @@ public final class TextFieldComponent: Component {
             
             self.textView.isScrollEnabled = false
             
-            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.accentColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+            refreshChatTextInputAttributes(context: component.context, textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.accentColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+            })
             refreshChatTextInputTypingAttributes(self.textView, textColor: component.textColor, baseFontSize: component.fontSize)
             
             if self.textView.subviews.count > 1, animated {
@@ -1438,7 +1446,7 @@ extension TextFieldComponent.InputState {
                         for (key, value) in attributes {
                             if let value = value as? ChatTextInputTextQuoteAttribute {
                                 result.removeAttribute(key, range: range)
-                                result.addAttribute(key, value: ChatTextInputTextQuoteAttribute(kind: value.kind), range: range)
+                                result.addAttribute(key, value: ChatTextInputTextQuoteAttribute(kind: value.kind, isCollapsed: value.isCollapsed), range: range)
                             }
                         }
                     }
@@ -1451,7 +1459,7 @@ extension TextFieldComponent.InputState {
             
             if addAttribute {
                 if attribute == ChatTextInputAttributes.block {
-                    result.addAttribute(attribute, value: value ?? ChatTextInputTextQuoteAttribute(kind: .quote), range: nsRange)
+                    result.addAttribute(attribute, value: value ?? ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: false), range: nsRange)
                     var selectionIndex = nsRange.upperBound
                     if nsRange.upperBound != result.length && (result.string as NSString).character(at: nsRange.upperBound) != 0x0a {
                         result.insert(NSAttributedString(string: "\n"), at: nsRange.upperBound)

@@ -8795,6 +8795,23 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
+                static func refundStarsCharge(userId: Api.InputUser, msgId: Int32, chargeId: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-258950164)
+                    userId.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeString(chargeId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "payments.refundStarsCharge", parameters: [("userId", String(describing: userId)), ("msgId", String(describing: msgId)), ("chargeId", String(describing: chargeId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
                 static func sendPaymentForm(flags: Int32, formId: Int64, invoice: Api.InputInvoice, requestedInfoId: String?, shippingOptionId: String?, credentials: Api.InputPaymentCredentials, tipAmount: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentResult>) {
                     let buffer = Buffer()
                     buffer.appendInt32(755192367)

@@ -12218,6 +12218,7 @@ Sorry for the inconvenience.";
 "Message.FactCheck" = "Fact Check";
 "Message.FactCheck.WhatIsThis" = "what's this?";
 
+"Conversation.FactCheck.InnerDescription" = "This clarification was provided by a fact checking agency assigned by the department of the government of your country (%@) responsible for combating misinformation.";
 "Conversation.FactCheck.Description" = "This clarification was provided by a fact checking agency assigned by the department of the government of your country (%@) responsible for combating misinformation.";
 
 "FactCheck.Title" = "Fact Check";

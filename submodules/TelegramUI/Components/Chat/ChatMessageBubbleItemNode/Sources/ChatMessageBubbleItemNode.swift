@@ -98,6 +98,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     var result: [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)] = []
     var skipText = false
     var messageWithCaptionToAdd: (Message, ChatMessageEntryAttributes)?
+    var messageWithFactCheckToAdd: (Message, ChatMessageEntryAttributes)?
     var isUnsupportedMedia = false
     var isStoryWithText = false
     var isAction = false
@@ -263,6 +264,10 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             }
         }
         
+        if let attribute = message.factCheckAttribute, case .Loaded = attribute.content, messageWithFactCheckToAdd == nil {
+            messageWithFactCheckToAdd = (message, itemAttributes)
+        }
+        
         inner: for media in message.media {
             if let webpage = media as? TelegramMediaWebpage {
                 if case let .Loaded(content) = webpage.content {
@@ -294,14 +299,6 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         if isUnsupportedMedia {
             result.append((message, ChatMessageUnsupportedBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
             needReactions = false
-        } else {
-            for attribute in message.attributes {
-                if let attribute = attribute as? FactCheckMessageAttribute, case .Loaded = attribute.content {
-                    result.append((message, ChatMessageFactCheckBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
-                    needReactions = false
-                    break
-                }
-            }
         }
     }
     
@@ -315,6 +312,11 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             result.append((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
             needReactions = false
         }
+    }
+    
+    if let (messageWithFactCheckToAdd, itemAttributes) = messageWithFactCheckToAdd, !hasSeparateCommentsButton {
+        result.append((messageWithFactCheckToAdd, ChatMessageFactCheckBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+        needReactions = false
     }
     
     if let additionalContent = item.additionalContent {
@@ -1178,7 +1180,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         break
                     case .ignore:
                         return .fail
-                    case .url, .phone, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji:
+                    case .url, .phone, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji, .custom:
                         return .waitForSingleTap
                     }
                 }
@@ -2432,7 +2434,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1 || item.associatedData.isRecentActions), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
                 hasThreadInfo = true
             } else if case let .customChatContents(contents) = item.associatedData.subject, case .hashTagSearch = contents.kind {
-                hasThreadInfo = true
+                if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                    
+                } else {
+                    hasThreadInfo = true
+                }
             }
                         
             var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
@@ -4623,6 +4629,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             return .action(InternalBubbleTapAction.Action {
                             })
                         }
+                    case let .custom(action):
+                        return .action(InternalBubbleTapAction.Action({
+                            action()
+                        }, contextMenuOnLongPress: !tapAction.hasLongTapAction))
                     case let .url(url):
                         if case .longTap = gesture, !tapAction.hasLongTapAction, let item = self.item {
                             let tapMessage = item.content.firstMessage
@@ -4871,6 +4881,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         case .largeEmoji:
                             break
                         case .customEmoji:
+                            break
+                        case .custom:
                             break
                         }
                     }

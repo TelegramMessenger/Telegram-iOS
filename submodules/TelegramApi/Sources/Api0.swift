@@ -870,7 +870,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1108478618] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
     dict[1124938064] = { return Api.SponsoredMessageReportOption.parse_sponsoredMessageReportOption($0) }
     dict[198776256] = { return Api.StarsTopupOption.parse_starsTopupOption($0) }
-    dict[1600878860] = { return Api.StarsTransaction.parse_starsTransaction($0) }
+    dict[-865044046] = { return Api.StarsTransaction.parse_starsTransaction($0) }
     dict[-670195363] = { return Api.StarsTransactionPeer.parse_starsTransactionPeer($0) }
     dict[-1269320843] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerAppStore($0) }
     dict[-382740222] = { return Api.StarsTransactionPeer.parse_starsTransactionPeerFragment($0) }
@@ -1302,6 +1302,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1610250415] = { return Api.payments.PaymentForm.parse_paymentForm($0) }
     dict[2079764828] = { return Api.payments.PaymentForm.parse_paymentFormStars($0) }
     dict[1891958275] = { return Api.payments.PaymentReceipt.parse_paymentReceipt($0) }
+    dict[-625215430] = { return Api.payments.PaymentReceipt.parse_paymentReceiptStars($0) }
     dict[1314881805] = { return Api.payments.PaymentResult.parse_paymentResult($0) }
     dict[-666824391] = { return Api.payments.PaymentResult.parse_paymentVerificationNeeded($0) }
     dict[-74456004] = { return Api.payments.SavedInfo.parse_savedInfo($0) }
@@ -1379,7 +1380,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }

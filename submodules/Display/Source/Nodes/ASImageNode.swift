@@ -8,7 +8,7 @@ open class ASImageNode: ASDisplayNode {
             if self.isNodeLoaded {
                 if let image = self.image {
                     let capInsets = image.capInsets
-                    if capInsets.left.isZero && capInsets.top.isZero {
+                    if capInsets.left.isZero && capInsets.top.isZero && capInsets.right.isZero && capInsets.bottom.isZero {
                         self.contentsScale = image.scale
                         self.contents = image.cgImage
                     } else {

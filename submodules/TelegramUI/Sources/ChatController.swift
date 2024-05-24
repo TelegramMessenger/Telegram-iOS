@@ -1041,8 +1041,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if canSetupAutoremoveTimeout {
                                 strongSelf.presentAutoremoveSetup()
                             }
-                        case .paymentSent:
-                            strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: message.id), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        case let .paymentSent(currency, _, _, _, _):
+                            if currency == "XTR" {
+                                let _ = (context.engine.payments.requestBotPaymentReceipt(messageId: message.id)
+                                |> deliverOnMainQueue).start(next: { [weak self] receipt in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.push(self.context.sharedContext.makeStarsReceiptScreen(context: self.context, receipt: receipt))
+                                })
+                            } else {
+                                strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: message.id), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            }
                             /*for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
                                     //strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId))
@@ -2709,19 +2719,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 if let strongSelf = self {
-                                    let peerSignal: Signal<Peer?, NoError>
-                                    guard let peerId = strongSelf.chatLocation.peerId else {
-                                        return
-                                    }
-                                    peerSignal = strongSelf.context.account.postbox.loadedPeerWithId(peerId)
-                                    |> map(Optional.init)
-                                    let _ = (peerSignal
-                                    |> deliverOnMainQueue).startStandalone(next: { peer in
-                                        if let strongSelf = self {
-                                            let searchController = HashtagSearchController(context: strongSelf.context, peer: peer.flatMap(EnginePeer.init), query: hashtag)
-                                            strongSelf.effectiveNavigationController?.pushViewController(searchController)
-                                        }
-                                    })
+                                    strongSelf.openHashtag(hashtag, peerName: nil)
                                 }
                             }),
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
@@ -2925,7 +2923,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let invoice = media as? TelegramMediaInvoice {
                         strongSelf.chatDisplayNode.dismissInput()
                         if let receiptMessageId = invoice.receiptMessageId {
-                            strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            if invoice.currency == "XTR" {
+                                let _ = (strongSelf.context.engine.payments.requestBotPaymentReceipt(messageId: message.id)
+                                |> deliverOnMainQueue).start(next: { [weak self] receipt in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.push(strongSelf.context.sharedContext.makeStarsReceiptScreen(context: strongSelf.context, receipt: receipt))
+                                })
+                            } else {
+                                strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            }
                         } else {
                             let inputData = Promise<BotCheckoutController.InputData?>()
                             inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .message(message.id))
@@ -9586,6 +9594,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.resolvePeerByNameDisposable?.set((resolveSignal
             |> deliverOnMainQueue).start(next: { [weak self] peer in
                 if let strongSelf = self, !hashtag.isEmpty {
+//                    var peer = peer
+//                    if peer?.id.isReplies == true {
+//                        peer = nil
+//                    }
                     let searchController = HashtagSearchController(context: strongSelf.context, peer: peer.flatMap(EnginePeer.init), query: hashtag)
                     strongSelf.effectiveNavigationController?.pushViewController(searchController)
                 }

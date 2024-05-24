@@ -718,7 +718,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         return self._isReady.get()
     }
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tag: HistoryViewInputTag?, source: ChatHistoryListSource, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, rotated: Bool = false, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tag: HistoryViewInputTag?, source: ChatHistoryListSource, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, rotated: Bool = false, isChatPreview: Bool, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?) {
         var tag = tag
         if case .pinnedMessages = subject {
             tag = .tag(.pinned)
@@ -752,13 +752,15 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         self.prefetchManager = InChatPrefetchManager(context: context)
         
         var displayAdPeer: PeerId?
-        switch subject {
-        case .none, .message:
-            if case let .peer(peerId) = chatLocation {
-                displayAdPeer = peerId
+        if !isChatPreview {
+            switch subject {
+            case .none, .message:
+                if case let .peer(peerId) = chatLocation {
+                    displayAdPeer = peerId
+                }
+            default:
+                break
             }
-        default:
-            break
         }
         var adMessages: Signal<(interPostInterval: Int32?, messages: [Message]), NoError>
         if case .bubbles = mode, let peerId = displayAdPeer {

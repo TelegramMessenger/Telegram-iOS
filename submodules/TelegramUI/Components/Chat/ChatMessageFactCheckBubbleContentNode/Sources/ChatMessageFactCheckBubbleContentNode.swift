@@ -12,6 +12,7 @@ import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import MessageInlineBlockBackgroundView
+import TextSelectionNode
 import Geocoding
 import UrlEscaping
 
@@ -42,26 +43,33 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
     private var titleBadgeButton: HighlightTrackingButtonNode?
     private let textClippingNode: ASDisplayNode
     private let textNode: TextNode
+    private let additionalTextNode: TextNode
     private var linkHighlightingNode: LinkHighlightingNode?
+    private var textSelectionNode: TextSelectionNode?
+    
+    private let lineNode: ASDisplayNode
     
     private var maskView: UIImageView?
     private var maskOverlayView: UIView?
     
     private var expandIcon: ASImageNode
-    private var expandButton: HighlightTrackingButtonNode?
     
     private let statusNode: ChatMessageDateAndStatusNode
     
     private var isExpanded: Bool = false
     private var appliedIsExpanded: Bool = false
     
+    private var countryName: String?
+    
     required public init() {
         self.titleNode = TextNode()
         self.titleBadgeLabel = TextNode()
         self.textClippingNode = ASDisplayNode()
         self.textNode = TextNode()
+        self.additionalTextNode = TextNode()
         self.expandIcon = ASImageNode()
         self.statusNode = ChatMessageDateAndStatusNode()
+        self.lineNode = ASDisplayNode()
 
         super.init()
         
@@ -79,6 +87,14 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
         self.textNode.contentsScale = UIScreenScale
         self.textNode.displaysAsynchronously = false
         self.textClippingNode.addSubnode(self.textNode)
+        
+        self.additionalTextNode.isUserInteractionEnabled = false
+        self.additionalTextNode.contentMode = .topLeft
+        self.additionalTextNode.contentsScale = UIScreenScale
+        self.additionalTextNode.displaysAsynchronously = false
+        self.textClippingNode.addSubnode(self.additionalTextNode)
+        
+        self.textClippingNode.addSubnode(self.lineNode)
         
         self.titleBadgeLabel.isUserInteractionEnabled = false
         self.titleBadgeLabel.contentMode = .topLeft
@@ -106,24 +122,10 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
     }
     
     @objc private func badgePressed() {
-        guard let item = self.item else {
+        guard let item = self.item, let countryName = self.countryName else {
             return
         }
         
-        var countryId: String?
-        for attribute in item.message.attributes {
-            if let attribute = attribute as? FactCheckMessageAttribute, case let .Loaded(_, _, countryIdValue) = attribute.content {
-                countryId = countryIdValue
-                break
-            }
-        }
-        
-        guard let countryId else {
-            return
-        }
-        
-        let locale = localeWithStrings(item.presentationData.strings)
-        let countryName = displayCountryName(countryId, locale: locale)
         item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_FactCheck_Description(countryName).string, true, self.titleBadgeButton, nil)
     }
     
@@ -135,10 +137,58 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
         let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, false)
     }
     
-    public override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
-        if let expandButton = self.expandButton, expandButton.frame.contains(point) {
-            return ChatMessageBubbleContentTapAction(content: .ignore)
+    public override func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+        if !value {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
         }
+    }
+    
+    public override func updateIsExtractedToContextPreview(_ value: Bool) {
+        if value {
+            if self.textSelectionNode == nil, let item = self.item, let rootNode = item.controllerInteraction.chatControllerNode() {
+                let selectionColor: UIColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionColor
+                let knobColor: UIColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionKnobColor
+                
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor, isDark: item.presentationData.theme.theme.overallDarkAppearance), strings: item.presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
+                    self?.updateIsTextSelectionActive?(value)
+                }, present: { [weak self] c, a in
+                    self?.item?.controllerInteraction.presentGlobalOverlayController(c, a)
+                }, rootNode: { [weak rootNode] in
+                    return rootNode
+                }, performAction: { [weak self] text, action in
+                    guard let strongSelf = self, let item = strongSelf.item else {
+                        return
+                    }
+                    item.controllerInteraction.performTextSelectionAction(item.message, true, text, action)
+                })
+                textSelectionNode.enableQuote = false
+                self.textSelectionNode = textSelectionNode
+                self.addSubnode(textSelectionNode)
+                self.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textClippingNode)
+                textSelectionNode.frame = self.textClippingNode.view.convert(self.textNode.frame, to: self.view)
+                textSelectionNode.highlightAreaNode.frame = textSelectionNode.frame
+            }
+        } else {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                self.updateIsTextSelectionActive?(false)
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
+        }
+    }
+    
+    public override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if let titleBadgeButton = self.titleBadgeButton, titleBadgeButton.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
         }
@@ -148,13 +198,9 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
         }
         
         let textNodeFrame = self.textClippingNode.frame
-        if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+        if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                var concealed = true
-                if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
-                    concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
-                }
-                return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed)))
+                return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: false)))
             } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return ChatMessageBubbleContentTapAction(content: .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false))
             } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
@@ -164,6 +210,11 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag))
             }
+        }
+        if let backgroundView = self.backgroundView, backgroundView.frame.contains(point), case .tap = gesture {
+            return ChatMessageBubbleContentTapAction(content: .custom({ [weak self] in
+                self?.expandPressed()
+            }), hasLongTapAction: false)
         }
         return ChatMessageBubbleContentTapAction(content: .none)
     }
@@ -216,10 +267,12 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
         let titleLayout = TextNode.asyncLayout(self.titleNode)
         let titleBadgeLayout = TextNode.asyncLayout(self.titleBadgeLabel)
         let textLayout = TextNode.asyncLayout(self.textNode)
+        let additionalTextLayout = TextNode.asyncLayout(self.additionalTextNode)
         let measureTextLayout = TextNode.asyncLayout(nil)
         let statusLayout = self.statusNode.asyncLayout()
         
         let currentIsExpanded = self.isExpanded
+        let currentCountryName = self.countryName
         
         return { item, layoutConstants, _, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
@@ -313,15 +366,32 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                 let titleBadgeString = NSAttributedString(string: item.presentationData.strings.Message_FactCheck_WhatIsThis, font: badgeFont, textColor: mainColor)
                 let (titleBadgeLayout, titleBadgeApply) = titleBadgeLayout(TextNodeLayoutArguments(attributedString: titleBadgeString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize))
                 
+                let countryName: String
+                if let currentCountryName {
+                    countryName = currentCountryName
+                } else {
+                    if let attribute = item.message.factCheckAttribute, case let .Loaded(_, _, countryIdValue) = attribute.content {
+                        let locale = localeWithStrings(item.presentationData.strings)
+                        countryName = displayCountryName(countryIdValue, locale: locale)
+                    } else {
+                        countryName = ""
+                    }
+                }
+                
                 let finalAttributedText = stringWithAppliedEntities(rawText, entities: rawEntities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont, message: nil) as! NSMutableAttributedString
                 finalAttributedText.append(NSAttributedString(string: "__", font: textFont, textColor: .clear))
                 
                 let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: finalAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets, lineColor: messageTheme.accentControlColor))
+                
+                let additionalAttributedText = NSMutableAttributedString(string: item.presentationData.strings.Conversation_FactCheck_InnerDescription(countryName).string, font: badgeFont, textColor: mainColor)
+                additionalAttributedText.append(NSAttributedString(string: "__", font: badgeFont, textColor: .clear))
+                
+                let (additionalTextLayout, additionalTextApply) = additionalTextLayout(TextNodeLayoutArguments(attributedString: additionalAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, lineSpacing: 0.0, cutout: nil, insets: textInsets, lineColor: messageTheme.accentControlColor))
             
                 var canExpand = false
                 var clippedTextHeight: CGFloat = textLayout.size.height
                 if textLayout.numberOfLines > 4 {
-                    let (measuredTextLayout, _) = measureTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets, lineColor: messageTheme.accentControlColor))
+                    let (measuredTextLayout, _) = measureTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 4, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets, lineColor: messageTheme.accentControlColor))
                     canExpand = true
                     
                     if !currentIsExpanded {
@@ -340,7 +410,11 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                 let textFrame = CGRect(origin: CGPoint(x: titleFrame.origin.x, y: -textInsets.top + titleFrameWithoutInsets.height + textSpacing), size: textLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: clippedTextHeight - textInsets.top - textInsets.bottom))
                 textFrameWithoutInsets = textFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
-                                
+                
+                let additionalTextFrame = CGRect(origin: CGPoint(x: titleFrame.origin.x, y: textFrame.maxY), size: additionalTextLayout.size)
+                var additionalTextFrameWithoutInsets = CGRect(origin: CGPoint(x: additionalTextFrame.origin.x + textInsets.left, y: additionalTextFrame.origin.y + textInsets.top), size: CGSize(width: additionalTextFrame.width - textInsets.left - textInsets.right, height: additionalTextFrame.height - textInsets.top - textInsets.bottom))
+                additionalTextFrameWithoutInsets = additionalTextFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
+                
                 var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
                 if let statusType = statusType {
                     var isReplyThread = false
@@ -377,6 +451,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
                     suggestedBoundingWidth = max(suggestedBoundingWidth, statusSuggestedWidthAndContinue.0)
                 }
+                suggestedBoundingWidth = max(suggestedBoundingWidth, additionalTextFrameWithoutInsets.width)
                 let sideInsets = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 suggestedBoundingWidth += (sideInsets - 2.0) * 2.0
                 
@@ -385,7 +460,13 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                     
                     let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right)
                     
-                    boundingSize = CGSize(width: boundingWidth, height: topInset + titleFrameWithoutInsets.height + textFrameWithoutInsets.size.height + textSpacing)
+                    var contentHeight = titleFrameWithoutInsets.height + textSpacing + textFrameWithoutInsets.size.height
+                    if canExpand && !currentIsExpanded {
+                    } else {
+                        contentHeight += textSpacing * 2.0 + 1.0 + additionalTextFrameWithoutInsets.height
+                    }
+                    contentHeight += textSpacing
+                    boundingSize = CGSize(width: boundingWidth, height: topInset + contentHeight - textSpacing)
                     if let statusSizeAndApply = statusSizeAndApply {
                         boundingSize.height += statusSizeAndApply.0.height
                     }
@@ -400,7 +481,8 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                             let themeUpdated = strongSelf.item?.presentationData.theme.theme !== item.presentationData.theme.theme
                             
                             strongSelf.item = item
-                            
+                            strongSelf.countryName = countryName
+     
                             let backgroundView: MessageInlineBlockBackgroundView
                             if let current = strongSelf.backgroundView {
                                 backgroundView = current
@@ -408,6 +490,10 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                                 backgroundView = MessageInlineBlockBackgroundView()
                                 strongSelf.view.insertSubview(backgroundView, at: 0)
                                 strongSelf.backgroundView = backgroundView
+                            }
+                            
+                            if themeUpdated {
+                                strongSelf.lineNode.backgroundColor = mainColor.withAlphaComponent(0.15)
                             }
                             
                             var isExpandedUpdated = false
@@ -464,57 +550,12 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
 
                             let _ = textApply()
                             strongSelf.textNode.frame = CGRect(origin: .zero, size: textFrame.size)
-
-                            var clippingTextFrame = textFrame.offsetBy(dx: 0.0, dy: topInset)
-                            clippingTextFrame.size.height = clippedTextHeight - 3.0
                             
-                            if canExpand {
-                                let wasHidden = strongSelf.expandIcon.isHidden
-                                strongSelf.expandIcon.isHidden = false
-                                if strongSelf.maskView?.image == nil {
-                                    strongSelf.maskView?.image = generateMaskImage()
-                                }
-                                strongSelf.textClippingNode.view.mask = strongSelf.maskView
-                                
-                                var expandIconFrame: CGRect = .zero
-                                if let icon = strongSelf.expandIcon.image {
-                                    expandIconFrame = CGRect(origin: CGPoint(x: boundingWidth - icon.size.width - 19.0, y: clippingTextFrame.maxY - icon.size.height - 5.0), size: icon.size)
-                                    if wasHidden || isFirstTime {
-                                        strongSelf.expandIcon.position = expandIconFrame.center
-                                    } else {
-                                        animation.animator.updatePosition(layer: strongSelf.expandIcon.layer, position: expandIconFrame.center, completion: nil)
-                                    }
-                                    strongSelf.expandIcon.bounds = CGRect(origin: .zero, size: expandIconFrame.size)
-                                }
-                                
-                                let expandButtonFrame = expandIconFrame.insetBy(dx: -8.0, dy: -8.0)
-                                 
-                                let expandButton: HighlightTrackingButtonNode
-                                if let current = strongSelf.expandButton {
-                                    expandButton = current
-                                } else {
-                                    expandButton = HighlightTrackingButtonNode()
-                                    expandButton.addTarget(self, action: #selector(strongSelf.expandPressed), forControlEvents: .touchUpInside)
-                                    expandButton.highligthedChanged = { [weak self] highlighted in
-                                        if let strongSelf = self {
-                                            if highlighted {
-                                                strongSelf.expandIcon.layer.removeAnimation(forKey: "opacity")
-                                                strongSelf.expandIcon.alpha = 0.4
-                                            } else {
-                                                strongSelf.expandIcon.alpha = 1.0
-                                                strongSelf.expandIcon.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                                            }
-                                        }
-                                    }
-                                    strongSelf.expandButton = expandButton
-                                    strongSelf.addSubnode(expandButton)
-                                }
-                                expandButton.frame = expandButtonFrame
-                            } else {
-                                strongSelf.expandIcon.isHidden = true
-                                strongSelf.textClippingNode.view.mask = nil
-                            }
+                            let _ = additionalTextApply()
+                            strongSelf.additionalTextNode.frame = CGRect(origin: CGPoint(x: 0.0, y: textFrame.height - textInsets.bottom + textSpacing + 1.0), size: additionalTextFrame.size)
                             
+                            let clippingTextFrame = CGRect(origin: textFrame.origin.offsetBy(dx: 0.0, dy: topInset), size: CGSize(width: boundingWidth, height: contentHeight - titleFrame.height + textSpacing))
+                             
                             var titleLineWidth: CGFloat = 0.0
                             if let firstLine = titleLayout.linesRects().first {
                                 titleLineWidth = firstLine.width
@@ -559,7 +600,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                                 titleBadgeButton.setBackgroundImage(generateFilledCircleImage(diameter: badgeBackgroundFrame.height, color: mainColor.withMultipliedAlpha(0.1))?.stretchableImage(withLeftCapWidth: Int(badgeBackgroundFrame.height / 2), topCapHeight: Int(badgeBackgroundFrame.height / 2)), for: .normal)
                             }
                             
-                            let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top + topInset), size: CGSize(width: boundingWidth - backgroundInsets.left - backgroundInsets.right, height: titleFrameWithoutInsets.height + textSpacing + textFrameWithoutInsets.height + textSpacing))
+                            let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top + topInset), size: CGSize(width: boundingWidth - backgroundInsets.left - backgroundInsets.right, height: contentHeight))
                             
                             if isFirstTime {
                                 strongSelf.textClippingNode.frame = clippingTextFrame
@@ -578,6 +619,41 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                             }
                             backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: nil, thirdColor: nil, backgroundColor: nil, pattern: nil, patternTopRightPosition: nil, animation: isFirstTime ? .None : animation)
                             
+                            animation.animator.updateFrame(layer: strongSelf.lineNode.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: textFrame.height - textSpacing + 1.0), size: CGSize(width: backgroundFrame.width - 9.0 - 6.0, height: 1.0 - UIScreenPixel)), completion: nil)
+                            
+                            if canExpand {
+                                let wasHidden = strongSelf.expandIcon.isHidden
+                                strongSelf.expandIcon.isHidden = false
+                                if strongSelf.maskView?.image == nil {
+                                    strongSelf.maskView?.image = generateMaskImage()
+                                }
+                                strongSelf.textClippingNode.view.mask = strongSelf.maskView
+                                
+                                var expandIconFrame: CGRect = .zero
+                                if let icon = strongSelf.expandIcon.image {
+                                    expandIconFrame = CGRect(origin: CGPoint(x: boundingWidth - icon.size.width - 19.0, y: backgroundFrame.maxY - icon.size.height - 6.0), size: icon.size)
+                                    if wasHidden || isFirstTime {
+                                        strongSelf.expandIcon.position = expandIconFrame.center
+                                    } else {
+                                        animation.animator.updatePosition(layer: strongSelf.expandIcon.layer, position: expandIconFrame.center, completion: nil)
+                                    }
+                                    strongSelf.expandIcon.bounds = CGRect(origin: .zero, size: expandIconFrame.size)
+                                }
+                            } else {
+                                strongSelf.expandIcon.isHidden = true
+                                strongSelf.textClippingNode.view.mask = nil
+                            }
+                            
+                            if let textSelectionNode = strongSelf.textSelectionNode {
+                                let shouldUpdateLayout = textSelectionNode.frame.size != textFrame.size
+                                textSelectionNode.frame = strongSelf.textClippingNode.view.convert(strongSelf.textNode.frame, to: strongSelf.view)
+                                textSelectionNode.highlightAreaNode.frame = textSelectionNode.frame
+                                
+                                if shouldUpdateLayout {
+                                    textSelectionNode.updateLayout()
+                                }
+                            }
+                            
                             if let statusSizeAndApply = statusSizeAndApply {
                                 strongSelf.statusNode.reactionSelected = { [weak strongSelf] _, value, sourceView in
                                     guard let strongSelf, let item = strongSelf.item else {
@@ -594,7 +670,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                                     item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
                                 }
                                 
-                                let statusFrame = CGRect(origin: CGPoint(x: boundingWidth - layoutConstants.text.bubbleInsets.right - statusSizeAndApply.0.width, y: topInset + textFrameWithoutInsets.maxY), size: statusSizeAndApply.0)
+                                let statusFrame = CGRect(origin: CGPoint(x: boundingWidth - layoutConstants.text.bubbleInsets.right - statusSizeAndApply.0.width, y: backgroundFrame.maxY + 4.0), size: statusSizeAndApply.0)
                                 if isFirstTime {
                                     strongSelf.statusNode.frame = statusFrame
                                 } else {

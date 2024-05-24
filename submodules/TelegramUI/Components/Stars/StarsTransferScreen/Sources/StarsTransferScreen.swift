@@ -216,7 +216,8 @@ private final class SheetContent: CombinedComponent {
             
             let constrainedTitleWidth = context.availableSize.width - 16.0 * 2.0
             
-            contentSize.height += 130.0
+            contentSize.height += 126.0
+            
             let title = title.update(
                 component: Text(text: strings.Stars_Transfer_Title, font: Font.bold(24.0), color: theme.list.itemPrimaryTextColor),
                 availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
@@ -258,13 +259,14 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + text.size.height / 2.0))
             )
             contentSize.height += text.size.height
-            contentSize.height += 24.0
+            contentSize.height += 28.0
             
             if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== theme {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Premium/Stars/Star"), color: UIColor(rgb: 0xf09903))!, theme)
             }
             
-            let balanceAttributedString = parseMarkdownIntoAttributedString("\(strings.Stars_Transfer_Balance)\n #  **\(state.balance ?? 0)**", attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
+            let balanceAttributedString = NSMutableAttributedString(string: strings.Stars_Transfer_Balance, font: Font.regular(14.0), textColor: textColor)
+            balanceAttributedString.append(NSMutableAttributedString(string: "\n #  \(state.balance ?? 0)", font: Font.semibold(16.0), textColor: textColor))
             if let range = balanceAttributedString.string.range(of: "#"), let chevronImage = state.cachedChevronImage?.0 {
                 balanceAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: balanceAttributedString.string))
                 balanceAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xf09903), range: NSRange(range, in: balanceAttributedString.string))
@@ -274,13 +276,14 @@ private final class SheetContent: CombinedComponent {
                 component: MultilineTextComponent(
                     text: .plain(balanceAttributedString),
                     horizontalAlignment: .left,
-                    maximumNumberOfLines: 0
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.25
                 ),
                 availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
                 transition: .immediate
             )
             context.add(balanceText
-                .position(CGPoint(x: 16.0 + balanceText.size.width / 2.0, y: 29.0))
+                .position(CGPoint(x: 16.0 + balanceText.size.width / 2.0, y: 31.0))
             )
             
             if state.cachedStarImage == nil || state.cachedStarImage?.1 !== theme {
@@ -315,14 +318,17 @@ private final class SheetContent: CombinedComponent {
                     isEnabled: true,
                     displaysProgress: state.inProgress,
                     action: { [weak state, weak controller] in
-                        state?.buy(requestTopUp: { [weak controller] _ in
+                        state?.buy(requestTopUp: { [weak controller] completion in
                             let purchaseController = accountContext.sharedContext.makeStarsPurchaseScreen(
                                 context: accountContext,
                                 starsContext: starsContext,
                                 options: state?.options ?? [],
                                 peerId: state?.peer?.id,
                                 requiredStars: invoice.totalAmount,
-                                completion: { _ in }
+                                completion: { [weak starsContext] stars in
+                                    starsContext?.add(balance: stars)
+                                    completion()
+                                }
                             )
                             controller?.push(purchaseController)
                         }, completion: { [weak controller] in

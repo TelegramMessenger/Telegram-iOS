@@ -102,7 +102,17 @@ final class HashtagSearchControllerNode: ASDisplayNode {
                 self.myController?.displayNode.isHidden = true
                 self.globalController?.displayNode.isHidden = true
                 
-                self.isSearching.set(self.currentController?.searching.get() ?? .single(false))
+                let isSearching: Signal<Bool, NoError>
+                if let currentController = self.currentController {
+                    isSearching = .single(true)
+                    |> then(
+                        currentController.searching.get()
+                        |> delay(0.5, queue: Queue.mainQueue())
+                    )
+                } else {
+                    isSearching = .single(false)
+                }
+                self.isSearching.set(isSearching)
             } else {
                 self.myController?.displayNode.isHidden = false
                 self.globalController?.displayNode.isHidden = true

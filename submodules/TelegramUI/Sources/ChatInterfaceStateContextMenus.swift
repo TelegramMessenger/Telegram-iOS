@@ -480,6 +480,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         isEmbeddedMode = true
     }
     
+    if case let .customChatContents(customChatContents) = chatPresentationInterfaceState.subject, case .hashTagSearch = customChatContents.kind {
+        isEmbeddedMode = true
+    }
+    
     var hasExpandedAudioTranscription = false
     if let messageNode = messageNode as? ChatMessageBubbleItemNode {
         hasExpandedAudioTranscription = messageNode.hasExpandedAudioTranscription()
@@ -1703,29 +1707,29 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             clearCacheAsDelete = true
         }
         
-        
         if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info, canEditFactCheck(appConfig: appConfig) {
-            var hasFactCheck = false
-            for attribute in message.attributes {
-                if let _ = attribute as? FactCheckMessageAttribute {
-                    hasFactCheck = true
-                    break
-                }
+            var canAddFactCheck = true
+            if message.media.contains(where: { $0 is TelegramMediaAction || $0 is TelegramMediaGiveaway }) {
+                canAddFactCheck = false
             }
             
-            let title: String
-            if hasFactCheck {
-                title = chatPresentationInterfaceState.strings.Conversation_ContextMenuEditFactCheck
-            } else {
-                title = chatPresentationInterfaceState.strings.Conversation_ContextMenuAddFactCheck
+            if canAddFactCheck {
+                let sortedMessages = messages.sorted(by: { $0.id < $1.id })
+                let hasFactCheck = sortedMessages[0].factCheckAttribute != nil
+                let title: String
+                if hasFactCheck {
+                    title = chatPresentationInterfaceState.strings.Conversation_ContextMenuEditFactCheck
+                } else {
+                    title = chatPresentationInterfaceState.strings.Conversation_ContextMenuAddFactCheck
+                }
+                actions.append(.action(ContextMenuActionItem(text: title, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/FactCheck"), color: theme.actionSheet.primaryTextColor)
+                }, action: { c, f in
+                    c?.dismiss(completion: {
+                        controllerInteraction.editMessageFactCheck(sortedMessages[0].id)
+                    })
+                })))
             }
-            actions.append(.action(ContextMenuActionItem(text: title, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/FactCheck"), color: theme.actionSheet.primaryTextColor)
-            }, action: { c, f in
-                c?.dismiss(completion: {
-                    controllerInteraction.editMessageFactCheck(messages[0].id)
-                })
-            })))
         }
 //        if message.id.peerId.isGroupOrChannel {
 //            //TODO:localize
@@ -1985,12 +1989,11 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         if let message = messages.first, case let .customChatContents(customChatContents) = chatPresentationInterfaceState.subject {
-            actions.removeAll()
-            
             switch customChatContents.kind {
             case .hashTagSearch:
                 break
             case .quickReplyMessageInput:
+                actions.removeAll()
                 if !messageText.isEmpty || (resourceAvailable && isImage) || diceEmoji != nil {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
@@ -2054,7 +2057,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     })))
                 }
             case .businessLinkSetup:
-                break
+                actions.removeAll()
             }
         }
         

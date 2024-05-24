@@ -222,7 +222,7 @@ private final class FactCheckAlertContentNode: AlertContentNode {
                 characterLimit: 1024,
                 emptyLineHandling: .oneConsecutive,
                 formatMenuAvailability: .available([.bold, .italic, .link]),
-                returnKeyType: .done,
+                returnKeyType: .default,
                 lockedFormatAction: {
                 },
                 present: { [weak self] c in

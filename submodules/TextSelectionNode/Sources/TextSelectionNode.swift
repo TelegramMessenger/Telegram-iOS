@@ -218,7 +218,7 @@ public enum TextSelectionAction: Equatable {
 public final class TextSelectionNode: ASDisplayNode {
     private let theme: TextSelectionTheme
     private let strings: PresentationStrings
-    private let textNode: TextNode
+    private let textNode: TextNodeProtocol
     private let updateIsActive: (Bool) -> Void
     public var canBeginSelection: (CGPoint) -> Bool = { _ in true }
     public var updateRange: ((NSRange?) -> Void)?
@@ -252,7 +252,7 @@ public final class TextSelectionNode: ASDisplayNode {
     
     private weak var contextMenu: ContextMenuController?
     
-    public init(theme: TextSelectionTheme, strings: PresentationStrings, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: @escaping () -> ASDisplayNode?, externalKnobSurface: UIView? = nil, performAction: @escaping (NSAttributedString, TextSelectionAction) -> Void) {
+    public init(theme: TextSelectionTheme, strings: PresentationStrings, textNode: TextNodeProtocol, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: @escaping () -> ASDisplayNode?, externalKnobSurface: UIView? = nil, performAction: @escaping (NSAttributedString, TextSelectionAction) -> Void) {
         self.theme = theme
         self.strings = strings
         self.textNode = textNode
@@ -302,7 +302,7 @@ public final class TextSelectionNode: ASDisplayNode {
             return self?.knobAtPoint(point)
         }
         recognizer.moveKnob = { [weak self] knob, point in
-            guard let strongSelf = self, let cachedLayout = strongSelf.textNode.cachedLayout, let _ = cachedLayout.attributedString, let currentRange = strongSelf.currentRange else {
+            guard let strongSelf = self, let currentRange = strongSelf.currentRange else {
                 return
             }
             
@@ -335,7 +335,7 @@ public final class TextSelectionNode: ASDisplayNode {
             strongSelf.displayMenu()
         }
         recognizer.beginSelection = { [weak self] point in
-            guard let strongSelf = self, let cachedLayout = strongSelf.textNode.cachedLayout, let attributedString = cachedLayout.attributedString else {
+            guard let strongSelf = self, let attributedString = strongSelf.textNode.currentText else {
                 return
             }
             
@@ -398,7 +398,7 @@ public final class TextSelectionNode: ASDisplayNode {
     }
     
     public func pretendInitiateSelection() {
-        guard let cachedLayout = self.textNode.cachedLayout, let attributedString = cachedLayout.attributedString else {
+        guard let attributedString = self.textNode.currentText else {
             return
         }
         
@@ -432,7 +432,7 @@ public final class TextSelectionNode: ASDisplayNode {
     }
     
     public func pretendExtendSelection(to index: Int) {
-        guard let cachedLayout = self.textNode.cachedLayout, let _ = cachedLayout.attributedString, let endRangeRect = cachedLayout.rangeRects(in: NSRange(location: index, length: 1))?.rects.first else {
+        guard let endRangeRect = self.textNode.textRangeRects(in: NSRange(location: index, length: 1))?.rects.first else {
             return
         }
         let startPoint = self.rightKnob.frame.center
@@ -449,7 +449,7 @@ public final class TextSelectionNode: ASDisplayNode {
     }
     
     public func setSelection(range: NSRange, displayMenu: Bool) {
-        guard let cachedLayout = self.textNode.cachedLayout, let attributedString = cachedLayout.attributedString else {
+        guard let attributedString = self.textNode.currentText else {
             return
         }
         let range = self.convertSelectionFromOriginalText(attributedString: attributedString, range: range)
@@ -561,7 +561,7 @@ public final class TextSelectionNode: ASDisplayNode {
     }
     
     public func getSelection() -> NSRange? {
-        guard let currentRange = self.currentRange, let cachedLayout = self.textNode.cachedLayout, let attributedString = cachedLayout.attributedString else {
+        guard let currentRange = self.currentRange, let attributedString = self.textNode.currentText else {
             return nil
         }
         let range = NSRange(location: min(currentRange.0, currentRange.1), length: max(currentRange.0, currentRange.1) - min(currentRange.0, currentRange.1))
@@ -573,8 +573,24 @@ public final class TextSelectionNode: ASDisplayNode {
         
         var rects: (rects: [CGRect], start: TextRangeRectEdge, end: TextRangeRectEdge)?
         
-        if let range = range {
-            rects = self.textNode.rangeRects(in: range)
+        if let range {
+            if var rectsValue = self.textNode.textRangeRects(in: range) {
+                var rectList = rectsValue.rects
+                if rectList.count > 1 {
+                    for i in 0 ..< rectList.count - 1 {
+                        let deltaY = rectList[i + 1].minY - rectList[i].maxY
+                        if deltaY > 0.0 && deltaY <= 4.0 {
+                            rectList[i].size.height += deltaY * 0.5
+                            rectList[i + 1].size.height += deltaY * 0.5
+                            rectList[i + 1].origin.y -= deltaY * 0.5
+                        }
+                    }
+                }
+                rectsValue.rects = rectList
+                rects = rectsValue
+            } else {
+                rects = nil
+            }
         }
         
         self.currentRects = rects?.rects
@@ -667,7 +683,7 @@ public final class TextSelectionNode: ASDisplayNode {
     }
     
     private func displayMenu() {
-        guard let currentRects = self.currentRects, !currentRects.isEmpty, let currentRange = self.currentRange, let cachedLayout = self.textNode.cachedLayout, let attributedString = cachedLayout.attributedString else {
+        guard let currentRects = self.currentRects, !currentRects.isEmpty, let currentRange = self.currentRange, let attributedString = self.textNode.currentText else {
             return
         }
         let range = NSRange(location: min(currentRange.0, currentRange.1), length: max(currentRange.0, currentRange.1) - min(currentRange.0, currentRange.1))

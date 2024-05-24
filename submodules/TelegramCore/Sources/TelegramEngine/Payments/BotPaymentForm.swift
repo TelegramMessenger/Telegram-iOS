@@ -615,14 +615,20 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
 
 public struct BotPaymentReceipt : Equatable {
     public let invoice: BotPaymentInvoice
+    public let date: Int32
     public let info: BotPaymentRequestedInfo?
     public let shippingOption: BotPaymentShippingOption?
     public let credentialsTitle: String
     public let invoiceMedia: TelegramMediaInvoice
     public let tipAmount: Int64?
     public let botPaymentId: PeerId
+    public let transactionId: String?
+    
     public static func ==(lhs: BotPaymentReceipt, rhs: BotPaymentReceipt) -> Bool {
         if lhs.invoice != rhs.invoice {
+            return false
+        }
+        if lhs.date != rhs.date {
             return false
         }
         if lhs.info != rhs.info {
@@ -641,6 +647,9 @@ public struct BotPaymentReceipt : Equatable {
             return false
         }
         if lhs.botPaymentId != rhs.botPaymentId {
+            return false
+        }
+        if lhs.transactionId != rhs.transactionId {
             return false
         }
         return true
@@ -669,7 +678,7 @@ func _internal_requestBotPaymentReceipt(account: Account, messageId: MessageId) 
         |> mapToSignal { result -> Signal<BotPaymentReceipt, RequestBotPaymentReceiptError> in
             return account.postbox.transaction { transaction -> BotPaymentReceipt in
                 switch result {
-                case let .paymentReceipt(_, _, botId, _, title, description, photo, invoice, info, shipping, tipAmount, currency, totalAmount, credentialsTitle, users):
+                case let .paymentReceipt(_, date, botId, _, title, description, photo, invoice, info, shipping, tipAmount, currency, totalAmount, credentialsTitle, users):
                     let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
                     updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
 
@@ -692,7 +701,28 @@ func _internal_requestBotPaymentReceipt(account: Account, messageId: MessageId) 
                     
                     let botPaymentId = PeerId.init(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId))
 
-                    return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle, invoiceMedia: invoiceMedia, tipAmount: tipAmount, botPaymentId: botPaymentId)
+                    return BotPaymentReceipt(invoice: parsedInvoice, date: date, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle, invoiceMedia: invoiceMedia, tipAmount: tipAmount, botPaymentId: botPaymentId, transactionId: nil)
+                case let .paymentReceiptStars(_, date, botId, title, description, photo, invoice, currency, totalAmount, transactionId, users):
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                    
+                    let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                    
+                    let invoiceMedia = TelegramMediaInvoice(
+                        title: title,
+                        description: description,
+                        photo: photo.flatMap(TelegramMediaWebFile.init),
+                        receiptMessageId: nil,
+                        currency: currency,
+                        totalAmount: totalAmount,
+                        startParam: "",
+                        extendedMedia: nil,
+                        flags: [],
+                        version: TelegramMediaInvoice.lastVersion
+                    )
+                    
+                    let botPaymentId = PeerId.init(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId))
+                    return BotPaymentReceipt(invoice: parsedInvoice, date: date, info: nil, shippingOption: nil, credentialsTitle: "", invoiceMedia: invoiceMedia, tipAmount: nil, botPaymentId: botPaymentId, transactionId: transactionId)
                 }
             }
             |> castError(RequestBotPaymentReceiptError.self)

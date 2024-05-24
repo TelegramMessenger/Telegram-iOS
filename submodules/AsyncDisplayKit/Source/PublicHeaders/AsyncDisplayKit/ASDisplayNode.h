@@ -569,6 +569,8 @@ AS_EXTERN NSInteger const ASDefaultDrawingPriority;
 
 @property (nonatomic) bool disableClearContentsOnHide;
 
+- (void)displayImmediately;
+
 @end
 
 /**

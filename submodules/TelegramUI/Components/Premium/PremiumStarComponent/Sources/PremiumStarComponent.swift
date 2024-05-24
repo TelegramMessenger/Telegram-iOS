@@ -33,7 +33,11 @@ private func generateShineTexture() -> UIImage {
 private func generateDiffuseTexture(colors: [UIColor]) -> UIImage {
     return generateImage(CGSize(width: 256, height: 256), rotatedContext: { size, context in
         let colorsArray: [CGColor] = colors.map { $0.cgColor }
-        var locations: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
+        var locations: [CGFloat] = []
+        for i in 0 ..< colors.count {
+            let t = CGFloat(i) / CGFloat(colors.count - 1)
+            locations.append(t)
+        }
         let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
 
         context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: size.height), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
@@ -281,7 +285,7 @@ public final class PremiumStarComponent: Component {
         
         private var didSetup = false
         private func setup() {
-            guard !self.didSetup, let scene = loadCompressedScene(name: "star", version: sceneVersion) else {
+            guard !self.didSetup, let scene = loadCompressedScene(name: "star2", version: sceneVersion) else {
                 return
             }
             
@@ -450,9 +454,9 @@ public final class PremiumStarComponent: Component {
                 return
             }
             
-            if #available(iOS 17.0, *), let material = node.geometry?.materials.first {
-                material.metalness.intensity = 0.2
-            }
+//            if let material = node.geometry?.materials.first {
+//                material.metalness.intensity = 0.4
+//            }
             
             let animation = CABasicAnimation(keyPath: "contentsTransform")
             animation.fillMode = .forwards

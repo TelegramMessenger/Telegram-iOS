@@ -159,6 +159,7 @@ public struct ChatMessageBubbleContentTapAction {
         case copy(String)
         case largeEmoji(String, String?, TelegramMediaFile)
         case customEmoji(TelegramMediaFile)
+        case custom(() -> Void)
     }
     
     public var content: Content

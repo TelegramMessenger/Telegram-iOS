@@ -2170,7 +2170,7 @@ extension ChatControllerImpl {
                     invertedMediaAttribute = attribute as? InvertMediaMessageAttribute
                 }
                 
-                let text = trimChatInputText(convertMarkdownToAttributes(editMessage.inputState.inputText))
+                let text = trimChatInputText(convertMarkdownToAttributes(expandedInputStateAttributedString(editMessage.inputState.inputText)))
                 
                 let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
                 var entitiesAttribute: TextEntitiesMessageAttribute?
