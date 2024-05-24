@@ -366,7 +366,7 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                         switch source {
                                         case let .slug(slug):
                                             for media in message.media {
-                                                if let action = media as? TelegramMediaAction, case let .paymentSent(_, _, invoiceSlug?, _, _, _) = action.action, invoiceSlug == slug {
+                                                if let action = media as? TelegramMediaAction, case let .paymentSent(_, _, invoiceSlug?, _, _) = action.action, invoiceSlug == slug {
                                                     if case let .Id(id) = message.id {
                                                         receiptMessageId = id
                                                     }

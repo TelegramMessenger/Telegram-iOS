@@ -2635,8 +2635,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsTransactionScreen(context: context, subject: .transaction(transaction), action: {})
     }
     
-    public func makeStarsReceiptScreen(context: AccountContext, receipt: BotPaymentReceipt, id: String?, date: Int32) -> ViewController {
-        return StarsTransactionScreen(context: context, subject: .receipt(receipt: receipt, id: id, date: date), action: {})
+    public func makeStarsReceiptScreen(context: AccountContext, receipt: BotPaymentReceipt) -> ViewController {
+        return StarsTransactionScreen(context: context, subject: .receipt(receipt), action: {})
     }
 }
 

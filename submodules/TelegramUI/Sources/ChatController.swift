@@ -1041,14 +1041,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if canSetupAutoremoveTimeout {
                                 strongSelf.presentAutoremoveSetup()
                             }
-                        case let .paymentSent(currency, _, _, _, _, id):
+                        case let .paymentSent(currency, _, _, _, _):
                             if currency == "XTR" {
                                 let _ = (context.engine.payments.requestBotPaymentReceipt(messageId: message.id)
                                 |> deliverOnMainQueue).start(next: { [weak self] receipt in
                                     guard let self else {
                                         return
                                     }
-                                    self.push(self.context.sharedContext.makeStarsReceiptScreen(context: self.context, receipt: receipt, id: id, date: message.timestamp))
+                                    self.push(self.context.sharedContext.makeStarsReceiptScreen(context: self.context, receipt: receipt))
                                 })
                             } else {
                                 strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: message.id), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
@@ -2929,7 +2929,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    strongSelf.push(strongSelf.context.sharedContext.makeStarsReceiptScreen(context: strongSelf.context, receipt: receipt, id: nil, date: 0))
+                                    strongSelf.push(strongSelf.context.sharedContext.makeStarsReceiptScreen(context: strongSelf.context, receipt: receipt))
                                 })
                             } else {
                                 strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

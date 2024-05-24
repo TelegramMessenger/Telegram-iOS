@@ -1045,7 +1045,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsPurchaseScreen(context: AccountContext, starsContext: StarsContext, options: [StarsTopUpOption], peerId: EnginePeer.Id?, requiredStars: Int64?, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarsTransferScreen(context: AccountContext, starsContext: StarsContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>) -> ViewController
     func makeStarsTransactionScreen(context: AccountContext, transaction: StarsContext.State.Transaction) -> ViewController
-    func makeStarsReceiptScreen(context: AccountContext, receipt: BotPaymentReceipt, id: String?, date: Int32) -> ViewController
+    func makeStarsReceiptScreen(context: AccountContext, receipt: BotPaymentReceipt) -> ViewController
     
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     

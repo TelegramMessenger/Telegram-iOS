@@ -79,7 +79,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 if case let .peer(peer) = transaction.peer {
                     peerIds.append(peer.id)
                 }
-            case let .receipt(receipt, _, _):
+            case let .receipt(receipt):
                 peerIds.append(receipt.botPaymentId)
             }
             
@@ -194,11 +194,11 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     toPeer = nil
                 }
                 photo = transaction.photo
-            case let .receipt(receipt, id, dateValue):
+            case let .receipt(receipt):
                 titleText = receipt.invoiceMedia.title
                 count = (receipt.invoice.prices.first?.amount ?? receipt.invoiceMedia.totalAmount) * -1
-                transactionId = id
-                date = dateValue
+                transactionId = receipt.transactionId
+                date = receipt.date
                 if let peer = state.peerMap[receipt.botPaymentId] {
                     toPeer = peer
                 } else {
@@ -485,7 +485,12 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
                     followContentSizeChanges: true,
                     clipsContent: true,
                     externalState: sheetExternalState,
-                    animateOut: animateOut
+                    animateOut: animateOut,
+                    onPan: {
+                        if let controller = controller() as? StarsTransactionScreen {
+                            controller.dismissAllTooltips()
+                        }
+                    }
                 ),
                 environment: {
                     environment
@@ -543,7 +548,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
 public class StarsTransactionScreen: ViewControllerComponentContainer {
     public enum Subject: Equatable {
         case transaction(StarsContext.State.Transaction)
-        case receipt(receipt: BotPaymentReceipt, id: String?, date: Int32)
+        case receipt(BotPaymentReceipt)
     }
     
     private let context: AccountContext
