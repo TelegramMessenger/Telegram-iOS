@@ -179,7 +179,7 @@ public struct ChatTextFontAttributes: OptionSet, Hashable, Sequence {
 public func textAttributedStringForStateText(context: AnyObject, stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor, writingDirection: NSWritingDirection?, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?, makeCollapsedQuoteAttachment: ((NSAttributedString, ChatInputTextCollapsedQuoteAttributes) -> ChatInputTextCollapsedQuoteAttachment)?) -> NSAttributedString {
     let quoteAttributes = ChatInputTextCollapsedQuoteAttributes(
         context: context,
-        fontSize: fontSize,
+        fontSize: round(fontSize * 0.8235294117647058),
         textColor: textColor,
         accentTextColor: accentTextColor
     )
