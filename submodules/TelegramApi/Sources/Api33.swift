@@ -771,6 +771,7 @@ public extension Api.payments {
 public extension Api.payments {
     enum PaymentReceipt: TypeConstructorDescription {
         case paymentReceipt(flags: Int32, date: Int32, botId: Int64, providerId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, info: Api.PaymentRequestedInfo?, shipping: Api.ShippingOption?, tipAmount: Int64?, currency: String, totalAmount: Int64, credentialsTitle: String, users: [Api.User])
+        case paymentReceiptStars(flags: Int32, date: Int32, botId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, currency: String, totalAmount: Int64, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -798,6 +799,25 @@ public extension Api.payments {
                         item.serialize(buffer, true)
                     }
                     break
+                case .paymentReceiptStars(let flags, let date, let botId, let title, let description, let photo, let invoice, let currency, let totalAmount, let users):
+                    if boxed {
+                        buffer.appendInt32(-319617530)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt64(botId, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(description, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {photo!.serialize(buffer, true)}
+                    invoice.serialize(buffer, true)
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(totalAmount, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
     }
     }
     
@@ -805,6 +825,8 @@ public extension Api.payments {
         switch self {
                 case .paymentReceipt(let flags, let date, let botId, let providerId, let title, let description, let photo, let invoice, let info, let shipping, let tipAmount, let currency, let totalAmount, let credentialsTitle, let users):
                 return ("paymentReceipt", [("flags", flags as Any), ("date", date as Any), ("botId", botId as Any), ("providerId", providerId as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("info", info as Any), ("shipping", shipping as Any), ("tipAmount", tipAmount as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("credentialsTitle", credentialsTitle as Any), ("users", users as Any)])
+                case .paymentReceiptStars(let flags, let date, let botId, let title, let description, let photo, let invoice, let currency, let totalAmount, let users):
+                return ("paymentReceiptStars", [("flags", flags as Any), ("date", date as Any), ("botId", botId as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("users", users as Any)])
     }
     }
     
@@ -866,6 +888,50 @@ public extension Api.payments {
             let _c15 = _15 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 {
                 return Api.payments.PaymentReceipt.paymentReceipt(flags: _1!, date: _2!, botId: _3!, providerId: _4!, title: _5!, description: _6!, photo: _7, invoice: _8!, info: _9, shipping: _10, tipAmount: _11, currency: _12!, totalAmount: _13!, credentialsTitle: _14!, users: _15!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_paymentReceiptStars(_ reader: BufferReader) -> PaymentReceipt? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Api.WebDocument?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.WebDocument
+            } }
+            var _7: Api.Invoice?
+            if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.Invoice
+            }
+            var _8: String?
+            _8 = parseString(reader)
+            var _9: Int64?
+            _9 = reader.readInt64()
+            var _10: [Api.User]?
+            if let _ = reader.readInt32() {
+                _10 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            let _c10 = _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.payments.PaymentReceipt.paymentReceiptStars(flags: _1!, date: _2!, botId: _3!, title: _4!, description: _5!, photo: _6, invoice: _7!, currency: _8!, totalAmount: _9!, users: _10!)
             }
             else {
                 return nil
@@ -1604,70 +1670,6 @@ public extension Api.photos {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.photos.Photos.photosSlice(count: _1!, photos: _2!, users: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.premium {
-    enum BoostsList: TypeConstructorDescription {
-        case boostsList(flags: Int32, count: Int32, boosts: [Api.Boost], nextOffset: String?, users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .boostsList(let flags, let count, let boosts, let nextOffset, let users):
-                    if boxed {
-                        buffer.appendInt32(-2030542532)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(boosts.count))
-                    for item in boosts {
-                        item.serialize(buffer, true)
-                    }
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .boostsList(let flags, let count, let boosts, let nextOffset, let users):
-                return ("boostsList", [("flags", flags as Any), ("count", count as Any), ("boosts", boosts as Any), ("nextOffset", nextOffset as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_boostsList(_ reader: BufferReader) -> BoostsList? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: [Api.Boost]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Boost.self)
-            }
-            var _4: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
-            var _5: [Api.User]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.premium.BoostsList.boostsList(flags: _1!, count: _2!, boosts: _3!, nextOffset: _4, users: _5!)
             }
             else {
                 return nil

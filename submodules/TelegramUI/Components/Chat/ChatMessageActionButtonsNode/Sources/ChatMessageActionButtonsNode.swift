@@ -172,6 +172,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             let incoming = message.effectivelyIncoming(context.account.peerId)
             let graphics = PresentationResourcesChat.additionalGraphics(theme.theme, wallpaper: theme.wallpaper, bubbleCorners: bubbleCorners)
             
+            var isStarsPayment = false
             let iconImage: UIImage?
             switch button.action {
                 case .text:
@@ -191,7 +192,8 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                 case .switchInline:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingShareIconImage : graphics.chatBubbleActionButtonOutgoingShareIconImage
                 case .payment:
-                    if button.title.contains("Pay XTR") {
+                    if button.title.contains("⭐️") {
+                        isStarsPayment = true
                         iconImage = nil
                     } else {
                         iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPaymentIconImage : graphics.chatBubbleActionButtonOutgoingPaymentIconImage
@@ -222,10 +224,10 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             
             let titleColor = bubbleVariableColor(variableColor: messageTheme.actionButtonsTextColor, wallpaper: theme.wallpaper)
             let attributedTitle: NSAttributedString
-            if title.contains("Pay XTR") {
-                let stars = title.replacingOccurrences(of: "Pay XTR", with: "")
-                let buttonAttributedString = NSMutableAttributedString(string: "Pay  >  \(stars)", font: titleFont, textColor: titleColor, paragraphAlignment: .center)
-                if let range = buttonAttributedString.string.range(of: ">"), let starImage = UIImage(bundleImageName: "Item List/PremiumIcon") {
+            if isStarsPayment {
+                let updatedTitle = title.replacingOccurrences(of: "⭐️", with: " #  ")
+                let buttonAttributedString = NSMutableAttributedString(string: updatedTitle, font: titleFont, textColor: titleColor, paragraphAlignment: .center)
+                if let range = buttonAttributedString.string.range(of: "#"), let starImage = UIImage(bundleImageName: "Item List/PremiumIcon") {
                     buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
                     buttonAttributedString.addAttribute(.foregroundColor, value: titleColor, range: NSRange(range, in: buttonAttributedString.string))
                     buttonAttributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: buttonAttributedString.string))

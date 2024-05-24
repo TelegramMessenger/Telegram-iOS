@@ -1178,7 +1178,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         break
                     case .ignore:
                         return .fail
-                    case .url, .phone, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji:
+                    case .url, .phone, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji, .custom:
                         return .waitForSingleTap
                     }
                 }
@@ -4623,6 +4623,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             return .action(InternalBubbleTapAction.Action {
                             })
                         }
+                    case let .custom(action):
+                        return .action(InternalBubbleTapAction.Action({
+                            action()
+                        }, contextMenuOnLongPress: !tapAction.hasLongTapAction))
                     case let .url(url):
                         if case .longTap = gesture, !tapAction.hasLongTapAction, let item = self.item {
                             let tapMessage = item.content.firstMessage
@@ -4871,6 +4875,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         case .largeEmoji:
                             break
                         case .customEmoji:
+                            break
+                        case .custom:
                             break
                         }
                     }

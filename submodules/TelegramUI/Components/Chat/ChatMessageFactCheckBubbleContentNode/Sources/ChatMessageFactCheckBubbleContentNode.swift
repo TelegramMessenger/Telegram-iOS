@@ -12,6 +12,7 @@ import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import MessageInlineBlockBackgroundView
+import TextSelectionNode
 import Geocoding
 import UrlEscaping
 
@@ -44,6 +45,7 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
     private let textNode: TextNode
     private let additionalTextNode: TextNode
     private var linkHighlightingNode: LinkHighlightingNode?
+    private var textSelectionNode: TextSelectionNode?
     
     private let lineNode: ASDisplayNode
     
@@ -51,7 +53,6 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
     private var maskOverlayView: UIView?
     
     private var expandIcon: ASImageNode
-    private var expandButton: HighlightTrackingButtonNode?
     
     private let statusNode: ChatMessageDateAndStatusNode
     
@@ -136,10 +137,58 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
         let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, false)
     }
     
-    public override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
-        if let expandButton = self.expandButton, expandButton.frame.contains(point) {
-            return ChatMessageBubbleContentTapAction(content: .ignore)
+    public override func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+        if !value {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
         }
+    }
+    
+    public override func updateIsExtractedToContextPreview(_ value: Bool) {
+        if value {
+            if self.textSelectionNode == nil, let item = self.item, let rootNode = item.controllerInteraction.chatControllerNode() {
+                let selectionColor: UIColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionColor
+                let knobColor: UIColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionKnobColor
+                
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor, isDark: item.presentationData.theme.theme.overallDarkAppearance), strings: item.presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
+                    self?.updateIsTextSelectionActive?(value)
+                }, present: { [weak self] c, a in
+                    self?.item?.controllerInteraction.presentGlobalOverlayController(c, a)
+                }, rootNode: { [weak rootNode] in
+                    return rootNode
+                }, performAction: { [weak self] text, action in
+                    guard let strongSelf = self, let item = strongSelf.item else {
+                        return
+                    }
+                    item.controllerInteraction.performTextSelectionAction(item.message, true, text, action)
+                })
+                textSelectionNode.enableQuote = false
+                self.textSelectionNode = textSelectionNode
+                self.addSubnode(textSelectionNode)
+                self.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textClippingNode)
+                textSelectionNode.frame = self.textClippingNode.view.convert(self.textNode.frame, to: self.view)
+                textSelectionNode.highlightAreaNode.frame = textSelectionNode.frame
+            }
+        } else {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                self.updateIsTextSelectionActive?(false)
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
+        }
+    }
+    
+    public override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if let titleBadgeButton = self.titleBadgeButton, titleBadgeButton.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
         }
@@ -161,6 +210,11 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag))
             }
+        }
+        if let backgroundView = self.backgroundView, backgroundView.frame.contains(point), case .tap = gesture {
+            return ChatMessageBubbleContentTapAction(content: .custom({ [weak self] in
+                self?.expandPressed()
+            }), hasLongTapAction: false)
         }
         return ChatMessageBubbleContentTapAction(content: .none)
     }
@@ -585,33 +639,19 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                                     }
                                     strongSelf.expandIcon.bounds = CGRect(origin: .zero, size: expandIconFrame.size)
                                 }
-                                
-                                let expandButtonFrame = expandIconFrame.insetBy(dx: -8.0, dy: -8.0)
-                                 
-                                let expandButton: HighlightTrackingButtonNode
-                                if let current = strongSelf.expandButton {
-                                    expandButton = current
-                                } else {
-                                    expandButton = HighlightTrackingButtonNode()
-                                    expandButton.addTarget(self, action: #selector(strongSelf.expandPressed), forControlEvents: .touchUpInside)
-                                    expandButton.highligthedChanged = { [weak self] highlighted in
-                                        if let strongSelf = self {
-                                            if highlighted {
-                                                strongSelf.expandIcon.layer.removeAnimation(forKey: "opacity")
-                                                strongSelf.expandIcon.alpha = 0.4
-                                            } else {
-                                                strongSelf.expandIcon.alpha = 1.0
-                                                strongSelf.expandIcon.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                                            }
-                                        }
-                                    }
-                                    strongSelf.expandButton = expandButton
-                                    strongSelf.addSubnode(expandButton)
-                                }
-                                expandButton.frame = expandButtonFrame
                             } else {
                                 strongSelf.expandIcon.isHidden = true
                                 strongSelf.textClippingNode.view.mask = nil
+                            }
+                            
+                            if let textSelectionNode = strongSelf.textSelectionNode {
+                                let shouldUpdateLayout = textSelectionNode.frame.size != textFrame.size
+                                textSelectionNode.frame = strongSelf.textClippingNode.view.convert(strongSelf.textNode.frame, to: strongSelf.view)
+                                textSelectionNode.highlightAreaNode.frame = textSelectionNode.frame
+                                
+                                if shouldUpdateLayout {
+                                    textSelectionNode.updateLayout()
+                                }
                             }
                             
                             if let statusSizeAndApply = statusSizeAndApply {

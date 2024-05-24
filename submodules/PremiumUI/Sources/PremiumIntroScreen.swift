@@ -3212,7 +3212,12 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     component: PremiumStarComponent(
                         isIntro: isIntro,
                         isVisible: starIsVisible,
-                        hasIdleAnimations: state.hasIdleAnimations
+                        hasIdleAnimations: state.hasIdleAnimations,
+                        colors: [
+                            UIColor(rgb: 0x6a94ff),
+                            UIColor(rgb: 0x9472fd),
+                            UIColor(rgb: 0xe26bd3)
+                        ]
                     ),
                     availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                     transition: context.transition
