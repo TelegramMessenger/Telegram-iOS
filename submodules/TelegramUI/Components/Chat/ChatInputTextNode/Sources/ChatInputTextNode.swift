@@ -400,13 +400,15 @@ private final class ChatInputLegacyLayoutManager: NSLayoutManager {
 private struct DisplayBlockQuote {
     var id: Int
     var boundingRect: CGRect
-    var attribute: ChatTextInputTextQuoteAttribute
+    var kind: ChatTextInputTextQuoteAttribute.Kind
+    var isCollapsed: Bool
     var range: NSRange
     
-    init(id: Int, boundingRect: CGRect, attribute: ChatTextInputTextQuoteAttribute, range: NSRange) {
+    init(id: Int, boundingRect: CGRect, kind: ChatTextInputTextQuoteAttribute.Kind, isCollapsed: Bool, range: NSRange) {
         self.id = id
         self.boundingRect = boundingRect
-        self.attribute = attribute
+        self.kind = kind
+        self.isCollapsed = isCollapsed
         self.range = range
     }
 }
@@ -612,7 +614,50 @@ private final class ChatInputTextLegacyInternal: NSObject, ChatInputTextInternal
                 boundingRect.origin.y -= 4.0
                 boundingRect.size.height += 8.0
                 
-                result.append(DisplayBlockQuote(id: id, boundingRect: boundingRect, attribute: value, range: range))
+                result.append(DisplayBlockQuote(id: id, boundingRect: boundingRect, kind: value.kind, isCollapsed: value.isCollapsed, range: range))
+                
+                blockQuoteIndex += 1
+            }
+        })
+        self.customTextStorage.enumerateAttribute(NSAttributedString.Key.attachment, in: NSRange(location: 0, length: self.customTextStorage.length), using: { value, range, _ in
+            if let _ = value as? ChatInputTextCollapsedQuoteAttachment {
+                let glyphRange = self.customLayoutManager.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+                if self.customLayoutManager.isValidGlyphIndex(glyphRange.location) && self.customLayoutManager.isValidGlyphIndex(glyphRange.location + glyphRange.length - 1) {
+                } else {
+                    return
+                }
+                
+                let id = blockQuoteIndex
+                
+                var boundingRect = CGRect()
+                var startIndex = glyphRange.lowerBound
+                while startIndex < glyphRange.upperBound {
+                    var effectiveRange = NSRange(location: NSNotFound, length: 0)
+                    let rect = self.customLayoutManager.lineFragmentUsedRect(forGlyphAt: startIndex, effectiveRange: &effectiveRange)
+                    if boundingRect.isEmpty {
+                        boundingRect = rect
+                    } else {
+                        boundingRect = boundingRect.union(rect)
+                    }
+                    if effectiveRange.location != NSNotFound {
+                        startIndex = max(startIndex + 1, effectiveRange.upperBound)
+                    } else {
+                        break
+                    }
+                }
+                
+                boundingRect.origin.y += self.defaultTextContainerInset.top
+                
+                boundingRect.origin.x += 5.0
+                boundingRect.size.width += 4.0
+                boundingRect.size.width += 18.0
+                boundingRect.size.width = min(boundingRect.size.width, self.textContainer.size.width - 18.0)
+                boundingRect.size.width = min(boundingRect.size.width, self.textContainer.size.width)
+                
+                boundingRect.origin.y += 4.0
+                boundingRect.size.height -= 8.0
+                
+                result.append(DisplayBlockQuote(id: id, boundingRect: boundingRect, kind: .quote, isCollapsed: true, range: range))
                 
                 blockQuoteIndex += 1
             }
@@ -735,7 +780,7 @@ private final class ChatInputTextNewInternal: NSObject, ChatInputTextInternal, N
                     } else {
                         let id = nextId
                         nextId += 1
-                        result[quoteId] = DisplayBlockQuote(id: id, boundingRect: fragmentFrame, attribute: attribute, range: fragmentRange)
+                        result[quoteId] = DisplayBlockQuote(id: id, boundingRect: fragmentFrame, kind: attribute.kind, isCollapsed: attribute.isCollapsed, range: fragmentRange)
                     }
                 }
             }
@@ -746,6 +791,116 @@ private final class ChatInputTextNewInternal: NSObject, ChatInputTextInternal, N
         return Array(result.values).sorted(by: { lhs, rhs in
             return lhs.boundingRect.minY < rhs.boundingRect.minY
         })
+    }
+}
+
+private let registeredViewProvider: Void = {
+    if #available(iOS 15.0, *) {
+        NSTextAttachment.registerViewProviderClass(ChatInputTextCollapsedQuoteAttachmentImpl.ViewProvider.self, forFileType: "public.data")
+    }
+}()
+
+public final class ChatInputTextCollapsedQuoteAttachmentImpl: NSTextAttachment, ChatInputTextCollapsedQuoteAttachment {
+    final class View: UIView {
+        let attachment: ChatInputTextCollapsedQuoteAttachmentImpl
+        let textNode: ImmediateTextNode
+        
+        init(attachment: ChatInputTextCollapsedQuoteAttachmentImpl) {
+            self.attachment = attachment
+            self.textNode = ImmediateTextNode()
+            self.textNode.maximumNumberOfLines = 3
+            
+            super.init(frame: CGRect())
+            
+            self.addSubview(self.textNode.view)
+        }
+        
+        required init(coder: NSCoder) {
+            preconditionFailure()
+        }
+        
+        static func calculateSize(attachment: ChatInputTextCollapsedQuoteAttachmentImpl, constrainedSize: CGSize) -> CGSize {
+            let renderingText = NSMutableAttributedString(attributedString: attachment.text)
+            renderingText.addAttribute(.font, value: attachment.attributes.font, range: NSRange(location: 0, length: renderingText.length))
+            renderingText.addAttribute(.foregroundColor, value: attachment.attributes.textColor, range: NSRange(location: 0, length: renderingText.length))
+            
+            let textNode = ImmediateTextNode()
+            textNode.maximumNumberOfLines = 3
+            
+            textNode.attributedText = renderingText
+            textNode.cutout = TextNodeCutout(topRight: CGSize(width: 40.0, height: 10.0))
+            
+            let layoutInfo = textNode.updateLayoutFullInfo(CGSize(width: constrainedSize.width - 9.0, height: constrainedSize.height))
+            
+            return CGSize(width: constrainedSize.width, height: 8.0 + layoutInfo.size.height + 8.0)
+        }
+        
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            
+            let renderingText = NSMutableAttributedString(attributedString: attachment.text)
+            renderingText.addAttribute(.font, value: attachment.attributes.font, range: NSRange(location: 0, length: renderingText.length))
+            renderingText.addAttribute(.foregroundColor, value: attachment.attributes.textColor, range: NSRange(location: 0, length: renderingText.length))
+            
+            self.textNode.attributedText = renderingText
+            self.textNode.cutout = TextNodeCutout(topRight: CGSize(width: 10.0, height: 8.0))
+            
+            let maxTextSize = CGSize(width: self.bounds.size.width - 9.0, height: self.bounds.size.height)
+            let layoutInfo = self.textNode.updateLayoutFullInfo(maxTextSize)
+            
+            self.textNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 8.0), size: layoutInfo.size)
+        }
+    }
+    
+    @available(iOS 15.0, *)
+    final class ViewProvider: NSTextAttachmentViewProvider {
+        override init(
+            textAttachment: NSTextAttachment,
+            parentView: UIView?,
+            textLayoutManager: NSTextLayoutManager?,
+            location: NSTextLocation
+        ) {
+            super.init(textAttachment: textAttachment, parentView: parentView, textLayoutManager: textLayoutManager, location: location)
+        }
+        
+        override public func loadView() {
+            if let textAttachment = self.textAttachment as? ChatInputTextCollapsedQuoteAttachmentImpl {
+                self.view = View(attachment: textAttachment)
+            } else {
+                self.view = UIView()
+            }
+        }
+    }
+    
+    public let text: NSAttributedString
+    public let attributes: ChatInputTextCollapsedQuoteAttributes
+    
+    public init(text: NSAttributedString, attributes: ChatInputTextCollapsedQuoteAttributes) {
+        let _ = registeredViewProvider
+        
+        self.text = text
+        self.attributes = attributes
+        
+        super.init(data: nil, ofType: "public.data")
+    }
+    
+    required public init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func renderingText() -> NSAttributedString {
+        let result = NSMutableAttributedString(attributedString: self.text)
+        result.addAttribute(.font, value: self.attributes.font, range: NSRange(location: 0, length: result.length))
+        result.addAttribute(.foregroundColor, value: self.attributes.textColor, range: NSRange(location: 0, length: result.length))
+        return result
+    }
+    
+    override public func attachmentBounds(for textContainer: NSTextContainer?, proposedLineFragment lineFrag: CGRect, glyphPosition position: CGPoint, characterIndex charIndex: Int) -> CGRect {
+        return CGRect(origin: CGPoint(), size: View.calculateSize(attachment: self, constrainedSize: CGSize(width: lineFrag.width, height: 10000.0)))
+    }
+    
+    override public func image(forBounds imageBounds: CGRect, textContainer: NSTextContainer?, characterIndex charIndex: Int) -> UIImage? {
+        return nil
     }
 }
 
@@ -1161,7 +1316,7 @@ public final class ChatInputTextView: ChatInputTextViewImpl, UITextViewDelegate,
             
             blockQuote.frame = displayBlockQuote.boundingRect
             if let theme = self.theme {
-                blockQuote.update(value: displayBlockQuote.attribute, range: displayBlockQuote.range, size: displayBlockQuote.boundingRect.size, theme: theme.quote)
+                blockQuote.update(kind: displayBlockQuote.kind, isCollapsed: displayBlockQuote.isCollapsed, range: displayBlockQuote.range, size: displayBlockQuote.boundingRect.size, theme: theme.quote)
             }
             
             validBlockQuotes.append(displayBlockQuote.id)
@@ -1255,7 +1410,7 @@ private final class QuoteBackgroundView: UIView {
         }
     }
     
-    func update(value: ChatTextInputTextQuoteAttribute, range: NSRange, size: CGSize, theme: ChatInputTextView.Theme.Quote) {
+    func update(kind: ChatTextInputTextQuoteAttribute.Kind, isCollapsed: Bool, range: NSRange, size: CGSize, theme: ChatInputTextView.Theme.Quote) {
         self.range = range
         
         if self.theme != theme {
@@ -1270,7 +1425,7 @@ private final class QuoteBackgroundView: UIView {
         let collapseButtonSize = CGSize(width: 18.0, height: 18.0)
         self.collapseButton.frame = CGRect(origin: CGPoint(x: size.width - 2.0 - collapseButtonSize.width, y: 2.0), size: collapseButtonSize)
         
-        if value.isCollapsed {
+        if isCollapsed {
             self.collapseButtonIconView.image = quoteExpandImage
         } else {
             self.collapseButtonIconView.image = quoteCollapseImage
@@ -1285,9 +1440,9 @@ private final class QuoteBackgroundView: UIView {
         var tertiaryColor: UIColor?
         let backgroundColor: UIColor?
         
-        switch value.kind {
+        switch kind {
         case .quote:
-            if size.height >= 100.0 {
+            if size.height >= 100.0 || isCollapsed {
                 self.iconView.isHidden = true
                 self.collapseButton.isHidden = false
             } else {

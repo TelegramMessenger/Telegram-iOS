@@ -338,7 +338,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                 accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
                 baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
             }
-            textInputNode.attributedText = textAttributedStringForStateText(state.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(self.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+            textInputNode.attributedText = textAttributedStringForStateText(state.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(self.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+            })
             textInputNode.selectedRange = NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count)
             self.updatingInputState = false
             self.updateTextNodeText(animated: animated)
@@ -1020,7 +1022,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     public func chatInputTextNodeDidUpdateText() {
         if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState {
             let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
-            refreshChatTextInputAttributes(textInputNode.textView, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(self.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+            refreshChatTextInputAttributes(textInputNode.textView, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(self.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+            })
             refreshChatTextInputTypingAttributes(textInputNode.textView, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
             
             self.updateSpoiler()
@@ -1192,9 +1196,13 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         
         textInputNode.textView.isScrollEnabled = false
         
-        refreshChatTextInputAttributes(textInputNode.textView, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(self.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+        refreshChatTextInputAttributes(textInputNode.textView, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(self.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+            return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+        })
         
-        textInputNode.attributedText = textAttributedStringForStateText(self.inputTextState.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(self.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+        textInputNode.attributedText = textAttributedStringForStateText(self.inputTextState.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(self.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+            return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+        })
         
         if textInputNode.textView.subviews.count > 1, animated {
             let containerView = textInputNode.textView.subviews[1]
@@ -1349,7 +1357,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             let textFont = Font.regular(baseFontSize)
             let accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
                     
-            let attributedText = textAttributedStringForStateText(self.inputTextState.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: false, availableEmojis: Set(self.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+            let attributedText = textAttributedStringForStateText(self.inputTextState.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: false, availableEmojis: Set(self.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+            })
             
             let range = (attributedText.string as NSString).range(of: "\n")
             if range.location != NSNotFound {
@@ -1754,7 +1764,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                 accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
                 baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
             }
-            let cleanReplacementString = textAttributedStringForStateText(NSAttributedString(string: cleanText), fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(self.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+            let cleanReplacementString = textAttributedStringForStateText(NSAttributedString(string: cleanText), fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(self.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+            })
             string.replaceCharacters(in: range, with: cleanReplacementString)
             self.textInputNode?.attributedText = string
             self.textInputNode?.selectedRange = NSMakeRange(range.lowerBound + cleanReplacementString.length, 0)

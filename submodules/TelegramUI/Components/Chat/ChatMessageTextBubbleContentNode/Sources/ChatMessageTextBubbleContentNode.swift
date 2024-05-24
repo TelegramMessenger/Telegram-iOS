@@ -111,7 +111,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var codeHighlightState: (id: EngineMessage.Id, specs: [CachedMessageSyntaxHighlight.Spec], disposable: Disposable)?
     
-    private var collapsedBlockIds: Set<Int> = Set()
+    private var expandedBlockIds: Set<Int> = Set()
     
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -155,12 +155,24 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             guard let self, let item = self.item else {
                 return
             }
-            if self.collapsedBlockIds.contains(blockId) {
-                self.collapsedBlockIds.remove(blockId)
+            if self.expandedBlockIds.contains(blockId) {
+                self.expandedBlockIds.remove(blockId)
             } else {
-                self.collapsedBlockIds.insert(blockId)
+                self.expandedBlockIds.insert(blockId)
             }
             item.controllerInteraction.requestMessageUpdate(item.message.id, false)
+        }
+        self.textNode.textNode.canHandleTapAtPoint = { [weak self] point in
+            guard let self else {
+                return false
+            }
+            let localPoint = self.textNode.textNode.view.convert(point, to: self.view)
+            let action = self.tapActionAtPoint(localPoint, gesture: .tap, isEstimating: true)
+            if case .none = action.content {
+                return true
+            } else {
+                return false
+            }
         }
     }
 
@@ -179,7 +191,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         let statusLayout = ChatMessageDateAndStatusNode.asyncLayout(self.statusNode)
         
         let currentCachedChatMessageText = self.cachedChatMessageText
-        let collapsedBlockIds = self.collapsedBlockIds
+        let expandedBlockIds = self.expandedBlockIds
         
         return { item, layoutConstants, _, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
@@ -434,7 +446,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var codeHighlightSpecs: [CachedMessageSyntaxHighlight.Spec] = []
                 var cachedMessageSyntaxHighlight: CachedMessageSyntaxHighlight?
                 
-                if let entities = entities {
+                if let entities {
                     var underlineLinks = true
                     if !messageTheme.primaryTextColor.isEqual(messageTheme.linkTextColor) {
                         underlineLinks = false
@@ -569,7 +581,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     lineColor: messageTheme.accentControlColor,
                     displayContentsUnderSpoilers: false,
                     customTruncationToken: customTruncationToken,
-                    collapsedBlocks: collapsedBlockIds
+                    expandedBlocks: expandedBlockIds
                 ))
             
                 var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode))?

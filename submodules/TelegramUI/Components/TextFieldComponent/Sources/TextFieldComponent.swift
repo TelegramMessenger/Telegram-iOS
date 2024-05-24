@@ -314,13 +314,17 @@ public final class TextFieldComponent: Component {
             let inputState = f(self.inputState)
             
             let currentAttributedText = self.textView.attributedText
-            let updatedAttributedText = textAttributedStringForStateText(inputState.inputText, fontSize: component.fontSize, textColor: component.textColor, accentTextColor: component.accentColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+            let updatedAttributedText = textAttributedStringForStateText(inputState.inputText, fontSize: component.fontSize, textColor: component.textColor, accentTextColor: component.accentColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+            })
             if currentAttributedText != updatedAttributedText {
                 self.textView.attributedText = updatedAttributedText
             }
             self.textView.selectedRange = NSMakeRange(inputState.selectionRange.lowerBound, inputState.selectionRange.count)
             
-            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.accentColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.accentColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+            })
             
             self.updateEntities()
             
@@ -452,7 +456,9 @@ public final class TextFieldComponent: Component {
             guard let component = self.component else {
                 return
             }
-            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.accentColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.accentColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+            })
             refreshChatTextInputTypingAttributes(self.textView, textColor: component.textColor, baseFontSize: component.fontSize)
             self.textView.updateTextContainerInset()
             
@@ -957,7 +963,9 @@ public final class TextFieldComponent: Component {
             
             self.textView.isScrollEnabled = false
             
-            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.accentColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider)
+            refreshChatTextInputAttributes(textView: self.textView, primaryTextColor: component.textColor, accentTextColor: component.accentColor, baseFontSize: component.fontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: Set(component.context.animatedEmojiStickersValue.keys), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
+            })
             refreshChatTextInputTypingAttributes(self.textView, textColor: component.textColor, baseFontSize: component.fontSize)
             
             if self.textView.subviews.count > 1, animated {
