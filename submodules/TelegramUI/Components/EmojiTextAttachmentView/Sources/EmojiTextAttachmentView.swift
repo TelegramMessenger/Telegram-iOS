@@ -395,6 +395,9 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 self.updateTopicInfo(topicInfo: (id, info))
             case let .nameColors(colors):
                 self.updateNameColors(colors: colors)
+            case .stars:
+                self.updateStars()
+                self.updateTintColor()
             }
         } else if let file = file {
             self.updateFile(file: file, attemptSynchronousLoad: attemptSynchronousLoad)
@@ -480,6 +483,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 if file.isCustomTemplateEmoji {
                     customColor = self.dynamicColor
                 }
+            } else if let emoji = self.arguments?.emoji, let custom = emoji.custom, case .stars = custom {
+                customColor = self.dynamicColor
             }
             
             if customColor != nil {
@@ -572,6 +577,10 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             }
         })
         self.contents = image?.cgImage
+    }
+    
+    private func updateStars() {
+        self.contents = starImage?.cgImage
     }
     
     private func updateFile(file: TelegramMediaFile, attemptSynchronousLoad: Bool) {
@@ -833,3 +842,13 @@ public final class CustomEmojiContainerView: UIView {
         }
     }
 }
+
+private let starImage: UIImage? = {
+    generateImage(CGSize(width: 32.0, height: 32.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Premium/Stars/Star"), color: .white), let cgImage = image.cgImage {
+            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 2.0, dy: 2.0), byTiling: false)
+        }
+    })?.withRenderingMode(.alwaysTemplate)
+}()

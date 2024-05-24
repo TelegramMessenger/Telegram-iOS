@@ -2634,6 +2634,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makeStarsTransactionScreen(context: AccountContext, transaction: StarsContext.State.Transaction) -> ViewController {
         return StarsTransactionScreen(context: context, subject: .transaction(transaction), action: {})
     }
+    
+    public func makeStarsReceiptScreen(context: AccountContext, receipt: BotPaymentReceipt, id: String?, date: Int32) -> ViewController {
+        return StarsTransactionScreen(context: context, subject: .receipt(receipt: receipt, id: id, date: date), action: {})
+    }
 }
 
 private func peerInfoControllerImpl(context: AccountContext, updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>)?, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, requestsContext: PeerInvitationImportersContext? = nil) -> ViewController? {
