@@ -604,7 +604,7 @@ public extension Api {
         case messageActionGroupCallScheduled(call: Api.InputGroupCall, scheduleDate: Int32)
         case messageActionHistoryClear
         case messageActionInviteToGroupCall(call: Api.InputGroupCall, users: [Int64])
-        case messageActionPaymentSent(flags: Int32, currency: String, totalAmount: Int64, invoiceSlug: String?, charge: Api.PaymentCharge?)
+        case messageActionPaymentSent(flags: Int32, currency: String, totalAmount: Int64, invoiceSlug: String?)
         case messageActionPaymentSentMe(flags: Int32, currency: String, totalAmount: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, charge: Api.PaymentCharge)
         case messageActionPhoneCall(flags: Int32, callId: Int64, reason: Api.PhoneCallDiscardReason?, duration: Int32?)
         case messageActionPinMessage
@@ -816,15 +816,14 @@ public extension Api {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }
                     break
-                case .messageActionPaymentSent(let flags, let currency, let totalAmount, let invoiceSlug, let charge):
+                case .messageActionPaymentSent(let flags, let currency, let totalAmount, let invoiceSlug):
                     if boxed {
-                        buffer.appendInt32(-1482950556)
+                        buffer.appendInt32(-1776926890)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(totalAmount, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(invoiceSlug!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 4) != 0 {charge!.serialize(buffer, true)}
                     break
                 case .messageActionPaymentSentMe(let flags, let currency, let totalAmount, let payload, let info, let shippingOptionId, let charge):
                     if boxed {
@@ -1018,8 +1017,8 @@ public extension Api {
                 return ("messageActionHistoryClear", [])
                 case .messageActionInviteToGroupCall(let call, let users):
                 return ("messageActionInviteToGroupCall", [("call", call as Any), ("users", users as Any)])
-                case .messageActionPaymentSent(let flags, let currency, let totalAmount, let invoiceSlug, let charge):
-                return ("messageActionPaymentSent", [("flags", flags as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("invoiceSlug", invoiceSlug as Any), ("charge", charge as Any)])
+                case .messageActionPaymentSent(let flags, let currency, let totalAmount, let invoiceSlug):
+                return ("messageActionPaymentSent", [("flags", flags as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("invoiceSlug", invoiceSlug as Any)])
                 case .messageActionPaymentSentMe(let flags, let currency, let totalAmount, let payload, let info, let shippingOptionId, let charge):
                 return ("messageActionPaymentSentMe", [("flags", flags as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("payload", payload as Any), ("info", info as Any), ("shippingOptionId", shippingOptionId as Any), ("charge", charge as Any)])
                 case .messageActionPhoneCall(let flags, let callId, let reason, let duration):
@@ -1396,17 +1395,12 @@ public extension Api {
             _3 = reader.readInt64()
             var _4: String?
             if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
-            var _5: Api.PaymentCharge?
-            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.PaymentCharge
-            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.MessageAction.messageActionPaymentSent(flags: _1!, currency: _2!, totalAmount: _3!, invoiceSlug: _4, charge: _5)
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessageAction.messageActionPaymentSent(flags: _1!, currency: _2!, totalAmount: _3!, invoiceSlug: _4)
             }
             else {
                 return nil

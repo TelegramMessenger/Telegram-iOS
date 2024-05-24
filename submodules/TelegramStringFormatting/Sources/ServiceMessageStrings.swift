@@ -496,7 +496,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 var argumentAttributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
                 argumentAttributes[1] = MarkdownAttributeSet(font: titleBoldFont, textColor: primaryTextColor, additionalAttributes: [:])
                 attributedString = addAttributesToStringWithRanges(formatWithArgumentRanges(baseString, ranges, [authorName, gameTitle ?? ""]), body: bodyAttributes, argumentAttributes: argumentAttributes)
-            case let .paymentSent(currency, totalAmount, _, isRecurringInit, isRecurringUsed, _):
+            case let .paymentSent(currency, totalAmount, _, isRecurringInit, isRecurringUsed):
                 var invoiceMessage: EngineMessage?
                 for attribute in message.attributes {
                     if let attribute = attribute as? ReplyMessageAttribute, let message = message.associatedMessages[attribute.messageId] {

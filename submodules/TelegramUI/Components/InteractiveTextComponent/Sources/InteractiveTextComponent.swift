@@ -45,7 +45,7 @@ private func generateBlockMaskImage() -> UIImage {
         gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
         
         context.setBlendMode(.destinationIn)
-        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: size.height), end: CGPoint(x: 0.0, y: size.height - 7.0), options: CGGradientDrawingOptions())
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: size.height), end: CGPoint(x: 0.0, y: size.height - 18.0), options: CGGradientDrawingOptions())
     })!.resizableImage(withCapInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: size.height - 1.0, right: size.width - 1.0), resizingMode: .stretch)
 }
 

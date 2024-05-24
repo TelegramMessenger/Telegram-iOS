@@ -293,23 +293,23 @@ public final class PremiumStarComponent: Component {
             self.sceneView.scene = scene
             self.sceneView.delegate = self
             
-            if let node = scene.rootNode.childNode(withName: "star", recursively: false), let colors = self.component?.colors, let _ = colors.first {
+            if let node = scene.rootNode.childNode(withName: "star", recursively: false), let colors = self.component?.colors, let color = colors.first {
                 node.geometry?.materials.first?.diffuse.contents = generateDiffuseTexture(colors: colors)
                 
-//                let names: [String] = [
-//                    "particles_left",
-//                    "particles_right",
-//                    "particles_left_bottom",
-//                    "particles_right_bottom",
-//                    "particles_center"
-//                ]
-//                
-//                for name in names {
-//                    if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
-//                        particleSystem.particleColor = color
-//                        particleSystem.particleColorVariation = SCNVector4Make(0, 0, 0, 0)
-//                    }
-//                }
+                let names: [String] = [
+                    "particles_left",
+                    "particles_right",
+                    "particles_left_bottom",
+                    "particles_right_bottom",
+                    "particles_center"
+                ]
+                
+                for name in names {
+                    if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
+                        particleSystem.particleColor = color
+                        particleSystem.particleColorVariation = SCNVector4Make(0, 0, 0, 0)
+                    }
+                }
             }
             
             if self.animateFrom != nil {
