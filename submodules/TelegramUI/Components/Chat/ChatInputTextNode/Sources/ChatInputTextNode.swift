@@ -6,6 +6,7 @@ import AppBundle
 import ChatInputTextViewImpl
 import MessageInlineBlockBackgroundView
 import TextFormat
+import AccountContext
 
 public protocol ChatInputTextNodeDelegate: AnyObject {
     func chatInputTextNodeDidUpdateText()
@@ -820,9 +821,26 @@ public final class ChatInputTextCollapsedQuoteAttachmentImpl: NSTextAttachment, 
         }
         
         static func calculateSize(attachment: ChatInputTextCollapsedQuoteAttachmentImpl, constrainedSize: CGSize) -> CGSize {
-            let renderingText = NSMutableAttributedString(attributedString: attachment.text)
+            guard let context = attachment.attributes.context as? AccountContext else {
+                return CGSize(width: 10.0, height: 10.0)
+            }
+            
+            /*let renderingText = NSMutableAttributedString(attributedString: attachment.text)
             renderingText.addAttribute(.font, value: attachment.attributes.font, range: NSRange(location: 0, length: renderingText.length))
-            renderingText.addAttribute(.foregroundColor, value: attachment.attributes.textColor, range: NSRange(location: 0, length: renderingText.length))
+            renderingText.addAttribute(.foregroundColor, value: attachment.attributes.textColor, range: NSRange(location: 0, length: renderingText.length))*/
+            
+            let renderingText = textAttributedStringForStateText(
+                context: context,
+                stateText: attachment.text,
+                fontSize: attachment.attributes.fontSize,
+                textColor: attachment.attributes.textColor,
+                accentTextColor: attachment.attributes.accentTextColor,
+                writingDirection: nil,
+                spoilersRevealed: false,
+                availableEmojis: Set(context.animatedEmojiStickersValue.keys),
+                emojiViewProvider: nil,
+                makeCollapsedQuoteAttachment: nil
+            )
             
             let textNode = ImmediateTextNode()
             textNode.maximumNumberOfLines = 3
@@ -838,9 +856,25 @@ public final class ChatInputTextCollapsedQuoteAttachmentImpl: NSTextAttachment, 
         override func layoutSubviews() {
             super.layoutSubviews()
             
-            let renderingText = NSMutableAttributedString(attributedString: attachment.text)
+            guard let context = self.attachment.attributes.context as? AccountContext else {
+                return
+            }
+            
+            let renderingText = textAttributedStringForStateText(
+                context: context, stateText: self.attachment.text,
+                fontSize: self.attachment.attributes.fontSize,
+                textColor: self.attachment.attributes.textColor,
+                accentTextColor: self.attachment.attributes.accentTextColor,
+                writingDirection: nil,
+                spoilersRevealed: false,
+                availableEmojis: Set(context.animatedEmojiStickersValue.keys),
+                emojiViewProvider: nil,
+                makeCollapsedQuoteAttachment: nil
+            )
+            
+            /*let renderingText = NSMutableAttributedString(attributedString: attachment.text)
             renderingText.addAttribute(.font, value: attachment.attributes.font, range: NSRange(location: 0, length: renderingText.length))
-            renderingText.addAttribute(.foregroundColor, value: attachment.attributes.textColor, range: NSRange(location: 0, length: renderingText.length))
+            renderingText.addAttribute(.foregroundColor, value: attachment.attributes.textColor, range: NSRange(location: 0, length: renderingText.length))*/
             
             self.textNode.attributedText = renderingText
             self.textNode.cutout = TextNodeCutout(topRight: CGSize(width: 10.0, height: 8.0))
@@ -886,13 +920,6 @@ public final class ChatInputTextCollapsedQuoteAttachmentImpl: NSTextAttachment, 
     
     required public init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    private func renderingText() -> NSAttributedString {
-        let result = NSMutableAttributedString(attributedString: self.text)
-        result.addAttribute(.font, value: self.attributes.font, range: NSRange(location: 0, length: result.length))
-        result.addAttribute(.foregroundColor, value: self.attributes.textColor, range: NSRange(location: 0, length: result.length))
-        return result
     }
     
     override public func attachmentBounds(for textContainer: NSTextContainer?, proposedLineFragment lineFrag: CGRect, glyphPosition position: CGPoint, characterIndex charIndex: Int) -> CGRect {

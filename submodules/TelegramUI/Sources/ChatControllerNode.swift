@@ -3890,7 +3890,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 
                 var messages: [EnqueueMessage] = []
                 
-                let effectiveInputText = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
+                let effectiveInputText = expandedInputStateAttributedString(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)
                 
                 let peerSpecificEmojiPack = (self.controller?.peerView?.cachedData as? CachedChannelData)?.emojiPack
                 

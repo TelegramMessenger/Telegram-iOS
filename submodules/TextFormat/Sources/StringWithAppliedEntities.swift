@@ -56,6 +56,25 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
                 break
         }
     }
+    
+    while true {
+        var found = false
+        string.enumerateAttribute(ChatTextInputAttributes.block, in: NSRange(location: 0, length: string.length), using: { value, range, stop in
+            if let value = value as? ChatTextInputTextQuoteAttribute, value.isCollapsed {
+                found = true
+                let blockString = string.attributedSubstring(from: range)
+                string.replaceCharacters(in: range, with: "")
+                string.insert(NSAttributedString(string: " ", attributes: [
+                    ChatTextInputAttributes.collapsedBlock: blockString
+                ]), at: range.lowerBound)
+                stop.pointee = true
+            }
+        })
+        if !found {
+            break
+        }
+    }
+    
     return string
 }
 

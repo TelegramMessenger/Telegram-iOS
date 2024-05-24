@@ -720,7 +720,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             self.loadTextInputNode()
         }
         
-        if let textInputNode = self.textInputNode, let _ = self.presentationInterfaceState {
+        if let textInputNode = self.textInputNode, let _ = self.presentationInterfaceState, let context = self.context {
             self.updatingInputState = true
             
             var textColor: UIColor = .black
@@ -731,13 +731,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
                 baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
             }
-            textInputNode.attributedText = textAttributedStringForStateText(state.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+            textInputNode.attributedText = textAttributedStringForStateText(context: context, stateText: state.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
                 return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
             })
             textInputNode.selectedRange = NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count)
             
             if let presentationInterfaceState = self.presentationInterfaceState {
-                refreshChatTextInputAttributes(textInputNode.textView, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+                refreshChatTextInputAttributes(context: context, textView: textInputNode.textView, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
                     return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
                 })
             }
@@ -1209,39 +1209,23 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             guard let self else {
                 return
             }
-            guard let presentationInterfaceState = self.presentationInterfaceState else {
-                return
-            }
-            
-            let textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
-            let accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
-            let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
             
             self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-                let textAttributedString = textAttributedStringForStateText(
-                    current.inputText,
-                    fontSize: baseFontSize,
-                    textColor: textColor,
-                    accentTextColor: accentTextColor,
-                    writingDirection: nil,
-                    spoilersRevealed: self.spoilersRevealed,
-                    availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(),
-                    emojiViewProvider: self.emojiViewProvider,
-                    makeCollapsedQuoteAttachment: { text, attributes in
-                       return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
-                   }
-                )
-                let result = NSMutableAttributedString(attributedString: textAttributedString)
+                let result = NSMutableAttributedString(attributedString: current.inputText)
                 
-                var effectiveRange: NSRange = NSRange(location: NSNotFound, length: 0)
-                if let current = result.attribute(ChatTextInputAttributes.block, at: range.lowerBound, effectiveRange: &effectiveRange) as? ChatTextInputTextQuoteAttribute {
-                    result.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: current.kind, isCollapsed: !current.isCollapsed), range: effectiveRange)
-                } else if let current = result.attribute(.attachment, at: range.lowerBound, effectiveRange: &effectiveRange) as? ChatInputTextCollapsedQuoteAttachment {
-                    result.replaceCharacters(in: effectiveRange, with: "")
-                    let updatedQuote = NSMutableAttributedString(attributedString: current.text)
-                    updatedQuote.removeAttribute(ChatTextInputAttributes.block, range: NSRange(location: 0, length: updatedQuote.length))
-                    updatedQuote.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: false), range: NSRange(location: 0, length: updatedQuote.length))
-                    result.insert(updatedQuote, at: effectiveRange.lowerBound)
+                if let _ = result.attribute(ChatTextInputAttributes.block, at: range.lowerBound, effectiveRange: nil) as? ChatTextInputTextQuoteAttribute {
+                    let blockString = result.attributedSubstring(from: range)
+                    result.replaceCharacters(in: range, with: "")
+                    result.insert(NSAttributedString(string: " ", attributes: [
+                        ChatTextInputAttributes.collapsedBlock: blockString
+                    ]), at: range.lowerBound)
+                } else if let current = result.attribute(ChatTextInputAttributes.collapsedBlock, at: range.lowerBound, effectiveRange: nil) as? NSAttributedString {
+                    result.replaceCharacters(in: range, with: "")
+                    
+                    let updatedBlockString = NSMutableAttributedString(attributedString: current)
+                    updatedBlockString.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: false), range: NSRange(location: 0, length: updatedBlockString.length))
+                    
+                    result.insert(updatedBlockString, at: range.lowerBound)
                 }
                 
                 let stateResult = stateAttributedStringForText(result)
@@ -2944,9 +2928,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     }
     
     func chatInputTextNodeDidUpdateText() {
-        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState {
+        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let context = self.context {
             let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
-            refreshChatTextInputAttributes(textInputNode.textView, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+            refreshChatTextInputAttributes(context: context, textView: textInputNode.textView, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
                 return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
             })
             refreshChatTextInputTypingAttributes(textInputNode.textView, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
@@ -3108,7 +3092,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     }
     
     private func updateInternalSpoilersRevealed(_ revealed: Bool, animated: Bool) {
-        guard self.spoilersRevealed == revealed, let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState else {
+        guard self.spoilersRevealed == revealed, let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let context = self.context else {
             return
         }
         
@@ -3118,11 +3102,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         
         textInputNode.textView.isScrollEnabled = false
         
-        refreshChatTextInputAttributes(textInputNode.textView, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+        refreshChatTextInputAttributes(context: context, textView: textInputNode.textView, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
             return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
         })
         
-        textInputNode.attributedText = textAttributedStringForStateText(self.inputTextState.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+        textInputNode.attributedText = textAttributedStringForStateText(context: context, stateText: self.inputTextState.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
             return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
         })
         
@@ -4353,7 +4337,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     }
     
     func chatInputTextNode(shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
-        guard let editableTextNode = self.textInputNode else {
+        guard let editableTextNode = self.textInputNode, let context = self.context else {
             return false
         }
         
@@ -4380,7 +4364,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
                 baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
             }
-            let cleanReplacementString = textAttributedStringForStateText(NSAttributedString(string: cleanText), fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
+            let cleanReplacementString = textAttributedStringForStateText(context: context, stateText: NSAttributedString(string: cleanText), fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickersValue.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider, makeCollapsedQuoteAttachment: { text, attributes in
                 return ChatInputTextCollapsedQuoteAttachmentImpl(text: text, attributes: attributes)
             })
             string.replaceCharacters(in: range, with: cleanReplacementString)
