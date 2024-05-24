@@ -129,9 +129,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
         var peer: EnginePeer?
         
         private var disposable: Disposable?
-    
-        var cachedChevronImage: (UIImage, PresentationTheme)?
-        
+            
         init(
             context: AccountContext,
             peerId: EnginePeer.Id?
@@ -553,8 +551,6 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
         private var disposable: Disposable?
         private var paymentDisposable = MetaDisposable()
         
-        var cachedChevronImage: (UIImage, PresentationTheme)?
-        
         init(
             context: AccountContext,
             starsContext: StarsContext,
@@ -696,7 +692,9 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
         let topPanel = Child(BlurredBackgroundComponent.self)
         let topSeparator = Child(Rectangle.self)
         let title = Child(MultilineTextComponent.self)
-        let balanceText = Child(MultilineTextComponent.self)
+        let balanceTitle = Child(MultilineTextComponent.self)
+        let balanceValue = Child(MultilineTextComponent.self)
+        let balanceIcon = Child(BundleIconComponent.self)
         
         let scrollAction = ActionSlot<CGPoint?>()
         
@@ -765,32 +763,33 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                 transition: context.transition
             )
 
-            let textColor = environment.theme.list.itemPrimaryTextColor
-            let accentColor = UIColor(rgb: 0x597cf5)
-            
-            let textFont = Font.regular(14.0)
-            let boldTextFont = Font.bold(14.0)
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: accentColor), linkAttribute: { _ in
-                return nil
-            })
-            
-            if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
-                state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: UIColor(rgb: 0xf09903))!, environment.theme)
-            }
-            
-            let balanceAttributedString = parseMarkdownIntoAttributedString(" \(strings.Stars_Purchase_Balance)\n #  **\(state.starsState?.balance ?? 0)**", attributes: markdownAttributes, textAlignment: .right).mutableCopy() as! NSMutableAttributedString
-            if let range = balanceAttributedString.string.range(of: "#"), let chevronImage = state.cachedChevronImage?.0 {
-                balanceAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: balanceAttributedString.string))
-                balanceAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xf09903), range: NSRange(range, in: balanceAttributedString.string))
-                balanceAttributedString.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: balanceAttributedString.string))
-            }
-            let balanceText = balanceText.update(
+            let balanceTitle = balanceTitle.update(
                 component: MultilineTextComponent(
-                    text: .plain(balanceAttributedString),
-                    horizontalAlignment: .left,
-                    maximumNumberOfLines: 0
+                    text: .plain(NSAttributedString(
+                        string: environment.strings.Stars_Purchase_Balance,
+                        font: Font.regular(14.0),
+                        textColor: environment.theme.actionSheet.primaryTextColor
+                    )),
+                    maximumNumberOfLines: 1
                 ),
-                availableSize: CGSize(width: 200, height: context.availableSize.height),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            let balanceValue = balanceValue.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: presentationStringsFormattedNumber(Int32(state.starsState?.balance ?? 0), environment.dateTimeFormat.decimalSeparator),
+                        font: Font.semibold(14.0),
+                        textColor: environment.theme.actionSheet.primaryTextColor
+                    )),
+                    maximumNumberOfLines: 1
+                ),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            let balanceIcon = balanceIcon.update(
+                component: BundleIconComponent(name: "Premium/Stars/StarSmall", tintColor: nil),
+                availableSize: context.availableSize,
                 transition: .immediate
             )
               
@@ -890,8 +889,16 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                 .opacity(titleAlpha)
             )
             
-            context.add(balanceText
-                .position(CGPoint(x: context.availableSize.width - 16.0 - balanceText.size.width / 2.0, y: 28.0))
+            let navigationHeight = environment.navigationHeight - environment.statusBarHeight
+            let topBalanceOriginY = environment.statusBarHeight + (navigationHeight - balanceTitle.size.height - balanceValue.size.height) / 2.0
+            context.add(balanceTitle
+                .position(CGPoint(x: context.availableSize.width - 16.0 - environment.safeInsets.right - balanceTitle.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height / 2.0))
+            )
+            context.add(balanceValue
+                .position(CGPoint(x: context.availableSize.width - 16.0 - environment.safeInsets.right - balanceValue.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0))
+            )
+            context.add(balanceIcon
+                .position(CGPoint(x: context.availableSize.width - 16.0 - environment.safeInsets.right - balanceValue.size.width - balanceIcon.size.width / 2.0 - 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0 - UIScreenPixel))
             )
                                     
             return context.availableSize

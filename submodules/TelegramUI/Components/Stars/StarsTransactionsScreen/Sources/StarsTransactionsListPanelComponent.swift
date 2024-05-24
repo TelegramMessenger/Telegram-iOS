@@ -285,7 +285,7 @@ final class StarsTransactionsListPanelComponent: Component {
                         component: AnyComponent(ListActionItemComponent(
                             theme: environment.theme,
                             title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 2.0)),
-                            contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
+                            contentInsets: UIEdgeInsets(top: 9.0, left: environment.containerInsets.left, bottom: 8.0, right: environment.containerInsets.right),
                             leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(AvatarComponent(context: component.context, theme: environment.theme, peer: item.transaction.peer))), false),
                             icon: nil,
                             accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(LabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
@@ -306,7 +306,7 @@ final class StarsTransactionsListPanelComponent: Component {
                         }
                         itemTransition.setFrame(view: itemComponentView, frame: itemFrame)
                     }
-                    let sideInset: CGFloat = 60.0
+                    let sideInset: CGFloat = 60.0 + environment.containerInsets.left
                     itemTransition.setFrame(view: separatorView, frame: CGRect(x: sideInset, y: itemFrame.maxY, width: itemFrame.width - sideInset, height: UIScreenPixel))
                 }
             }

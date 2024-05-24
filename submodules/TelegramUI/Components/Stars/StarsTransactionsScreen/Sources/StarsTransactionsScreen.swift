@@ -426,7 +426,6 @@ final class StarsTransactionsScreenComponent: Component {
                         font: Font.regular(14.0),
                         textColor: environment.theme.actionSheet.primaryTextColor
                     )),
-                    horizontalAlignment: .right,
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
@@ -441,7 +440,6 @@ final class StarsTransactionsScreenComponent: Component {
                         font: Font.semibold(14.0),
                         textColor: environment.theme.actionSheet.primaryTextColor
                     )),
-                    horizontalAlignment: .right,
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
@@ -456,7 +454,7 @@ final class StarsTransactionsScreenComponent: Component {
             
             let navigationHeight = environment.navigationHeight - environment.statusBarHeight
             let topBalanceOriginY = environment.statusBarHeight + (navigationHeight - topBalanceTitleSize.height - topBalanceValueSize.height) / 2.0
-            let topBalanceTitleFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceTitleSize.width - 16.0, y: topBalanceOriginY), size: topBalanceTitleSize)
+            let topBalanceTitleFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceTitleSize.width - 16.0 - environment.safeInsets.right, y: topBalanceOriginY), size: topBalanceTitleSize)
             if let topBalanceTitleView = self.topBalanceTitleView.view {
                 if topBalanceTitleView.superview == nil {
                     topBalanceTitleView.alpha = 0.0
@@ -465,7 +463,7 @@ final class StarsTransactionsScreenComponent: Component {
                 starTransition.setFrame(view: topBalanceTitleView, frame: topBalanceTitleFrame)
             }
     
-            let topBalanceValueFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceValueSize.width - 16.0, y: topBalanceTitleFrame.maxY), size: topBalanceValueSize)
+            let topBalanceValueFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceValueSize.width - 16.0 - environment.safeInsets.right, y: topBalanceTitleFrame.maxY), size: topBalanceValueSize)
             if let topBalanceValueView = self.topBalanceValueView.view {
                 if topBalanceValueView.superview == nil {
                     topBalanceValueView.alpha = 0.0
