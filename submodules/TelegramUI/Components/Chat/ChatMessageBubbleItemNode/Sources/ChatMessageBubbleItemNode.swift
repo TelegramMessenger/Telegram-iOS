@@ -98,6 +98,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     var result: [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)] = []
     var skipText = false
     var messageWithCaptionToAdd: (Message, ChatMessageEntryAttributes)?
+    var messageWithFactCheckToAdd: (Message, ChatMessageEntryAttributes)?
     var isUnsupportedMedia = false
     var isStoryWithText = false
     var isAction = false
@@ -263,6 +264,10 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             }
         }
         
+        if let attribute = message.factCheckAttribute, case .Loaded = attribute.content, messageWithFactCheckToAdd == nil {
+            messageWithFactCheckToAdd = (message, itemAttributes)
+        }
+        
         inner: for media in message.media {
             if let webpage = media as? TelegramMediaWebpage {
                 if case let .Loaded(content) = webpage.content {
@@ -294,14 +299,6 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         if isUnsupportedMedia {
             result.append((message, ChatMessageUnsupportedBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
             needReactions = false
-        } else {
-            for attribute in message.attributes {
-                if let attribute = attribute as? FactCheckMessageAttribute, case .Loaded = attribute.content {
-                    result.append((message, ChatMessageFactCheckBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
-                    needReactions = false
-                    break
-                }
-            }
         }
     }
     
@@ -315,6 +312,11 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             result.append((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
             needReactions = false
         }
+    }
+    
+    if let (messageWithFactCheckToAdd, itemAttributes) = messageWithFactCheckToAdd, !hasSeparateCommentsButton {
+        result.append((messageWithFactCheckToAdd, ChatMessageFactCheckBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+        needReactions = false
     }
     
     if let additionalContent = item.additionalContent {

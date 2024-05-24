@@ -79,6 +79,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 if case let .peer(peer) = transaction.peer {
                     peerIds.append(peer.id)
                 }
+            case let .receipt(receipt, _, _):
+                peerIds.append(receipt.botPaymentId)
             }
             
             self.disposable = (context.engine.data.get(
@@ -159,18 +161,20 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let additionalText: String
             let buttonText: String
             
-            let transactionId: String
+            let count: Int64
+            let transactionId: String?
             let date: Int32
             let toPeer: EnginePeer?
+            let photo: TelegramMediaWebFile?
             
             let gloss = false
             switch subject {
             case let .transaction(transaction):
                 switch transaction.peer {
-                case .peer:
-                    titleText = "Product Title"
+                case let .peer(peer):
+                    titleText = transaction.title ?? peer.compactDisplayTitle
                 case .appStore:
-                    titleText = "In-app Purchase"
+                    titleText = "In-App Purchase"
                 case .playMarket:
                     titleText = "Play Market"
                 case .premiumBot:
@@ -181,14 +185,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     titleText = "Unsupported"
                 }
 
-                if transaction.count < 0 {
-                    descriptionText = "- \(transaction.count * -1) ⭐️"
-                } else {
-                    descriptionText = "+ \(transaction.count) ⭐️"
-                }
-                additionalText = strings.Stars_Transaction_Terms
-                buttonText = strings.Common_OK
-                
+                count = transaction.count
                 transactionId = transaction.id
                 date = transaction.date
                 if case let .peer(peer) = transaction.peer {
@@ -196,6 +193,27 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 } else {
                     toPeer = nil
                 }
+                photo = transaction.photo
+            case let .receipt(receipt, id, dateValue):
+                titleText = receipt.invoiceMedia.title
+                count = (receipt.invoice.prices.first?.amount ?? receipt.invoiceMedia.totalAmount) * -1
+                transactionId = id
+                date = dateValue
+                if let peer = state.peerMap[receipt.botPaymentId] {
+                    toPeer = peer
+                } else {
+                    toPeer = nil
+                }
+                photo = receipt.invoiceMedia.photo
+            }
+            
+            additionalText = strings.Stars_Transaction_Terms
+            buttonText = strings.Common_OK
+            
+            if count < 0 {
+                descriptionText = "- \(count * -1) ⭐️"
+            } else {
+                descriptionText = "+ \(count) ⭐️"
             }
             
             let title = title.update(
@@ -218,6 +236,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     context: component.context,
                     theme: theme,
                     peers: toPeer.flatMap { [$0] } ?? [],
+                    photo: photo,
                     isVisible: true,
                     hasIdleAnimations: true,
                     hasScaleAnimation: false,
@@ -247,7 +266,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             if let toPeer {
                 tableItems.append(.init(
                     id: "to",
-                    title: strings.Stars_Transaction_Date,
+                    title: strings.Stars_Transaction_To,
                     component: AnyComponent(
                         Button(
                             content: AnyComponent(
@@ -270,21 +289,23 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 ))
             }
 
-            tableItems.append(.init(
-                id: "transaction",
-                title: strings.Stars_Transaction_Id,
-                component: AnyComponent(
-                    TransactionCellComponent(
-                        textColor: tableTextColor,
-                        accentColor: tableLinkColor,
-                        transactionId: transactionId,
-                        copy: {
-                            component.copyTransactionId()
-                        }
-                    )
-                ),
-                insets: UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 5.0)
-            ))
+            if let transactionId {
+                tableItems.append(.init(
+                    id: "transaction",
+                    title: strings.Stars_Transaction_Id,
+                    component: AnyComponent(
+                        TransactionCellComponent(
+                            textColor: tableTextColor,
+                            accentColor: tableLinkColor,
+                            transactionId: transactionId,
+                            copy: {
+                                component.copyTransactionId()
+                            }
+                        )
+                    ),
+                    insets: UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 5.0)
+                ))
+            }
             
             tableItems.append(.init(
                 id: "date",
@@ -522,6 +543,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
 public class StarsTransactionScreen: ViewControllerComponentContainer {
     public enum Subject: Equatable {
         case transaction(StarsContext.State.Transaction)
+        case receipt(receipt: BotPaymentReceipt, id: String?, date: Int32)
     }
     
     private let context: AccountContext

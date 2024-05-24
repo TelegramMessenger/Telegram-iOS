@@ -63,6 +63,8 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         
         super.init()
         
+        self.searchBar.autocapitalization = .none
+        
         if hasCurrentChat {
             self.addSubnode(self.searchBar)
         }

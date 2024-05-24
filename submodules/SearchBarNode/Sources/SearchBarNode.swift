@@ -949,6 +949,15 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
+    public var autocapitalization: UITextAutocapitalizationType {
+        get {
+            return self.textField.autocapitalizationType
+        }
+        set {
+            self.textField.autocapitalizationType = newValue
+        }
+    }
+    
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     private let fieldStyle: SearchBarStyle
@@ -962,7 +971,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.forceSeparator = forceSeparator
         self.cancelText = cancelText
         self.icon = icon
-        
+                
         self.backgroundNode = NavigationBackgroundNode(color: theme.background)
         self.backgroundNode.isUserInteractionEnabled = false
         self.backgroundNode.isHidden = !displayBackground

@@ -101,7 +101,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case messageAutoremoveTimeoutUpdated(period: Int32, autoSettingSource: PeerId?)
     case gameScore(gameId: Int64, score: Int32)
     case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?, isVideo: Bool)
-    case paymentSent(currency: String, totalAmount: Int64, invoiceSlug: String?, isRecurringInit: Bool, isRecurringUsed: Bool)
+    case paymentSent(currency: String, totalAmount: Int64, invoiceSlug: String?, isRecurringInit: Bool, isRecurringUsed: Bool, chargeId: String?)
     case customText(text: String, entities: [MessageTextEntity], additionalAttributes: CustomTextAttributes?)
     case botDomainAccessGranted(domain: String)
     case botAppAccessGranted(appName: String?, type: BotSendMessageAccessGrantedType?)
@@ -164,7 +164,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             }
             self = .phoneCall(callId: decoder.decodeInt64ForKey("i", orElse: 0), discardReason: discardReason, duration: decoder.decodeInt32ForKey("d", orElse: 0), isVideo: decoder.decodeInt32ForKey("vc", orElse: 0) != 0)
         case 15:
-            self = .paymentSent(currency: decoder.decodeStringForKey("currency", orElse: ""), totalAmount: decoder.decodeInt64ForKey("ta", orElse: 0), invoiceSlug: decoder.decodeOptionalStringForKey("invoiceSlug"), isRecurringInit: decoder.decodeBoolForKey("isRecurringInit", orElse: false), isRecurringUsed: decoder.decodeBoolForKey("isRecurringUsed", orElse: false))
+            self = .paymentSent(currency: decoder.decodeStringForKey("currency", orElse: ""), totalAmount: decoder.decodeInt64ForKey("ta", orElse: 0), invoiceSlug: decoder.decodeOptionalStringForKey("invoiceSlug"), isRecurringInit: decoder.decodeBoolForKey("isRecurringInit", orElse: false), isRecurringUsed: decoder.decodeBoolForKey("isRecurringUsed", orElse: false), chargeId: decoder.decodeOptionalStringForKey("chargeId"))
         case 16:
             self = .customText(text: decoder.decodeStringForKey("text", orElse: ""), entities: decoder.decodeObjectArrayWithDecoderForKey("ent"), additionalAttributes: nil)
         case 17:
@@ -293,7 +293,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             encoder.encodeInt32(13, forKey: "_rawValue")
             encoder.encodeInt64(gameId, forKey: "i")
             encoder.encodeInt32(score, forKey: "s")
-        case let .paymentSent(currency, totalAmount, invoiceSlug, isRecurringInit, isRecurringUsed):
+        case let .paymentSent(currency, totalAmount, invoiceSlug, isRecurringInit, isRecurringUsed, chargeId):
             encoder.encodeInt32(15, forKey: "_rawValue")
             encoder.encodeString(currency, forKey: "currency")
             encoder.encodeInt64(totalAmount, forKey: "ta")
@@ -304,6 +304,11 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             }
             encoder.encodeBool(isRecurringInit, forKey: "isRecurringInit")
             encoder.encodeBool(isRecurringUsed, forKey: "isRecurringUsed")
+            if let chargeId = chargeId {
+                encoder.encodeString(chargeId, forKey: "chargeId")
+            } else {
+                encoder.encodeNil(forKey: "chargeId")
+            }
         case let .phoneCall(callId, discardReason, duration, isVideo):
             encoder.encodeInt32(14, forKey: "_rawValue")
             encoder.encodeInt64(callId, forKey: "i")

@@ -2816,7 +2816,11 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     }
                     self.skippedShowSearchResultsAsListAnimationOnce = true
                     inlineSearchResultsView.layer.allowsGroupOpacity = true
-                    self.contentContainerNode.view.insertSubview(inlineSearchResultsView, aboveSubview: self.historyNodeContainer.view)
+                    if let inlineSearchResultsView = self.inlineSearchResults?.view {
+                        self.contentContainerNode.view.insertSubview(inlineSearchResultsView, aboveSubview: inlineSearchResultsView)
+                    } else {
+                        self.contentContainerNode.view.insertSubview(inlineSearchResultsView, aboveSubview: self.historyNodeContainer.view)
+                    }
                 }
                 inlineSearchResultsTransition.setFrame(view: inlineSearchResultsView, frame: CGRect(origin: CGPoint(), size: layout.size))
                 
