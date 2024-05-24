@@ -19,6 +19,7 @@ swift_library(
         "//submodules/GZip",
         "//submodules/LegacyComponents",
         "//submodules/AvatarNode",
+        "//submodules/PhotoResources",
         "//submodules/TelegramUI/Components/Chat/MergedAvatarsNode",
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
     ],

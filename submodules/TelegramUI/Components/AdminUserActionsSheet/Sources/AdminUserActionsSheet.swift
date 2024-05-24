@@ -1247,7 +1247,7 @@ private final class AdminUserActionsSheetComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: environment.strings.Chat_AdminActionSheet_PermissionsSectionHeader,
+                            string: component.peers.count == 1 ? environment.strings.Chat_AdminActionSheet_PermissionsSectionHeader : environment.strings.Chat_AdminActionSheet_PermissionsSectionHeaderMultiple,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),

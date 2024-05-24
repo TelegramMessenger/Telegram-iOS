@@ -65,6 +65,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
     public let clipsContent: Bool
     public let externalState: ExternalState?
     public let animateOut: ActionSlot<Action<()>>
+    public let onPan: () -> Void
     
     public init(
         content: AnyComponent<ChildEnvironmentType>,
@@ -72,7 +73,8 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         followContentSizeChanges: Bool = false,
         clipsContent: Bool = false,
         externalState: ExternalState? = nil,
-        animateOut: ActionSlot<Action<()>>
+        animateOut: ActionSlot<Action<()>>,
+        onPan: @escaping () -> Void = {}
     ) {
         self.content = content
         self.backgroundColor = backgroundColor
@@ -80,6 +82,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         self.clipsContent = clipsContent
         self.externalState = externalState
         self.animateOut = animateOut
+        self.onPan = onPan
     }
     
     public static func ==(lhs: SheetComponent, rhs: SheetComponent) -> Bool {
@@ -127,6 +130,8 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             }
             return false
         }
+        
+        private var component: SheetComponent<ChildEnvironmentType>?
         
         private let dimView: UIView
         private let scrollView: ScrollView
@@ -197,6 +202,10 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         
         public func dismissAnimated() {
             self.dismiss?(true)
+        }
+        
+        public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            self.component?.onPan()
         }
         
         private var scrollingOut = false
@@ -302,6 +311,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
                 }
             }
             
+            self.component = component
             self.currentHasInputHeight = sheetEnvironment.hasInputHeight
             
             switch component.backgroundColor {

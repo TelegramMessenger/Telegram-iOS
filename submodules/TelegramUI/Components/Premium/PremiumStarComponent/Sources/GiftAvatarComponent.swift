@@ -13,6 +13,7 @@ import TelegramCore
 import MergedAvatarsNode
 import MultilineTextComponent
 import TelegramPresentationData
+import PhotoResources
 
 private let sceneVersion: Int = 1
 
@@ -73,6 +74,7 @@ public final class GiftAvatarComponent: Component {
         private let sceneView: SCNView
         private let avatarNode: ImageNode
         private var mergedAvatarsNode: MergedAvatarsNode?
+        private var imageNode: TransformImageNode?
         
         private let badgeBackground = ComponentView<Empty>()
         private let badge = ComponentView<Empty>()
@@ -80,6 +82,8 @@ public final class GiftAvatarComponent: Component {
         private var previousInteractionTimestamp: Double = 0.0
         private var timer: SwiftSignalKit.Timer?
         private var hasIdleAnimations = false
+        
+        private let fetchDisposable = MetaDisposable()
         
         public override init(frame: CGRect) {
             self.sceneView = SCNView(frame: CGRect(origin: .zero, size: CGSize(width: 64.0, height: 64.0)))
@@ -109,6 +113,7 @@ public final class GiftAvatarComponent: Component {
         
         deinit {
             self.timer?.invalidate()
+            self.fetchDisposable.dispose()
         }
         
         private let hapticFeedback = HapticFeedback()
@@ -297,7 +302,26 @@ public final class GiftAvatarComponent: Component {
             
             self.hasIdleAnimations = component.hasIdleAnimations
             
-            if component.peers.count > 1 {
+            if let photo = component.photo {
+                let imageNode: TransformImageNode
+                if let current = self.imageNode {
+                    imageNode = current
+                } else {
+                    imageNode = TransformImageNode()
+                    self.addSubview(imageNode.view)
+                    self.imageNode = imageNode
+                    
+                    imageNode.setSignal(chatWebFileImage(account: component.context.account, file: photo))
+                    self.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: component.context.account, userLocation: .other, image: photo).startStrict())
+                }
+                                
+                let imageSize = CGSize(width: component.avatarSize, height: component.avatarSize)
+                imageNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - imageSize.width) / 2.0), y: 113.0 - imageSize.height / 2.0), size: imageSize)
+                
+                imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
+                
+                self.avatarNode.isHidden = true
+            } else if component.peers.count > 1 {
                 let avatarSize = CGSize(width: 60.0, height: 60.0)
                 
                 let mergedAvatarsNode: MergedAvatarsNode

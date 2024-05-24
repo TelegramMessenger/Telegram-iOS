@@ -1714,7 +1714,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
             
             if canAddFactCheck {
-                let hasFactCheck = message.factCheckAttribute != nil
+                let sortedMessages = messages.sorted(by: { $0.id < $1.id })
+                let hasFactCheck = sortedMessages[0].factCheckAttribute != nil
                 let title: String
                 if hasFactCheck {
                     title = chatPresentationInterfaceState.strings.Conversation_ContextMenuEditFactCheck
@@ -1725,7 +1726,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/FactCheck"), color: theme.actionSheet.primaryTextColor)
                 }, action: { c, f in
                     c?.dismiss(completion: {
-                        controllerInteraction.editMessageFactCheck(messages[0].id)
+                        controllerInteraction.editMessageFactCheck(sortedMessages[0].id)
                     })
                 })))
             }

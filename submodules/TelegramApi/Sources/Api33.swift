@@ -771,7 +771,7 @@ public extension Api.payments {
 public extension Api.payments {
     enum PaymentReceipt: TypeConstructorDescription {
         case paymentReceipt(flags: Int32, date: Int32, botId: Int64, providerId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, info: Api.PaymentRequestedInfo?, shipping: Api.ShippingOption?, tipAmount: Int64?, currency: String, totalAmount: Int64, credentialsTitle: String, users: [Api.User])
-        case paymentReceiptStars(flags: Int32, date: Int32, botId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, currency: String, totalAmount: Int64, users: [Api.User])
+        case paymentReceiptStars(flags: Int32, date: Int32, botId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, currency: String, totalAmount: Int64, transactionId: String, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -799,9 +799,9 @@ public extension Api.payments {
                         item.serialize(buffer, true)
                     }
                     break
-                case .paymentReceiptStars(let flags, let date, let botId, let title, let description, let photo, let invoice, let currency, let totalAmount, let users):
+                case .paymentReceiptStars(let flags, let date, let botId, let title, let description, let photo, let invoice, let currency, let totalAmount, let transactionId, let users):
                     if boxed {
-                        buffer.appendInt32(-319617530)
+                        buffer.appendInt32(-625215430)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
@@ -812,6 +812,7 @@ public extension Api.payments {
                     invoice.serialize(buffer, true)
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(totalAmount, buffer: buffer, boxed: false)
+                    serializeString(transactionId, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
@@ -825,8 +826,8 @@ public extension Api.payments {
         switch self {
                 case .paymentReceipt(let flags, let date, let botId, let providerId, let title, let description, let photo, let invoice, let info, let shipping, let tipAmount, let currency, let totalAmount, let credentialsTitle, let users):
                 return ("paymentReceipt", [("flags", flags as Any), ("date", date as Any), ("botId", botId as Any), ("providerId", providerId as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("info", info as Any), ("shipping", shipping as Any), ("tipAmount", tipAmount as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("credentialsTitle", credentialsTitle as Any), ("users", users as Any)])
-                case .paymentReceiptStars(let flags, let date, let botId, let title, let description, let photo, let invoice, let currency, let totalAmount, let users):
-                return ("paymentReceiptStars", [("flags", flags as Any), ("date", date as Any), ("botId", botId as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("users", users as Any)])
+                case .paymentReceiptStars(let flags, let date, let botId, let title, let description, let photo, let invoice, let currency, let totalAmount, let transactionId, let users):
+                return ("paymentReceiptStars", [("flags", flags as Any), ("date", date as Any), ("botId", botId as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("transactionId", transactionId as Any), ("users", users as Any)])
     }
     }
     
@@ -916,9 +917,11 @@ public extension Api.payments {
             _8 = parseString(reader)
             var _9: Int64?
             _9 = reader.readInt64()
-            var _10: [Api.User]?
+            var _10: String?
+            _10 = parseString(reader)
+            var _11: [Api.User]?
             if let _ = reader.readInt32() {
-                _10 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _11 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -930,8 +933,9 @@ public extension Api.payments {
             let _c8 = _8 != nil
             let _c9 = _9 != nil
             let _c10 = _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.payments.PaymentReceipt.paymentReceiptStars(flags: _1!, date: _2!, botId: _3!, title: _4!, description: _5!, photo: _6, invoice: _7!, currency: _8!, totalAmount: _9!, users: _10!)
+            let _c11 = _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.payments.PaymentReceipt.paymentReceiptStars(flags: _1!, date: _2!, botId: _3!, title: _4!, description: _5!, photo: _6, invoice: _7!, currency: _8!, totalAmount: _9!, transactionId: _10!, users: _11!)
             }
             else {
                 return nil

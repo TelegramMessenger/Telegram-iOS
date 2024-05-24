@@ -211,53 +211,75 @@ final class StarsTransactionsListPanelComponent: Component {
                     let fontBaseDisplaySize = 17.0
                     
                     let itemTitle: String
-                    let itemSubtitle: String
+                    let itemSubtitle: String?
+                    let itemDate: String
                     let itemLabel: NSAttributedString
                     switch item.transaction.peer {
                     case let .peer(peer):
                         itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
+                        itemSubtitle = item.transaction.title
                         itemLabel = NSAttributedString(string: "- \(item.transaction.count * -1)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDestructiveColor)
                     case .appStore:
-                        itemTitle = "In-App Purchase"
+                        itemTitle = "Stars Top-Up"
+                        itemSubtitle = "via App Store"
                         itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
                     case .playMarket:
-                        itemTitle = "Play Market"
+                        itemTitle = "Stars Top-Up"
+                        itemSubtitle = "via Play Market"
                         itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
                     case .fragment:
-                        itemTitle = "Fragment"
+                        itemTitle = "Stars Top-Up"
+                        itemSubtitle = "via Fragment"
                         itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
                     case .premiumBot:
-                        itemTitle = "Premium Bot"
+                        itemTitle = "Stars Top-Up"
+                        itemSubtitle = "via Premium Bot"
                         itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
                     case .unsupported:
                         itemTitle = "Unsupported"
+                        itemSubtitle = nil
                         itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
                     }
-                    itemSubtitle = stringForMediumCompactDate(timestamp: item.transaction.date, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
+                    itemDate = stringForMediumCompactDate(timestamp: item.transaction.date, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
                     
+                    var titleComponents: [AnyComponentWithIdentity<Empty>] = []
+                    titleComponents.append(
+                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: itemTitle,
+                                font: Font.semibold(fontBaseDisplaySize),
+                                textColor: environment.theme.list.itemPrimaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        )))
+                    )
+                    if let itemSubtitle {
+                        titleComponents.append(
+                            AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(
+                                    string: itemSubtitle,
+                                    font: Font.regular(fontBaseDisplaySize * 16.0 / 17.0),
+                                    textColor: environment.theme.list.itemPrimaryTextColor
+                                )),
+                                maximumNumberOfLines: 1
+                            )))
+                        )
+                    }
+                    titleComponents.append(
+                        AnyComponentWithIdentity(id: AnyHashable(2), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: itemDate,
+                                font: Font.regular(floor(fontBaseDisplaySize * 14.0 / 17.0)),
+                                textColor: environment.theme.list.itemSecondaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        )))
+                    )
                     let _ = itemView.update(
                         transition: itemTransition,
                         component: AnyComponent(ListActionItemComponent(
                             theme: environment.theme,
-                            title: AnyComponent(VStack([
-                                AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                                    text: .plain(NSAttributedString(
-                                        string: itemTitle,
-                                        font: Font.semibold(fontBaseDisplaySize),
-                                        textColor: environment.theme.list.itemPrimaryTextColor
-                                    )),
-                                    maximumNumberOfLines: 0
-                                ))),
-                                AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
-                                    text: .plain(NSAttributedString(
-                                        string: itemSubtitle,
-                                        font: Font.regular(floor(fontBaseDisplaySize * 15.0 / 17.0)),
-                                        textColor: environment.theme.list.itemSecondaryTextColor
-                                    )),
-                                    maximumNumberOfLines: 0,
-                                    lineSpacing: 0.18
-                                )))
-                            ], alignment: .left, spacing: 3.0)),
+                            title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 2.0)),
                             contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
                             leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(AvatarComponent(context: component.context, theme: environment.theme, peer: item.transaction.peer))), false),
                             icon: nil,
@@ -330,13 +352,21 @@ final class StarsTransactionsListPanelComponent: Component {
                         AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
                                 string: "abc",
-                                font: Font.regular(floor(fontBaseDisplaySize * 15.0 / 17.0)),
+                                font: Font.regular(fontBaseDisplaySize * 16.0 / 17.0),
+                                textColor: environment.theme.list.itemPrimaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        ))),
+                        AnyComponentWithIdentity(id: AnyHashable(2), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "abc",
+                                font: Font.regular(floor(fontBaseDisplaySize * 14.0 / 17.0)),
                                 textColor: environment.theme.list.itemSecondaryTextColor
                             )),
                             maximumNumberOfLines: 0,
                             lineSpacing: 0.18
                         )))
-                    ], alignment: .left, spacing: 3.0)),
+                    ], alignment: .left, spacing: 2.0)),
                     contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
                     leftIcon: nil,
                     icon: nil,
@@ -441,7 +471,7 @@ private final class AvatarComponent: Component {
             super.init(frame: frame)
             
             self.iconView.contentMode = .center
-            self.iconView.image = UIImage(bundleImageName: "Premium/Stars/TopUp")
+            self.iconView.image = UIImage(bundleImageName: "Premium/Stars/Apple")
             
             self.addSubnode(self.avatarNode)
             self.addSubview(self.backgroundView)
@@ -458,7 +488,7 @@ private final class AvatarComponent: Component {
             
             let size = CGSize(width: 40.0, height: 40.0)
 
-            let gradientImage = generateGradientFilledCircleImage(diameter: size.width, colors: [UIColor(rgb: 0xf67447).cgColor, UIColor(rgb: 0xfdbe1c).cgColor], direction: .mirroredDiagonal)
+            let gradientImage = generateGradientFilledCircleImage(diameter: size.width, colors: [UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor], direction: .mirroredDiagonal)
             
             switch component.peer {
             case let .peer(peer):
