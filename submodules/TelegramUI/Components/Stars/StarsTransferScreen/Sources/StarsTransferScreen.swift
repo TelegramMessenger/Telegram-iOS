@@ -262,11 +262,12 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += 28.0
             
             if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== theme {
-                state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Premium/Stars/Star"), color: UIColor(rgb: 0xf09903))!, theme)
+                state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Premium/Stars/StarLarge"), color: UIColor(rgb: 0xf09903))!, theme)
             }
             
+            let balanceValue = presentationStringsFormattedNumber(Int32(state.balance ?? 0), environment.dateTimeFormat.decimalSeparator)
             let balanceAttributedString = NSMutableAttributedString(string: strings.Stars_Transfer_Balance, font: Font.regular(14.0), textColor: textColor)
-            balanceAttributedString.append(NSMutableAttributedString(string: "\n #  \(state.balance ?? 0)", font: Font.semibold(16.0), textColor: textColor))
+            balanceAttributedString.append(NSMutableAttributedString(string: "\n #  \(balanceValue)", font: Font.semibold(16.0), textColor: textColor))
             if let range = balanceAttributedString.string.range(of: "#"), let chevronImage = state.cachedChevronImage?.0 {
                 balanceAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: balanceAttributedString.string))
                 balanceAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xf09903), range: NSRange(range, in: balanceAttributedString.string))
@@ -336,7 +337,7 @@ private final class SheetContent: CombinedComponent {
                             let resultController = UndoOverlayController(
                                 presentationData: presentationData,
                                 content: .image(
-                                    image: UIImage(bundleImageName: "Premium/Stars/Star")!,
+                                    image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
                                     title: presentationData.strings.Stars_Transfer_PurchasedTitle,
                                     text: presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string,
                                     round: false,

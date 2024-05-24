@@ -118,7 +118,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         let closeButton = Child(Button.self)
         let title = Child(MultilineTextComponent.self)
         let star = Child(GiftAvatarComponent.self)
-        let description = Child(BalancedTextComponent.self)
+        let amount = Child(BalancedTextComponent.self)
+        let amountStar = Child(BundleIconComponent.self)
+        let description = Child(MultilineTextComponent.self)
         let table = Child(TableComponent.self)
         let additional = Child(BalancedTextComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
@@ -157,6 +159,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
             
             let titleText: String
+            let amountText: String
             let descriptionText: String
             let additionalText: String
             let buttonText: String
@@ -164,6 +167,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let count: Int64
             let transactionId: String?
             let date: Int32
+            let via: String?
             let toPeer: EnginePeer?
             let photo: TelegramMediaWebFile?
             
@@ -173,17 +177,24 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 switch transaction.peer {
                 case let .peer(peer):
                     titleText = transaction.title ?? peer.compactDisplayTitle
+                    via = nil
                 case .appStore:
-                    titleText = "In-App Purchase"
+                    titleText = strings.Stars_Transaction_AppleTopUp_Title
+                    via = strings.Stars_Transaction_AppleTopUp_Subtitle
                 case .playMarket:
-                    titleText = "Play Market"
+                    titleText = strings.Stars_Transaction_GoogleTopUp_Title
+                    via = strings.Stars_Transaction_GoogleTopUp_Subtitle
                 case .premiumBot:
-                    titleText = "Premium Bot"
+                    titleText = strings.Stars_Transaction_PremiumBotTopUp_Title
+                    via = strings.Stars_Transaction_PremiumBotTopUp_Subtitle
                 case .fragment:
-                    titleText = "Fragment"
+                    titleText = strings.Stars_Transaction_FragmentTopUp_Title
+                    via = strings.Stars_Transaction_FragmentTopUp_Subtitle
                 case .unsupported:
-                    titleText = "Unsupported"
+                    titleText = strings.Stars_Transaction_Unsupported_Title
+                    via = nil
                 }
+                descriptionText = transaction.description ?? ""
 
                 count = transaction.count
                 transactionId = transaction.id
@@ -196,7 +207,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 photo = transaction.photo
             case let .receipt(receipt):
                 titleText = receipt.invoiceMedia.title
+                descriptionText = receipt.invoiceMedia.description
                 count = (receipt.invoice.prices.first?.amount ?? receipt.invoiceMedia.totalAmount) * -1
+                via = nil
                 transactionId = receipt.transactionId
                 date = receipt.date
                 if let peer = state.peerMap[receipt.botPaymentId] {
@@ -207,22 +220,15 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 photo = receipt.invoiceMedia.photo
             }
             
+            let formattedAmount = presentationStringsFormattedNumber(abs(Int32(count)), dateTimeFormat.decimalSeparator)
+            if count < 0 {
+                amountText = "- \(formattedAmount)"
+            } else {
+                amountText = "+ \(formattedAmount)"
+            }
             additionalText = strings.Stars_Transaction_Terms
             buttonText = strings.Common_OK
             
-            if count < 0 {
-                descriptionText = " - \(count * -1)  #   "
-            } else {
-                descriptionText = " + \(count)  #   "
-            }
-            
-            let descriptionAttributedText = NSMutableAttributedString(string: descriptionText, font: Font.semibold(18.0), textColor: descriptionText.hasPrefix("-") ? theme.list.itemDestructiveColor : theme.list.itemDisclosureActions.constructive.fillColor)
-            if let range = descriptionAttributedText.string.range(of: "#"), let chevronImage = generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: UIColor(rgb: 0xf09903)) {
-                descriptionAttributedText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: descriptionAttributedText.string))
-                descriptionAttributedText.addAttribute(.foregroundColor, value: UIColor(rgb: 0xf09903), range: NSRange(range, in: descriptionAttributedText.string))
-                descriptionAttributedText.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: descriptionAttributedText.string))
-            }
-                                                               
             let title = title.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
@@ -254,9 +260,10 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 transition: .immediate
             )
             
-            let description = description.update(
+            let amountAttributedText = NSMutableAttributedString(string: amountText, font: Font.semibold(17.0), textColor: amountText.hasPrefix("-") ? theme.list.itemDestructiveColor : theme.list.itemDisclosureActions.constructive.fillColor)
+            let amount = amount.update(
                 component: BalancedTextComponent(
-                    text: .plain(descriptionAttributedText),
+                    text: .plain(amountAttributedText),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
@@ -264,7 +271,16 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
                 transition: .immediate
             )
-             
+            
+            let amountStar = amountStar.update(
+                component: BundleIconComponent(
+                    name: "Premium/Stars/StarMedium",
+                    tintColor: nil
+                ),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            
             let tableFont = Font.regular(15.0)
             let tableTextColor = theme.list.itemPrimaryTextColor
             let tableLinkColor = theme.list.itemAccentColor
@@ -292,6 +308,14 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                                 }
                             }
                         )
+                    )
+                ))
+            } else if let via {
+                tableItems.append(.init(
+                    id: "via",
+                    title: strings.Stars_Transaction_Via,
+                    component: AnyComponent(
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: via, font: tableFont, textColor: tableTextColor)))
                     )
                 ))
             }
@@ -393,10 +417,35 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var originY: CGFloat = 0.0
             originY += star.size.height - 23.0
             
-            context.add(description
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + description.size.height / 2.0))
+            if !descriptionText.isEmpty {
+                let description = description.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: descriptionText,
+                            font: Font.regular(15.0),
+                            textColor: theme.actionSheet.primaryTextColor,
+                            paragraphAlignment: .center
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 3
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                context.add(description
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + description.size.height / 2.0))
+                )
+                originY += description.size.height + 10.0
+            }
+            
+            context.add(amount
+                .position(CGPoint(x: context.availableSize.width / 2.0 - 10.0, y: originY + amount.size.height / 2.0))
             )
-            originY += description.size.height + 20.0
+            context.add(amountStar
+                .position(CGPoint(x: context.availableSize.width / 2.0 + amount.size.width / 2.0 + amountStar.size.width / 2.0 - 7.0, y: originY + amountStar.size.height / 2.0))
+            )
+            
+            originY += amount.size.height + 20.0
                         
             context.add(table
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
@@ -1054,7 +1103,6 @@ private final class TransactionCellComponent: Component {
             
             let size = CGSize(width: textSize.width + spacing + buttonSize.width, height: textSize.height)
             
-            
             let buttonFrame = CGRect(origin: CGPoint(x: textSize.width + spacing, y: floorToScreenPixels((size.height - buttonSize.height) / 2.0)), size: buttonSize)
             if let buttonView = self.button.view {
                 if buttonView.superview == nil {
@@ -1063,7 +1111,7 @@ private final class TransactionCellComponent: Component {
                 transition.setFrame(view: buttonView, frame: buttonFrame)
             }
             
-            let textFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
+            let textFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((size.height - textSize.height) / 2.0) + 1.0), size: textSize)
             if let textView = self.text.view {
                 if textView.superview == nil {
                     self.addSubview(textView)

@@ -35,7 +35,7 @@ private enum DeviceContactInfoAction {
 }
 
 private final class DeviceContactInfoControllerArguments {
-    let accountContext: AccountContext?
+    let context: ShareControllerAccountContext
     let isPlain: Bool
     let updateEditingName: (ItemListAvatarAndNameInfoItemName) -> Void
     let updatePhone: (Int64, String) -> Void
@@ -52,8 +52,8 @@ private final class DeviceContactInfoControllerArguments {
     let updateShareViaException: (Bool) -> Void
     let openAvatar: (EnginePeer) -> Void
     
-    init(accountContext: AccountContext?, isPlain: Bool, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updatePhone: @escaping (Int64, String) -> Void, updatePhoneLabel: @escaping (Int64, String) -> Void, deletePhone: @escaping (Int64) -> Void, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, addPhoneNumber: @escaping () -> Void, performAction: @escaping (DeviceContactInfoAction) -> Void, toggleSelection: @escaping (DeviceContactInfoDataId) -> Void, callPhone: @escaping (String) -> Void, openUrl: @escaping (String) -> Void, openAddress: @escaping (DeviceContactAddressData) -> Void, displayCopyContextMenu: @escaping (DeviceContactInfoEntryTag, String) -> Void, updateShareViaException: @escaping (Bool) -> Void, openAvatar: @escaping (EnginePeer) -> Void) {
-        self.accountContext = accountContext
+    init(context: ShareControllerAccountContext, isPlain: Bool, updateEditingName: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, updatePhone: @escaping (Int64, String) -> Void, updatePhoneLabel: @escaping (Int64, String) -> Void, deletePhone: @escaping (Int64) -> Void, setPhoneIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, addPhoneNumber: @escaping () -> Void, performAction: @escaping (DeviceContactInfoAction) -> Void, toggleSelection: @escaping (DeviceContactInfoDataId) -> Void, callPhone: @escaping (String) -> Void, openUrl: @escaping (String) -> Void, openAddress: @escaping (DeviceContactAddressData) -> Void, displayCopyContextMenu: @escaping (DeviceContactInfoEntryTag, String) -> Void, updateShareViaException: @escaping (Bool) -> Void, openAvatar: @escaping (EnginePeer) -> Void) {
+        self.context = context
         self.isPlain = isPlain
         self.updateEditingName = updateEditingName
         self.updatePhone = updatePhone
@@ -406,10 +406,13 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
         let arguments = arguments as! DeviceContactInfoControllerArguments
         switch self {
             case let .info(_, _, _, dateTimeFormat, peer, state, jobSummary, _, hiddenAvatar):
-                guard let accountContext = arguments.accountContext else {
-                    fatalError()
+                let itemContext: ItemListAvatarAndNameInfoItem.ItemContext
+                if let context = arguments.context as? ShareControllerAppAccountContext {
+                    itemContext = .accountContext(context.context)
+                } else {
+                    itemContext = .other(accountPeerId: arguments.context.accountPeerId, postbox: arguments.context.stateManager.postbox, network: arguments.context.stateManager.network)
                 }
-                return ItemListAvatarAndNameInfoItem(accountContext: accountContext, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, memberCount: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(itemContext: itemContext, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, memberCount: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     if peer.smallProfileImage != nil {
@@ -945,13 +948,7 @@ public func deviceContactInfoController(context: ShareControllerAccountContext, 
         shareViaException = shareViaExceptionValue
     }
     
-    let accountContext: AccountContext?
-    if let context = context as? ShareControllerAppAccountContext {
-        accountContext = context.context
-    } else {
-        accountContext = nil
-    }
-    let arguments = DeviceContactInfoControllerArguments(accountContext: accountContext, isPlain: !isShare, updateEditingName: { editingName in
+    let arguments = DeviceContactInfoControllerArguments(context: context, isPlain: !isShare, updateEditingName: { editingName in
         updateState { state in
             var state = state
             if let _ = state.editingState {

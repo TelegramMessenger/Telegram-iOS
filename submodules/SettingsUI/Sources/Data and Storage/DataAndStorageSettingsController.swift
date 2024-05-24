@@ -35,8 +35,9 @@ private final class DataAndStorageControllerArguments {
     let openBrowserSelection: () -> Void
     let openIntents: () -> Void
     let toggleEnableSensitiveContent: (Bool) -> Void
+    let presentSensitiveContentConfirmation: () -> Void
 
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, toggleVoiceUseLessData: @escaping (Bool) -> Void, openSaveIncoming: @escaping (AutomaticSaveIncomingPeerType) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, togglePauseMusicOnRecording: @escaping (Bool) -> Void, toggleRaiseToListen: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, toggleVoiceUseLessData: @escaping (Bool) -> Void, openSaveIncoming: @escaping (AutomaticSaveIncomingPeerType) -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, togglePauseMusicOnRecording: @escaping (Bool) -> Void, toggleRaiseToListen: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void, presentSensitiveContentConfirmation: @escaping () -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
@@ -51,6 +52,7 @@ private final class DataAndStorageControllerArguments {
         self.openBrowserSelection = openBrowserSelection
         self.openIntents = openIntents
         self.toggleEnableSensitiveContent = toggleEnableSensitiveContent
+        self.presentSensitiveContentConfirmation = presentSensitiveContentConfirmation
     }
 }
 
@@ -110,6 +112,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case connectionHeader(PresentationTheme, String)
     case connectionProxy(PresentationTheme, String, String)
     case enableSensitiveContent(String, Bool)
+    case enableSensitiveContentInfo(String)
     
     var section: ItemListSectionId {
         switch self {
@@ -127,7 +130,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.other.rawValue
             case .connectionHeader, .connectionProxy:
                 return DataAndStorageSection.connection.rawValue
-            case .enableSensitiveContent:
+            case .enableSensitiveContent, .enableSensitiveContentInfo:
                 return DataAndStorageSection.enableSensitiveContent.rawValue
         }
     }
@@ -174,12 +177,14 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 34
             case .raiseToListenInfo:
                 return 35
-            case .connectionHeader:
-                return 36
-            case .connectionProxy:
-                return 37
             case .enableSensitiveContent:
+                return 36
+            case .enableSensitiveContentInfo:
+                return 37
+            case .connectionHeader:
                 return 38
+            case .connectionProxy:
+                return 39
         }
     }
     
@@ -323,6 +328,12 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .enableSensitiveContentInfo(text):
+                if case .enableSensitiveContentInfo(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -421,9 +432,15 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                     arguments.openProxy()
                 })
             case let .enableSensitiveContent(text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.toggleEnableSensitiveContent(value)
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                    if value {
+                        arguments.toggleEnableSensitiveContent(updatedValue)
+                    } else {
+                        arguments.presentSensitiveContentConfirmation()
+                    }
                 }, tag: nil)
+            case let .enableSensitiveContentInfo(text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         }
     }
 }
@@ -627,6 +644,14 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.raiseToListen(presentationData.theme, presentationData.strings.Settings_RaiseToListen, data.mediaInputSettings.enableRaiseToSpeak))
     entries.append(.raiseToListenInfo(presentationData.theme, presentationData.strings.Settings_RaiseToListenInfo))
 
+    
+#if DEBUG
+    if let contentSettingsConfiguration = contentSettingsConfiguration { //, contentSettingsConfiguration.canAdjustSensitiveContent {
+    entries.append(.enableSensitiveContent("Show 18+ Content", contentSettingsConfiguration.sensitiveContentEnabled))
+    entries.append(.enableSensitiveContentInfo("Do not hide media that contain content suitable only for adults."))
+    }
+#endif
+    
     let proxyValue: String
     if let proxySettings = data.proxySettings, let activeServer = proxySettings.activeServer, proxySettings.enabled {
         switch activeServer.connection {
@@ -640,13 +665,7 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     }
     entries.append(.connectionHeader(presentationData.theme, presentationData.strings.ChatSettings_ConnectionType_Title.uppercased()))
     entries.append(.connectionProxy(presentationData.theme, presentationData.strings.SocksProxySetup_Title, proxyValue))
-    
-    #if DEBUG
-    if let contentSettingsConfiguration = contentSettingsConfiguration, contentSettingsConfiguration.canAdjustSensitiveContent {
-        entries.append(.enableSensitiveContent("Display Sensitive Content", contentSettingsConfiguration.sensitiveContentEnabled))
-    }
-    #endif
-    
+        
     return entries
 }
 
@@ -779,6 +798,8 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         return DataAndStorageData(automaticMediaDownloadSettings: automaticMediaDownloadSettings, autodownloadSettings: autodownloadSettings, generatedMediaStoreSettings: generatedMediaStoreSettings, mediaInputSettings: mediaInputSettings, voiceCallSettings: voiceCallSettings, proxySettings: proxySettings)
     })
     
+    var enableSensitiveContentImpl: (() -> Void)?
+
     let arguments = DataAndStorageControllerArguments(openStorageUsage: {
         pushControllerImpl?(StorageUsageScreen(context: context, makeStorageUsageExceptionsScreen: { category in
             return storageUsageExceptionsScreen(context: context, category: category)
@@ -882,7 +903,21 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
             }
         })
         updateSensitiveContentDisposable.set(updateRemoteContentSettingsConfiguration(postbox: context.account.postbox, network: context.account.network, sensitiveContentEnabled: value).start())
+    }, presentSensitiveContentConfirmation: {
+        let controller = textAlertController(context: context, title: "18+ Content", text: "Confirm that you are over 18 years old and update your settings to see potentially explicit and sensitive content.", actions: [
+            TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                
+            }),
+            TextAlertAction(type: .defaultAction, title: "Confirm", action: {
+                enableSensitiveContentImpl?()
+            })
+        ])
+        presentControllerImpl?(controller, nil)
     })
+    
+    enableSensitiveContentImpl = {
+        arguments.toggleEnableSensitiveContent(true)
+    }
     
     let preferencesKey: PostboxViewKey = .preferences(keys: Set([ApplicationSpecificPreferencesKeys.mediaAutoSaveSettings]))
     let preferences = context.account.postbox.combinedView(keys: [preferencesKey])

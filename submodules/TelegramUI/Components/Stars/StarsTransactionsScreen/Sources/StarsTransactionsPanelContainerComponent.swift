@@ -623,7 +623,9 @@ final class StarsTransactionsPanelContainerComponent: Component {
                 }
             }
             
-            let _ = self.header.update(
+            let sideInset: CGFloat = 16.0
+            let condensedPanelWidth: CGFloat = availableSize.width - sideInset * 2.0
+            let headerSize = self.header.update(
                 transition: transition,
                 component: AnyComponent(StarsTransactionsHeaderComponent(
                     theme: component.theme,
@@ -648,13 +650,13 @@ final class StarsTransactionsPanelContainerComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: topPanelFrame.size
+                containerSize: CGSize(width: condensedPanelWidth, height: topPanelFrame.size.height)
             )
             if let headerView = self.header.view {
                 if headerView.superview == nil {
                     self.addSubview(headerView)
                 }
-                transition.setFrame(view: headerView, frame: topPanelFrame)
+                transition.setFrame(view: headerView, frame: CGRect(origin: topPanelFrame.origin.offsetBy(dx: sideInset, dy: 0.0), size: headerSize))
             }
             
             let childEnvironment = StarsTransactionsPanelEnvironment(

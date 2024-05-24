@@ -72,10 +72,10 @@ struct InternalStarsStatus {
     let nextOffset: String?
 }
 
-func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, offset: String?) -> Signal<InternalStarsStatus?, NoError> {
+func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, offset: String?) -> Signal<InternalStarsStatus, NoError> {
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
-    } |> mapToSignal { peer -> Signal<InternalStarsStatus?, NoError> in
+    } |> mapToSignal { peer -> Signal<InternalStarsStatus, NoError> in
         guard let peer, let inputPeer = apiInputPeer(peer) else {
             return .never()
         }
@@ -88,15 +88,9 @@ func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, offset
         }
         
         return signal
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.payments.StarsStatus?, NoError> in
-            return .single(nil)
-        }
-        |> mapToSignal { result -> Signal<InternalStarsStatus?, NoError> in
-            guard let result else {
-                return .single(nil)
-            }
-            return account.postbox.transaction { transaction -> InternalStarsStatus? in
+        |> retryRequest
+        |> mapToSignal { result -> Signal<InternalStarsStatus, NoError> in
+            return account.postbox.transaction { transaction -> InternalStarsStatus in
                 switch result {
                 case let .starsStatus(_, balance, history, nextOffset, chats, users):
                     let peers = AccumulatedPeers(chats: chats, users: users)
@@ -168,14 +162,10 @@ private final class StarsContextImpl {
         self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, offset: nil)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let self {
-                if let status {
-                    self._state = StarsContext.State(balance: status.balance, transactions: status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false)
-                    self.nextOffset = status.nextOffset
-                    
-                    self.loadMore()
-                } else {
-                    self._state = nil
-                }
+                self._state = StarsContext.State(balance: status.balance, transactions: status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false)
+                self.nextOffset = status.nextOffset
+                
+                self.loadMore()
             }
         }))
     }
@@ -202,12 +192,8 @@ private final class StarsContextImpl {
         self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, offset: nextOffset)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let self {
-                if let status {
-                    self._state = StarsContext.State(balance: status.balance, transactions: currentState.transactions + status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false)
-                    self.nextOffset = status.nextOffset
-                } else {
-                    self.nextOffset = nil
-                }
+                self._state = StarsContext.State(balance: status.balance, transactions: currentState.transactions + status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false)
+                self.nextOffset = status.nextOffset
             }
         }))
     }

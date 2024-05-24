@@ -1059,13 +1059,13 @@ func generateStarsIcon(count: Int) -> UIImage {
         
         var originX = floorToScreenPixels((size.width - totalWidth) / 2.0)
         
-        let mainImage = UIImage(bundleImageName: "Premium/Stars/Star")
+        let mainImage = UIImage(bundleImageName: "Premium/Stars/StarLarge")
         if let cgImage = mainImage?.cgImage, let partCGImage = partImage.cgImage {
             context.draw(cgImage, in: CGRect(origin: CGPoint(x: originX, y: 0.0), size: imageSize), byTiling: false)
-            originX += spacing
+            originX += spacing + UIScreenPixel
             
             for _ in 0 ..< count - 1 {
-                context.draw(partCGImage, in: CGRect(origin: CGPoint(x: originX, y: UIScreenPixel), size: imageSize), byTiling: false)
+                context.draw(partCGImage, in: CGRect(origin: CGPoint(x: originX, y: -UIScreenPixel), size: imageSize).insetBy(dx: -1.0 + UIScreenPixel, dy: -1.0 + UIScreenPixel), byTiling: false)
                 originX += spacing
             }
         }
