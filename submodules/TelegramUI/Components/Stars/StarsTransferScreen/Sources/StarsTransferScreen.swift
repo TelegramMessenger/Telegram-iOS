@@ -59,6 +59,7 @@ private final class SheetContent: CombinedComponent {
         var cachedStarImage: (UIImage, PresentationTheme)?
         
         private let context: AccountContext
+        private let starsContext: StarsContext
         private let source: BotPaymentInvoiceSource
         private let invoice: TelegramMediaInvoice
         
@@ -66,6 +67,8 @@ private final class SheetContent: CombinedComponent {
         private var peerDisposable: Disposable?
         private(set) var balance: Int64?
         private(set) var form: BotPaymentForm?
+        
+        private var stateDisposable: Disposable?
         
         private var optionsDisposable: Disposable?
         private(set) var options: [StarsTopUpOption] = [] {
@@ -79,11 +82,13 @@ private final class SheetContent: CombinedComponent {
         
         init(
             context: AccountContext,
+            starsContext: StarsContext,
             source: BotPaymentInvoiceSource,
             invoice: TelegramMediaInvoice,
             inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
         ) {
             self.context = context
+            self.starsContext = starsContext
             self.source = source
             self.invoice = invoice
             
@@ -109,10 +114,20 @@ private final class SheetContent: CombinedComponent {
                     })
                 }
             })
+            
+            self.stateDisposable = (starsContext.state
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                guard let self else {
+                    return
+                }
+                self.balance = state?.balance
+                self.updated(transition: .immediate)
+            })
         }
         
         deinit {
             self.peerDisposable?.dispose()
+            self.stateDisposable?.dispose()
             self.optionsDisposable?.dispose()
         }
         
@@ -140,16 +155,33 @@ private final class SheetContent: CombinedComponent {
                     self.updated()
                 }
                 let _ = (self.optionsPromise.get()
-                |> filter { $0 != nil}
+                |> filter { $0 != nil }
                 |> take(1)
                 |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
                     if let self {
                         self.inProgress = false
                         self.updated()
+                    
+                        requestTopUp({ [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.inProgress = true
+                            self.updated()
+                            
+                            let _ = (self.starsContext.state
+                            |> filter { state in
+                                if let state {
+                                    return !state.flags.contains(.isPendingBalance)
+                                }
+                                return false
+                            }
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { _ in
+                                action()
+                            })
+                        })
                     }
-                    requestTopUp({
-                        action()
-                    })
                 })
             } else {
                 action()
@@ -158,7 +190,7 @@ private final class SheetContent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, source: self.source, invoice: self.invoice, inputData: self.inputData)
+        return State(context: self.context, starsContext: self.starsContext, source: self.source, invoice: self.invoice, inputData: self.inputData)
     }
         
     static var body: Body {
@@ -366,7 +398,9 @@ private final class SheetContent: CombinedComponent {
                                 requiredStars: invoice.totalAmount,
                                 completion: { [weak starsContext] stars in
                                     starsContext?.add(balance: stars)
-                                    completion()
+                                    Queue.mainQueue().after(0.1) {
+                                        completion()
+                                    }
                                 }
                             )
                             controller?.push(purchaseController)
@@ -375,7 +409,7 @@ private final class SheetContent: CombinedComponent {
                             let resultController = UndoOverlayController(
                                 presentationData: presentationData,
                                 content: .image(
-                                    image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
+                                    image: UIImage(bundleImageName: "Premium/Stars/StarMedium")!,
                                     title: presentationData.strings.Stars_Transfer_PurchasedTitle,
                                     text: presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string,
                                     round: false,
@@ -386,6 +420,8 @@ private final class SheetContent: CombinedComponent {
                             controller?.present(resultController, in: .window(.root))
 
                             controller?.dismissAnimated()
+                            
+                            starsContext.load()
                         })
                     }
                 ),
@@ -530,6 +566,8 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
         )
         
         self.navigationPresentation = .flatModal
+        
+        starsContext.load()
     }
     
     required public init(coder aDecoder: NSCoder) {

@@ -53,6 +53,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
     let context: AccountContext
     let externalState: ExternalState
     let containerSize: CGSize
+    let balance: Int64?
     let options: [StarsTopUpOption]
     let peerId: EnginePeer.Id?
     let requiredStars: Int64?
@@ -67,6 +68,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
         context: AccountContext,
         externalState: ExternalState,
         containerSize: CGSize,
+        balance: Int64?,
         options: [StarsTopUpOption],
         peerId: EnginePeer.Id?,
         requiredStars: Int64?,
@@ -80,6 +82,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
         self.context = context
         self.externalState = externalState
         self.containerSize = containerSize
+        self.balance = balance
         self.options = options
         self.peerId = peerId
         self.requiredStars = requiredStars
@@ -300,14 +303,20 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                             
             var i = 0
             var items: [AnyComponentWithIdentity<Empty>] = []
-                                            
-            if let products = state.products {
+                           
+            if let products = state.products, let balance = context.component.balance {
+                var minimumCount: Int64?
+                if let requiredStars = context.component.requiredStars {
+                    minimumCount = requiredStars - balance
+                }
                 for product in products {
-                    if let requiredStars = context.component.requiredStars, requiredStars > product.option.count {
+                    if let minimumCount, minimumCount > product.option.count {
                         continue
                     }
                     
-                    if !context.component.expanded && !initialValues.contains(product.option.count) {
+                    if let _ =  minimumCount, items.isEmpty {
+                        
+                    } else if !context.component.expanded && !initialValues.contains(product.option.count) {
                         continue
                     }
                     
@@ -799,6 +808,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                         context: context.component.context,
                         externalState: contentExternalState,
                         containerSize: context.availableSize,
+                        balance: state.starsState?.balance,
                         options: context.component.options,
                         peerId: context.component.peerId,
                         requiredStars: context.component.requiredStars,

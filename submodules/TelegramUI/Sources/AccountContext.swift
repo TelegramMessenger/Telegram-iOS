@@ -127,6 +127,7 @@ public final class AccountContextImpl: AccountContext {
     public let wallpaperUploadManager: WallpaperUploadManager?
     private let themeUpdateManager: ThemeUpdateManager?
     public let inAppPurchaseManager: InAppPurchaseManager?
+    public let starsContext: StarsContext?
     
     public let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
     
@@ -294,11 +295,13 @@ public final class AccountContextImpl: AccountContext {
             self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)
             
             self.inAppPurchaseManager = InAppPurchaseManager(engine: self.engine)
+            self.starsContext = self.engine.payments.peerStarsContext(peerId: account.peerId)
         } else {
             self.prefetchManager = nil
             self.wallpaperUploadManager = nil
             self.themeUpdateManager = nil
             self.inAppPurchaseManager = nil
+            self.starsContext = nil
         }
         
         if let locationManager = self.sharedContextImpl.locationManager, sharedContext.applicationBindings.isMainApp && !temp {

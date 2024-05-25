@@ -12247,6 +12247,11 @@ Sorry for the inconvenience.";
 "Stars.Intro.Transaction.FragmentTopUp.Subtitle" = "via Fragment";
 "Stars.Intro.Transaction.Unsupported.Title" = "Unsupported";
 
+"Stars.Intro.PurchasedTitle" = "Stars Acquired";
+"Stars.Intro.PurchasedText" = "**%@** added to your balance.";
+"Stars.Intro.PurchasedText.Stars_1" = "%@ Star";
+"Stars.Intro.PurchasedText.Stars_any" = "%@ Stars";
+
 "Stars.Purchase.GetStars" = "Get Stars";
 "Stars.Purchase.GetStarsInfo" = "Choose how many Stars you would like to buy.";
 

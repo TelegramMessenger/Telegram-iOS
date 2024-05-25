@@ -17,6 +17,7 @@ import PremiumStarComponent
 import ListSectionComponent
 import BundleIconComponent
 import TextFormat
+import UndoUI
 
 final class StarsTransactionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -719,10 +720,26 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                         return
                     }
                     self.starsContext.add(balance: stars)
+                    
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let resultController = UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .image(
+                            image: UIImage(bundleImageName: "Premium/Stars/StarMedium")!,
+                            title: presentationData.strings.Stars_Intro_PurchasedTitle,
+                            text: presentationData.strings.Stars_Intro_PurchasedText(presentationData.strings.Stars_Intro_PurchasedText_Stars(Int32(stars))).string,
+                            round: false,
+                            undoText: nil
+                        ),
+                        elevatedLayout: false,
+                        action: { _ in return true})
+                    self.present(resultController, in: .window(.root))
                 })
                 self.push(controller)
             })
         }
+        
+        self.starsContext.load()
     }
     
     required public init(coder aDecoder: NSCoder) {

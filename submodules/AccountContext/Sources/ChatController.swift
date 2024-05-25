@@ -299,9 +299,11 @@ public struct ChatControllerInitialBotAppStart {
 public enum ChatControllerInteractionNavigateToPeer {
     public struct InfoParams {
         public let switchToRecommendedChannels: Bool
+        public let ignoreInSavedMessages: Bool
         
-        public init(switchToRecommendedChannels: Bool) {
+        public init(switchToRecommendedChannels: Bool = false, ignoreInSavedMessages: Bool = false) {
             self.switchToRecommendedChannels = switchToRecommendedChannels
+            self.ignoreInSavedMessages = ignoreInSavedMessages
         }
     }
     

@@ -11931,7 +11931,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         }
         
         if isSettings {
-            self.starsContext = context.engine.payments.peerStarsContext(peerId: context.account.peerId)
+            self.starsContext = context.starsContext
         } else {
             self.starsContext = nil
         }

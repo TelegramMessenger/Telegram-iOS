@@ -305,7 +305,7 @@ public final class PremiumStarComponent: Component {
                 ]
                 
                 for name in names {
-                    if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
+                    if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first, color.rgb != 0x6a94ff {
                         particleSystem.particleColor = color
                         particleSystem.particleColorVariation = SCNVector4Make(0, 0, 0, 0)
                     }

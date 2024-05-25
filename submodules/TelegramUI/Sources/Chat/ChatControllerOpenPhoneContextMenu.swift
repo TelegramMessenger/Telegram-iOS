@@ -45,7 +45,13 @@ extension ChatControllerImpl: MFMessageComposeViewControllerDelegate {
                 source = .location(ChatMessageContextLocationContentSource(controller: self, location: messageNode.view.convert(messageNode.bounds, to: nil).origin.offsetBy(dx: location.x, dy: location.y)))
             } else {
                 source = .extracted(ChatMessagePhoneContextExtractedContentSource(chatNode: self.chatDisplayNode, contentNode: contentNode))
-//                source = .extracted(ChatMessageContextExtractedContentSource(chatController: self, chatNode: self.chatDisplayNode, engine: self.context.engine, message: message, selectAll: false))
+            }
+            
+            let phoneNumber: String
+            if let peer, case let .user(user) = peer, let phone = user.phone {
+                phoneNumber = "+\(phone)"
+            } else {
+                phoneNumber = number
             }
             
             var items: [ContextMenuItem] = []
@@ -55,7 +61,7 @@ extension ChatControllerImpl: MFMessageComposeViewControllerDelegate {
                         return
                     }
                     let basicData = DeviceContactBasicData(firstName: "", lastName: "", phoneNumbers: [
-                        DeviceContactPhoneNumberData(label: "", value: number)
+                        DeviceContactPhoneNumberData(label: "", value: phoneNumber)
                     ])
                     let contactData = DeviceContactExtendedData(basicData: basicData, middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
                     
@@ -121,7 +127,7 @@ extension ChatControllerImpl: MFMessageComposeViewControllerDelegate {
                         guard let self else {
                             return
                         }
-                        self.openUrl("tel:\(number)", concealed: false)
+                        self.openUrl("tel:\(phoneNumber)", concealed: false)
                     }))
                 )
             }
@@ -158,7 +164,7 @@ extension ChatControllerImpl: MFMessageComposeViewControllerDelegate {
                         guard let self else {
                             return
                         }
-                        self.openPeer(peer: peer, navigation: .info(nil), fromMessage: nil)
+                        self.openPeer(peer: peer, navigation: .info(ChatControllerInteractionNavigateToPeer.InfoParams(ignoreInSavedMessages: true)), fromMessage: nil)
                     }))
                 )
             } else {

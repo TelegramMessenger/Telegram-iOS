@@ -1127,6 +1127,7 @@ public protocol AccountContext: AnyObject {
     var wallpaperUploadManager: WallpaperUploadManager? { get }
     var watchManager: WatchManager? { get }
     var inAppPurchaseManager: InAppPurchaseManager? { get }
+    var starsContext: StarsContext? { get }
     
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }
