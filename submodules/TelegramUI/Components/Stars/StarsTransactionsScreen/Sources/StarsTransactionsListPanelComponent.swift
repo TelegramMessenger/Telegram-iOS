@@ -203,7 +203,7 @@ final class StarsTransactionsListPanelComponent: Component {
                         
                         separatorView = UIView()
                         self.separatorViews[id] = separatorView
-                        self.addSubview(separatorView)
+                        self.scrollView.addSubview(separatorView)
                     }
                     
                     separatorView.backgroundColor = environment.theme.list.itemBlocksSeparatorColor
@@ -213,33 +213,38 @@ final class StarsTransactionsListPanelComponent: Component {
                     let itemTitle: String
                     let itemSubtitle: String?
                     let itemDate: String
-                    let itemLabel: NSAttributedString
                     switch item.transaction.peer {
                     case let .peer(peer):
                         itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                         itemSubtitle = item.transaction.title
-                        itemLabel = NSAttributedString(string: "- \(item.transaction.count * -1)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDestructiveColor)
                     case .appStore:
-                        itemTitle = "Stars Top-Up"
-                        itemSubtitle = "via App Store"
-                        itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
+                        itemTitle = environment.strings.Stars_Intro_Transaction_AppleTopUp_Title
+                        itemSubtitle = environment.strings.Stars_Intro_Transaction_AppleTopUp_Subtitle
                     case .playMarket:
-                        itemTitle = "Stars Top-Up"
-                        itemSubtitle = "via Play Market"
-                        itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
+                        itemTitle = environment.strings.Stars_Intro_Transaction_GoogleTopUp_Title
+                        itemSubtitle = environment.strings.Stars_Intro_Transaction_GoogleTopUp_Subtitle
                     case .fragment:
-                        itemTitle = "Stars Top-Up"
-                        itemSubtitle = "via Fragment"
-                        itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
+                        itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
+                        itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
                     case .premiumBot:
-                        itemTitle = "Stars Top-Up"
-                        itemSubtitle = "via Premium Bot"
-                        itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
+                        itemTitle = environment.strings.Stars_Intro_Transaction_PremiumBotTopUp_Title
+                        itemSubtitle = environment.strings.Stars_Intro_Transaction_PremiumBotTopUp_Subtitle
                     case .unsupported:
-                        itemTitle = "Unsupported"
+                        itemTitle = environment.strings.Stars_Intro_Transaction_Unsupported_Title
                         itemSubtitle = nil
-                        itemLabel = NSAttributedString(string: "+ \(item.transaction.count)", font: Font.medium(fontBaseDisplaySize), textColor: environment.theme.list.itemDisclosureActions.constructive.fillColor)
                     }
+                    
+                    let itemLabel: NSAttributedString
+                    let labelString: String
+                    
+                    let formattedLabel = presentationStringsFormattedNumber(abs(Int32(item.transaction.count)), environment.dateTimeFormat.decimalSeparator)
+                    if item.transaction.count < 0 {
+                        labelString = "- \(formattedLabel)"
+                    } else {
+                        labelString = "+ \(formattedLabel)"
+                    }
+                    itemLabel = NSAttributedString(string: labelString, font: Font.medium(fontBaseDisplaySize), textColor: labelString.hasPrefix("-") ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemDisclosureActions.constructive.fillColor)
+                    
                     itemDate = stringForMediumCompactDate(timestamp: item.transaction.date, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
                     
                     var titleComponents: [AnyComponentWithIdentity<Empty>] = []
@@ -280,7 +285,7 @@ final class StarsTransactionsListPanelComponent: Component {
                         component: AnyComponent(ListActionItemComponent(
                             theme: environment.theme,
                             title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 2.0)),
-                            contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
+                            contentInsets: UIEdgeInsets(top: 9.0, left: environment.containerInsets.left, bottom: 8.0, right: environment.containerInsets.right),
                             leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(AvatarComponent(context: component.context, theme: environment.theme, peer: item.transaction.peer))), false),
                             icon: nil,
                             accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(LabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
@@ -301,7 +306,7 @@ final class StarsTransactionsListPanelComponent: Component {
                         }
                         itemTransition.setFrame(view: itemComponentView, frame: itemFrame)
                     }
-                    let sideInset: CGFloat = 60.0
+                    let sideInset: CGFloat = 60.0 + environment.containerInsets.left
                     itemTransition.setFrame(view: separatorView, frame: CGRect(x: sideInset, y: itemFrame.maxY, width: itemFrame.width - sideInset, height: UIScreenPixel))
                 }
             }
@@ -577,7 +582,7 @@ private final class LabelComponent: CombinedComponent {
             let iconSize = CGSize(width: 20.0, height: 20.0)
             let icon = icon.update(
                 component: BundleIconComponent(
-                    name: "Premium/Stars/Star",
+                    name: "Premium/Stars/StarLarge",
                     tintColor: nil
                 ),
                 availableSize: iconSize,
@@ -592,7 +597,7 @@ private final class LabelComponent: CombinedComponent {
                 .position(CGPoint(x: text.size.width / 2.0, y: size.height / 2.0))
             )
             context.add(icon
-                .position(CGPoint(x: totalWidth - iconSize.width / 2.0, y: size.height / 2.0))
+                .position(CGPoint(x: totalWidth - iconSize.width / 2.0, y: size.height / 2.0 - UIScreenPixel))
             )
             return size
         }

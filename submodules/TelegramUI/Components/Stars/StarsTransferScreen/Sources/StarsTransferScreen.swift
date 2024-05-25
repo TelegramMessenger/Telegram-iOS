@@ -11,11 +11,12 @@ import ViewControllerComponent
 import SheetComponent
 import BalancedTextComponent
 import MultilineTextComponent
+import BundleIconComponent
+import ButtonComponent
+import PremiumStarComponent
 import ItemListUI
 import UndoUI
 import AccountContext
-import PremiumStarComponent
-import ButtonComponent
 
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -55,10 +56,10 @@ private final class SheetContent: CombinedComponent {
     
     final class State: ComponentState {
         var cachedCloseImage: (UIImage, PresentationTheme)?
-        var cachedChevronImage: (UIImage, PresentationTheme)?
         var cachedStarImage: (UIImage, PresentationTheme)?
         
         private let context: AccountContext
+        private let starsContext: StarsContext
         private let source: BotPaymentInvoiceSource
         private let invoice: TelegramMediaInvoice
         
@@ -67,18 +68,27 @@ private final class SheetContent: CombinedComponent {
         private(set) var balance: Int64?
         private(set) var form: BotPaymentForm?
         
+        private var stateDisposable: Disposable?
+        
         private var optionsDisposable: Disposable?
-        private(set) var options: [StarsTopUpOption] = []
+        private(set) var options: [StarsTopUpOption] = [] {
+            didSet {
+                self.optionsPromise.set(self.options)
+            }
+        }
+        private let optionsPromise = ValuePromise<[StarsTopUpOption]?>(nil)
         
         var inProgress = false
         
         init(
             context: AccountContext,
+            starsContext: StarsContext,
             source: BotPaymentInvoiceSource,
             invoice: TelegramMediaInvoice,
             inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
         ) {
             self.context = context
+            self.starsContext = starsContext
             self.source = source
             self.invoice = invoice
             
@@ -94,7 +104,7 @@ private final class SheetContent: CombinedComponent {
                 self.peer = inputData?.2
                 self.updated(transition: .immediate)
                 
-                if self.optionsDisposable != nil {
+                if self.optionsDisposable == nil, let balance = self.balance, balance < self.invoice.totalAmount {
                     self.optionsDisposable = (context.engine.payments.starsTopUpOptions()
                     |> deliverOnMainQueue).start(next: { [weak self] options in
                         guard let self else {
@@ -104,19 +114,32 @@ private final class SheetContent: CombinedComponent {
                     })
                 }
             })
+            
+            self.stateDisposable = (starsContext.state
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                guard let self else {
+                    return
+                }
+                self.balance = state?.balance
+                self.updated(transition: .immediate)
+            })
         }
         
         deinit {
             self.peerDisposable?.dispose()
+            self.stateDisposable?.dispose()
             self.optionsDisposable?.dispose()
         }
         
-        func buy(requestTopUp: (@escaping () -> Void) -> Void, completion: @escaping () -> Void) {
+        func buy(requestTopUp: @escaping (@escaping () -> Void) -> Void, completion: @escaping () -> Void) {
             guard let form, let balance else {
                 return
             }
             
-            let action = {
+            let action = { [weak self] in
+                guard let self else {
+                    return
+                }
                 self.inProgress = true
                 self.updated()
                 
@@ -127,8 +150,38 @@ private final class SheetContent: CombinedComponent {
             }
             
             if balance < self.invoice.totalAmount {
-                requestTopUp({
-                    action()
+                if self.options.isEmpty {
+                    self.inProgress = true
+                    self.updated()
+                }
+                let _ = (self.optionsPromise.get()
+                |> filter { $0 != nil }
+                |> take(1)
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
+                    if let self {
+                        self.inProgress = false
+                        self.updated()
+                    
+                        requestTopUp({ [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.inProgress = true
+                            self.updated()
+                            
+                            let _ = (self.starsContext.state
+                            |> filter { state in
+                                if let state {
+                                    return !state.flags.contains(.isPendingBalance)
+                                }
+                                return false
+                            }
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { _ in
+                                action()
+                            })
+                        })
+                    }
                 })
             } else {
                 action()
@@ -137,7 +190,7 @@ private final class SheetContent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, source: self.source, invoice: self.invoice, inputData: self.inputData)
+        return State(context: self.context, starsContext: self.starsContext, source: self.source, invoice: self.invoice, inputData: self.inputData)
     }
         
     static var body: Body {
@@ -146,8 +199,10 @@ private final class SheetContent: CombinedComponent {
         let closeButton = Child(Button.self)
         let title = Child(Text.self)
         let text = Child(BalancedTextComponent.self)
-        let balanceText = Child(MultilineTextComponent.self)
         let button = Child(ButtonComponent.self)
+        let balanceTitle = Child(MultilineTextComponent.self)
+        let balanceValue = Child(MultilineTextComponent.self)
+        let balanceIcon = Child(BundleIconComponent.self)
         
         return { context in
             let environment = context.environment[EnvironmentType.self]
@@ -261,31 +316,47 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += text.size.height
             contentSize.height += 28.0
             
-            if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== theme {
-                state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Premium/Stars/Star"), color: UIColor(rgb: 0xf09903))!, theme)
-            }
-            
-            let balanceAttributedString = NSMutableAttributedString(string: strings.Stars_Transfer_Balance, font: Font.regular(14.0), textColor: textColor)
-            balanceAttributedString.append(NSMutableAttributedString(string: "\n #  \(state.balance ?? 0)", font: Font.semibold(16.0), textColor: textColor))
-            if let range = balanceAttributedString.string.range(of: "#"), let chevronImage = state.cachedChevronImage?.0 {
-                balanceAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: balanceAttributedString.string))
-                balanceAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xf09903), range: NSRange(range, in: balanceAttributedString.string))
-                balanceAttributedString.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: balanceAttributedString.string))
-            }
-            let balanceText = balanceText.update(
+            let balanceTitle = balanceTitle.update(
                 component: MultilineTextComponent(
-                    text: .plain(balanceAttributedString),
-                    horizontalAlignment: .left,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.25
+                    text: .plain(NSAttributedString(
+                        string: environment.strings.Stars_Transfer_Balance,
+                        font: Font.regular(14.0),
+                        textColor: textColor
+                    )),
+                    maximumNumberOfLines: 1
                 ),
-                availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
+                availableSize: context.availableSize,
                 transition: .immediate
             )
-            context.add(balanceText
-                .position(CGPoint(x: 16.0 + balanceText.size.width / 2.0, y: 31.0))
+            let balanceValue = balanceValue.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: presentationStringsFormattedNumber(Int32(state.balance ?? 0), environment.dateTimeFormat.decimalSeparator),
+                        font: Font.semibold(16.0),
+                        textColor: textColor
+                    )),
+                    maximumNumberOfLines: 1
+                ),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            let balanceIcon = balanceIcon.update(
+                component: BundleIconComponent(name: "Premium/Stars/StarMedium", tintColor: nil),
+                availableSize: context.availableSize,
+                transition: .immediate
             )
             
+            let topBalanceOriginY = 11.0
+            context.add(balanceTitle
+                .position(CGPoint(x: 16.0 + environment.safeInsets.left + balanceTitle.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height / 2.0))
+            )
+            context.add(balanceIcon
+                .position(CGPoint(x: 16.0 + environment.safeInsets.left + balanceIcon.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0 - UIScreenPixel))
+            )
+            context.add(balanceValue
+                .position(CGPoint(x: 16.0 + environment.safeInsets.left + balanceIcon.size.width + 3.0 + balanceValue.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0))
+            )
+           
             if state.cachedStarImage == nil || state.cachedStarImage?.1 !== theme {
                 state.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: .white)!, theme)
             }
@@ -327,7 +398,9 @@ private final class SheetContent: CombinedComponent {
                                 requiredStars: invoice.totalAmount,
                                 completion: { [weak starsContext] stars in
                                     starsContext?.add(balance: stars)
-                                    completion()
+                                    Queue.mainQueue().after(0.1) {
+                                        completion()
+                                    }
                                 }
                             )
                             controller?.push(purchaseController)
@@ -336,7 +409,7 @@ private final class SheetContent: CombinedComponent {
                             let resultController = UndoOverlayController(
                                 presentationData: presentationData,
                                 content: .image(
-                                    image: UIImage(bundleImageName: "Premium/Stars/Star")!,
+                                    image: UIImage(bundleImageName: "Premium/Stars/StarMedium")!,
                                     title: presentationData.strings.Stars_Transfer_PurchasedTitle,
                                     text: presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string,
                                     round: false,
@@ -347,6 +420,8 @@ private final class SheetContent: CombinedComponent {
                             controller?.present(resultController, in: .window(.root))
 
                             controller?.dismissAnimated()
+                            
+                            starsContext.load()
                         })
                     }
                 ),
@@ -491,6 +566,8 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
         )
         
         self.navigationPresentation = .flatModal
+        
+        starsContext.load()
     }
     
     required public init(coder aDecoder: NSCoder) {

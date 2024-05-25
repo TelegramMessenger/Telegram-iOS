@@ -2941,8 +2941,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
                                 return .single(nil)
                             })
-                            if invoice.currency == "XTR" {
-                                let starsContext = strongSelf.context.engine.payments.peerStarsContext(peerId: strongSelf.context.account.peerId)
+                            if invoice.currency == "XTR", let starsContext = strongSelf.context.starsContext {
                                 let starsInputData = combineLatest(
                                     inputData.get(),
                                     starsContext.state

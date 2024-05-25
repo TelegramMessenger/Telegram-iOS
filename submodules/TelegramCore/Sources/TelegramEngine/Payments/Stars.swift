@@ -72,10 +72,10 @@ struct InternalStarsStatus {
     let nextOffset: String?
 }
 
-func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, offset: String?) -> Signal<InternalStarsStatus?, NoError> {
+func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, offset: String?) -> Signal<InternalStarsStatus, NoError> {
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
-    } |> mapToSignal { peer -> Signal<InternalStarsStatus?, NoError> in
+    } |> mapToSignal { peer -> Signal<InternalStarsStatus, NoError> in
         guard let peer, let inputPeer = apiInputPeer(peer) else {
             return .never()
         }
@@ -88,15 +88,9 @@ func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, offset
         }
         
         return signal
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.payments.StarsStatus?, NoError> in
-            return .single(nil)
-        }
-        |> mapToSignal { result -> Signal<InternalStarsStatus?, NoError> in
-            guard let result else {
-                return .single(nil)
-            }
-            return account.postbox.transaction { transaction -> InternalStarsStatus? in
+        |> retryRequest
+        |> mapToSignal { result -> Signal<InternalStarsStatus, NoError> in
+            return account.postbox.transaction { transaction -> InternalStarsStatus in
                 switch result {
                 case let .starsStatus(_, balance, history, nextOffset, chats, users):
                     let peers = AccumulatedPeers(chats: chats, users: users)
@@ -119,13 +113,7 @@ private final class StarsContextImpl {
     private let account: Account
     private let peerId: EnginePeer.Id
     
-    private var _state: StarsContext.State? {
-        didSet {
-            if self._state != oldValue {
-                self._statePromise.set(.single(self._state))
-            }
-        }
-    }
+    private var _state: StarsContext.State?
     private let _statePromise = Promise<StarsContext.State?>()
     var state: Signal<StarsContext.State?, NoError> {
         return self._statePromise.get()
@@ -151,7 +139,7 @@ private final class StarsContextImpl {
             guard let self, let state = self._state, let balance = balances[peerId] else {
                 return
             }
-            self._state = StarsContext.State(balance: balance, transactions: state.transactions, canLoadMore: nextOffset != nil, isLoading: false)
+            self.updateState(StarsContext.State(flags: [], balance: balance, transactions: state.transactions, canLoadMore: nextOffset != nil, isLoading: false))
             self.load()
         })
     }
@@ -168,26 +156,20 @@ private final class StarsContextImpl {
         self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, offset: nil)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let self {
-                if let status {
-                    self._state = StarsContext.State(balance: status.balance, transactions: status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false)
-                    self.nextOffset = status.nextOffset
-                    
-                    self.loadMore()
-                } else {
-                    self._state = nil
-                }
+                self.updateState(StarsContext.State(flags: [], balance: status.balance, transactions: status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false))
+                self.nextOffset = status.nextOffset
             }
         }))
     }
     
     func add(balance: Int64) {
-        if var state = self._state {
-            var transactions = state.transactions
-            transactions.insert(.init(id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil), at: 0)
-            
-            state.balance = state.balance + balance
-            self._state = state
+        guard let state = self._state else {
+            return
         }
+        var transactions = state.transactions
+        transactions.insert(.init(id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil), at: 0)
+        
+        self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, transactions: transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
     }
     
     func loadMore() {
@@ -202,14 +184,15 @@ private final class StarsContextImpl {
         self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, offset: nextOffset)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let self {
-                if let status {
-                    self._state = StarsContext.State(balance: status.balance, transactions: currentState.transactions + status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false)
-                    self.nextOffset = status.nextOffset
-                } else {
-                    self.nextOffset = nil
-                }
+                self.updateState(StarsContext.State(flags: [], balance: status.balance, transactions: currentState.transactions + status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false))
+                self.nextOffset = status.nextOffset
             }
         }))
+    }
+    
+    private func updateState(_ state: StarsContext.State) {
+        self._state = state
+        self._statePromise.set(.single(state))
     }
 }
 
@@ -279,11 +262,24 @@ public final class StarsContext {
             }
         }
         
+        public struct Flags: OptionSet {
+            public var rawValue: Int32
+            
+            public init(rawValue: Int32) {
+                self.rawValue = rawValue
+            }
+            
+            public static let isPendingBalance = Flags(rawValue: 1 << 0)
+        }
+        
+        public var flags: Flags
         public var balance: Int64
         public var transactions: [Transaction]
         public var canLoadMore: Bool
         public var isLoading: Bool
-        init(balance: Int64, transactions: [Transaction], canLoadMore: Bool, isLoading: Bool) {
+        
+        init(flags: Flags, balance: Int64, transactions: [Transaction], canLoadMore: Bool, isLoading: Bool) {
+            self.flags = flags
             self.balance = balance
             self.transactions = transactions
             self.canLoadMore = canLoadMore
@@ -291,6 +287,9 @@ public final class StarsContext {
         }
         
         public static func == (lhs: State, rhs: State) -> Bool {
+            if lhs.flags != rhs.flags {
+                return true
+            }
             if lhs.balance != rhs.balance {
                 return false
             }
@@ -324,6 +323,12 @@ public final class StarsContext {
     public func add(balance: Int64) {
         self.impl.with {
             $0.add(balance: balance)
+        }
+    }
+    
+    public func load() {
+        self.impl.with {
+            $0.load()
         }
     }
     

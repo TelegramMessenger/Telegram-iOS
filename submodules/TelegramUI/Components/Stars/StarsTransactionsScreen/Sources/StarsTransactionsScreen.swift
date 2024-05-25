@@ -15,7 +15,9 @@ import BalancedTextComponent
 import Markdown
 import PremiumStarComponent
 import ListSectionComponent
+import BundleIconComponent
 import TextFormat
+import UndoUI
 
 final class StarsTransactionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -90,7 +92,9 @@ final class StarsTransactionsScreenComponent: Component {
         
         private let balanceView = ComponentView<Empty>()
         
-        private let topBalanceView = ComponentView<Empty>()
+        private let topBalanceTitleView = ComponentView<Empty>()
+        private let topBalanceValueView = ComponentView<Empty>()
+        private let topBalanceIconView = ComponentView<Empty>()
                 
         private let panelContainer = ComponentView<StarsTransactionsPanelContainerEnvironment>()
                                 
@@ -241,8 +245,15 @@ final class StarsTransactionsScreenComponent: Component {
                     panelContainerView.updateNavigationMergeFactor(value: 1.0 - expansionDistanceFactor, transition: transition)
                 }
                 
-                if let topBalanceView = self.topBalanceView.view {
-                    topBalanceView.alpha = 1.0 - expansionDistanceFactor
+                let topBalanceAlpha = 1.0 - expansionDistanceFactor
+                if let view = self.topBalanceTitleView.view {
+                    view.alpha = topBalanceAlpha
+                }
+                if let view = self.topBalanceValueView.view {
+                    view.alpha = topBalanceAlpha
+                }
+                if let view = self.topBalanceIconView.view {
+                    view.alpha = topBalanceAlpha
                 }
             }
             
@@ -408,36 +419,67 @@ final class StarsTransactionsScreenComponent: Component {
                 starTransition.setBounds(view: titleView, bounds: CGRect(origin: .zero, size: titleSize))
             }
             
-            let textFont = Font.regular(14.0)
-            let boldTextFont = Font.semibold(14.0)
-            let textColor = environment.theme.actionSheet.primaryTextColor
-            let linkColor = environment.theme.actionSheet.controlAccentColor
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
-                return (TelegramTextAttributes.URL, contents)
-            })
-            let balanceAttributedString = parseMarkdownIntoAttributedString(" \(environment.strings.Stars_Intro_Balance)\n #  **\(self.starsState?.balance ?? 0)**", attributes: markdownAttributes, textAlignment: .right).mutableCopy() as! NSMutableAttributedString
-            if let range = balanceAttributedString.string.range(of: "#"), let chevronImage = generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: UIColor(rgb: 0xf09903)) {
-                balanceAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: balanceAttributedString.string))
-                balanceAttributedString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xf09903), range: NSRange(range, in: balanceAttributedString.string))
-                balanceAttributedString.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: balanceAttributedString.string))
-            }
-            let topBalanceSize = self.topBalanceView.update(
+            let topBalanceTitleSize = self.topBalanceTitleView.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(balanceAttributedString),
-                    horizontalAlignment: .right,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.1
+                    text: .plain(NSAttributedString(
+                        string: environment.strings.Stars_Intro_Balance,
+                        font: Font.regular(14.0),
+                        textColor: environment.theme.actionSheet.primaryTextColor
+                    )),
+                    maximumNumberOfLines: 1
                 )),
                 environment: {},
                 containerSize: CGSize(width: 120.0, height: 100.0)
             )
-            if let topBalanceView = self.topBalanceView.view {
-                if topBalanceView.superview == nil {
-                    topBalanceView.alpha = 0.0
-                    self.addSubview(topBalanceView)
+            
+            let topBalanceValueSize = self.topBalanceValueView.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: presentationStringsFormattedNumber(Int32(self.starsState?.balance ?? 0), environment.dateTimeFormat.decimalSeparator),
+                        font: Font.semibold(14.0),
+                        textColor: environment.theme.actionSheet.primaryTextColor
+                    )),
+                    maximumNumberOfLines: 1
+                )),
+                environment: {},
+                containerSize: CGSize(width: 120.0, height: 100.0)
+            )
+            let topBalanceIconSize = self.topBalanceIconView.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(name: "Premium/Stars/StarSmall", tintColor: nil)),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            let navigationHeight = environment.navigationHeight - environment.statusBarHeight
+            let topBalanceOriginY = environment.statusBarHeight + (navigationHeight - topBalanceTitleSize.height - topBalanceValueSize.height) / 2.0
+            let topBalanceTitleFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceTitleSize.width - 16.0 - environment.safeInsets.right, y: topBalanceOriginY), size: topBalanceTitleSize)
+            if let topBalanceTitleView = self.topBalanceTitleView.view {
+                if topBalanceTitleView.superview == nil {
+                    topBalanceTitleView.alpha = 0.0
+                    self.addSubview(topBalanceTitleView)
                 }
-                starTransition.setFrame(view: topBalanceView, frame: CGRect(origin: CGPoint(x: availableSize.width - topBalanceSize.width - 16.0, y: 56.0), size: topBalanceSize))
+                starTransition.setFrame(view: topBalanceTitleView, frame: topBalanceTitleFrame)
+            }
+    
+            let topBalanceValueFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceValueSize.width - 16.0 - environment.safeInsets.right, y: topBalanceTitleFrame.maxY), size: topBalanceValueSize)
+            if let topBalanceValueView = self.topBalanceValueView.view {
+                if topBalanceValueView.superview == nil {
+                    topBalanceValueView.alpha = 0.0
+                    self.addSubview(topBalanceValueView)
+                }
+                starTransition.setFrame(view: topBalanceValueView, frame: topBalanceValueFrame)
+            }
+            
+            let topBalanceIconFrame = CGRect(origin: CGPoint(x: topBalanceValueFrame.minX - topBalanceIconSize.width - 2.0, y: floorToScreenPixels(topBalanceValueFrame.midY - topBalanceIconSize.height / 2.0) - UIScreenPixel), size: topBalanceIconSize)
+            if let topBalanceIconView = self.topBalanceIconView.view {
+                if topBalanceIconView.superview == nil {
+                    topBalanceIconView.alpha = 0.0
+                    self.addSubview(topBalanceIconView)
+                }
+                starTransition.setFrame(view: topBalanceIconView, frame: topBalanceIconFrame)
             }
 
             contentHeight += 181.0
@@ -678,10 +720,26 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                         return
                     }
                     self.starsContext.add(balance: stars)
+                    
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let resultController = UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .image(
+                            image: UIImage(bundleImageName: "Premium/Stars/StarMedium")!,
+                            title: presentationData.strings.Stars_Intro_PurchasedTitle,
+                            text: presentationData.strings.Stars_Intro_PurchasedText(presentationData.strings.Stars_Intro_PurchasedText_Stars(Int32(stars))).string,
+                            round: false,
+                            undoText: nil
+                        ),
+                        elevatedLayout: false,
+                        action: { _ in return true})
+                    self.present(resultController, in: .window(.root))
                 })
                 self.push(controller)
             })
         }
+        
+        self.starsContext.load()
     }
     
     required public init(coder aDecoder: NSCoder) {

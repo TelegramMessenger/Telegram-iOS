@@ -824,8 +824,7 @@ func openResolvedUrlImpl(
                     |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
                         return .single(nil)
                     })
-                    if invoice.currency == "XTR" {
-                        let starsContext = context.engine.payments.peerStarsContext(peerId: context.account.peerId)
+                    if invoice.currency == "XTR", let starsContext = context.starsContext {
                         let starsInputData = combineLatest(
                             inputData.get(),
                             starsContext.state

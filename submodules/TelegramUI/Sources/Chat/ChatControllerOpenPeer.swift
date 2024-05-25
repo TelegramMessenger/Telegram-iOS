@@ -131,8 +131,14 @@ extension ChatControllerImpl {
                 switch navigation {
                     case let .info(params):
                         var recommendedChannels = false
-                        if let params, params.switchToRecommendedChannels {
-                            recommendedChannels = true
+                        if let params {
+                            if params.switchToRecommendedChannels {
+                                recommendedChannels = true
+                            }
+                            if params.ignoreInSavedMessages && currentPeerId == self.context.account.peerId {
+                                self.playShakeAnimation()
+                                return
+                            }
                         }
                         self.navigationButtonAction(.openChatInfo(expandAvatar: expandAvatar, recommendedChannels: recommendedChannels))
                     case let .chat(textInputState, _, _):

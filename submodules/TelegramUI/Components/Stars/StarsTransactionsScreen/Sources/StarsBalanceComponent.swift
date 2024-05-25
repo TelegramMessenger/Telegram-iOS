@@ -52,7 +52,7 @@ final class StarsBalanceComponent: Component {
         override init(frame: CGRect) {
             super.init(frame: frame)
             
-            self.icon.image = UIImage(bundleImageName: "Premium/Stars/StarLarge")
+            self.icon.image = UIImage(bundleImageName: "Premium/Stars/BalanceStar")
             
             self.addSubview(self.icon)
         }
@@ -107,7 +107,7 @@ final class StarsBalanceComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "your balance", font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)),
+                        text: .plain(NSAttributedString(string: component.strings.Stars_Intro_YourBalance, font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)),
                         horizontalAlignment: .center
                     )
                 ),
@@ -126,7 +126,7 @@ final class StarsBalanceComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(
                     SolidRoundedButtonComponent(
-                        title: "Buy More Stars",
+                        title: component.strings.Stars_Intro_Buy,
                         theme: SolidRoundedButtonComponent.Theme(theme: component.theme),
                         height: 50.0,
                         cornerRadius: 11.0,

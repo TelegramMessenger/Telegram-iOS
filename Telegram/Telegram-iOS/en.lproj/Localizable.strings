@@ -12231,9 +12231,26 @@ Sorry for the inconvenience.";
 "Stars.Intro.Title" = "Telegram Stars";
 "Stars.Intro.Description" = "Buy Stars to unlock content and services in miniapps on Telegram.";
 "Stars.Intro.Balance" = "Balance";
+"Stars.Intro.YourBalance" = "your balance";
+"Stars.Intro.Buy" = "Buy More Stars";
 "Stars.Intro.AllTransactions" = "All Transactions";
 "Stars.Intro.Incoming" = "Incoming";
 "Stars.Intro.Outgoing" = "Outgoing";
+
+"Stars.Intro.Transaction.AppleTopUp.Title" = "Stars Top-Up";
+"Stars.Intro.Transaction.AppleTopUp.Subtitle" = "via App Store";
+"Stars.Intro.Transaction.GoogleTopUp.Title" = "Stars Top-Up";
+"Stars.Intro.Transaction.GoogleTopUp.Subtitle" = "via Play Market";
+"Stars.Intro.Transaction.PremiumBotTopUp.Title" = "Stars Top-Up";
+"Stars.Intro.Transaction.PremiumBotTopUp.Subtitle" = "via Premium Bot";
+"Stars.Intro.Transaction.FragmentTopUp.Title" = "Stars Top-Up";
+"Stars.Intro.Transaction.FragmentTopUp.Subtitle" = "via Fragment";
+"Stars.Intro.Transaction.Unsupported.Title" = "Unsupported";
+
+"Stars.Intro.PurchasedTitle" = "Stars Acquired";
+"Stars.Intro.PurchasedText" = "**%@** added to your balance.";
+"Stars.Intro.PurchasedText.Stars_1" = "%@ Star";
+"Stars.Intro.PurchasedText.Stars_any" = "%@ Stars";
 
 "Stars.Purchase.GetStars" = "Get Stars";
 "Stars.Purchase.GetStarsInfo" = "Choose how many Stars you would like to buy.";
@@ -12250,12 +12267,23 @@ Sorry for the inconvenience.";
 "Stars.Purchase.Info" = "By proceeding and purchasing Stars, you agree with [Terms and Conditions]().";
 "Stars.Purchase.Terms_URL" = "https://telegram.org/tos";
 
+"Stars.Transaction.Via" = "Via";
 "Stars.Transaction.To" = "To";
 "Stars.Transaction.Id" = "Transaction ID";
 "Stars.Transaction.Date" = "Date";
 "Stars.Transaction.Terms" = "Review the [Terms of Service]() for Stars.";
 "Stars.Transaction.Terms_URL" = "https://telegram.org/tos";
 "Stars.Transaction.CopiedId" = "Transaction ID copied to clipboard.";
+
+"Stars.Transaction.AppleTopUp.Title" = "Stars Top-Up";
+"Stars.Transaction.AppleTopUp.Subtitle" = "App Store";
+"Stars.Transaction.GoogleTopUp.Title" = "Stars Top-Up";
+"Stars.Transaction.GoogleTopUp.Subtitle" = "Play Market";
+"Stars.Transaction.PremiumBotTopUp.Title" = "Stars Top-Up";
+"Stars.Transaction.PremiumBotTopUp.Subtitle" = "Premium Bot";
+"Stars.Transaction.FragmentTopUp.Title" = "Stars Top-Up";
+"Stars.Transaction.FragmentTopUp.Subtitle" = "Fragment";
+"Stars.Transaction.Unsupported.Title" = "Unsupported";
 
 "Stars.Transfer.Title" = "Confirm Your Purchase";
 "Stars.Transfer.Info" = "Do you want to buy **%1$@** in **%2$@** for **%3$@**?";
