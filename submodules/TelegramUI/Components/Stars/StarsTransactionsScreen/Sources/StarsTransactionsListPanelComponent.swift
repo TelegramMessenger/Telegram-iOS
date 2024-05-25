@@ -14,6 +14,7 @@ import ListActionItemComponent
 import TelegramStringFormatting
 import AvatarNode
 import BundleIconComponent
+import PhotoResources
 
 final class StarsTransactionsListPanelComponent: Component {
     typealias EnvironmentType = StarsTransactionsPanelEnvironment
@@ -150,7 +151,7 @@ final class StarsTransactionsListPanelComponent: Component {
             if #available(iOS 13.0, *) {
                 self.scrollView.automaticallyAdjustsScrollIndicatorInsets = false
             }
-            self.scrollView.showsVerticalScrollIndicator = true
+            self.scrollView.showsVerticalScrollIndicator = false
             self.scrollView.showsHorizontalScrollIndicator = false
             self.scrollView.alwaysBounceHorizontal = false
             self.scrollView.scrollsToTop = false
@@ -215,8 +216,13 @@ final class StarsTransactionsListPanelComponent: Component {
                     let itemDate: String
                     switch item.transaction.peer {
                     case let .peer(peer):
-                        itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
-                        itemSubtitle = item.transaction.title
+                        if let title = item.transaction.title {
+                            itemTitle = title
+                            itemSubtitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
+                        } else {
+                            itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
+                            itemSubtitle = nil
+                        }
                     case .appStore:
                         itemTitle = environment.strings.Stars_Intro_Transaction_AppleTopUp_Title
                         itemSubtitle = environment.strings.Stars_Intro_Transaction_AppleTopUp_Subtitle
@@ -286,7 +292,7 @@ final class StarsTransactionsListPanelComponent: Component {
                             theme: environment.theme,
                             title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 2.0)),
                             contentInsets: UIEdgeInsets(top: 9.0, left: environment.containerInsets.left, bottom: 8.0, right: environment.containerInsets.right),
-                            leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(AvatarComponent(context: component.context, theme: environment.theme, peer: item.transaction.peer))), false),
+                            leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(AvatarComponent(context: component.context, theme: environment.theme, peer: item.transaction.peer, photo: item.transaction.photo))), false),
                             icon: nil,
                             accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(LabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
                             action: { [weak self] _ in
@@ -442,11 +448,13 @@ private final class AvatarComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let peer: StarsContext.State.Transaction.Peer
+    let photo: TelegramMediaWebFile?
 
-    init(context: AccountContext, theme: PresentationTheme, peer: StarsContext.State.Transaction.Peer) {
+    init(context: AccountContext, theme: PresentationTheme, peer: StarsContext.State.Transaction.Peer, photo: TelegramMediaWebFile?) {
         self.context = context
         self.theme = theme
         self.peer = peer
+        self.photo = photo
     }
 
     static func ==(lhs: AvatarComponent, rhs: AvatarComponent) -> Bool {
@@ -459,6 +467,9 @@ private final class AvatarComponent: Component {
         if lhs.peer != rhs.peer {
             return false
         }
+        if lhs.photo != rhs.photo {
+            return false
+        }
         return true
     }
 
@@ -466,6 +477,9 @@ private final class AvatarComponent: Component {
         private let avatarNode: AvatarNode
         private let backgroundView = UIImageView()
         private let iconView = UIImageView()
+        private var imageNode: TransformImageNode?
+        
+        private let fetchDisposable = MetaDisposable()
         
         private var component: AvatarComponent?
         private weak var state: EmptyComponentState?
@@ -486,6 +500,10 @@ private final class AvatarComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            self.fetchDisposable.dispose()
+        }
+        
         func update(component: AvatarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
@@ -496,15 +514,36 @@ private final class AvatarComponent: Component {
             
             switch component.peer {
             case let .peer(peer):
-                self.avatarNode.setPeer(
-                    context: component.context,
-                    theme: component.theme,
-                    peer: peer,
-                    synchronousLoad: true
-                )
-                self.backgroundView.isHidden = true
-                self.iconView.isHidden = true
-                self.avatarNode.isHidden = false
+                if let photo = component.photo {
+                    let imageNode: TransformImageNode
+                    if let current = self.imageNode {
+                        imageNode = current
+                    } else {
+                        imageNode = TransformImageNode()
+                        self.addSubview(imageNode.view)
+                        self.imageNode = imageNode
+                        
+                        imageNode.setSignal(chatWebFileImage(account: component.context.account, file: photo))
+                        self.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: component.context.account, userLocation: .other, image: photo).startStrict())
+                    }
+                                    
+                    imageNode.frame = CGRect(origin: .zero, size: size)
+                    imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: size.width / 2.0), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets()))()
+                    
+                    self.backgroundView.isHidden = true
+                    self.iconView.isHidden = true
+                    self.avatarNode.isHidden = true
+                } else {
+                    self.avatarNode.setPeer(
+                        context: component.context,
+                        theme: component.theme,
+                        peer: peer,
+                        synchronousLoad: true
+                    )
+                    self.backgroundView.isHidden = true
+                    self.iconView.isHidden = true
+                    self.avatarNode.isHidden = false
+                }
             case .appStore:
                 self.backgroundView.image = generateGradientFilledCircleImage(
                     diameter: size.width,

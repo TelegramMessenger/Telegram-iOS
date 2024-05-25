@@ -170,6 +170,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let date: Int32
             let via: String?
             let toPeer: EnginePeer?
+            let transactionPeer: StarsContext.State.Transaction.Peer?
             let photo: TelegramMediaWebFile?
             
             var delayedCloseOnOpenPeer = true
@@ -205,6 +206,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 } else {
                     toPeer = nil
                 }
+                transactionPeer = transaction.peer
                 photo = transaction.photo
             case let .receipt(receipt):
                 titleText = receipt.invoiceMedia.title
@@ -218,6 +220,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 } else {
                     toPeer = nil
                 }
+                transactionPeer = nil
                 photo = receipt.invoiceMedia.photo
                 delayedCloseOnOpenPeer = false
             }
@@ -252,6 +255,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     theme: theme,
                     peers: toPeer.flatMap { [$0] } ?? [],
                     photo: photo,
+                    starsPeer: transactionPeer,
                     isVisible: true,
                     hasIdleAnimations: true,
                     hasScaleAnimation: false,
@@ -1090,11 +1094,30 @@ private final class TransactionCellComponent: Component {
                 containerSize: CGSize(width: availableSize.width, height: availableSize.height)
             )
             
+            func brokenLine(_ string: String) -> String {
+                let middleIndex = string.index(string.startIndex, offsetBy: string.count / 2)
+                var newString = string
+                newString.insert("\n", at: middleIndex)
+                return newString
+            }
+            
+            let text: String
+            if availableSize.width > 230.0 {
+                text = component.transactionId
+            } else {
+                text = brokenLine(component.transactionId)
+            }
+            
             let textSize = self.text.update(
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: component.transactionId, font: Font.monospace(15.0), textColor: component.textColor, paragraphAlignment: .left)),
+                        text: .plain(NSAttributedString(
+                            string: text,
+                            font: Font.monospace(15.0),
+                            textColor: component.textColor,
+                            paragraphAlignment: .left
+                        )),
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.2
                     )
@@ -1103,9 +1126,9 @@ private final class TransactionCellComponent: Component {
                 containerSize: CGSize(width: availableSize.width - buttonSize.width - spacing, height: availableSize.height)
             )
             
-            let size = CGSize(width: textSize.width + spacing + buttonSize.width, height: textSize.height)
+            let size = CGSize(width: availableSize.width, height: textSize.height)
             
-            let buttonFrame = CGRect(origin: CGPoint(x: textSize.width + spacing, y: floorToScreenPixels((size.height - buttonSize.height) / 2.0)), size: buttonSize)
+            let buttonFrame = CGRect(origin: CGPoint(x: availableSize.width - buttonSize.width - 2.0, y: floorToScreenPixels((size.height - buttonSize.height) / 2.0)), size: buttonSize)
             if let buttonView = self.button.view {
                 if buttonView.superview == nil {
                     self.addSubview(buttonView)
