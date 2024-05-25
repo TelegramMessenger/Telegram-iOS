@@ -54,7 +54,8 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.shimmerNode.allowsGroupOpacity = true
         
         self.recentListNode = HashtagSearchRecentListNode(context: context)
-                
+        self.recentListNode.alpha = 0.0
+        
         let navigationController = controller.navigationController as? NavigationController
         if let peer {
             self.currentController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
@@ -150,6 +151,10 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             }
             self.searchContentNode.query = query
             self.updateSearchQuery(query)
+            
+            Queue.mainQueue().after(0.4) {
+                let _ = addRecentHashtagSearchQuery(engine: context.engine, string: query).startStandalone()
+            }
         }
         
         self.currentController?.isSelectingMessagesUpdated = { [weak self] isSelecting in
@@ -303,9 +308,20 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             self.insertSubnode(self.recentListNode, aboveSubnode: self.shimmerNode)
         }
         
-        self.recentListNode.frame = CGRect(origin: .zero, size: layout.size)
+        transition.updateFrame(node: self.recentListNode, frame: CGRect(origin: .zero, size: layout.size))
         self.recentListNode.updateLayout(layout: ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: insets.top - 35.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
-        self.recentListNode.isHidden = !self.query.isEmpty
+        
+        let recentTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+        if self.query.isEmpty {
+            recentTransition.updateAlpha(node: self.recentListNode, alpha: 1.0)
+        } else if self.recentListNode.alpha > 0.0 {
+            Queue.mainQueue().after(0.1, {
+                if !self.query.isEmpty {
+                    recentTransition.updateAlpha(node: self.recentListNode, alpha: 0.0)
+                }
+            })
+        }
+        
         
         if !self.hasValidLayout {
             self.hasValidLayout = true
