@@ -110,6 +110,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private var codeHighlightState: (id: EngineMessage.Id, specs: [CachedMessageSyntaxHighlight.Spec], disposable: Disposable)?
     
     private var expandedBlockIds: Set<Int> = Set()
+    private var appliedExpandedBlockIds: Set<Int>?
     private var displayContentsUnderSpoilers: Bool = false
     
     override public var visibility: ListViewItemNodeVisibility {
@@ -661,7 +662,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     boundingSize.height += topInset + bottomInset
                     
-                    return (boundingSize, { [weak self] animation, synchronousLoads, _ in
+                    return (boundingSize, { [weak self] animation, synchronousLoads, itemApply in
                         if let strongSelf = self {
                             strongSelf.item = item
                             if let updatedCachedChatMessageText = updatedCachedChatMessageText {
@@ -670,6 +671,11 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             strongSelf.textNode.textNode.displaysAsynchronously = !item.presentationData.isPreview
                             strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: boundingSize)
+                            
+                            if strongSelf.appliedExpandedBlockIds != nil && strongSelf.appliedExpandedBlockIds != strongSelf.expandedBlockIds {
+                                itemApply?.setInvertOffsetDirection()
+                            }
+                            strongSelf.appliedExpandedBlockIds = strongSelf.expandedBlockIds
                             
                             let _ = textApply(InteractiveTextNodeWithEntities.Arguments(
                                 context: item.context,
