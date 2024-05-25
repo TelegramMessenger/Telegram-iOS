@@ -8,7 +8,6 @@ import TextFormat
 import UrlEscaping
 import TelegramUniversalVideoContent
 import TextSelectionNode
-import InvisibleInkDustNode
 import Emoji
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
@@ -85,7 +84,6 @@ private func findQuoteRange(string: String, quoteText: String, offset: Int?) -> 
 public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let containerNode: ASDisplayNode
     private let textNode: InteractiveTextNodeWithEntities
-    private var dustNode: InvisibleInkDustNode?
     
     private let textAccessibilityOverlayNode: TextAccessibilityOverlayNode
     public var statusNode: ChatMessageDateAndStatusNode?
@@ -112,6 +110,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private var codeHighlightState: (id: EngineMessage.Id, specs: [CachedMessageSyntaxHighlight.Spec], disposable: Disposable)?
     
     private var expandedBlockIds: Set<Int> = Set()
+    private var displayContentsUnderSpoilers: Bool = false
     
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -162,6 +161,12 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             }
             item.controllerInteraction.requestMessageUpdate(item.message.id, false)
         }
+        self.textNode.textNode.requestDisplayContentsUnderSpoilers = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.updateDisplayContentsUnderSpoilers(value: true)
+        }
         self.textNode.textNode.canHandleTapAtPoint = { [weak self] point in
             guard let self else {
                 return false
@@ -192,6 +197,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         
         let currentCachedChatMessageText = self.cachedChatMessageText
         let expandedBlockIds = self.expandedBlockIds
+        let displayContentsUnderSpoilers = self.displayContentsUnderSpoilers
         
         return { item, layoutConstants, _, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
@@ -579,7 +585,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     cutout: nil,
                     insets: textInsets,
                     lineColor: messageTheme.accentControlColor,
-                    displayContentsUnderSpoilers: false,
+                    displayContentsUnderSpoilers: displayContentsUnderSpoilers,
                     customTruncationToken: customTruncationToken,
                     expandedBlocks: expandedBlockIds
                 ))
@@ -676,31 +682,6 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 animation: animation
                             ))
                             animation.animator.updateFrame(layer: strongSelf.textNode.textNode.layer, frame: textFrame, completion: nil)
-                            
-                            /*if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
-                                let spoilerTextNode = spoilerTextApply(InteractiveTextNodeWithEntities.Arguments(context: item.context, cache: item.controllerInteraction.presentationContext.animationCache, renderer: item.controllerInteraction.presentationContext.animationRenderer, placeholderColor: messageTheme.mediaPlaceholderColor, attemptSynchronous: synchronousLoads, animation: animation))
-                                
-                                strongSelf.spoilerTextNode?.textNode.frame = textFrame
-                                
-                                let dustNode: InvisibleInkDustNode
-                                if let current = strongSelf.dustNode {
-                                    dustNode = current
-                                } else {
-                                    dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode, enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency && !item.presentationData.isPreview)
-                                    strongSelf.dustNode = dustNode
-                                    strongSelf.containerNode.insertSubnode(dustNode, aboveSubnode: spoilerTextNode.textNode)
-                                }
-                                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
-                                dustNode.update(size: dustNode.frame.size, color: messageTheme.secondaryTextColor, textColor: messageTheme.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
-                            } else if let spoilerTextNode = strongSelf.spoilerTextNode {
-                                strongSelf.spoilerTextNode = nil
-                                spoilerTextNode.textNode.removeFromSupernode()
-                                
-                                if let dustNode = strongSelf.dustNode {
-                                    strongSelf.dustNode = nil
-                                    dustNode.removeFromSupernode()
-                                }
-                            }*/
                             
                             switch strongSelf.visibility {
                             case .none:
@@ -866,7 +847,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         let textNodeFrame = self.textNode.textNode.frame
         let textLocalPoint = CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)
         if let (index, attributes) = self.textNode.textNode.attributesAtPoint(textLocalPoint) {
-            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(self.dustNode?.isRevealed ?? true)  {
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !self.displayContentsUnderSpoilers {
                 return ChatMessageBubbleContentTapAction(content: .none)
             } else if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
@@ -1058,8 +1039,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            if let spoilerRects = spoilerRects, !spoilerRects.isEmpty, let dustNode = self.dustNode, !dustNode.isRevealed {
-                
+            if let spoilerRects = spoilerRects, !spoilerRects.isEmpty, !self.displayContentsUnderSpoilers {
             } else if let rects = rects {
                 let linkHighlightingNode: LinkHighlightingNode
                 if let current = self.linkHighlightingNode {
@@ -1329,11 +1309,11 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     guard let strongSelf = self else {
                         return
                     }
-                    if let dustNode = strongSelf.dustNode, !dustNode.isRevealed, let textLayout = strongSelf.textNode.textNode.cachedLayout, textLayout.segments.contains(where: { !$0.spoilers.isEmpty }), let selectionRange {
+                    if !strongSelf.displayContentsUnderSpoilers, let textLayout = strongSelf.textNode.textNode.cachedLayout, textLayout.segments.contains(where: { !$0.spoilers.isEmpty }), let selectionRange {
                         for segment in textLayout.segments {
                             for (spoilerRange, _) in segment.spoilers {
                                 if let intersection = selectionRange.intersection(spoilerRange), intersection.length > 0 {
-                                    dustNode.update(revealed: true)
+                                    strongSelf.updateDisplayContentsUnderSpoilers(value: true)
                                     return
                                 }
                             }
@@ -1389,9 +1369,19 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 })
             }
             
-            if let dustNode = self.dustNode, dustNode.isRevealed {
-                dustNode.update(revealed: false)
+            if self.displayContentsUnderSpoilers {
+                self.updateDisplayContentsUnderSpoilers(value: false)
             }
+        }
+    }
+    
+    private func updateDisplayContentsUnderSpoilers(value: Bool) {
+        if self.displayContentsUnderSpoilers == value {
+            return
+        }
+        self.displayContentsUnderSpoilers = value
+        if let item = self.item {
+            item.controllerInteraction.requestMessageUpdate(item.message.id, false)
         }
     }
     
