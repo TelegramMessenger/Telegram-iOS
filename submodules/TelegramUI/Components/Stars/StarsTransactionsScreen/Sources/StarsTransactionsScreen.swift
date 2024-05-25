@@ -437,7 +437,7 @@ final class StarsTransactionsScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: presentationStringsFormattedNumber(Int32(self.starsState?.balance ?? 0), environment.dateTimeFormat.decimalSeparator),
+                        string: presentationStringsFormattedNumber(Int32(self.starsState?.balance ?? 0), environment.dateTimeFormat.groupingSeparator),
                         font: Font.semibold(14.0),
                         textColor: environment.theme.actionSheet.primaryTextColor
                     )),

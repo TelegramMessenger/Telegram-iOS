@@ -1031,6 +1031,8 @@ public protocol ChatController: ViewController {
     func performScrollToTop() -> Bool
     func transferScrollingVelocity(_ velocity: CGFloat)
     func updateIsScrollingLockedAtTop(isScrollingLockedAtTop: Bool)
+    
+    func playShakeAnimation()
 }
 
 public protocol ChatMessagePreviewItemNode: AnyObject {

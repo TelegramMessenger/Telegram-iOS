@@ -331,7 +331,7 @@ private final class SheetContent: CombinedComponent {
             let balanceValue = balanceValue.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: presentationStringsFormattedNumber(Int32(state.balance ?? 0), environment.dateTimeFormat.decimalSeparator),
+                        string: presentationStringsFormattedNumber(Int32(state.balance ?? 0), environment.dateTimeFormat.groupingSeparator),
                         font: Font.semibold(16.0),
                         textColor: textColor
                     )),
