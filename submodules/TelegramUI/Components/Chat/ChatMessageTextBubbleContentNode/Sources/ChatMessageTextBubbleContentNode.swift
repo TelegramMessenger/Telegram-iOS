@@ -594,6 +594,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     let trailingWidthToMeasure: CGFloat
                     if let lastSegment = textLayout.segments.last, lastSegment.hasRTL {
                         trailingWidthToMeasure = 10000.0
+                    } else if let lastSegment = textLayout.segments.last, lastSegment.hasBlockQuote {
+                        trailingWidthToMeasure = textLayout.size.width
                     } else {
                         trailingWidthToMeasure = textLayout.trailingLineWidth
                     }

@@ -1482,7 +1482,7 @@ private final class QuoteBackgroundView: UIView {
         }
         if let image = self.collapseButtonIconView.image {
             let iconSize = image.size.aspectFitted(collapseButtonSize)
-            self.collapseButtonIconView.frame = CGRect(origin: CGPoint(x: self.collapseButton.bounds.width - 2.0 - collapseButtonSize.width + floorToScreenPixels((collapseButtonSize.width - iconSize.width) * 0.5), y: 2.0 + floorToScreenPixels((collapseButtonSize.height - iconSize.height) * 0.5)), size: iconSize)
+            self.collapseButtonIconView.frame = CGRect(origin: CGPoint(x: self.collapseButton.bounds.width - 4.0 - collapseButtonSize.width + floorToScreenPixels((collapseButtonSize.width - iconSize.width) * 0.5), y: 4.0 + floorToScreenPixels((collapseButtonSize.height - iconSize.height) * 0.5)), size: iconSize)
         }
         
         var primaryColor: UIColor

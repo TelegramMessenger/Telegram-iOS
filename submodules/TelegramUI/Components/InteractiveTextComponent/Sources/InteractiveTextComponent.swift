@@ -33,19 +33,12 @@ private func generateBlockMaskImage() -> UIImage {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         
         var locations: [CGFloat] = [0.0, 0.5, 1.0]
-        var colors: [CGColor] = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.cgColor]
+        let colors: [CGColor] = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.cgColor]
         
-        var gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
         
         context.setBlendMode(.copy)
         context.drawRadialGradient(gradient, startCenter: CGPoint(x: size.width - 20.0, y: size.height), startRadius: 0.0, endCenter: CGPoint(x: size.width - 20.0, y: size.height), endRadius: 34.0, options: CGGradientDrawingOptions())
-        
-        locations = [0.0, 0.5, 1.0]
-        colors = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.4).cgColor, UIColor.black.cgColor]
-        gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-        
-        context.setBlendMode(.destinationIn)
-        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: size.height), end: CGPoint(x: 0.0, y: size.height - 18.0), options: CGGradientDrawingOptions())
     })!.resizableImage(withCapInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: size.height - 1.0, right: size.width - 1.0), resizingMode: .stretch)
 }
 
@@ -189,6 +182,10 @@ public final class InteractiveTextNodeSegment {
     public let spoilers: [(NSRange, CGRect)]
     public let spoilerWords: [(NSRange, CGRect)]
     public let embeddedItems: [InteractiveTextNodeLayout.EmbeddedItem]
+    
+    public var hasBlockQuote: Bool {
+        return self.blockQuote != nil
+    }
     
     fileprivate init(
         lines: [InteractiveTextNodeLine],
@@ -1589,7 +1586,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             
             var segmentBlockQuote: InteractiveTextNodeBlockQuote?
             if let blockQuote = segment.blockQuote, let tintColor = segment.tintColor, let blockIndex {
-                segmentBlockQuote = InteractiveTextNodeBlockQuote(id: blockIndex, frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 4.0)), data: blockQuote, tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor, tertiaryTintColor: segment.tertiaryTintColor, backgroundColor: blockQuote.backgroundColor, isCollapsed: (blockQuote.isCollapsible && segmentLines.count > 3) ? isCollapsed : nil)
+                segmentBlockQuote = InteractiveTextNodeBlockQuote(id: blockIndex, frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 3.0)), data: blockQuote, tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor, tertiaryTintColor: segment.tertiaryTintColor, backgroundColor: blockQuote.backgroundColor, isCollapsed: (blockQuote.isCollapsible && segmentLines.count > 3) ? isCollapsed : nil)
             }
             
             segments.append(InteractiveTextNodeSegment(
