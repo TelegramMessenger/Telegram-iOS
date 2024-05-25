@@ -982,7 +982,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         if let starsState = data.starsState {
             let balanceText: String
             if starsState.balance > 0 {
-                balanceText = "\(starsState.balance)"
+                balanceText = presentationStringsFormattedNumber(Int32(starsState.balance), presentationData.dateTimeFormat.groupingSeparator)
             } else {
                 balanceText = ""
             }

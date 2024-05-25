@@ -237,7 +237,7 @@ final class StarsTransactionsListPanelComponent: Component {
                     let itemLabel: NSAttributedString
                     let labelString: String
                     
-                    let formattedLabel = presentationStringsFormattedNumber(abs(Int32(item.transaction.count)), environment.dateTimeFormat.decimalSeparator)
+                    let formattedLabel = presentationStringsFormattedNumber(abs(Int32(item.transaction.count)), environment.dateTimeFormat.groupingSeparator)
                     if item.transaction.count < 0 {
                         labelString = "- \(formattedLabel)"
                     } else {
@@ -475,8 +475,7 @@ private final class AvatarComponent: Component {
             
             super.init(frame: frame)
             
-            self.iconView.contentMode = .center
-            self.iconView.image = UIImage(bundleImageName: "Premium/Stars/Apple")
+            self.iconView.contentMode = .scaleAspectFit
             
             self.addSubnode(self.avatarNode)
             self.addSubview(self.backgroundView)
@@ -492,8 +491,8 @@ private final class AvatarComponent: Component {
             self.state = state
             
             let size = CGSize(width: 40.0, height: 40.0)
-
-            let gradientImage = generateGradientFilledCircleImage(diameter: size.width, colors: [UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor], direction: .mirroredDiagonal)
+            var iconInset: CGFloat = 3.0
+            var iconOffset: CGFloat = 0.0
             
             switch component.peer {
             case let .peer(peer):
@@ -507,34 +506,73 @@ private final class AvatarComponent: Component {
                 self.iconView.isHidden = true
                 self.avatarNode.isHidden = false
             case .appStore:
-                self.backgroundView.image = gradientImage
+                self.backgroundView.image = generateGradientFilledCircleImage(
+                    diameter: size.width,
+                    colors: [
+                        UIColor(rgb: 0x2a9ef1).cgColor,
+                        UIColor(rgb: 0x72d5fd).cgColor
+                    ],
+                    direction: .mirroredDiagonal
+                )
                 self.backgroundView.isHidden = false
                 self.iconView.isHidden = false
                 self.avatarNode.isHidden = true
+                self.iconView.image = UIImage(bundleImageName: "Premium/Stars/Apple")
             case .playMarket:
-                self.backgroundView.image = gradientImage
+                self.backgroundView.image = generateGradientFilledCircleImage(
+                    diameter: size.width,
+                    colors: [
+                        UIColor(rgb: 0x54cb68).cgColor,
+                        UIColor(rgb: 0xa0de7e).cgColor
+                    ],
+                    direction: .mirroredDiagonal
+                )
                 self.backgroundView.isHidden = false
                 self.iconView.isHidden = false
                 self.avatarNode.isHidden = true
+                self.iconView.image = UIImage(bundleImageName: "Premium/Stars/Google")
             case .fragment:
-                self.backgroundView.image = gradientImage
+                self.backgroundView.image = generateFilledCircleImage(diameter: size.width, color: UIColor(rgb: 0x1b1f24))
                 self.backgroundView.isHidden = false
                 self.iconView.isHidden = false
                 self.avatarNode.isHidden = true
+                self.iconView.image = UIImage(bundleImageName: "Premium/Stars/Fragment")
+                iconOffset = 2.0
             case .premiumBot:
-                self.backgroundView.image = gradientImage
+                iconInset = 7.0
+                self.backgroundView.image = generateGradientFilledCircleImage(
+                    diameter: size.width,
+                    colors: [
+                        UIColor(rgb: 0x6b93ff).cgColor,
+                        UIColor(rgb: 0x6b93ff).cgColor,
+                        UIColor(rgb: 0x8d77ff).cgColor,
+                        UIColor(rgb: 0xb56eec).cgColor,
+                        UIColor(rgb: 0xb56eec).cgColor
+                    ],
+                    direction: .mirroredDiagonal
+                )
                 self.backgroundView.isHidden = false
                 self.iconView.isHidden = false
                 self.avatarNode.isHidden = true
+                self.iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon"), color: .white)
             case .unsupported:
-                self.backgroundView.image = gradientImage
+                iconInset = 7.0
+                self.backgroundView.image = generateGradientFilledCircleImage(
+                    diameter: size.width,
+                    colors: [
+                        UIColor(rgb: 0xb1b1b1).cgColor,
+                        UIColor(rgb: 0xcdcdcd).cgColor
+                    ],
+                    direction: .mirroredDiagonal
+                )
                 self.backgroundView.isHidden = false
                 self.iconView.isHidden = false
                 self.avatarNode.isHidden = true
+                self.iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon"), color: .white)
             }
             
             self.avatarNode.frame = CGRect(origin: .zero, size: size)
-            self.iconView.frame = CGRect(origin: .zero, size: size)
+            self.iconView.frame = CGRect(origin: .zero, size: size).insetBy(dx: iconInset, dy: iconInset).offsetBy(dx: 0.0, dy: iconOffset)
             self.backgroundView.frame = CGRect(origin: .zero, size: size)
 
             return size

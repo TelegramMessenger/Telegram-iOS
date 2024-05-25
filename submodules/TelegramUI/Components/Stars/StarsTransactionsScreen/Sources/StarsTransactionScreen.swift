@@ -127,11 +127,12 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
+            let controller = environment.controller
+            
             let component = context.component
             let theme = environment.theme
             let strings = environment.strings
             let dateTimeFormat = environment.dateTimeFormat
-            let accountContext = context.component.context
             
             let state = context.state
             let subject = component.subject
@@ -171,7 +172,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let toPeer: EnginePeer?
             let photo: TelegramMediaWebFile?
             
-            let gloss = false
+            var delayedCloseOnOpenPeer = true
             switch subject {
             case let .transaction(transaction):
                 switch transaction.peer {
@@ -218,9 +219,10 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     toPeer = nil
                 }
                 photo = receipt.invoiceMedia.photo
+                delayedCloseOnOpenPeer = false
             }
             
-            let formattedAmount = presentationStringsFormattedNumber(abs(Int32(count)), dateTimeFormat.decimalSeparator)
+            let formattedAmount = presentationStringsFormattedNumber(abs(Int32(count)), dateTimeFormat.groupingSeparator)
             if count < 0 {
                 amountText = "- \(formattedAmount)"
             } else {
@@ -300,11 +302,16 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                                 )
                             ),
                             action: {
-                                if toPeer.id != accountContext.account.peerId {
+                                if delayedCloseOnOpenPeer {
                                     component.openPeer(toPeer)
                                     Queue.mainQueue().after(1.0, {
                                         component.cancel(false)
                                     })
+                                } else {
+                                    if let controller = controller() as? StarsTransactionScreen, let navigationController = controller.navigationController, let chatController = navigationController.viewControllers.first(where: { $0 is ChatController }) as? ChatController {
+                                        chatController.playShakeAnimation()
+                                    }
+                                    component.cancel(true)
                                 }
                             }
                         )
@@ -325,11 +332,15 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     id: "transaction",
                     title: strings.Stars_Transaction_Id,
                     component: AnyComponent(
-                        TransactionCellComponent(
-                            textColor: tableTextColor,
-                            accentColor: tableLinkColor,
-                            transactionId: transactionId,
-                            copy: {
+                        Button(
+                            content: AnyComponent(
+                                TransactionCellComponent(
+                                    textColor: tableTextColor,
+                                    accentColor: tableLinkColor,
+                                    transactionId: transactionId
+                                )
+                            ),
+                            action: {
                                 component.copyTransactionId()
                             }
                         )
@@ -393,7 +404,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     fontSize: 17.0,
                     height: 50.0,
                     cornerRadius: 10.0,
-                    gloss: gloss,
+                    gloss: false,
                     iconName: nil,
                     animationName: nil,
                     iconPosition: .left,
@@ -656,7 +667,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 guard let peer else {
                     return
                 }
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: false, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: nil, animated: true))
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: true, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: nil, animated: true))
             })
         }
         
@@ -1029,13 +1040,11 @@ private final class TransactionCellComponent: Component {
     let textColor: UIColor
     let accentColor: UIColor
     let transactionId: String
-    let copy: () -> Void
-
-    init(textColor: UIColor, accentColor: UIColor, transactionId: String, copy: @escaping () -> Void) {
+    
+    init(textColor: UIColor, accentColor: UIColor, transactionId: String) {
         self.textColor = textColor
         self.accentColor = accentColor
         self.transactionId = transactionId
-        self.copy = copy
     }
 
     static func ==(lhs: TransactionCellComponent, rhs: TransactionCellComponent) -> Bool {
@@ -1075,14 +1084,7 @@ private final class TransactionCellComponent: Component {
             let buttonSize = self.button.update(
                 transition: .immediate,
                 component: AnyComponent(
-                    Button(
-                        content: AnyComponent(
-                            BundleIconComponent(name: "Chat/Context Menu/Copy", tintColor: component.accentColor)
-                        ),
-                        action: {
-                            component.copy()
-                        }
-                    )
+                    BundleIconComponent(name: "Chat/Context Menu/Copy", tintColor: component.accentColor)
                 ),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: availableSize.height)

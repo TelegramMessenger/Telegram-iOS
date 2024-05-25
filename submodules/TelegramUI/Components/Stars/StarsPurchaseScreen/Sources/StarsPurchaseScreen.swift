@@ -787,7 +787,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
             let balanceValue = balanceValue.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: presentationStringsFormattedNumber(Int32(state.starsState?.balance ?? 0), environment.dateTimeFormat.decimalSeparator),
+                        string: presentationStringsFormattedNumber(Int32(state.starsState?.balance ?? 0), environment.dateTimeFormat.groupingSeparator),
                         font: Font.semibold(14.0),
                         textColor: environment.theme.actionSheet.primaryTextColor
                     )),
