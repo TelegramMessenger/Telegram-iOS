@@ -260,7 +260,7 @@ public final class StarsContext {
             public let description: String?
             public let photo: TelegramMediaWebFile?
             
-            init(
+            public init(
                 id: String,
                 count: Int64,
                 date: Int32,
