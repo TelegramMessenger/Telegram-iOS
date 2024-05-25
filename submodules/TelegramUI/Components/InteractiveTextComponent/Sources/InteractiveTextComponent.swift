@@ -33,19 +33,12 @@ private func generateBlockMaskImage() -> UIImage {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         
         var locations: [CGFloat] = [0.0, 0.5, 1.0]
-        var colors: [CGColor] = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.cgColor]
+        let colors: [CGColor] = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.cgColor]
         
-        var gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
         
         context.setBlendMode(.copy)
         context.drawRadialGradient(gradient, startCenter: CGPoint(x: size.width - 20.0, y: size.height), startRadius: 0.0, endCenter: CGPoint(x: size.width - 20.0, y: size.height), endRadius: 34.0, options: CGGradientDrawingOptions())
-        
-        locations = [0.0, 0.5, 1.0]
-        colors = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.4).cgColor, UIColor.black.cgColor]
-        gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-        
-        context.setBlendMode(.destinationIn)
-        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: size.height), end: CGPoint(x: 0.0, y: size.height - 18.0), options: CGGradientDrawingOptions())
     })!.resizableImage(withCapInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: size.height - 1.0, right: size.width - 1.0), resizingMode: .stretch)
 }
 
@@ -189,6 +182,10 @@ public final class InteractiveTextNodeSegment {
     public let spoilers: [(NSRange, CGRect)]
     public let spoilerWords: [(NSRange, CGRect)]
     public let embeddedItems: [InteractiveTextNodeLayout.EmbeddedItem]
+    
+    public var hasBlockQuote: Bool {
+        return self.blockQuote != nil
+    }
     
     fileprivate init(
         lines: [InteractiveTextNodeLine],
@@ -393,7 +390,7 @@ public final class InteractiveTextNodeLayout: NSObject {
     fileprivate let textShadowColor: UIColor?
     fileprivate let textShadowBlur: CGFloat?
     fileprivate let textStroke: (UIColor, CGFloat)?
-    fileprivate let displayContentsUnderSpoilers: Bool
+    public let displayContentsUnderSpoilers: Bool
     fileprivate let expandedBlocks: Set<Int>
     
     fileprivate init(
@@ -442,6 +439,33 @@ public final class InteractiveTextNodeLayout: NSObject {
         self.textStroke = textStroke
         self.displayContentsUnderSpoilers = displayContentsUnderSpoilers
         self.expandedBlocks = expandedBlocks
+    }
+    
+    func withUpdatedDisplayContentsUnderSpoilers(_ displayContentsUnderSpoilers: Bool) -> InteractiveTextNodeLayout {
+        return InteractiveTextNodeLayout(
+            attributedString: self.attributedString,
+            maximumNumberOfLines: self.maximumNumberOfLines,
+            truncationType: self.truncationType,
+            constrainedSize: self.constrainedSize,
+            explicitAlignment: self.explicitAlignment,
+            resolvedAlignment: self.resolvedAlignment,
+            verticalAlignment: self.verticalAlignment,
+            lineSpacing: self.lineSpacing,
+            cutout: self.cutout,
+            insets: self.insets,
+            size: self.size,
+            rawTextSize: self.rawTextSize,
+            truncated: self.truncated,
+            firstLineOffset: self.firstLineOffset,
+            segments: self.segments,
+            backgroundColor: self.backgroundColor,
+            lineColor: self.lineColor,
+            textShadowColor: self.textShadowColor,
+            textShadowBlur: self.textShadowBlur,
+            textStroke: self.textStroke,
+            displayContentsUnderSpoilers: displayContentsUnderSpoilers,
+            expandedBlocks: self.expandedBlocks
+        )
     }
     
     public var numberOfLines: Int {
@@ -1078,8 +1102,11 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
     public var renderContentTypes: RenderContentTypes = .all
     private var contentItemLayers: [Int: TextContentItemLayer] = [:]
     
+    private var isDisplayingContentsUnderSpoilers: Bool?
+    
     public var canHandleTapAtPoint: ((CGPoint) -> Bool)?
     public var requestToggleBlockCollapsed: ((Int) -> Void)?
+    public var requestDisplayContentsUnderSpoilers: (() -> Void)?
     private var tapRecognizer: UITapGestureRecognizer?
     
     public var currentText: NSAttributedString? {
@@ -1538,7 +1565,10 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(line.line, &ascent, &descent, nil)
                             
-                            let isHiddenBySpoiler = attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil
+                            var isHiddenBySpoiler = attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil
+                            if displayContentsUnderSpoilers {
+                                isHiddenBySpoiler = false
+                            }
                             
                             addEmbeddedItem(item: embeddedItem, isHiddenBySpoiler: isHiddenBySpoiler, line: line, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                         }
@@ -1589,7 +1619,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             
             var segmentBlockQuote: InteractiveTextNodeBlockQuote?
             if let blockQuote = segment.blockQuote, let tintColor = segment.tintColor, let blockIndex {
-                segmentBlockQuote = InteractiveTextNodeBlockQuote(id: blockIndex, frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 4.0)), data: blockQuote, tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor, tertiaryTintColor: segment.tertiaryTintColor, backgroundColor: blockQuote.backgroundColor, isCollapsed: (blockQuote.isCollapsible && segmentLines.count > 3) ? isCollapsed : nil)
+                segmentBlockQuote = InteractiveTextNodeBlockQuote(id: blockIndex, frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 3.0)), data: blockQuote, tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor, tertiaryTintColor: segment.tertiaryTintColor, backgroundColor: blockQuote.backgroundColor, isCollapsed: (blockQuote.isCollapsible && segmentLines.count > 3) ? isCollapsed : nil)
             }
             
             segments.append(InteractiveTextNodeSegment(
@@ -1651,6 +1681,10 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             return
         }
         
+        let animateContents = self.isDisplayingContentsUnderSpoilers != nil && self.isDisplayingContentsUnderSpoilers != cachedLayout.displayContentsUnderSpoilers && animation.isAnimated
+        let synchronous = animateContents
+        self.isDisplayingContentsUnderSpoilers = cachedLayout.displayContentsUnderSpoilers
+        
         let topLeftOffset = CGPoint(x: cachedLayout.insets.left, y: cachedLayout.insets.top)
         
         var validIds: [Int] = []
@@ -1704,7 +1738,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 self.layer.addSublayer(contentItemLayer)
             }
             
-            contentItemLayer.update(item: contentItem, animation: contentItemAnimation)
+            contentItemLayer.update(item: contentItem, animation: contentItemAnimation, synchronously: synchronous, animateContents: animateContents && contentItemAnimation.isAnimated)
             
             contentItemAnimation.animator.updateFrame(layer: contentItemLayer, frame: contentItemFrame, completion: nil)
         }
@@ -1739,6 +1773,12 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             let point = recognizer.location(in: self.view)
+            if let cachedLayout = self.cachedLayout, !cachedLayout.displayContentsUnderSpoilers, let (_, attributes) = self.attributesAtPoint(point) {
+                if attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil {
+                    self.requestDisplayContentsUnderSpoilers?()
+                    return
+                }
+            }
             if let blockId = self.collapsibleBlockAtPoint(point) {
                 self.requestToggleBlockCollapsed?(blockId)
             }
@@ -1749,7 +1789,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         let existingLayout: InteractiveTextNodeLayout? = maybeNode?.cachedLayout
         
         return { arguments in
-            let layout: InteractiveTextNodeLayout
+            var layout: InteractiveTextNodeLayout
             
             if let existingLayout = existingLayout, existingLayout.constrainedSize == arguments.constrainedSize && existingLayout.maximumNumberOfLines == arguments.maximumNumberOfLines && existingLayout.truncationType == arguments.truncationType && existingLayout.cutout == arguments.cutout && existingLayout.explicitAlignment == arguments.alignment && existingLayout.lineSpacing.isEqual(to: arguments.lineSpacing) && existingLayout.expandedBlocks == arguments.expandedBlocks {
                 let stringMatch: Bool
@@ -1775,6 +1815,9 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 
                 if stringMatch {
                     layout = existingLayout
+                    if layout.displayContentsUnderSpoilers != arguments.displayContentsUnderSpoilers {
+                        layout = layout.withUpdatedDisplayContentsUnderSpoilers(arguments.displayContentsUnderSpoilers)
+                    }
                 } else {
                     layout = InteractiveTextNode.calculateLayout(attributedString: arguments.attributedString, minimumNumberOfLines: arguments.minimumNumberOfLines, maximumNumberOfLines: arguments.maximumNumberOfLines, truncationType: arguments.truncationType, backgroundColor: arguments.backgroundColor, constrainedSize: arguments.constrainedSize, alignment: arguments.alignment, verticalAlignment: arguments.verticalAlignment, lineSpacingFactor: arguments.lineSpacing, cutout: arguments.cutout, insets: arguments.insets, lineColor: arguments.lineColor, textShadowColor: arguments.textShadowColor, textShadowBlur: arguments.textShadowBlur, textStroke: arguments.textStroke, displayContentsUnderSpoilers: arguments.displayContentsUnderSpoilers, customTruncationToken: arguments.customTruncationToken, expandedBlocks: arguments.expandedBlocks)
                 }
@@ -1964,7 +2007,7 @@ final class TextContentItemLayer: SimpleLayer {
                             if attributes["Attribute__EmbeddedItem"] != nil {
                                 continue
                             }
-                            if hasHiddenSpoilers && attributes["Attribute__Spoiler"] != nil || attributes["TelegramSpoiler"] != nil {
+                            if hasHiddenSpoilers && (attributes["Attribute__Spoiler"] != nil || attributes["TelegramSpoiler"] != nil) {
                                 continue
                             }
                             
@@ -2155,9 +2198,8 @@ final class TextContentItemLayer: SimpleLayer {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(item: TextContentItem, animation: ListViewItemUpdateAnimation, synchronously: Bool = false) {
+    func update(item: TextContentItem, animation: ListViewItemUpdateAnimation, synchronously: Bool = false, animateContents: Bool = false) {
         self.item = item
-        self.setNeedsDisplay()
 
         let contentFrame = CGRect(origin: CGPoint(), size: item.size)
         var effectiveContentFrame = contentFrame
@@ -2316,7 +2358,11 @@ final class TextContentItemLayer: SimpleLayer {
         
         self.renderNode.params = RenderParams(size: contentFrame.size, item: item, mask: staticContentMask)
         if synchronously {
+            let previousContents = self.renderNode.layer.contents
             self.renderNode.displayImmediately()
+            if animateContents, let previousContents {
+                animation.transition.animateContents(layer: self.renderNode.layer, from: previousContents)
+            }
         } else {
             self.renderNode.setNeedsDisplay()
         }

@@ -1672,6 +1672,27 @@ public extension ContainedViewLayoutTransition {
             )
         }
     }
+    
+    func animateContents(layer: CALayer, from fromContents: Any) {
+        guard case let .animated(duration, curve) = self else {
+            return
+        }
+        guard let contents = layer.contents, CFGetTypeID(contents as CFTypeRef) == CGImage.typeID else {
+            return
+        }
+        guard CFGetTypeID(fromContents as CFTypeRef) == CGImage.typeID else {
+            return
+        }
+        
+        let contentsImage = contents as! CGImage
+        let fromContentsImage = fromContents as! CGImage
+    
+        if contentsImage === fromContentsImage {
+            return
+        }
+        
+        layer.animate(from: fromContentsImage, to: contentsImage, keyPath: "contents", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false)
+    }
 }
 
 public struct CombinedTransition {

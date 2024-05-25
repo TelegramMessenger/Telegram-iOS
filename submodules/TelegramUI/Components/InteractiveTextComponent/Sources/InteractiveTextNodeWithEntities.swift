@@ -257,6 +257,11 @@ public final class InteractiveTextNodeWithEntities {
     ) {
         self.enableLooping = context.sharedContext.energyUsageSettings.loopEmoji
         
+        var displayContentsUnderSpoilers = false
+        if let textLayout {
+            displayContentsUnderSpoilers = textLayout.displayContentsUnderSpoilers
+        }
+        
         var nextIndexById: [Int64: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
         
@@ -291,6 +296,7 @@ public final class InteractiveTextNodeWithEntities {
                         itemFrame.origin.y += segmentItem.contentOffset.y
                         
                         let itemLayerData: InlineStickerItemLayerData
+                        var itemLayerTransition = animation.transition
                         if let current = self.inlineStickerItemLayers[id] {
                             itemLayerData = current
                             itemLayerData.itemLayer.dynamicColor = item.textColor
@@ -299,6 +305,7 @@ public final class InteractiveTextNodeWithEntities {
                                 segmentLayer.addSublayer(itemLayerData.itemLayer)
                             }
                         } else {
+                            itemLayerTransition = .immediate
                             let pointSize = floor(itemSize * 1.3)
                             itemLayerData = InlineStickerItemLayerData(itemLayer: InlineStickerItemLayer(context: context, userLocation: .other, attemptSynchronousLoad: attemptSynchronousLoad, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: pointSize, height: pointSize), dynamicColor: item.textColor))
                             self.inlineStickerItemLayers[id] = itemLayerData
@@ -307,7 +314,7 @@ public final class InteractiveTextNodeWithEntities {
                             itemLayerData.itemLayer.isVisibleForAnimations = self.enableLooping && self.isItemVisible(itemRect: itemFrame.offsetBy(dx: -segmentItem.contentOffset.x, dy: -segmentItem.contentOffset.x))
                         }
                         
-                        itemLayerData.itemLayer.opacity = item.isHiddenBySpoiler ? 0.0 : 1.0
+                        itemLayerTransition.updateAlpha(layer: itemLayerData.itemLayer, alpha: item.isHiddenBySpoiler ? 0.0 : 1.0)
                         
                         itemLayerData.itemLayer.frame = itemFrame
                         itemLayerData.rect = itemFrame.offsetBy(dx: -segmentItem.contentOffset.x, dy: -segmentItem.contentOffset.y)
@@ -337,6 +344,8 @@ public final class InteractiveTextNodeWithEntities {
                         rects: segment.spoilers.map { $0.1.offsetBy(dx: 3.0 + segmentItem.contentOffset.x, dy: segmentItem.contentOffset.y + 3.0).insetBy(dx: 1.0, dy: 1.0) },
                         wordRects: segment.spoilerWords.map { $0.1.offsetBy(dx: segmentItem.contentOffset.x + 3.0, dy: segmentItem.contentOffset.y + 3.0).insetBy(dx: 1.0, dy: 1.0) }
                     )
+                    
+                    animation.transition.updateAlpha(node: dustEffectNode, alpha: displayContentsUnderSpoilers ? 0.0 : 1.0)
                 }
             }
         }
