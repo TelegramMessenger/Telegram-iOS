@@ -17,7 +17,7 @@ final class HashtagSearchGlobalChatContents: ChatCustomContentsProtocol {
                 }
             }
         }
-        private let onlyMy: Bool
+        private let publicPosts: Bool
         private var currentSearchState: SearchMessagesState?
         
         private(set) var mergedHistoryView: MessageHistoryView?
@@ -31,11 +31,11 @@ final class HashtagSearchGlobalChatContents: ChatCustomContentsProtocol {
         
         let isSearchingPromise = ValuePromise<Bool>(true)
         
-        init(queue: Queue, context: AccountContext, query: String, onlyMy: Bool) {
+        init(queue: Queue, context: AccountContext, query: String, publicPosts: Bool) {
             self.queue = queue
             self.context = context
             self.query = query
-            self.onlyMy = onlyMy
+            self.publicPosts = publicPosts
             
             self.updateHistoryViewRequest(reload: false)
         }
@@ -51,10 +51,10 @@ final class HashtagSearchGlobalChatContents: ChatCustomContentsProtocol {
             self.historyViewDisposable?.dispose()
             
             let search: Signal<(SearchMessagesResult, SearchMessagesState), NoError>
-            if self.onlyMy {
-                search = self.context.engine.messages.searchMessages(location: .general(scope: .everywhere, tags: nil, minDate: nil, maxDate: nil), query: "#\(self.query)", state: nil)
-            } else {
+            if self.publicPosts {
                 search = self.context.engine.messages.searchHashtagPosts(hashtag: self.query, state: nil)
+            } else {
+                search = self.context.engine.messages.searchMessages(location: .general(scope: .everywhere, tags: nil, minDate: nil, maxDate: nil), query: "#\(self.query)", state: nil)
             }
             
             self.isSearchingPromise.set(true)
@@ -99,10 +99,10 @@ final class HashtagSearchGlobalChatContents: ChatCustomContentsProtocol {
             }
             
             let search: Signal<(SearchMessagesResult, SearchMessagesState), NoError>
-            if self.onlyMy {
-                search = self.context.engine.messages.searchMessages(location: .general(scope: .everywhere, tags: nil, minDate: nil, maxDate: nil), query: "#\(self.query)", state: currentSearchState)
-            } else {
+            if self.publicPosts {
                 search = self.context.engine.messages.searchHashtagPosts(hashtag: self.query, state: self.currentSearchState)
+            } else {
+                search = self.context.engine.messages.searchMessages(location: .general(scope: .everywhere, tags: nil, minDate: nil, maxDate: nil), query: "#\(self.query)", state: currentSearchState)
             }
             
             self.historyViewDisposable?.dispose()
@@ -165,13 +165,13 @@ final class HashtagSearchGlobalChatContents: ChatCustomContentsProtocol {
     private let queue: Queue
     private let impl: QueueLocalObject<Impl>
     
-    init(context: AccountContext, kind: ChatCustomContentsKind, query: String, onlyMy: Bool) {
-        self.kind = kind
+    init(context: AccountContext, query: String, publicPosts: Bool) {
+        self.kind = .hashTagSearch(publicPosts: publicPosts)
         
         let queue = Queue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, context: context, query: query, onlyMy: onlyMy)
+            return Impl(queue: queue, context: context, query: query, publicPosts: publicPosts)
         })
     }
     

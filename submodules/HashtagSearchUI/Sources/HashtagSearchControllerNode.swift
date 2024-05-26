@@ -53,7 +53,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         
         self.containerNode = ASDisplayNode()
         
-        let cleanHashtag = query.replacingOccurrences(of: "#", with: "")
+        let cleanHashtag = cleanHashtag(query)
         self.searchContentNode = HashtagSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, initialQuery: cleanHashtag, hasCurrentChat: peer != nil, cancel: { [weak controller] in
             controller?.dismiss()
         })
@@ -66,7 +66,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         self.recentListNode.alpha = 0.0
         
         let navigationController = controller.navigationController as? NavigationController
-        if let peer {
+        if let peer, !controller.all {
             self.currentController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
             self.currentController?.alwaysShowSearchResultsAsList = true
             self.currentController?.showListEmptyResults = true
@@ -75,22 +75,27 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             self.currentController = nil
         }
                 
-        let myChatContents = HashtagSearchGlobalChatContents(context: context, kind: .hashTagSearch, query: cleanHashtag, onlyMy: true)
+        let myChatContents = HashtagSearchGlobalChatContents(context: context, query: cleanHashtag, publicPosts: false)
         self.myChatContents = myChatContents
         self.myController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: myChatContents), botStart: nil, mode: .standard(.default))
         self.myController?.alwaysShowSearchResultsAsList = true
         self.myController?.showListEmptyResults = true
         self.myController?.customNavigationController = navigationController
-        if peer == nil {
-            self.searchContentNode.selectedIndex = 1
-        }
         
-        let globalChatContents = HashtagSearchGlobalChatContents(context: context, kind: .hashTagSearch, query: cleanHashtag, onlyMy: false)
+        let globalChatContents = HashtagSearchGlobalChatContents(context: context, query: cleanHashtag, publicPosts: true)
         self.globalChatContents = globalChatContents
         self.globalController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: globalChatContents), botStart: nil, mode: .standard(.default))
         self.globalController?.alwaysShowSearchResultsAsList = true
         self.globalController?.showListEmptyResults = true
         self.globalController?.customNavigationController = navigationController
+        
+        if controller.publicPosts {
+            self.searchContentNode.selectedIndex = 2
+        } else if peer == nil {
+            self.searchContentNode.selectedIndex = 1
+        } else {
+            self.searchContentNode.selectedIndex = 0
+        }
         
         super.init()
         
@@ -167,7 +172,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             self?.searchQueryPromise.set(query)
         }
         
-        let _ = addRecentHashtagSearchQuery(engine: context.engine, string: query.replacingOccurrences(of: "#", with: "")).startStandalone()
+        let _ = addRecentHashtagSearchQuery(engine: context.engine, string: cleanHashtag).startStandalone()
         self.searchContentNode.onReturn = { query in
             let _ = addRecentHashtagSearchQuery(engine: context.engine, string: query).startStandalone()
         }
@@ -326,10 +331,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
     func updateSearchQuery(_ query: String) {
         self.query = query
         
-        var cleanQuery = query
-        if cleanQuery.hasPrefix("#") {
-            cleanQuery.removeFirst()
-        }
+        let cleanQuery = cleanHashtag(query)
         if !cleanQuery.isEmpty {
             self.currentController?.beginMessageSearch("#" + cleanQuery)
             
@@ -455,4 +457,15 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             return 0.0
         }
     }
+}
+
+private func cleanHashtag(_ string: String) -> String {
+    var string = string
+    if string.hasPrefix("#") {
+        string.removeFirst()
+    }
+    if string.hasPrefix("$") {
+        string.removeFirst()
+    }
+    return string
 }

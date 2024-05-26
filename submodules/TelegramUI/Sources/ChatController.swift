@@ -9592,13 +9592,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             self.resolvePeerByNameDisposable?.set((resolveSignal
             |> deliverOnMainQueue).start(next: { [weak self] peer in
-                if let strongSelf = self, !hashtag.isEmpty {
-//                    var peer = peer
-//                    if peer?.id.isReplies == true {
-//                        peer = nil
-//                    }
-                    let searchController = HashtagSearchController(context: strongSelf.context, peer: peer.flatMap(EnginePeer.init), query: hashtag)
-                    strongSelf.effectiveNavigationController?.pushViewController(searchController)
+                if let self, !hashtag.isEmpty {
+                    var publicPosts = false
+                    if case let .customChatContents(contents) = self.subject, case let .hashTagSearch(publicPostsValue) = contents.kind {
+                        publicPosts = publicPostsValue
+                    }
+                    let searchController = HashtagSearchController(context: self.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, publicPosts: publicPosts)
+                    self.effectiveNavigationController?.pushViewController(searchController)
                 }
             }))
         })
