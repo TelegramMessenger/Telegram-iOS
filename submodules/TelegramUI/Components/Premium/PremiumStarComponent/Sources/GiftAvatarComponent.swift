@@ -22,6 +22,7 @@ public final class GiftAvatarComponent: Component {
     let theme: PresentationTheme
     let peers: [EnginePeer]
     let photo: TelegramMediaWebFile?
+    let starsPeer: StarsContext.State.Transaction.Peer?
     let isVisible: Bool
     let hasIdleAnimations: Bool
     let hasScaleAnimation: Bool
@@ -29,11 +30,24 @@ public final class GiftAvatarComponent: Component {
     let color: UIColor?
     let offset: CGFloat?
         
-    public init(context: AccountContext, theme: PresentationTheme, peers: [EnginePeer], photo: TelegramMediaWebFile? = nil, isVisible: Bool, hasIdleAnimations: Bool, hasScaleAnimation: Bool = true, avatarSize: CGFloat = 100.0, color: UIColor? = nil, offset: CGFloat? = nil) {
+    public init(
+        context: AccountContext,
+        theme: PresentationTheme,
+        peers: [EnginePeer],
+        photo: TelegramMediaWebFile? = nil,
+        starsPeer: StarsContext.State.Transaction.Peer? = nil,
+        isVisible: Bool,
+        hasIdleAnimations: Bool,
+        hasScaleAnimation: Bool = true,
+        avatarSize: CGFloat = 100.0,
+        color: UIColor? = nil,
+        offset: CGFloat? = nil
+    ) {
         self.context = context
         self.theme = theme
         self.peers = peers
         self.photo = photo
+        self.starsPeer = starsPeer
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
         self.hasScaleAnimation = hasScaleAnimation
@@ -75,6 +89,9 @@ public final class GiftAvatarComponent: Component {
         private let avatarNode: ImageNode
         private var mergedAvatarsNode: MergedAvatarsNode?
         private var imageNode: TransformImageNode?
+        
+        private var iconBackgroundView: UIImageView?
+        private var iconView: UIImageView?
         
         private let badgeBackground = ComponentView<Empty>()
         private let badge = ComponentView<Empty>()
@@ -321,6 +338,82 @@ public final class GiftAvatarComponent: Component {
                 imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
                 
                 self.avatarNode.isHidden = true
+            } else if let starsPeer = component.starsPeer {
+                let iconBackgroundView: UIImageView
+                let iconView: UIImageView
+                if let currentBackground = self.iconBackgroundView, let current = self.iconView {
+                    iconBackgroundView = currentBackground
+                    iconView = current
+                } else {
+                    iconBackgroundView = UIImageView()
+                    iconView = UIImageView()
+                    
+                    self.addSubview(iconBackgroundView)
+                    self.addSubview(iconView)
+                    
+                    self.iconBackgroundView = iconBackgroundView
+                    self.iconView = iconView
+                    
+                    let size = CGSize(width: component.avatarSize, height: component.avatarSize)
+                    var iconInset: CGFloat = 9.0
+                    var iconOffset: CGFloat = 0.0
+                    
+                    switch starsPeer {
+                    case .appStore:
+                        iconBackgroundView.image = generateGradientFilledCircleImage(
+                            diameter: size.width,
+                            colors: [
+                                UIColor(rgb: 0x2a9ef1).cgColor,
+                                UIColor(rgb: 0x72d5fd).cgColor
+                            ],
+                            direction: .mirroredDiagonal
+                        )
+                        iconView.image = UIImage(bundleImageName: "Premium/Stars/Apple")
+                    case .playMarket:
+                        iconBackgroundView.image = generateGradientFilledCircleImage(
+                            diameter: size.width,
+                            colors: [
+                                UIColor(rgb: 0x54cb68).cgColor,
+                                UIColor(rgb: 0xa0de7e).cgColor
+                            ],
+                            direction: .mirroredDiagonal
+                        )
+                        iconView.image = UIImage(bundleImageName: "Premium/Stars/Google")
+                    case .fragment:
+                        iconBackgroundView.image = generateFilledCircleImage(diameter: size.width, color: UIColor(rgb: 0x1b1f24))
+                        iconView.image = UIImage(bundleImageName: "Premium/Stars/Fragment")
+                        iconOffset = 5.0
+                    case .premiumBot:
+                        iconInset = 15.0
+                        iconBackgroundView.image = generateGradientFilledCircleImage(
+                            diameter: size.width,
+                            colors: [
+                                UIColor(rgb: 0x6b93ff).cgColor,
+                                UIColor(rgb: 0x6b93ff).cgColor,
+                                UIColor(rgb: 0x8d77ff).cgColor,
+                                UIColor(rgb: 0xb56eec).cgColor,
+                                UIColor(rgb: 0xb56eec).cgColor
+                            ],
+                            direction: .mirroredDiagonal
+                        )
+                        iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon"), color: .white)
+                    case .peer, .unsupported:
+                        iconInset = 15.0
+                        iconBackgroundView.image = generateGradientFilledCircleImage(
+                            diameter: size.width,
+                            colors: [
+                                UIColor(rgb: 0xb1b1b1).cgColor,
+                                UIColor(rgb: 0xcdcdcd).cgColor
+                            ],
+                            direction: .mirroredDiagonal
+                        )
+                        iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon"), color: .white)
+                    }
+                    
+                    let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - size.width) / 2.0), y: 113.0 - size.height / 2.0), size: size)
+                    iconBackgroundView.frame = imageFrame
+                    iconView.frame = imageFrame.insetBy(dx: iconInset, dy: iconInset).offsetBy(dx: 0.0, dy: iconOffset)
+                }
             } else if component.peers.count > 1 {
                 let avatarSize = CGSize(width: 60.0, height: 60.0)
                 

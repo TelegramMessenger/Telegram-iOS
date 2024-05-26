@@ -341,7 +341,7 @@ private final class SheetContent: CombinedComponent {
                 transition: .immediate
             )
             let balanceIcon = balanceIcon.update(
-                component: BundleIconComponent(name: "Premium/Stars/StarMedium", tintColor: nil),
+                component: BundleIconComponent(name: "Premium/Stars/StarLarge", tintColor: nil),
                 availableSize: context.availableSize,
                 transition: .immediate
             )

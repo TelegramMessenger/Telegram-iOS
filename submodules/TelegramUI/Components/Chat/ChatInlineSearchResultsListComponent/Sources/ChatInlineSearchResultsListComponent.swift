@@ -768,10 +768,14 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         }
                         
                         let renderedPeer: EngineRenderedPeer
-                        if let effectiveAuthor {
+                        if let effectiveAuthor, !component.showEmptyResults {
                             renderedPeer = EngineRenderedPeer(peer: effectiveAuthor)
                         } else {
-                            renderedPeer = EngineRenderedPeer(peerId: message.id.peerId, peers: [:], associatedMedia: [:])
+                            var peers: [EnginePeer.Id: EnginePeer] = [:]
+                            if let peer = message.peers[message.id.peerId] {
+                                peers[message.id.peerId] = EnginePeer(peer)
+                            }
+                            renderedPeer = EngineRenderedPeer(peerId: message.id.peerId, peers: peers, associatedMedia: [:])
                         }
                         
                         return ChatListItem(
@@ -800,7 +804,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                                 inputActivities: nil,
                                 promoInfo: nil,
                                 ignoreUnreadBadge: false,
-                                displayAsMessage: component.peerId != component.context.account.peerId,
+                                displayAsMessage: component.peerId != component.context.account.peerId && !component.showEmptyResults,
                                 hasFailedMessages: false,
                                 forumTopicData: nil,
                                 topForumTopicItems: [],

@@ -94,7 +94,7 @@ final class HashtagSearchGlobalChatContents: ChatCustomContentsProtocol {
         }
         
         func loadMore() {
-            guard self.historyViewDisposable == nil, let currentSearchState = self.currentSearchState else {
+            guard self.historyViewDisposable == nil, let currentSearchState = self.currentSearchState, let currentHistoryView = self.sourceHistoryView, currentHistoryView.holeEarlier else {
                 return
             }
             
@@ -114,7 +114,7 @@ final class HashtagSearchGlobalChatContents: ChatCustomContentsProtocol {
                 
                 let updateType: ViewUpdateType = .FillHole
                 
-                let historyView = MessageHistoryView(tag: nil, namespaces: .just(Set([Namespaces.Message.Cloud])), entries: result.0.messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: false, holeLater: false, isLoading: false)
+                let historyView = MessageHistoryView(tag: nil, namespaces: .just(Set([Namespaces.Message.Cloud])), entries: result.0.messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: !result.0.completed, holeLater: false, isLoading: false)
                 self.sourceHistoryView = historyView
                                                      
                 self.updateHistoryView(updateType: updateType)

@@ -228,7 +228,15 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
                 canChangeListMode = true
                 
-                if params.interfaceState.displayHistoryFilterAsList || self.alwaysShowTotalMessagesCount {
+                if self.alwaysShowTotalMessagesCount {
+                    let value = presentationStringsFormattedNumber(Int32(displayTotalCount), params.interfaceState.dateTimeFormat.groupingSeparator)
+                    let suffix = params.interfaceState.strings.Chat_BottomSearchPanel_MessageCount(Int32(displayTotalCount))
+                    resultsTextString = [AnimatedTextComponent.Item(
+                        id: "text",
+                        isUnbreakable: true,
+                        content: .text(params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(value, suffix).string)
+                    )]
+                } else if params.interfaceState.displayHistoryFilterAsList {
                     resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(
                         ".",
                         "."

@@ -725,7 +725,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                     let resultController = UndoOverlayController(
                         presentationData: presentationData,
                         content: .image(
-                            image: UIImage(bundleImageName: "Premium/Stars/StarMedium")!,
+                            image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
                             title: presentationData.strings.Stars_Intro_PurchasedTitle,
                             text: presentationData.strings.Stars_Intro_PurchasedText(presentationData.strings.Stars_Intro_PurchasedText_Stars(Int32(stars))).string,
                             round: false,
@@ -740,6 +740,10 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         }
         
         self.starsContext.load()
+        
+        Queue.mainQueue().after(0.5, {
+            self.starsContext.loadMore()
+        })
     }
     
     required public init(coder aDecoder: NSCoder) {
