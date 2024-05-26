@@ -35,6 +35,16 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         }
     }
     
+    var transitionFraction: CGFloat? {
+        didSet {
+            if self.transitionFraction != oldValue {
+                if let (size, leftInset, rightInset) = self.validLayout {
+                    self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: self.transitionFraction == nil ? .animated(duration: 0.35, curve: .spring) : .immediate)
+                }
+            }
+        }
+    }
+    
     var isSearching: Bool = false {
         didSet {
             self.searchBar.activity = self.isSearching
@@ -142,7 +152,7 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
                     }
                     self.indexUpdated?(index)
                 },
-                transitionFraction: 0.0
+                transitionFraction: self.transitionFraction
             )),
             environment: {},
             containerSize: CGSize(width: size.width, height: 44.0)

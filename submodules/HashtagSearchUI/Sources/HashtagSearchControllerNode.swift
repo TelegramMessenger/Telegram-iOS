@@ -9,7 +9,7 @@ import ChatListUI
 import SegmentedControlNode
 import ChatListSearchItemHeader
 
-final class HashtagSearchControllerNode: ASDisplayNode {
+final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private let context: AccountContext
     private weak var controller: HashtagSearchController?
     private var query: String
@@ -26,12 +26,16 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     private let isSearching = Promise<Bool>()
     private var isSearchingDisposable: Disposable?
     
+    private let clippingNode: ASDisplayNode
+    private let containerNode: ASDisplayNode
     let currentController: ChatController?
     let myController: ChatController?
     let myChatContents: HashtagSearchGlobalChatContents?
     
     let globalController: ChatController?
     let globalChatContents: HashtagSearchGlobalChatContents?
+    
+    private var panRecognizer: InteractiveTransitionGestureRecognizer?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     private var hasValidLayout = false
@@ -43,6 +47,11 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.navigationBar = navigationBar
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        self.clippingNode = ASDisplayNode()
+        self.clippingNode.clipsToBounds = true
+        
+        self.containerNode = ASDisplayNode()
         
         let cleanHashtag = query.replacingOccurrences(of: "#", with: "")
         self.searchContentNode = HashtagSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, initialQuery: cleanHashtag, hasCurrentChat: peer != nil, cancel: { [weak controller] in
@@ -90,19 +99,14 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         })
         
         self.backgroundColor = presentationData.theme.chatList.backgroundColor
+        
+        self.addSubnode(self.clippingNode)
+        self.clippingNode.addSubnode(self.containerNode)
                 
         if controller.all {
-            self.currentController?.displayNode.isHidden = true
-            self.myController?.displayNode.isHidden = false
-            self.globalController?.displayNode.isHidden = true
-            
             self.isSearching.set(self.myChatContents?.searching ?? .single(false))
         } else {
             if let _ = peer {
-                self.currentController?.displayNode.isHidden = false
-                self.myController?.displayNode.isHidden = true
-                self.globalController?.displayNode.isHidden = true
-                
                 let isSearching: Signal<Bool, NoError>
                 if let currentController = self.currentController {
                     isSearching = .single(true)
@@ -115,9 +119,6 @@ final class HashtagSearchControllerNode: ASDisplayNode {
                 }
                 self.isSearching.set(isSearching)
             } else {
-                self.myController?.displayNode.isHidden = false
-                self.globalController?.displayNode.isHidden = true
-                
                 self.isSearching.set(self.myChatContents?.searching ?? .single(false))
             }
         }
@@ -128,20 +129,14 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             }
             self.searchContentNode.selectedIndex = index
             if index == 0 {
-                self.currentController?.displayNode.isHidden = false
-                self.myController?.displayNode.isHidden = true
-                self.globalController?.displayNode.isHidden = true
                 self.isSearching.set(self.currentController?.searching.get() ?? .single(false))
             } else if index == 1 {
-                self.currentController?.displayNode.isHidden = true
-                self.myController?.displayNode.isHidden = false
-                self.globalController?.displayNode.isHidden = true
                 self.isSearching.set(self.myChatContents?.searching ?? .single(false))
             } else if index == 2 {
-                self.currentController?.displayNode.isHidden = true
-                self.myController?.displayNode.isHidden = true
-                self.globalController?.displayNode.isHidden = false
                 self.isSearching.set(self.globalChatContents?.searching ?? .single(false))
+            }
+            if let (layout, navigationHeight) = self.containerLayout {
+                let _ = self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
             }
         }
                
@@ -209,6 +204,125 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.isSearchingDisposable?.dispose()
     }
     
+    private var panAllowedDirections: InteractiveTransitionGestureRecognizerDirections {
+        let currentIndex = self.searchContentNode.selectedIndex
+        let minIndex: Int
+        if let _ = self.currentController {
+            minIndex = 0
+        } else {
+            minIndex = 1
+        }
+        let maxIndex = 2
+        
+        var directions: InteractiveTransitionGestureRecognizerDirections = []
+        if currentIndex > minIndex {
+            directions.insert(.rightCenter)
+        }
+        if currentIndex < maxIndex {
+            directions.insert(.leftCenter)
+        }
+        return directions
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] _ in
+            guard let self else {
+                return []
+            }
+            return self.panAllowedDirections
+        }, edgeWidth: .widthMultiplier(factor: 1.0 / 6.0, min: 22.0, max: 80.0))
+        panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
+        panRecognizer.delaysTouchesBegan = false
+        panRecognizer.cancelsTouchesInView = true
+        self.panRecognizer = panRecognizer
+        self.view.addGestureRecognizer(panRecognizer)
+    }
+    
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let _ = otherGestureRecognizer as? InteractiveTransitionGestureRecognizer {
+            return false
+        }
+        if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
+            return true
+        }
+        return false
+    }
+    
+    private var panTransitionFraction: CGFloat = 0.0
+    private var panCurrentAllowedDirections: InteractiveTransitionGestureRecognizerDirections = [.leftCenter, .rightCenter]
+    
+    @objc private func panGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
+        let translation = gestureRecognizer.translation(in: self.view).x
+        let velocity = gestureRecognizer.velocity(in: self.view).x
+        
+        switch gestureRecognizer.state {
+        case .began, .changed:
+            if case .began = gestureRecognizer.state {
+                self.panCurrentAllowedDirections = self.panAllowedDirections
+            }
+            
+            self.panTransitionFraction = -translation / self.view.bounds.width
+            if !self.panCurrentAllowedDirections.contains(.leftCenter) {
+                self.panTransitionFraction = min(0.0, self.panTransitionFraction)
+            }
+            if !self.panCurrentAllowedDirections.contains(.rightCenter) {
+                self.panTransitionFraction = max(0.0, self.panTransitionFraction)
+            }
+        
+            self.searchContentNode.transitionFraction = self.panTransitionFraction
+            
+            if let (layout, navigationHeight) = self.containerLayout {
+                let _ = self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+            }
+        case .ended, .cancelled:
+            var directionIsToRight: Bool?
+            if abs(velocity) > 10.0 {
+                if translation > 0.0 {
+                    if velocity <= 0.0 {
+                        directionIsToRight = nil
+                    } else {
+                        directionIsToRight = true
+                    }
+                } else {
+                    if velocity >= 0.0 {
+                        directionIsToRight = nil
+                    } else {
+                        directionIsToRight = false
+                    }
+                }
+            } else {
+                if abs(translation) > self.view.bounds.width / 2.0 {
+                    directionIsToRight = translation > self.view.bounds.width / 2.0
+                }
+            }
+            if !self.panCurrentAllowedDirections.contains(.rightCenter) && directionIsToRight == true {
+                directionIsToRight = nil
+            }
+            if !self.panCurrentAllowedDirections.contains(.leftCenter) && directionIsToRight == false {
+                directionIsToRight = nil
+            }
+            
+            if let directionIsToRight {
+                if directionIsToRight {
+                    self.searchContentNode.selectedIndex -= 1
+                } else {
+                    self.searchContentNode.selectedIndex += 1
+                }
+            }
+            
+            self.panTransitionFraction = 0.0
+            self.searchContentNode.transitionFraction = nil
+            
+            if let (layout, navigationHeight) = self.containerLayout {
+                let _ = self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
+            }
+        default:
+            break
+        }
+    }
+    
     func updateSearchQuery(_ query: String) {
         self.query = query
         
@@ -258,15 +372,19 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         insets.top += navigationBarHeight
         
         let toolbarHeight: CGFloat = 40.0
-            
         insets.top += toolbarHeight - 4.0
+        
+        if isFirstTime {
+            self.insertSubnode(self.clippingNode, at: 0)
+        }
+        
         if let controller = self.currentController {
             transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: layout.size))
             controller.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: insets.top - 79.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
             
             if controller.displayNode.supernode == nil {
                 controller.viewWillAppear(false)
-                self.insertSubnode(controller.displayNode, at: 0)
+                self.containerNode.addSubnode(controller.displayNode)
                 controller.viewDidAppear(false)
                 
                 controller.beginMessageSearch(self.query)
@@ -274,12 +392,12 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         }
         
         if let controller = self.myController {
-            transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: layout.size))
+            transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(x: layout.size.width, y: 0.0), size: layout.size))
             controller.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: insets.top - 89.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
             
             if controller.displayNode.supernode == nil {
                 controller.viewWillAppear(false)
-                self.insertSubnode(controller.displayNode, at: 0)
+                self.containerNode.addSubnode(controller.displayNode)
                 controller.viewDidAppear(false)
                 
                 controller.beginMessageSearch(self.query)
@@ -287,17 +405,22 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         }
         
         if let controller = self.globalController {
-            transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: layout.size))
+            transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(x: layout.size.width * 2.0, y: 0.0), size: layout.size))
             controller.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: insets.top - 89.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
             
             if controller.displayNode.supernode == nil {
                 controller.viewWillAppear(false)
-                self.insertSubnode(controller.displayNode, at: 0)
+                self.containerNode.addSubnode(controller.displayNode)
                 controller.viewDidAppear(false)
                 
                 controller.beginMessageSearch(self.query)
             }
         }
+        
+        transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: .zero, size: layout.size))
+        
+        let containerPosition: CGFloat = -layout.size.width * CGFloat(self.searchContentNode.selectedIndex) - self.panTransitionFraction * layout.size.width
+        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: containerPosition, y: 0.0), size: CGSize(width: layout.size.width * 3.0, height: layout.size.height)))
         
         let overflowInset: CGFloat = 0.0
         let topInset = navigationBarHeight
@@ -321,7 +444,6 @@ final class HashtagSearchControllerNode: ASDisplayNode {
                 }
             })
         }
-        
         
         if !self.hasValidLayout {
             self.hasValidLayout = true

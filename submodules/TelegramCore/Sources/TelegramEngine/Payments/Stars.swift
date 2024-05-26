@@ -132,7 +132,7 @@ private final class StarsContextImpl {
         self._state = nil
         self._statePromise.set(.single(nil))
         
-        self.load()
+        self.load(force: true)
         
         self.updateDisposable = (account.stateManager.updatedStarsBalance()
         |> deliverOnMainQueue).startStrict(next: { [weak self] balances in
@@ -140,7 +140,7 @@ private final class StarsContextImpl {
                 return
             }
             self.updateState(StarsContext.State(flags: [], balance: balance, transactions: state.transactions, canLoadMore: nextOffset != nil, isLoading: false))
-            self.load()
+            self.load(force: true)
         })
     }
     
@@ -150,8 +150,15 @@ private final class StarsContextImpl {
         self.updateDisposable?.dispose()
     }
     
-    func load() {
+    private var previousLoadTimestamp: Double?
+    func load(force: Bool) {
         assert(Queue.mainQueue().isCurrent())
+        
+        let currentTimestamp = CFAbsoluteTimeGetCurrent()
+        if let previousLoadTimestamp = self.previousLoadTimestamp, currentTimestamp - previousLoadTimestamp < 60 && !force {
+            return
+        }
+        self.previousLoadTimestamp = currentTimestamp
         
         self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, offset: nil)
         |> deliverOnMainQueue).start(next: { [weak self] status in
@@ -326,9 +333,9 @@ public final class StarsContext {
         }
     }
     
-    public func load() {
+    public func load(force: Bool) {
         self.impl.with {
-            $0.load()
+            $0.load(force: force)
         }
     }
     

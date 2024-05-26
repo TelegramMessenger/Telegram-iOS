@@ -66,7 +66,7 @@ final class HashtagSearchGlobalChatContents: ChatCustomContentsProtocol {
                 
                 let updateType: ViewUpdateType = .Initial
                 
-                let historyView = MessageHistoryView(tag: nil, namespaces: .just(Set([Namespaces.Message.Cloud])), entries: result.0.messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: false, holeLater: false, isLoading: false)
+                let historyView = MessageHistoryView(tag: nil, namespaces: .just(Set([Namespaces.Message.Cloud])), entries: result.0.messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: !result.0.completed, holeLater: false, isLoading: false)
                 self.sourceHistoryView = historyView
                 self.updateHistoryView(updateType: updateType)
                                 
@@ -87,14 +87,14 @@ final class HashtagSearchGlobalChatContents: ChatCustomContentsProtocol {
             var entries = self.sourceHistoryView?.entries ?? []
             entries.sort(by: { $0.message.index < $1.message.index })
             
-            let mergedHistoryView = MessageHistoryView(tag: nil, namespaces: .just(Set([Namespaces.Message.Cloud])), entries: entries, holeEarlier: false, holeLater: false, isLoading: false)
+            let mergedHistoryView = MessageHistoryView(tag: nil, namespaces: .just(Set([Namespaces.Message.Cloud])), entries: entries, holeEarlier: self.sourceHistoryView?.holeEarlier ?? false, holeLater: false, isLoading: false)
             self.mergedHistoryView = mergedHistoryView
             
             self.historyViewStream.putNext((mergedHistoryView, updateType))
         }
         
         func loadMore() {
-            guard self.historyViewDisposable == nil, let currentSearchState = self.currentSearchState, let currentHistoryView = self.sourceHistoryView, currentHistoryView.holeEarlier else {
+            guard self.historyViewDisposable == nil, let currentSearchState = self.currentSearchState, let sourceHistoryView = self.sourceHistoryView, sourceHistoryView.holeEarlier else {
                 return
             }
             
