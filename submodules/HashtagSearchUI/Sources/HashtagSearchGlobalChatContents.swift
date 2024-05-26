@@ -94,7 +94,7 @@ final class HashtagSearchGlobalChatContents: ChatCustomContentsProtocol {
         }
         
         func loadMore() {
-            guard self.historyViewDisposable == nil, let currentSearchState = self.currentSearchState else {
+            guard self.historyViewDisposable == nil, let currentSearchState = self.currentSearchState, currentSearchState.main.nextRate != nil else {
                 return
             }
             
