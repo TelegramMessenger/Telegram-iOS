@@ -58,15 +58,8 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
     let editMessages: Signal<[EngineMessage], NoError>
     if let editMessage = selfController.presentationInterfaceState.interfaceState.editMessage {
         editMessages = selfController.context.engine.data.get(
-            TelegramEngine.EngineData.Item.Messages.Message(id: editMessage.messageId)
+            TelegramEngine.EngineData.Item.Messages.MessageGroup(id: editMessage.messageId)
         )
-        |> map { message -> [EngineMessage] in
-            if let message {
-                return [message]
-            } else {
-                return []
-            }
-        }
     } else {
         editMessages = .single([])
     }
@@ -83,17 +76,62 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
             return
         }
         
-        if let _ = selfController.presentationInterfaceState.interfaceState.editMessage {
+        if let editMessage = selfController.presentationInterfaceState.interfaceState.editMessage {
             if editMessages.isEmpty {
                 return
             }
+            
+            var mediaPreview: ChatSendMessageContextScreenMediaPreview?
+            if editMessages.contains(where: { message in
+                return message.media.contains(where: { media in
+                    if media is TelegramMediaImage {
+                        return true
+                    } else if let file = media as? TelegramMediaFile, file.isVideo {
+                        return true
+                    }
+                    return false
+                })
+            }) {
+                mediaPreview = ChatSendGroupMediaMessageContextPreview(
+                    context: selfController.context,
+                    presentationData: selfController.presentationData,
+                    wallpaperBackgroundNode: selfController.chatDisplayNode.backgroundNode,
+                    messages: editMessages
+                )
+            }
+            
+            let mediaCaptionIsAbove: Bool
+            if let value = editMessage.mediaCaptionIsAbove {
+                mediaCaptionIsAbove = value
+            } else {
+                mediaCaptionIsAbove = editMessages.contains(where: {
+                    $0.attributes.contains(where: {
+                        $0 is InvertMediaMessageAttribute
+                    })
+                })
+            }
+            
             let controller = makeChatSendMessageActionSheetController(
                 context: selfController.context,
                 updatedPresentationData: selfController.updatedPresentationData,
                 peerId: selfController.presentationInterfaceState.chatLocation.peerId,
                 params: .editMessage(SendMessageActionSheetControllerParams.EditMessage(
                     messages: editMessages,
-                    mediaPreview: nil
+                    mediaPreview: mediaPreview,
+                    mediaCaptionIsAbove: (mediaCaptionIsAbove, { [weak selfController] updatedMediaCaptionIsAbove in
+                        guard let selfController else {
+                            return
+                        }
+                        selfController.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+                            return state.updatedInterfaceState { interfaceState in
+                                guard var editMessage = interfaceState.editMessage else {
+                                    return interfaceState
+                                }
+                                editMessage.mediaCaptionIsAbove = updatedMediaCaptionIsAbove
+                                return interfaceState.withUpdatedEditMessage(editMessage)
+                            }
+                        })
+                    })
                 )),
                 hasEntityKeyboard: hasEntityKeyboard,
                 gesture: gesture,

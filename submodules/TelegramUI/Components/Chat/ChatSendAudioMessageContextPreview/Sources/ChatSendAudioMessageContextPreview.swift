@@ -13,6 +13,12 @@ import TelegramCore
 import WallpaperBackgroundNode
 import AudioWaveform
 import ChatMessageItemView
+import ChatMessageItemCommon
+import ChatMessageBubbleContentNode
+import ChatMessageMediaBubbleContentNode
+import ChatControllerInteraction
+import TelegramUIPreferences
+import ChatHistoryEntry
 
 public final class ChatSendContactMessageContextPreview: UIView, ChatSendMessageContextScreenMediaPreview {
     private let context: AccountContext
@@ -316,5 +322,262 @@ public final class ChatSendAudioMessageContextPreview: UIView, ChatSendMessageCo
         self.messagesContainer.frame = CGRect(origin: CGPoint(x: 6.0, y: 3.0), size: CGSize(width: contentFrame.width, height: contentFrame.height))
         
         return CGSize(width: contentFrame.width - 4.0, height: contentFrame.height + 2.0)
+    }
+}
+
+public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMessageContextScreenMediaPreview {
+    private let context: AccountContext
+    private let presentationData: PresentationData
+    private let wallpaperBackgroundNode: WallpaperBackgroundNode?
+    private let messages: [Message]
+    
+    private var chatPresentationData: ChatPresentationData?
+    
+    private var messageNode: ChatMessageMediaBubbleContentNode?
+    private let messagesContainer: UIView
+    
+    public var isReady: Signal<Bool, NoError> {
+        return .single(true)
+    }
+
+    public var view: UIView {
+        return self
+    }
+    
+    public var globalClippingRect: CGRect? {
+        return nil
+    }
+
+    public var layoutType: ChatSendMessageContextScreenMediaPreviewLayoutType {
+        return .media
+    }
+    
+    public init(context: AccountContext, presentationData: PresentationData, wallpaperBackgroundNode: WallpaperBackgroundNode?, messages: [EngineMessage]) {
+        self.context = context
+        self.presentationData = presentationData
+        self.wallpaperBackgroundNode = wallpaperBackgroundNode
+        self.messages = messages.map { message in
+            return message._asMessage().withUpdatedTimestamp(0)
+        }
+        
+        self.messagesContainer = UIView()
+        
+        super.init(frame: CGRect())
+        
+        self.addSubview(self.messagesContainer)
+    }
+    
+    required public init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+    }
+    
+    public func animateIn(transition: Transition) {
+        transition.animateAlpha(view: self.messagesContainer, from: 0.0, to: 1.0)
+        transition.animateScale(view: self.messagesContainer, from: 0.001, to: 1.0)
+    }
+
+    public func animateOut(transition: Transition) {
+        transition.setAlpha(view: self.messagesContainer, alpha: 0.0)
+        transition.setScale(view: self.messagesContainer, scale: 0.001)
+    }
+
+    public func animateOutOnSend(transition: Transition) {
+        transition.setAlpha(view: self.messagesContainer, alpha: 0.0)
+    }
+
+    public func update(containerSize: CGSize, transition: Transition) -> CGSize {
+        let messageNode: ChatMessageMediaBubbleContentNode
+        if let current = self.messageNode {
+            messageNode = current
+        } else {
+            messageNode = ChatMessageMediaBubbleContentNode()
+            self.messageNode = messageNode
+            self.messagesContainer.addSubview(messageNode.view)
+        }
+        
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        
+        let chatPresentationData: ChatPresentationData
+        if let current = self.chatPresentationData {
+            chatPresentationData = current
+        } else {
+            chatPresentationData = ChatPresentationData(
+                theme: ChatPresentationThemeData(
+                    theme: presentationData.theme,
+                    wallpaper: presentationData.chatWallpaper
+                ),
+                fontSize: presentationData.chatFontSize,
+                strings: presentationData.strings,
+                dateTimeFormat: presentationData.dateTimeFormat,
+                nameDisplayOrder: presentationData.nameDisplayOrder,
+                disableAnimations: false,
+                largeEmoji: false,
+                chatBubbleCorners: presentationData.chatBubbleCorners
+            )
+            self.chatPresentationData = chatPresentationData
+        }
+        
+        let controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
+            return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _, _ in }, openMessageContextMenu: { _, _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
+            }, updateMessageReaction: { _, _, _, _ in }, activateMessagePinch: { _ in
+            }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _, _ in }, navigateToMessageStandalone: { _ in
+            }, navigateToThreadMessage: { _, _, _ in
+            }, tapMessage: { _ in
+        }, clickThroughMessage: {
+        }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _, _ in
+            return false
+        }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _, _ in }, openUrl: { _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        }, presentController: { _, _ in
+        }, presentControllerInCurrent: { _, _ in
+        }, navigationController: {
+            return nil
+        }, chatControllerNode: {
+            return nil
+        }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
+        }, canSetupReply: { _ in
+            return .none
+        }, canSendMessages: {
+            return false
+        }, navigateToFirstDateMessage: { _, _ in
+        }, requestRedeliveryOfFailedMessages: { _ in
+        }, addContact: { _ in
+        }, rateCall: { _, _, _ in
+        }, requestSelectMessagePollOptions: { _, _ in
+        }, requestOpenMessagePollResults: { _, _ in
+        }, openAppStorePage: {
+        }, displayMessageTooltip: { _, _, _, _, _ in
+        }, seekToTimecode: { _, _, _ in
+        }, scheduleCurrentMessage: {
+        }, sendScheduledMessagesNow: { _ in
+        }, editScheduledMessagesTime: { _ in
+        }, performTextSelectionAction: { _, _, _, _ in
+        }, displayImportedMessageTooltip: { _ in
+        }, displaySwipeToReplyHint: {
+        }, dismissReplyMarkupMessage: { _ in
+        }, openMessagePollResults: { _, _ in
+        }, openPollCreation: { _ in
+        }, displayPollSolution: { _, _ in
+        }, displayPsa: { _, _ in
+        }, displayDiceTooltip: { _ in
+        }, animateDiceSuccess: { _, _ in
+        }, displayPremiumStickerTooltip: { _, _ in
+        }, displayEmojiPackTooltip: { _, _ in
+        }, openPeerContextMenu: { _, _, _, _, _ in
+        }, openMessageReplies: { _, _, _ in
+        }, openReplyThreadOriginalMessage: { _ in
+        }, openMessageStats: { _ in
+        }, editMessageMedia: { _, _ in
+        }, copyText: { _ in
+        }, displayUndo: { _ in
+        }, isAnimatingMessage: { _ in
+            return false
+        }, getMessageTransitionNode: {
+            return nil
+        }, updateChoosingSticker: { _ in
+        }, commitEmojiInteraction: { _, _, _, _ in
+        }, openLargeEmojiInfo: { _, _, _ in
+        }, openJoinLink: { _ in
+        }, openWebView: { _, _, _, _ in
+        }, activateAdAction: { _, _ in
+        }, openRequestedPeerSelection: { _, _, _, _ in
+        }, saveMediaToFiles: { _ in
+        }, openNoAdsDemo: {
+        }, openAdsInfo: {
+        }, displayGiveawayParticipationStatus: { _ in
+        }, openPremiumStatusInfo: { _, _, _, _ in
+        }, openRecommendedChannelContextMenu: { _, _, _ in
+        }, openGroupBoostInfo: { _, _ in
+        }, openStickerEditor: {
+        }, openPhoneContextMenu: { _ in
+        }, openAgeRestrictedMessageMedia: { _, _ in
+        }, playMessageEffect: { _ in
+        }, editMessageFactCheck: { _ in
+        }, requestMessageUpdate: { _, _ in
+        }, cancelInteractiveKeyboardGestures: {
+        }, dismissTextInput: {
+        }, scrollToMessageId: { _ in
+        }, navigateToStory: { _, _ in
+        }, attemptedNavigationToPrivateQuote: { _ in
+        }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
+        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: self.context, backgroundNode: self.wallpaperBackgroundNode))
+        
+        let associatedData = ChatMessageItemAssociatedData(
+            automaticDownloadPeerType: .channel,
+            automaticDownloadPeerId: nil,
+            automaticDownloadNetworkType: .cellular,
+            isRecentActions: false,
+            availableReactions: nil,
+            availableMessageEffects: nil,
+            savedMessageTags: nil,
+            defaultReaction: nil,
+            isPremium: false,
+            accountPeer: nil
+        )
+        
+        let entryAttributes = ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil)
+        
+        let item = ChatMessageBubbleContentItem(
+            context: self.context,
+            controllerInteraction: controllerInteraction,
+            message: self.messages[0],
+            topMessage: self.messages[0],
+            read: true,
+            chatLocation: .peer(id: self.context.account.peerId),
+            presentationData: chatPresentationData,
+            associatedData: associatedData,
+            attributes: entryAttributes,
+            isItemPinned: false,
+            isItemEdited: false
+        )
+        
+        let makeMessageLayout = messageNode.asyncLayoutContent()
+        let layoutConstants = chatMessageItemLayoutConstants(
+            (ChatMessageItemLayoutConstants.compact, ChatMessageItemLayoutConstants.regular),
+            params: ListViewItemLayoutParams(
+                width: containerSize.width,
+                leftInset: 0.0,
+                rightInset: 0.0,
+                availableHeight: 10000.0
+            ),
+            presentationData: chatPresentationData
+        )
+        
+        let (_, _, _, continueMessageLayout) = makeMessageLayout(
+            item,
+            layoutConstants,
+            ChatMessageBubblePreparePosition.linear(
+                top: ChatMessageBubbleRelativePosition.None(.None(.None)),
+                bottom: ChatMessageBubbleRelativePosition.None(.None(.None))
+            ),
+            nil,
+            CGSize(width: containerSize.width, height: 10000.0),
+            0.0
+        )
+        
+        let (finalizedWidth, finalizeMessageLayout) = continueMessageLayout(
+            CGSize(width: containerSize.width, height: 10000.0),
+            ChatMessageBubbleContentPosition.linear(
+                top: ChatMessageBubbleRelativePosition.None(.None(.None)),
+                bottom: ChatMessageBubbleRelativePosition.None(.None(.None))
+            )
+        )
+        let _ = finalizedWidth
+        
+        let (finalizedSize, apply) = finalizeMessageLayout(finalizedWidth)
+        apply(.None, true, nil)
+        
+        let contentFrameInset = UIEdgeInsets(top: -2.0, left: -2.0, bottom: -2.0, right: -2.0)
+        
+        let contentFrame = CGRect(origin: CGPoint(x: contentFrameInset.left, y: contentFrameInset.top), size: finalizedSize)
+        messageNode.frame = contentFrame
+        
+        let messagesContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentFrame.width + contentFrameInset.left + contentFrameInset.right, height: contentFrame.height + contentFrameInset.top + contentFrameInset.bottom))
+        
+        self.messagesContainer.frame = messagesContainerFrame
+        
+        return messagesContainerFrame.size
     }
 }

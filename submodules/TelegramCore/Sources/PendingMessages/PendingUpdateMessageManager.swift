@@ -71,7 +71,7 @@ private final class PendingUpdateMessageManagerImpl {
         }
         
         let disposable = MetaDisposable()
-        let context = PendingUpdateMessageContext(value: ChatUpdatingMessageMedia(text: text, entities: entities, disableUrlPreview: disableUrlPreview, media: media, progress: 0.0), disposable: disposable)
+        let context = PendingUpdateMessageContext(value: ChatUpdatingMessageMedia(text: text, entities: entities, disableUrlPreview: disableUrlPreview, media: media, invertMediaAttribute: invertMediaAttribute, progress: 0.0), disposable: disposable)
         self.contexts[messageId] = context
         
         let queue = self.queue

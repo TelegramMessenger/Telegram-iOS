@@ -1824,7 +1824,7 @@ extension ChatControllerImpl {
                             }
                             
                             var updated = state.updatedInterfaceState { interfaceState in
-                                return interfaceState.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: inputText), disableUrlPreviews: disableUrlPreviews, inputTextMaxLength: inputTextMaxLength))
+                                return interfaceState.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: inputText), disableUrlPreviews: disableUrlPreviews, inputTextMaxLength: inputTextMaxLength, mediaCaptionIsAbove: nil))
                             }
                             
                             let (updatedState, updatedPreviewQueryState) = updatedChatEditInterfaceMessageState(context: strongSelf.context, state: updated, message: message)
@@ -2167,6 +2167,14 @@ extension ChatControllerImpl {
                 var invertedMediaAttribute: InvertMediaMessageAttribute?
                 if let attribute = message.attributes.first(where: { $0 is InvertMediaMessageAttribute }) {
                     invertedMediaAttribute = attribute as? InvertMediaMessageAttribute
+                }
+                
+                if let mediaCaptionIsAbove = editMessage.mediaCaptionIsAbove {
+                    if mediaCaptionIsAbove {
+                        invertedMediaAttribute = InvertMediaMessageAttribute()
+                    } else {
+                        invertedMediaAttribute = nil
+                    }
                 }
                 
                 let text = trimChatInputText(convertMarkdownToAttributes(expandedInputStateAttributedString(editMessage.inputState.inputText)))

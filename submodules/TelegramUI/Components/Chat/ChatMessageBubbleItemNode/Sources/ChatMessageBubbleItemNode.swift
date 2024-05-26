@@ -250,7 +250,14 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     messageWithCaptionToAdd = (message, itemAttributes)
                     skipText = true
                 } else {
-                    if let _ = message.attributes.first(where: { $0 is InvertMediaMessageAttribute }) {
+                    var isMediaInverted = false
+                    if let updatingMedia = itemAttributes.updatingMedia {
+                        isMediaInverted = updatingMedia.invertMediaAttribute != nil
+                    } else if let _ = message.attributes.first(where: { $0 is InvertMediaMessageAttribute }) {
+                        isMediaInverted = true
+                    }
+                    
+                    if isMediaInverted {
                         result.insert((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)), at: 0)
                     } else {
                         result.append((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)))
@@ -303,7 +310,14 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     }
     
     if let (messageWithCaptionToAdd, itemAttributes) = messageWithCaptionToAdd {
-        if let _ = messageWithCaptionToAdd.attributes.first(where: { $0 is InvertMediaMessageAttribute }) {
+        var isMediaInverted = false
+        if let updatingMedia = itemAttributes.updatingMedia {
+            isMediaInverted = updatingMedia.invertMediaAttribute != nil
+        } else if let _ = messageWithCaptionToAdd.attributes.first(where: { $0 is InvertMediaMessageAttribute }) {
+            isMediaInverted = true
+        }
+        
+        if isMediaInverted {
             if result.isEmpty {
                 needReactions = false
             }

@@ -40,10 +40,12 @@ public enum SendMessageActionSheetControllerParams {
     public final class EditMessage {
         public let messages: [EngineMessage]
         public let mediaPreview: ChatSendMessageContextScreenMediaPreview?
+        public let mediaCaptionIsAbove: (Bool, (Bool) -> Void)?
         
-        public init(messages: [EngineMessage], mediaPreview: ChatSendMessageContextScreenMediaPreview?) {
+        public init(messages: [EngineMessage], mediaPreview: ChatSendMessageContextScreenMediaPreview?, mediaCaptionIsAbove: (Bool, (Bool) -> Void)?) {
             self.messages = messages
             self.mediaPreview = mediaPreview
+            self.mediaCaptionIsAbove = mediaCaptionIsAbove
         }
     }
     

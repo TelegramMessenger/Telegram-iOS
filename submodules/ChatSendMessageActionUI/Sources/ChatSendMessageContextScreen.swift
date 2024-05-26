@@ -320,9 +320,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                 case let .sendMessage(sendMessage):
                     self.mediaCaptionIsAbove = sendMessage.mediaCaptionIsAbove?.0 ?? false
                 case let .editMessage(editMessage):
-                    self.mediaCaptionIsAbove = editMessage.messages.contains(where: {
-                        return $0.attributes.contains(where: { $0 is InvertMediaMessageAttribute })
-                    })
+                    self.mediaCaptionIsAbove = editMessage.mediaCaptionIsAbove?.0 ?? false
                 }
                 
                 component.gesture.externalUpdated = { [weak self] view, location in
@@ -483,8 +481,8 @@ final class ChatSendMessageContextScreenComponent: Component {
                         switch component.params {
                         case let .sendMessage(sendMessage):
                             sendMessage.mediaCaptionIsAbove?.1(self.mediaCaptionIsAbove)
-                        case .editMessage:
-                            break
+                        case let .editMessage(editMessage):
+                            editMessage.mediaCaptionIsAbove?.1(self.mediaCaptionIsAbove)
                         }
                         if !self.isUpdating {
                             self.state?.updated(transition: .spring(duration: 0.35))
@@ -704,6 +702,11 @@ final class ChatSendMessageContextScreenComponent: Component {
                 messageItemViewContainerSize = CGSize(width: availableSize.width - 16.0 - 40.0, height: availableSize.height)
             }
             
+            var isEditMessage = false
+            if case .editMessage = component.params {
+                isEditMessage = true
+            }
+            
             let messageItemSize = messageItemView.update(
                 context: component.context,
                 presentationData: presentationData,
@@ -719,6 +722,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                 maxTextHeight: 20000.0,
                 containerSize: messageItemViewContainerSize,
                 effect: self.presentationAnimationState.key == .animatedIn ? self.selectedMessageEffect : nil,
+                isEditMessage: isEditMessage,
                 transition: transition
             )
             let sourceMessageItemFrame = CGRect(origin: CGPoint(x: localSourceTextInputViewFrame.minX - sourceMessageTextInsets.left, y: localSourceTextInputViewFrame.minY - 2.0), size: messageItemSize)
@@ -1141,6 +1145,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                     
                     messageItemView.animateIn(
                         sourceTextInputView: component.textInputView as? ChatInputTextView,
+                        isEditMessage: isEditMessage,
                         transition: transition
                     )
                 case .animatedOut:
@@ -1150,6 +1155,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                     messageItemView.animateOut(
                         sourceTextInputView: component.textInputView as? ChatInputTextView,
                         toEmpty: self.animateOutToEmpty,
+                        isEditMessage: isEditMessage,
                         transition: transition
                     )
                 }

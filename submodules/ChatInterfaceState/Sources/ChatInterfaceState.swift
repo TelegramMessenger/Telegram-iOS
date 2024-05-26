@@ -47,12 +47,14 @@ public struct ChatEditMessageState: Codable, Equatable {
     public var inputState: ChatTextInputState
     public var disableUrlPreviews: [String]
     public var inputTextMaxLength: Int32?
+    public var mediaCaptionIsAbove: Bool?
     
-    public init(messageId: EngineMessage.Id, inputState: ChatTextInputState, disableUrlPreviews: [String], inputTextMaxLength: Int32?) {
+    public init(messageId: EngineMessage.Id, inputState: ChatTextInputState, disableUrlPreviews: [String], inputTextMaxLength: Int32?, mediaCaptionIsAbove: Bool?) {
         self.messageId = messageId
         self.inputState = inputState
         self.disableUrlPreviews = disableUrlPreviews
         self.inputTextMaxLength = inputTextMaxLength
+        self.mediaCaptionIsAbove = mediaCaptionIsAbove
     }
 
     public init(from decoder: Decoder) throws {
@@ -80,6 +82,8 @@ public struct ChatEditMessageState: Codable, Equatable {
             }
         }
         self.inputTextMaxLength = try? container.decodeIfPresent(Int32.self, forKey: "tl")
+        
+        self.mediaCaptionIsAbove = try? container.decodeIfPresent(Bool.self, forKey: "mediaCaptionIsAbove")
     }
 
 
@@ -94,18 +98,20 @@ public struct ChatEditMessageState: Codable, Equatable {
 
         try container.encode(self.disableUrlPreviews, forKey: "dupl")
         try container.encodeIfPresent(self.inputTextMaxLength, forKey: "tl")
+        
+        try container.encodeIfPresent(self.mediaCaptionIsAbove, forKey: "mediaCaptionIsAbove")
     }
     
     public static func ==(lhs: ChatEditMessageState, rhs: ChatEditMessageState) -> Bool {
-        return lhs.messageId == rhs.messageId && lhs.inputState == rhs.inputState && lhs.disableUrlPreviews == rhs.disableUrlPreviews && lhs.inputTextMaxLength == rhs.inputTextMaxLength
+        return lhs.messageId == rhs.messageId && lhs.inputState == rhs.inputState && lhs.disableUrlPreviews == rhs.disableUrlPreviews && lhs.inputTextMaxLength == rhs.inputTextMaxLength && lhs.mediaCaptionIsAbove == rhs.mediaCaptionIsAbove
     }
     
     public func withUpdatedInputState(_ inputState: ChatTextInputState) -> ChatEditMessageState {
-        return ChatEditMessageState(messageId: self.messageId, inputState: inputState, disableUrlPreviews: self.disableUrlPreviews, inputTextMaxLength: self.inputTextMaxLength)
+        return ChatEditMessageState(messageId: self.messageId, inputState: inputState, disableUrlPreviews: self.disableUrlPreviews, inputTextMaxLength: self.inputTextMaxLength, mediaCaptionIsAbove: self.mediaCaptionIsAbove)
     }
     
     public func withUpdatedDisableUrlPreviews(_ disableUrlPreviews: [String]) -> ChatEditMessageState {
-        return ChatEditMessageState(messageId: self.messageId, inputState: self.inputState, disableUrlPreviews: disableUrlPreviews, inputTextMaxLength: self.inputTextMaxLength)
+        return ChatEditMessageState(messageId: self.messageId, inputState: self.inputState, disableUrlPreviews: disableUrlPreviews, inputTextMaxLength: self.inputTextMaxLength, mediaCaptionIsAbove: self.mediaCaptionIsAbove)
     }
 }
 

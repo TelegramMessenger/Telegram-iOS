@@ -23,6 +23,12 @@ swift_library(
         "//submodules/WallpaperBackgroundNode",
         "//submodules/AudioWaveform",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemView",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageMediaBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
+        "//submodules/TelegramUI/Components/Chat/ChatHistoryEntry",
+        "//submodules/TelegramUI/Components/ChatControllerInteraction",
+        "//submodules/TelegramUIPreferences",
     ],
     visibility = [
         "//visibility:public",

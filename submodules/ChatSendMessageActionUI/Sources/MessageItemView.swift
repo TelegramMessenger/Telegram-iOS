@@ -245,23 +245,35 @@ final class MessageItemView: UIView {
     
     func animateIn(
         sourceTextInputView: ChatInputTextView?,
+        isEditMessage: Bool,
         transition: Transition
     ) {
-        if let mediaPreview = self.mediaPreview {
-            mediaPreview.animateIn(transition: transition)
+        if isEditMessage {
+            transition.animateScale(view: self, from: 0.001, to: 1.0)
+            transition.animateAlpha(view: self, from: 0.0, to: 1.0)
+        } else {
+            if let mediaPreview = self.mediaPreview {
+                mediaPreview.animateIn(transition: transition)
+            }
         }
     }
     
     func animateOut(
         sourceTextInputView: ChatInputTextView?,
         toEmpty: Bool,
+        isEditMessage: Bool,
         transition: Transition
     ) {
-        if let mediaPreview = self.mediaPreview {
-            if toEmpty {
-                mediaPreview.animateOutOnSend(transition: transition)
-            } else {
-                mediaPreview.animateOut(transition: transition)
+        if isEditMessage {
+            transition.setScale(view: self, scale: 0.001)
+            transition.setAlpha(view: self, alpha: 0.0)
+        } else {
+            if let mediaPreview = self.mediaPreview {
+                if toEmpty {
+                    mediaPreview.animateOutOnSend(transition: transition)
+                } else {
+                    mediaPreview.animateOut(transition: transition)
+                }
             }
         }
     }
@@ -281,6 +293,7 @@ final class MessageItemView: UIView {
         maxTextHeight: CGFloat,
         containerSize: CGSize,
         effect: AvailableMessageEffects.MessageEffect?,
+        isEditMessage: Bool,
         transition: Transition
     ) -> CGSize {
         self.emojiViewProvider = emojiViewProvider
@@ -386,6 +399,8 @@ final class MessageItemView: UIView {
             case .message, .videoMessage:
                 backgroundAlpha = 0.0
             }
+            
+            let backgroundScale: CGFloat = 1.0
             
             var backgroundFrame = mediaPreviewFrame.insetBy(dx: -2.0, dy: -2.0)
             backgroundFrame.size.width += 6.0
@@ -502,10 +517,14 @@ final class MessageItemView: UIView {
             
             transition.setFrame(view: sourceMediaPreview.view, frame: mediaPreviewFrame)
             
-            transition.setFrame(view: self.backgroundWallpaperNode.view, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+            transition.setPosition(view: self.backgroundWallpaperNode.view, position: CGRect(origin: CGPoint(), size: backgroundFrame.size).center)
+            transition.setBounds(view: self.backgroundWallpaperNode.view, bounds: CGRect(origin: CGPoint(), size: backgroundFrame.size))
             alphaTransition.setAlpha(view: self.backgroundWallpaperNode.view, alpha: backgroundAlpha)
+            transition.setScale(view: self.backgroundWallpaperNode.view, scale: backgroundScale)
             self.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: transition.containedViewLayoutTransition)
-            transition.setFrame(view: self.backgroundNode.view, frame: backgroundFrame)
+            transition.setPosition(view: self.backgroundNode.view, position: backgroundFrame.center)
+            transition.setBounds(view: self.backgroundNode.view, bounds: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+            transition.setScale(view: self.backgroundNode.view, scale: backgroundScale)
             alphaTransition.setAlpha(view: self.backgroundNode.view, alpha: backgroundAlpha)
             self.backgroundNode.updateLayout(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
             
