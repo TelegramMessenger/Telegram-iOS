@@ -12298,3 +12298,13 @@ Sorry for the inconvenience.";
 "Stars.Transfer.Balance" = "Balance";
 
 "Settings.Stars" = "Your Stars";
+
+"Chat.MessageEffectMenu.TitleAddEffect" = "Add an animated effect";
+"Chat.MessageEffectMenu.SectionMessageEffects" = "Message Effects";
+"Chat.SendMessageMenu.MoveCaptionUp" = "Move Caption Up";
+"Chat.SendMessageMenu.MoveCaptionDown" = "Move Caption Down";
+"Chat.SendMessageMenu.ToastPremiumRequired.Text" = "Subscribe to [Telegram Premium]() to add this animated effect.";
+
+"BusinessLink.AlertTextLimitText" = "The message text limit is 4096 characters";
+
+"Chat.SendMessageMenu.EditMessage" = "Edit Message";

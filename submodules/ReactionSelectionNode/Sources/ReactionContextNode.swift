@@ -1796,6 +1796,9 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                     return
                 }
                 
+                let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
+                let strings = presentationData.strings
+                
                 switch query {
                 case .none:
                     self.emojiSearchDisposable.set(nil)
@@ -1929,7 +1932,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                             } else {
                                                 resultGroupIndexById[groupId] = resultGroups.count
                                                 //TODO:localize
-                                                resultGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: i == 0 ? nil : "Message Effects", subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, hasEdit: false, headerItem: nil, items: [resultItem]))
+                                                resultGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: i == 0 ? nil : strings.Chat_MessageEffectMenu_SectionMessageEffects, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, hasEdit: false, headerItem: nil, items: [resultItem]))
                                             }
                                         }
                                     }
@@ -2281,7 +2284,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                         } else {
                                             resultGroupIndexById[groupId] = resultGroups.count
                                             //TODO:localize
-                                            resultGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: i == 0 ? nil : "Message Effects", subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, hasEdit: false, headerItem: nil, items: [resultItem]))
+                                            resultGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: i == 0 ? nil : strings.Chat_MessageEffectMenu_SectionMessageEffects, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, hasEdit: false, headerItem: nil, items: [resultItem]))
                                         }
                                     }
                                 }

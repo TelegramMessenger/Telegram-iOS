@@ -57,7 +57,7 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode, ChatSendMessage
         
         self.sendButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
-                if strongSelf.sendButtonHasApplyIcon || !strongSelf.sendButtonLongPressEnabled {
+                if !strongSelf.sendButtonLongPressEnabled {
                     if highlighted {
                         strongSelf.sendContainerNode.layer.removeAnimation(forKey: "opacity")
                         strongSelf.sendContainerNode.alpha = 0.4

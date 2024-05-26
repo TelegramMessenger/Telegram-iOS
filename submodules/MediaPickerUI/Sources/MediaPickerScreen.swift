@@ -2502,8 +2502,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                                 mediaCaptionIsAbove = interaction.captionIsAboveMedia
                             }
                             
-                            //TODO:localize
-                            items.append(.action(ContextMenuActionItem(text: mediaCaptionIsAbove ? "Move Caption Down" : "Move Caption Up", icon: { _ in return nil }, iconAnimation: ContextMenuActionItem.IconAnimation(
+                            items.append(.action(ContextMenuActionItem(text: mediaCaptionIsAbove ? strings.Chat_SendMessageMenu_MoveCaptionDown : strings.Chat_SendMessageMenu_MoveCaptionUp, icon: { _ in return nil }, iconAnimation: ContextMenuActionItem.IconAnimation(
                                 name: !mediaCaptionIsAbove ? "message_preview_sort_above" : "message_preview_sort_below"
                             ), action: { [weak self]  _, f in
                                 f(.default)

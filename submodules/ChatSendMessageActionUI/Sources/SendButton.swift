@@ -19,6 +19,13 @@ import ActivityIndicator
 import RadialStatusNode
 
 final class SendButton: HighlightTrackingButton {
+    enum Kind {
+        case send
+        case edit
+    }
+    
+    private let kind: Kind
+    
     private let containerView: UIView
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     private let backgroundLayer: SimpleLayer
@@ -28,7 +35,9 @@ final class SendButton: HighlightTrackingButton {
     private var didProcessSourceCustomContent: Bool = false
     private var sourceCustomContentView: UIView?
     
-    override init(frame: CGRect) {
+    init(kind: Kind) {
+        self.kind = kind
+        
         self.containerView = UIView()
         self.containerView.isUserInteractionEnabled = false
         
@@ -37,7 +46,7 @@ final class SendButton: HighlightTrackingButton {
         self.iconView = UIImageView()
         self.iconView.isUserInteractionEnabled = false
         
-        super.init(frame: frame)
+        super.init(frame: CGRect())
         
         self.containerView.clipsToBounds = true
         self.addSubview(self.containerView)
@@ -100,7 +109,12 @@ final class SendButton: HighlightTrackingButton {
         }
         
         if self.iconView.image == nil {
-            self.iconView.image = PresentationResourcesChat.chatInputPanelSendIconImage(presentationData.theme)
+            switch self.kind {
+            case .send:
+                self.iconView.image = PresentationResourcesChat.chatInputPanelSendIconImage(presentationData.theme)
+            case .edit:
+                self.iconView.image = PresentationResourcesChat.chatInputPanelApplyIconImage(presentationData.theme)
+            }
         }
         
         if let sourceCustomContentView = self.sourceCustomContentView {

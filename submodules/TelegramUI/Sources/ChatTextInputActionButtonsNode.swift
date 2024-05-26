@@ -67,7 +67,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         
         self.sendButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
-                if strongSelf.sendButtonHasApplyIcon || !strongSelf.sendButtonLongPressEnabled {
+                if !strongSelf.sendButtonLongPressEnabled {
                     if highlighted {
                         strongSelf.sendContainerNode.layer.removeAnimation(forKey: "opacity")
                         strongSelf.sendContainerNode.alpha = 0.4
@@ -109,9 +109,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            if !strongSelf.sendButtonHasApplyIcon {
-                strongSelf.sendButtonLongPressed?(strongSelf, recognizer)
-            }
+            strongSelf.sendButtonLongPressed?(strongSelf, recognizer)
         }
         
         self.micButtonPointerInteraction = PointerInteraction(view: self.micButton, style: .circle(36.0))

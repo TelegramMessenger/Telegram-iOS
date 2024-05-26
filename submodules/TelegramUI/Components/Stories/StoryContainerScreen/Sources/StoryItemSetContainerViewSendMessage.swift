@@ -2918,13 +2918,13 @@ final class StoryItemSetContainerSendMessage {
                 return
             }
             if !hashtag.isEmpty {
-                if "".isEmpty {
+                /*if !"".isEmpty {
                     let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, query: hashtag)
                     navigationController.pushViewController(searchController)
-                } else {
+                } else {*/
                     let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)
                     navigationController.pushViewController(searchController)
-                }
+                //}
             }
         }))
     }

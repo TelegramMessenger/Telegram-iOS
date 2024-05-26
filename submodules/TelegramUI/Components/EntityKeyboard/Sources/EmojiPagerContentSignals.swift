@@ -2256,8 +2256,7 @@ public extension EmojiPagerContentComponent {
                             itemGroups[groupIndex].items.append(resultItem)
                         } else {
                             itemGroupIndexById[groupId] = itemGroups.count
-                            //TODO:localize
-                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: i == 0 ? nil : "Message Effects", subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, hasEdit: false, headerItem: nil, items: [resultItem]))
+                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: i == 0 ? nil : strings.Chat_MessageEffectMenu_SectionMessageEffects, subtitle: nil, actionButtonTitle: nil, isPremiumLocked: false, isFeatured: false, displayPremiumBadges: false, hasEdit: false, headerItem: nil, items: [resultItem]))
                         }
                     }
                 }

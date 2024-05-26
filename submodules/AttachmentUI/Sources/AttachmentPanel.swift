@@ -1002,21 +1002,24 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                         context: strongSelf.context,
                         updatedPresentationData: strongSelf.updatedPresentationData,
                         peerId: strongSelf.presentationInterfaceState.chatLocation.peerId,
-                        forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds,
+                        params: .sendMessage(SendMessageActionSheetControllerParams.SendMessage(
+                            isScheduledMessages: false,
+                            mediaPreview: mediaPreview,
+                            mediaCaptionIsAbove: (captionIsAboveMedia, { [weak strongSelf] value in
+                                guard let strongSelf, let controller = strongSelf.controller, let mediaPickerContext = controller.mediaPickerContext else {
+                                    return
+                                }
+                                mediaPickerContext.setCaptionIsAboveMedia(value)
+                            }),
+                            attachment: true,
+                            canSendWhenOnline: sendWhenOnlineAvailable,
+                            forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
+                        )),
                         hasEntityKeyboard: hasEntityKeyboard,
                         gesture: gesture,
                         sourceSendButton: node,
                         textInputView: textInputNode.textView,
-                        mediaPreview: mediaPreview,
-                        mediaCaptionIsAbove: (captionIsAboveMedia, { [weak strongSelf] value in
-                            guard let strongSelf, let controller = strongSelf.controller, let mediaPickerContext = controller.mediaPickerContext else {
-                                return
-                            }
-                            mediaPickerContext.setCaptionIsAboveMedia(value)
-                        }),
                         emojiViewProvider: textInputPanelNode.emojiViewProvider,
-                        attachment: true,
-                        canSendWhenOnline: sendWhenOnlineAvailable,
                         completion: {
                         },
                         sendMessage: { [weak textInputPanelNode] mode, messageEffect in
