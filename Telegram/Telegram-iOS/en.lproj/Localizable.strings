@@ -12297,6 +12297,8 @@ Sorry for the inconvenience.";
 
 "Stars.Transfer.Balance" = "Balance";
 
+"Stars.Transfer.Unavailable" = "Unavailable";
+
 "Settings.Stars" = "Your Stars";
 
 "Chat.MessageEffectMenu.TitleAddEffect" = "Add an animated effect";

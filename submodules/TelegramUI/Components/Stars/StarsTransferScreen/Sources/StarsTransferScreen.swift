@@ -17,6 +17,7 @@ import PremiumStarComponent
 import ItemListUI
 import UndoUI
 import AccountContext
+import PresentationDataUtils
 
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -390,20 +391,26 @@ private final class SheetContent: CombinedComponent {
                     displaysProgress: state.inProgress,
                     action: { [weak state, weak controller] in
                         state?.buy(requestTopUp: { [weak controller] completion in
-                            let purchaseController = accountContext.sharedContext.makeStarsPurchaseScreen(
-                                context: accountContext,
-                                starsContext: starsContext,
-                                options: state?.options ?? [],
-                                peerId: state?.peer?.id,
-                                requiredStars: invoice.totalAmount,
-                                completion: { [weak starsContext] stars in
-                                    starsContext?.add(balance: stars)
-                                    Queue.mainQueue().after(0.1) {
-                                        completion()
+                            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: accountContext.currentAppConfiguration.with { $0 })
+                            if !premiumConfiguration.isPremiumDisabled {
+                                let purchaseController = accountContext.sharedContext.makeStarsPurchaseScreen(
+                                    context: accountContext,
+                                    starsContext: starsContext,
+                                    options: state?.options ?? [],
+                                    peerId: state?.peer?.id,
+                                    requiredStars: invoice.totalAmount,
+                                    completion: { [weak starsContext] stars in
+                                        starsContext?.add(balance: stars)
+                                        Queue.mainQueue().after(0.1) {
+                                            completion()
+                                        }
                                     }
-                                }
-                            )
-                            controller?.push(purchaseController)
+                                )
+                                controller?.push(purchaseController)
+                            } else {
+                                let alertController = textAlertController(context: accountContext, title: nil, text: presentationData.strings.Stars_Transfer_Unavailable, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                                controller?.present(alertController, in: .window(.root))
+                            }
                         }, completion: { [weak controller] in
                             let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
                             let resultController = UndoOverlayController(
@@ -421,7 +428,7 @@ private final class SheetContent: CombinedComponent {
 
                             controller?.dismissAnimated()
                             
-                            starsContext.load()
+                            starsContext.load(force: true)
                         })
                     }
                 ),
@@ -567,7 +574,7 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
         
         self.navigationPresentation = .flatModal
         
-        starsContext.load()
+        starsContext.load(force: false)
     }
     
     required public init(coder aDecoder: NSCoder) {

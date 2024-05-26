@@ -509,6 +509,7 @@ final class StarsTransactionsScreenComponent: Component {
             contentHeight += descriptionSize.height
             contentHeight += 29.0
             
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             let balanceSize = self.balanceView.update(
                 transition: .immediate,
                 component: AnyComponent(ListSectionComponent(
@@ -520,6 +521,7 @@ final class StarsTransactionsScreenComponent: Component {
                             theme: environment.theme,
                             strings: environment.strings,
                             count: self.starsState?.balance ?? 0,
+                            purchaseAvailable: !premiumConfiguration.areStarsDisabled,
                             buy: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
@@ -739,7 +741,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
             })
         }
         
-        self.starsContext.load()
+        self.starsContext.load(force: false)
         
         Queue.mainQueue().after(0.5, {
             self.starsContext.loadMore()

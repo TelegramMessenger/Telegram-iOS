@@ -14,17 +14,20 @@ final class StarsBalanceComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let count: Int64
+    let purchaseAvailable: Bool
     let buy: () -> Void
     
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
         count: Int64,
+        purchaseAvailable: Bool,
         buy: @escaping () -> Void
     ) {
         self.theme = theme
         self.strings = strings
         self.count = count
+        self.purchaseAvailable = purchaseAvailable
         self.buy = buy
     }
     
@@ -33,6 +36,9 @@ final class StarsBalanceComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.purchaseAvailable != rhs.purchaseAvailable {
             return false
         }
         if lhs.count != rhs.count {
@@ -66,8 +72,7 @@ final class StarsBalanceComponent: Component {
             self.component = component
             
             let sideInset: CGFloat = 16.0
-            
-            let size = CGSize(width: availableSize.width, height: 172.0)
+            var contentHeight: CGFloat = sideInset
             
             var animatedTextItems: [AnimatedTextComponent.Item] = []
             animatedTextItems.append(AnimatedTextComponent.Item(
@@ -96,13 +101,14 @@ final class StarsBalanceComponent: Component {
                     let spacing: CGFloat = 3.0
                     let totalWidth = titleSize.width + icon.size.width + spacing
                     let origin = floorToScreenPixels((availableSize.width - totalWidth) / 2.0)
-                    let titleFrame = CGRect(origin: CGPoint(x: origin + icon.size.width + spacing, y: 13.0), size: titleSize)
+                    let titleFrame = CGRect(origin: CGPoint(x: origin + icon.size.width + spacing, y: contentHeight - 3.0), size: titleSize)
                     titleView.frame = titleFrame
                     
-                    self.icon.frame = CGRect(origin: CGPoint(x: origin, y: 18.0), size: icon.size)
+                    self.icon.frame = CGRect(origin: CGPoint(x: origin, y: contentHeight + 2.0), size: icon.size)
                 }
             }
-            
+            contentHeight += titleSize.height
+        
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(
@@ -118,35 +124,42 @@ final class StarsBalanceComponent: Component {
                 if subtitleView.superview == nil {
                     self.addSubview(subtitleView)
                 }
-                let subtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - subtitleSize.width) / 2.0), y: 70.0), size: subtitleSize)
+                let subtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - subtitleSize.width) / 2.0), y: contentHeight - 4.0), size: subtitleSize)
                 subtitleView.frame = subtitleFrame
             }
+            contentHeight += subtitleSize.height
             
-            let buttonSize = self.button.update(
-                transition: .immediate,
-                component: AnyComponent(
-                    SolidRoundedButtonComponent(
-                        title: component.strings.Stars_Intro_Buy,
-                        theme: SolidRoundedButtonComponent.Theme(theme: component.theme),
-                        height: 50.0,
-                        cornerRadius: 11.0,
-                        action: { [weak self] in
-                            self?.component?.buy()
-                        }
-                    )
-                ),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
-            )
-            if let buttonView = self.button.view {
-                if buttonView.superview == nil {
-                    self.addSubview(buttonView)
+            if component.purchaseAvailable {
+                contentHeight += 12.0
+                
+                let buttonSize = self.button.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        SolidRoundedButtonComponent(
+                            title: component.strings.Stars_Intro_Buy,
+                            theme: SolidRoundedButtonComponent.Theme(theme: component.theme),
+                            height: 50.0,
+                            cornerRadius: 11.0,
+                            action: { [weak self] in
+                                self?.component?.buy()
+                            }
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
+                )
+                if let buttonView = self.button.view {
+                    if buttonView.superview == nil {
+                        self.addSubview(buttonView)
+                    }
+                    let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: buttonSize)
+                    buttonView.frame = buttonFrame
                 }
-                let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: size.height - buttonSize.height - sideInset), size: buttonSize)
-                buttonView.frame = buttonFrame
+                contentHeight += buttonSize.height
             }
+            contentHeight += sideInset
             
-            return size
+            return CGSize(width: availableSize.width, height: contentHeight)
         }
     }
     

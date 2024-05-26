@@ -520,6 +520,7 @@ private final class AvatarComponent: Component {
                         imageNode = current
                     } else {
                         imageNode = TransformImageNode()
+                        imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
                         self.addSubview(imageNode.view)
                         self.imageNode = imageNode
                         
@@ -528,7 +529,7 @@ private final class AvatarComponent: Component {
                     }
                                     
                     imageNode.frame = CGRect(origin: .zero, size: size)
-                    imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: size.width / 2.0), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets()))()
+                    imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: size.width / 2.0), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
                     
                     self.backgroundView.isHidden = true
                     self.iconView.isHidden = true
