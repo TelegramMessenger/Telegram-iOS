@@ -837,7 +837,7 @@ func openResolvedUrlImpl(
                             }
                         }
                         let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { _ in
-                            let controller = context.sharedContext.makeStarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: .slug(slug), inputData: starsInputData)
+                            let controller = context.sharedContext.makeStarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: .slug(slug), inputData: starsInputData, completion: { _ in })
                             navigationController.pushViewController(controller)
                         })
                     } else {

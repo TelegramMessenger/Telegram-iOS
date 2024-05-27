@@ -877,7 +877,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                         }
                                     }
                                     let _ = (starsInputData |> filter { $0 != nil } |> take(1) |> deliverOnMainQueue).start(next: { _ in
-                                        let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .slug(slug), inputData: starsInputData)
+                                        let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(
+                                            context: strongSelf.context,
+                                            starsContext: starsContext,
+                                            invoice: invoice,
+                                            source: .slug(slug),
+                                            inputData: starsInputData,
+                                            completion: { [weak self] paid in
+                                                guard let self else {
+                                                    return
+                                                }
+                                                self?.sendInvoiceClosedEvent(slug: slug, result: paid ? .paid : .cancelled)
+                                            }
+                                        )
                                         navigationController.pushViewController(controller)
                                     })
                                 } else {

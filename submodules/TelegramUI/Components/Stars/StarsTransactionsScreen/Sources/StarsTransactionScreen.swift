@@ -297,7 +297,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             if let toPeer {
                 tableItems.append(.init(
                     id: "to",
-                    title: strings.Stars_Transaction_To,
+                    title: count < 0 ? strings.Stars_Transaction_To : strings.Stars_Transaction_From,
                     component: AnyComponent(
                         Button(
                             content: AnyComponent(
@@ -1097,6 +1097,9 @@ private final class TransactionCellComponent: Component {
             )
             
             func brokenLine(_ string: String) -> String {
+                if string.count > 30 {
+                    return string
+                }
                 let middleIndex = string.index(string.startIndex, offsetBy: string.count / 2)
                 var newString = string
                 newString.insert("\n", at: middleIndex)

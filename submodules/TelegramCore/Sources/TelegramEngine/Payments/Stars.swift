@@ -199,7 +199,7 @@ private final class StarsContextImpl {
             return
         }
         var transactions = state.transactions
-        transactions.insert(.init(id: "tmp_\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil), at: 0)
+        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil), at: 0)
         
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, transactions: transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
     }
@@ -250,7 +250,7 @@ private extension StarsContext.State.Transaction {
                 }
                 parsedPeer = .peer(EnginePeer(peer))
             }
-            self.init(id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init))
+            self.init(flags: [], id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init))
         }
     }
 }
@@ -258,6 +258,17 @@ private extension StarsContext.State.Transaction {
 public final class StarsContext {
     public struct State: Equatable {
         public struct Transaction: Equatable {
+            public struct Flags: OptionSet {
+                public var rawValue: Int32
+                
+                public init(rawValue: Int32) {
+                    self.rawValue = rawValue
+                }
+                
+                public static let isRefund = Flags(rawValue: 1 << 0)
+                public static let isLocal = Flags(rawValue: 1 << 1)
+            }
+            
             public enum Peer: Equatable {
                 case appStore
                 case playMarket
@@ -267,6 +278,7 @@ public final class StarsContext {
                 case peer(EnginePeer)
             }
             
+            public let flags: Flags
             public let id: String
             public let count: Int64
             public let date: Int32
@@ -276,6 +288,7 @@ public final class StarsContext {
             public let photo: TelegramMediaWebFile?
             
             public init(
+                flags: Flags,
                 id: String,
                 count: Int64,
                 date: Int32,
@@ -284,6 +297,7 @@ public final class StarsContext {
                 description: String?,
                 photo: TelegramMediaWebFile?
             ) {
+                self.flags = flags
                 self.id = id
                 self.count = count
                 self.date = date
@@ -449,13 +463,13 @@ private final class StarsTransactionsContextImpl {
             if filteredTransactions != initialTransactions {
                 var existingIds = Set<String>()
                 for transaction in self._state.transactions {
-                    if !transaction.id.hasPrefix("tmp_") {
+                    if !transaction.flags.contains(.isLocal) {
                         existingIds.insert(transaction.id)
                     }
                 }
             
                 var updatedState = self._state
-                updatedState.transactions.removeAll(where: { $0.id.hasPrefix("tmp_") })
+                updatedState.transactions.removeAll(where: { $0.flags.contains(.isLocal) })
                 for transaction in filteredTransactions.reversed() {
                     if !existingIds.contains(transaction.id) {
                         updatedState.transactions.insert(transaction, at: 0)

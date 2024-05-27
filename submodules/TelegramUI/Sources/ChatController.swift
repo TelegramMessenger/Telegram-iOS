@@ -2957,7 +2957,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(messageId), inputData: starsInputData)
+                                    let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(messageId), inputData: starsInputData, completion: { _ in })
                                     strongSelf.push(controller)
                                 })
                             } else {

@@ -427,6 +427,7 @@ private final class SheetContent: CombinedComponent {
                                 action: { _ in return true})
                             controller?.present(resultController, in: .window(.root))
 
+                            controller?.complete(paid: true)
                             controller?.dismissAnimated()
                             
                             starsContext.load(force: true)
@@ -549,15 +550,18 @@ private final class StarsTransferSheetComponent: CombinedComponent {
 
 public final class StarsTransferScreen: ViewControllerComponentContainer {
     private let context: AccountContext
+    private let completion: @escaping () -> Void
         
     public init(
         context: AccountContext,
         starsContext: StarsContext,
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
-        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
+        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
+        completion: @escaping (Bool) -> Void
     ) {
         self.context = context
+        self.completion = completion
                 
         super.init(
             context: context,
@@ -578,8 +582,21 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
         starsContext.load(force: false)
     }
     
+    deinit {
+        self.complete(paid: false)
+    }
+    
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private var didComplete = false
+    fileprivate func complete(paid: Bool) {
+        guard !self.didComplete else {
+            return
+        }
+        self.didComplete = true
+        self.completion(paid)
     }
     
     public func dismissAnimated() {
