@@ -29,6 +29,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatHistoryEntry",
         "//submodules/TelegramUI/Components/ChatControllerInteraction",
         "//submodules/TelegramUIPreferences",
+        "//submodules/MosaicLayout",
     ],
     visibility = [
         "//visibility:public",
