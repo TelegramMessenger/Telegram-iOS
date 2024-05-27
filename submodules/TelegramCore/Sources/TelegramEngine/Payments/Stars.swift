@@ -183,7 +183,7 @@ private final class StarsContextImpl {
             return
         }
         var transactions = state.transactions
-        transactions.insert(.init(id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil), at: 0)
+        transactions.insert(.init(id: "tmp_\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil), at: 0)
         
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, transactions: transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
     }
@@ -433,10 +433,13 @@ private final class StarsTransactionsContextImpl {
             if filteredTransactions != initialTransactions {
                 var existingIds = Set<String>()
                 for transaction in self._state.transactions {
-                    existingIds.insert(transaction.id)
+                    if !transaction.id.hasPrefix("tmp_") {
+                        existingIds.insert(transaction.id)
+                    }
                 }
             
                 var updatedState = self._state
+                updatedState.transactions.removeAll(where: { $0.id.hasPrefix("tmp_") })
                 for transaction in filteredTransactions.reversed() {
                     if !existingIds.contains(transaction.id) {
                         updatedState.transactions.insert(transaction, at: 0)

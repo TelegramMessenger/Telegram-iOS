@@ -3210,6 +3210,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             } else {
                 header = star.update(
                     component: PremiumStarComponent(
+                        theme: environment.theme,
                         isIntro: isIntro,
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations,

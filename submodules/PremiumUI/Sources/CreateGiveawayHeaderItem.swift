@@ -197,6 +197,7 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
         self.backgroundNode.update(size: CGSize(width: layout.size.width, height: navigationBarHeight), transition: transition)
                
         let component = AnyComponent(PremiumStarComponent(
+            theme: self.item.theme,
             isIntro: true,
             isVisible: true,
             hasIdleAnimations: true,

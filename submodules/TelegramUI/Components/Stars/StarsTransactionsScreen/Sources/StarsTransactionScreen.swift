@@ -428,7 +428,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
             
             context.add(star
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 32.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 19.0))
             )
             
             var originY: CGFloat = 0.0

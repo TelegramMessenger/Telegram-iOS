@@ -167,7 +167,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
     
     static var body: Body {
         let overscroll = Child(Rectangle.self)
-        let fade = Child(RoundedRectangle.self)
+//        let fade = Child(RoundedRectangle.self)
         let text = Child(BalancedTextComponent.self)
         let list = Child(VStack<Empty>.self)
         let termsText = Child(BalancedTextComponent.self)
@@ -203,21 +203,21 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                 .position(CGPoint(x: overscroll.size.width / 2.0, y: -overscroll.size.height / 2.0))
             )
             
-            let fade = fade.update(
-                component: RoundedRectangle(
-                    colors: [
-                        topBackgroundColor,
-                        bottomBackgroundColor
-                    ],
-                    cornerRadius: 0.0,
-                    gradientDirection: .vertical
-                ),
-                availableSize: CGSize(width: availableWidth, height: 300),
-                transition: context.transition
-            )
-            context.add(fade
-                .position(CGPoint(x: fade.size.width / 2.0, y: fade.size.height / 2.0))
-            )
+//            let fade = fade.update(
+//                component: RoundedRectangle(
+//                    colors: [
+//                        topBackgroundColor,
+//                        bottomBackgroundColor
+//                    ],
+//                    cornerRadius: 0.0,
+//                    gradientDirection: .vertical
+//                ),
+//                availableSize: CGSize(width: availableWidth, height: 300),
+//                transition: context.transition
+//            )
+//            context.add(fade
+//                .position(CGPoint(x: fade.size.width / 2.0, y: fade.size.height / 2.0))
+//            )
             
             size.height += 183.0 + 10.0 + environment.navigationHeight - 56.0
             
@@ -724,6 +724,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
 
             let header = star.update(
                 component: PremiumStarComponent(
+                    theme: environment.theme,
                     isIntro: true,
                     isVisible: starIsVisible,
                     hasIdleAnimations: state.hasIdleAnimations,
@@ -732,7 +733,8 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                         UIColor(rgb: 0xf09903),
                         UIColor(rgb: 0xf9b004),
                         UIColor(rgb: 0xfdd219)
-                    ]
+                    ],
+                    particleColor: UIColor(rgb: 0xf9b004)
                 ),
                 availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                 transition: context.transition
