@@ -887,7 +887,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                                 guard let self else {
                                                     return
                                                 }
-                                                self?.sendInvoiceClosedEvent(slug: slug, result: paid ? .paid : .cancelled)
+                                                self.sendInvoiceClosedEvent(slug: slug, result: paid ? .paid : .cancelled)
                                             }
                                         )
                                         navigationController.pushViewController(controller)

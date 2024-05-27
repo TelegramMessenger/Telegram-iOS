@@ -550,7 +550,7 @@ private final class StarsTransferSheetComponent: CombinedComponent {
 
 public final class StarsTransferScreen: ViewControllerComponentContainer {
     private let context: AccountContext
-    private let completion: @escaping () -> Void
+    private let completion: (Bool) -> Void
         
     public init(
         context: AccountContext,
