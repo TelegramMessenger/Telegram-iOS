@@ -112,6 +112,12 @@ final class StarsTransactionsScreenComponent: Component {
         private var stateDisposable: Disposable?
         private var starsState: StarsContext.State?
         
+        private var previousBalance: Int64?
+        
+        private var allTransactionsContext: StarsTransactionsContext?
+        private var incomingTransactionsContext: StarsTransactionsContext?
+        private var outgoingTransactionsContext: StarsTransactionsContext?
+        
         override init(frame: CGRect) {
             self.headerOffsetContainer = UIView()
             self.headerOffsetContainer.isUserInteractionEnabled = false
@@ -264,9 +270,7 @@ final class StarsTransactionsScreenComponent: Component {
                 }
             )
         }
-        
-        private var previousBalance: Int64?
-        
+                
         private var isUpdating = false
         func update(component: StarsTransactionsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
             self.isUpdating = true
@@ -294,6 +298,7 @@ final class StarsTransactionsScreenComponent: Component {
                         return
                     }
                     self.starsState = state
+                    
                     if !self.isUpdating {
                         self.state?.updated()
                     }
@@ -545,56 +550,65 @@ final class StarsTransactionsScreenComponent: Component {
             contentHeight += balanceSize.height
             contentHeight += 44.0
             
-            let transactions = self.starsState?.transactions ?? []
-            let allItems = StarsTransactionsListPanelComponent.Items(
-                items: transactions.map { StarsTransactionsListPanelComponent.Item(transaction: $0) }
-            )
-            let incomingItems = StarsTransactionsListPanelComponent.Items(
-                items: transactions.filter { $0.count > 0 }.map { StarsTransactionsListPanelComponent.Item(transaction: $0) }
-            )
-            let outgoingItems = StarsTransactionsListPanelComponent.Items(
-                items: transactions.filter { $0.count < 0 }.map { StarsTransactionsListPanelComponent.Item(transaction: $0) }
-            )
-            
+            let initialTransactions = self.starsState?.transactions ?? []
             var panelItems: [StarsTransactionsPanelContainerComponent.Item] = []
-            if !allItems.items.isEmpty {
+            if !initialTransactions.isEmpty {
+                let allTransactionsContext: StarsTransactionsContext
+                if let current = self.allTransactionsContext {
+                    allTransactionsContext = current
+                } else {
+                    allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(starsContext: component.starsContext, subject: .all)
+                }
+                
+                let incomingTransactionsContext: StarsTransactionsContext
+                if let current = self.incomingTransactionsContext {
+                    incomingTransactionsContext = current
+                } else {
+                    incomingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(starsContext: component.starsContext, subject: .incoming)
+                }
+                
+                let outgoingTransactionsContext: StarsTransactionsContext
+                if let current = self.outgoingTransactionsContext {
+                    outgoingTransactionsContext = current
+                } else {
+                    outgoingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(starsContext: component.starsContext, subject: .outgoing)
+                }
+                
                 panelItems.append(StarsTransactionsPanelContainerComponent.Item(
                     id: "all",
                     title: environment.strings.Stars_Intro_AllTransactions,
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
-                        items: allItems,
+                        transactionsContext: allTransactionsContext,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
                     ))
                 ))
                 
-                if !outgoingItems.items.isEmpty {
-                    panelItems.append(StarsTransactionsPanelContainerComponent.Item(
-                        id: "incoming",
-                        title: environment.strings.Stars_Intro_Incoming,
-                        panel: AnyComponent(StarsTransactionsListPanelComponent(
-                            context: component.context,
-                            items: incomingItems,
-                            action: { transaction in
-                                component.openTransaction(transaction)
-                            }
-                        ))
+                panelItems.append(StarsTransactionsPanelContainerComponent.Item(
+                    id: "incoming",
+                    title: environment.strings.Stars_Intro_Incoming,
+                    panel: AnyComponent(StarsTransactionsListPanelComponent(
+                        context: component.context,
+                        transactionsContext: incomingTransactionsContext,
+                        action: { transaction in
+                            component.openTransaction(transaction)
+                        }
                     ))
-                    
-                    panelItems.append(StarsTransactionsPanelContainerComponent.Item(
-                        id: "outgoing",
-                        title: environment.strings.Stars_Intro_Outgoing,
-                        panel: AnyComponent(StarsTransactionsListPanelComponent(
-                            context: component.context,
-                            items: outgoingItems,
-                            action: { transaction in
-                                component.openTransaction(transaction)
-                            }
-                        ))
+                ))
+                
+                panelItems.append(StarsTransactionsPanelContainerComponent.Item(
+                    id: "outgoing",
+                    title: environment.strings.Stars_Intro_Outgoing,
+                    panel: AnyComponent(StarsTransactionsListPanelComponent(
+                        context: component.context,
+                        transactionsContext: outgoingTransactionsContext,
+                        action: { transaction in
+                            component.openTransaction(transaction)
+                        }
                     ))
-                }
+                ))
             }
             
             var panelTransition = transition
@@ -742,10 +756,6 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         }
         
         self.starsContext.load(force: false)
-        
-        Queue.mainQueue().after(0.5, {
-            self.starsContext.loadMore()
-        })
     }
     
     required public init(coder aDecoder: NSCoder) {

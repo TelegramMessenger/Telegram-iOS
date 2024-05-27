@@ -2803,14 +2803,14 @@ public func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Si
                         
                         c.setBlendMode(.normal)
                     }
-                } else {
-                    context.withFlippedContext { c in
-                        c.setBlendMode(.copy)
-                        c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
-                        c.fill(arguments.drawingRect)
-                        
-                        c.setBlendMode(.normal)
-                    }
+                }
+            } else {
+                context.withFlippedContext { c in
+                    c.setBlendMode(.copy)
+                    c.setFillColor((arguments.emptyColor ?? UIColor.white).cgColor)
+                    c.fill(arguments.drawingRect)
+                    
+                    c.setBlendMode(.normal)
                 }
             }
             

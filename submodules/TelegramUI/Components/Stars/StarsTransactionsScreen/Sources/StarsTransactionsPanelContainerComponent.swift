@@ -28,19 +28,22 @@ final class StarsTransactionsPanelEnvironment: Equatable {
     let dateTimeFormat: PresentationDateTimeFormat
     let containerInsets: UIEdgeInsets
     let isScrollable: Bool
+    let isCurrent: Bool
     
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
         dateTimeFormat: PresentationDateTimeFormat,
         containerInsets: UIEdgeInsets,
-        isScrollable: Bool
+        isScrollable: Bool,
+        isCurrent: Bool
     ) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.containerInsets = containerInsets
         self.isScrollable = isScrollable
+        self.isCurrent = isCurrent
     }
 
     static func ==(lhs: StarsTransactionsPanelEnvironment, rhs: StarsTransactionsPanelEnvironment) -> Bool {
@@ -57,6 +60,9 @@ final class StarsTransactionsPanelEnvironment: Equatable {
             return false
         }
         if lhs.isScrollable != rhs.isScrollable {
+            return false
+        }
+        if lhs.isCurrent != rhs.isCurrent {
             return false
         }
         return true
@@ -658,15 +664,7 @@ final class StarsTransactionsPanelContainerComponent: Component {
                 }
                 transition.setFrame(view: headerView, frame: CGRect(origin: topPanelFrame.origin.offsetBy(dx: sideInset, dy: 0.0), size: headerSize))
             }
-            
-            let childEnvironment = StarsTransactionsPanelEnvironment(
-                theme: component.theme,
-                strings: component.strings,
-                dateTimeFormat: component.dateTimeFormat,
-                containerInsets: UIEdgeInsets(top: 0.0, left: component.insets.left, bottom: component.insets.bottom, right: component.insets.right),
-                isScrollable: environment.isScrollable
-            )
-            
+                        
             let centralPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelFrame.maxY))
             
             if self.animatingTransition {
@@ -739,6 +737,16 @@ final class StarsTransactionsPanelContainerComponent: Component {
                         panel = ComponentView()
                         self.visiblePanels[panelItem.id] = panel
                     }
+                    
+                    let childEnvironment = StarsTransactionsPanelEnvironment(
+                        theme: component.theme,
+                        strings: component.strings,
+                        dateTimeFormat: component.dateTimeFormat,
+                        containerInsets: UIEdgeInsets(top: 0.0, left: component.insets.left, bottom: component.insets.bottom, right: component.insets.right),
+                        isScrollable: environment.isScrollable,
+                        isCurrent: self.currentId == panelItem.id
+                    )
+                    
                     let _ = panel.update(
                         transition: panelTransition,
                         component: panelItem.panel,

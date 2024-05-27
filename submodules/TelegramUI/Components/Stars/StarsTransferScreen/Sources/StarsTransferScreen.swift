@@ -13,11 +13,11 @@ import BalancedTextComponent
 import MultilineTextComponent
 import BundleIconComponent
 import ButtonComponent
-import PremiumStarComponent
 import ItemListUI
 import UndoUI
 import AccountContext
 import PresentationDataUtils
+import StarsImageComponent
 
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -196,7 +196,7 @@ private final class SheetContent: CombinedComponent {
         
     static var body: Body {
         let background = Child(RoundedRectangle.self)
-        let star = Child(GiftAvatarComponent.self)
+        let star = Child(StarsImageComponent.self)
         let closeButton = Child(Button.self)
         let title = Child(Text.self)
         let text = Child(BalancedTextComponent.self)
@@ -228,24 +228,25 @@ private final class SheetContent: CombinedComponent {
             )
             
             if let peer = state.peer {
+                let subject: StarsImageComponent.Subject
+                if let photo = component.invoice.photo {
+                    subject = .photo(photo)
+                } else {
+                    subject = .transactionPeer(.peer(peer))
+                }
                 let star = star.update(
-                    component: GiftAvatarComponent(
-                        context: context.component.context,
-                        theme: environment.theme,
-                        peers: [peer],
-                        photo: component.invoice.photo,
-                        isVisible: true,
-                        hasIdleAnimations: true,
-                        hasScaleAnimation: false,
-                        avatarSize: 90.0,
-                        color: UIColor(rgb: 0xf7ab04)
+                    component: StarsImageComponent(
+                        context: component.context,
+                        subject: subject,
+                        theme: theme,
+                        diameter: 90.0
                     ),
                     availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                     transition: context.transition
                 )
                 
                 context.add(star
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: 0.0 + star.size.height / 2.0 - 30.0))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 27.0))
                 )
             }
             
@@ -342,7 +343,7 @@ private final class SheetContent: CombinedComponent {
                 transition: .immediate
             )
             let balanceIcon = balanceIcon.update(
-                component: BundleIconComponent(name: "Premium/Stars/StarLarge", tintColor: nil),
+                component: BundleIconComponent(name: "Premium/Stars/StarSmall", tintColor: nil),
                 availableSize: context.availableSize,
                 transition: .immediate
             )
@@ -352,10 +353,10 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: 16.0 + environment.safeInsets.left + balanceTitle.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height / 2.0))
             )
             context.add(balanceIcon
-                .position(CGPoint(x: 16.0 + environment.safeInsets.left + balanceIcon.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0 - UIScreenPixel))
+                .position(CGPoint(x: 16.0 + environment.safeInsets.left + balanceIcon.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0 + 1.0 + UIScreenPixel))
             )
             context.add(balanceValue
-                .position(CGPoint(x: 16.0 + environment.safeInsets.left + balanceIcon.size.width + 3.0 + balanceValue.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0))
+                .position(CGPoint(x: 16.0 + environment.safeInsets.left + balanceIcon.size.width + 3.0 + balanceValue.size.width / 2.0, y: topBalanceOriginY + balanceTitle.size.height + balanceValue.size.height / 2.0 + 2.0 - UIScreenPixel))
             )
            
             if state.cachedStarImage == nil || state.cachedStarImage?.1 !== theme {
@@ -416,7 +417,7 @@ private final class SheetContent: CombinedComponent {
                             let resultController = UndoOverlayController(
                                 presentationData: presentationData,
                                 content: .image(
-                                    image: UIImage(bundleImageName: "Premium/Stars/StarMedium")!,
+                                    image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
                                     title: presentationData.strings.Stars_Transfer_PurchasedTitle,
                                     text: presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string,
                                     round: false,

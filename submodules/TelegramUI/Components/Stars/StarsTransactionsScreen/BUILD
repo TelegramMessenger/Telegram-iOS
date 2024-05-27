@@ -39,6 +39,7 @@ swift_library(
         "//submodules/TelegramUI/Components/AnimatedTextComponent",
         "//submodules/AvatarNode",
         "//submodules/PhotoResources",
+        "//submodules/TelegramUI/Components/Stars/StarsImageComponent",
     ],
     visibility = [
         "//visibility:public",
