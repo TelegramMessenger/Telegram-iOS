@@ -81,7 +81,7 @@ public final class DrawingWallpaperRenderer {
 }
 
 public final class DrawingMessageRenderer {
-    class ContainerNode: ASDisplayNode {
+    final class ContainerNode: ASDisplayNode {
         private let context: AccountContext
         private let messages: [Message]
         private let isNight: Bool
@@ -115,8 +115,9 @@ public final class DrawingMessageRenderer {
             
             let layout = ContainerViewLayout(size: CGSize(width: 360.0, height: 640.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: .portrait), deviceMetrics: .iPhoneX, intrinsicInsets: .zero, safeInsets: .zero, additionalInsets: .zero, statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
             let size = self.updateMessagesLayout(layout: layout, presentationData: mockPresentationData)
+            let _ = self.updateMessagesLayout(layout: layout, presentationData: mockPresentationData)
             
-            Queue.mainQueue().after(0.05, {
+            Queue.mainQueue().after(0.2, {
                 var mediaRect: CGRect?
                 if let messageNode = self.messageNodes?.first {
                     if self.isOverlay {
@@ -157,6 +158,7 @@ public final class DrawingMessageRenderer {
                         }
                     }
                 }
+
                 self.generate(size: size) { image in
                     completion(size, image, mediaRect)
                 }
@@ -304,64 +306,74 @@ public final class DrawingMessageRenderer {
     private let nightContainerNode: ContainerNode
     private let overlayContainerNode: ContainerNode
     
-    public init(context: AccountContext, messages: [Message]) {
+    public init(context: AccountContext, messages: [Message], parentView: UIView) {
         self.context = context
         self.messages = messages
         
         self.dayContainerNode = ContainerNode(context: context, messages: messages)
         self.nightContainerNode = ContainerNode(context: context, messages: messages, isNight: true)
         self.overlayContainerNode = ContainerNode(context: context, messages: messages, isOverlay: true)
+        
+        parentView.addSubview(self.dayContainerNode.view)
+        parentView.addSubview(self.nightContainerNode.view)
+        parentView.addSubview(self.overlayContainerNode.view)
     }
     
     public func render(completion: @escaping (Result) -> Void) {
-        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        let defaultPresentationData = defaultPresentationData()
+        Queue.mainQueue().after(0.1) {
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let defaultPresentationData = defaultPresentationData()
+                        
+            let mockPresentationData = PresentationData(
+                strings: presentationData.strings,
+                theme: defaultPresentationTheme,
+                autoNightModeTriggered: false,
+                chatWallpaper: presentationData.chatWallpaper,
+                chatFontSize: defaultPresentationData.chatFontSize,
+                chatBubbleCorners: defaultPresentationData.chatBubbleCorners,
+                listsFontSize: defaultPresentationData.listsFontSize,
+                dateTimeFormat: presentationData.dateTimeFormat,
+                nameDisplayOrder: presentationData.nameDisplayOrder,
+                nameSortOrder: presentationData.nameSortOrder,
+                reduceMotion: false,
+                largeEmoji: true
+            )
+            
+            var finalSize: CGSize = .zero
+            var dayImage: UIImage?
+            var nightImage: UIImage?
+            var overlayImage: UIImage?
+            var mediaRect: CGRect?
+            
+            let completeIfReady = {
+                if let dayImage, let nightImage, let overlayImage {
+                    var cornerRadius: CGFloat = defaultPresentationData.chatBubbleCorners.mainRadius
+                    if let mediaRect, mediaRect.width == mediaRect.height, mediaRect.width == 240.0 {
+                        cornerRadius = mediaRect.width / 2.0
+                    } else if let rect = mediaRect {
+                        mediaRect = CGRect(x: rect.minX + 4.0, y: rect.minY, width: rect.width - 6.0, height: rect.height - 1.0)
+                    }
+                    completion(Result(size: finalSize, dayImage: dayImage, nightImage: nightImage, overlayImage: overlayImage, mediaFrame: mediaRect.flatMap { Result.MediaFrame(rect: $0, cornerRadius: cornerRadius) }))
                     
-        let mockPresentationData = PresentationData(
-            strings: presentationData.strings,
-            theme: defaultPresentationTheme,
-            autoNightModeTriggered: false,
-            chatWallpaper: presentationData.chatWallpaper,
-            chatFontSize: defaultPresentationData.chatFontSize,
-            chatBubbleCorners: defaultPresentationData.chatBubbleCorners,
-            listsFontSize: defaultPresentationData.listsFontSize,
-            dateTimeFormat: presentationData.dateTimeFormat,
-            nameDisplayOrder: presentationData.nameDisplayOrder,
-            nameSortOrder: presentationData.nameSortOrder,
-            reduceMotion: false,
-            largeEmoji: true
-        )
-        
-        var finalSize: CGSize = .zero
-        var dayImage: UIImage?
-        var nightImage: UIImage?
-        var overlayImage: UIImage?
-        var mediaRect: CGRect?
-        
-        let completeIfReady = {
-            if let dayImage, let nightImage, let overlayImage {
-                var cornerRadius: CGFloat = defaultPresentationData.chatBubbleCorners.mainRadius
-                if let mediaRect, mediaRect.width == mediaRect.height, mediaRect.width == 240.0 {
-                    cornerRadius = mediaRect.width / 2.0
-                } else if let rect = mediaRect {
-                    mediaRect = CGRect(x: rect.minX + 4.0, y: rect.minY, width: rect.width - 6.0, height: rect.height - 1.0)
+                    self.dayContainerNode.view.removeFromSuperview()
+                    self.nightContainerNode.view.removeFromSuperview()
+                    self.overlayContainerNode.view.removeFromSuperview()
                 }
-                completion(Result(size: finalSize, dayImage: dayImage, nightImage: nightImage, overlayImage: overlayImage, mediaFrame: mediaRect.flatMap { Result.MediaFrame(rect: $0, cornerRadius: cornerRadius) }))
             }
-        }
-        self.dayContainerNode.render(presentationData: mockPresentationData) { size, image, rect in
-            finalSize = size
-            dayImage = image
-            mediaRect = rect
-            completeIfReady()
-        }
-        self.nightContainerNode.render(presentationData: mockPresentationData) { size, image, _ in
-            nightImage = image
-            completeIfReady()
-        }
-        self.overlayContainerNode.render(presentationData: mockPresentationData) { size, image, _ in
-            overlayImage = image
-            completeIfReady()
+            self.dayContainerNode.render(presentationData: mockPresentationData) { size, image, rect in
+                finalSize = size
+                dayImage = image
+                mediaRect = rect
+                completeIfReady()
+            }
+            self.nightContainerNode.render(presentationData: mockPresentationData) { size, image, _ in
+                nightImage = image
+                completeIfReady()
+            }
+            self.overlayContainerNode.render(presentationData: mockPresentationData) { size, image, _ in
+                overlayImage = image
+                completeIfReady()
+            }
         }
     }
 }

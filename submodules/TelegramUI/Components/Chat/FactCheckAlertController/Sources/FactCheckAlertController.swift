@@ -204,6 +204,11 @@ private final class FactCheckAlertContentNode: AlertContentNode {
         let inputInset: CGFloat = 16.0
         let inputWidth = resultWidth - inputInset * 2.0
         
+        var characterLimit: Int = 1024
+        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let value = data["factcheck_length_limit"] as? Double {
+            characterLimit = Int(value)
+        }
+        
         let inputFieldSize = self.inputField.update(
             transition: .immediate,
             component: AnyComponent(TextFieldComponent(
@@ -219,7 +224,7 @@ private final class FactCheckAlertContentNode: AlertContentNode {
                 customInputView: nil,
                 resetText: nil,
                 isOneLineWhenUnfocused: false,
-                characterLimit: 1024,
+                characterLimit: characterLimit,
                 emptyLineHandling: .oneConsecutive,
                 formatMenuAvailability: .available([.bold, .italic, .link]),
                 returnKeyType: .default,

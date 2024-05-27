@@ -3039,7 +3039,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         messageFile = nil
                     }
                     
-                    let renderer = DrawingMessageRenderer(context: self.context, messages: messages)
+                    let renderer = DrawingMessageRenderer(context: self.context, messages: messages, parentView: self.view)
                     renderer.render(completion: { result in
                         if case .draft = subject, let existingEntityView = self.entitiesView.getView(where: { entityView in
                             if let stickerEntityView = entityView as? DrawingStickerEntityView, case .message = (stickerEntityView.entity as! DrawingStickerEntity).content {
