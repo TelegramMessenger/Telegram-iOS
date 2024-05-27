@@ -319,14 +319,18 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     
     private var alertActions: (primary: (() -> Void)?, other: (() -> Void)?)?
     
-    private let deviceToken = Promise<Data?>(nil)
+    private let voipDeviceToken = Promise<Data?>(nil)
+    private let regularDeviceToken = Promise<Data?>(nil)
         
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
         
         let _ = voipTokenPromise.get().start(next: { token in
-            self.deviceToken.set(.single(token))
+            self.voipDeviceToken.set(.single(token))
+        })
+        let _ = notificationTokenPromise.get().start(next: { token in
+            self.regularDeviceToken.set(.single(token))
         })
         
         let launchStartTime = CFAbsoluteTimeGetCurrent()
@@ -492,9 +496,16 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, voipVersions: PresentationCallManagerImpl.voipVersions(includeExperimental: true, includeReference: false).map { version, supportsVideo -> CallSessionManagerImplementationVersion in
             CallSessionManagerImplementationVersion(version: version, supportsVideo: supportsVideo)
-        }, appData: self.deviceToken.get()
+        }, appData: self.regularDeviceToken.get()
         |> map { token in
-            let data = buildConfig.bundleData(withAppToken: token, signatureDict: signatureDict)
+            let tokenEnvironment: String
+            #if DEBUG
+            tokenEnvironment = "sandbox"
+            #else
+            tokenEnvironment = "production"
+            #endif
+            
+            let data = buildConfig.bundleData(withAppToken: token, tokenType: "apns", tokenEnvironment: tokenEnvironment, signatureDict: signatureDict)
             if let data = data, let _ = String(data: data, encoding: .utf8) {
             } else {
                 Logger.shared.log("data", "can't deserialize")
@@ -1904,11 +1915,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 firebaseSecrets[receipt] = secret
                 self.firebaseSecrets = firebaseSecrets
             }
-            if let nonce = firebaseDict["verify_nonce"] as? String, let secret = firebaseDict["verify_secret"] as? String {
-                var firebaseRequestVerificationSecrets = self.firebaseRequestVerificationSecrets
-                firebaseRequestVerificationSecrets[nonce] = secret
-                self.firebaseRequestVerificationSecrets = firebaseRequestVerificationSecrets
-            }
+            
+            completionHandler(.newData)
+            return
+        }
+        
+        if let nonce = redactedPayload["verify_nonce"] as? String, let secret = redactedPayload["verify_secret"] as? String {
+            var firebaseRequestVerificationSecrets = self.firebaseRequestVerificationSecrets
+            firebaseRequestVerificationSecrets[nonce] = secret
+            self.firebaseRequestVerificationSecrets = firebaseRequestVerificationSecrets
             
             completionHandler(.newData)
             return
