@@ -333,7 +333,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         
         let cleanQuery = cleanHashtag(query)
         if !cleanQuery.isEmpty {
-            self.currentController?.beginMessageSearch("#" + cleanQuery)
+            self.currentController?.beginMessageSearch(cleanQuery)
             
             self.myChatContents?.hashtagSearchUpdate(query: cleanQuery)
             self.myController?.beginMessageSearch("#" + cleanQuery)
