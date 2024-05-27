@@ -319,9 +319,10 @@ final class StarsTransactionsListPanelComponent: Component {
             
             let bottomOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
             let loadMore = bottomOffset < 100.0
-            if environment.isCurrent, loadMore, let lastTransaction = self.items.last {
-                if lastTransaction.id != self.currentLoadMoreId {
-                    self.currentLoadMoreId = lastTransaction.id
+            if environment.isCurrent, loadMore {
+                let lastId = self.items.last?.id
+                if lastId != self.currentLoadMoreId || lastId == nil {
+                    self.currentLoadMoreId = lastId
                     component.transactionsContext.loadMore()
                 }
             }

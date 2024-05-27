@@ -314,7 +314,15 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                     }
                 }
                 
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, associatedData: item.associatedData)
+                let dateFormat: MessageTimestampStatusFormat
+                if item.presentationData.isPreview {
+                    dateFormat = .full
+                } else if let subject = item.associatedData.subject, case .messageOptions = subject {
+                    dateFormat = .minimal
+                } else {
+                    dateFormat = .regular
+                }
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, associatedData: item.associatedData)
                 
                 let statusType: ChatMessageDateAndStatusType?
                 if case .customChatContents = item.associatedData.subject {
@@ -425,11 +433,11 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                     statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                         context: item.context,
                         presentationData: item.presentationData,
-                        edited: edited,
-                        impressionCount: viewCount,
+                        edited: edited && !item.presentationData.isPreview,
+                        impressionCount: !item.presentationData.isPreview ? viewCount : nil,
                         dateText: dateText,
                         type: statusType,
-                        layoutInput: .trailingContent(contentWidth: nil, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions), preferAdditionalInset: false)),
+                        layoutInput: .trailingContent(contentWidth: nil, reactionSettings: item.presentationData.isPreview ? nil : ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions), preferAdditionalInset: false)),
                         constrainedSize: textConstrainedSize,
                         availableReactions: item.associatedData.availableReactions,
                         savedMessageTags: item.associatedData.savedMessageTags,
@@ -595,6 +603,9 @@ public class ChatMessageFactCheckBubbleContentNode: ChatMessageBubbleContentNode
                                 strongSelf.titleBadgeButton = titleBadgeButton
                                 strongSelf.addSubnode(titleBadgeButton)
                             }
+                            
+                            titleBadgeButton.isHidden = item.presentationData.isPreview
+                            strongSelf.titleBadgeLabel.isHidden = item.presentationData.isPreview
                             
                             if themeUpdated || titleBadgeButton.backgroundImage(for: .normal) == nil {
                                 titleBadgeButton.setBackgroundImage(generateFilledCircleImage(diameter: badgeBackgroundFrame.height, color: mainColor.withMultipliedAlpha(0.1))?.stretchableImage(withLeftCapWidth: Int(badgeBackgroundFrame.height / 2), topCapHeight: Int(badgeBackgroundFrame.height / 2)), for: .normal)
