@@ -19,6 +19,7 @@ import ChatMessageMediaBubbleContentNode
 import ChatControllerInteraction
 import TelegramUIPreferences
 import ChatHistoryEntry
+import MosaicLayout
 
 public final class ChatSendContactMessageContextPreview: UIView, ChatSendMessageContextScreenMediaPreview {
     private let context: AccountContext
@@ -333,7 +334,7 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
     
     private var chatPresentationData: ChatPresentationData?
     
-    private var messageNode: ChatMessageMediaBubbleContentNode?
+    private var messageNodes: [EngineMessage.Id: ChatMessageMediaBubbleContentNode] = [:]
     private let messagesContainer: UIView
     
     public var isReady: Signal<Bool, NoError> {
@@ -389,15 +390,6 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
     }
 
     public func update(containerSize: CGSize, transition: Transition) -> CGSize {
-        let messageNode: ChatMessageMediaBubbleContentNode
-        if let current = self.messageNode {
-            messageNode = current
-        } else {
-            messageNode = ChatMessageMediaBubbleContentNode()
-            self.messageNode = messageNode
-            self.messagesContainer.addSubview(messageNode.view)
-        }
-        
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
         let chatPresentationData: ChatPresentationData
@@ -519,21 +511,22 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
         
         let entryAttributes = ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil)
         
-        let item = ChatMessageBubbleContentItem(
-            context: self.context,
-            controllerInteraction: controllerInteraction,
-            message: self.messages[0],
-            topMessage: self.messages[0],
-            read: true,
-            chatLocation: .peer(id: self.context.account.peerId),
-            presentationData: chatPresentationData,
-            associatedData: associatedData,
-            attributes: entryAttributes,
-            isItemPinned: false,
-            isItemEdited: false
-        )
+        let items = self.messages.map { message -> ChatMessageBubbleContentItem in
+            return ChatMessageBubbleContentItem(
+                context: self.context,
+                controllerInteraction: controllerInteraction,
+                message: message,
+                topMessage: message,
+                read: true,
+                chatLocation: .peer(id: self.context.account.peerId),
+                presentationData: chatPresentationData,
+                associatedData: associatedData,
+                attributes: entryAttributes,
+                isItemPinned: false,
+                isItemEdited: false
+            )
+        }
         
-        let makeMessageLayout = messageNode.asyncLayoutContent()
         let layoutConstants = chatMessageItemLayoutConstants(
             (ChatMessageItemLayoutConstants.compact, ChatMessageItemLayoutConstants.regular),
             params: ListViewItemLayoutParams(
@@ -545,39 +538,238 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
             presentationData: chatPresentationData
         )
         
-        let (_, _, _, continueMessageLayout) = makeMessageLayout(
-            item,
-            layoutConstants,
-            ChatMessageBubblePreparePosition.linear(
-                top: ChatMessageBubbleRelativePosition.None(.None(.None)),
-                bottom: ChatMessageBubbleRelativePosition.None(.None(.None))
-            ),
-            nil,
-            CGSize(width: containerSize.width, height: 10000.0),
-            0.0
-        )
-        
-        let (finalizedWidth, finalizeMessageLayout) = continueMessageLayout(
-            CGSize(width: containerSize.width, height: 10000.0),
-            ChatMessageBubbleContentPosition.linear(
-                top: ChatMessageBubbleRelativePosition.None(.None(.None)),
-                bottom: ChatMessageBubbleRelativePosition.None(.None(.None))
+        if items.count == 1 {
+            let messageNode: ChatMessageMediaBubbleContentNode
+            if let current = self.messageNodes[items[0].message.id] {
+                messageNode = current
+            } else {
+                messageNode = ChatMessageMediaBubbleContentNode()
+                self.messageNodes[items[0].message.id] = messageNode
+                self.messagesContainer.addSubview(messageNode.view)
+            }
+            
+            let makeMessageLayout = messageNode.asyncLayoutContent()
+            
+            let (_, _, _, continueMessageLayout) = makeMessageLayout(
+                items[0],
+                layoutConstants,
+                ChatMessageBubblePreparePosition.linear(
+                    top: ChatMessageBubbleRelativePosition.None(.None(.None)),
+                    bottom: ChatMessageBubbleRelativePosition.None(.None(.None))
+                ),
+                nil,
+                CGSize(width: containerSize.width, height: 10000.0),
+                0.0
             )
-        )
-        let _ = finalizedWidth
-        
-        let (finalizedSize, apply) = finalizeMessageLayout(finalizedWidth)
-        apply(.None, true, nil)
-        
-        let contentFrameInset = UIEdgeInsets(top: -2.0, left: -2.0, bottom: -2.0, right: -2.0)
-        
-        let contentFrame = CGRect(origin: CGPoint(x: contentFrameInset.left, y: contentFrameInset.top), size: finalizedSize)
-        messageNode.frame = contentFrame
-        
-        let messagesContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentFrame.width + contentFrameInset.left + contentFrameInset.right, height: contentFrame.height + contentFrameInset.top + contentFrameInset.bottom))
-        
-        self.messagesContainer.frame = messagesContainerFrame
-        
-        return messagesContainerFrame.size
+            
+            let (finalizedWidth, finalizeMessageLayout) = continueMessageLayout(
+                CGSize(width: containerSize.width, height: 10000.0),
+                ChatMessageBubbleContentPosition.linear(
+                    top: ChatMessageBubbleRelativePosition.None(.None(.None)),
+                    bottom: ChatMessageBubbleRelativePosition.None(.None(.None))
+                )
+            )
+            let _ = finalizedWidth
+            
+            let (finalizedSize, apply) = finalizeMessageLayout(finalizedWidth)
+            apply(.None, true, nil)
+            
+            let contentFrameInset = UIEdgeInsets(top: -2.0, left: -2.0, bottom: -2.0, right: -2.0)
+            
+            let contentFrame = CGRect(origin: CGPoint(x: contentFrameInset.left, y: contentFrameInset.top), size: finalizedSize)
+            messageNode.frame = contentFrame
+            
+            let messagesContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentFrame.width + contentFrameInset.left + contentFrameInset.right, height: contentFrame.height + contentFrameInset.top + contentFrameInset.bottom))
+            
+            self.messagesContainer.frame = messagesContainerFrame
+            return messagesContainerFrame.size
+        } else {
+            var contentPropertiesAndLayouts: [(
+                CGSize?,
+                ChatMessageBubbleContentProperties,
+                ChatMessageBubblePreparePosition,
+                (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void)),
+                ChatMessageMediaBubbleContentNode
+            )] = []
+            
+            let bottomPosition: ChatMessageBubbleRelativePosition = ChatMessageBubbleRelativePosition.None(.None(.None))
+            
+            var firstNodeTopPosition: ChatMessageBubbleRelativePosition = ChatMessageBubbleRelativePosition.None(.None(.None))
+            if "".isEmpty {
+                firstNodeTopPosition = ChatMessageBubbleRelativePosition.None(.None(.None))
+            }
+            var lastNodeTopPosition = ChatMessageBubbleRelativePosition.None(.None(.None))
+            if "".isEmpty {
+                lastNodeTopPosition = ChatMessageBubbleRelativePosition.None(.None(.None))
+            }
+            
+            let contentFrameInset = UIEdgeInsets(top: -2.0, left: -2.0, bottom: -2.0, right: -2.0)
+            
+            var maximumNodeWidth: CGFloat = containerSize.width + contentFrameInset.left + contentFrameInset.right
+            let maximumContentWidth = maximumNodeWidth
+            
+            for i in 0 ..< items.count {
+                let messageNode: ChatMessageMediaBubbleContentNode
+                if let current = self.messageNodes[items[i].message.id] {
+                    messageNode = current
+                } else {
+                    messageNode = ChatMessageMediaBubbleContentNode()
+                    self.messageNodes[items[i].message.id] = messageNode
+                    self.messagesContainer.addSubview(messageNode.view)
+                }
+                
+                let prepareLayout = messageNode.asyncLayoutContent()
+                
+                let prepareContentPosition: ChatMessageBubblePreparePosition = .mosaic(top: .None(.None(.Incoming)), bottom: i == (items.count - 1 - 1) ? bottomPosition : .None(.None(.Incoming)))
+                
+                let (properties, unboundSize, maxNodeWidth, nodeLayout) = prepareLayout(items[i], layoutConstants, prepareContentPosition, nil, CGSize(width: maximumContentWidth, height: CGFloat.greatestFiniteMagnitude), 0.0)
+                maximumNodeWidth = min(maximumNodeWidth, maxNodeWidth)
+                
+                contentPropertiesAndLayouts.append((unboundSize, properties, prepareContentPosition, nodeLayout, messageNode))
+            }
+            
+            let maxSize = layoutConstants.image.maxDimensions.fittedToWidthOrSmaller(maximumContentWidth)
+            let (innerFramesAndPositions, innerSize) = chatMessageBubbleMosaicLayout(maxSize: maxSize, itemSizes: contentPropertiesAndLayouts.map { item in
+                guard let size = item.0, size.width > 0.0, size.height > 0 else {
+                    return CGSize(width: 256.0, height: 256.0)
+                }
+                return size
+            })
+            
+            let framesAndPositions = innerFramesAndPositions
+            
+            let size = CGSize(width: innerSize.width, height: innerSize.height)
+            
+            var contentNodePropertiesAndFinalize: [(
+                ChatMessageBubbleContentProperties,
+                ChatMessageBubbleContentPosition?,
+                (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void),
+                ChatMessageMediaBubbleContentNode
+            )] = []
+            
+            var maxContentWidth = 0.0
+            for i in 0 ..< contentPropertiesAndLayouts.count {
+                let (_, contentNodeProperties, _, contentNodeLayout, messageNode) = contentPropertiesAndLayouts[i]
+                
+                let mosaicIndex = i
+                
+                let position = framesAndPositions[mosaicIndex].1
+                
+                let topLeft: ChatMessageBubbleContentMosaicNeighbor
+                let topRight: ChatMessageBubbleContentMosaicNeighbor
+                let bottomLeft: ChatMessageBubbleContentMosaicNeighbor
+                let bottomRight: ChatMessageBubbleContentMosaicNeighbor
+                
+                switch firstNodeTopPosition {
+                case .Neighbour:
+                    topLeft = .merged
+                    topRight = .merged
+                case .BubbleNeighbour:
+                    topLeft = .mergedBubble
+                    topRight = .mergedBubble
+                case let .None(status):
+                    if position.contains(.top) && position.contains(.left) {
+                        switch status {
+                        case .Left, .Both:
+                            topLeft = .mergedBubble
+                        case .Right:
+                            topLeft = .none(tail: false)
+                        case .None:
+                            topLeft = .none(tail: false)
+                        }
+                    } else {
+                        topLeft = .merged
+                    }
+                    
+                    if position.contains(.top) && position.contains(.right) {
+                        switch status {
+                        case .Left:
+                            topRight = .none(tail: false)
+                        case .Right, .Both:
+                            topRight = .mergedBubble
+                        case .None:
+                            topRight = .none(tail: false)
+                        }
+                    } else {
+                        topRight = .merged
+                    }
+                }
+                
+                let lastMosaicBottomPosition: ChatMessageBubbleRelativePosition = lastNodeTopPosition
+                
+                if position.contains(.bottom), case .Neighbour = lastMosaicBottomPosition {
+                    bottomLeft = .merged
+                    bottomRight = .merged
+                } else {
+                    let switchValue = lastNodeTopPosition
+
+                    switch switchValue {
+                    case .Neighbour:
+                        bottomLeft = .merged
+                        bottomRight = .merged
+                    case .BubbleNeighbour:
+                        bottomLeft = .mergedBubble
+                        bottomRight = .mergedBubble
+                    case let .None(status):
+                        if position.contains(.bottom) && position.contains(.left) {
+                            switch status {
+                            case .Left, .Both:
+                                bottomLeft = .mergedBubble
+                            case .Right:
+                                bottomLeft = .none(tail: false)
+                            case let .None(tailStatus):
+                                if case .Incoming = tailStatus {
+                                    bottomLeft = .none(tail: true)
+                                } else {
+                                    bottomLeft = .none(tail: false)
+                                }
+                            }
+                        } else {
+                            bottomLeft = .merged
+                        }
+                        
+                        if position.contains(.bottom) && position.contains(.right) {
+                            switch status {
+                            case .Left:
+                                bottomRight = .none(tail: false)
+                            case .Right, .Both:
+                                bottomRight = .mergedBubble
+                            case let .None(tailStatus):
+                                if case .Outgoing = tailStatus {
+                                    bottomRight = .none(tail: true)
+                                } else {
+                                    bottomRight = .none(tail: false)
+                                }
+                            }
+                        } else {
+                            bottomRight = .merged
+                        }
+                    }
+                }
+                
+                let (_, contentNodeFinalize) = contentNodeLayout(framesAndPositions[mosaicIndex].0.size, .mosaic(position: ChatMessageBubbleContentMosaicPosition(topLeft: topLeft, topRight: topRight, bottomLeft: bottomLeft, bottomRight: bottomRight), wide: position.isWide))
+                
+                contentNodePropertiesAndFinalize.append((contentNodeProperties, nil, contentNodeFinalize, messageNode))
+                
+                maxContentWidth = max(maxContentWidth, size.width)
+            }
+            
+            for i in 0 ..< contentNodePropertiesAndFinalize.count {
+                let (_, _, finalize, messageNode) = contentNodePropertiesAndFinalize[i]
+                
+                let mosaicIndex = i
+                
+                let (_, apply) = finalize(maxContentWidth)
+                let contentNodeFrame = framesAndPositions[mosaicIndex].0.offsetBy(dx: 0.0, dy: 0.0)
+                apply(.None, true, nil)
+                
+                messageNode.frame = contentNodeFrame
+            }
+            
+            let messagesContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
+            
+            self.messagesContainer.frame = messagesContainerFrame
+            return messagesContainerFrame.size
+        }
     }
 }
