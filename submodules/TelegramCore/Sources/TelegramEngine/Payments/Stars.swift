@@ -72,12 +72,18 @@ struct InternalStarsStatus {
     let nextOffset: String?
 }
 
-private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, subject: StarsTransactionsContext.Subject, offset: String?) -> Signal<InternalStarsStatus, NoError> {
+private enum RequestStarsStateError {
+    case generic
+}
+
+private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, subject: StarsTransactionsContext.Subject, offset: String?) -> Signal<InternalStarsStatus, RequestStarsStateError> {
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
-    } |> mapToSignal { peer -> Signal<InternalStarsStatus, NoError> in
+    } 
+    |> castError(RequestStarsStateError.self)
+    |> mapToSignal { peer -> Signal<InternalStarsStatus, RequestStarsStateError> in
         guard let peer, let inputPeer = apiInputPeer(peer) else {
-            return .never()
+            return .fail(.generic)
         }
                 
         let signal: Signal<Api.payments.StarsStatus, MTRpcError>
@@ -98,7 +104,8 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
         
         return signal
         |> retryRequest
-        |> mapToSignal { result -> Signal<InternalStarsStatus, NoError> in
+        |> castError(RequestStarsStateError.self)
+        |> mapToSignal { result -> Signal<InternalStarsStatus, RequestStarsStateError> in
             return account.postbox.transaction { transaction -> InternalStarsStatus in
                 switch result {
                 case let .starsStatus(_, balance, history, nextOffset, chats, users):
@@ -114,6 +121,7 @@ private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id
                     return InternalStarsStatus(balance: balance, transactions: parsedTransactions, nextOffset: nextOffset)
                 }
             }
+            |> castError(RequestStarsStateError.self)
         }
     }
 }
@@ -171,10 +179,18 @@ private final class StarsContextImpl {
         
         self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, subject: .all, offset: nil)
         |> deliverOnMainQueue).start(next: { [weak self] status in
-            if let self {
-                self.updateState(StarsContext.State(flags: [], balance: status.balance, transactions: status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false))
-                self.nextOffset = status.nextOffset
+            guard let self else {
+                return
             }
+            self.updateState(StarsContext.State(flags: [], balance: status.balance, transactions: status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false))
+            self.nextOffset = status.nextOffset
+        }, error: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            Queue.mainQueue().after(2.5, {
+                self.load(force: true)
+            })
         }))
     }
     
