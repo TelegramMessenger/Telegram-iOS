@@ -272,7 +272,9 @@ final class StarsTransactionsListPanelComponent: Component {
                                 guard let self, let component = self.component else {
                                     return
                                 }
-                                component.action(item)
+                                if !item.id.hasPrefix("tmp_") {
+                                    component.action(item)
+                                }
                             }
                         )),
                         environment: {},
@@ -341,12 +343,14 @@ final class StarsTransactionsListPanelComponent: Component {
                         return
                     }
                     let wasEmpty = self.items.isEmpty
+                    let hadTemporaryTransactions = self.items.contains(where: { $0.id.hasPrefix("tmp_") })
+                    
                     self.items = status.transactions
                     if !status.isLoading {
                         self.currentLoadMoreId = nil
                     }
                     if !self.isUpdating {
-                        state?.updated(transition: wasEmpty ? .immediate : .easeInOut(duration: 0.2))
+                        state?.updated(transition: wasEmpty || hadTemporaryTransactions ? .immediate : .easeInOut(duration: 0.2))
                     }
                 })
             }
