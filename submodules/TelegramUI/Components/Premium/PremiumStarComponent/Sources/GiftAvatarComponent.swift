@@ -325,6 +325,7 @@ public final class GiftAvatarComponent: Component {
                     imageNode = current
                 } else {
                     imageNode = TransformImageNode()
+                    imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
                     self.addSubview(imageNode.view)
                     self.imageNode = imageNode
                     
@@ -335,7 +336,7 @@ public final class GiftAvatarComponent: Component {
                 let imageSize = CGSize(width: component.avatarSize, height: component.avatarSize)
                 imageNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - imageSize.width) / 2.0), y: 113.0 - imageSize.height / 2.0), size: imageSize)
                 
-                imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
+                imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
                 
                 self.avatarNode.isHidden = true
             } else if let starsPeer = component.starsPeer {

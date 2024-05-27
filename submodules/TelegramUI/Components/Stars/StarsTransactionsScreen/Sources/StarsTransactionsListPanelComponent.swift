@@ -18,58 +18,23 @@ import PhotoResources
 
 final class StarsTransactionsListPanelComponent: Component {
     typealias EnvironmentType = StarsTransactionsPanelEnvironment
-    
-    final class Item: Equatable {
-        let transaction: StarsContext.State.Transaction
         
-        init(
-            transaction: StarsContext.State.Transaction
-        ) {
-            self.transaction = transaction
-        }
-        
-        static func ==(lhs: Item, rhs: Item) -> Bool {
-            if lhs.transaction != rhs.transaction {
-                return false
-            }
-            return true
-        }
-    }
-    
-    final class Items: Equatable {
-        let items: [Item]
-        
-        init(items: [Item]) {
-            self.items = items
-        }
-        
-        static func ==(lhs: Items, rhs: Items) -> Bool {
-            if lhs === rhs {
-                return true
-            }
-            return lhs.items == rhs.items
-        }
-    }
-    
     let context: AccountContext
-    let items: Items?
+    let transactionsContext: StarsTransactionsContext
     let action: (StarsContext.State.Transaction) -> Void
 
     init(
         context: AccountContext,
-        items: Items?,
+        transactionsContext: StarsTransactionsContext,
         action: @escaping (StarsContext.State.Transaction) -> Void
     ) {
         self.context = context
-        self.items = items
+        self.transactionsContext = transactionsContext
         self.action = action
     }
     
     static func ==(lhs: StarsTransactionsListPanelComponent, rhs: StarsTransactionsListPanelComponent) -> Bool {
         if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.items != rhs.items {
             return false
         }
         return true
@@ -137,6 +102,10 @@ final class StarsTransactionsListPanelComponent: Component {
         private var environment: StarsTransactionsPanelEnvironment?
         private var itemLayout: ItemLayout?
         
+        private var items: [StarsContext.State.Transaction] = []
+        private var itemsDisposable: Disposable?
+        private var currentLoadMoreId: String?
+        
         override init(frame: CGRect) {
             self.scrollView = ScrollViewImpl()
             
@@ -164,6 +133,10 @@ final class StarsTransactionsListPanelComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            self.itemsDisposable?.dispose()
+        }
+        
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
                 self.updateScrolling(transition: .immediate)
@@ -175,7 +148,7 @@ final class StarsTransactionsListPanelComponent: Component {
         }
         
         private func updateScrolling(transition: Transition) {
-            guard let component = self.component, let environment = self.environment, let items = component.items, let itemLayout = self.itemLayout else {
+            guard let component = self.component, let environment = self.environment, let itemLayout = self.itemLayout else {
                 return
             }
             
@@ -184,11 +157,11 @@ final class StarsTransactionsListPanelComponent: Component {
             var validIds = Set<String>()
             if let visibleItems = itemLayout.visibleItems(for: visibleBounds) {
                 for index in visibleItems.lowerBound ..< visibleItems.upperBound {
-                    if index >= items.items.count {
+                    if index >= self.items.count {
                         continue
                     }
-                    let item = items.items[index]
-                    let id = item.transaction.id
+                    let item = self.items[index]
+                    let id = item.id
                     validIds.insert(id)
                     
                     var itemTransition = transition
@@ -214,9 +187,9 @@ final class StarsTransactionsListPanelComponent: Component {
                     let itemTitle: String
                     let itemSubtitle: String?
                     let itemDate: String
-                    switch item.transaction.peer {
+                    switch item.peer {
                     case let .peer(peer):
-                        if let title = item.transaction.title {
+                        if let title = item.title {
                             itemTitle = title
                             itemSubtitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                         } else {
@@ -243,15 +216,15 @@ final class StarsTransactionsListPanelComponent: Component {
                     let itemLabel: NSAttributedString
                     let labelString: String
                     
-                    let formattedLabel = presentationStringsFormattedNumber(abs(Int32(item.transaction.count)), environment.dateTimeFormat.groupingSeparator)
-                    if item.transaction.count < 0 {
+                    let formattedLabel = presentationStringsFormattedNumber(abs(Int32(item.count)), environment.dateTimeFormat.groupingSeparator)
+                    if item.count < 0 {
                         labelString = "- \(formattedLabel)"
                     } else {
                         labelString = "+ \(formattedLabel)"
                     }
                     itemLabel = NSAttributedString(string: labelString, font: Font.medium(fontBaseDisplaySize), textColor: labelString.hasPrefix("-") ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemDisclosureActions.constructive.fillColor)
                     
-                    itemDate = stringForMediumCompactDate(timestamp: item.transaction.date, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
+                    itemDate = stringForMediumCompactDate(timestamp: item.date, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
                     
                     var titleComponents: [AnyComponentWithIdentity<Empty>] = []
                     titleComponents.append(
@@ -292,14 +265,16 @@ final class StarsTransactionsListPanelComponent: Component {
                             theme: environment.theme,
                             title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 2.0)),
                             contentInsets: UIEdgeInsets(top: 9.0, left: environment.containerInsets.left, bottom: 8.0, right: environment.containerInsets.right),
-                            leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(AvatarComponent(context: component.context, theme: environment.theme, peer: item.transaction.peer, photo: item.transaction.photo))), false),
+                            leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(AvatarComponent(context: component.context, theme: environment.theme, peer: item.peer, photo: item.photo))), false),
                             icon: nil,
                             accessory: .custom(ListActionItemComponent.CustomAccessory(component: AnyComponentWithIdentity(id: "label", component: AnyComponent(LabelComponent(text: itemLabel))), insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
                             action: { [weak self] _ in
                                 guard let self, let component = self.component else {
                                     return
                                 }
-                                component.action(item.transaction)
+                                if !item.id.hasPrefix("tmp_") {
+                                    component.action(item)
+                                }
                             }
                         )),
                         environment: {},
@@ -308,6 +283,9 @@ final class StarsTransactionsListPanelComponent: Component {
                     let itemFrame = itemLayout.itemFrame(for: index)
                     if let itemComponentView = itemView.view {
                         if itemComponentView.superview == nil {
+                            if !transition.animation.isImmediate {
+                                transition.animateAlpha(view: itemComponentView, from: 0.0, to: 1.0)
+                            }
                             self.scrollView.addSubview(itemComponentView)
                         }
                         itemTransition.setFrame(view: itemComponentView, frame: itemFrame)
@@ -338,10 +316,44 @@ final class StarsTransactionsListPanelComponent: Component {
             for id in removeIds {
                 self.visibleItems.removeValue(forKey: id)
             }
+            
+            let bottomOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
+            let loadMore = bottomOffset < 100.0
+            if environment.isCurrent, loadMore, let lastTransaction = self.items.last {
+                if lastTransaction.id != self.currentLoadMoreId {
+                    self.currentLoadMoreId = lastTransaction.id
+                    component.transactionsContext.loadMore()
+                }
+            }
         }
         
+        private var isUpdating = false
         func update(component: StarsTransactionsListPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StarsTransactionsPanelEnvironment>, transition: Transition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
             self.component = component
+            
+            if self.itemsDisposable == nil {
+                self.itemsDisposable = (component.transactionsContext.state
+                |> deliverOnMainQueue).start(next: { [weak self, weak state] status in
+                    guard let self else {
+                        return
+                    }
+                    let wasEmpty = self.items.isEmpty
+                    let hadTemporaryTransactions = self.items.contains(where: { $0.id.hasPrefix("tmp_") })
+                    
+                    self.items = status.transactions
+                    if !status.isLoading {
+                        self.currentLoadMoreId = nil
+                    }
+                    if !self.isUpdating {
+                        state?.updated(transition: wasEmpty || hadTemporaryTransactions ? .immediate : .easeInOut(duration: 0.2))
+                    }
+                })
+            }
             
             let environment = environment[StarsTransactionsPanelEnvironment.self].value
             self.environment = environment
@@ -392,7 +404,7 @@ final class StarsTransactionsListPanelComponent: Component {
                 containerInsets: environment.containerInsets,
                 containerWidth: availableSize.width,
                 itemHeight: measureItemSize.height,
-                itemCount: component.items?.items.count ?? 0
+                itemCount: self.items.count
             )
             self.itemLayout = itemLayout
             

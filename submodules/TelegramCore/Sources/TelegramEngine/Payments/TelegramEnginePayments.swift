@@ -73,7 +73,12 @@ public extension TelegramEngine {
         public func peerStarsContext(peerId: EnginePeer.Id) -> StarsContext {
             return StarsContext(account: self.account, peerId: peerId)
         }
-                
+
+        
+        public func peerStarsTransactionsContext(starsContext: StarsContext, subject: StarsTransactionsContext.Subject) -> StarsTransactionsContext {
+            return StarsTransactionsContext(account: self.account, starsContext: starsContext, subject: subject)
+        }
+        
         public func sendStarsPaymentForm(formId: Int64, source: BotPaymentInvoiceSource) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
             return _internal_sendStarsPaymentForm(account: self.account, formId: formId, source: source)
         }

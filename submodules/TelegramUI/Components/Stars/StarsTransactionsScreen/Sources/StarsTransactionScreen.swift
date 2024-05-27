@@ -19,7 +19,7 @@ import AvatarNode
 import TextFormat
 import TelegramStringFormatting
 import UndoUI
-import PremiumStarComponent
+import StarsImageComponent
 
 private final class StarsTransactionSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -117,7 +117,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     static var body: Body {
         let closeButton = Child(Button.self)
         let title = Child(MultilineTextComponent.self)
-        let star = Child(GiftAvatarComponent.self)
+        let star = Child(StarsImageComponent.self)
         let amount = Child(BalancedTextComponent.self)
         let amountStar = Child(BundleIconComponent.self)
         let description = Child(MultilineTextComponent.self)
@@ -249,18 +249,20 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 transition: .immediate
             )
             
+            let imageSubject: StarsImageComponent.Subject
+            if let photo {
+                imageSubject = .photo(photo)
+            } else if let transactionPeer {
+                imageSubject = .transactionPeer(transactionPeer)
+            } else {
+                imageSubject = .none
+            }
             let star = star.update(
-                component: GiftAvatarComponent(
+                component: StarsImageComponent(
                     context: component.context,
+                    subject: imageSubject,
                     theme: theme,
-                    peers: toPeer.flatMap { [$0] } ?? [],
-                    photo: photo,
-                    starsPeer: transactionPeer,
-                    isVisible: true,
-                    hasIdleAnimations: true,
-                    hasScaleAnimation: false,
-                    avatarSize: 90.0,
-                    color: UIColor(rgb: 0xf7ab04)
+                    diameter: 90.0
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: 200.0),
                 transition: .immediate
@@ -426,7 +428,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
             
             context.add(star
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 32.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 19.0))
             )
             
             var originY: CGFloat = 0.0

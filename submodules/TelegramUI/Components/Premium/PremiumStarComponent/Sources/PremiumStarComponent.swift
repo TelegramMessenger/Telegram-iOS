@@ -7,6 +7,7 @@ import SceneKit
 import GZip
 import AppBundle
 import LegacyComponents
+import TelegramPresentationData
 
 private let sceneVersion: Int = 7
 
@@ -69,25 +70,31 @@ public func loadCompressedScene(name: String, version: Int) -> SCNScene? {
 }
 
 public final class PremiumStarComponent: Component {
+    let theme: PresentationTheme
     let isIntro: Bool
     let isVisible: Bool
     let hasIdleAnimations: Bool
     let colors: [UIColor]?
+    let particleColor: UIColor?
     
     public init(
+        theme: PresentationTheme,
         isIntro: Bool,
         isVisible: Bool,
         hasIdleAnimations: Bool,
-        colors: [UIColor]? = nil
+        colors: [UIColor]? = nil,
+        particleColor: UIColor? = nil
     ) {
+        self.theme = theme
         self.isIntro = isIntro
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
         self.colors = colors
+        self.particleColor = particleColor
     }
     
     public static func ==(lhs: PremiumStarComponent, rhs: PremiumStarComponent) -> Bool {
-        return lhs.isIntro == rhs.isIntro && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations && lhs.colors == rhs.colors
+        return lhs.theme === rhs.theme && lhs.isIntro == rhs.isIntro && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations && lhs.colors == rhs.colors && lhs.particleColor == rhs.particleColor
     }
     
     public final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -293,9 +300,10 @@ public final class PremiumStarComponent: Component {
             self.sceneView.scene = scene
             self.sceneView.delegate = self
             
-            if let node = scene.rootNode.childNode(withName: "star", recursively: false), let colors = self.component?.colors, let color = colors.first {
+            if let component = self.component, let node = scene.rootNode.childNode(withName: "star", recursively: false), let colors =
+                component.colors {
                 node.geometry?.materials.first?.diffuse.contents = generateDiffuseTexture(colors: colors)
-                
+                                
                 let names: [String] = [
                     "particles_left",
                     "particles_right",
@@ -304,10 +312,63 @@ public final class PremiumStarComponent: Component {
                     "particles_center"
                 ]
                 
+                let starNames: [String] = [
+                    "coins_left",
+                    "coins_right"
+                ]
+                
+                if let particleColor = component.particleColor {
+                    for name in starNames {
+                        if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
+                            particleSystem.particleIntensity = 1.0
+                            particleSystem.particleIntensityVariation = 0.05
+                            particleSystem.particleColor = particleColor
+                            particleSystem.particleColorVariation = SCNVector4Make(0.07, 0.0, 0.1, 0.0)
+                            node.isHidden = false
+                            
+                            if let propertyControllers = particleSystem.propertyControllers, let sizeController = propertyControllers[.size], let colorController = propertyControllers[.color] {
+                                let animation = CAKeyframeAnimation()
+                                if let existing = colorController.animation as? CAKeyframeAnimation {
+                                    animation.keyTimes = existing.keyTimes
+                                    animation.values = existing.values?.compactMap { ($0 as? UIColor)?.alpha } ?? []
+                                } else {
+                                    animation.values = [ 0.0, 1.0, 1.0, 0.0 ]
+                                }
+                                let opacityController = SCNParticlePropertyController(animation: animation)
+                                particleSystem.propertyControllers = [
+                                    .size: sizeController,
+                                    .opacity: opacityController
+                                ]
+                            }
+                        }
+                    }
+                }
+                
                 for name in names {
-                    if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first, color.rgb != 0x6a94ff {
-                        particleSystem.particleColor = color
-                        particleSystem.particleColorVariation = SCNVector4Make(0, 0, 0, 0)
+                    if let node = scene.rootNode.childNode(withName: name, recursively: false), let particleSystem = node.particleSystems?.first {
+                        if let particleColor = component.particleColor {
+                            particleSystem.particleIntensity = min(1.0, 2.0 * particleSystem.particleIntensity)
+                            particleSystem.particleIntensityVariation = 0.05
+                            particleSystem.particleColor = particleColor
+                            particleSystem.particleColorVariation = SCNVector4Make(0.1, 0.0, 0.12, 0.0)
+                        } else {
+                            particleSystem.particleColorVariation = SCNVector4Make(0.12, 0.03, 0.035, 0.0)
+                        }
+                                                
+                        if let propertyControllers = particleSystem.propertyControllers, let sizeController = propertyControllers[.size], let colorController = propertyControllers[.color] {
+                            let animation = CAKeyframeAnimation()
+                            if let existing = colorController.animation as? CAKeyframeAnimation {
+                                animation.keyTimes = existing.keyTimes
+                                animation.values = existing.values?.compactMap { ($0 as? UIColor)?.alpha } ?? []
+                            } else {
+                                animation.values = [ 0.0, 1.0, 1.0, 0.0 ]
+                            }
+                            let opacityController = SCNParticlePropertyController(animation: animation)
+                            particleSystem.propertyControllers = [ 
+                                .size: sizeController,
+                                .opacity: opacityController
+                            ]
+                        }
                     }
                 }
             }
@@ -599,6 +660,10 @@ public final class PremiumStarComponent: Component {
             self.component = component
             
             self.setup()
+            
+            if let _ = component.particleColor {
+                self.sceneView.backgroundColor = component.theme.list.blocksBackgroundColor
+            }
             
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
             if self.sceneView.superview == self {

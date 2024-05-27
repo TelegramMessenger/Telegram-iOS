@@ -72,24 +72,40 @@ struct InternalStarsStatus {
     let nextOffset: String?
 }
 
-func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, offset: String?) -> Signal<InternalStarsStatus, NoError> {
+private enum RequestStarsStateError {
+    case generic
+}
+
+private func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, subject: StarsTransactionsContext.Subject, offset: String?) -> Signal<InternalStarsStatus, RequestStarsStateError> {
     return account.postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
-    } |> mapToSignal { peer -> Signal<InternalStarsStatus, NoError> in
+    } 
+    |> castError(RequestStarsStateError.self)
+    |> mapToSignal { peer -> Signal<InternalStarsStatus, RequestStarsStateError> in
         guard let peer, let inputPeer = apiInputPeer(peer) else {
-            return .never()
+            return .fail(.generic)
         }
                 
         let signal: Signal<Api.payments.StarsStatus, MTRpcError>
         if let offset {
-            signal = account.network.request(Api.functions.payments.getStarsTransactions(flags: 0, peer: inputPeer, offset: offset))
+            var flags: Int32 = 0
+            switch subject {
+            case .incoming:
+                flags = 1 << 0
+            case .outgoing:
+                flags = 1 << 1
+            default:
+                break
+            }
+            signal = account.network.request(Api.functions.payments.getStarsTransactions(flags: flags, peer: inputPeer, offset: offset))
         } else {
             signal = account.network.request(Api.functions.payments.getStarsStatus(peer: inputPeer))
         }
         
         return signal
         |> retryRequest
-        |> mapToSignal { result -> Signal<InternalStarsStatus, NoError> in
+        |> castError(RequestStarsStateError.self)
+        |> mapToSignal { result -> Signal<InternalStarsStatus, RequestStarsStateError> in
             return account.postbox.transaction { transaction -> InternalStarsStatus in
                 switch result {
                 case let .starsStatus(_, balance, history, nextOffset, chats, users):
@@ -105,15 +121,16 @@ func _internal_requestStarsState(account: Account, peerId: EnginePeer.Id, offset
                     return InternalStarsStatus(balance: balance, transactions: parsedTransactions, nextOffset: nextOffset)
                 }
             }
+            |> castError(RequestStarsStateError.self)
         }
     }
 }
 
 private final class StarsContextImpl {
     private let account: Account
-    private let peerId: EnginePeer.Id
+    fileprivate let peerId: EnginePeer.Id
     
-    private var _state: StarsContext.State?
+    fileprivate var _state: StarsContext.State?
     private let _statePromise = Promise<StarsContext.State?>()
     var state: Signal<StarsContext.State?, NoError> {
         return self._statePromise.get()
@@ -160,12 +177,20 @@ private final class StarsContextImpl {
         }
         self.previousLoadTimestamp = currentTimestamp
         
-        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, offset: nil)
+        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, subject: .all, offset: nil)
         |> deliverOnMainQueue).start(next: { [weak self] status in
-            if let self {
-                self.updateState(StarsContext.State(flags: [], balance: status.balance, transactions: status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false))
-                self.nextOffset = status.nextOffset
+            guard let self else {
+                return
             }
+            self.updateState(StarsContext.State(flags: [], balance: status.balance, transactions: status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false))
+            self.nextOffset = status.nextOffset
+        }, error: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            Queue.mainQueue().after(2.5, {
+                self.load(force: true)
+            })
         }))
     }
     
@@ -174,7 +199,7 @@ private final class StarsContextImpl {
             return
         }
         var transactions = state.transactions
-        transactions.insert(.init(id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil), at: 0)
+        transactions.insert(.init(id: "tmp_\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil), at: 0)
         
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, transactions: transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
     }
@@ -188,7 +213,7 @@ private final class StarsContextImpl {
 
         self._state?.isLoading = true
         
-        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, offset: nextOffset)
+        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, subject: .all, offset: nextOffset)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let self {
                 self.updateState(StarsContext.State(flags: [], balance: status.balance, transactions: currentState.transactions + status.transactions, canLoadMore: status.nextOffset != nil, isLoading: false))
@@ -327,6 +352,22 @@ public final class StarsContext {
         }
     }
     
+    var peerId: EnginePeer.Id {
+        var peerId: EnginePeer.Id?
+        self.impl.syncWith { impl in
+            peerId = impl.peerId
+        }
+        return peerId!
+    }
+    
+    var currentState: StarsContext.State? {
+        var state: StarsContext.State?
+        self.impl.syncWith { impl in
+            state = impl._state
+        }
+        return state
+    }
+    
     public func add(balance: Int64) {
         self.impl.with {
             $0.add(balance: balance)
@@ -348,6 +389,173 @@ public final class StarsContext {
     init(account: Account, peerId: EnginePeer.Id) {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
             return StarsContextImpl(account: account, peerId: peerId)
+        })
+    }
+}
+
+private final class StarsTransactionsContextImpl {
+    private let account: Account
+    private let peerId: EnginePeer.Id
+    private let subject: StarsTransactionsContext.Subject
+    
+    private var _state: StarsTransactionsContext.State
+    private let _statePromise = Promise<StarsTransactionsContext.State>()
+    var state: Signal<StarsTransactionsContext.State, NoError> {
+        return self._statePromise.get()
+    }
+    private var nextOffset: String? = ""
+    
+    private let disposable = MetaDisposable()
+    private var stateDisposable: Disposable?
+    
+    init(account: Account, starsContext: StarsContext, subject: StarsTransactionsContext.Subject) {
+        assert(Queue.mainQueue().isCurrent())
+        
+        self.account = account
+        self.peerId = starsContext.peerId
+        self.subject = subject
+        
+        let currentTransactions = starsContext.currentState?.transactions ?? []
+        let initialTransactions: [StarsContext.State.Transaction]
+        switch subject {
+        case .all:
+            initialTransactions = currentTransactions
+        case .incoming:
+            initialTransactions = currentTransactions.filter { $0.count > 0 }
+        case .outgoing:
+            initialTransactions = currentTransactions.filter { $0.count < 0 }
+        }
+        
+        self._state = StarsTransactionsContext.State(transactions: initialTransactions, canLoadMore: true, isLoading: false)
+        self._statePromise.set(.single(self._state))
+        
+        self.stateDisposable = (starsContext.state
+        |> deliverOnMainQueue).start(next: { [weak self] state in
+            guard let self, let state else {
+                return
+            }
+            
+            let currentTransactions = state.transactions
+            let filteredTransactions: [StarsContext.State.Transaction]
+            switch subject {
+            case .all:
+                filteredTransactions = currentTransactions
+            case .incoming:
+                filteredTransactions = currentTransactions.filter { $0.count > 0 }
+            case .outgoing:
+                filteredTransactions = currentTransactions.filter { $0.count < 0 }
+            }
+            
+            if filteredTransactions != initialTransactions {
+                var existingIds = Set<String>()
+                for transaction in self._state.transactions {
+                    if !transaction.id.hasPrefix("tmp_") {
+                        existingIds.insert(transaction.id)
+                    }
+                }
+            
+                var updatedState = self._state
+                updatedState.transactions.removeAll(where: { $0.id.hasPrefix("tmp_") })
+                for transaction in filteredTransactions.reversed() {
+                    if !existingIds.contains(transaction.id) {
+                        updatedState.transactions.insert(transaction, at: 0)
+                    }
+                }
+                self.updateState(updatedState)
+            }
+        })
+    }
+    
+    deinit {
+        assert(Queue.mainQueue().isCurrent())
+        self.disposable.dispose()
+        self.stateDisposable?.dispose()
+    }
+    
+    func loadMore(reload: Bool = false) {
+        assert(Queue.mainQueue().isCurrent())
+        
+        if reload {
+            self.nextOffset = ""
+        }
+        
+        guard !self._state.isLoading, let nextOffset = self.nextOffset else {
+            return
+        }
+        
+        var updatedState = self._state
+        updatedState.isLoading = true
+        self.updateState(updatedState)
+        
+        self.disposable.set((_internal_requestStarsState(account: self.account, peerId: self.peerId, subject: self.subject, offset: nextOffset)
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            guard let self else {
+                return
+            }
+            self.nextOffset = status.nextOffset
+            
+            var updatedState = self._state
+            updatedState.transactions = nextOffset.isEmpty ? status.transactions : updatedState.transactions + status.transactions
+            updatedState.isLoading = false
+            updatedState.canLoadMore = self.nextOffset != nil
+            self.updateState(updatedState)
+        }))
+    }
+    
+    private func updateState(_ state: StarsTransactionsContext.State) {
+        self._state = state
+        self._statePromise.set(.single(state))
+    }
+}
+    
+public final class StarsTransactionsContext {
+    public struct State: Equatable {
+        public var transactions: [StarsContext.State.Transaction]
+        public var canLoadMore: Bool
+        public var isLoading: Bool
+        
+        init(transactions: [StarsContext.State.Transaction], canLoadMore: Bool, isLoading: Bool) {
+            self.transactions = transactions
+            self.canLoadMore = canLoadMore
+            self.isLoading = isLoading
+        }
+    }
+    
+    fileprivate let impl: QueueLocalObject<StarsTransactionsContextImpl>
+    
+    public enum Subject {
+        case all
+        case incoming
+        case outgoing
+    }
+    
+    public var state: Signal<StarsTransactionsContext.State, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.state.start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func reload() {
+        self.impl.with {
+            $0.loadMore(reload: true)
+        }
+    }
+    
+    public func loadMore() {
+        self.impl.with {
+            $0.loadMore()
+        }
+    }
+    
+    init(account: Account, starsContext: StarsContext, subject: Subject) {
+        self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
+            return StarsTransactionsContextImpl(account: account, starsContext: starsContext, subject: subject)
         })
     }
 }

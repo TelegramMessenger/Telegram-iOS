@@ -267,6 +267,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
             
             let star = star.update(
                 component: PremiumStarComponent(
+                    theme: theme,
                     isIntro: false,
                     isVisible: true,
                     hasIdleAnimations: true,
