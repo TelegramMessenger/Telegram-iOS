@@ -231,7 +231,7 @@ private final class StarsContextImpl {
 private extension StarsContext.State.Transaction {
     init?(apiTransaction: Api.StarsTransaction, transaction: Transaction) {
         switch apiTransaction {
-        case let .starsTransaction(_, id, stars, date, transactionPeer, title, description, photo):
+        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo):
             let parsedPeer: StarsContext.State.Transaction.Peer
             switch transactionPeer {
             case .starsTransactionPeerAppStore:
@@ -250,7 +250,12 @@ private extension StarsContext.State.Transaction {
                 }
                 parsedPeer = .peer(EnginePeer(peer))
             }
-            self.init(flags: [], id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init))
+            
+            var flags: Flags = []
+            if (apiFlags & (1 << 3)) != 0 {
+                flags.insert(.isRefund)
+            }
+            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init))
         }
     }
 }

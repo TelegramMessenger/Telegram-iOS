@@ -125,6 +125,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         let additional = Child(BalancedTextComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
         
+        let refundBackgound = Child(RoundedRectangle.self)
+        let refundText = Child(MultilineTextComponent.self)
+        
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let controller = environment.controller
@@ -172,6 +175,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let toPeer: EnginePeer?
             let transactionPeer: StarsContext.State.Transaction.Peer?
             let photo: TelegramMediaWebFile?
+            let isRefund: Bool
             
             var delayedCloseOnOpenPeer = true
             switch subject {
@@ -208,6 +212,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 }
                 transactionPeer = transaction.peer
                 photo = transaction.photo
+                isRefund = transaction.flags.contains(.isRefund)
             case let .receipt(receipt):
                 titleText = receipt.invoiceMedia.title
                 descriptionText = receipt.invoiceMedia.description
@@ -222,6 +227,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 }
                 transactionPeer = nil
                 photo = receipt.invoiceMedia.photo
+                isRefund = false
                 delayedCloseOnOpenPeer = false
             }
             
@@ -455,11 +461,45 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 originY += description.size.height + 10.0
             }
             
+            let amountSpacing: CGFloat = 3.0
+            var totalAmountWidth: CGFloat = amount.size.width + amountSpacing + amountStar.size.width
+            var amountOriginX: CGFloat = floor(context.availableSize.width - totalAmountWidth) / 2.0
+            if isRefund {
+                let refundText = refundText.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: strings.Stars_Transaction_Refund,
+                            font: Font.medium(14.0),
+                            textColor: theme.list.itemDisclosureActions.constructive.fillColor
+                        ))
+                    ),
+                    availableSize: context.availableSize,
+                    transition: .immediate
+                )
+                let refundBackground = refundBackgound.update(
+                    component: RoundedRectangle(
+                        color: theme.list.itemDisclosureActions.constructive.fillColor.withAlphaComponent(0.1),
+                        cornerRadius: 6.0
+                    ),
+                    availableSize: CGSize(width: refundText.size.width + 10.0, height: refundText.size.height + 4.0),
+                    transition: .immediate
+                )
+                totalAmountWidth += amountSpacing * 2.0 + refundBackground.size.width
+                amountOriginX = floor(context.availableSize.width - totalAmountWidth) / 2.0
+                
+                context.add(refundBackground
+                    .position(CGPoint(x: amountOriginX + amount.size.width + amountSpacing + amountStar.size.width + amountSpacing * 2.0 + refundBackground.size.width / 2.0, y: originY + refundBackground.size.height / 2.0))
+                )
+                context.add(refundText
+                    .position(CGPoint(x: amountOriginX + amount.size.width + amountSpacing + amountStar.size.width + amountSpacing * 2.0 + refundBackground.size.width / 2.0, y: originY + refundBackground.size.height / 2.0))
+                )
+            }
+            
             context.add(amount
-                .position(CGPoint(x: context.availableSize.width / 2.0 - 10.0, y: originY + amount.size.height / 2.0))
+                .position(CGPoint(x: amountOriginX + amount.size.width / 2.0, y: originY + amount.size.height / 2.0))
             )
             context.add(amountStar
-                .position(CGPoint(x: context.availableSize.width / 2.0 + amount.size.width / 2.0 + amountStar.size.width / 2.0 - 7.0, y: originY + amountStar.size.height / 2.0))
+                .position(CGPoint(x: amountOriginX + amount.size.width + amountSpacing + amountStar.size.width / 2.0, y: originY + amountStar.size.height / 2.0))
             )
             
             originY += amount.size.height + 20.0

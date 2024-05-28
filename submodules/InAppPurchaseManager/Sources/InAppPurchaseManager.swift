@@ -184,6 +184,7 @@ public final class InAppPurchaseManager: NSObject {
         case notAllowed
         case cantMakePayments
         case assignFailed
+        case tryLater
     }
     
     public enum RestoreState {
@@ -219,6 +220,8 @@ public final class InAppPurchaseManager: NSObject {
     
     private let stateQueue = Queue()
     private var paymentContexts: [String: PaymentTransactionContext] = [:]
+    
+    private var finishedSuccessfulTransactions = Set<String>()
         
     private var onRestoreCompletion: ((RestoreState) -> Void)?
     
@@ -315,6 +318,12 @@ public final class InAppPurchaseManager: NSObject {
                                         mappedError = .network
                                     case .paymentNotAllowed, .clientInvalid:
                                         mappedError = .notAllowed
+                                    case .unknown:
+                                        if let _ = error.userInfo["tryLater"] {
+                                            mappedError = .tryLater
+                                        } else {
+                                            mappedError = .generic
+                                        }
                                     default:
                                         mappedError = .generic
                                 }
@@ -400,9 +409,15 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 let transactionState: TransactionState?
                 switch transaction.transactionState {
                     case .purchased:
-                        Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "none") purchased")
-                        transactionState = .purchased(transactionId: transaction.transactionIdentifier)
-                        transactionsToAssign.append(transaction)
+                        if transaction.payment.productIdentifier.contains(".topup."), let transactionIdentifier = transaction.transactionIdentifier, self.finishedSuccessfulTransactions.contains(transactionIdentifier) {
+                            Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "none") seems to be already reported, ask to try later")
+                            transactionState = .failed(error: SKError(SKError.Code.unknown, userInfo: ["tryLater": true]))
+                            queue.finishTransaction(transaction)
+                        } else {
+                            Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "none") purchased")
+                            transactionState = .purchased(transactionId: transaction.transactionIdentifier)
+                            transactionsToAssign.append(transaction)
+                        }
                     case .restored:
                         Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transaction \(transaction.transactionIdentifier ?? ""), original transaction \(transaction.original?.transactionIdentifier ?? "") restroring")
                         let transactionIdentifier = transaction.transactionIdentifier
@@ -489,6 +504,12 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
 #if DEBUG
                 self.debugSaveReceipt(receiptData: receiptData)
 #endif
+                
+                for transaction in transactionsToAssign {
+                    if let transactionIdentifier = transaction.transactionIdentifier {
+                        self.finishedSuccessfulTransactions.insert(transactionIdentifier)
+                    }
+                }
                 
                 self.disposableSet.set(
                     (purpose

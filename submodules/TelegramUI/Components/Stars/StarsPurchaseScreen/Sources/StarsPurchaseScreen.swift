@@ -663,6 +663,8 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                                         errorText = presentationData.strings.Premium_Purchase_ErrorCantMakePayments
                                     case .assignFailed:
                                         errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                                    case .tryLater:
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorTryLater
                                     case .cancelled:
                                         break
                                 }
