@@ -260,6 +260,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 imageSubject = .photo(photo)
             } else if let transactionPeer {
                 imageSubject = .transactionPeer(transactionPeer)
+            } else if let toPeer {
+                imageSubject = .transactionPeer(.peer(toPeer))
             } else {
                 imageSubject = .none
             }

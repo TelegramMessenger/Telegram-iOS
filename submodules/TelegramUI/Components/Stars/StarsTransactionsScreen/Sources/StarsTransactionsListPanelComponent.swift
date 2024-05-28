@@ -546,7 +546,7 @@ private final class AvatarComponent: Component {
                         imageNode = current
                     } else {
                         imageNode = TransformImageNode()
-                        imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
+                        imageNode.contentAnimations = [.subsequentUpdates]
                         self.addSubview(imageNode.view)
                         self.imageNode = imageNode
                         
