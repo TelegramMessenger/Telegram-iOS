@@ -65,6 +65,7 @@ public final class InteractiveTextNodeWithEntities {
         public let textColor: UIColor
         public let spoilerEffectColor: UIColor
         public let animation: ListViewItemUpdateAnimation
+        public let animationArguments: InteractiveTextNode.AnimationArguments?
         
         public init(
             context: AccountContext,
@@ -74,7 +75,8 @@ public final class InteractiveTextNodeWithEntities {
             attemptSynchronous: Bool,
             textColor: UIColor,
             spoilerEffectColor: UIColor,
-            animation: ListViewItemUpdateAnimation
+            animation: ListViewItemUpdateAnimation,
+            animationArguments: InteractiveTextNode.AnimationArguments?
         ) {
             self.context = context
             self.cache = cache
@@ -84,6 +86,7 @@ public final class InteractiveTextNodeWithEntities {
             self.textColor = textColor
             self.spoilerEffectColor = spoilerEffectColor
             self.animation = animation
+            self.animationArguments = animationArguments
         }
         
         public func withUpdatedPlaceholderColor(_ color: UIColor) -> Arguments {
@@ -95,7 +98,8 @@ public final class InteractiveTextNodeWithEntities {
                 attemptSynchronous: self.attemptSynchronous,
                 textColor: self.textColor,
                 spoilerEffectColor: self.spoilerEffectColor,
-                animation: self.animation
+                animation: self.animation,
+                animationArguments: self.animationArguments
             )
         }
     }
@@ -113,6 +117,7 @@ public final class InteractiveTextNodeWithEntities {
     
     private var inlineStickerItemLayers: [InlineStickerItemLayer.Key: InlineStickerItemLayerData] = [:]
     private var dustEffectNodes: [Int: InvisibleInkDustNode] = [:]
+    private var displayContentsUnderSpoilers: Bool?
     
     private var enableLooping: Bool = true
     
@@ -215,11 +220,22 @@ public final class InteractiveTextNodeWithEntities {
             return (layout, { applyArguments in
                 let animation: ListViewItemUpdateAnimation = applyArguments?.animation ?? .None
                 
-                let result = apply(animation)
+                let result = apply(animation, applyArguments?.animationArguments)
                 
                 if let maybeNode = maybeNode {
                     if let applyArguments = applyArguments {
-                        maybeNode.updateInteractiveContents(context: applyArguments.context, cache: applyArguments.cache, renderer: applyArguments.renderer, textLayout: layout, placeholderColor: applyArguments.placeholderColor, attemptSynchronousLoad: false, textColor: applyArguments.textColor, spoilerEffectColor: applyArguments.spoilerEffectColor, animation: animation)
+                        maybeNode.updateInteractiveContents(
+                            context: applyArguments.context,
+                            cache: applyArguments.cache,
+                            renderer: applyArguments.renderer,
+                            textLayout: layout,
+                            placeholderColor: applyArguments.placeholderColor,
+                            attemptSynchronousLoad: false,
+                            textColor: applyArguments.textColor,
+                            spoilerEffectColor: applyArguments.spoilerEffectColor,
+                            animation: animation,
+                            animationArguments: applyArguments.animationArguments
+                        )
                     }
                     
                     return maybeNode
@@ -227,7 +243,18 @@ public final class InteractiveTextNodeWithEntities {
                     let resultNode = InteractiveTextNodeWithEntities(textNode: result)
                     
                     if let applyArguments = applyArguments {
-                        resultNode.updateInteractiveContents(context: applyArguments.context, cache: applyArguments.cache, renderer: applyArguments.renderer, textLayout: layout, placeholderColor: applyArguments.placeholderColor, attemptSynchronousLoad: false, textColor: applyArguments.textColor, spoilerEffectColor: applyArguments.spoilerEffectColor, animation: .None)
+                        resultNode.updateInteractiveContents(
+                            context: applyArguments.context,
+                            cache: applyArguments.cache,
+                            renderer: applyArguments.renderer,
+                            textLayout: layout,
+                            placeholderColor: applyArguments.placeholderColor,
+                            attemptSynchronousLoad: false,
+                            textColor: applyArguments.textColor,
+                            spoilerEffectColor: applyArguments.spoilerEffectColor,
+                            animation: .None,
+                            animationArguments: nil
+                        )
                     }
                     
                     return resultNode
@@ -253,7 +280,8 @@ public final class InteractiveTextNodeWithEntities {
         attemptSynchronousLoad: Bool,
         textColor: UIColor,
         spoilerEffectColor: UIColor,
-        animation: ListViewItemUpdateAnimation
+        animation: ListViewItemUpdateAnimation,
+        animationArguments: InteractiveTextNode.AnimationArguments?
     ) {
         self.enableLooping = context.sharedContext.energyUsageSettings.loopEmoji
         
@@ -261,6 +289,8 @@ public final class InteractiveTextNodeWithEntities {
         if let textLayout {
             displayContentsUnderSpoilers = textLayout.displayContentsUnderSpoilers
         }
+        let previousDisplayContentsUnderSpoilers = self.displayContentsUnderSpoilers
+        self.displayContentsUnderSpoilers = displayContentsUnderSpoilers
         
         var nextIndexById: [Int64: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
@@ -345,7 +375,12 @@ public final class InteractiveTextNodeWithEntities {
                         wordRects: segment.spoilerWords.map { $0.1.offsetBy(dx: segmentItem.contentOffset.x + 3.0, dy: segmentItem.contentOffset.y + 3.0).insetBy(dx: 1.0, dy: 1.0) }
                     )
                     
-                    animation.transition.updateAlpha(node: dustEffectNode, alpha: displayContentsUnderSpoilers ? 0.0 : 1.0)
+                    if let previousDisplayContentsUnderSpoilers, previousDisplayContentsUnderSpoilers != displayContentsUnderSpoilers, displayContentsUnderSpoilers, let currentSpoilerExpandRect = animationArguments?.spoilerExpandRect {
+                        let spoilerLocalPosition = self.textNode.layer.convert(currentSpoilerExpandRect.center, to: dustEffectNode.layer)
+                        dustEffectNode.revealAtLocation(spoilerLocalPosition)
+                    } else {
+                        dustEffectNode.update(revealed: displayContentsUnderSpoilers, animated: previousDisplayContentsUnderSpoilers != nil && animation.isAnimated)
+                    }
                 }
             }
         }
