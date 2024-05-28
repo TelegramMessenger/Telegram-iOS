@@ -166,7 +166,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
     }
     
     static var body: Body {
-        let overscroll = Child(Rectangle.self)
+//        let overscroll = Child(Rectangle.self)
 //        let fade = Child(RoundedRectangle.self)
         let text = Child(BalancedTextComponent.self)
         let list = Child(VStack<Empty>.self)
@@ -188,21 +188,21 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             let sideInsets = sideInset * 2.0 + environment.safeInsets.left + environment.safeInsets.right
             var size = CGSize(width: context.availableSize.width, height: 0.0)
             
-            var topBackgroundColor = theme.list.plainBackgroundColor
-            let bottomBackgroundColor = theme.list.blocksBackgroundColor
-            if theme.overallDarkAppearance {
-                topBackgroundColor = bottomBackgroundColor
-            }
-        
-            let overscroll = overscroll.update(
-                component: Rectangle(color: topBackgroundColor),
-                availableSize: CGSize(width: context.availableSize.width, height: 1000),
-                transition: context.transition
-            )
-            context.add(overscroll
-                .position(CGPoint(x: overscroll.size.width / 2.0, y: -overscroll.size.height / 2.0))
-            )
-            
+//            var topBackgroundColor = theme.list.plainBackgroundColor
+//            let bottomBackgroundColor = theme.list.blocksBackgroundColor
+//            if theme.overallDarkAppearance {
+//                topBackgroundColor = bottomBackgroundColor
+//            }
+//        
+//            let overscroll = overscroll.update(
+//                component: Rectangle(color: topBackgroundColor),
+//                availableSize: CGSize(width: context.availableSize.width, height: 1000),
+//                transition: context.transition
+//            )
+//            context.add(overscroll
+//                .position(CGPoint(x: overscroll.size.width / 2.0, y: -overscroll.size.height / 2.0))
+//            )
+//            
 //            let fade = fade.update(
 //                component: RoundedRectangle(
 //                    colors: [
@@ -663,6 +663,8 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                                         errorText = presentationData.strings.Premium_Purchase_ErrorCantMakePayments
                                     case .assignFailed:
                                         errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                                    case .tryLater:
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorTryLater
                                     case .cancelled:
                                         break
                                 }

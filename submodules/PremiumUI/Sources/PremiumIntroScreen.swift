@@ -3113,6 +3113,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                                         errorText = presentationData.strings.Premium_Purchase_ErrorCantMakePayments
                                     case .assignFailed:
                                         errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
+                                    case .tryLater:
+                                        errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
                                     case .cancelled:
                                         break
                                 }

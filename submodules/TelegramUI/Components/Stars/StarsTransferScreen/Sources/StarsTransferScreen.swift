@@ -414,19 +414,27 @@ private final class SheetContent: CombinedComponent {
                             }
                         }, completion: { [weak controller] in
                             let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
-                            let resultController = UndoOverlayController(
-                                presentationData: presentationData,
-                                content: .image(
-                                    image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
-                                    title: presentationData.strings.Stars_Transfer_PurchasedTitle,
-                                    text: presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string,
-                                    round: false,
-                                    undoText: nil
-                                ),
-                                elevatedLayout: true,
-                                action: { _ in return true})
-                            controller?.present(resultController, in: .window(.root))
-
+                            if let navigationController = controller?.navigationController {
+                                Queue.mainQueue().after(0.5) {
+                                    if let lastController = navigationController.viewControllers.last as? ViewController {
+                                        let resultController = UndoOverlayController(
+                                            presentationData: presentationData,
+                                            content: .image(
+                                                image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
+                                                title: presentationData.strings.Stars_Transfer_PurchasedTitle,
+                                                text: presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string,
+                                                round: false,
+                                                undoText: nil
+                                            ),
+                                            elevatedLayout: lastController is ChatController,
+                                            action: { _ in return true}
+                                        )
+                                        lastController.present(resultController, in: .window(.root))
+                                    }
+                                }
+                            }
+                            
+                            controller?.complete(paid: true)
                             controller?.dismissAnimated()
                             
                             starsContext.load(force: true)
@@ -549,15 +557,18 @@ private final class StarsTransferSheetComponent: CombinedComponent {
 
 public final class StarsTransferScreen: ViewControllerComponentContainer {
     private let context: AccountContext
+    private let completion: (Bool) -> Void
         
     public init(
         context: AccountContext,
         starsContext: StarsContext,
         invoice: TelegramMediaInvoice,
         source: BotPaymentInvoiceSource,
-        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>
+        inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>,
+        completion: @escaping (Bool) -> Void
     ) {
         self.context = context
+        self.completion = completion
                 
         super.init(
             context: context,
@@ -578,8 +589,21 @@ public final class StarsTransferScreen: ViewControllerComponentContainer {
         starsContext.load(force: false)
     }
     
+    deinit {
+        self.complete(paid: false)
+    }
+    
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private var didComplete = false
+    fileprivate func complete(paid: Bool) {
+        guard !self.didComplete else {
+            return
+        }
+        self.didComplete = true
+        self.completion(paid)
     }
     
     public func dismissAnimated() {

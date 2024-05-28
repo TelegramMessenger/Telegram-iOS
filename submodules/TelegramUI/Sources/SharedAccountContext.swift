@@ -2627,8 +2627,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsPurchaseScreen(context: context, starsContext: starsContext, options: options, peerId: peerId, requiredStars: requiredStars, modal: true, completion: completion)
     }
     
-    public func makeStarsTransferScreen(context: AccountContext, starsContext: StarsContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>) -> ViewController {
-        return StarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: source, inputData: inputData)
+    public func makeStarsTransferScreen(context: AccountContext, starsContext: StarsContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, inputData: Signal<(StarsContext.State, BotPaymentForm, EnginePeer?)?, NoError>, completion: @escaping (Bool) -> Void) -> ViewController {
+        return StarsTransferScreen(context: context, starsContext: starsContext, invoice: invoice, source: source, inputData: inputData, completion: completion)
     }
     
     public func makeStarsTransactionScreen(context: AccountContext, transaction: StarsContext.State.Transaction) -> ViewController {

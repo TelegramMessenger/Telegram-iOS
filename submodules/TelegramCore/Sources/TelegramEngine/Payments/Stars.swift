@@ -199,9 +199,16 @@ private final class StarsContextImpl {
             return
         }
         var transactions = state.transactions
-        transactions.insert(.init(id: "tmp_\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil), at: 0)
+        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil), at: 0)
         
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, transactions: transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
+    }
+    
+    fileprivate func updateBalance(_ balance: Int64) {
+        guard let state = self._state else {
+            return
+        }
+        self.updateState(StarsContext.State(flags: [], balance: balance, transactions: state.transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
     }
     
     func loadMore() {
@@ -231,7 +238,7 @@ private final class StarsContextImpl {
 private extension StarsContext.State.Transaction {
     init?(apiTransaction: Api.StarsTransaction, transaction: Transaction) {
         switch apiTransaction {
-        case let .starsTransaction(_, id, stars, date, transactionPeer, title, description, photo):
+        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo):
             let parsedPeer: StarsContext.State.Transaction.Peer
             switch transactionPeer {
             case .starsTransactionPeerAppStore:
@@ -250,7 +257,12 @@ private extension StarsContext.State.Transaction {
                 }
                 parsedPeer = .peer(EnginePeer(peer))
             }
-            self.init(id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init))
+            
+            var flags: Flags = []
+            if (apiFlags & (1 << 3)) != 0 {
+                flags.insert(.isRefund)
+            }
+            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init))
         }
     }
 }
@@ -258,6 +270,17 @@ private extension StarsContext.State.Transaction {
 public final class StarsContext {
     public struct State: Equatable {
         public struct Transaction: Equatable {
+            public struct Flags: OptionSet {
+                public var rawValue: Int32
+                
+                public init(rawValue: Int32) {
+                    self.rawValue = rawValue
+                }
+                
+                public static let isRefund = Flags(rawValue: 1 << 0)
+                public static let isLocal = Flags(rawValue: 1 << 1)
+            }
+            
             public enum Peer: Equatable {
                 case appStore
                 case playMarket
@@ -267,6 +290,7 @@ public final class StarsContext {
                 case peer(EnginePeer)
             }
             
+            public let flags: Flags
             public let id: String
             public let count: Int64
             public let date: Int32
@@ -276,6 +300,7 @@ public final class StarsContext {
             public let photo: TelegramMediaWebFile?
             
             public init(
+                flags: Flags,
                 id: String,
                 count: Int64,
                 date: Int32,
@@ -284,6 +309,7 @@ public final class StarsContext {
                 description: String?,
                 photo: TelegramMediaWebFile?
             ) {
+                self.flags = flags
                 self.id = id
                 self.count = count
                 self.date = date
@@ -374,6 +400,13 @@ public final class StarsContext {
         }
     }
     
+    fileprivate func updateBalance(_ balance: Int64) {
+        self.impl.with {
+            $0.updateBalance(balance)
+        }
+    }
+    
+    
     public func load(force: Bool) {
         self.impl.with {
             $0.load(force: force)
@@ -395,6 +428,7 @@ public final class StarsContext {
 
 private final class StarsTransactionsContextImpl {
     private let account: Account
+    private weak var starsContext: StarsContext?
     private let peerId: EnginePeer.Id
     private let subject: StarsTransactionsContext.Subject
     
@@ -412,6 +446,7 @@ private final class StarsTransactionsContextImpl {
         assert(Queue.mainQueue().isCurrent())
         
         self.account = account
+        self.starsContext = starsContext
         self.peerId = starsContext.peerId
         self.subject = subject
         
@@ -449,13 +484,13 @@ private final class StarsTransactionsContextImpl {
             if filteredTransactions != initialTransactions {
                 var existingIds = Set<String>()
                 for transaction in self._state.transactions {
-                    if !transaction.id.hasPrefix("tmp_") {
+                    if !transaction.flags.contains(.isLocal) {
                         existingIds.insert(transaction.id)
                     }
                 }
             
                 var updatedState = self._state
-                updatedState.transactions.removeAll(where: { $0.id.hasPrefix("tmp_") })
+                updatedState.transactions.removeAll(where: { $0.flags.contains(.isLocal) })
                 for transaction in filteredTransactions.reversed() {
                     if !existingIds.contains(transaction.id) {
                         updatedState.transactions.insert(transaction, at: 0)
@@ -499,6 +534,8 @@ private final class StarsTransactionsContextImpl {
             updatedState.isLoading = false
             updatedState.canLoadMore = self.nextOffset != nil
             self.updateState(updatedState)
+            
+            self.starsContext?.updateBalance(status.balance)
         }))
     }
     

@@ -449,6 +449,10 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
                 self.resultsText = resultsText
             }
             
+            if self.alwaysShowTotalMessagesCount {
+                resultsTextTransition = .immediate
+            }
+            
             let resultsTextSize = resultsText.update(
                 transition: resultsTextTransition,
                 component: AnyComponent(AnimatedTextComponent(

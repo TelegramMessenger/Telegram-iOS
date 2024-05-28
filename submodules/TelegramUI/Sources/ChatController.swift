@@ -2924,7 +2924,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.chatDisplayNode.dismissInput()
                         if let receiptMessageId = invoice.receiptMessageId {
                             if invoice.currency == "XTR" {
-                                let _ = (strongSelf.context.engine.payments.requestBotPaymentReceipt(messageId: message.id)
+                                let _ = (strongSelf.context.engine.payments.requestBotPaymentReceipt(messageId: receiptMessageId)
                                 |> deliverOnMainQueue).start(next: { [weak self] receipt in
                                     guard let strongSelf = self else {
                                         return
@@ -2957,7 +2957,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(messageId), inputData: starsInputData)
+                                    let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(messageId), inputData: starsInputData, completion: { _ in })
                                     strongSelf.push(controller)
                                 })
                             } else {

@@ -504,7 +504,7 @@ final class StarsTransactionsScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInsets - 8.0, height: 240.0)
             )
-            let descriptionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - descriptionSize.width) / 2.0), y: contentHeight), size: descriptionSize)
+            let descriptionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - descriptionSize.width) / 2.0), y: contentHeight + 20.0 - floor(descriptionSize.height / 2.0)), size: descriptionSize)
             if let descriptionView = self.descriptionView.view {
                 if descriptionView.superview == nil {
                     self.scrollView.addSubview(descriptionView)
@@ -527,6 +527,7 @@ final class StarsTransactionsScreenComponent: Component {
                         StarsBalanceComponent(
                             theme: environment.theme,
                             strings: environment.strings,
+                            dateTimeFormat: environment.dateTimeFormat,
                             count: self.starsState?.balance ?? 0,
                             purchaseAvailable: !premiumConfiguration.areStarsDisabled,
                             buy: { [weak self] in

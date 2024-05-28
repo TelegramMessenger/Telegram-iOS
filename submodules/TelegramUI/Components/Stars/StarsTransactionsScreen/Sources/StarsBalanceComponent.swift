@@ -8,11 +8,11 @@ import MultilineTextComponent
 import TelegramPresentationData
 import PresentationDataUtils
 import SolidRoundedButtonComponent
-import AnimatedTextComponent
 
 final class StarsBalanceComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let dateTimeFormat: PresentationDateTimeFormat
     let count: Int64
     let purchaseAvailable: Bool
     let buy: () -> Void
@@ -20,12 +20,14 @@ final class StarsBalanceComponent: Component {
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
+        dateTimeFormat: PresentationDateTimeFormat,
         count: Int64,
         purchaseAvailable: Bool,
         buy: @escaping () -> Void
     ) {
         self.theme = theme
         self.strings = strings
+        self.dateTimeFormat = dateTimeFormat
         self.count = count
         self.purchaseAvailable = purchaseAvailable
         self.buy = buy
@@ -36,6 +38,9 @@ final class StarsBalanceComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.dateTimeFormat != rhs.dateTimeFormat {
             return false
         }
         if lhs.purchaseAvailable != rhs.purchaseAvailable {
@@ -68,26 +73,17 @@ final class StarsBalanceComponent: Component {
         }
         
         func update(component: StarsBalanceComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            let isFirstTime = self.component == nil
             self.component = component
             
             let sideInset: CGFloat = 16.0
             var contentHeight: CGFloat = sideInset
             
-            var animatedTextItems: [AnimatedTextComponent.Item] = []
-            animatedTextItems.append(AnimatedTextComponent.Item(
-                id: 1,
-                isUnbreakable: true,
-                content: .number(Int(component.count), minDigits: 1)
-            ))
-            
+            let balanceString = presentationStringsFormattedNumber(Int32(component.count), component.dateTimeFormat.groupingSeparator)
             let titleSize = self.title.update(
-                transition: isFirstTime ? .immediate : .easeInOut(duration: 0.2),
+                transition: .immediate,
                 component: AnyComponent(
-                    AnimatedTextComponent(
-                        font: Font.with(size: 48.0, design: .round, weight: .semibold),
-                        color: component.theme.list.itemPrimaryTextColor,
-                        items: animatedTextItems
+                    MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: balanceString, font: Font.with(size: 48.0, design: .round, weight: .semibold), textColor: component.theme.list.itemPrimaryTextColor))
                     )
                 ),
                 environment: {},

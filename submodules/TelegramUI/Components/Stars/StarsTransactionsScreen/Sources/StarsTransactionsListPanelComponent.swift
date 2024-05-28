@@ -16,6 +16,16 @@ import AvatarNode
 import BundleIconComponent
 import PhotoResources
 
+private extension StarsContext.State.Transaction {
+    var extendedId: String {
+        if self.count > 0 {
+            return "\(id)_in"
+        } else {
+            return "\(id)_out"
+        }
+    }
+}
+
 final class StarsTransactionsListPanelComponent: Component {
     typealias EnvironmentType = StarsTransactionsPanelEnvironment
         
@@ -161,7 +171,7 @@ final class StarsTransactionsListPanelComponent: Component {
                         continue
                     }
                     let item = self.items[index]
-                    let id = item.id
+                    let id = item.extendedId
                     validIds.insert(id)
                     
                     var itemTransition = transition
@@ -186,7 +196,7 @@ final class StarsTransactionsListPanelComponent: Component {
                     
                     let itemTitle: String
                     let itemSubtitle: String?
-                    let itemDate: String
+                    var itemDate: String
                     switch item.peer {
                     case let .peer(peer):
                         if let title = item.title {
@@ -225,6 +235,9 @@ final class StarsTransactionsListPanelComponent: Component {
                     itemLabel = NSAttributedString(string: labelString, font: Font.medium(fontBaseDisplaySize), textColor: labelString.hasPrefix("-") ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemDisclosureActions.constructive.fillColor)
                     
                     itemDate = stringForMediumCompactDate(timestamp: item.date, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
+                    if item.flags.contains(.isRefund) {
+                        itemDate += " – \(environment.strings.Stars_Intro_Transaction_Refund)"
+                    }
                     
                     var titleComponents: [AnyComponentWithIdentity<Empty>] = []
                     titleComponents.append(
@@ -272,7 +285,7 @@ final class StarsTransactionsListPanelComponent: Component {
                                 guard let self, let component = self.component else {
                                     return
                                 }
-                                if !item.id.hasPrefix("tmp_") {
+                                if !item.flags.contains(.isLocal) {
                                     component.action(item)
                                 }
                             }
@@ -320,7 +333,7 @@ final class StarsTransactionsListPanelComponent: Component {
             let bottomOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
             let loadMore = bottomOffset < 100.0
             if environment.isCurrent, loadMore {
-                let lastId = self.items.last?.id
+                let lastId = self.items.last?.extendedId
                 if lastId != self.currentLoadMoreId || lastId == nil {
                     self.currentLoadMoreId = lastId
                     component.transactionsContext.loadMore()
@@ -344,14 +357,14 @@ final class StarsTransactionsListPanelComponent: Component {
                         return
                     }
                     let wasEmpty = self.items.isEmpty
-                    let hadTemporaryTransactions = self.items.contains(where: { $0.id.hasPrefix("tmp_") })
+                    let hadLocalTransactions = self.items.contains(where: { $0.flags.contains(.isLocal) })
                     
                     self.items = status.transactions
                     if !status.isLoading {
                         self.currentLoadMoreId = nil
                     }
                     if !self.isUpdating {
-                        state?.updated(transition: wasEmpty || hadTemporaryTransactions ? .immediate : .easeInOut(duration: 0.2))
+                        state?.updated(transition: wasEmpty || hadLocalTransactions ? .immediate : .easeInOut(duration: 0.2))
                     }
                 })
             }
@@ -533,7 +546,7 @@ private final class AvatarComponent: Component {
                         imageNode = current
                     } else {
                         imageNode = TransformImageNode()
-                        imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
+                        imageNode.contentAnimations = [.subsequentUpdates]
                         self.addSubview(imageNode.view)
                         self.imageNode = imageNode
                         

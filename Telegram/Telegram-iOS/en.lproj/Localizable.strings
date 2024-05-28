@@ -7799,6 +7799,7 @@ Sorry for the inconvenience.";
 "Premium.Purchase.ErrorNetwork" = "Please check your internet connection and try again.";
 "Premium.Purchase.ErrorNotAllowed" = "The device is not not allowed to make the payment.";
 "Premium.Purchase.ErrorCantMakePayments" = "In-app purchases are not allowed on this device.";
+"Premium.Purchase.ErrorTryLater" = "An error occurred. Please try again.";
 
 "Premium.Restore.Success" = "Done";
 "Premium.Restore.ErrorUnknown" = "An error occurred. Please try again.";
@@ -12246,6 +12247,7 @@ Sorry for the inconvenience.";
 "Stars.Intro.Transaction.FragmentTopUp.Title" = "Stars Top-Up";
 "Stars.Intro.Transaction.FragmentTopUp.Subtitle" = "via Fragment";
 "Stars.Intro.Transaction.Unsupported.Title" = "Unsupported";
+"Stars.Intro.Transaction.Refund" = "Refund";
 
 "Stars.Intro.PurchasedTitle" = "Stars Acquired";
 "Stars.Intro.PurchasedText" = "**%@** added to your balance.";
@@ -12269,6 +12271,7 @@ Sorry for the inconvenience.";
 
 "Stars.Transaction.Via" = "Via";
 "Stars.Transaction.To" = "To";
+"Stars.Transaction.From" = "From";
 "Stars.Transaction.Id" = "Transaction ID";
 "Stars.Transaction.Date" = "Date";
 "Stars.Transaction.Terms" = "Review the [Terms of Service]() for Stars.";
@@ -12284,6 +12287,7 @@ Sorry for the inconvenience.";
 "Stars.Transaction.FragmentTopUp.Title" = "Stars Top-Up";
 "Stars.Transaction.FragmentTopUp.Subtitle" = "Fragment";
 "Stars.Transaction.Unsupported.Title" = "Unsupported";
+"Stars.Transaction.Refund" = "Refund";
 
 "Stars.Transfer.Title" = "Confirm Your Purchase";
 "Stars.Transfer.Info" = "Do you want to buy **%1$@** in **%2$@** for **%3$@**?";
