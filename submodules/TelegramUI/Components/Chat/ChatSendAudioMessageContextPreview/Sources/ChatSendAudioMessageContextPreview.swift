@@ -769,7 +769,8 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
             let messagesContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
             
             self.messagesContainer.frame = messagesContainerFrame
-            return messagesContainerFrame.size
+            // 4.0 is a magic number to compensate for offset in other types of content
+            return CGSize(width: messagesContainerFrame.width, height: messagesContainerFrame.height - 4.0)
         }
     }
 }

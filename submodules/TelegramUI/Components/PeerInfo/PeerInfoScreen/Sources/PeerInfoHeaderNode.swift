@@ -552,7 +552,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         transition.updateAlpha(node: self.regularContentNode, alpha: (state.isEditing || self.customNavigationContentNode != nil) ? 0.0 : 1.0)
-        transition.updateAlpha(node: self.navigationButtonContainer, alpha: self.customNavigationContentNode != nil ? 0.0 : 1.0)
+        if self.navigationTransition == nil {
+            transition.updateAlpha(node: self.navigationButtonContainer, alpha: self.customNavigationContentNode != nil ? 0.0 : 1.0)
+        }
         
         self.editingContentNode.alpha = state.isEditing ? 1.0 : 0.0
         

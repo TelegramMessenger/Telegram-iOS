@@ -1073,6 +1073,14 @@ private func addAttachment(attachment: UIImage, line: InteractiveTextNodeLine, a
 }
 
 open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecognizerDelegate {
+    public final class AnimationArguments {
+        public let spoilerExpandRect: CGRect?
+        
+        public init(spoilerExpandRect: CGRect?) {
+            self.spoilerExpandRect = spoilerExpandRect
+        }
+    }
+    
     public struct RenderContentTypes: OptionSet {
         public var rawValue: Int
         
@@ -1106,7 +1114,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
     
     public var canHandleTapAtPoint: ((CGPoint) -> Bool)?
     public var requestToggleBlockCollapsed: ((Int) -> Void)?
-    public var requestDisplayContentsUnderSpoilers: (() -> Void)?
+    public var requestDisplayContentsUnderSpoilers: ((CGPoint?) -> Void)?
     private var tapRecognizer: UITapGestureRecognizer?
     
     public var currentText: NSAttributedString? {
@@ -1676,7 +1684,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         return calculateLayoutV2(attributedString: attributedString, minimumNumberOfLines: minimumNumberOfLines, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, backgroundColor: backgroundColor, constrainedSize: constrainedSize, alignment: alignment, verticalAlignment: verticalAlignment, lineSpacingFactor: lineSpacingFactor, cutout: cutout, insets: insets, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displayContentsUnderSpoilers: displayContentsUnderSpoilers, customTruncationToken: customTruncationToken, expandedBlocks: expandedBlocks)
     }
     
-    private func updateContentItems(animation: ListViewItemUpdateAnimation) {
+    private func updateContentItems(animation: ListViewItemUpdateAnimation, animationArguments: AnimationArguments?) {
         guard let cachedLayout = self.cachedLayout else {
             return
         }
@@ -1729,8 +1737,15 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             
             var contentItemAnimation = animation
             let contentItemLayer: TextContentItemLayer
+            var itemSpoilerExpandRect: CGRect?
+            var itemAnimateContents = animateContents && contentItemAnimation.isAnimated
             if let current = self.contentItemLayers[itemId] {
                 contentItemLayer = current
+                
+                if animation.isAnimated, let spoilerExpandRect = animationArguments?.spoilerExpandRect {
+                    itemSpoilerExpandRect = spoilerExpandRect.offsetBy(dx: -contentItemFrame.minX, dy: -contentItemFrame.minY)
+                    itemAnimateContents = true
+                }
             } else {
                 contentItemAnimation = .None
                 contentItemLayer = TextContentItemLayer()
@@ -1738,7 +1753,13 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 self.layer.addSublayer(contentItemLayer)
             }
             
-            contentItemLayer.update(item: contentItem, animation: contentItemAnimation, synchronously: synchronous, animateContents: animateContents && contentItemAnimation.isAnimated)
+            contentItemLayer.update(
+                item: contentItem,
+                animation: contentItemAnimation,
+                synchronously: synchronous,
+                animateContents: itemAnimateContents,
+                spoilerExpandRect: itemSpoilerExpandRect
+            )
             
             contentItemAnimation.animator.updateFrame(layer: contentItemLayer, frame: contentItemFrame, completion: nil)
         }
@@ -1779,7 +1800,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             let point = recognizer.location(in: self.view)
             if let cachedLayout = self.cachedLayout, !cachedLayout.displayContentsUnderSpoilers, let (_, attributes) = self.attributesAtPoint(point) {
                 if attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil {
-                    self.requestDisplayContentsUnderSpoilers?()
+                    self.requestDisplayContentsUnderSpoilers?(point)
                     return
                 }
             }
@@ -1789,7 +1810,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         }
     }
     
-    public static func asyncLayout(_ maybeNode: InteractiveTextNode?) -> (InteractiveTextNodeLayoutArguments) -> (InteractiveTextNodeLayout, (ListViewItemUpdateAnimation) -> InteractiveTextNode) {
+    public static func asyncLayout(_ maybeNode: InteractiveTextNode?) -> (InteractiveTextNodeLayoutArguments) -> (InteractiveTextNodeLayout, (ListViewItemUpdateAnimation, AnimationArguments?) -> InteractiveTextNode) {
         let existingLayout: InteractiveTextNodeLayout? = maybeNode?.cachedLayout
         
         return { arguments in
@@ -1831,10 +1852,10 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             
             let node = maybeNode ?? InteractiveTextNode()
             
-            return (layout, { animation in
+            return (layout, { animation, animationArguments in
                 if node.cachedLayout !== layout {
                     node.cachedLayout = layout
-                    node.updateContentItems(animation: animation)
+                    node.updateContentItems(animation: animation, animationArguments: animationArguments)
                 }
                 
                 return node
@@ -2202,7 +2223,13 @@ final class TextContentItemLayer: SimpleLayer {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(item: TextContentItem, animation: ListViewItemUpdateAnimation, synchronously: Bool = false, animateContents: Bool = false) {
+    func update(
+        item: TextContentItem,
+        animation: ListViewItemUpdateAnimation,
+        synchronously: Bool,
+        animateContents: Bool,
+        spoilerExpandRect: CGRect?
+    ) {
         self.item = item
 
         let contentFrame = CGRect(origin: CGPoint(), size: item.size)
@@ -2241,7 +2268,13 @@ final class TextContentItemLayer: SimpleLayer {
                         return
                     }
                     self.isAnimating = false
-                    self.update(item: item, animation: .None, synchronously: true)
+                    self.update(
+                        item: item,
+                        animation: .None,
+                        synchronously: true,
+                        animateContents: false,
+                        spoilerExpandRect: nil
+                    )
                 })
             } else {
                 blockBackgroundView.layer.frame = blockBackgroundFrame
@@ -2362,13 +2395,61 @@ final class TextContentItemLayer: SimpleLayer {
         
         self.renderNode.params = RenderParams(size: contentFrame.size, item: item, mask: staticContentMask)
         if synchronously {
-            let previousContents = self.renderNode.layer.contents
-            self.renderNode.displayImmediately()
-            if animateContents, let previousContents {
-                animation.transition.animateContents(layer: self.renderNode.layer, from: previousContents)
+            if let spoilerExpandRect {
+                let _ = spoilerExpandRect
+                
+                self.renderNode.displayImmediately()
+                
+                let maskFrame = self.renderNode.frame
+                
+                let maskLayer = SimpleLayer()
+                maskLayer.frame = maskFrame
+                self.addSublayer(maskLayer)
+                
+                let maskGradientLayer = SimpleGradientLayer()
+                maskGradientLayer.frame = CGRect(origin: CGPoint(), size: maskFrame.size)
+                setupSpoilerExpansionMaskGradient(
+                    gradientLayer: maskGradientLayer,
+                        centerLocation: CGPoint(
+                        x: 0.5,
+                        y: 0.5
+                    ),
+                    radius: CGSize(
+                        width: 1.5,
+                        height: 1.5
+                    ),
+                    inverse: false
+                )
+            } else {
+                let previousContents = self.renderNode.layer.contents
+                self.renderNode.displayImmediately()
+                if animateContents, let previousContents {
+                    animation.transition.animateContents(layer: self.renderNode.layer, from: previousContents)
+                }
             }
         } else {
             self.renderNode.setNeedsDisplay()
         }
     }
+}
+
+private func setupSpoilerExpansionMaskGradient(gradientLayer: SimpleGradientLayer, centerLocation: CGPoint, radius: CGSize, inverse: Bool) {
+    let startAlpha: CGFloat = inverse ? 0.0 : 1.0
+    let endAlpha: CGFloat = inverse ? 1.0 : 0.0
+    
+    let locations: [CGFloat] = [0.0, 0.7, 0.95, 1.0]
+    let colors: [CGColor] = [
+        UIColor(rgb: 0xff0000, alpha: startAlpha).cgColor,
+        UIColor(rgb: 0xff0000, alpha: startAlpha).cgColor,
+        UIColor(rgb: 0xff0000, alpha: endAlpha).cgColor,
+        UIColor(rgb: 0xff0000, alpha: endAlpha).cgColor
+    ]
+    
+    gradientLayer.type = .radial
+    gradientLayer.colors = colors
+    gradientLayer.locations = locations.map { $0 as NSNumber }
+    gradientLayer.startPoint = centerLocation
+    
+    let endEndPoint = CGPoint(x: (gradientLayer.startPoint.x + radius.width) * 1.0, y: (gradientLayer.startPoint.y + radius.height) * 1.0)
+    gradientLayer.endPoint = endEndPoint
 }
