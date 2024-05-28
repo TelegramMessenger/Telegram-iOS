@@ -11930,9 +11930,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             self.chatLocation = .peer(id: peerId)
         }
         
-        if isSettings, let starsContext = context.starsContext {
-            self.starsContext = starsContext
-            starsContext.load()
+        if isSettings {
+            self.starsContext = context.starsContext
         } else {
             self.starsContext = nil
         }
