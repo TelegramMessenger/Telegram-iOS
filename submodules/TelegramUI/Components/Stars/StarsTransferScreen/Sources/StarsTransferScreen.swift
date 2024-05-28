@@ -414,19 +414,26 @@ private final class SheetContent: CombinedComponent {
                             }
                         }, completion: { [weak controller] in
                             let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
-                            let resultController = UndoOverlayController(
-                                presentationData: presentationData,
-                                content: .image(
-                                    image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
-                                    title: presentationData.strings.Stars_Transfer_PurchasedTitle,
-                                    text: presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string,
-                                    round: false,
-                                    undoText: nil
-                                ),
-                                elevatedLayout: true,
-                                action: { _ in return true})
-                            controller?.present(resultController, in: .window(.root))
-
+                            if let navigationController = controller?.navigationController {
+                                Queue.mainQueue().after(0.5) {
+                                    if let lastController = navigationController.viewControllers.last as? ViewController {
+                                        let resultController = UndoOverlayController(
+                                            presentationData: presentationData,
+                                            content: .image(
+                                                image: UIImage(bundleImageName: "Premium/Stars/StarLarge")!,
+                                                title: presentationData.strings.Stars_Transfer_PurchasedTitle,
+                                                text: presentationData.strings.Stars_Transfer_PurchasedText(invoice.title, botTitle, presentationData.strings.Stars_Transfer_Purchased_Stars(Int32(invoice.totalAmount))).string,
+                                                round: false,
+                                                undoText: nil
+                                            ),
+                                            elevatedLayout: lastController is ChatController,
+                                            action: { _ in return true}
+                                        )
+                                        lastController.present(resultController, in: .window(.root))
+                                    }
+                                }
+                            }
+                            
                             controller?.complete(paid: true)
                             controller?.dismissAnimated()
                             
