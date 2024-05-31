@@ -2816,8 +2816,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     }
                     self.skippedShowSearchResultsAsListAnimationOnce = true
                     inlineSearchResultsView.layer.allowsGroupOpacity = true
-                    if let inlineSearchResultsView = self.inlineSearchResults?.view {
-                        self.contentContainerNode.view.insertSubview(inlineSearchResultsView, aboveSubview: inlineSearchResultsView)
+                    if let emptyNode = self.emptyNode {
+                        self.contentContainerNode.view.insertSubview(inlineSearchResultsView, aboveSubview: emptyNode.view)
                     } else {
                         self.contentContainerNode.view.insertSubview(inlineSearchResultsView, aboveSubview: self.historyNodeContainer.view)
                     }
