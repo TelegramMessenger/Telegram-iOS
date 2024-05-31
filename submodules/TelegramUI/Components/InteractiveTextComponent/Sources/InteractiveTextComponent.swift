@@ -109,6 +109,7 @@ private final class InteractiveTextNodeLine {
     let ascent: CGFloat
     let descent: CGFloat
     let range: NSRange?
+    let isTruncated: Bool
     let isRTL: Bool
     var strikethroughs: [InteractiveTextNodeStrikethrough]
     var spoilers: [InteractiveTextNodeSpoiler]
@@ -117,7 +118,7 @@ private final class InteractiveTextNodeLine {
     var attachments: [InteractiveTextNodeAttachment]
     let additionalTrailingLine: (CTLine, Double)?
     
-    init(line: CTLine, constrainedWidth: CGFloat, frame: CGRect, intrinsicWidth: CGFloat, ascent: CGFloat, descent: CGFloat, range: NSRange?, isRTL: Bool, strikethroughs: [InteractiveTextNodeStrikethrough], spoilers: [InteractiveTextNodeSpoiler], spoilerWords: [InteractiveTextNodeSpoiler], embeddedItems: [InteractiveTextNodeEmbeddedItem], attachments: [InteractiveTextNodeAttachment], additionalTrailingLine: (CTLine, Double)?) {
+    init(line: CTLine, constrainedWidth: CGFloat, frame: CGRect, intrinsicWidth: CGFloat, ascent: CGFloat, descent: CGFloat, range: NSRange?, isTruncated: Bool, isRTL: Bool, strikethroughs: [InteractiveTextNodeStrikethrough], spoilers: [InteractiveTextNodeSpoiler], spoilerWords: [InteractiveTextNodeSpoiler], embeddedItems: [InteractiveTextNodeEmbeddedItem], attachments: [InteractiveTextNodeAttachment], additionalTrailingLine: (CTLine, Double)?) {
         self.line = line
         self.constrainedWidth = constrainedWidth
         self.frame = frame
@@ -125,6 +126,7 @@ private final class InteractiveTextNodeLine {
         self.ascent = ascent
         self.descent = descent
         self.range = range
+        self.isTruncated = isTruncated
         self.isRTL = isRTL
         self.strikethroughs = strikethroughs
         self.spoilers = spoilers
@@ -1360,6 +1362,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         }
         
         class CalculatedSegment {
+            let id: Int?
             var titleLine: InteractiveTextNodeLine?
             var lines: [InteractiveTextNodeLine] = []
             var tintColor: UIColor?
@@ -1368,16 +1371,29 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             var blockQuote: TextNodeBlockQuoteData?
             var additionalWidth: CGFloat = 0.0
             
-            init() {
+            init(id: Int?) {
+                self.id = id
             }
         }
         
         var calculatedSegments: [CalculatedSegment] = []
         var remainingLines = maximumNumberOfLines <= 0 ? Int.max : maximumNumberOfLines
         
+        var nextBlockIndex = 0
         for segment in stringSegments {
             if remainingLines <= 0 {
                 break
+            }
+            
+            var blockIndex: Int?
+            var isCollapsed = false
+            if let blockQuote = segment.blockQuote {
+                let blockIndexValue = nextBlockIndex
+                blockIndex = blockIndexValue
+                nextBlockIndex += 1
+                if blockQuote.isCollapsible {
+                    isCollapsed = !expandedBlocks.contains(blockIndexValue)
+                }
             }
             
             let rawSubstring = segment.substring.string as NSString
@@ -1389,7 +1405,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             var currentLineStartIndex = segment.firstCharacterOffset
             let segmentEndIndex = segment.firstCharacterOffset + substringLength
             
-            let calculatedSegment = CalculatedSegment()
+            let calculatedSegment = CalculatedSegment(id: blockIndex)
             calculatedSegment.blockQuote = segment.blockQuote
             calculatedSegment.tintColor = segment.tintColor
             calculatedSegment.secondaryTintColor = segment.secondaryTintColor
@@ -1430,6 +1446,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                         ascent: lineAscent,
                         descent: lineDescent,
                         range: nil,
+                        isTruncated: false,
                         isRTL: false,
                         strikethroughs: [],
                         spoilers: [],
@@ -1470,6 +1487,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                         ascent: lineAscent,
                         descent: lineDescent,
                         range: NSRange(location: currentLineStartIndex, length: lineCharacterCount),
+                        isTruncated: false,
                         isRTL: isRTL && segment.blockQuote == nil,
                         strikethroughs: [],
                         spoilers: [],
@@ -1497,10 +1515,53 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 }
             }
             
+            if isCollapsed, calculatedSegment.lines.count > 3 {
+                let lastLine = calculatedSegment.lines[2]
+                if !lastLine.isTruncated, let lineRange = lastLine.range, let lineFont = attributedString.attribute(.font, at: lineRange.lowerBound, effectiveRange: nil) as? UIFont {
+                    var truncationTokenAttributes: [NSAttributedString.Key : AnyObject] = [:]
+                    truncationTokenAttributes[NSAttributedString.Key.font] = lineFont
+                    truncationTokenAttributes[NSAttributedString.Key(rawValue:  kCTForegroundColorFromContextAttributeName as String)] = true as NSNumber
+                    let tokenString = "\u{2026}"
+                    
+                    let truncatedTokenString = NSAttributedString(string: tokenString, attributes: truncationTokenAttributes)
+                    
+                    let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)
+                    
+                    var truncationTokenAscent: CGFloat = 0.0
+                    var truncationTokenDescent: CGFloat = 0.0
+                    let truncationTokenWidth = CTLineGetTypographicBounds(truncationToken, &truncationTokenAscent, &truncationTokenDescent, nil)
+                    
+                    if let updatedLine = CTLineCreateTruncatedLine(lastLine.line, max(0.0, lastLine.constrainedWidth - truncationTokenWidth), .end, nil) {
+                        var lineAscent: CGFloat = 0.0
+                        var lineDescent: CGFloat = 0.0
+                        var lineWidth = CTLineGetTypographicBounds(updatedLine, &lineAscent, &lineDescent, nil)
+                        lineWidth = min(lineWidth, lastLine.constrainedWidth)
+                        
+                        calculatedSegment.lines[2] = InteractiveTextNodeLine(
+                            line: updatedLine,
+                            constrainedWidth: lastLine.constrainedWidth,
+                            frame: CGRect(origin: lastLine.frame.origin, size: CGSize(width: lineWidth, height: lineAscent + lineDescent)),
+                            intrinsicWidth: lineWidth,
+                            ascent: lineAscent,
+                            descent: lineDescent,
+                            range: lastLine.range,
+                            isTruncated: true,
+                            isRTL: lastLine.isRTL,
+                            strikethroughs: [],
+                            spoilers: [],
+                            spoilerWords: [],
+                            embeddedItems: [],
+                            attachments: [],
+                            additionalTrailingLine: (truncationToken, 0.0)
+                        )
+                    }
+                }
+            }
+            
             calculatedSegments.append(calculatedSegment)
         }
         
-        if remainingLines <= 0, let lastSegment = calculatedSegments.last, let lastLine = lastSegment.lines.last, let lineRange = lastLine.range, let lineFont = attributedString.attribute(.font, at: lineRange.lowerBound, effectiveRange: nil) as? UIFont {
+        if remainingLines <= 0, let lastSegment = calculatedSegments.last, let lastLine = lastSegment.lines.last, !lastLine.isTruncated, let lineRange = lastLine.range, let lineFont = attributedString.attribute(.font, at: lineRange.lowerBound, effectiveRange: nil) as? UIFont {
             let truncatedTokenString: NSAttributedString
             if let customTruncationTokenValue = customTruncationToken?(lineFont, lastSegment.blockQuote != nil) {
                 if lineRange.length == 0 && customTruncationTokenValue.string.hasPrefix("\u{2026} ") {
@@ -1537,6 +1598,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                     ascent: lineAscent,
                     descent: lineDescent,
                     range: lastLine.range,
+                    isTruncated: true,
                     isRTL: lastLine.isRTL,
                     strikethroughs: [],
                     spoilers: [],
@@ -1564,8 +1626,6 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         
         var firstLineOffset: CGFloat?
         
-        var nextBlockIndex = 0
-        
         for i in 0 ..< calculatedSegments.count {
             var segmentLines: [InteractiveTextNodeLine] = []
             
@@ -1580,7 +1640,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 }
             }
             
-            let blockMinY = size.height - insets.bottom
+            let blockMinY = size.height
             var blockWidth: CGFloat = 0.0
             
             if let titleLine = segment.titleLine {
@@ -1592,14 +1652,11 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 segmentLines.append(titleLine)
             }
             
-            var blockIndex: Int?
+            let blockIndex = segment.id
             var isCollapsed = false
-            if let blockQuote = segment.blockQuote {
-                let blockIndexValue = nextBlockIndex
-                blockIndex = blockIndexValue
-                nextBlockIndex += 1
+            if let blockIndex, let blockQuote = segment.blockQuote {
                 if blockQuote.isCollapsible {
-                    isCollapsed = !expandedBlocks.contains(blockIndexValue)
+                    isCollapsed = !expandedBlocks.contains(blockIndex)
                 }
             }
             
@@ -1611,18 +1668,21 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 let line = segment.lines[i]
                 lineCount += 1
                 
+                if i != 0 {
+                    segmentHeight += line.frame.height * lineSpacingFactor
+                }
+                if isCollapsed && lineCount > 3 {
+                } else {
+                    effectiveSegmentHeight += line.frame.height * lineSpacingFactor
+                }
+                
                 line.frame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: size.height + segmentHeight), size: line.frame.size)
                 line.frame.size.width += max(0.0, segment.additionalWidth)
                 
-                var lineHeightIncrease = line.frame.height
-                if i != segment.lines.count - 1 {
-                    lineHeightIncrease += line.frame.height * lineSpacingFactor
-                }
-                
-                segmentHeight += lineHeightIncrease
+                segmentHeight += line.frame.height
                 if isCollapsed && lineCount > 3 {
                 } else {
-                    effectiveSegmentHeight += lineHeightIncrease
+                    effectiveSegmentHeight += line.frame.height
                     visibleLineCount = i + 1
                 }
                 blockWidth = max(blockWidth, line.frame.origin.x + line.frame.width)
@@ -1710,7 +1770,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             effectiveSegmentHeight = ceil(effectiveSegmentHeight)
             
             size.height += effectiveSegmentHeight
-            let blockMaxY = size.height - insets.bottom
+            let blockMaxY = size.height
             
             if i != calculatedSegments.count - 1 {
                 if segment.blockQuote != nil {
@@ -1724,7 +1784,19 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             
             var segmentBlockQuote: InteractiveTextNodeBlockQuote?
             if let blockQuote = segment.blockQuote, let tintColor = segment.tintColor, let blockIndex, let firstLine = segment.lines.first, let lastLine = segment.lines.last {
-                segmentBlockQuote = InteractiveTextNodeBlockQuote(id: blockIndex, frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY + floor(0.15 * firstLine.frame.height)), size: CGSize(width: blockWidth, height: blockMaxY - blockMinY + floor(0.4 * lastLine.frame.height))), data: blockQuote, tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor, tertiaryTintColor: segment.tertiaryTintColor, backgroundColor: blockQuote.backgroundColor, isCollapsed: (blockQuote.isCollapsible && segmentLines.count > 3) ? isCollapsed : nil)
+                segmentBlockQuote = InteractiveTextNodeBlockQuote(
+                    id: blockIndex,
+                    frame: CGRect(
+                        origin: CGPoint(x: 0.0, y: blockMinY - floor(firstLine.frame.height * 0.2)),
+                        size: CGSize(width: blockWidth, height: blockMaxY - blockMinY + floor(firstLine.frame.height * 0.2) + floor(lastLine.frame.height * 0.15))
+                    ),
+                    data: blockQuote,
+                    tintColor: tintColor,
+                    secondaryTintColor: segment.secondaryTintColor,
+                    tertiaryTintColor: segment.tertiaryTintColor,
+                    backgroundColor: blockQuote.backgroundColor,
+                    isCollapsed: (blockQuote.isCollapsible && segmentLines.count > 3) ? isCollapsed : nil
+                )
             }
             
             segments.append(InteractiveTextNodeSegment(
