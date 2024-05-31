@@ -20,6 +20,10 @@ private func generateHashtagIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Hashtag"), color: color)
 }
 
+private func generateCashtagIcon(color: UIColor) -> UIImage? {
+    return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Cashtag"), color: color)
+}
+
 private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
 }
@@ -851,6 +855,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     public enum Icon {
         case loupe
         case hashtag
+        case cashtag
     }
     public let icon: Icon
     
@@ -1062,6 +1067,8 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
                 icon = generateLoupeIcon(color: theme.inputIcon)
             case .hashtag:
                 icon = generateHashtagIcon(color: theme.inputIcon)
+            case .cashtag:
+                icon = generateCashtagIcon(color: theme.inputIcon)
             }
             self.iconNode.image = icon
             self.textField.keyboardAppearance = theme.keyboard.keyboardAppearance
@@ -1149,6 +1156,11 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             self.textBackgroundNode.layer.animate(from: fromTextBackgroundColor.cgColor, to: toTextBackgroundColor.cgColor, keyPath: "backgroundColor", timingFunction: timingFunction, duration: duration * 1.0)
         }
         self.textBackgroundNode.layer.animateFrame(from: initialTextBackgroundFrame, to: self.textBackgroundNode.frame, duration: duration, timingFunction: timingFunction)
+        
+        if initialTextBackgroundFrame.height.isZero {
+            self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            self.textField.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        }
         
         let textFieldFrame = self.textField.frame
         var tokensWidth = self.textField.tokensWidth
@@ -1264,24 +1276,24 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             separatorCompleted = true
             intermediateCompletion()
         })
-
+        
         self.textBackgroundNode.isHidden = true
         
         /*if let accessoryComponentView = node.accessoryComponentView {
-            let tempContainer = UIView()
-            
-            let accessorySize = accessoryComponentView.bounds.size
-            tempContainer.frame = CGRect(origin: CGPoint(x: self.textBackgroundNode.frame.maxX - accessorySize.width - 4.0, y: floor((self.textBackgroundNode.frame.minY + self.textBackgroundNode.frame.height - accessorySize.height) / 2.0)), size: accessorySize)
-            
-            let targetTempContainerFrame = CGRect(origin: CGPoint(x: targetTextBackgroundFrame.maxX - accessorySize.width - 4.0, y: floor((targetTextBackgroundFrame.minY + 8.0 + targetTextBackgroundFrame.height - accessorySize.height) / 2.0)), size: accessorySize)
-            
-            tempContainer.layer.animateFrame(from: tempContainer.frame, to: targetTempContainerFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
-            
-            accessoryComponentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            tempContainer.addSubview(accessoryComponentView)
-            self.view.addSubview(tempContainer)
-        }*/
-
+         let tempContainer = UIView()
+         
+         let accessorySize = accessoryComponentView.bounds.size
+         tempContainer.frame = CGRect(origin: CGPoint(x: self.textBackgroundNode.frame.maxX - accessorySize.width - 4.0, y: floor((self.textBackgroundNode.frame.minY + self.textBackgroundNode.frame.height - accessorySize.height) / 2.0)), size: accessorySize)
+         
+         let targetTempContainerFrame = CGRect(origin: CGPoint(x: targetTextBackgroundFrame.maxX - accessorySize.width - 4.0, y: floor((targetTextBackgroundFrame.minY + 8.0 + targetTextBackgroundFrame.height - accessorySize.height) / 2.0)), size: accessorySize)
+         
+         tempContainer.layer.animateFrame(from: tempContainer.frame, to: targetTempContainerFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
+         
+         accessoryComponentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+         tempContainer.addSubview(accessoryComponentView)
+         self.view.addSubview(tempContainer)
+         }*/
+        
         self.textBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { [weak node] _ in
             textBackgroundCompleted = true
             intermediateCompletion()
@@ -1300,8 +1312,11 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.insertSubnode(transitionBackgroundNode, aboveSubnode: self.textBackgroundNode)
         
         transitionBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
-                
-        if let snapshot = node.labelNode.layer.snapshotContentTree() {
+        
+        if targetTextBackgroundFrame.height.isZero {
+            self.iconNode.layer.animateAlpha(from: self.iconNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            self.textField.layer.animateAlpha(from: self.textField.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        } else if let snapshot = node.labelNode.layer.snapshotContentTree() {
             snapshot.frame = CGRect(origin: self.textField.placeholderLabel.frame.origin.offsetBy(dx: 0.0, dy: UIScreenPixel), size: node.labelNode.frame.size)
             self.textField.layer.addSublayer(snapshot)
             snapshot.animateAlpha(from: 0.0, to: 1.0, duration: duration * 2.0 / 3.0, timingFunction: CAMediaTimingFunctionName.linear.rawValue)

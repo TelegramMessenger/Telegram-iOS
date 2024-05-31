@@ -2074,6 +2074,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
+    private weak var storyTooltip: TooltipScreen?
     fileprivate func maybeDisplayStoryTooltip() {
         let content = self.updateHeaderContent()
         if content.secondaryContent != nil {
@@ -2128,6 +2129,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                         )
                         self.present(tooltipScreen, in: .current)
+                        self.storyTooltip = tooltipScreen
                         
                         #if !DEBUG
                         let _ = ApplicationSpecificNotice.setDisplayChatListStoriesTooltip(accountManager: self.context.sharedContext.accountManager).startStandalone()
@@ -4345,7 +4347,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.activateSearch(filter: filter, query: query)
     }
         
+    private var previousSearchToggleTimestamp: Double?
     func activateSearch(filter: ChatListSearchFilter = .chats, query: String? = nil, skipScrolling: Bool = false, searchContentNode: NavigationBarSearchContentNode) {
+        let currentTimestamp = CACurrentMediaTime()
+        if let previousSearchActivationTimestamp = self.previousSearchToggleTimestamp, currentTimestamp < previousSearchActivationTimestamp + 0.6 {
+            return
+        }
+        self.previousSearchToggleTimestamp = currentTimestamp
+        
+        if let storyTooltip = self.storyTooltip {
+            storyTooltip.dismiss()
+        }
+        
         var filter = filter
         if case .forum = self.chatListDisplayNode.effectiveContainerNode.location {
             filter = .topics
@@ -4420,46 +4433,53 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     public func deactivateSearch(animated: Bool) {
-        if !self.displayNavigationBar {
-            var completion: (() -> Void)?
-            
-            self.searchTabsNode = nil
-            
-            var searchContentNode: NavigationBarSearchContentNode?
-            if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
-                searchContentNode = navigationBarView.searchContentNode
+        guard !self.displayNavigationBar else {
+            return
+        }
+        let currentTimestamp = CACurrentMediaTime()
+        if let previousSearchActivationTimestamp = self.previousSearchToggleTimestamp, currentTimestamp < previousSearchActivationTimestamp + 0.6 {
+            return
+        }
+        self.previousSearchToggleTimestamp = currentTimestamp
+        
+        var completion: (() -> Void)?
+        
+        self.searchTabsNode = nil
+        
+        var searchContentNode: NavigationBarSearchContentNode?
+        if let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+            searchContentNode = navigationBarView.searchContentNode
+        }
+        
+        if let searchContentNode {
+            let previousFrame = searchContentNode.placeholderNode.frame
+            if case .chatList(.root) = self.location {
+                searchContentNode.placeholderNode.frame = previousFrame.offsetBy(dx: 0.0, dy: 79.0)
             }
-            
-            if let searchContentNode {
-                let previousFrame = searchContentNode.placeholderNode.frame
-                if case .chatList(.root) = self.location {
-                    searchContentNode.placeholderNode.frame = previousFrame.offsetBy(dx: 0.0, dy: 79.0)
-                }
-                completion = self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
-                searchContentNode.placeholderNode.frame = previousFrame
-            }
-            
-            self.chatListDisplayNode.tempAllowAvatarExpansion = true
-            self.requestLayout(transition: .animated(duration: 0.5, curve: .spring))
-            self.chatListDisplayNode.tempAllowAvatarExpansion = false
-            
-            //TODO:swap tabs
-            
-            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
-            //transition.updateAlpha(node: self.tabContainerNode, alpha: tabsIsEmpty ? 0.0 : 1.0)
-            self.setDisplayNavigationBar(true, transition: transition)
-            
-            completion?()
-            
-            (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.4, curve: .spring))
-            
-            self.isSearchActive = false
-            if let navigationController = self.navigationController as? NavigationController {
-                for controller in navigationController.globalOverlayControllers {
-                    if let controller = controller as? VoiceChatOverlayController {
-                        controller.updateVisibility()
-                        break
-                    }
+            completion = self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
+            searchContentNode.placeholderNode.frame = previousFrame
+        }
+        
+        self.chatListDisplayNode.tempAllowAvatarExpansion = true
+        self.requestLayout(transition: .animated(duration: 0.5, curve: .spring))
+        self.chatListDisplayNode.tempAllowAvatarExpansion = false
+        
+        //TODO:swap tabs
+        
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
+        //transition.updateAlpha(node: self.tabContainerNode, alpha: tabsIsEmpty ? 0.0 : 1.0)
+        self.setDisplayNavigationBar(true, transition: transition)
+        
+        completion?()
+        
+        (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.4, curve: .spring))
+        
+        self.isSearchActive = false
+        if let navigationController = self.navigationController as? NavigationController {
+            for controller in navigationController.globalOverlayControllers {
+                if let controller = controller as? VoiceChatOverlayController {
+                    controller.updateVisibility()
+                    break
                 }
             }
         }
