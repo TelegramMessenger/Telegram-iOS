@@ -226,4 +226,7 @@ final class SampleBufferVideoRenderingView: UIView, VideoRenderingView {
     func updateIsEnabled(_ isEnabled: Bool) {
         self.isEnabled = isEnabled
     }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    }
 }

@@ -300,6 +300,59 @@ public final class TextFieldComponent: Component {
                 NSAttributedString.Key.font: Font.regular(17.0),
                 NSAttributedString.Key.foregroundColor: UIColor.white
             ]
+            
+            self.textView.toggleQuoteCollapse = { [weak self] range in
+                guard let self else {
+                    return
+                }
+                
+                self.updateInputState { current in
+                    let result = NSMutableAttributedString(attributedString: current.inputText)
+                    var selectionRange = current.selectionRange
+                    
+                    if let _ = result.attribute(ChatTextInputAttributes.block, at: range.lowerBound, effectiveRange: nil) as? ChatTextInputTextQuoteAttribute {
+                        let blockString = NSMutableAttributedString(attributedString: result.attributedSubstring(from: range))
+                        blockString.removeAttribute(ChatTextInputAttributes.block, range: NSRange(location: 0, length: blockString.length))
+                        
+                        result.replaceCharacters(in: range, with: "")
+                        result.insert(NSAttributedString(string: " ", attributes: [
+                            ChatTextInputAttributes.collapsedBlock: blockString
+                        ]), at: range.lowerBound)
+                        
+                        if selectionRange.lowerBound >= range.lowerBound && selectionRange.upperBound < range.upperBound {
+                            selectionRange = range.lowerBound ..< range.lowerBound
+                        } else if selectionRange.lowerBound >= range.upperBound {
+                            let deltaLength = 1 - range.length
+                            selectionRange = (selectionRange.lowerBound + deltaLength) ..< (selectionRange.lowerBound + deltaLength)
+                        }
+                    } else if let current = result.attribute(ChatTextInputAttributes.collapsedBlock, at: range.lowerBound, effectiveRange: nil) as? NSAttributedString {
+                        result.replaceCharacters(in: range, with: "")
+                        
+                        let updatedBlockString = NSMutableAttributedString(attributedString: current)
+                        updatedBlockString.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote, isCollapsed: false), range: NSRange(location: 0, length: updatedBlockString.length))
+                        
+                        result.insert(updatedBlockString, at: range.lowerBound)
+                        
+                        if selectionRange.lowerBound >= range.upperBound {
+                            let deltaLength = updatedBlockString.length - 1
+                            selectionRange = (selectionRange.lowerBound + deltaLength) ..< (selectionRange.lowerBound + deltaLength)
+                        }
+                    }
+                    
+                    let stateResult = stateAttributedStringForText(result)
+                    if selectionRange.lowerBound < 0 {
+                        selectionRange = 0 ..< selectionRange.upperBound
+                    }
+                    if selectionRange.upperBound > stateResult.length {
+                        selectionRange = selectionRange.lowerBound ..< stateResult.length
+                    }
+                    
+                    return InputState(
+                        inputText: stateResult,
+                        selectionRange: selectionRange
+                    )
+                }
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -900,7 +953,7 @@ public final class TextFieldComponent: Component {
         
         public func getAttributedText() -> NSAttributedString {
             Keyboard.applyAutocorrection(textView: self.textView)
-            return self.inputState.inputText
+            return expandedInputStateAttributedString(self.inputState.inputText)
         }
         
         public func setAttributedText(_ string: NSAttributedString, updateState: Bool) {

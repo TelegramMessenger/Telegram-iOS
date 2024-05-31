@@ -5,10 +5,10 @@ import MetalPerformanceShaders
 import Accelerate
 import MetalEngine
 
-final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
-    var internalData: MetalEngineSubjectInternalData?
+public final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
+    public var internalData: MetalEngineSubjectInternalData?
     
-    let blurredLayer: MetalEngineSubjectLayer
+    public let blurredLayer: MetalEngineSubjectLayer
     
     final class BlurState: ComputeState {
         let computePipelineStateYUVBiPlanarToRGBA: MTLComputePipelineState
@@ -77,36 +77,36 @@ final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         }
     }
     
-    var video: VideoSource.Output? {
+    public var video: VideoSource.Output? {
         didSet {
             self.setNeedsUpdate()
         }
     }
     
-    var renderSpec: RenderLayerSpec?
+    public var renderSpec: RenderLayerSpec?
     
     private var rgbaTexture: PooledTexture?
     private var downscaledTexture: PooledTexture?
     private var blurredHorizontalTexture: PooledTexture?
     private var blurredVerticalTexture: PooledTexture?
     
-    override init() {
+    override public init() {
         self.blurredLayer = MetalEngineSubjectLayer()
         
         super.init()
     }
     
-    override init(layer: Any) {
+    override public init(layer: Any) {
         self.blurredLayer = MetalEngineSubjectLayer()
         
         super.init(layer: layer)
     }
     
-    required init?(coder: NSCoder) {
+    required public init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(context: MetalEngineSubjectContext) {
+    public func update(context: MetalEngineSubjectContext) {
         if self.isHidden {
             return
         }

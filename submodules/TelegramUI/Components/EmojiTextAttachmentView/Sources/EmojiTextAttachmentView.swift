@@ -352,6 +352,44 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         }
     }
     
+    public weak var mirrorLayer: CALayer? {
+        didSet {
+            if let mirrorLayer = self.mirrorLayer {
+                mirrorLayer.contents = self.contents
+                
+                var customColor = self.contentTintColor
+                if let file = self.file {
+                    if file.isCustomTemplateEmoji {
+                        customColor = self.dynamicColor
+                    }
+                }
+                
+                if customColor != nil {
+                    if self.layerTintColor == nil {
+                        setLayerContentsMaskMode(mirrorLayer, true)
+                    }
+                } else {
+                    if self.layerTintColor != nil {
+                        setLayerContentsMaskMode(mirrorLayer, false)
+                    }
+                }
+                if let customColor {
+                    Transition.immediate.setTintColor(layer: mirrorLayer, color: customColor)
+                } else {
+                    self.layerTintColor = nil
+                }
+            }
+        }
+    }
+    
+    override public var contents: Any? {
+        didSet {
+            if let mirrorLayer = self.mirrorLayer {
+                mirrorLayer.contents = self.contents
+            }
+        }
+    }
+    
     public convenience init(context: AccountContext, userLocation: MediaResourceUserLocation, attemptSynchronousLoad: Bool, emoji: ChatTextInputTextCustomEmojiAttribute, file: TelegramMediaFile?, cache: AnimationCache, renderer: MultiAnimationRenderer, unique: Bool = false, placeholderColor: UIColor, pointSize: CGSize, dynamicColor: UIColor? = nil, loopCount: Int? = nil) {
         self.init(
             context: .account(context),

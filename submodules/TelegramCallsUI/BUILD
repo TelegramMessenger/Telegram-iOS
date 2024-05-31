@@ -110,6 +110,7 @@ swift_library(
         "//submodules/TinyThumbnail",
         "//submodules/ImageBlur",
         "//submodules/MetalEngine",
+        "//submodules/TelegramUI/Components/Calls/VoiceChatActionButton",
     ],
     visibility = [
         "//visibility:public",

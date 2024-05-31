@@ -17,6 +17,7 @@ import AccountContext
 import LegacyComponents
 import AudioBlob
 import PeerInfoAvatarListNode
+import VoiceChatActionButton
 
 private let avatarFont = avatarPlaceholderFont(size: floor(50.0 * 16.0 / 37.0))
 private let tileSize = CGSize(width: 84.0, height: 84.0)

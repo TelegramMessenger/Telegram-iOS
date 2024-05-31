@@ -97,6 +97,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/ForwardInfoPanelComponent",
         "//submodules/TelegramUI/Components/Stories/StoryQualityUpgradeSheetScreen",
         "//submodules/TelegramUI/Components/SliderContextItem",
+        "//submodules/TelegramUI/Components/InteractiveTextComponent",
     ],
     visibility = [
         "//visibility:public",
