@@ -841,7 +841,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.textInputPanelNode?.sendMessage = { [weak self] in
             if let strongSelf = self {
                 if case .scheduledMessages = strongSelf.chatPresentationInterfaceState.subject, strongSelf.chatPresentationInterfaceState.editMessageState == nil {
-                    strongSelf.controllerInteraction.scheduleCurrentMessage()
+                    strongSelf.controllerInteraction.scheduleCurrentMessage(nil)
                 } else {
                     strongSelf.sendCurrentMessage()
                 }

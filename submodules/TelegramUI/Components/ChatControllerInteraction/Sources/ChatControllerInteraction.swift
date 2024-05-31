@@ -221,7 +221,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openAppStorePage: () -> Void
     public let displayMessageTooltip: (MessageId, String, Bool, ASDisplayNode?, CGRect?) -> Void
     public let seekToTimecode: (Message, Double, Bool) -> Void
-    public let scheduleCurrentMessage: () -> Void
+    public let scheduleCurrentMessage: (ChatSendMessageActionSheetController.SendParameters?) -> Void
     public let sendScheduledMessagesNow: ([MessageId]) -> Void
     public let editScheduledMessagesTime: ([MessageId]) -> Void
     public let performTextSelectionAction: (Message?, Bool, NSAttributedString, TextSelectionAction) -> Void
@@ -350,7 +350,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         openAppStorePage: @escaping () -> Void,
         displayMessageTooltip: @escaping (MessageId, String, Bool, ASDisplayNode?, CGRect?) -> Void,
         seekToTimecode: @escaping (Message, Double, Bool) -> Void,
-        scheduleCurrentMessage: @escaping () -> Void,
+        scheduleCurrentMessage: @escaping (ChatSendMessageActionSheetController.SendParameters?) -> Void,
         sendScheduledMessagesNow: @escaping ([MessageId]) -> Void,
         editScheduledMessagesTime: @escaping ([MessageId]) -> Void,
         performTextSelectionAction: @escaping (Message?, Bool, NSAttributedString, TextSelectionAction) -> Void,

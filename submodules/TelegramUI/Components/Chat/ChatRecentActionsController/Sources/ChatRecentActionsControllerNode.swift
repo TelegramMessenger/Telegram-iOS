@@ -573,7 +573,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
         }, displayMessageTooltip: { _, _, _, _, _ in
         }, seekToTimecode: { _, _, _ in
-        }, scheduleCurrentMessage: {
+        }, scheduleCurrentMessage: { _ in
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _, _ in

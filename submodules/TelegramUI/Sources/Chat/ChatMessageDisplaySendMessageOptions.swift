@@ -244,11 +244,11 @@ func chatMessageDisplaySendMessageOptions(selfController: ChatControllerImpl, no
                         }
                     }
                 },
-                schedule: { [weak selfController] effect in
+                schedule: { [weak selfController] params in
                     guard let selfController else {
                         return
                     }
-                    selfController.controllerInteraction?.scheduleCurrentMessage()
+                    selfController.controllerInteraction?.scheduleCurrentMessage(params)
                 }, openPremiumPaywall: { [weak selfController] c in
                     guard let selfController else {
                         return
