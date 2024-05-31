@@ -3,10 +3,10 @@ import MetalKit
 import MetalEngine
 import Display
 
-final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
-    var internalData: MetalEngineSubjectInternalData?
+public final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
+    public var internalData: MetalEngineSubjectInternalData?
     
-    struct Blob {
+    private struct Blob {
         var points: [Float]
         var nextPoints: [Float]
         
@@ -35,7 +35,7 @@ final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         }
     }
     
-    final class RenderState: RenderToLayerState {
+    private final class RenderState: RenderToLayerState {
         let pipelineState: MTLRenderPipelineState
         
         required init?(device: MTLDevice) {
@@ -71,7 +71,7 @@ final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     
     private var displayLinkSubscription: SharedDisplayLinkDriver.Link?
     
-    override init() {
+    override public init() {
         super.init()
         
         self.didEnterHierarchy = { [weak self] in
@@ -105,15 +105,15 @@ final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         }
     }
     
-    override init(layer: Any) {
+    override public init(layer: Any) {
         super.init(layer: layer)
     }
     
-    required init?(coder: NSCoder) {
+    required public init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(context: MetalEngineSubjectContext) {
+    public func update(context: MetalEngineSubjectContext) {
         if self.bounds.isEmpty {
             return
         }

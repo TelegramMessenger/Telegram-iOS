@@ -305,6 +305,8 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
         transition.updatePosition(layer: self.videoView.layer, position: rotatedVideoFrame.center)
         transition.updateBounds(layer: self.videoView.layer, bounds: CGRect(origin: CGPoint(), size: normalizedVideoSize))
         
+        self.videoView.updateLayout(size: normalizedVideoSize, transition: transition)
+        
         let transformScale: CGFloat = rotatedVideoFrame.width / normalizedVideoSize.width
         transition.updateTransformScale(layer: self.videoViewContainer.layer, scale: transformScale)
         
@@ -340,6 +342,7 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
             })
 
             transition.updateBounds(layer: backdropVideoView.layer, bounds: CGRect(origin: CGPoint(), size: normalizedVideoSize))
+            backdropVideoView.updateLayout(size: normalizedVideoSize, transition: transition)
             
             let transformScale: CGFloat = rotatedVideoFrame.width / normalizedVideoSize.width
 
