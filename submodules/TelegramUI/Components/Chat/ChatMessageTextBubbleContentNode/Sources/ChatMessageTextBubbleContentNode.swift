@@ -550,7 +550,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     attributedText = updatedString
                 }
                                 
-                var customTruncationToken: NSAttributedString?
+                var customTruncationToken: ((UIFont, Bool) -> NSAttributedString?)?
                 var maximumNumberOfLines: Int = 0
                 if item.presentationData.isPreview {
                     if item.message.groupingKey != nil {
@@ -573,10 +573,17 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         maximumNumberOfLines = 12
                     }
                     
-                    let truncationToken = NSMutableAttributedString()
-                    truncationToken.append(NSAttributedString(string: "\u{2026} ", font: textFont, textColor: messageTheme.primaryTextColor))
-                    truncationToken.append(NSAttributedString(string: item.presentationData.strings.Conversation_ReadMore, font: textFont, textColor: messageTheme.accentTextColor))
-                    customTruncationToken = truncationToken
+                    let truncationTokenText = item.presentationData.strings.Conversation_ReadMore
+                    customTruncationToken = { baseFont, isQuote in
+                        let truncationToken = NSMutableAttributedString()
+                        if isQuote {
+                            truncationToken.append(NSAttributedString(string: "\u{2026}", font: Font.regular(baseFont.pointSize), textColor: messageTheme.primaryTextColor))
+                        } else {
+                            truncationToken.append(NSAttributedString(string: "\u{2026} ", font: Font.regular(baseFont.pointSize), textColor: messageTheme.primaryTextColor))
+                            truncationToken.append(NSAttributedString(string: truncationTokenText, font: Font.regular(baseFont.pointSize), textColor: messageTheme.accentTextColor))
+                        }
+                        return truncationToken
+                    }
                 }
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 5.0, right: 2.0)
@@ -1416,7 +1423,6 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             return
         }
         self.displayContentsUnderSpoilers = (value, location)
-        //self.displayContentsUnderSpoilers.location = nil
         if let item = self.item {
             item.controllerInteraction.requestMessageUpdate(item.message.id, false)
         }

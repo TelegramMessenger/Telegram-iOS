@@ -35,12 +35,19 @@ private func generateBlockMaskImage() -> UIImage {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         
         var locations: [CGFloat] = [0.0, 0.5, 1.0]
-        let colors: [CGColor] = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.cgColor]
+        var colors: [CGColor] = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.cgColor]
         
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        var gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
         
         context.setBlendMode(.copy)
         context.drawRadialGradient(gradient, startCenter: CGPoint(x: size.width - 20.0, y: size.height), startRadius: 0.0, endCenter: CGPoint(x: size.width - 20.0, y: size.height), endRadius: 34.0, options: CGGradientDrawingOptions())
+        
+        locations = [0.0, 0.4, 1.0]
+        colors = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.cgColor]
+        gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        
+        context.setBlendMode(.destinationIn)
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: size.height), end: CGPoint(x: 0.0, y: size.height - 8.0), options: CGGradientDrawingOptions())
     })!.resizableImage(withCapInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: size.height - 1.0, right: size.width - 1.0), resizingMode: .stretch)
 }
 
@@ -96,7 +103,9 @@ private final class InteractiveTextNodeAttachment {
 
 private final class InteractiveTextNodeLine {
     let line: CTLine
+    let constrainedWidth: CGFloat
     var frame: CGRect
+    let intrinsicWidth: CGFloat
     let ascent: CGFloat
     let descent: CGFloat
     let range: NSRange?
@@ -108,9 +117,11 @@ private final class InteractiveTextNodeLine {
     var attachments: [InteractiveTextNodeAttachment]
     let additionalTrailingLine: (CTLine, Double)?
     
-    init(line: CTLine, frame: CGRect, ascent: CGFloat, descent: CGFloat, range: NSRange?, isRTL: Bool, strikethroughs: [InteractiveTextNodeStrikethrough], spoilers: [InteractiveTextNodeSpoiler], spoilerWords: [InteractiveTextNodeSpoiler], embeddedItems: [InteractiveTextNodeEmbeddedItem], attachments: [InteractiveTextNodeAttachment], additionalTrailingLine: (CTLine, Double)?) {
+    init(line: CTLine, constrainedWidth: CGFloat, frame: CGRect, intrinsicWidth: CGFloat, ascent: CGFloat, descent: CGFloat, range: NSRange?, isRTL: Bool, strikethroughs: [InteractiveTextNodeStrikethrough], spoilers: [InteractiveTextNodeSpoiler], spoilerWords: [InteractiveTextNodeSpoiler], embeddedItems: [InteractiveTextNodeEmbeddedItem], attachments: [InteractiveTextNodeAttachment], additionalTrailingLine: (CTLine, Double)?) {
         self.line = line
+        self.constrainedWidth = constrainedWidth
         self.frame = frame
+        self.intrinsicWidth = intrinsicWidth
         self.ascent = ascent
         self.descent = descent
         self.range = range
@@ -269,7 +280,7 @@ public final class InteractiveTextNodeLayoutArguments {
     public let textShadowBlur: CGFloat?
     public let textStroke: (UIColor, CGFloat)?
     public let displayContentsUnderSpoilers: Bool
-    public let customTruncationToken: NSAttributedString?
+    public let customTruncationToken: ((UIFont, Bool) -> NSAttributedString?)?
     public let expandedBlocks: Set<Int>
     
     public init(
@@ -289,7 +300,7 @@ public final class InteractiveTextNodeLayoutArguments {
         textShadowBlur: CGFloat? = nil,
         textStroke: (UIColor, CGFloat)? = nil,
         displayContentsUnderSpoilers: Bool = false,
-        customTruncationToken: NSAttributedString? = nil,
+        customTruncationToken: ((UIFont, Bool) -> NSAttributedString?)? = nil,
         expandedBlocks: Set<Int> = Set()
     ) {
         self.attributedString = attributedString
@@ -1256,7 +1267,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         textShadowBlur: CGFloat?,
         textStroke: (UIColor, CGFloat)?,
         displayContentsUnderSpoilers: Bool,
-        customTruncationToken: NSAttributedString?,
+        customTruncationToken: ((UIFont, Bool) -> NSAttributedString?)?,
         expandedBlocks: Set<Int>
     ) -> InteractiveTextNodeLayout {
         let blockQuoteLeftInset: CGFloat = 9.0
@@ -1348,7 +1359,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             }
         }
         
-        struct CalculatedSegment {
+        class CalculatedSegment {
             var titleLine: InteractiveTextNodeLine?
             var lines: [InteractiveTextNodeLine] = []
             var tintColor: UIColor?
@@ -1356,16 +1367,18 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             var tertiaryTintColor: UIColor?
             var blockQuote: TextNodeBlockQuoteData?
             var additionalWidth: CGFloat = 0.0
+            
+            init() {
+            }
         }
         
         var calculatedSegments: [CalculatedSegment] = []
+        var remainingLines = maximumNumberOfLines <= 0 ? Int.max : maximumNumberOfLines
         
         for segment in stringSegments {
-            var calculatedSegment = CalculatedSegment()
-            calculatedSegment.blockQuote = segment.blockQuote
-            calculatedSegment.tintColor = segment.tintColor
-            calculatedSegment.secondaryTintColor = segment.secondaryTintColor
-            calculatedSegment.tertiaryTintColor = segment.tertiaryTintColor
+            if remainingLines <= 0 {
+                break
+            }
             
             let rawSubstring = segment.substring.string as NSString
             let substringLength = rawSubstring.length
@@ -1375,6 +1388,12 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             
             var currentLineStartIndex = segment.firstCharacterOffset
             let segmentEndIndex = segment.firstCharacterOffset + substringLength
+            
+            let calculatedSegment = CalculatedSegment()
+            calculatedSegment.blockQuote = segment.blockQuote
+            calculatedSegment.tintColor = segment.tintColor
+            calculatedSegment.secondaryTintColor = segment.secondaryTintColor
+            calculatedSegment.tertiaryTintColor = segment.tertiaryTintColor
             
             var constrainedSegmentWidth = constrainedSize.width
             var additionalOffsetX: CGFloat = 0.0
@@ -1398,13 +1417,16 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             
             if let title = segment.title {
                 let rawTitleLine = CTLineCreateWithAttributedString(title)
-                if let titleLine = CTLineCreateTruncatedLine(rawTitleLine, constrainedSegmentWidth - additionalSegmentRightInset, .end, nil) {
+                let constrainedLineWidth = constrainedSegmentWidth - additionalSegmentRightInset
+                if let titleLine = CTLineCreateTruncatedLine(rawTitleLine, constrainedLineWidth, .end, nil) {
                     var lineAscent: CGFloat = 0.0
                     var lineDescent: CGFloat = 0.0
                     let lineWidth = CTLineGetTypographicBounds(titleLine, &lineAscent, &lineDescent, nil)
                     calculatedSegment.titleLine = InteractiveTextNodeLine(
                         line: titleLine,
+                        constrainedWidth: constrainedLineWidth,
                         frame: CGRect(origin: CGPoint(x: additionalOffsetX, y: 0.0), size: CGSize(width: lineWidth + additionalSegmentRightInset, height: lineAscent + lineDescent)),
+                        intrinsicWidth: lineWidth,
                         ascent: lineAscent,
                         descent: lineDescent,
                         range: nil,
@@ -1421,7 +1443,8 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             }
             
             while true {
-                let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, currentLineStartIndex, constrainedSegmentWidth - additionalSegmentRightInset)
+                let constrainedLineWidth = constrainedSegmentWidth - additionalSegmentRightInset
+                let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, currentLineStartIndex, constrainedLineWidth)
                 
                 if lineCharacterCount != 0 {
                     let line = CTTypesetterCreateLine(typesetter, CFRange(location: currentLineStartIndex, length: lineCharacterCount))
@@ -1441,7 +1464,9 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                     
                     calculatedSegment.lines.append(InteractiveTextNodeLine(
                         line: line,
+                        constrainedWidth: constrainedLineWidth,
                         frame: CGRect(origin: CGPoint(x: additionalOffsetX, y: 0.0), size: CGSize(width: lineWidth + additionalSegmentRightInset, height: lineAscent + lineDescent)),
+                        intrinsicWidth: lineWidth,
                         ascent: lineAscent,
                         descent: lineDescent,
                         range: NSRange(location: currentLineStartIndex, length: lineCharacterCount),
@@ -1453,6 +1478,11 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                         attachments: [],
                         additionalTrailingLine: nil
                     ))
+                    
+                    remainingLines -= 1
+                    if remainingLines <= 0 {
+                        break
+                    }
                 }
                 
                 additionalSegmentRightInset = 0.0
@@ -1462,9 +1492,60 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 if currentLineStartIndex >= segmentEndIndex {
                     break
                 }
+                if remainingLines <= 0 {
+                    break
+                }
             }
             
             calculatedSegments.append(calculatedSegment)
+        }
+        
+        if remainingLines <= 0, let lastSegment = calculatedSegments.last, let lastLine = lastSegment.lines.last, let lineRange = lastLine.range, let lineFont = attributedString.attribute(.font, at: lineRange.lowerBound, effectiveRange: nil) as? UIFont {
+            let truncatedTokenString: NSAttributedString
+            if let customTruncationTokenValue = customTruncationToken?(lineFont, lastSegment.blockQuote != nil) {
+                if lineRange.length == 0 && customTruncationTokenValue.string.hasPrefix("\u{2026} ") {
+                    truncatedTokenString = customTruncationTokenValue.attributedSubstring(from: NSRange(location: 2, length: customTruncationTokenValue.length - 2))
+                } else {
+                    truncatedTokenString = customTruncationTokenValue
+                }
+            } else {
+                var truncationTokenAttributes: [NSAttributedString.Key : AnyObject] = [:]
+                truncationTokenAttributes[NSAttributedString.Key.font] = lineFont
+                truncationTokenAttributes[NSAttributedString.Key(rawValue:  kCTForegroundColorFromContextAttributeName as String)] = true as NSNumber
+                let tokenString = "\u{2026}"
+                
+                truncatedTokenString = NSAttributedString(string: tokenString, attributes: truncationTokenAttributes)
+            }
+            
+            let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)
+            
+            var truncationTokenAscent: CGFloat = 0.0
+            var truncationTokenDescent: CGFloat = 0.0
+            let truncationTokenWidth = CTLineGetTypographicBounds(truncationToken, &truncationTokenAscent, &truncationTokenDescent, nil)
+            
+            if let updatedLine = CTLineCreateTruncatedLine(lastLine.line, max(0.0, lastLine.constrainedWidth - truncationTokenWidth), .end, nil) {
+                var lineAscent: CGFloat = 0.0
+                var lineDescent: CGFloat = 0.0
+                var lineWidth = CTLineGetTypographicBounds(updatedLine, &lineAscent, &lineDescent, nil)
+                lineWidth = min(lineWidth, lastLine.constrainedWidth)
+                
+                lastSegment.lines[lastSegment.lines.count - 1] = InteractiveTextNodeLine(
+                    line: updatedLine,
+                    constrainedWidth: lastLine.constrainedWidth,
+                    frame: CGRect(origin: lastLine.frame.origin, size: CGSize(width: lineWidth, height: lineAscent + lineDescent)),
+                    intrinsicWidth: lineWidth,
+                    ascent: lineAscent,
+                    descent: lineDescent,
+                    range: lastLine.range,
+                    isRTL: lastLine.isRTL,
+                    strikethroughs: [],
+                    spoilers: [],
+                    spoilerWords: [],
+                    embeddedItems: [],
+                    attachments: [],
+                    additionalTrailingLine: (truncationToken, 0.0)
+                )
+            }
         }
         
         var size = CGSize()
@@ -1642,8 +1723,8 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             }
             
             var segmentBlockQuote: InteractiveTextNodeBlockQuote?
-            if let blockQuote = segment.blockQuote, let tintColor = segment.tintColor, let blockIndex {
-                segmentBlockQuote = InteractiveTextNodeBlockQuote(id: blockIndex, frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 3.0)), data: blockQuote, tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor, tertiaryTintColor: segment.tertiaryTintColor, backgroundColor: blockQuote.backgroundColor, isCollapsed: (blockQuote.isCollapsible && segmentLines.count > 3) ? isCollapsed : nil)
+            if let blockQuote = segment.blockQuote, let tintColor = segment.tintColor, let blockIndex, let firstLine = segment.lines.first, let lastLine = segment.lines.last {
+                segmentBlockQuote = InteractiveTextNodeBlockQuote(id: blockIndex, frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY + floor(0.15 * firstLine.frame.height)), size: CGSize(width: blockWidth, height: blockMaxY - blockMinY + floor(0.4 * lastLine.frame.height))), data: blockQuote, tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor, tertiaryTintColor: segment.tertiaryTintColor, backgroundColor: blockQuote.backgroundColor, isCollapsed: (blockQuote.isCollapsible && segmentLines.count > 3) ? isCollapsed : nil)
             }
             
             segments.append(InteractiveTextNodeSegment(
@@ -1692,7 +1773,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         )
     }
     
-    static func calculateLayout(attributedString: NSAttributedString?, minimumNumberOfLines: Int, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?, textShadowBlur: CGFloat?, textStroke: (UIColor, CGFloat)?, displayContentsUnderSpoilers: Bool, customTruncationToken: NSAttributedString?, expandedBlocks: Set<Int>) -> InteractiveTextNodeLayout {
+    static func calculateLayout(attributedString: NSAttributedString?, minimumNumberOfLines: Int, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?, textShadowBlur: CGFloat?, textStroke: (UIColor, CGFloat)?, displayContentsUnderSpoilers: Bool, customTruncationToken: ((UIFont, Bool) -> NSAttributedString?)?, expandedBlocks: Set<Int>) -> InteractiveTextNodeLayout {
         guard let attributedString else {
             return InteractiveTextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: alignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, segments: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displayContentsUnderSpoilers: displayContentsUnderSpoilers, expandedBlocks: expandedBlocks)
         }
@@ -2171,7 +2252,7 @@ final class TextContentItemLayer: SimpleLayer {
                     }
                     
                     if let (additionalTrailingLine, _) = line.additionalTrailingLine {
-                        context.textPosition = CGPoint(x: lineFrame.maxX, y: lineFrame.minY)
+                        context.textPosition = CGPoint(x: lineFrame.minX + line.intrinsicWidth, y: lineFrame.maxY - line.descent)
                         
                         let glyphRuns = CTLineGetGlyphRuns(additionalTrailingLine) as NSArray
                         if glyphRuns.count != 0 {
@@ -2302,25 +2383,28 @@ final class TextContentItemLayer: SimpleLayer {
             }
             blockExpandArrow.layerTintColor = blockQuote.tintColor.cgColor
             
-            let blockBackgroundFrame = blockQuote.frame.offsetBy(dx: params.item.contentOffset.x, dy: params.item.contentOffset.y + 4.0)
+            let blockBackgroundFrame = blockQuote.frame.offsetBy(dx: params.item.contentOffset.x, dy: params.item.contentOffset.y)
             
             if animation.isAnimated {
-                self.isAnimating = true
-                self.currentAnimationId += 1
-                let animationId = self.currentAnimationId
-                animation.animator.updateFrame(layer: blockBackgroundView.layer, frame: blockBackgroundFrame, completion: { [weak self] completed in
-                    guard completed, let self, self.currentAnimationId == animationId, let params = self.params else {
-                        return
-                    }
-                    self.isAnimating = false
-                    self.update(
-                        params: params,
-                        animation: .None,
-                        synchronously: true,
-                        animateContents: false,
-                        spoilerExpandRect: nil
-                    )
-                })
+                if blockBackgroundFrame != blockBackgroundView.layer.frame {
+                    self.isAnimating = true
+                    self.currentAnimationId += 1
+                    let animationId = self.currentAnimationId
+                    
+                    animation.animator.updateFrame(layer: blockBackgroundView.layer, frame: blockBackgroundFrame, completion: { [weak self] completed in
+                        guard completed, let self, self.currentAnimationId == animationId, let params = self.params else {
+                            return
+                        }
+                        self.isAnimating = false
+                        self.update(
+                            params: params,
+                            animation: .None,
+                            synchronously: true,
+                            animateContents: false,
+                            spoilerExpandRect: nil
+                        )
+                    })
+                }
             } else {
                 blockBackgroundView.layer.frame = blockBackgroundFrame
             }
@@ -2431,9 +2515,9 @@ final class TextContentItemLayer: SimpleLayer {
         } else {
             if let contentMaskNode = self.contentMaskNode {
                 self.contentMaskNode = nil
-                self.renderNode.layer.mask = nil
                 contentMaskNode.layer.removeFromSuperlayer()
             }
+            self.renderNode.layer.mask = nil
         }
         
         if !params.item.segment.spoilers.isEmpty {
@@ -2471,6 +2555,36 @@ final class TextContentItemLayer: SimpleLayer {
                 overlayContentLayer.masksToBounds = true
                 self.addSublayer(overlayContentLayer)
                 overlayContentLayer.frame = effectiveContentFrame
+            }
+            
+            if let contentMask {
+                var overlayContentMaskAnimation = animation
+                let overlayContentMaskNode: ASImageNode
+                if let current = self.overlayContentMaskNode {
+                    overlayContentMaskNode = current
+                } else {
+                    overlayContentMaskNode = ASImageNode()
+                    overlayContentMaskNode.isLayerBacked = true
+                    overlayContentMaskNode.backgroundColor = .clear
+                    self.overlayContentMaskNode = overlayContentMaskNode
+                    overlayContentLayer.mask = overlayContentMaskNode.layer
+                    
+                    if let currentContentMask = self.currentContentMask {
+                        overlayContentMaskNode.frame = currentContentMask.frame
+                    } else {
+                        overlayContentMaskAnimation = .None
+                    }
+                    
+                    overlayContentMaskNode.image = contentMask.image
+                }
+                
+                overlayContentMaskAnimation.animator.updateBackgroundColor(layer: overlayContentMaskNode.layer, color: contentMask.isOpaque ? UIColor.white : UIColor.clear, completion: nil)
+                overlayContentMaskAnimation.animator.updateFrame(layer: overlayContentMaskNode.layer, frame: contentMask.frame, completion: nil)
+            } else {
+                if let _ = self.overlayContentMaskNode {
+                    self.overlayContentMaskNode = nil
+                    overlayContentLayer.mask = nil
+                }
             }
             
             if let spoilerEffectNode = self.spoilerEffectNode {
@@ -2593,6 +2707,7 @@ final class TextContentItemLayer: SimpleLayer {
             
             if let spoilerEffectNode = self.spoilerEffectNode {
                 animation.transition.updateAlpha(layer: spoilerEffectNode.layer, alpha: params.item.displayContentsUnderSpoilers ? 0.0 : 1.0)
+                spoilerEffectNode.update(revealed: params.item.displayContentsUnderSpoilers, animated: animation.isAnimated)
             }
         }
     }
