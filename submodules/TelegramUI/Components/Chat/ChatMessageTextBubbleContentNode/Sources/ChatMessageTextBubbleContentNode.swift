@@ -683,7 +683,22 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             var spoilerExpandRect: CGRect?
                             if let location = strongSelf.displayContentsUnderSpoilers.location {
-                                spoilerExpandRect = textFrame.size.centered(around: CGPoint(x: location.x - textFrame.minX, y: location.y - textFrame.minY))
+                                strongSelf.displayContentsUnderSpoilers.location = nil
+                                
+                                let mappedLocation = CGPoint(x: location.x - textFrame.minX, y: location.y - textFrame.minY)
+                                
+                                let getDistance: (CGPoint, CGPoint) -> CGFloat = { a, b in
+                                    let v = CGPoint(x: a.x - b.x, y: a.y - b.y)
+                                    return sqrt(v.x * v.x + v.y * v.y)
+                                }
+                                
+                                var maxDistance: CGFloat = getDistance(mappedLocation, CGPoint(x: 0.0, y: 0.0))
+                                maxDistance = max(maxDistance, getDistance(mappedLocation, CGPoint(x: textFrame.width, y: 0.0)))
+                                maxDistance = max(maxDistance, getDistance(mappedLocation, CGPoint(x: textFrame.width, y: textFrame.height)))
+                                maxDistance = max(maxDistance, getDistance(mappedLocation, CGPoint(x: 0.0, y: textFrame.height)))
+                                
+                                let mappedSize = CGSize(width: maxDistance * 2.0, height: maxDistance * 2.0)
+                                spoilerExpandRect = mappedSize.centered(around: mappedLocation)
                             }
                             
                             let _ = textApply(InteractiveTextNodeWithEntities.Arguments(
@@ -694,8 +709,11 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 attemptSynchronous: synchronousLoads,
                                 textColor: messageTheme.primaryTextColor,
                                 spoilerEffectColor: messageTheme.secondaryTextColor,
-                                animation: animation,
-                                animationArguments: InteractiveTextNode.AnimationArguments(
+                                applyArguments: InteractiveTextNode.ApplyArguments(
+                                    animation: animation,
+                                    spoilerTextColor: messageTheme.primaryTextColor,
+                                    spoilerEffectColor: messageTheme.secondaryTextColor,
+                                    areContentAnimationsEnabled: item.context.sharedContext.energyUsageSettings.loopEmoji,
                                     spoilerExpandRect: spoilerExpandRect
                                 )
                             ))
@@ -1398,7 +1416,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             return
         }
         self.displayContentsUnderSpoilers = (value, location)
-        self.displayContentsUnderSpoilers.location = nil
+        //self.displayContentsUnderSpoilers.location = nil
         if let item = self.item {
             item.controllerInteraction.requestMessageUpdate(item.message.id, false)
         }

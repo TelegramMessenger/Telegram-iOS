@@ -591,6 +591,29 @@ public class InvisibleInkDustNode: ASDisplayNode {
         }
     }
     
+    public func revealWithoutMaskAtLocation(_ location: CGPoint) {
+        guard !self.isRevealed else {
+            return
+        }
+        
+        self.isRevealed = true
+        
+        if self.enableAnimations {
+            self.isExploding = true
+            
+            self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
+            self.emitterLayer?.setValue(location, forKeyPath: "emitterBehaviors.fingerAttractor.position")
+            
+            Queue.mainQueue().after(0.8 * UIView.animationDurationFactor()) {
+                self.isExploding = false
+                self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
+            }
+        } else {
+            self.staticNode?.alpha = 0.0
+            self.staticNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+        }
+    }
+    
     @objc private func tap(_ gestureRecognizer: UITapGestureRecognizer) {
         let location = gestureRecognizer.location(in: self.view)
         self.revealAtLocation(location)

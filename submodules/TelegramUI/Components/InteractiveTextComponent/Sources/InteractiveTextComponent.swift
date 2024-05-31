@@ -7,6 +7,8 @@ import AppBundle
 import ComponentFlow
 import TextFormat
 import MessageInlineBlockBackgroundView
+import InvisibleInkDustNode
+import EmojiTextAttachmentView
 
 private let defaultFont = UIFont.systemFont(ofSize: 15.0)
 
@@ -1073,10 +1075,24 @@ private func addAttachment(attachment: UIImage, line: InteractiveTextNodeLine, a
 }
 
 open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecognizerDelegate {
-    public final class AnimationArguments {
+    public final class ApplyArguments {
+        public let animation: ListViewItemUpdateAnimation
+        public let spoilerTextColor: UIColor
+        public let spoilerEffectColor: UIColor
+        public let areContentAnimationsEnabled: Bool
         public let spoilerExpandRect: CGRect?
         
-        public init(spoilerExpandRect: CGRect?) {
+        public init(
+            animation: ListViewItemUpdateAnimation,
+            spoilerTextColor: UIColor,
+            spoilerEffectColor: UIColor,
+            areContentAnimationsEnabled: Bool,
+            spoilerExpandRect: CGRect?
+        ) {
+            self.animation = animation
+            self.spoilerTextColor = spoilerTextColor
+            self.spoilerEffectColor = spoilerEffectColor
+            self.areContentAnimationsEnabled = areContentAnimationsEnabled
             self.spoilerExpandRect = spoilerExpandRect
         }
     }
@@ -1154,10 +1170,10 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
                 continue
             }
             
-            guard let item = contentItemLayer.item else {
+            guard let params = contentItemLayer.params else {
                 continue
             }
-            guard let blockQuote = item.segment.blockQuote else {
+            guard let blockQuote = params.item.segment.blockQuote else {
                 continue
             }
             if blockQuote.isCollapsed == nil {
@@ -1684,12 +1700,12 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         return calculateLayoutV2(attributedString: attributedString, minimumNumberOfLines: minimumNumberOfLines, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, backgroundColor: backgroundColor, constrainedSize: constrainedSize, alignment: alignment, verticalAlignment: verticalAlignment, lineSpacingFactor: lineSpacingFactor, cutout: cutout, insets: insets, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displayContentsUnderSpoilers: displayContentsUnderSpoilers, customTruncationToken: customTruncationToken, expandedBlocks: expandedBlocks)
     }
     
-    private func updateContentItems(animation: ListViewItemUpdateAnimation, animationArguments: AnimationArguments?) {
+    private func updateContentItems(arguments: ApplyArguments) {
         guard let cachedLayout = self.cachedLayout else {
             return
         }
         
-        let animateContents = self.isDisplayingContentsUnderSpoilers != nil && self.isDisplayingContentsUnderSpoilers != cachedLayout.displayContentsUnderSpoilers && animation.isAnimated
+        let animateContents = self.isDisplayingContentsUnderSpoilers != nil && self.isDisplayingContentsUnderSpoilers != cachedLayout.displayContentsUnderSpoilers && arguments.animation.isAnimated
         let synchronous = animateContents
         self.isDisplayingContentsUnderSpoilers = cachedLayout.displayContentsUnderSpoilers
         
@@ -1735,14 +1751,14 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             
             let contentItemFrame = CGRect(origin: CGPoint(x: segmentRect.minX, y: segmentRect.minY), size: CGSize(width: contentItem.size.width, height: contentItem.size.height))
             
-            var contentItemAnimation = animation
+            var contentItemAnimation = arguments.animation
             let contentItemLayer: TextContentItemLayer
             var itemSpoilerExpandRect: CGRect?
             var itemAnimateContents = animateContents && contentItemAnimation.isAnimated
             if let current = self.contentItemLayers[itemId] {
                 contentItemLayer = current
                 
-                if animation.isAnimated, let spoilerExpandRect = animationArguments?.spoilerExpandRect {
+                if arguments.animation.isAnimated, let spoilerExpandRect = arguments.spoilerExpandRect {
                     itemSpoilerExpandRect = spoilerExpandRect.offsetBy(dx: -contentItemFrame.minX, dy: -contentItemFrame.minY)
                     itemAnimateContents = true
                 }
@@ -1754,7 +1770,12 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             }
             
             contentItemLayer.update(
-                item: contentItem,
+                params: TextContentItemLayer.Params(
+                    item: contentItem,
+                    spoilerTextColor: arguments.spoilerTextColor,
+                    spoilerEffectColor: arguments.spoilerEffectColor,
+                    areContentAnimationsEnabled: arguments.areContentAnimationsEnabled
+                ),
                 animation: contentItemAnimation,
                 synchronously: synchronous,
                 animateContents: itemAnimateContents,
@@ -1810,7 +1831,7 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
         }
     }
     
-    public static func asyncLayout(_ maybeNode: InteractiveTextNode?) -> (InteractiveTextNodeLayoutArguments) -> (InteractiveTextNodeLayout, (ListViewItemUpdateAnimation, AnimationArguments?) -> InteractiveTextNode) {
+    public static func asyncLayout(_ maybeNode: InteractiveTextNode?) -> (InteractiveTextNodeLayoutArguments) -> (InteractiveTextNodeLayout, (ApplyArguments) -> InteractiveTextNode) {
         let existingLayout: InteractiveTextNodeLayout? = maybeNode?.cachedLayout
         
         return { arguments in
@@ -1852,10 +1873,10 @@ open class InteractiveTextNode: ASDisplayNode, TextNodeProtocol, UIGestureRecogn
             
             let node = maybeNode ?? InteractiveTextNode()
             
-            return (layout, { animation, animationArguments in
+            return (layout, { arguments in
                 if node.cachedLayout !== layout {
                     node.cachedLayout = layout
-                    node.updateContentItems(animation: animation, animationArguments: animationArguments)
+                    node.updateContentItems(arguments: arguments)
                 }
                 
                 return node
@@ -1899,6 +1920,25 @@ final class TextContentItem {
 }
 
 final class TextContentItemLayer: SimpleLayer {
+    final class Params {
+        let item: TextContentItem
+        let spoilerTextColor: UIColor
+        let spoilerEffectColor: UIColor
+        let areContentAnimationsEnabled: Bool
+        
+        init(
+            item: TextContentItem,
+            spoilerTextColor: UIColor,
+            spoilerEffectColor: UIColor,
+            areContentAnimationsEnabled: Bool
+        ) {
+            self.item = item
+            self.spoilerTextColor = spoilerTextColor
+            self.spoilerEffectColor = spoilerEffectColor
+            self.areContentAnimationsEnabled = areContentAnimationsEnabled
+        }
+    }
+    
     final class RenderMask {
         let image: UIImage
         let isOpaque: Bool
@@ -2193,10 +2233,15 @@ final class TextContentItemLayer: SimpleLayer {
         }
     }
     
-    private(set) var item: TextContentItem?
+    private(set) var params: Params?
     
     let renderNode: RenderNode
     private var contentMaskNode: ASImageNode?
+    
+    private var overlayContentLayer: SimpleLayer?
+    private var overlayContentMaskNode: ASImageNode?
+    private var spoilerEffectNode: InvisibleInkDustNode?
+    
     private var blockBackgroundView: MessageInlineBlockBackgroundView?
     private var quoteTypeIconNode: ASImageNode?
     private var blockExpandArrow: SimpleLayer?
@@ -2224,19 +2269,19 @@ final class TextContentItemLayer: SimpleLayer {
     }
     
     func update(
-        item: TextContentItem,
+        params: Params,
         animation: ListViewItemUpdateAnimation,
         synchronously: Bool,
         animateContents: Bool,
         spoilerExpandRect: CGRect?
     ) {
-        self.item = item
+        self.params = params
 
-        let contentFrame = CGRect(origin: CGPoint(), size: item.size)
+        let contentFrame = CGRect(origin: CGPoint(), size: params.item.size)
         var effectiveContentFrame = contentFrame
         var contentMask: RenderMask?
         
-        if let blockQuote = item.segment.blockQuote {
+        if let blockQuote = params.item.segment.blockQuote {
             let blockBackgroundView: MessageInlineBlockBackgroundView
             if let current = self.blockBackgroundView {
                 blockBackgroundView = current
@@ -2257,19 +2302,19 @@ final class TextContentItemLayer: SimpleLayer {
             }
             blockExpandArrow.layerTintColor = blockQuote.tintColor.cgColor
             
-            let blockBackgroundFrame = blockQuote.frame.offsetBy(dx: item.contentOffset.x, dy: item.contentOffset.y + 4.0)
+            let blockBackgroundFrame = blockQuote.frame.offsetBy(dx: params.item.contentOffset.x, dy: params.item.contentOffset.y + 4.0)
             
             if animation.isAnimated {
                 self.isAnimating = true
                 self.currentAnimationId += 1
                 let animationId = self.currentAnimationId
                 animation.animator.updateFrame(layer: blockBackgroundView.layer, frame: blockBackgroundFrame, completion: { [weak self] completed in
-                    guard completed, let self, self.currentAnimationId == animationId, let item = self.item else {
+                    guard completed, let self, self.currentAnimationId == animationId, let params = self.params else {
                         return
                     }
                     self.isAnimating = false
                     self.update(
-                        item: item,
+                        params: params,
                         animation: .None,
                         synchronously: true,
                         animateContents: false,
@@ -2326,7 +2371,7 @@ final class TextContentItemLayer: SimpleLayer {
                 animation.animator.updateBounds(layer: blockExpandArrow, bounds: CGRect(origin: CGPoint(), size: expandArrowFrame.size), completion: nil)
                 animation.animator.updateTransform(layer: blockExpandArrow, transform: CATransform3DMakeRotation(isCollapsed ? 0.0 : CGFloat.pi, 0.0, 0.0, 1.0), completion: nil)
                 
-                let contentMaskFrame = CGRect(origin: CGPoint(x: 0.0, y: blockBackgroundFrame.minY - contentFrame.minY), size: CGSize(width: contentFrame.width, height: blockBackgroundFrame.height))
+                let contentMaskFrame = CGRect(origin: CGPoint(x: 0.0, y: contentFrame.minY - blockBackgroundFrame.minY), size: CGSize(width: contentFrame.width, height: blockBackgroundFrame.height))
                 contentMask = RenderMask(image: expandableBlockMaskImage, isOpaque: !isCollapsed, frame: contentMaskFrame)
                 effectiveContentFrame.size.height = ceil(contentMaskFrame.height - contentMaskFrame.minY)
             } else {
@@ -2391,44 +2436,221 @@ final class TextContentItemLayer: SimpleLayer {
             }
         }
         
+        if !params.item.segment.spoilers.isEmpty {
+            let spoilerEffectNode: InvisibleInkDustNode
+            if let current = self.spoilerEffectNode {
+                spoilerEffectNode = current
+            } else {
+                spoilerEffectNode = InvisibleInkDustNode(textNode: nil, enableAnimations: params.areContentAnimationsEnabled)
+                self.spoilerEffectNode = spoilerEffectNode
+            }
+            
+            spoilerEffectNode.frame = contentFrame
+            spoilerEffectNode.update(
+                size: contentFrame.size,
+                color: params.spoilerEffectColor,
+                textColor: params.spoilerTextColor,
+                rects: params.item.segment.spoilers.map { $0.1.offsetBy(dx: 0.0 + params.item.contentOffset.x, dy: params.item.contentOffset.y + 0.0).insetBy(dx: 1.0, dy: 1.0) },
+                wordRects: params.item.segment.spoilerWords.map { $0.1.offsetBy(dx: params.item.contentOffset.x + 0.0, dy: params.item.contentOffset.y + 0.0).insetBy(dx: 1.0, dy: 1.0) }
+            )
+        } else {
+            if let spoilerEffectNode = self.spoilerEffectNode {
+                self.spoilerEffectNode = nil
+                spoilerEffectNode.layer.removeFromSuperlayer()
+            }
+        }
+        
+        if self.spoilerEffectNode != nil {
+            let overlayContentLayer: SimpleLayer
+            if let current = self.overlayContentLayer {
+                overlayContentLayer = current
+                animation.animator.updateFrame(layer: overlayContentLayer, frame: effectiveContentFrame, completion: nil)
+            } else {
+                overlayContentLayer = SimpleLayer()
+                self.overlayContentLayer = overlayContentLayer
+                overlayContentLayer.masksToBounds = true
+                self.addSublayer(overlayContentLayer)
+                overlayContentLayer.frame = effectiveContentFrame
+            }
+            
+            if let spoilerEffectNode = self.spoilerEffectNode {
+                if spoilerEffectNode.layer.superlayer !== overlayContentLayer {
+                    overlayContentLayer.addSublayer(spoilerEffectNode.layer)
+                }
+            }
+        } else {
+            if let overlayContentLayer = self.overlayContentLayer {
+                self.overlayContentLayer = nil
+                overlayContentLayer.removeFromSuperlayer()
+            }
+        }
+        
         self.currentContentMask = contentMask
         
-        self.renderNode.params = RenderParams(size: contentFrame.size, item: item, mask: staticContentMask)
+        self.renderNode.params = RenderParams(size: contentFrame.size, item: params.item, mask: staticContentMask)
         if synchronously {
-            if let spoilerExpandRect {
-                let _ = spoilerExpandRect
+            if let spoilerExpandRect, animation.isAnimated {
+                let localSpoilerExpandRect = spoilerExpandRect.offsetBy(dx: -self.renderNode.frame.minX, dy: -self.renderNode.frame.minY)
+                
+                let revealAnimationDuration: CGFloat = 0.55
+                
+                let revealTransition: ContainedViewLayoutTransition = .animated(duration: revealAnimationDuration, curve: .easeInOut)
+                
+                let previousContents = self.renderNode.layer.contents
+                let copyContentsLayer = SimpleLayer()
+                copyContentsLayer.frame = self.renderNode.frame
+                copyContentsLayer.contents = previousContents
+                copyContentsLayer.masksToBounds = self.renderNode.layer.masksToBounds
+                copyContentsLayer.contentsGravity = self.renderNode.layer.contentsGravity
+                copyContentsLayer.contentsScale = self.renderNode.layer.contentsScale
+                for sublayer in self.renderNode.layer.sublayers ?? [] {
+                    let copySublayer = SimpleLayer()
+                    copySublayer.contentsScale = sublayer.contentsScale
+                    copySublayer.position = sublayer.position
+                    copySublayer.bounds = sublayer.bounds
+                    copySublayer.transform = sublayer.transform
+                    copySublayer.opacity = sublayer.opacity
+                    copySublayer.isHidden = sublayer.isHidden
+                    
+                    if let sublayer = sublayer as? InlineStickerItemLayer {
+                        sublayer.mirrorLayer = copySublayer
+                    } else {
+                        copySublayer.contents = sublayer.contents
+                    }
+                    
+                    copyContentsLayer.addSublayer(copySublayer)
+                }
+                self.renderNode.layer.superlayer?.insertSublayer(copyContentsLayer, below: self.renderNode.layer)
                 
                 self.renderNode.displayImmediately()
                 
-                let maskFrame = self.renderNode.frame
+                let rectangularExpandedSide = max(localSpoilerExpandRect.width, localSpoilerExpandRect.height)
+                // The gradient starts at 0.7
+                let adjustedExpandedSide = ceil(rectangularExpandedSide * 1.3)
+                
+                let rectangularExpandedRect = CGSize(width: adjustedExpandedSide, height: adjustedExpandedSide).centered(around: spoilerExpandRect.center)
+                
+                let maskFrame = self.renderNode.bounds
                 
                 let maskLayer = SimpleLayer()
+                maskLayer.masksToBounds = true
+                self.renderNode.layer.mask = maskLayer
                 maskLayer.frame = maskFrame
-                self.addSublayer(maskLayer)
                 
-                let maskGradientLayer = SimpleGradientLayer()
-                maskGradientLayer.frame = CGRect(origin: CGPoint(), size: maskFrame.size)
-                setupSpoilerExpansionMaskGradient(
-                    gradientLayer: maskGradientLayer,
-                        centerLocation: CGPoint(
-                        x: 0.5,
-                        y: 0.5
-                    ),
-                    radius: CGSize(
-                        width: 1.5,
-                        height: 1.5
-                    ),
-                    inverse: false
-                )
+                animateRadialExpansionMask(maskLayer: maskLayer, expandedRect: rectangularExpandedRect, transition: revealTransition, inverse: false, completion: { [weak self] in
+                    guard let self, let params = self.params else {
+                        return
+                    }
+                    self.renderNode.layer.mask = nil
+                    self.update(
+                        params: params,
+                        animation: .None,
+                        synchronously: true,
+                        animateContents: false,
+                        spoilerExpandRect: nil
+                    )
+                })
+                
+                let copyMaskLayer = SimpleLayer()
+                copyMaskLayer.masksToBounds = true
+                copyContentsLayer.mask = copyMaskLayer
+                copyMaskLayer.frame = maskFrame
+                
+                animateRadialExpansionMask(maskLayer: copyMaskLayer, expandedRect: rectangularExpandedRect, transition: revealTransition, inverse: true, completion: { [weak copyContentsLayer] in
+                    copyContentsLayer?.removeFromSuperlayer()
+                })
+                
+                if let spoilerEffectNode = self.spoilerEffectNode {
+                    let spoilerMaskLayer = SimpleLayer()
+                    spoilerMaskLayer.masksToBounds = true
+                    spoilerEffectNode.layer.mask = spoilerMaskLayer
+                    spoilerMaskLayer.frame = maskFrame
+                    
+                    let spoilerLocalPosition = self.convert(rectangularExpandedRect.center, to: spoilerEffectNode.layer)
+                    spoilerEffectNode.revealWithoutMaskAtLocation(spoilerLocalPosition)
+                    
+                    animateRadialExpansionMask(maskLayer: spoilerMaskLayer, expandedRect: rectangularExpandedRect, transition: revealTransition, inverse: true, completion: { [weak self] in
+                        guard let self, let spoilerEffectNode = self.spoilerEffectNode else {
+                            return
+                        }
+                        spoilerEffectNode.layer.mask = nil
+                        spoilerEffectNode.layer.opacity = 0.0
+                    })
+                }
             } else {
                 let previousContents = self.renderNode.layer.contents
                 self.renderNode.displayImmediately()
                 if animateContents, let previousContents {
                     animation.transition.animateContents(layer: self.renderNode.layer, from: previousContents)
                 }
+                
+                if let spoilerEffectNode = self.spoilerEffectNode {
+                    animation.transition.updateAlpha(layer: spoilerEffectNode.layer, alpha: params.item.displayContentsUnderSpoilers ? 0.0 : 1.0)
+                }
             }
         } else {
             self.renderNode.setNeedsDisplay()
+            
+            if let spoilerEffectNode = self.spoilerEffectNode {
+                animation.transition.updateAlpha(layer: spoilerEffectNode.layer, alpha: params.item.displayContentsUnderSpoilers ? 0.0 : 1.0)
+            }
+        }
+    }
+}
+
+private func animateRadialExpansionMask(maskLayer: CALayer, expandedRect: CGRect, transition: ContainedViewLayoutTransition, inverse: Bool, completion: @escaping () -> Void) {
+    let maskGradientLayer = SimpleGradientLayer()
+    maskLayer.addSublayer(maskGradientLayer)
+    maskGradientLayer.frame = expandedRect
+    
+    setupSpoilerExpansionMaskGradient(
+        gradientLayer: maskGradientLayer,
+            centerLocation: CGPoint(
+            x: 0.5,
+            y: 0.5
+        ),
+        radius: CGSize(
+            width: 0.5,
+            height: 0.5
+        ),
+        inverse: inverse
+    )
+    
+    let minGradientFrame = CGSize(width: 1.0, height: 1.0).centered(around: expandedRect.center)
+    
+    transition.animateFrame(layer: maskGradientLayer, from: minGradientFrame, delay: 0.1, completion: { _ in
+        completion()
+    })
+    
+    if inverse {
+        let outerBoundsSourceRect = minGradientFrame.insetBy(dx: 0.5, dy: 0.5)
+        let outerBoundsDestinationRect = expandedRect.insetBy(dx: 0.5, dy: 0.5)
+        
+        for sideIndex in 0 ..< 4 {
+            let copyMaskOuterBoundsTopLayer = SimpleLayer()
+            copyMaskOuterBoundsTopLayer.backgroundColor = UIColor.white.cgColor
+            maskLayer.addSublayer(copyMaskOuterBoundsTopLayer)
+            
+            let sourceFrame: CGRect
+            let destinationFrame: CGRect
+            
+            // Top, left, bottom, right
+            if sideIndex == 0 {
+                sourceFrame = CGRect(origin: CGPoint(x: 0.0, y: outerBoundsSourceRect.minY - expandedRect.height), size: expandedRect.size)
+                destinationFrame = CGRect(origin: CGPoint(x: 0.0, y: outerBoundsDestinationRect.minY - expandedRect.height), size: expandedRect.size)
+            } else if sideIndex == 1 {
+                sourceFrame = CGRect(origin: CGPoint(x: outerBoundsSourceRect.minX - expandedRect.width, y: 0.0), size: expandedRect.size)
+                destinationFrame = CGRect(origin: CGPoint(x: outerBoundsDestinationRect.minX - expandedRect.width, y: 0.0), size: expandedRect.size)
+            } else if sideIndex == 2 {
+                sourceFrame = CGRect(origin: CGPoint(x: 0.0, y: outerBoundsSourceRect.maxY), size: expandedRect.size)
+                destinationFrame = CGRect(origin: CGPoint(x: 0.0, y: outerBoundsDestinationRect.maxY), size: expandedRect.size)
+            } else {
+                sourceFrame = CGRect(origin: CGPoint(x: outerBoundsSourceRect.maxX, y: 0.0), size: expandedRect.size)
+                destinationFrame = CGRect(origin: CGPoint(x: outerBoundsDestinationRect.maxX, y: 0.0), size: expandedRect.size)
+            }
+            
+            copyMaskOuterBoundsTopLayer.frame = destinationFrame
+            transition.animateFrame(layer: copyMaskOuterBoundsTopLayer, from: sourceFrame, delay: 0.1)
         }
     }
 }
