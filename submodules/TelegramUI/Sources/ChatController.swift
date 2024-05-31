@@ -3375,15 +3375,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
-        }, scheduleCurrentMessage: { [weak self] in
+        }, scheduleCurrentMessage: { [weak self] params in
             if let strongSelf = self {
                 strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
                     if let strongSelf = self {
                         if let _ = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState {
-                            strongSelf.sendMediaRecording(scheduleTime: time, messageEffect: nil)
+                            strongSelf.sendMediaRecording(scheduleTime: time, messageEffect: (params?.effect).flatMap {
+                                return ChatSendMessageEffect(id: $0.id)
+                            })
                         } else {
                             let silentPosting = strongSelf.presentationInterfaceState.interfaceState.silentPosting
-                            strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: time, messageEffect: nil) { [weak self] in
+                            strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: time, messageEffect: (params?.effect).flatMap {
+                                return ChatSendMessageEffect(id: $0.id)
+                            }) { [weak self] in
                                 if let strongSelf = self {
                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: strongSelf.presentationInterfaceState.subject != .scheduledMessages, {
                                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
