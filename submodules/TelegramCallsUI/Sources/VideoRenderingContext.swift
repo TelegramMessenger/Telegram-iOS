@@ -45,7 +45,7 @@ class VideoRenderingContext {
         return SampleBufferVideoRenderingView(input: input)
         #else
         if #available(iOS 13.0, *), !forceSampleBufferDisplayLayer {
-            return MetalVideoRenderingView(renderingContext: self.metalContext, input: input, blur: blur)
+            return MetalVideoRenderingView(renderingContext: self.metalContext, input: input, blur: false)
         } else {
             return SampleBufferVideoRenderingView(input: input)
         }
