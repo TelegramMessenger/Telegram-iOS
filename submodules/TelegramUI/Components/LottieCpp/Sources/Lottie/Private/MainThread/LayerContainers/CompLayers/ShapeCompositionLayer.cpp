@@ -903,7 +903,7 @@ public:
         std::unique_ptr<TransformOutput> transform;
         
         std::vector<ShadingVariant> shadings;
-        std::vector<std::shared_ptr<TrimParamsOutput>> trims;
+        std::shared_ptr<TrimParamsOutput> trim;
         
     public:
         std::vector<std::shared_ptr<ContentItem>> subItems;
@@ -929,8 +929,8 @@ public:
                 auto &subItem = subItems[i];
                 
                 std::optional<TrimParams> currentTrim;
-                if (!trims.empty()) {
-                    currentTrim = trims[0]->trimParams();
+                if (trim) {
+                    currentTrim = trim->trimParams();
                 }
                 
                 auto subItemPaths = subItem->collectPaths(INT32_MAX, effectiveTransform, false);
@@ -973,8 +973,8 @@ public:
             shadings.insert(shadings.begin(), shading);
         }
         
-        void addTrim(Trim const &trim) {
-            trims.push_back(std::make_shared<TrimParamsOutput>(trim));
+        void setTrim(Trim const &trim_) {
+            trim = std::make_shared<TrimParamsOutput>(trim_);
         }
         
     public:
@@ -1028,7 +1028,7 @@ public:
             if (path) {
                 path->update(frameTime);
             }
-            for (const auto &trim : trims) {
+            if (trim) {
                 trim->update(frameTime);
             }
             
@@ -1047,10 +1047,20 @@ public:
         }
         
         bool hasTrims() {
-            if (!trims.empty()) {
+            if (trim) {
                 return true;
             }
             
+            for (const auto &subItem : subItems) {
+                if (subItem->hasTrims()) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        bool hasNestedTrims() {
             for (const auto &subItem : subItems) {
                 if (subItem->hasTrims()) {
                     return true;
@@ -1070,8 +1080,8 @@ public:
             _contentItem->transform = containerTransform;
             _contentItem->alpha = containerOpacity;
             
-            if (!trims.empty()) {
-                _contentItem->trimParams = trims[0]->trimParams();
+            if (trim) {
+                _contentItem->trimParams = trim->trimParams();
             }
             
             for (int i = 0; i < shadings.size(); i++) {
@@ -1123,9 +1133,7 @@ public:
             if (isGroup && !subItems.empty()) {
                 for (int i = (int)subItems.size() - 1; i >= 0; i--) {
                     std::optional<TrimParams> childTrim = parentTrim;
-                    for (const auto &trim : trims) {
-                        //TODO:allow combination
-                        //assert(!parentTrim);
+                    if (trim) {
                         childTrim = trim->trimParams();
                     }
                     
@@ -1228,10 +1236,11 @@ private:
                     
                     auto groupItem = std::make_shared<ContentItem>();
                     groupItem->isGroup = true;
+                    groupItem->setTrim(trim);
+                    
                     for (const auto &subItem : itemTree->subItems) {
                         groupItem->addSubItem(subItem);
                     }
-                    groupItem->addTrim(trim);
                     itemTree->subItems.clear();
                     itemTree->addSubItem(groupItem);
                     
