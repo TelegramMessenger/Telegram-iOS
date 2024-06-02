@@ -1080,54 +1080,23 @@ public:
             _contentItem->transform = containerTransform;
             _contentItem->alpha = containerOpacity;
             
-            if (trim) {
-                _contentItem->trimParams = trim->trimParams();
-            }
-            
-            for (int i = 0; i < shadings.size(); i++) {
-                const auto &shadingVariant = shadings[i];
+            if (parentTrim) {
+                _contentItem->trimParams = parentTrim;
                 
-                if (!(shadingVariant.fill || shadingVariant.stroke)) {
-                    continue;
+                CompoundBezierPath compoundPath;
+                auto paths = collectPaths(INT32_MAX, Transform2D::identity(), true);
+                for (const auto &path : paths) {
+                    compoundPath.appendPath(path.path.copyUsingTransform(path.transform));
                 }
                 
-                //std::optional<TrimParams> currentTrim = parentTrim;
-                //TODO:investigate
-                /*if (!trims.empty()) {
-                    currentTrim = trims[0];
-                }*/
+                compoundPath = trimCompoundPath(compoundPath, parentTrim->start, parentTrim->end, parentTrim->offset, parentTrim->type);
                 
-                if (parentTrim) {
-                    CompoundBezierPath compoundPath;
-                    auto paths = collectPaths(shadingVariant.subItemLimit, Transform2D::identity(), true);
-                    for (const auto &path : paths) {
-                        compoundPath.appendPath(path.path.copyUsingTransform(path.transform));
-                    }
-                    
-                    compoundPath = trimCompoundPath(compoundPath, parentTrim->start, parentTrim->end, parentTrim->offset, parentTrim->type);
-                    
-                    std::vector<BezierPath> resultPaths;
-                    for (const auto &path : compoundPath.paths) {
-                        resultPaths.push_back(path);
-                    }
-                    _contentItem->shadings[i]->explicitPath = resultPaths;
-                } else {
-                    if (hasTrims()) {
-                        CompoundBezierPath compoundPath;
-                        auto paths = collectPaths(shadingVariant.subItemLimit, Transform2D::identity(), true);
-                        for (const auto &path : paths) {
-                            compoundPath.appendPath(path.path.copyUsingTransform(path.transform));
-                        }
-                        std::vector<BezierPath> resultPaths;
-                        for (const auto &path : compoundPath.paths) {
-                            resultPaths.push_back(path);
-                        }
-                        
-                        _contentItem->shadings[i]->explicitPath = resultPaths;
-                    } else {
-                        _contentItem->shadings[i]->explicitPath = std::nullopt;
-                    }
+                std::vector<BezierPath> resultPaths;
+                for (const auto &path : compoundPath.paths) {
+                    resultPaths.push_back(path);
                 }
+                
+                _contentItem->trimmedPaths = resultPaths;
             }
             
             if (isGroup && !subItems.empty()) {

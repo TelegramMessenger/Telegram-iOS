@@ -368,6 +368,7 @@ public:
     float alpha = 0.0;
     std::optional<TrimParams> trimParams;
     std::shared_ptr<RenderTreeNodeContentPath> path;
+    std::optional<std::vector<BezierPath>> trimmedPaths;
     std::vector<std::shared_ptr<RenderTreeNodeContentShadingVariant>> shadings;
     std::vector<std::shared_ptr<RenderTreeNodeContentItem>> subItems;
     int drawContentCount = 0;
@@ -383,7 +384,6 @@ public:
 public:
     std::shared_ptr<RenderTreeNodeContentItem::Stroke> stroke;
     std::shared_ptr<RenderTreeNodeContentItem::Fill> fill;
-    std::optional<std::vector<BezierPath>> explicitPath;
     
     size_t subItemLimit = 0;
 };

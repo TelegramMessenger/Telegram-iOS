@@ -131,6 +131,31 @@ public:
     std::shared_ptr<BezierPathContents> _contents;
 };
 
+class PathContents {
+public:
+    struct Element {
+        Vector2D point;
+        Vector2D cp1;
+        Vector2D cp2;
+        
+        explicit Element(Vector2D const &point_, Vector2D const &cp1_, Vector2D const &cp2_) :
+        point(point_),
+        cp1(cp1_),
+        cp2(cp2_) {
+        }
+    };
+    
+public:
+    PathContents(BezierPathContents const &bezierPath);
+    ~PathContents();
+    
+    std::shared_ptr<BezierPathContents> bezierPath() const;
+    
+private:
+    std::vector<Element> _elements;
+    bool _isClosed = false;
+};
+
 class BezierPathsBoundingBoxContext {
 public:
     BezierPathsBoundingBoxContext();

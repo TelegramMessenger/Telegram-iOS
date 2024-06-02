@@ -687,4 +687,46 @@ CGRect bezierPathsBoundingBox(std::vector<BezierPath> const &paths) {
     return calculateBoundingRectOpt(pointsX, pointsY, pointCount);
 }
 
+PathContents::PathContents(BezierPathContents const &bezierPath) {
+    std::optional<PathElement> previousElement;
+    for (const auto &element : bezierPath.elements) {
+        if (previousElement.has_value()) {
+            _elements.emplace_back(element.vertex.point, previousElement->vertex.outTangent, element.vertex.inTangent);
+        } else {
+            _elements.emplace_back(element.vertex.point, Vector2D(0.0, 0.0), Vector2D(0.0, 0.0));
+        }
+        previousElement = element;
+    }
+    
+    if (bezierPath.closed.value_or(true)) {
+        _isClosed = true;
+    } else {
+        _isClosed = false;
+    }
+}
+
+PathContents::~PathContents() {
+}
+    
+std::shared_ptr<BezierPathContents> PathContents::bezierPath() const {
+    auto result = std::make_shared<BezierPathContents>();
+    
+    bool isFirst = true;
+    for (const auto &element : _elements) {
+        if (isFirst) {
+            isFirst = false;
+        } else {
+            result->elements.push_back(PathElement(CurveVertex::absolute(
+                element.point,
+                element.cp1,
+                element.cp2
+            )));
+        }
+    }
+    
+    result->closed = _isClosed;
+    
+    return result;
+}
+
 }

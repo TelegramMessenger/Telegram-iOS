@@ -65,6 +65,14 @@ static void enumeratePaths(std::shared_ptr<lottie::RenderTreeNodeContentItem> it
     
     size_t maxSubitem = std::min(item->subItems.size(), subItemLimit);
     
+    if (item->trimmedPaths) {
+        for (const auto &path : item->trimmedPaths.value()) {
+            onPath(path, effectiveTransform);
+        }
+        
+        return;
+    }
+    
     if (item->path) {
         onPath(item->path->path, effectiveTransform);
     }
@@ -234,76 +242,11 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> const
     
     for (const auto &shading : item->shadings) {
         lottieRendering::CanvasPathEnumerator iteratePaths;
-        if (shading->explicitPath) {
-            auto itemPaths = shading->explicitPath.value();
-            iteratePaths = [itemPaths = itemPaths](std::function<void(lottieRendering::PathCommand const &)> iterate) -> void {
+        iteratePaths = [&](std::function<void(lottieRendering::PathCommand const &)> iterate) {
+            enumeratePaths(item, shading->subItemLimit, lottie::Transform2D::identity(), true, [&](lottie::BezierPath const &sourcePath, lottie::Transform2D const &transform) {
+                auto path = sourcePath.copyUsingTransform(transform);
+                
                 lottieRendering::PathCommand pathCommand;
-                for (const auto &path : itemPaths) {
-                    std::optional<lottie::PathElement> previousElement;
-                    for (const auto &element : path.elements()) {
-                        if (previousElement.has_value()) {
-                            if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
-                                pathCommand.type = lottieRendering::PathCommandType::LineTo;
-                                pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                                iterate(pathCommand);
-                            } else {
-                                pathCommand.type = lottieRendering::PathCommandType::CurveTo;
-                                pathCommand.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                                pathCommand.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
-                                pathCommand.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
-                                iterate(pathCommand);
-                            }
-                        } else {
-                            pathCommand.type = lottieRendering::PathCommandType::MoveTo;
-                            pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                            iterate(pathCommand);
-                        }
-                        previousElement = element;
-                    }
-                    if (path.closed().value_or(true)) {
-                        pathCommand.type = lottieRendering::PathCommandType::Close;
-                        iterate(pathCommand);
-                    }
-                }
-            };
-        } else {
-            iteratePaths = [&](std::function<void(lottieRendering::PathCommand const &)> iterate) {
-                enumeratePaths(item, shading->subItemLimit, lottie::Transform2D::identity(), true, [&](lottie::BezierPath const &sourcePath, lottie::Transform2D const &transform) {
-                    auto path = sourcePath.copyUsingTransform(transform);
-                    
-                    lottieRendering::PathCommand pathCommand;
-                    std::optional<lottie::PathElement> previousElement;
-                    for (const auto &element : path.elements()) {
-                        if (previousElement.has_value()) {
-                            if (previousElement->vertex.outTangentRelative().isZero() && element.vertex.inTangentRelative().isZero()) {
-                                pathCommand.type = lottieRendering::PathCommandType::LineTo;
-                                pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                                iterate(pathCommand);
-                            } else {
-                                pathCommand.type = lottieRendering::PathCommandType::CurveTo;
-                                pathCommand.points[2] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                                pathCommand.points[1] = CGPointMake(element.vertex.inTangent.x, element.vertex.inTangent.y);
-                                pathCommand.points[0] = CGPointMake(previousElement->vertex.outTangent.x, previousElement->vertex.outTangent.y);
-                                iterate(pathCommand);
-                            }
-                        } else {
-                            pathCommand.type = lottieRendering::PathCommandType::MoveTo;
-                            pathCommand.points[0] = CGPointMake(element.vertex.point.x, element.vertex.point.y);
-                            iterate(pathCommand);
-                        }
-                        previousElement = element;
-                    }
-                    if (path.closed().value_or(true)) {
-                        pathCommand.type = lottieRendering::PathCommandType::Close;
-                        iterate(pathCommand);
-                    }
-                });
-            };
-        }
-        
-        /*auto iteratePaths = [&](std::function<void(lottieRendering::PathCommand const &)> iterate) -> void {
-            lottieRendering::PathCommand pathCommand;
-            for (const auto &path : itemPaths) {
                 std::optional<lottie::PathElement> previousElement;
                 for (const auto &element : path.elements()) {
                     if (previousElement.has_value()) {
@@ -329,8 +272,8 @@ static void drawLottieContentItem(std::shared_ptr<lottieRendering::Canvas> const
                     pathCommand.type = lottieRendering::PathCommandType::Close;
                     iterate(pathCommand);
                 }
-            }
-        };*/
+            });
+        };
         
         if (shading->stroke) {
             if (shading->stroke->shading->type() == lottie::RenderTreeNodeContentItem::ShadingType::Solid) {
