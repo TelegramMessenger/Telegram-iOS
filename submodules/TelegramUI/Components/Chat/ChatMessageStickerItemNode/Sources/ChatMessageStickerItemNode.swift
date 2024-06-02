@@ -2156,6 +2156,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         } else {
             isPlaying = false
         }
+        if !item.controllerInteraction.canReadHistory {
+            isPlaying = false
+        }
         
         if !isPlaying {
             self.removeEffectAnimations()

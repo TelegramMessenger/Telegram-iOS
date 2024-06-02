@@ -2121,6 +2121,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             if let strongSelf = self {
                 if strongSelf.canReadHistoryValue != value {
                     strongSelf.canReadHistoryValue = value
+                    strongSelf.controllerInteraction.canReadHistory = value
                     strongSelf.updateReadHistoryActions()
 
                     if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.messageIdsScheduledForMarkAsSeen.isEmpty {
@@ -2188,6 +2189,12 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             
             self.messageIdsWithReactionsScheduledForMarkAsSeen.removeAll()
             self.context.account.viewTracker.updateMarkReactionsSeenForMessageIds(messageIds: messageIds)
+        }
+        
+        if self.canReadHistoryValue {
+            self.forEachVisibleMessageItemNode { itemNode in
+                itemNode.unreadMessageRangeUpdated()
+            }
         }
     }
     

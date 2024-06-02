@@ -592,7 +592,11 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         }
         
-        let isPlaying = self.visibilityStatus == true && !self.forceStopAnimations
+        var isPlaying = self.visibilityStatus == true && !self.forceStopAnimations
+        if !item.controllerInteraction.canReadHistory {
+            isPlaying = false
+        }
+        
         if !isPlaying {
             self.removeAdditionalAnimations()
             self.removeEffectAnimations()

@@ -293,6 +293,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public var recommendedChannelsOpenUp: Bool = false
     public var enableFullTranslucency: Bool = true
     public var chatIsRotated: Bool = true
+    public var canReadHistory: Bool = false
     
     public init(
         openMessage: @escaping (Message, OpenMessageParams) -> Bool,

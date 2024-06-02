@@ -5936,6 +5936,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         } else {
             isPlaying = false
         }
+        if !item.controllerInteraction.canReadHistory {
+            isPlaying = false
+        }
         
         if !isPlaying {
             self.removeEffectAnimations()
