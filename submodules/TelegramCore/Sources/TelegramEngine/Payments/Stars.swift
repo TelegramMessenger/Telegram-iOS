@@ -204,11 +204,11 @@ private final class StarsContextImpl {
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, transactions: transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
     }
     
-    fileprivate func updateBalance(_ balance: Int64) {
+    fileprivate func updateBalance(_ balance: Int64, transactions: [StarsContext.State.Transaction]?) {
         guard let state = self._state else {
             return
         }
-        self.updateState(StarsContext.State(flags: [], balance: balance, transactions: state.transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
+        self.updateState(StarsContext.State(flags: [], balance: balance, transactions: transactions ?? state.transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
     }
     
     func loadMore() {
@@ -400,9 +400,9 @@ public final class StarsContext {
         }
     }
     
-    fileprivate func updateBalance(_ balance: Int64) {
+    fileprivate func updateBalance(_ balance: Int64, transactions: [StarsContext.State.Transaction]?) {
         self.impl.with {
-            $0.updateBalance(balance)
+            $0.updateBalance(balance, transactions: transactions)
         }
     }
     
@@ -535,7 +535,11 @@ private final class StarsTransactionsContextImpl {
             updatedState.canLoadMore = self.nextOffset != nil
             self.updateState(updatedState)
             
-            self.starsContext?.updateBalance(status.balance)
+            if case .all = self.subject, nextOffset.isEmpty {
+                self.starsContext?.updateBalance(status.balance, transactions: status.transactions)
+            } else {
+                self.starsContext?.updateBalance(status.balance, transactions: nil)
+            }
         }))
     }
     
