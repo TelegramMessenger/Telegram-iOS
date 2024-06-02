@@ -2924,7 +2924,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.chatDisplayNode.dismissInput()
                         if let receiptMessageId = invoice.receiptMessageId {
                             if invoice.currency == "XTR" {
-                                let _ = (strongSelf.context.engine.payments.requestBotPaymentReceipt(messageId: message.id)
+                                let _ = (strongSelf.context.engine.payments.requestBotPaymentReceipt(messageId: receiptMessageId)
                                 |> deliverOnMainQueue).start(next: { [weak self] receipt in
                                     guard let strongSelf = self else {
                                         return

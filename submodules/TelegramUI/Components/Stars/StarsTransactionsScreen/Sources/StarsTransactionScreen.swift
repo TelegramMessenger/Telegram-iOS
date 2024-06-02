@@ -260,6 +260,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 imageSubject = .photo(photo)
             } else if let transactionPeer {
                 imageSubject = .transactionPeer(transactionPeer)
+            } else if let toPeer {
+                imageSubject = .transactionPeer(.peer(toPeer))
             } else {
                 imageSubject = .none
             }
@@ -725,6 +727,8 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             self.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Stars_Transaction_CopiedId), elevatedLayout: false, position: .bottom, action: { _ in return true }), in: .current)
+            
+            HapticFeedback().tap()
         }
     }
     

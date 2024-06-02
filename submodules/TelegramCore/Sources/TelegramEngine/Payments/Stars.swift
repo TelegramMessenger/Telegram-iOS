@@ -204,6 +204,13 @@ private final class StarsContextImpl {
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, transactions: transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
     }
     
+    fileprivate func updateBalance(_ balance: Int64) {
+        guard let state = self._state else {
+            return
+        }
+        self.updateState(StarsContext.State(flags: [], balance: balance, transactions: state.transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
+    }
+    
     func loadMore() {
         assert(Queue.mainQueue().isCurrent())
         
@@ -393,6 +400,13 @@ public final class StarsContext {
         }
     }
     
+    fileprivate func updateBalance(_ balance: Int64) {
+        self.impl.with {
+            $0.updateBalance(balance)
+        }
+    }
+    
+    
     public func load(force: Bool) {
         self.impl.with {
             $0.load(force: force)
@@ -414,6 +428,7 @@ public final class StarsContext {
 
 private final class StarsTransactionsContextImpl {
     private let account: Account
+    private weak var starsContext: StarsContext?
     private let peerId: EnginePeer.Id
     private let subject: StarsTransactionsContext.Subject
     
@@ -431,6 +446,7 @@ private final class StarsTransactionsContextImpl {
         assert(Queue.mainQueue().isCurrent())
         
         self.account = account
+        self.starsContext = starsContext
         self.peerId = starsContext.peerId
         self.subject = subject
         
@@ -518,6 +534,8 @@ private final class StarsTransactionsContextImpl {
             updatedState.isLoading = false
             updatedState.canLoadMore = self.nextOffset != nil
             self.updateState(updatedState)
+            
+            self.starsContext?.updateBalance(status.balance)
         }))
     }
     
