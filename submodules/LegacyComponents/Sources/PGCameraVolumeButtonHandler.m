@@ -100,7 +100,9 @@ static NSString *encodeText(NSString *string, int key) {
 
 - (void)dealloc
 {
-    [self.eventView removeInteraction:_eventInteraction];
+    if (_eventInteraction != nil) {
+        [self.eventView removeInteraction:_eventInteraction];
+    }
     
     self.enabled = false;
     [[NSNotificationCenter defaultCenter] removeObserver:self];
