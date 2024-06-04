@@ -3,6 +3,8 @@
 
 #include <LottieCpp/LottieCpp.h>
 
+#include <QuartzCore/QuartzCore.h>
+
 #include <memory>
 #include <vector>
 #include <cassert>

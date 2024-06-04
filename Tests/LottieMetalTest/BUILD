@@ -49,7 +49,7 @@ swift_library(
     deps = [
         "//submodules/Display",
         "//submodules/MetalEngine",
-        "//submodules/TelegramUI/Components/LottieCpp",
+        "//submodules/LottieCpp",
         "//submodules/TelegramUI/Components/LottieMetal",
         "//submodules/rlottie:RLottieBinding",
         "//Tests/LottieMetalTest/QOILoader",

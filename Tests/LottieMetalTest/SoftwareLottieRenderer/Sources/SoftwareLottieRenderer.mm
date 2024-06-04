@@ -6,6 +6,9 @@
 #import "NullCanvasImpl.h"
 
 #include <LottieCpp/RenderTreeNode.h>
+#include <LottieCpp/LottieAnimationContainer.h>
+#include <LottieCpp/CGPathCocoa.h>
+#include <LottieCpp/VectorsCocoa.h>
 
 namespace {
 

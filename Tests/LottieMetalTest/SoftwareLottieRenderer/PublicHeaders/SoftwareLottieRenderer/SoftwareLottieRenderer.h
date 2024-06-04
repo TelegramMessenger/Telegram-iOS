@@ -5,6 +5,7 @@
 #import <UIKit/UIKit.h>
 
 #import <LottieCpp/LottieCpp.h>
+#import <LottieCpp/LottieAnimationContainer.h>
 
 #ifdef __cplusplus
 extern "C" {

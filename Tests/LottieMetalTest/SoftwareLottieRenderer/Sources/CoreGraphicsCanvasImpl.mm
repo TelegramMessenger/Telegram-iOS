@@ -1,5 +1,8 @@
 #include "CoreGraphicsCanvasImpl.h"
 
+#include <LottieCpp/CGPathCocoa.h>
+#include <LottieCpp/VectorsCocoa.h>
+
 namespace lottieRendering {
 
 namespace {
