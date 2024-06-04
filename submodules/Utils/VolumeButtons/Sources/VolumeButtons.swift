@@ -16,15 +16,19 @@ private final class LegacyHandlerImpl: VolumeButtonHandlerImpl {
         context: SharedAccountContext,
         performAction: @escaping (VolumeButtonsListener.Action) -> Void
     ) {
-        self.handler = PGCameraVolumeButtonHandler(upButtonPressedBlock: {
-            performAction(.up)
-        }, upButtonReleasedBlock: {
-            performAction(.upRelease)
-        }, downButtonPressedBlock: {
-            performAction(.down)
-        }, downButtonReleasedBlock: {
-            performAction(.downRelease)
-        })
+        self.handler = PGCameraVolumeButtonHandler(
+            isCameraSpecific: false,
+            eventView: context.mainWindow?.viewController?.view,
+            upButtonPressedBlock: {
+                performAction(.up)
+            }, upButtonReleasedBlock: {
+                performAction(.upRelease)
+            }, downButtonPressedBlock: {
+                performAction(.down)
+            }, downButtonReleasedBlock: {
+                performAction(.downRelease)
+            }
+        )
         self.handler.enabled = true
     }
     

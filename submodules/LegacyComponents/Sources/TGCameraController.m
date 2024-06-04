@@ -510,7 +510,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         strongSelf->_interfaceView.shutterReleased(true);
     };
     
-    _buttonHandler = [[PGCameraVolumeButtonHandler alloc] initWithUpButtonPressedBlock:buttonPressed upButtonReleasedBlock:buttonReleased downButtonPressedBlock:buttonPressed downButtonReleasedBlock:buttonReleased];
+    _buttonHandler = [[PGCameraVolumeButtonHandler alloc] initWithIsCameraSpecific:true eventView:self.view upButtonPressedBlock:buttonPressed upButtonReleasedBlock:buttonReleased downButtonPressedBlock:buttonPressed downButtonReleasedBlock:buttonReleased];
     
     [self _configureCamera];
 }
