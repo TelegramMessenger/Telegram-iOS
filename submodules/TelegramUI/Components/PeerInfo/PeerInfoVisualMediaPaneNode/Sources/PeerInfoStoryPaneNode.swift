@@ -435,7 +435,7 @@ private final class DurationLayer: SimpleLayer {
         avatarLayer.contents = other.avatarLayer?.contents
     }
     
-    func update(directMediaImageCache: DirectMediaImageCache, author: EnginePeer, synchronous: SparseItemGrid.Synchronous) {
+    func update(directMediaImageCache: DirectMediaImageCache, author: EnginePeer, constrainedWidth: CGFloat, synchronous: SparseItemGrid.Synchronous) {
         let avatarLayer: SimpleLayer
         if let current = self.avatarLayer {
             avatarLayer = current
@@ -451,7 +451,7 @@ private final class DurationLayer: SimpleLayer {
         
         if self.authorPeerId != author.id {
             let string = NSAttributedString(string: author.debugDisplayTitle, font: durationFont, textColor: .white)
-            let bounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+            let bounds = string.boundingRect(with: CGSize(width: constrainedWidth - 20.0, height: 20.0), options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil)
             let textSize = CGSize(width: ceil(bounds.width), height: ceil(bounds.height))
             let sideInset: CGFloat = 6.0
             let verticalInset: CGFloat = 2.0
@@ -463,7 +463,7 @@ private final class DurationLayer: SimpleLayer {
                 context.setShadow(offset: CGSize(width: 0.0, height: 0.0), blur: 2.5, color: UIColor(rgb: 0x000000, alpha: 0.22).cgColor)
                 
                 UIGraphicsPushContext(context)
-                string.draw(in: bounds.offsetBy(dx: sideInset, dy: verticalInset))
+                string.draw(with: bounds.offsetBy(dx: sideInset, dy: verticalInset), options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil)
                 UIGraphicsPopContext()
             })
             self.contents = image?.cgImage
@@ -552,7 +552,7 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
         self.item = item
     }
 
-    func updateDuration(viewCount: Int32?, duration: Int32?, topRightIcon: ItemTopRightIcon?, author: EnginePeer?, isMin: Bool, minFactor: CGFloat, directMediaImageCache: DirectMediaImageCache, synchronous: SparseItemGrid.Synchronous) {
+    func updateDuration(size: CGSize, viewCount: Int32?, duration: Int32?, topRightIcon: ItemTopRightIcon?, author: EnginePeer?, isMin: Bool, minFactor: CGFloat, directMediaImageCache: DirectMediaImageCache, synchronous: SparseItemGrid.Synchronous) {
         self.minFactor = minFactor
         
         if let viewCount {
@@ -607,11 +607,11 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
         
         if let author {
             if let authorLayer = self.authorLayer {
-                authorLayer.update(directMediaImageCache: directMediaImageCache, author: author, synchronous: synchronous)
+                authorLayer.update(directMediaImageCache: directMediaImageCache, author: author, constrainedWidth: size.width, synchronous: synchronous)
             } else {
                 let authorLayer = DurationLayer()
                 authorLayer.contentsGravity = .bottomLeft
-                authorLayer.update(directMediaImageCache: directMediaImageCache, author: author, synchronous: synchronous)
+                authorLayer.update(directMediaImageCache: directMediaImageCache, author: author, constrainedWidth: size.width, synchronous: synchronous)
                 self.addSublayer(authorLayer)
                 authorLayer.frame = CGRect(origin: CGPoint(x: 17.0, y: 3.0), size: CGSize())
                 authorLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
@@ -1292,7 +1292,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
             isMin = layer.bounds.width < 80.0
         }
         
-        layer.updateDuration(viewCount: viewCount, duration: duration, topRightIcon: topRightIcon, author: item.authorPeer, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0), directMediaImageCache: self.directMediaImageCache, synchronous: synchronous)
+        layer.updateDuration(size: layer.bounds.size, viewCount: viewCount, duration: duration, topRightIcon: topRightIcon, author: item.authorPeer, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0), directMediaImageCache: self.directMediaImageCache, synchronous: synchronous)
     }
 
     func unbindLayer(layer: SparseItemGridLayer) {
@@ -1468,7 +1468,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     private var animationTimer: SwiftSignalKit.Timer?
 
     public private(set) var calendarSource: SparseMessageCalendar?
-    private var listSource: PeerStoryListContext
+    private var listSource: StoryListContext
 
     public var openCurrentDate: (() -> Void)?
     public var paneDidScroll: (() -> Void)?
@@ -1484,14 +1484,14 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     
     private weak var pendingOpenListContext: PeerStoryListContentContextImpl?
     
-    private var preloadArchiveListContext: PeerStoryListContext?
+    private var preloadArchiveListContext: StoryListContext?
     
     private var emptyStateView: ComponentView<Empty>?
     
     private weak var contextControllerToDismissOnSelection: ContextControllerProtocol?
     private weak var tempContextContentItemNode: TempExtractedItemNode?
         
-    public init(context: AccountContext, peerId: PeerId?, searchQuery: String? = nil, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, isProfileEmbedded: Bool, canManageStories: Bool, navigationController: @escaping () -> NavigationController?, listContext: PeerStoryListContext?) {
+    public init(context: AccountContext, peerId: PeerId?, searchQuery: String? = nil, contentType: ContentType, captureProtected: Bool, isSaved: Bool, isArchive: Bool, isProfileEmbedded: Bool, canManageStories: Bool, navigationController: @escaping () -> NavigationController?, listContext: StoryListContext?) {
         self.context = context
         self.peerId = peerId
         self.searchQuery = searchQuery
@@ -1518,7 +1518,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             displayPrivacy: isProfileEmbedded
         )
 
-        self.listSource = listContext ?? PeerStoryListContext(account: context.account, peerId: peerId ?? context.account.peerId, isArchived: self.isArchive)
+        if let listContext {
+            self.listSource = listContext
+        } else if let searchQuery {
+            self.listSource = SearchStoryListContext(account: context.account, query: searchQuery)
+        } else {
+            self.listSource = PeerStoryListContext(account: context.account, peerId: peerId ?? context.account.peerId, isArchived: self.isArchive)
+        }
         self.calendarSource = nil
         
         super.init()
@@ -2237,37 +2243,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         var firstTime = true
         let queue = Queue()
         
-        let authorPeer: Signal<EnginePeer?, NoError>
-        if self.searchQuery != nil {
-            authorPeer = self.context.engine.data.get(
-                TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId)
-            )
-        } else {
-            authorPeer = .single(nil)
-        }
-        
-        var state = self.listSource.state
-        if self.peerId == nil && self.listDisposable == nil {
-            state = .single(PeerStoryListContext.State(
-                peerReference: nil,
-                items: [],
-                pinnedIds: Set(),
-                totalCount: 0,
-                loadMoreToken: 0,
-                isCached: false,
-                hasCache: false,
-                allEntityFiles: [:]
-            )) |> then(state |> delay(2.0, queue: .mainQueue()))
-        }
+        let state = self.listSource.state
         
         self.listDisposable?.dispose()
         self.listDisposable = nil
 
-        self.listDisposable = (combineLatest(
-            state,
-            authorPeer
-        )
-        |> deliverOn(queue)).startStrict(next: { [weak self] state, authorPeer in
+        self.listDisposable = (state
+        |> deliverOn(queue)).startStrict(next: { [weak self] state in
             guard let self else {
                 return
             }
@@ -2291,20 +2273,28 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             var mappedItems: [SparseItemGrid.Item] = []
             var mappedHoles: [SparseItemGrid.HoleAnchor] = []
             var totalCount: Int = 0
-            if let peerReference = state.peerReference {
-                for item in state.items {
-                    mappedItems.append(VisualMediaItem(
-                        index: mappedItems.count,
-                        peer: peerReference,
-                        story: item,
-                        authorPeer: authorPeer,
-                        isPinned: state.pinnedIds.contains(item.id),
-                        localMonthTimestamp: Month(localTimestamp: item.timestamp + timezoneOffset).packedValue
-                    ))
+            for item in state.items {
+                var peerReference: PeerReference?
+                if let value = state.peerReference {
+                    peerReference = value
+                } else if let peer = item.peer {
+                    peerReference = PeerReference(peer._asPeer())
                 }
-                if mappedItems.count < state.totalCount, let lastItem = state.items.last, let loadMoreToken = state.loadMoreToken {
-                    mappedHoles.append(VisualMediaHoleAnchor(index: mappedItems.count, storyId: Int32(loadMoreToken), localMonthTimestamp: Month(localTimestamp: lastItem.timestamp + timezoneOffset).packedValue))
+                guard let peerReference else {
+                    continue
                 }
+                
+                mappedItems.append(VisualMediaItem(
+                    index: mappedItems.count,
+                    peer: peerReference,
+                    story: item.storyItem,
+                    authorPeer: item.peer,
+                    isPinned: state.pinnedIds.contains(item.storyItem.id),
+                    localMonthTimestamp: Month(localTimestamp: item.storyItem.timestamp + timezoneOffset).packedValue
+                ))
+            }
+            if mappedItems.count < state.totalCount, let lastItem = state.items.last, let _ = state.loadMoreToken {
+                mappedHoles.append(VisualMediaHoleAnchor(index: mappedItems.count, storyId: Int32.max, localMonthTimestamp: Month(localTimestamp: lastItem.storyItem.timestamp + timezoneOffset).packedValue))
             }
             totalCount = state.totalCount
             totalCount = max(mappedItems.count, totalCount)
@@ -2833,7 +2823,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
 
         transition.updateFrame(node: self.contextGestureContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
         
-        if let items = self.items, items.items.isEmpty, items.count == 0 {
+        if self.searchQuery == nil, let items = self.items, items.items.isEmpty, items.count == 0 {
             let emptyStateView: ComponentView<Empty>
             var emptyStateTransition = Transition(transition)
             if let current = self.emptyStateView {

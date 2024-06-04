@@ -471,7 +471,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                 }
                 var replySubject = replySubject
                 replySubject.quote = nil
-                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withoutSelectionState() }).updatedSearch(nil) })
+                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withoutSelectionState() }).updatedSearch(nil) })
             })))
         }
         
@@ -646,7 +646,7 @@ func moveReplyMessageToAnotherChat(selfController: ChatControllerImpl, replySubj
                         guard let selfController else {
                             return
                         }
-                        selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withoutSelectionState() }) })
+                        selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withoutSelectionState() }) })
                         
                         let navigationController: NavigationController?
                         if let parentController = selfController.parentController {

@@ -840,6 +840,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                             maxReadOutgoingMessageId: nil
                         )),
                         ignoreMessagesInTimestampRange: nil,
+                        ignoreMessageIds: Set(),
                         count: 40,
                         clipHoles: true,
                         anchor: inputAnchor,

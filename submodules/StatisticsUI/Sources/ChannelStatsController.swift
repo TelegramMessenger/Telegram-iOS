@@ -1135,7 +1135,7 @@ private func statsEntries(
     data: ChannelStats,
     peer: EnginePeer?,
     messages: [Message]?,
-    stories: PeerStoryListContext.State?,
+    stories: StoryListContext.State?,
     interactions: [ChannelStatsPostInteractions.PostId: ChannelStatsPostInteractions]?
 ) -> [StatsEntry] {
     var entries: [StatsEntry] = []
@@ -1217,8 +1217,8 @@ private func statsEntries(
         }
         if let stories {
             for story in stories.items {
-                if let _ = interactions[.story(peerId: peer.id, id: story.id)] {
-                    posts.append(.story(peer, story))
+                if let _ = interactions[.story(peerId: peer.id, id: story.storyItem.id)] {
+                    posts.append(.story(peer, story.storyItem))
                 }
             }
         }
@@ -1463,8 +1463,8 @@ private func channelStatsControllerEntries(
     peer: EnginePeer?,
     data: ChannelStats?,
     messages: [Message]?,
-    stories: PeerStoryListContext.State?,
-    interactions: [ChannelStatsPostInteractions.PostId: ChannelStatsPostInteractions]?, 
+    stories: StoryListContext.State?,
+    interactions: [ChannelStatsPostInteractions.PostId: ChannelStatsPostInteractions]?,
     boostData: ChannelBoostStatus?,
     boostersState: ChannelBoostersContext.State?,
     giftsState: ChannelBoostersContext.State?,
@@ -1543,7 +1543,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let withdrawalDisposable = MetaDisposable()
     actionsDisposable.add(withdrawalDisposable)
     
-    let storiesPromise = Promise<PeerStoryListContext.State?>()
+    let storiesPromise = Promise<StoryListContext.State?>()
             
     let statsContext = ChannelStatsContext(postbox: context.account.postbox, network: context.account.network, peerId: peerId)
     let dataSignal: Signal<ChannelStats?, NoError> = statsContext.state

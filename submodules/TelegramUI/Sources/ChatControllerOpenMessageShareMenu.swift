@@ -31,7 +31,7 @@ func chatShareToSavedMessagesAdditionalView(_ chatController: ChatControllerImpl
                 return
             }
             
-            let _ = (chatController.context.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: chatController.context.account.peerId, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 45, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: [])
+            let _ = (chatController.context.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: chatController.context.account.peerId, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: 45, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: [])
             |> map { view, _, _ -> [EngineMessage.Id] in
                 let messageIds = correlationIds.compactMap { correlationId in
                     return chatController.context.engine.messages.synchronouslyLookupCorrelationId(correlationId: correlationId)

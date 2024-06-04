@@ -14,7 +14,7 @@ public extension StoryContainerScreen {
         |> take(1)
         |> mapToSignal { state -> Signal<Void, NoError> in
             if let slice = state.slice {
-                return waitUntilStoryMediaPreloaded(context: context, peerId: slice.peer.id, storyItem: slice.item.storyItem)
+                return waitUntilStoryMediaPreloaded(context: context, peerId: slice.effectivePeer.id, storyItem: slice.item.storyItem)
                 |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
                 |> map { _ -> Void in
                 }
@@ -185,7 +185,7 @@ public extension StoryContainerScreen {
                 }
                 #endif
                 
-                return waitUntilStoryMediaPreloaded(context: context, peerId: slice.peer.id, storyItem: slice.item.storyItem)
+                return waitUntilStoryMediaPreloaded(context: context, peerId: slice.effectivePeer.id, storyItem: slice.item.storyItem)
                 |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
                 |> map { _ -> StoryContentContextState in
                 }

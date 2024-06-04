@@ -571,7 +571,7 @@ final class StoryItemSetContainerSendMessage {
             guard let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
                 return
             }
-            let peer = component.slice.peer
+            let peer = component.slice.effectivePeer
             
             let controller = component.controller() as? StoryContainerScreen
             
@@ -638,7 +638,7 @@ final class StoryItemSetContainerSendMessage {
                 return
             }
             let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
-            let peer = component.slice.peer
+            let peer = component.slice.effectivePeer
             
             let controller = component.controller() as? StoryContainerScreen
             
@@ -692,7 +692,7 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         let focusedStoryId = StoryId(peerId: peerId, id: focusedItem.storyItem.id)
-        let peer = component.slice.peer
+        let peer = component.slice.effectivePeer
         
         let controller = component.controller() as? StoryContainerScreen
         
@@ -740,7 +740,7 @@ final class StoryItemSetContainerSendMessage {
         guard let component = view.component else {
             return
         }
-        let peer = component.slice.peer
+        let peer = component.slice.effectivePeer
         let _ = (legacyEnqueueGifMessage(account: component.context.account, data: data) |> deliverOnMainQueue).start(next: { [weak self, weak view] message in
             if let self, let view {
                 self.sendMessages(view: view, peer: peer, messages: [message])
@@ -752,7 +752,7 @@ final class StoryItemSetContainerSendMessage {
         guard let component = view.component else {
             return
         }
-        let peer = component.slice.peer
+        let peer = component.slice.effectivePeer
         
         let size = image.size.aspectFitted(CGSize(width: 512.0, height: 512.0))
         
@@ -1013,7 +1013,7 @@ final class StoryItemSetContainerSendMessage {
             component.presentController(actionSheet, nil)
         } else {
             var preferredAction: ShareControllerPreferredAction?
-            if focusedItem.storyItem.isPublic && !component.slice.peer.isService {
+            if focusedItem.storyItem.isPublic && !component.slice.effectivePeer.isService {
                 preferredAction = .custom(action: ShareControllerAction(title: component.strings.Story_Context_CopyLink, action: {
                     let _ = ((component.context.engine.messages.exportStoryLink(peerId: peerId, id: focusedItem.storyItem.id))
                              |> deliverOnMainQueue).start(next: { link in
@@ -1170,7 +1170,7 @@ final class StoryItemSetContainerSendMessage {
             guard let self, let view else {
                 return
             }
-            let peer = component.slice.peer
+            let peer = component.slice.effectivePeer
             
             let _ = self
             
@@ -1260,7 +1260,7 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         
-        let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
+        let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.effectivePeer.id, id: component.slice.item.storyItem.id)
         |> deliverOnMainQueue).start(next: { [weak view] link in
             guard let view, let component = view.component else {
                 return
@@ -2214,7 +2214,7 @@ final class StoryItemSetContainerSendMessage {
             inputText = text
         }
         
-        let peer = component.slice.peer
+        let peer = component.slice.effectivePeer
         let theme = defaultDarkPresentationTheme
         let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
         let controller = mediaPasteboardScreen(
@@ -2283,7 +2283,7 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         let context = component.context
-        let peer = component.slice.peer
+        let peer = component.slice.effectivePeer
         let storyId = component.slice.item.storyItem.id
         
         let theme = component.theme
@@ -2669,7 +2669,7 @@ final class StoryItemSetContainerSendMessage {
         
         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
         let updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
-        let peerId = component.slice.peer.id
+        let peerId = component.slice.effectivePeer.id
         component.context.sharedContext.openResolvedUrl(
             result,
             context: component.context,
@@ -2851,7 +2851,7 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         
-        let peerId = component.slice.peer.id
+        let peerId = component.slice.effectivePeer.id
         
         var resolveSignal: Signal<Peer?, NoError>
         if let peerName = peerName {
@@ -2918,13 +2918,13 @@ final class StoryItemSetContainerSendMessage {
                 return
             }
             if !hashtag.isEmpty {
-                /*if !"".isEmpty {
+                if peerName == nil {
                     let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, query: hashtag)
                     navigationController.pushViewController(searchController)
-                } else {*/
+                } else {
                     let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)
                     navigationController.pushViewController(searchController)
-                //}
+                }
             }
         }))
     }
@@ -3485,8 +3485,8 @@ final class StoryItemSetContainerSendMessage {
                 guard let view, let component = view.component else {
                     return
                 }
-                if component.slice.peer.id != component.context.account.peerId {
-                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: reaction).start()
+                if component.slice.effectivePeer.id != component.context.account.peerId {
+                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.effectivePeer.id, id: component.slice.item.storyItem.id, reaction: reaction).start()
                 }
                 
                 let targetFrame = reactionView.convert(reactionView.bounds, to: view)

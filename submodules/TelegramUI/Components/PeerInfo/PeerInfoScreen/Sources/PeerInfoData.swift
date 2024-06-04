@@ -334,8 +334,8 @@ final class PeerInfoScreenData {
     let groupsInCommon: GroupsInCommonContext?
     let linkedDiscussionPeer: Peer?
     let members: PeerInfoMembersData?
-    let storyListContext: PeerStoryListContext?
-    let storyArchiveListContext: PeerStoryListContext?
+    let storyListContext: StoryListContext?
+    let storyArchiveListContext: StoryListContext?
     let encryptionKeyFingerprint: SecretChatKeyFingerprint?
     let globalSettings: TelegramGlobalSettings?
     let invitations: PeerExportedInvitationsState?
@@ -375,8 +375,8 @@ final class PeerInfoScreenData {
         groupsInCommon: GroupsInCommonContext?,
         linkedDiscussionPeer: Peer?,
         members: PeerInfoMembersData?,
-        storyListContext: PeerStoryListContext?,
-        storyArchiveListContext: PeerStoryListContext?,
+        storyListContext: StoryListContext?,
+        storyArchiveListContext: StoryListContext?,
         encryptionKeyFingerprint: SecretChatKeyFingerprint?,
         globalSettings: TelegramGlobalSettings?,
         invitations: PeerExportedInvitationsState?,
@@ -635,7 +635,7 @@ private func peerInfoPersonalChannel(context: AccountContext, peerId: EnginePeer
             )
             
             return combineLatest(
-                context.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: channelPeer.id, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 10, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: []),
+                context.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: channelPeer.id, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), count: 10, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: []),
                 context.engine.data.subscribe(
                     TelegramEngine.EngineData.Item.Peer.StoryStats(id: channelPeer.id)
                 ),
@@ -1071,7 +1071,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             |> distinctUntilChanged
             
             let hasStoryArchive: Signal<Bool?, NoError>
-            var storyArchiveListContext: PeerStoryListContext?
+            var storyArchiveListContext: StoryListContext?
             if isMyProfile {
                 let storyArchiveListContextValue = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: true)
                 storyArchiveListContext = storyArchiveListContextValue
@@ -1556,7 +1556,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             let requestsContextPromise = Promise<PeerInvitationImportersContext?>(nil)
             let requestsStatePromise = Promise<PeerInvitationImportersState?>(nil)
             
-            let storyListContext: PeerStoryListContext?
+            let storyListContext: StoryListContext?
             let hasStories: Signal<Bool?, NoError>
             if peerId.namespace == Namespaces.Peer.CloudChannel {
                 storyListContext = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: false)

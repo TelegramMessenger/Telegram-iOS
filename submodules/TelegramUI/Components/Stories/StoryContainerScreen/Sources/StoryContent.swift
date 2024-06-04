@@ -104,19 +104,22 @@ public final class StoryContentItem: Equatable {
     public let peerId: EnginePeer.Id?
     public let storyItem: EngineStoryItem
     public let entityFiles: [EngineMedia.Id: TelegramMediaFile]
+    public let itemPeer: EnginePeer?
 
     public init(
         position: Int?,
         dayCounters: DayCounters?,
         peerId: EnginePeer.Id?,
         storyItem: EngineStoryItem,
-        entityFiles: [EngineMedia.Id: TelegramMediaFile]
+        entityFiles: [EngineMedia.Id: TelegramMediaFile],
+        itemPeer: EnginePeer?
     ) {
         self.position = position
         self.dayCounters = dayCounters
         self.peerId = peerId
         self.storyItem = storyItem
         self.entityFiles = entityFiles
+        self.itemPeer = itemPeer
     }
     
     public static func ==(lhs: StoryContentItem, rhs: StoryContentItem) -> Bool {
@@ -133,6 +136,9 @@ public final class StoryContentItem: Equatable {
             return false
         }
         if lhs.entityFiles != rhs.entityFiles {
+            return false
+        }
+        if lhs.itemPeer != rhs.itemPeer {
             return false
         }
         return true
@@ -208,6 +214,10 @@ public final class StoryContentContextState {
         public let nextItemId: Int32?
         public let allItems: [StoryContentItem]
         public let forwardInfoStories: [StoryId: Promise<EngineStoryItem?>]
+        
+        var effectivePeer: EnginePeer {
+            return self.item.itemPeer ?? self.peer
+        }
         
         public init(
             peer: EnginePeer,

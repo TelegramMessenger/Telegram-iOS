@@ -678,58 +678,67 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, reportPeerIrrelevantGeoLocation: {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { [weak self] node, gesture in
-            guard let strongSelf = self, let textInputPanelNode = strongSelf.textInputPanelNode else {
-                return
-            }
-            textInputPanelNode.loadTextInputNodeIfNeeded()
-            guard let textInputNode = textInputPanelNode.textInputNode else {
+            guard let strongSelf = self else {
                 return
             }
             
-            var hasEntityKeyboard = false
-            if case .media = strongSelf.presentationInterfaceState.inputMode {
-                hasEntityKeyboard = true
-            }
-            
-            let controller = makeChatSendMessageActionSheetController(
-                context: strongSelf.context,
-                peerId: strongSelf.presentationInterfaceState.chatLocation.peerId,
-                params: .sendMessage(SendMessageActionSheetControllerParams.SendMessage(
-                    isScheduledMessages: false,
-                    mediaPreview: nil,
-                    mediaCaptionIsAbove: nil,
-                    attachment: false,
-                    canSendWhenOnline: false,
-                    forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
-                )),
-                hasEntityKeyboard: hasEntityKeyboard,
-                gesture: gesture,
-                sourceSendButton: node,
-                textInputView: textInputNode.textView,
-                emojiViewProvider: textInputPanelNode.emojiViewProvider,
-                completion: {
-                },
-                sendMessage: { [weak textInputPanelNode] mode, messageEffect in
-                    switch mode {
-                    case .generic:
-                        textInputPanelNode?.sendMessage(.generic, messageEffect)
-                    case .silently:
-                        textInputPanelNode?.sendMessage(.silent, messageEffect)
-                    case .whenOnline:
-                        textInputPanelNode?.sendMessage(.whenOnline, messageEffect)
-                    }
-                },
-                schedule: { [weak textInputPanelNode] messageEffect in
-                    textInputPanelNode?.sendMessage(.schedule, messageEffect)
-                },
-                openPremiumPaywall: { [weak controller] c in
-                    guard let controller else {
-                        return
-                    }
-                    controller.push(c)
+            let _ = (ChatSendMessageContextScreen.initialData(context: strongSelf.context, currentMessageEffectId: nil)
+            |> deliverOnMainQueue).start(next: { initialData in
+                guard let strongSelf = self, let textInputPanelNode = strongSelf.textInputPanelNode else {
+                    return
                 }
-            )
-            strongSelf.presentInGlobalOverlay(controller, nil)
+                textInputPanelNode.loadTextInputNodeIfNeeded()
+                guard let textInputNode = textInputPanelNode.textInputNode else {
+                    return
+                }
+                
+                var hasEntityKeyboard = false
+                if case .media = strongSelf.presentationInterfaceState.inputMode {
+                    hasEntityKeyboard = true
+                }
+                
+                let controller = makeChatSendMessageActionSheetController(
+                    initialData: initialData,
+                    context: strongSelf.context,
+                    peerId: strongSelf.presentationInterfaceState.chatLocation.peerId,
+                    params: .sendMessage(SendMessageActionSheetControllerParams.SendMessage(
+                        isScheduledMessages: false,
+                        mediaPreview: nil,
+                        mediaCaptionIsAbove: nil,
+                        messageEffect: nil,
+                        attachment: false,
+                        canSendWhenOnline: false,
+                        forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
+                    )),
+                    hasEntityKeyboard: hasEntityKeyboard,
+                    gesture: gesture,
+                    sourceSendButton: node,
+                    textInputView: textInputNode.textView,
+                    emojiViewProvider: textInputPanelNode.emojiViewProvider,
+                    completion: {
+                    },
+                    sendMessage: { [weak textInputPanelNode] mode, messageEffect in
+                        switch mode {
+                        case .generic:
+                            textInputPanelNode?.sendMessage(.generic, messageEffect)
+                        case .silently:
+                            textInputPanelNode?.sendMessage(.silent, messageEffect)
+                        case .whenOnline:
+                            textInputPanelNode?.sendMessage(.whenOnline, messageEffect)
+                        }
+                    },
+                    schedule: { [weak textInputPanelNode] messageEffect in
+                        textInputPanelNode?.sendMessage(.schedule, messageEffect)
+                    },
+                    openPremiumPaywall: { [weak controller] c in
+                        guard let controller else {
+                            return
+                        }
+                        controller.push(c)
+                    }
+                )
+                strongSelf.presentInGlobalOverlay(controller, nil)
+            })
         }, openScheduledMessages: {
         }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in

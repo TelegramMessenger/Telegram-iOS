@@ -60,7 +60,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
             }
         }
         self.anchor = anchor
-        self.wrappedView = MutableMessageHistoryView(postbox: postbox, orderStatistics: [], clipHoles: true, trackHoles: true, peerIds: peerIds, ignoreMessagesInTimestampRange: nil, anchor: self.anchor, combinedReadStates: nil, transientReadStates: nil, tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .all, count: self.count, topTaggedMessages: [:], additionalDatas: [])
+        self.wrappedView = MutableMessageHistoryView(postbox: postbox, orderStatistics: [], clipHoles: true, trackHoles: true, peerIds: peerIds, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), anchor: self.anchor, combinedReadStates: nil, transientReadStates: nil, tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .all, count: self.count, topTaggedMessages: [:], additionalDatas: [])
         let _ = self.updateFromView()
     }
     
@@ -134,7 +134,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
             case let .peer(id, threadId):
                 peerIds = postbox.peerIdsForLocation(.peer(peerId: id, threadId: threadId), ignoreRelatedChats: false)
             }
-            self.wrappedView = MutableMessageHistoryView(postbox: postbox, orderStatistics: [], clipHoles: true, trackHoles: false, peerIds: peerIds, ignoreMessagesInTimestampRange: nil, anchor: self.anchor, combinedReadStates: nil, transientReadStates: nil, tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .all, count: self.count, topTaggedMessages: [:], additionalDatas: [])
+            self.wrappedView = MutableMessageHistoryView(postbox: postbox, orderStatistics: [], clipHoles: true, trackHoles: false, peerIds: peerIds, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), anchor: self.anchor, combinedReadStates: nil, transientReadStates: nil, tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .all, count: self.count, topTaggedMessages: [:], additionalDatas: [])
             return self.updateFromView()
         } else if self.wrappedView.replay(postbox: postbox, transaction: transaction) {
             var reloadView = false
@@ -167,7 +167,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                 case let .peer(id, threadId):
                     peerIds = postbox.peerIdsForLocation(.peer(peerId: id, threadId: threadId), ignoreRelatedChats: false)
                 }
-                self.wrappedView = MutableMessageHistoryView(postbox: postbox, orderStatistics: [], clipHoles: true, trackHoles: false, peerIds: peerIds, ignoreMessagesInTimestampRange: nil, anchor: self.anchor, combinedReadStates: nil, transientReadStates: nil, tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .all, count: self.count, topTaggedMessages: [:], additionalDatas: [])
+                self.wrappedView = MutableMessageHistoryView(postbox: postbox, orderStatistics: [], clipHoles: true, trackHoles: false, peerIds: peerIds, ignoreMessagesInTimestampRange: nil, ignoreMessageIds: Set(), anchor: self.anchor, combinedReadStates: nil, transientReadStates: nil, tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .all, count: self.count, topTaggedMessages: [:], additionalDatas: [])
             }
             
             return self.updateFromView()

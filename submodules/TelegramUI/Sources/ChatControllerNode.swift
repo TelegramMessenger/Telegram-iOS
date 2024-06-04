@@ -2705,6 +2705,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                         return chatHistoryViewForLocation(
                             input,
                             ignoreMessagesInTimestampRange: nil,
+                            ignoreMessageIds: Set(),
                             context: context,
                             chatLocation: chatLocation,
                             chatLocationContextHolder: Atomic(value: nil),
@@ -4123,7 +4124,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             
                             strongSelf.ignoreUpdateHeight = true
                             textInputPanelNode.text = ""
-                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageSubject(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeDisableUrlPreviews([]) })
+                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeDisableUrlPreviews([]) })
                             strongSelf.ignoreUpdateHeight = false
                         }
                     }, usedCorrelationId)
