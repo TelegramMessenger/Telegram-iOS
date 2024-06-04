@@ -991,14 +991,16 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                 
                 let _ = (combineLatest(
                     isReady,
-                    captionIsAboveMedia |> take(1)
+                    captionIsAboveMedia |> take(1),
+                    ChatSendMessageContextScreen.initialData(context: strongSelf.context, currentMessageEffectId: nil)
                 )
-                |> deliverOnMainQueue).start(next: { [weak strongSelf] _, captionIsAboveMedia in
+                |> deliverOnMainQueue).start(next: { [weak strongSelf] _, captionIsAboveMedia, initialData in
                     guard let strongSelf else {
                         return
                     }
                     
                     let controller = makeChatSendMessageActionSheetController(
+                        initialData: initialData,
                         context: strongSelf.context,
                         updatedPresentationData: strongSelf.updatedPresentationData,
                         peerId: strongSelf.presentationInterfaceState.chatLocation.peerId,
@@ -1011,6 +1013,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                                 }
                                 mediaPickerContext.setCaptionIsAboveMedia(value)
                             }),
+                            messageEffect: nil,
                             attachment: true,
                             canSendWhenOnline: sendWhenOnlineAvailable,
                             forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []

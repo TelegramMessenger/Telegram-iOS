@@ -20,16 +20,16 @@ import MultilineTextComponent
 import ChatInputTextNode
 import EmojiTextAttachmentView
 
-private final class EffectIcon: Component {
-    enum Content: Equatable {
+public final class ChatSendMessageScreenEffectIcon: Component {
+    public enum Content: Equatable {
         case file(TelegramMediaFile)
         case text(String)
     }
     
-    let context: AccountContext
-    let content: Content
+    public let context: AccountContext
+    public let content: Content
     
-    init(
+    public init(
         context: AccountContext,
         content: Content
     ) {
@@ -37,7 +37,7 @@ private final class EffectIcon: Component {
         self.content = content
     }
     
-    static func ==(lhs: EffectIcon, rhs: EffectIcon) -> Bool {
+    public static func ==(lhs: ChatSendMessageScreenEffectIcon, rhs: ChatSendMessageScreenEffectIcon) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
@@ -47,19 +47,19 @@ private final class EffectIcon: Component {
         return true
     }
     
-    final class View: UIView {
+    public final class View: UIView {
         private var fileView: ReactionIconView?
         private var textView: ComponentView<Empty>?
         
-        override init(frame: CGRect) {
+        override public init(frame: CGRect) {
             super.init(frame: frame)
         }
         
-        required init?(coder: NSCoder) {
+        required public init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: EffectIcon, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ChatSendMessageScreenEffectIcon, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             if case let .file(file) = component.content {
                 let fileView: ReactionIconView
                 if let current = self.fileView {
@@ -126,11 +126,11 @@ private final class EffectIcon: Component {
         }
     }
     
-    func makeView() -> View {
+    public func makeView() -> View {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -307,7 +307,7 @@ final class MessageItemView: UIView {
                 effectIcon = ComponentView()
                 self.effectIcon = effectIcon
             }
-            let effectIconContent: EffectIcon.Content
+            let effectIconContent: ChatSendMessageScreenEffectIcon.Content
             if let staticIcon = effect.staticIcon {
                 effectIconContent = .file(staticIcon)
             } else {
@@ -315,7 +315,7 @@ final class MessageItemView: UIView {
             }
             effectIconSize = effectIcon.update(
                 transition: .immediate,
-                component: AnyComponent(EffectIcon(
+                component: AnyComponent(ChatSendMessageScreenEffectIcon(
                     context: context,
                     content: effectIconContent
                 )),

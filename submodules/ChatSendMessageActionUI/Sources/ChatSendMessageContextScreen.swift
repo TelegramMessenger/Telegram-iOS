@@ -53,6 +53,7 @@ public protocol ChatSendMessageContextScreenMediaPreview: AnyObject {
 final class ChatSendMessageContextScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
+    let initialData: ChatSendMessageContextScreen.InitialData
     let context: AccountContext
     let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     let peerId: EnginePeer.Id?
@@ -72,6 +73,7 @@ final class ChatSendMessageContextScreenComponent: Component {
     let isPremium: Bool
 
     init(
+        initialData: ChatSendMessageContextScreen.InitialData,
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
         peerId: EnginePeer.Id?,
@@ -90,6 +92,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         availableMessageEffects: AvailableMessageEffects?,
         isPremium: Bool
     ) {
+        self.initialData = initialData
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId
@@ -319,6 +322,8 @@ final class ChatSendMessageContextScreenComponent: Component {
                 switch component.params {
                 case let .sendMessage(sendMessage):
                     self.mediaCaptionIsAbove = sendMessage.mediaCaptionIsAbove?.0 ?? false
+                    
+                    self.selectedMessageEffect = component.initialData.messageEffect
                 case let .editMessage(editMessage):
                     self.mediaCaptionIsAbove = editMessage.mediaCaptionIsAbove?.0 ?? false
                 }
@@ -841,12 +846,25 @@ final class ChatSendMessageContextScreenComponent: Component {
                                     if !self.isUpdating {
                                         self.state?.updated(transition: .easeInOut(duration: 0.2))
                                     }
+                                    if case let .sendMessage(sendMessage) = component.params {
+                                        let mappedEffect = self.selectedMessageEffect.flatMap {
+                                            return ChatSendMessageActionSheetControllerSendParameters.Effect(id: $0.id)
+                                        }
+                                        sendMessage.messageEffect?.1(mappedEffect)
+                                    }
                                     return
                                 } else {
                                     self.selectedMessageEffect = messageEffect
                                     reactionContextNode.selectedItems = Set([AnyHashable(updateReaction.reaction)])
                                     if !self.isUpdating {
                                         self.state?.updated(transition: .easeInOut(duration: 0.2))
+                                    }
+                                    
+                                    if case let .sendMessage(sendMessage) = component.params {
+                                        let mappedEffect = self.selectedMessageEffect.flatMap {
+                                            return ChatSendMessageActionSheetControllerSendParameters.Effect(id: $0.id)
+                                        }
+                                        sendMessage.messageEffect?.1(mappedEffect)
                                     }
                                     
                                     HapticFeedback().tap()
@@ -856,6 +874,13 @@ final class ChatSendMessageContextScreenComponent: Component {
                                 reactionContextNode.selectedItems = Set([AnyHashable(updateReaction.reaction)])
                                 if !self.isUpdating {
                                     self.state?.updated(transition: .easeInOut(duration: 0.2))
+                                }
+                                
+                                if case let .sendMessage(sendMessage) = component.params {
+                                    let mappedEffect = self.selectedMessageEffect.flatMap {
+                                        return ChatSendMessageActionSheetControllerSendParameters.Effect(id: $0.id)
+                                    }
+                                    sendMessage.messageEffect?.1(mappedEffect)
                                 }
                                 
                                 HapticFeedback().tap()
@@ -1319,6 +1344,14 @@ final class ChatSendMessageContextScreenComponent: Component {
 }
 
 public class ChatSendMessageContextScreen: ViewControllerComponentContainer, ChatSendMessageActionSheetController {
+    public final class InitialData {
+        fileprivate let messageEffect: AvailableMessageEffects.MessageEffect?
+        
+        init(messageEffect: AvailableMessageEffects.MessageEffect?) {
+            self.messageEffect = messageEffect
+        }
+    }
+    
     private let context: AccountContext
     
     private var processedDidAppear: Bool = false
@@ -1335,6 +1368,7 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
     }
     
     public init(
+        initialData: InitialData,
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
         peerId: EnginePeer.Id?,
@@ -1358,6 +1392,7 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
         super.init(
             context: context,
             component: ChatSendMessageContextScreenComponent(
+                initialData: initialData,
                 context: context,
                 updatedPresentationData: updatedPresentationData,
                 peerId: peerId,
@@ -1437,6 +1472,32 @@ public class ChatSendMessageContextScreen: ViewControllerComponentContainer, Cha
             } else {
                 super.dismiss(completion: completion)
             }
+        }
+    }
+    
+    public static func initialData(context: AccountContext, currentMessageEffectId: Int64?) -> Signal<InitialData, NoError> {
+        let messageEffect: Signal<AvailableMessageEffects.MessageEffect?, NoError>
+        if let currentMessageEffectId {
+            messageEffect = context.engine.stickers.availableMessageEffects()
+            |> take(1)
+            |> map { availableMessageEffects -> AvailableMessageEffects.MessageEffect? in
+                guard let availableMessageEffects else {
+                    return nil
+                }
+                for messageEffect in availableMessageEffects.messageEffects {
+                    if messageEffect.id == currentMessageEffectId || messageEffect.effectSticker.fileId.id == currentMessageEffectId {
+                        return messageEffect
+                    }
+                }
+                return nil
+            }
+        } else {
+            messageEffect = .single(nil)
+        }
+        
+        return messageEffect
+        |> map { messageEffect -> InitialData in
+            return InitialData(messageEffect: messageEffect)
         }
     }
 }
