@@ -565,7 +565,7 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
         CGPoint scale = CGPointMake(size.width / (CGFloat)animation.size.width, size.height / (CGFloat)animation.size.height);
         context->concatenate(lottie::Transform2D::makeScale(scale.x, scale.y));
         
-        //renderLottieRenderNode(renderNode, context, lottie::Vector2D(context->width(), context->height()), rootTransform, 1.0, false, *_bezierPathsBoundingBoxContext.get());
+        renderLottieRenderNode(renderNode, context, lottie::Vector2D(context->width(), context->height()), rootTransform, 1.0, false, *_bezierPathsBoundingBoxContext.get());
         
         return nil;
     }
