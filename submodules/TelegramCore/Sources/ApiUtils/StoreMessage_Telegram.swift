@@ -519,6 +519,8 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
         } else {
             return nil
         }
+    case let .mediaAreaUrl(coordinates, url):
+        return .url(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), url: url)
     case let .mediaAreaChannelPost(coordinates, channelId, messageId):
         return .channelMessage(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), messageId: EngineMessage.Id(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: messageId))
     }
@@ -551,6 +553,8 @@ func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea], transaction: Transac
             if let peer = transaction.getPeer(messageId.peerId), let inputChannel = apiInputChannel(peer) {
                 apiMediaAreas.append(.inputMediaAreaChannelPost(coordinates: inputCoordinates, channel: inputChannel, msgId: messageId.id))
             }
+        case let .url(_, url):
+            apiMediaAreas.append(.mediaAreaUrl(coordinates: inputCoordinates, url: url))
         }
     }
     return apiMediaAreas

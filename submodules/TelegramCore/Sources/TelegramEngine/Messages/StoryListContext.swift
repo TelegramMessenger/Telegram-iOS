@@ -1260,10 +1260,16 @@ public final class PeerStoryListContext: StoryListContext {
 }
 
 public final class SearchStoryListContext: StoryListContext {
+    
+    public enum Source {
+        case hashtag(String)
+        case venue(provider: String, id: String)
+    }
+    
     private final class Impl {
         private let queue: Queue
         private let account: Account
-        private let query: String
+        private let source: Source
         
         private let statePromise = Promise<State>()
         private var stateValue: State {
@@ -1282,10 +1288,10 @@ public final class SearchStoryListContext: StoryListContext {
         
         private var completionCallbacksByToken: [AnyHashable: [() -> Void]] = [:]
         
-        init(queue: Queue, account: Account, query: String) {
+        init(queue: Queue, account: Account, source: Source) {
             self.queue = queue
             self.account = account
-            self.query = query
+            self.source = source
             
             self.stateValue = State(peerReference: nil, items: [], pinnedIds: Set(), totalCount: 0, loadMoreToken: AnyHashable(""), isCached: false, hasCache: false, allEntityFiles: [:])
             self.statePromise.set(.single(self.stateValue))
@@ -1320,14 +1326,26 @@ public final class SearchStoryListContext: StoryListContext {
             let account = self.account
             let accountPeerId = account.peerId
             
-            let searchHashtag: String
-            if self.query.hasPrefix("#") {
-                searchHashtag = String(self.query[self.query.index(after: self.query.startIndex)...])
-            } else {
-                searchHashtag = self.query
+            var searchHashtag: String? = nil
+            var venueProvider: String? = nil
+            var venueId: String? = nil
+            
+            var flags: Int32 = 0
+            switch source {
+            case let .hashtag(query):
+                if query.hasPrefix("#") {
+                    searchHashtag = String(query[query.index(after: query.startIndex)...])
+                } else {
+                    searchHashtag = query
+                }
+                flags |= (1 << 0)
+            case .venue(let provider, let id):
+                venueProvider = provider
+                venueId = id
+                flags |= (1 << 1)
             }
             
-            self.requestDisposable = (account.network.request(Api.functions.stories.searchPosts(hashtag: searchHashtag, offset: "", limit: Int32(limit)))
+            self.requestDisposable = (account.network.request(Api.functions.stories.searchPosts(flags: flags, hashtag: searchHashtag, venueProvider: venueProvider, venueId: venueId, offset: "", limit:  Int32(limit)))
             |> map { result -> Api.stories.FoundStories? in
                 return result
             }
@@ -1455,11 +1473,11 @@ public final class SearchStoryListContext: StoryListContext {
     private let queue: Queue
     private let impl: QueueLocalObject<Impl>
     
-    public init(account: Account, query: String) {
+    public init(account: Account, source: Source) {
         let queue = Queue.mainQueue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, account: account, query: query)
+            return Impl(queue: queue, account: account, source: source)
         })
     }
     
