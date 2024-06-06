@@ -1327,7 +1327,7 @@ public final class SearchStoryListContext: StoryListContext {
                 searchHashtag = self.query
             }
             
-            self.requestDisposable = (account.network.request(Api.functions.stories.searchPosts(hashtag: searchHashtag, offset: "", limit: Int32(limit)))
+            self.requestDisposable = (account.network.request(Api.functions.stories.searchPosts(flags: 1 << 0, hashtag: searchHashtag, venueProvider: nil, venueId: nil, offset: "", limit: Int32(limit)))
             |> map { result -> Api.stories.FoundStories? in
                 return result
             }
