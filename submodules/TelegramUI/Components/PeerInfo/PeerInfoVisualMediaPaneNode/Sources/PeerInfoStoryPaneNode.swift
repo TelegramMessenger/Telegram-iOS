@@ -1521,7 +1521,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         if let listContext {
             self.listSource = listContext
         } else if let searchQuery {
-            self.listSource = SearchStoryListContext(account: context.account, query: searchQuery)
+            self.listSource = SearchStoryListContext(account: context.account, source: .hashtag(searchQuery))
         } else {
             self.listSource = PeerStoryListContext(account: context.account, peerId: peerId ?? context.account.peerId, isArchived: self.isArchive)
         }
