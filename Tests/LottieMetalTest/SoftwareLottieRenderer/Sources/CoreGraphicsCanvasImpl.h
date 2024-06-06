@@ -1,21 +1,24 @@
 #ifndef CoreGraphicsCanvasImpl_h
 #define CoreGraphicsCanvasImpl_h
 
-#include "Canvas.h"
+#include <LottieCpp/LottieCpp.h>
 
-namespace lottieRendering {
+#include <QuartzCore/QuartzCore.h>
 
-class ImageImpl: public Image {
-public:
-    ImageImpl(::CGImageRef image);
-    virtual ~ImageImpl();
-    ::CGImageRef nativeImage() const;
-    
-private:
-    CGImageRef _image = nil;
-};
+namespace lottie {
 
 class CanvasImpl: public Canvas {
+public:
+    class Image {
+    public:
+        Image(::CGImageRef image);
+        virtual ~Image();
+        ::CGImageRef nativeImage() const;
+        
+    private:
+        CGImageRef _image = nil;
+    };
+    
 public:
     CanvasImpl(int width, int height);
     CanvasImpl(CGContextRef context, int width, int height);

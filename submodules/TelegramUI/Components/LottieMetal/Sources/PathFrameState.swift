@@ -2,7 +2,7 @@ import Foundation
 import MetalKit
 import LottieCpp
 
-private func alignUp(size: Int, align: Int) -> Int {
+/*private func alignUp(size: Int, align: Int) -> Int {
     precondition(((align - 1) & align) == 0, "Align must be a power of two")
 
     let alignmentMask = align - 1
@@ -372,3 +372,4 @@ final class PathFrameState {
         computeEncoder.dispatchThreadgroups(MTLSize(width: dispatchSize, height: 1, depth: 1), threadsPerThreadgroup: MTLSize(width: 1, height: threadGroupHeight, depth: 1))
     }
 }
+*/

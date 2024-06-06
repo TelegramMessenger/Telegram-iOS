@@ -14,7 +14,7 @@ private final class ReferenceCompareTest {
     private let imageView = UIImageView()
     private let referenceImageView = UIImageView()
     
-    init(view: UIView) {
+    init(view: UIView, testNonReference: Bool) {
         lottieSwift_getPathNativeBoundingBox = { path in
             return getPathNativeBoundingBox(path)
         }
@@ -78,9 +78,9 @@ private final class ReferenceCompareTest {
             }
             
             var continueFromName: String?
-            continueFromName = "1137162165791227948.json"
+            //continueFromName = "1137162165791227948.json"
             
-            let _ = await processAnimationFolderAsync(basePath: bundlePath, path: "", stopOnFailure: true, process: { path, name, alwaysDraw in
+            let _ = await processAnimationFolderAsync(basePath: bundlePath, path: "", stopOnFailure: !testNonReference, process: { path, name, alwaysDraw in
                 if let continueFromNameValue = continueFromName {
                     if continueFromNameValue == name {
                         continueFromName = nil
@@ -91,7 +91,7 @@ private final class ReferenceCompareTest {
                 
                 let size = sizeMapping[name] ?? defaultSize
                 
-                let result = await processDrawAnimation(baseCachePath: baseCachePath, path: path, name: name, size: CGSize(width: size, height: size), alwaysDraw: alwaysDraw, updateImage: { image, referenceImage in
+                let result = await processDrawAnimation(baseCachePath: baseCachePath, path: path, name: name, size: CGSize(width: size, height: size), alwaysDraw: alwaysDraw, useNonReferenceRendering: testNonReference, updateImage: { image, referenceImage in
                     DispatchQueue.main.async {
                         self.imageView.image = image
                         self.referenceImageView.image = referenceImage
@@ -119,12 +119,12 @@ public final class ViewController: UIViewController {
         
         self.view.layer.addSublayer(MetalEngine.shared.rootLayer)
         
-        if !"".isEmpty {
+        if "".isEmpty {
             if #available(iOS 13.0, *) {
-                self.test = ReferenceCompareTest(view: self.view)
+                self.test = ReferenceCompareTest(view: self.view, testNonReference: true)
             }
         } else if !"".isEmpty {
-            let cachedAnimation = cacheLottieMetalAnimation(path: filePath)!
+            /*let cachedAnimation = cacheLottieMetalAnimation(path: filePath)!
             let animation = parseCachedLottieMetalAnimation(data: cachedAnimation)!
             
             /*let animationData = try! Data(contentsOf: URL(fileURLWithPath: filePath))
@@ -146,29 +146,23 @@ public final class ViewController: UIViewController {
             self.link = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { _ in
                 lottieLayer.frameIndex = (lottieLayer.frameIndex + 1) % animation.frameCount
                 lottieLayer.setNeedsUpdate()
-            })
+            })*/
         } else if "".isEmpty {
             Thread {
                 let animationData = try! Data(contentsOf: URL(fileURLWithPath: filePath))
                 
                 var startTime = CFAbsoluteTimeGetCurrent()
-                let animation = LottieAnimation(data: animationData)!
+                
+                let animationRenderer = SoftwareLottieRenderer(data: animationData)!
                 print("Load time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
-                
-                startTime = CFAbsoluteTimeGetCurrent()
-                let animationContainer = LottieAnimationContainer(animation: animation)
-                animationContainer.update(0)
-                print("Build time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
-                
-                let animationRenderer = SoftwareLottieRenderer(animationContainer: animationContainer)
                 
                 startTime = CFAbsoluteTimeGetCurrent()
                 var numUpdates: Int = 0
                 var frameIndex = 0
                 while true {
-                    animationContainer.update(frameIndex)
+                    animationRenderer.setFrame(frameIndex)
                     let _ = animationRenderer.render(for: CGSize(width: CGFloat(performanceFrameSize), height: CGFloat(performanceFrameSize)), useReferenceRendering: false)
-                    frameIndex = (frameIndex + 1) % animationContainer.animation.frameCount
+                    frameIndex = (frameIndex + 1) % animationRenderer.frameCount
                     numUpdates += 1
                     let timestamp = CFAbsoluteTimeGetCurrent()
                     let deltaTime = timestamp - startTime

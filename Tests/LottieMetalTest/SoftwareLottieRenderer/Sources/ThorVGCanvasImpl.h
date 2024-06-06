@@ -1,15 +1,17 @@
 #ifndef ThorVGCanvasImpl_h
 #define ThorVGCanvasImpl_h
 
-#include "Canvas.h"
+#include <LottieCpp/LottieCpp.h>
 
 #include <thorvg/thorvg.h>
 
-namespace lottieRendering {
+namespace lottie {
 
 class ThorVGCanvasImpl: public Canvas {
 public:
-    ThorVGCanvasImpl(int width, int height);
+    static void initializeOnce();
+    
+    ThorVGCanvasImpl(int width, int height, int bytesPerRow);
     virtual ~ThorVGCanvasImpl();
     
     virtual int width() const override;
@@ -21,8 +23,8 @@ public:
     virtual void restoreState() override;
     
     virtual void fillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottie::Color const &color) override;
-    virtual void linearGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottieRendering::Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) override;
-    virtual void radialGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottieRendering::Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) override;
+    virtual void linearGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottie::Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) override;
+    virtual void radialGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottie::Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) override;
     virtual void strokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, lottie::Color const &color) override;
     virtual void linearGradientStrokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) override;
     virtual void radialGradientStrokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) override;

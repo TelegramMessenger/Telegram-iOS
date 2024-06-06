@@ -3,7 +3,7 @@ import MetalKit
 import simd
 import LottieCpp
     
-enum PathShading {
+/*enum PathShading {
     final class Gradient {
         enum GradientType {
             case linear
@@ -274,4 +274,4 @@ final class PathRenderFillState {
         encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: quadVertices.count)
     }
 }
-
+*/

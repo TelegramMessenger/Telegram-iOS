@@ -2,7 +2,7 @@ import Foundation
 import MetalKit
 import LottieCpp
     
-func evaluateBezier(p0: SIMD2<Float>, p1: SIMD2<Float>, p2: SIMD2<Float>, p3: SIMD2<Float>, t: Float) -> SIMD2<Float> {
+/*func evaluateBezier(p0: SIMD2<Float>, p1: SIMD2<Float>, p2: SIMD2<Float>, p3: SIMD2<Float>, t: Float) -> SIMD2<Float> {
     let t2 = t * t
     let t3 = t * t * t
 
@@ -422,4 +422,4 @@ final class PathRenderStrokeState {
             }
         }
     }
-}
+}*/
