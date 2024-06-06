@@ -3431,6 +3431,8 @@ final class StoryItemSetContainerSendMessage {
             }))
         case .reaction:
             return
+        case .url:
+            return
         }
         
         self.selectedMediaArea =  mediaArea
