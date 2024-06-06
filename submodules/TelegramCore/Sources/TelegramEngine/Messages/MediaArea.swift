@@ -125,7 +125,7 @@ public enum MediaArea: Codable, Equatable {
     case venue(coordinates: Coordinates, venue: Venue)
     case reaction(coordinates: Coordinates, reaction: MessageReaction.Reaction, flags: ReactionFlags)
     case channelMessage(coordinates: Coordinates, messageId: EngineMessage.Id)
-    
+    case url(coordinates: Coordinates, url: String)
     public struct ReactionFlags: OptionSet {
         public var rawValue: Int32
         
@@ -146,6 +146,7 @@ public enum MediaArea: Codable, Equatable {
         case venue
         case reaction
         case channelMessage
+        case url
     }
     
     public enum DecodingError: Error {
@@ -172,6 +173,10 @@ public enum MediaArea: Codable, Equatable {
             let coordinates = try container.decode(MediaArea.Coordinates.self, forKey: .coordinates)
             let messageId = try container.decode(MessageId.self, forKey: .value)
             self = .channelMessage(coordinates: coordinates, messageId: messageId)
+        case .url:
+            let coordinates = try container.decode(MediaArea.Coordinates.self, forKey: .coordinates)
+            let url = try container.decode(String.self, forKey: .value)
+            self = .url(coordinates: coordinates, url: url)
         }
     }
     
@@ -192,6 +197,10 @@ public enum MediaArea: Codable, Equatable {
             try container.encode(MediaAreaType.channelMessage.rawValue, forKey: .type)
             try container.encode(coordinates, forKey: .coordinates)
             try container.encode(messageId, forKey: .value)
+        case let .url(coordinates, url):
+            try container.encode(MediaAreaType.url.rawValue, forKey: .type)
+            try container.encode(coordinates, forKey: .coordinates)
+            try container.encode(url, forKey: .value)
         }
     }
 }
@@ -204,6 +213,8 @@ public extension MediaArea {
         case let .reaction(coordinates, _, _):
             return coordinates
         case let .channelMessage(coordinates, _):
+            return coordinates
+        case let .url(coordinates, _):
             return coordinates
         }
     }
