@@ -7423,9 +7423,9 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func saveDraft(flags: Int32, replyTo: Api.InputReplyTo?, peer: Api.InputPeer, message: String, entities: [Api.MessageEntity]?, media: Api.InputMedia?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func saveDraft(flags: Int32, replyTo: Api.InputReplyTo?, peer: Api.InputPeer, message: String, entities: [Api.MessageEntity]?, media: Api.InputMedia?, effect: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(2146678790)
+                    buffer.appendInt32(-747452978)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 4) != 0 {replyTo!.serialize(buffer, true)}
                     peer.serialize(buffer, true)
@@ -7436,7 +7436,8 @@ public extension Api.functions.messages {
                         item.serialize(buffer, true)
                     }}
                     if Int(flags) & Int(1 << 5) != 0 {media!.serialize(buffer, true)}
-                    return (FunctionDescription(name: "messages.saveDraft", parameters: [("flags", String(describing: flags)), ("replyTo", String(describing: replyTo)), ("peer", String(describing: peer)), ("message", String(describing: message)), ("entities", String(describing: entities)), ("media", String(describing: media))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    if Int(flags) & Int(1 << 7) != 0 {serializeInt64(effect!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.saveDraft", parameters: [("flags", String(describing: flags)), ("replyTo", String(describing: replyTo)), ("peer", String(describing: peer)), ("message", String(describing: message)), ("entities", String(describing: entities)), ("media", String(describing: media)), ("effect", String(describing: effect))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -10393,13 +10394,16 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func searchPosts(hashtag: String, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.FoundStories>) {
+                static func searchPosts(flags: Int32, hashtag: String?, venueProvider: String?, venueId: String?, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.FoundStories>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-688008311)
-                    serializeString(hashtag, buffer: buffer, boxed: false)
+                    buffer.appendInt32(1391183841)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(hashtag!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(venueProvider!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(venueId!, buffer: buffer, boxed: false)}
                     serializeString(offset, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "stories.searchPosts", parameters: [("hashtag", String(describing: hashtag)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.FoundStories? in
+                    return (FunctionDescription(name: "stories.searchPosts", parameters: [("flags", String(describing: flags)), ("hashtag", String(describing: hashtag)), ("venueProvider", String(describing: venueProvider)), ("venueId", String(describing: venueId)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.FoundStories? in
                         let reader = BufferReader(buffer)
                         var result: Api.stories.FoundStories?
                         if let signature = reader.readInt32() {

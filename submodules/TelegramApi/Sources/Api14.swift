@@ -53,6 +53,7 @@ public extension Api {
         case mediaAreaChannelPost(coordinates: Api.MediaAreaCoordinates, channelId: Int64, msgId: Int32)
         case mediaAreaGeoPoint(coordinates: Api.MediaAreaCoordinates, geo: Api.GeoPoint)
         case mediaAreaSuggestedReaction(flags: Int32, coordinates: Api.MediaAreaCoordinates, reaction: Api.Reaction)
+        case mediaAreaUrl(coordinates: Api.MediaAreaCoordinates, url: String)
         case mediaAreaVenue(coordinates: Api.MediaAreaCoordinates, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -96,6 +97,13 @@ public extension Api {
                     coordinates.serialize(buffer, true)
                     reaction.serialize(buffer, true)
                     break
+                case .mediaAreaUrl(let coordinates, let url):
+                    if boxed {
+                        buffer.appendInt32(926421125)
+                    }
+                    coordinates.serialize(buffer, true)
+                    serializeString(url, buffer: buffer, boxed: false)
+                    break
                 case .mediaAreaVenue(let coordinates, let geo, let title, let address, let provider, let venueId, let venueType):
                     if boxed {
                         buffer.appendInt32(-1098720356)
@@ -123,6 +131,8 @@ public extension Api {
                 return ("mediaAreaGeoPoint", [("coordinates", coordinates as Any), ("geo", geo as Any)])
                 case .mediaAreaSuggestedReaction(let flags, let coordinates, let reaction):
                 return ("mediaAreaSuggestedReaction", [("flags", flags as Any), ("coordinates", coordinates as Any), ("reaction", reaction as Any)])
+                case .mediaAreaUrl(let coordinates, let url):
+                return ("mediaAreaUrl", [("coordinates", coordinates as Any), ("url", url as Any)])
                 case .mediaAreaVenue(let coordinates, let geo, let title, let address, let provider, let venueId, let venueType):
                 return ("mediaAreaVenue", [("coordinates", coordinates as Any), ("geo", geo as Any), ("title", title as Any), ("address", address as Any), ("provider", provider as Any), ("venueId", venueId as Any), ("venueType", venueType as Any)])
     }
@@ -221,6 +231,22 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MediaArea.mediaAreaSuggestedReaction(flags: _1!, coordinates: _2!, reaction: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_mediaAreaUrl(_ reader: BufferReader) -> MediaArea? {
+            var _1: Api.MediaAreaCoordinates?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.MediaAreaCoordinates
+            }
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MediaArea.mediaAreaUrl(coordinates: _1!, url: _2!)
             }
             else {
                 return nil
