@@ -2286,11 +2286,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     break
                 }
                 
-                if self.mapInfoData != mapInfoData {
-                    self.mapInfoData = mapInfoData
-                    self.update(transition: .immediate)
-                } else if let previousState, previousState.displayingMapModeOptions != state.displayingMapModeOptions {
+                if let previousState, previousState.displayingMapModeOptions != state.displayingMapModeOptions {
                     self.parentController?.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+                } else {
+                    if self.mapInfoData != mapInfoData {
+                        self.mapInfoData = mapInfoData
+                        self.update(transition: .immediate)
+                    }
                 }
             })
         }
