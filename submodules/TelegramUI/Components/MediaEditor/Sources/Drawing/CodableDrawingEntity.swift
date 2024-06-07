@@ -119,8 +119,7 @@ public enum CodableDrawingEntity: Equatable {
                     address: entity.location.address,
                     queryId: entity.queryId,
                     resultId: entity.resultId
-                ),
-                address: nil
+                )
             )
         case let .sticker(entity):
             if case let .link(url, _, _, _, _, _, _) = entity.content {

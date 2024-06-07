@@ -1445,7 +1445,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
     public enum Scope {
         case peer(id: EnginePeer.Id, isSaved: Bool, isArchived: Bool)
         case search(query: String)
-        case location(coordinates: MediaArea.Coordinates, venue: MediaArea.Venue, address: MediaArea.Address?)
+        case location(coordinates: MediaArea.Coordinates, venue: MediaArea.Venue)
     }
     
     public struct ZoomLevel {
@@ -1667,8 +1667,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 self.listSource = PeerStoryListContext(account: context.account, peerId: id, isArchived: isArchived)
             case let .search(query):
                 self.listSource = SearchStoryListContext(account: context.account, source: .hashtag(query))
-            case let .location(coordinates, venue, address):
-                self.listSource = SearchStoryListContext(account: context.account, source: .location(coordinates: coordinates, venue: venue, address: address))
+            case let .location(coordinates, venue):
+                self.listSource = SearchStoryListContext(account: context.account, source: .mediaArea(.venue(coordinates: coordinates, venue: venue)))
             }
         }
         self.calendarSource = nil
@@ -2163,7 +2163,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             self.preloadArchiveListContext = PeerStoryListContext(account: context.account, peerId: context.account.peerId, isArchived: true)
         }
         
-        if case let .location(_, venue, _) = scope, let mapNode = self.mapNode {
+        if case let .location(_, venue) = scope, let mapNode = self.mapNode {
             let locationCoordinate = CLLocationCoordinate2D(latitude: venue.latitude, longitude: venue.longitude)
             
             var initialMapState = LocationViewState()
@@ -2230,7 +2230,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 let subjectLocation = CLLocation(latitude: locationCoordinate.latitude, longitude: locationCoordinate.longitude)
                 let distance = userLocation.flatMap { subjectLocation.distance(from: $0) }
                 
-                let locationMap = TelegramMediaMap(latitude: locationCoordinate.latitude, longitude: locationCoordinate.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
+                let locationMap = TelegramMediaMap(latitude: locationCoordinate.latitude, longitude: locationCoordinate.longitude, heading: nil, accuracyRadius: nil, venue: nil, address: venue.address, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
                 
                 let mapInfoData = MapInfoData(
                     location: locationMap,

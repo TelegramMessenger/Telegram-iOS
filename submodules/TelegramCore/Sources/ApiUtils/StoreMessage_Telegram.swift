@@ -494,12 +494,12 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
             longitude = 0.0
         }
         
-        var mappedAddress: MediaArea.Address?
+        var mappedAddress: MapGeoAddress?
         if let address {
             switch address {
             case let .geoPointAddress(_, countryIso2, state, city, street):
-                mappedAddress = MediaArea.Address(
-                    countryIso2: countryIso2,
+                mappedAddress = MapGeoAddress(
+                    country: countryIso2,
                     state: state,
                     city: city,
                     street: street
@@ -507,7 +507,14 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
             }
         }
         
-        return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(latitude: latitude, longitude: longitude, venue: nil, queryId: nil, resultId: nil), address: mappedAddress)
+        return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(
+            latitude: latitude,
+            longitude: longitude,
+            venue: nil,
+            address: mappedAddress,
+            queryId: nil,
+            resultId: nil
+        ))
     case let .mediaAreaVenue(coordinates, geo, title, address, provider, venueId, venueType):
         let latitude: Double
         let longitude: Double
@@ -546,7 +553,7 @@ func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea], transaction: Transac
         let coordinates = area.coordinates
         let inputCoordinates = Api.MediaAreaCoordinates.mediaAreaCoordinates(x: coordinates.x, y: coordinates.y, w: coordinates.width, h: coordinates.height, rotation: coordinates.rotation)
         switch area {
-        case let .venue(_, venue, address):
+        case let .venue(_, venue):
             if let queryId = venue.queryId, let resultId = venue.resultId {
                 apiMediaAreas.append(.inputMediaAreaVenue(coordinates: inputCoordinates, queryId: queryId, resultId: resultId))
             } else if let venueInfo = venue.venue {

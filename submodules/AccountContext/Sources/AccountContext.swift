@@ -886,7 +886,7 @@ public enum CollectibleItemInfoScreenSubject {
 
 public enum StorySearchControllerScope {
     case query(String)
-    case location(coordinates: MediaArea.Coordinates, venue: MediaArea.Venue, address: MediaArea.Address?)
+    case location(coordinates: MediaArea.Coordinates, venue: MediaArea.Venue)
 }
 
 public protocol SharedAccountContext: AnyObject {

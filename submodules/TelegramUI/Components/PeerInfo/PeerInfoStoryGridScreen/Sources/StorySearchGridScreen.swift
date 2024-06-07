@@ -24,13 +24,16 @@ final class StorySearchGridScreenComponent: Component {
     
     let context: AccountContext
     let scope: StorySearchControllerScope
+    let listContext: SearchStoryListContext?
 
     init(
         context: AccountContext,
-        scope: StorySearchControllerScope
+        scope: StorySearchControllerScope,
+        listContext: SearchStoryListContext?
     ) {
         self.context = context
         self.scope = scope
+        self.listContext = listContext
     }
 
     static func ==(lhs: StorySearchGridScreenComponent, rhs: StorySearchGridScreenComponent) -> Bool {
@@ -98,8 +101,8 @@ final class StorySearchGridScreenComponent: Component {
                 switch component.scope {
                 case let .query(query):
                     paneNodeScope = .search(query: query)
-                case let .location(coordinates, venue, address):
-                    paneNodeScope = .location(coordinates: coordinates, venue: venue, address: address)
+                case let .location(coordinates, venue):
+                    paneNodeScope = .location(coordinates: coordinates, venue: venue)
                 }
                 
                 paneNode = PeerInfoStoryPaneNode(
@@ -235,10 +238,10 @@ public final class StorySearchGridScreen: ViewControllerComponentContainer {
     }
     
     @objc private func sharePressed() {
-        guard case let .location(_, venue, _) = self.scope else {
+        guard case let .location(_, venue) = self.scope else {
             return
         }
-        let locationMap = TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
+        let locationMap = TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, venue: nil, address: venue.address, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
         
         let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
         
