@@ -142,6 +142,8 @@ public class DrawingStickerEntityView: DrawingEntityView {
             return image
         } else if case .message = self.stickerEntity.content {
             return self.animatedImageView?.image
+        } else if case .link = self.stickerEntity.content {
+            return self.animatedImageView?.image
         } else {
             return nil
         }
@@ -169,6 +171,13 @@ public class DrawingStickerEntityView: DrawingEntityView {
             return CGSize(width: 512.0, height: 512.0)
         case let .message(_, size, _, _, _):
             return size
+        case let .link(_, _, _, _, size, compactSize, style):
+            switch style {
+            case .white, .black:
+                return size ?? compactSize
+            case .whiteCompact, .blackCompact:
+                return compactSize
+            }
         }
     }
     
@@ -295,6 +304,10 @@ public class DrawingStickerEntityView: DrawingEntityView {
             }
             if let file, let _ = mediaRect {
                 self.setupWithVideo(file)
+            }
+        } else if case .link = self.stickerEntity.content {
+            if let image = self.stickerEntity.renderImage {
+                self.setupWithImage(image, overlayImage: nil)
             }
         }
     }
@@ -682,6 +695,32 @@ public class DrawingStickerEntityView: DrawingEntityView {
         
     }
     
+    override func selectedTapAction() -> Bool {
+        if case let .link(url, name, positionBelowText, largeMedia, size, compactSize, style) = self.stickerEntity.content {
+            let updatedStyle: DrawingStickerEntity.Content.LinkStyle
+            switch style {
+            case .white:
+                updatedStyle = .black
+            case .black:
+                updatedStyle = .whiteCompact
+            case .whiteCompact:
+                updatedStyle = .blackCompact
+            case .blackCompact:
+                if let _ = size {
+                    updatedStyle = .white
+                } else {
+                    updatedStyle = .whiteCompact
+                }
+            }
+            self.stickerEntity.content = .link(url, name, positionBelowText, largeMedia, size, compactSize, updatedStyle)
+            self.animatedImageView?.image = nil
+            self.update(animated: false)
+            return true
+        } else {
+            return super.selectedTapAction()
+        }
+    }
+    
     func innerLayoutSubview(boundingSize: CGSize) -> CGSize {
         return boundingSize
     }
@@ -698,6 +737,21 @@ public class DrawingStickerEntityView: DrawingEntityView {
 
         if case .message = self.stickerEntity.content, self.animatedImageView == nil {
             let image = self.isNightTheme ? self.stickerEntity.secondaryRenderImage : self.stickerEntity.renderImage
+            if let image {
+                self.setupWithImage(image)
+            }
+        } else if case let .link(_, _, _, _, _, _, style) = self.stickerEntity.content, self.animatedImageView?.image == nil {
+            let image: UIImage?
+            switch style {
+            case .white:
+                image = self.stickerEntity.renderImage
+            case .black:
+                image = self.stickerEntity.secondaryRenderImage
+            case .whiteCompact:
+                image = self.stickerEntity.tertiaryRenderImage
+            case .blackCompact:
+                image = self.stickerEntity.quaternaryRenderImage
+            }
             if let image {
                 self.setupWithImage(image)
             }
@@ -1085,7 +1139,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             let aspectRatio = entity.baseSize.width / entity.baseSize.height
             
             let width: CGFloat
-            let height: CGFloat
+            var height: CGFloat
             
             if entity.baseSize.width > entity.baseSize.height {
                 width = self.bounds.width - inset * 2.0
@@ -1102,6 +1156,14 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             if case .message = entity.content {
                 cornerRadius *= 2.1
                 count = 24
+            } else if case .link = entity.content {
+                count = 24
+                if height > 0.0 && width / height > 5.0 {
+                    height *= 1.6
+                } else {
+                    cornerRadius *= 2.1
+                    height *= 1.2
+                }
             } else if case .image = entity.content {
                 count = 24
             }

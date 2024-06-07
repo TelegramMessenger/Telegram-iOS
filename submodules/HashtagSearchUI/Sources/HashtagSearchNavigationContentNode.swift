@@ -66,8 +66,18 @@ final class HashtagSearchNavigationContentNode: NavigationBarContentNode {
         self.hasCurrentChat = hasCurrentChat
         
         self.cancel = cancel
+
+        let icon: SearchBarNode.Icon
+        if initialQuery.hasPrefix("$") {
+            icon = .cashtag
+        } else {
+            icon = .hashtag
+        }
         
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern, icon: .hashtag, displayBackground: false)
+        var initialQuery = initialQuery
+        initialQuery.removeFirst()
+        
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern, icon: icon, displayBackground: false)
         self.searchBar.text = initialQuery
         self.searchBar.placeholderString = NSAttributedString(string: strings.HashtagSearch_SearchPlaceholder, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         

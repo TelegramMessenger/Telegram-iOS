@@ -84,7 +84,7 @@ func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, enti
                 content = .video(file)
             case .dualVideoReference:
                 return []
-            case .message:
+            case .message, .link:
                 if let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
                     var entities: [MediaEditorComposerEntity] = []
                     entities.append(MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: false))

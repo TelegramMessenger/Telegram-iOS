@@ -150,15 +150,13 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         }
     }
     
-    public struct OpenPhone {
-        public var number: String
-        public var message: Message
-        public var contentNode: ContextExtractedContentContainingNode
-        public var messageNode: ASDisplayNode
+    public struct LongTapParams {
+        public var message: Message?
+        public var contentNode: ContextExtractedContentContainingNode?
+        public var messageNode: ASDisplayNode?
         public var progress: Promise<Bool>?
         
-        public init(number: String, message: Message, contentNode: ContextExtractedContentContainingNode, messageNode: ASDisplayNode, progress: Promise<Bool>? = nil) {
-            self.number = number
+        public init(message: Message?, contentNode: ContextExtractedContentContainingNode? = nil, messageNode: ASDisplayNode? = nil, progress: Promise<Bool>? = nil) {
             self.message = message
             self.contentNode = contentNode
             self.messageNode = messageNode
@@ -206,7 +204,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let chatControllerNode: () -> ASDisplayNode?
     public let presentGlobalOverlayController: (ViewController, Any?) -> Void
     public let callPeer: (PeerId, Bool) -> Void
-    public let longTap: (ChatControllerInteractionLongTapAction, Message?) -> Void
+    public let longTap: (ChatControllerInteractionLongTapAction, LongTapParams?) -> Void
     public let openCheckoutOrReceipt: (MessageId) -> Void
     public let openSearch: () -> Void
     public let setupReply: (MessageId) -> Void
@@ -260,7 +258,6 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openRecommendedChannelContextMenu: (EnginePeer, UIView, ContextGesture?) -> Void
     public let openGroupBoostInfo: (EnginePeer.Id?, Int) -> Void
     public let openStickerEditor: () -> Void
-    public let openPhoneContextMenu: (OpenPhone) -> Void
     public let openAgeRestrictedMessageMedia: (Message, @escaping () -> Void) -> Void
     public let playMessageEffect: (Message) -> Void
     public let editMessageFactCheck: (MessageId) -> Void
@@ -336,7 +333,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         chatControllerNode: @escaping () -> ASDisplayNode?,
         presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void,
         callPeer: @escaping (PeerId, Bool) -> Void,
-        longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void,
+        longTap: @escaping (ChatControllerInteractionLongTapAction, LongTapParams?) -> Void,
         openCheckoutOrReceipt: @escaping (MessageId) -> Void,
         openSearch: @escaping () -> Void,
         setupReply: @escaping (MessageId) -> Void,
@@ -390,7 +387,6 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         openRecommendedChannelContextMenu: @escaping (EnginePeer, UIView, ContextGesture?) -> Void,
         openGroupBoostInfo: @escaping (EnginePeer.Id?, Int) -> Void,
         openStickerEditor: @escaping () -> Void,
-        openPhoneContextMenu: @escaping (OpenPhone) -> Void,
         openAgeRestrictedMessageMedia: @escaping (Message, @escaping () -> Void) -> Void,
         playMessageEffect: @escaping (Message) -> Void,
         editMessageFactCheck: @escaping (MessageId) -> Void,
@@ -499,7 +495,6 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.openRecommendedChannelContextMenu = openRecommendedChannelContextMenu
         self.openGroupBoostInfo = openGroupBoostInfo
         self.openStickerEditor = openStickerEditor
-        self.openPhoneContextMenu = openPhoneContextMenu
         self.openAgeRestrictedMessageMedia = openAgeRestrictedMessageMedia
         self.playMessageEffect = playMessageEffect
         self.editMessageFactCheck = editMessageFactCheck

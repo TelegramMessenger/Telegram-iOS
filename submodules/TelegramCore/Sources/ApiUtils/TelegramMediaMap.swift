@@ -10,8 +10,16 @@ func telegramMediaMapFromApiGeoPoint(_ geo: Api.GeoPoint, title: String?, addres
     }
     switch geo {
         case let .geoPoint(_, long, lat, _, accuracyRadius):
-            return TelegramMediaMap(latitude: lat, longitude: long, heading: heading, accuracyRadius: accuracyRadius.flatMap { Double($0) }, geoPlace: nil, venue: venue, liveBroadcastingTimeout: liveBroadcastingTimeout, liveProximityNotificationRadius: liveProximityNotificationRadius)
+            return TelegramMediaMap(latitude: lat, longitude: long, heading: heading, accuracyRadius: accuracyRadius.flatMap { Double($0) }, venue: venue, liveBroadcastingTimeout: liveBroadcastingTimeout, liveProximityNotificationRadius: liveProximityNotificationRadius)
         case .geoPointEmpty:
-            return TelegramMediaMap(latitude: 0.0, longitude: 0.0, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue, liveBroadcastingTimeout: liveBroadcastingTimeout, liveProximityNotificationRadius: liveProximityNotificationRadius)
+            return TelegramMediaMap(latitude: 0.0, longitude: 0.0, heading: nil, accuracyRadius: nil, venue: venue, liveBroadcastingTimeout: liveBroadcastingTimeout, liveProximityNotificationRadius: liveProximityNotificationRadius)
+    }
+}
+
+
+func mapGeoAddressFromApiGeoPointAddress(_ geo: Api.GeoPointAddress) -> MapGeoAddress {
+    switch geo {
+    case let .geoPointAddress(_, countryIso2, state, city, street):
+        return MapGeoAddress(country: countryIso2, state: state, city: city, street: street)
     }
 }

@@ -2919,7 +2919,7 @@ final class StoryItemSetContainerSendMessage {
             }
             if !hashtag.isEmpty {
                 if peerName == nil {
-                    let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, query: hashtag)
+                    let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, query: hashtag, listContext: nil)
                     navigationController.pushViewController(searchController)
                 } else {
                     let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)
@@ -3348,7 +3348,7 @@ final class StoryItemSetContainerSendMessage {
         switch mediaArea {
         case let .venue(_, venue):
             let action = { [weak controller, weak view] in
-                let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 let locationController = LocationViewController(
                     context: context,
                     updatedPresentationData: updatedPresentationData,
@@ -3431,8 +3431,30 @@ final class StoryItemSetContainerSendMessage {
             }))
         case .reaction:
             return
-        case .url:
-            return
+        case let .link(_, url):
+            let action = {
+                let _ = openUserGeneratedUrl(context: component.context, peerId: component.slice.effectivePeer.id, url: url, concealed: false, skipUrlAuth: false, skipConcealedAlert: false, forceDark: true, present: { [weak controller] c in
+                    controller?.present(c, in: .window(.root))
+                }, openResolved: { [weak self, weak view] resolved in
+                    guard let self, let view else {
+                        return
+                    }
+                    self.openResolved(view: view, result: resolved, forceExternal: false, concealed: false)
+                }, alertDisplayUpdated: { [weak self, weak view] alertController in
+                    guard let self, let view else {
+                        return
+                    }
+                    self.statusController = alertController
+                    view.updateIsProgressPaused()
+                })
+            }
+            if immediate {
+                action()
+                return
+            }
+            actions.append(ContextMenuAction(content: .textWithIcon(title: updatedPresentationData.initial.strings.Story_ViewLink, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: {
+                action()
+            }))
         }
         
         self.selectedMediaArea =  mediaArea

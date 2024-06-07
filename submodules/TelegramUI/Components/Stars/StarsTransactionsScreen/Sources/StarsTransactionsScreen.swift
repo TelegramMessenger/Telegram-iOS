@@ -529,7 +529,8 @@ final class StarsTransactionsScreenComponent: Component {
                             strings: environment.strings,
                             dateTimeFormat: environment.dateTimeFormat,
                             count: self.starsState?.balance ?? 0,
-                            purchaseAvailable: !premiumConfiguration.areStarsDisabled,
+                            rate: nil,
+                            actionAvailable: !premiumConfiguration.areStarsDisabled,
                             buy: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
@@ -713,6 +714,8 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                 buyImpl?()
             }
         ), navigationBarAppearance: .transparent)
+        
+        self.navigationPresentation = .modalInLargeLayout
         
         self.options.set(.single([]) |> then(context.engine.payments.starsTopUpOptions()))
         

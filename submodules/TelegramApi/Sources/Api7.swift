@@ -649,6 +649,58 @@ public extension Api {
     }
 }
 public extension Api {
+    enum GeoPointAddress: TypeConstructorDescription {
+        case geoPointAddress(flags: Int32, countryIso2: String, state: String?, city: String?, street: String?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .geoPointAddress(let flags, let countryIso2, let state, let city, let street):
+                    if boxed {
+                        buffer.appendInt32(-565420653)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(countryIso2, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(state!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(city!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(street!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .geoPointAddress(let flags, let countryIso2, let state, let city, let street):
+                return ("geoPointAddress", [("flags", flags as Any), ("countryIso2", countryIso2 as Any), ("state", state as Any), ("city", city as Any), ("street", street as Any)])
+    }
+    }
+    
+        public static func parse_geoPointAddress(_ reader: BufferReader) -> GeoPointAddress? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
+            var _5: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_5 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.GeoPointAddress.geoPointAddress(flags: _1!, countryIso2: _2!, state: _3, city: _4, street: _5)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum GlobalPrivacySettings: TypeConstructorDescription {
         case globalPrivacySettings(flags: Int32)
     
@@ -1258,56 +1310,6 @@ public extension Api {
         }
         public static func parse_inlineQueryPeerTypeSameBotPM(_ reader: BufferReader) -> InlineQueryPeerType? {
             return Api.InlineQueryPeerType.inlineQueryPeerTypeSameBotPM
-        }
-    
-    }
-}
-public extension Api {
-    enum InputAppEvent: TypeConstructorDescription {
-        case inputAppEvent(time: Double, type: String, peer: Int64, data: Api.JSONValue)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputAppEvent(let time, let type, let peer, let data):
-                    if boxed {
-                        buffer.appendInt32(488313413)
-                    }
-                    serializeDouble(time, buffer: buffer, boxed: false)
-                    serializeString(type, buffer: buffer, boxed: false)
-                    serializeInt64(peer, buffer: buffer, boxed: false)
-                    data.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputAppEvent(let time, let type, let peer, let data):
-                return ("inputAppEvent", [("time", time as Any), ("type", type as Any), ("peer", peer as Any), ("data", data as Any)])
-    }
-    }
-    
-        public static func parse_inputAppEvent(_ reader: BufferReader) -> InputAppEvent? {
-            var _1: Double?
-            _1 = reader.readDouble()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: Api.JSONValue?
-            if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.JSONValue
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputAppEvent.inputAppEvent(time: _1!, type: _2!, peer: _3!, data: _4!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

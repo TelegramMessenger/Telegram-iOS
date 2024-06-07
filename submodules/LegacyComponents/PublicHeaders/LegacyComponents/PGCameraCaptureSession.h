@@ -30,6 +30,9 @@
 @property (nonatomic, readonly) CGFloat minZoomLevel;
 @property (nonatomic, readonly) CGFloat maxZoomLevel;
 
+@property (nonatomic, readonly) int32_t maxMarkZoomValue;
+@property (nonatomic, readonly) int32_t secondMarkZoomValue;
+
 - (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated;
 
 @property (nonatomic, readonly) bool hasUltrawideCamera;

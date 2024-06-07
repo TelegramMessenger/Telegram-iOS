@@ -290,6 +290,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1107729093] = { return Api.Game.parse_game($0) }
     dict[-1297942941] = { return Api.GeoPoint.parse_geoPoint($0) }
     dict[286776671] = { return Api.GeoPoint.parse_geoPointEmpty($0) }
+    dict[-565420653] = { return Api.GeoPointAddress.parse_geoPointAddress($0) }
     dict[1934380235] = { return Api.GlobalPrivacySettings.parse_globalPrivacySettings($0) }
     dict[-711498484] = { return Api.GroupCall.parse_groupCall($0) }
     dict[2004925620] = { return Api.GroupCall.parse_groupCallDiscarded($0) }
@@ -513,7 +514,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[577893055] = { return Api.MediaArea.parse_inputMediaAreaChannelPost($0) }
     dict[-1300094593] = { return Api.MediaArea.parse_inputMediaAreaVenue($0) }
     dict[1996756655] = { return Api.MediaArea.parse_mediaAreaChannelPost($0) }
-    dict[-544523486] = { return Api.MediaArea.parse_mediaAreaGeoPoint($0) }
+    dict[-891992787] = { return Api.MediaArea.parse_mediaAreaGeoPoint($0) }
     dict[340088945] = { return Api.MediaArea.parse_mediaAreaSuggestedReaction($0) }
     dict[926421125] = { return Api.MediaArea.parse_mediaAreaUrl($0) }
     dict[-1098720356] = { return Api.MediaArea.parse_mediaAreaVenue($0) }
@@ -1383,7 +1384,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
@@ -1626,6 +1627,8 @@ public extension Api {
             case let _1 as Api.Game:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.GeoPoint:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.GeoPointAddress:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.GlobalPrivacySettings:
                 _1.serialize(buffer, boxed)

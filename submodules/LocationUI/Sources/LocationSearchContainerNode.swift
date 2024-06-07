@@ -194,7 +194,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
                             guard let placemarkLocation = placemark.location else {
                                 continue
                             }
-                            let location = TelegramMediaMap(latitude: placemarkLocation.coordinate.latitude, longitude: placemarkLocation.coordinate.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
+                            let location = TelegramMediaMap(latitude: placemarkLocation.coordinate.latitude, longitude: placemarkLocation.coordinate.longitude, heading: nil, accuracyRadius: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
                             
                             entries.append(LocationSearchEntry(index: index, theme: themeAndStrings.0, location: location, queryId: nil, resultId: nil, title: placemark.name ?? "Name", distance: placemarkLocation.distance(from: currentLocation)))
                             

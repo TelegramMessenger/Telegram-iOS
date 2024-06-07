@@ -22,13 +22,16 @@ final class StorySearchGridScreenComponent: Component {
     
     let context: AccountContext
     let searchQuery: String
+    let listContext: SearchStoryListContext?
 
     init(
         context: AccountContext,
-        searchQuery: String
+        searchQuery: String,
+        listContext: SearchStoryListContext? = nil
     ) {
         self.context = context
         self.searchQuery = searchQuery
+        self.listContext = listContext
     }
 
     static func ==(lhs: StorySearchGridScreenComponent, rhs: StorySearchGridScreenComponent) -> Bool {
@@ -115,7 +118,7 @@ final class StorySearchGridScreenComponent: Component {
                         }
                         return self.environment?.controller()?.navigationController as? NavigationController
                     },
-                    listContext: nil
+                    listContext: component.listContext
                 )
                 paneNode.isEmptyUpdated = { [weak self] _ in
                     guard let self else {
@@ -178,14 +181,16 @@ public class StorySearchGridScreen: ViewControllerComponentContainer {
     
     public init(
         context: AccountContext,
-        searchQuery: String
+        searchQuery: String,
+        listContext: SearchStoryListContext? = nil
     ) {
         self.context = context
         self.searchQuery = searchQuery
         
         super.init(context: context, component: StorySearchGridScreenComponent(
             context: context,
-            searchQuery: searchQuery
+            searchQuery: searchQuery,
+            listContext: listContext
         ), navigationBarAppearance: .default, theme: .default)
         
         let presentationData = context.sharedContext.currentPresentationData.with({ $0 })

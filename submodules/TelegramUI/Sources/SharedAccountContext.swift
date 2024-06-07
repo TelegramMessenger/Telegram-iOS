@@ -1775,7 +1775,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, openRecommendedChannelContextMenu: { _, _, _ in
         }, openGroupBoostInfo: { _, _ in
         }, openStickerEditor: {
-        }, openPhoneContextMenu: { _ in
         }, openAgeRestrictedMessageMedia: { _, _ in
         }, playMessageEffect: { _ in
         }, editMessageFactCheck: { _ in
@@ -1908,8 +1907,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return HashtagSearchController(context: context, peer: peer, query: query, all: all)
     }
     
-    public func makeStorySearchController(context: AccountContext, query: String) -> ViewController {
-        return StorySearchGridScreen(context: context, searchQuery: query)
+    public func makeStorySearchController(context: AccountContext, query: String, listContext: SearchStoryListContext?) -> ViewController {
+        return StorySearchGridScreen(context: context, searchQuery: query, listContext: listContext)
     }
     
     public func makeMyStoriesController(context: AccountContext, isArchive: Bool) -> ViewController {
@@ -2637,6 +2636,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeStarsReceiptScreen(context: AccountContext, receipt: BotPaymentReceipt) -> ViewController {
         return StarsTransactionScreen(context: context, subject: .receipt(receipt), action: {})
+    }
+    
+    public func makeStarsStatisticsScreen(context: AccountContext, starsContext: StarsContext) -> ViewController {
+        return StarsStatisticsScreen(context: context, starsContext: starsContext)
     }
 }
 

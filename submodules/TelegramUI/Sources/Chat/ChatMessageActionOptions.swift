@@ -19,6 +19,7 @@ import TelegramNotices
 import ChatMessageWebpageBubbleContentNode
 import PremiumUI
 import UndoUI
+import WebsiteType
 
 private enum OptionsId: Hashable {
     case reply

@@ -2928,6 +2928,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                     } else if case let .channel(channel) = peer {
+                        if channel.hasPermission(.postStories) {
+                            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.StoryFeed_ContextAddStory, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] c, _ in
+                                c?.dismiss(completion: {
+                                    guard let self else {
+                                        return
+                                    }
+                                    
+                                    self.openStoryCamera(fromList: true)
+                                })
+                            })))
+                        }
+                        
                         let openTitle: String
                         let openIcon: String
                         switch channel.info {

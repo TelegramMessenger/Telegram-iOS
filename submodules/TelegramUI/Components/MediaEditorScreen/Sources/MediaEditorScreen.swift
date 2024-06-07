@@ -4173,73 +4173,74 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 },
                 completion: { [weak self] location, queryId, resultId, address, countryCode in
-                if let self  {
-                    let emojiFile: Signal<TelegramMediaFile?, NoError>
-                    if let countryCode {
-                        let flag = flagEmoji(countryCode: countryCode)
-                        emojiFile = self.staticEmojiPack.get()
-                        |> filter { result in
-                            if case .result = result {
-                                return true
-                            } else {
-                                return false
-                            }
-                        }
-                        |> take(1)
-                        |> map { result -> TelegramMediaFile? in
-                            if case let .result(_, items, _) = result, let match = items.first(where: { item in
-                                var displayText: String?
-                                for attribute in item.file.attributes {
-                                    if case let .CustomEmoji(_, _, alt, _) = attribute {
-                                        displayText = alt
-                                        break
-                                    }
-                                }
-                                if let displayText, displayText.hasPrefix(flag) {
+                    if let self  {
+                        let emojiFile: Signal<TelegramMediaFile?, NoError>
+                        if let countryCode {
+                            let flag = flagEmoji(countryCode: countryCode)
+                            emojiFile = self.staticEmojiPack.get()
+                            |> filter { result in
+                                if case .result = result {
                                     return true
                                 } else {
                                     return false
                                 }
-                            }) {
-                                return match.file
-                            } else {
-                                return nil
                             }
-                        }
-                    } else {
-                        emojiFile = .single(nil)
-                    }
-                    
-                    let _ = emojiFile.start(next: { [weak self] emojiFile in
-                        guard let self else {
-                            return
-                        }
-                        let title: String
-                        if let venueTitle = location.venue?.title {
-                            title = venueTitle
+                            |> take(1)
+                            |> map { result -> TelegramMediaFile? in
+                                if case let .result(_, items, _) = result, let match = items.first(where: { item in
+                                    var displayText: String?
+                                    for attribute in item.file.attributes {
+                                        if case let .CustomEmoji(_, _, alt, _) = attribute {
+                                            displayText = alt
+                                            break
+                                        }
+                                    }
+                                    if let displayText, displayText.hasPrefix(flag) {
+                                        return true
+                                    } else {
+                                        return false
+                                    }
+                                }) {
+                                    return match.file
+                                } else {
+                                    return nil
+                                }
+                            }
                         } else {
-                            title = address ?? "Location"
+                            emojiFile = .single(nil)
                         }
-                        let position = existingEntity?.position
-                        let scale = existingEntity?.scale ?? 1.0
-                        if let existingEntity {
-                            self.entitiesView.remove(uuid: existingEntity.uuid, animated: true)
-                        }
-                        self.interaction?.insertEntity(
-                            DrawingLocationEntity(
-                                title: title,
-                                style: existingEntity?.style ?? .white,
-                                location: location,
-                                icon: emojiFile,
-                                queryId: queryId,
-                                resultId: resultId
-                            ),
-                            scale: scale,
-                            position: position
-                        )
-                    })
+                        
+                        let _ = emojiFile.start(next: { [weak self] emojiFile in
+                            guard let self else {
+                                return
+                            }
+                            let title: String
+                            if let venueTitle = location.venue?.title {
+                                title = venueTitle
+                            } else {
+                                title = address ?? "Location"
+                            }
+                            let position = existingEntity?.position
+                            let scale = existingEntity?.scale ?? 1.0
+                            if let existingEntity {
+                                self.entitiesView.remove(uuid: existingEntity.uuid, animated: true)
+                            }
+                            self.interaction?.insertEntity(
+                                DrawingLocationEntity(
+                                    title: title,
+                                    style: existingEntity?.style ?? .white,
+                                    location: location,
+                                    icon: emojiFile,
+                                    queryId: queryId,
+                                    resultId: resultId
+                                ),
+                                scale: scale,
+                                position: position
+                            )
+                        })
+                    }
                 }
-            })
+            )
             locationController.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak locationController] transition in
                 if let self, let locationController {
                     let transitionFactor = locationController.modalStyleOverlayTransitionFactor
@@ -4475,6 +4476,39 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
             let contextController = ContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: UIScreen.main.bounds, customPosition: CGPoint(x: 0.0, y: -3.0))), items: .single(ContextController.Items(content: .list(items))))
             self.controller?.present(contextController, in: .window(.root))
+        }
+        
+        func addLink() {
+            guard let controller = self.controller else {
+                return
+            }
+                        
+            let linkController = CreateLinkScreen(context: controller.context, link: nil, completion: { [weak self] url, result in
+                guard let self else {
+                    return
+                }
+                
+                let entity = DrawingStickerEntity(
+                    content: .link(url, result.name, result.positionBelowText, result.largeMedia, result.image?.size, result.compactLightImage.size, result.image != nil ? .white : .whiteCompact)
+                )
+                entity.renderImage = result.image
+                entity.secondaryRenderImage = result.nightImage
+                entity.tertiaryRenderImage = result.compactLightImage
+                entity.quaternaryRenderImage = result.compactDarkImage
+                
+                let fraction: CGFloat
+                if let image = result.image {
+                    fraction = max(image.size.width, image.size.height) / 353.0
+                } else {
+                    fraction = 1.0
+                }
+                self.interaction?.insertEntity(
+                    entity,
+                    scale: min(6.0, 3.3 * fraction) * 0.5,
+                    position: nil
+                )
+            })
+            controller.push(linkController)
         }
         
         func addReaction() {
@@ -4745,6 +4779,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     controller.addReaction = { [weak self, weak controller] in
                                         if let self {
                                             self.addReaction()
+                                            
+                                            self.stickerScreen = nil
+                                            controller?.dismiss(animated: true)
+                                        }
+                                    }
+                                    controller.addLink = { [weak self, weak controller] in
+                                        if let self {
+                                            self.addLink()
                                             
                                             self.stickerScreen = nil
                                             controller?.dismiss(animated: true)
@@ -5675,6 +5717,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             a(.default)
             
             self?.node.presentGallery()
+        })))
+        //TODO:localize
+        items.append(.action(ContextMenuActionItem(text: "Link", icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self] _, a in
+            a(.default)
+            
+            self?.node.addLink()
         })))
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Location, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LocationSmall"), color: theme.contextMenu.primaryColor)

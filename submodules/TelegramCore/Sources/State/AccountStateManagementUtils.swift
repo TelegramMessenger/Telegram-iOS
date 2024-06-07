@@ -1554,9 +1554,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 switch draft {
                     case .draftMessageEmpty:
                         inputState = nil
-                    case let .draftMessage(_, replyToMsgHeader, message, entities, media, date, effect):
+                    case let .draftMessage(_, replyToMsgHeader, message, entities, media, date, _):
                         let _ = media
-                        let _ = effect
                         var replySubject: EngineMessageReplySubject?
                         if let replyToMsgHeader = replyToMsgHeader {
                             switch replyToMsgHeader {

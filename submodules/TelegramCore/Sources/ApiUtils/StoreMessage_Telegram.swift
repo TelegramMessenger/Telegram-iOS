@@ -482,7 +482,8 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
         return nil
     case .inputMediaAreaVenue:
         return nil
-    case let .mediaAreaGeoPoint(coordinates, geo):
+    case let .mediaAreaGeoPoint(_, coordinates, geo, address):
+        let _ = address
         let latitude: Double
         let longitude: Double
         switch geo {
@@ -493,7 +494,7 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
             latitude = 0.0
             longitude = 0.0
         }
-        return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(latitude: latitude, longitude: longitude, venue: nil, queryId: nil, resultId: nil))
+        return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(latitude: latitude, longitude: longitude, venue: nil, address: address.flatMap(mapGeoAddressFromApiGeoPointAddress), queryId: nil, resultId: nil))
     case let .mediaAreaVenue(coordinates, geo, title, address, provider, venueId, venueType):
         let latitude: Double
         let longitude: Double
@@ -505,7 +506,7 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
             latitude = 0.0
             longitude = 0.0
         }
-        return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(latitude: latitude, longitude: longitude, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: venueType), queryId: nil, resultId: nil))
+        return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(latitude: latitude, longitude: longitude, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: venueType), address: nil, queryId: nil, resultId: nil))
     case let .mediaAreaSuggestedReaction(flags, coordinates, reaction):
         if let reaction = MessageReaction.Reaction(apiReaction: reaction) {
             var parsedFlags = MediaArea.ReactionFlags()
@@ -520,13 +521,13 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
             return nil
         }
     case let .mediaAreaUrl(coordinates, url):
-        return .url(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), url: url)
+        return .link(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), url: url)
     case let .mediaAreaChannelPost(coordinates, channelId, messageId):
         return .channelMessage(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), messageId: EngineMessage.Id(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: messageId))
     }
 }
 
-func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea], transaction: Transaction) -> [Api.MediaArea] {
+func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea], transaction: Transaction?) -> [Api.MediaArea] {
     var apiMediaAreas: [Api.MediaArea] = []
     for area in mediaAreas {
         let coordinates = area.coordinates
@@ -538,7 +539,23 @@ func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea], transaction: Transac
             } else if let venueInfo = venue.venue {
                 apiMediaAreas.append(.mediaAreaVenue(coordinates: inputCoordinates, geo: .geoPoint(flags: 0, long: venue.longitude, lat: venue.latitude, accessHash: 0, accuracyRadius: nil), title: venueInfo.title, address: venueInfo.address ?? "", provider: venueInfo.provider ?? "", venueId: venueInfo.id ?? "", venueType: venueInfo.type ?? ""))
             } else {
-                apiMediaAreas.append(.mediaAreaGeoPoint(coordinates: inputCoordinates, geo: .geoPoint(flags: 0, long: venue.longitude, lat: venue.latitude, accessHash: 0, accuracyRadius: nil)))
+                var flags: Int32 = 0
+                var inputAddress: Api.GeoPointAddress?
+                if let address = venue.address {
+                    var addressFlags: Int32 = 0
+                    if let _ = address.state {
+                        addressFlags |= (1 << 0)
+                    }
+                    if let _ = address.city {
+                        addressFlags |= (1 << 1)
+                    }
+                    if let _ = address.street {
+                        addressFlags |= (1 << 2)
+                    }
+                    inputAddress = .geoPointAddress(flags: addressFlags, countryIso2: address.country, state: address.state, city: address.city, street: address.street)
+                    flags |= (1 << 0)
+                }
+                apiMediaAreas.append(.mediaAreaGeoPoint(flags: flags, coordinates: inputCoordinates, geo: .geoPoint(flags: 0, long: venue.longitude, lat: venue.latitude, accessHash: 0, accuracyRadius: nil), address: inputAddress))
             }
         case let .reaction(_, reaction, flags):
             var apiFlags: Int32 = 0
@@ -550,10 +567,10 @@ func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea], transaction: Transac
             }
             apiMediaAreas.append(.mediaAreaSuggestedReaction(flags: apiFlags, coordinates: inputCoordinates, reaction: reaction.apiReaction))
         case let .channelMessage(_, messageId):
-            if let peer = transaction.getPeer(messageId.peerId), let inputChannel = apiInputChannel(peer) {
+            if let transaction, let peer = transaction.getPeer(messageId.peerId), let inputChannel = apiInputChannel(peer) {
                 apiMediaAreas.append(.inputMediaAreaChannelPost(coordinates: inputCoordinates, channel: inputChannel, msgId: messageId.id))
             }
-        case let .url(_, url):
+        case let .link(_, url):
             apiMediaAreas.append(.mediaAreaUrl(coordinates: inputCoordinates, url: url))
         }
     }

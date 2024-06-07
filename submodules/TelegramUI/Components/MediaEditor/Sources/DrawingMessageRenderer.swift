@@ -86,16 +86,18 @@ public final class DrawingMessageRenderer {
         private let messages: [Message]
         private let isNight: Bool
         private let isOverlay: Bool
+        private let isLink: Bool
         
         private let messagesContainerNode: ASDisplayNode
         private var avatarHeaderNode: ListViewItemHeaderNode?
         private var messageNodes: [ListViewItemNode]?
         
-        init(context: AccountContext, messages: [Message], isNight: Bool = false, isOverlay: Bool = false) {
+        init(context: AccountContext, messages: [Message], isNight: Bool = false, isOverlay: Bool = false, isLink: Bool = false) {
             self.context = context
             self.messages = messages
             self.isNight = isNight
             self.isOverlay = isOverlay
+            self.isLink = isLink
             
             self.messagesContainerNode = ASDisplayNode()
             self.messagesContainerNode.clipsToBounds = true
@@ -187,12 +189,26 @@ public final class DrawingMessageRenderer {
                     
             let theme = presentationData.theme.withUpdated(preview: true)
             
-            let avatarHeaderItem = self.context.sharedContext.makeChatMessageAvatarHeaderItem(context: self.context, timestamp: self.messages.first?.timestamp ?? 0, peer: self.messages.first!.peers[self.messages.first!.author!.id]!, message: self.messages.first!, theme: theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: presentationData.chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder)
-        
-            let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages, theme: theme, strings: presentationData.strings, wallpaper: presentationData.theme.chat.defaultWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: presentationData.chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false)]
+            let chatBubbleCorners = PresentationChatBubbleCorners(
+                mainRadius: presentationData.chatBubbleCorners.mainRadius,
+                auxiliaryRadius: presentationData.chatBubbleCorners.auxiliaryRadius,
+                mergeBubbleCorners: presentationData.chatBubbleCorners.mergeBubbleCorners,
+                hasTails: false
+            )
+            
+            let avatarHeaderItem: ListViewItemHeader?
+            if let author = self.messages.first?.author {
+                avatarHeaderItem = self.context.sharedContext.makeChatMessageAvatarHeaderItem(context: self.context, timestamp: self.messages.first?.timestamp ?? 0, peer: self.messages.first!.peers[author.id]!, message: self.messages.first!, theme: theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder)
+            } else {
+                avatarHeaderItem = nil
+            }
+            let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages, theme: theme, strings: presentationData.strings, wallpaper: presentationData.theme.chat.defaultWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false)]
         
             let inset: CGFloat = 16.0
-            let leftInset: CGFloat = 37.0
+            var leftInset: CGFloat = 37.0
+            if self.isLink {
+                leftInset = -6.0
+            }
             let containerWidth = layout.size.width - inset * 2.0
             let params = ListViewItemLayoutParams(width: containerWidth, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
             
@@ -264,22 +280,29 @@ public final class DrawingMessageRenderer {
                 }
             }
                     
-            let avatarHeaderNode: ListViewItemHeaderNode
-            if let currentAvatarHeaderNode = self.avatarHeaderNode {
-                avatarHeaderNode = currentAvatarHeaderNode
-                avatarHeaderItem.updateNode(avatarHeaderNode, previous: nil, next: avatarHeaderItem)
-            } else {
-                avatarHeaderNode = avatarHeaderItem.node(synchronousLoad: true)
-                avatarHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-                self.messagesContainerNode.addSubnode(avatarHeaderNode)
-                self.avatarHeaderNode = avatarHeaderNode
+            if let avatarHeaderItem {
+                let avatarHeaderNode: ListViewItemHeaderNode
+                if let currentAvatarHeaderNode = self.avatarHeaderNode {
+                    avatarHeaderNode = currentAvatarHeaderNode
+                    avatarHeaderItem.updateNode(avatarHeaderNode, previous: nil, next: avatarHeaderItem)
+                } else {
+                    avatarHeaderNode = avatarHeaderItem.node(synchronousLoad: true)
+                    avatarHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                    self.messagesContainerNode.addSubnode(avatarHeaderNode)
+                    self.avatarHeaderNode = avatarHeaderNode
+                }
+             
+                avatarHeaderNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 3.0), size: CGSize(width: layout.size.width, height: avatarHeaderItem.height))
+                avatarHeaderNode.updateLayout(size: size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
             }
-                    
-            avatarHeaderNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 3.0), size: CGSize(width: layout.size.width, height: avatarHeaderItem.height))
-            avatarHeaderNode.updateLayout(size: size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
             
-            let containerSize = CGSize(width: width + leftInset + 6.0, height: height)
-            self.frame = CGRect(origin: CGPoint(), size: containerSize)
+            var finalWidth: CGFloat = width
+            if leftInset > 0.0 {
+                finalWidth += leftInset + 6.0
+            }
+            
+            let containerSize = CGSize(width: finalWidth, height: height)
+            self.frame = CGRect(origin: CGPoint(x: -1000.0, y: 0.0), size: containerSize)
             self.messagesContainerNode.frame = CGRect(origin: CGPoint(), size: containerSize)
             
             return containerSize
@@ -306,13 +329,13 @@ public final class DrawingMessageRenderer {
     private let nightContainerNode: ContainerNode
     private let overlayContainerNode: ContainerNode
     
-    public init(context: AccountContext, messages: [Message], parentView: UIView) {
+    public init(context: AccountContext, messages: [Message], parentView: UIView, isLink: Bool = false) {
         self.context = context
         self.messages = messages
         
-        self.dayContainerNode = ContainerNode(context: context, messages: messages)
-        self.nightContainerNode = ContainerNode(context: context, messages: messages, isNight: true)
-        self.overlayContainerNode = ContainerNode(context: context, messages: messages, isOverlay: true)
+        self.dayContainerNode = ContainerNode(context: context, messages: messages, isLink: isLink)
+        self.nightContainerNode = ContainerNode(context: context, messages: messages, isNight: true, isLink: isLink)
+        self.overlayContainerNode = ContainerNode(context: context, messages: messages, isOverlay: true, isLink: isLink)
         
         parentView.addSubview(self.dayContainerNode.view)
         parentView.addSubview(self.nightContainerNode.view)

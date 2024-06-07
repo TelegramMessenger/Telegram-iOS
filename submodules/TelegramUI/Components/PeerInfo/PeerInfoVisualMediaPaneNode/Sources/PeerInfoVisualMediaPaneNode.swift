@@ -1192,7 +1192,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
                 chatControllerInteraction.openInstantPage(message, data)
             },
             longTap: { action, message in
-                chatControllerInteraction.longTap(action, message)
+                chatControllerInteraction.longTap(action, ChatControllerInteraction.LongTapParams(message: message))
             },
             getHiddenMedia: {
                 return chatControllerInteraction.hiddenMedia

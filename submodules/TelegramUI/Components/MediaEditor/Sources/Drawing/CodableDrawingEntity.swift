@@ -116,12 +116,18 @@ public enum CodableDrawingEntity: Equatable {
                     latitude: entity.location.latitude,
                     longitude: entity.location.longitude,
                     venue: entity.location.venue,
+                    address: entity.location.address,
                     queryId: entity.queryId,
                     resultId: entity.resultId
                 )
             )
         case let .sticker(entity):
-            if case let .file(_, type) = entity.content, case let .reaction(reaction, style) = type {
+            if case let .link(url, _, _, _, _, _, _) = entity.content {
+                return .link(
+                    coordinates: coordinates,
+                    url: url
+                )
+            } else if case let .file(_, type) = entity.content, case let .reaction(reaction, style) = type {
                 var flags: MediaArea.ReactionFlags = []
                 if case .black = style {
                     flags.insert(.isDark)
@@ -135,7 +141,10 @@ public enum CodableDrawingEntity: Equatable {
                     flags: flags
                 )
             } else if case let .message(messageIds, _, _, _, _) = entity.content, let messageId = messageIds.first {
-                return .channelMessage(coordinates: coordinates, messageId: messageId)
+                return .channelMessage(
+                    coordinates: coordinates,
+                    messageId: messageId
+                )
             } else {
                 return nil
             }

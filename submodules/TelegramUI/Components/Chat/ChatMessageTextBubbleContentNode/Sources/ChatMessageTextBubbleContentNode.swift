@@ -304,6 +304,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     } else {
                         displayStatus = false
                     }
+                } else if !item.presentationData.chatBubbleCorners.hasTails {
+                    displayStatus = false
                 }
                 if displayStatus {
                     if incoming {
@@ -887,6 +889,36 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         
+        func makeActivate(_ urlRange: NSRange?) -> (() -> Promise<Bool>?)? {
+            return { [weak self] in
+                guard let self else {
+                    return nil
+                }
+                
+                let promise = Promise<Bool>()
+                
+                self.linkProgressDisposable?.dispose()
+                
+                if self.linkProgressRange != nil {
+                    self.linkProgressRange = nil
+                    self.updateLinkProgressState()
+                }
+                
+                self.linkProgressDisposable = (promise.get() |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+                    guard let self else {
+                        return
+                    }
+                    let updatedRange: NSRange? = value ? urlRange : nil
+                    if self.linkProgressRange != updatedRange {
+                        self.linkProgressRange = updatedRange
+                        self.updateLinkProgressState()
+                    }
+                })
+                
+                return promise
+            }
+        }
+        
         let textNodeFrame = self.textNode.textNode.frame
         let textLocalPoint = CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)
         if let (index, attributes) = self.textNode.textNode.attributesAtPoint(textLocalPoint) {
@@ -907,33 +939,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     content = .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed))
                 }
                 
-                return ChatMessageBubbleContentTapAction(content: content, activate: { [weak self] in
-                    guard let self else {
-                        return nil
-                    }
-                    
-                    let promise = Promise<Bool>()
-                    
-                    self.linkProgressDisposable?.dispose()
-                    
-                    if self.linkProgressRange != nil {
-                        self.linkProgressRange = nil
-                        self.updateLinkProgressState()
-                    }
-                    
-                    self.linkProgressDisposable = (promise.get() |> deliverOnMainQueue).startStrict(next: { [weak self] value in
-                        guard let self else {
-                            return
-                        }
-                        let updatedRange: NSRange? = value ? urlRange : nil
-                        if self.linkProgressRange != updatedRange {
-                            self.linkProgressRange = updatedRange
-                            self.updateLinkProgressState()
-                        }
-                    })
-                    
-                    return promise
-                })
+                return ChatMessageBubbleContentTapAction(content: content, activate: makeActivate(urlRange))
             } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return ChatMessageBubbleContentTapAction(content: .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false))
             } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
@@ -942,33 +948,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     urlRange = urlRangeValue
                 }
                 
-                return ChatMessageBubbleContentTapAction(content: .textMention(peerName), activate: { [weak self] in
-                    guard let self else {
-                        return nil
-                    }
-                    
-                    let promise = Promise<Bool>()
-                    
-                    self.linkProgressDisposable?.dispose()
-                    
-                    if self.linkProgressRange != nil {
-                        self.linkProgressRange = nil
-                        self.updateLinkProgressState()
-                    }
-                    
-                    self.linkProgressDisposable = (promise.get() |> deliverOnMainQueue).startStrict(next: { [weak self] value in
-                        guard let self else {
-                            return
-                        }
-                        let updatedRange: NSRange? = value ? urlRange : nil
-                        if self.linkProgressRange != updatedRange {
-                            self.linkProgressRange = updatedRange
-                            self.updateLinkProgressState()
-                        }
-                    })
-                    
-                    return promise
-                })
+                return ChatMessageBubbleContentTapAction(content: .textMention(peerName), activate: makeActivate(urlRange))
             } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
                 return ChatMessageBubbleContentTapAction(content: .botCommand(botCommand))
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
@@ -976,7 +956,11 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             } else if let timecode = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Timecode)] as? TelegramTimecode {
                 return ChatMessageBubbleContentTapAction(content: .timecode(timecode.time, timecode.text))
             } else if let bankCard = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard)] as? String {
-                return ChatMessageBubbleContentTapAction(content: .bankCard(bankCard))
+                var urlRange: NSRange?
+                if let (_, _, urlRangeValue) = self.textNode.textNode.attributeSubstringWithRange(name: TelegramTextAttributes.BankCard, index: index) {
+                    urlRange = urlRangeValue
+                }
+                return ChatMessageBubbleContentTapAction(content: .bankCard(bankCard), activate: makeActivate(urlRange))
             } else if let pre = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre)] as? String {
                 return ChatMessageBubbleContentTapAction(content: .copy(pre))
             } else if let code = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Code)] as? String {

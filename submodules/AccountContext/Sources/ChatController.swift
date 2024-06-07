@@ -227,6 +227,7 @@ public extension ChatMessageItemAssociatedData {
 
 public enum ChatControllerInteractionLongTapAction {
     case url(String)
+    case phone(String)
     case mention(String)
     case peerMention(EnginePeer.Id, String)
     case command(String)

@@ -3088,12 +3088,15 @@ public final class DrawingToolsInteraction {
             var isVideo = false
             var isAdditional = false
             var isMessage = false
+            var isLink = false
             if let entity = entityView.entity as? DrawingStickerEntity {
                 if case let .dualVideoReference(isAdditionalValue) = entity.content {
                     isVideo = true
                     isAdditional = isAdditionalValue
                 } else if case .message = entity.content {
                     isMessage = true
+                } else if case .link = entity.content {
+                    isLink = true
                 }
             }
             
@@ -3112,7 +3115,7 @@ public final class DrawingToolsInteraction {
                     }
                 }))
             }
-            if let entityView = entityView as? DrawingLocationEntityView {
+            if entityView is DrawingLocationEntityView || isLink {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Edit, accessibilityLabel: presentationData.strings.Paint_Edit), action: { [weak self, weak entityView] in
                     if let self, let entityView {
                         self.editEntity(entityView.entity)
@@ -3126,7 +3129,7 @@ public final class DrawingToolsInteraction {
                         self.entitiesView.selectEntity(entityView.entity)
                     }
                 }))
-            } else if (entityView is DrawingStickerEntityView || entityView is DrawingBubbleEntityView) && !isVideo && !isMessage {
+            } else if (entityView is DrawingStickerEntityView || entityView is DrawingBubbleEntityView) && !isVideo && !isMessage && !isLink {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Flip, accessibilityLabel: presentationData.strings.Paint_Flip), action: { [weak self] in
                     if let self {
                         self.flipSelectedEntity()
