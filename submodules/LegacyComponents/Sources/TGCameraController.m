@@ -307,12 +307,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
     {
-        _interfaceView = [[TGCameraMainPhoneView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera];
+        _interfaceView = [[TGCameraMainPhoneView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera camera:_camera];
         [_interfaceView setInterfaceOrientation:interfaceOrientation animated:false];
     }
     else
     {
-        _interfaceView = [[TGCameraMainTabletView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera];
+        _interfaceView = [[TGCameraMainTabletView alloc] initWithFrame:screenBounds avatar:_intent == TGCameraControllerAvatarIntent videoModeByDefault:_intent == TGCameraControllerGenericVideoOnlyIntent hasUltrawideCamera:_camera.hasUltrawideCamera hasTelephotoCamera:_camera.hasTelephotoCamera camera:_camera];
         [_interfaceView setInterfaceOrientation:interfaceOrientation animated:false];
         
         CGSize referenceSize = [self referenceViewSizeForOrientation:interfaceOrientation];
@@ -806,29 +806,29 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         }
     };
     
-    _camera.captureSession.crossfadeNeeded = ^{
-        __strong TGCameraController *strongSelf = weakSelf;
-        if (strongSelf != nil)
-        {
-            if (strongSelf->_crossfadingForZoom) {
-                return;
-            }
-            strongSelf->_crossfadingForZoom = true;
-            
-            [strongSelf->_camera captureNextFrameCompletion:^(UIImage *image)
-            {
-                TGDispatchOnMainThread(^
-                {
-                    [strongSelf->_previewView beginTransitionWithSnapshotImage:image animated:false];
-                    
-                    TGDispatchAfter(0.15, dispatch_get_main_queue(), ^{
-                        [strongSelf->_previewView endTransitionAnimated:true];
-                        strongSelf->_crossfadingForZoom = false;
-                    });
-                });
-            }];
-        };
-    };
+//    _camera.captureSession.crossfadeNeeded = ^{
+//        __strong TGCameraController *strongSelf = weakSelf;
+//        if (strongSelf != nil)
+//        {
+//            if (strongSelf->_crossfadingForZoom) {
+//                return;
+//            }
+//            strongSelf->_crossfadingForZoom = true;
+//            
+//            [strongSelf->_camera captureNextFrameCompletion:^(UIImage *image)
+//            {
+//                TGDispatchOnMainThread(^
+//                {
+//                    [strongSelf->_previewView beginTransitionWithSnapshotImage:image animated:false];
+//                    
+//                    TGDispatchAfter(0.15, dispatch_get_main_queue(), ^{
+//                        [strongSelf->_previewView endTransitionAnimated:true];
+//                        strongSelf->_crossfadingForZoom = false;
+//                    });
+//                });
+//            }];
+//        };
+//    };
 }
 
 #pragma mark - View Life Cycle
@@ -2666,7 +2666,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         case UIGestureRecognizerStateChanged:
         {
             CGFloat delta = (gestureRecognizer.scale - 1.0f) * 1.25;
-            if (_camera.zoomLevel > 2.0) {
+            if (_camera.zoomLevel > _camera.secondMarkZoomValue) {
                 delta *= 2.0;
             }
             CGFloat value = MAX(_camera.minZoomLevel, MIN(_camera.maxZoomLevel, _camera.zoomLevel + delta));

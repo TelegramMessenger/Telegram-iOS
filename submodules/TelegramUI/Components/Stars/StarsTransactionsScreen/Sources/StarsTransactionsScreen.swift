@@ -78,10 +78,7 @@ final class StarsTransactionsScreenComponent: Component {
         private let navigationBackgroundView: BlurredBackgroundView
         private let navigationSeparatorLayer: SimpleLayer
         private let navigationSeparatorLayerContainer: SimpleLayer
-        
-        private let headerView = ComponentView<Empty>()
-        private let headerOffsetContainer: UIView
-        
+                
         private let scrollContainerView: UIView
         
         private let overscroll = ComponentView<Empty>()
@@ -119,9 +116,6 @@ final class StarsTransactionsScreenComponent: Component {
         private var outgoingTransactionsContext: StarsTransactionsContext?
         
         override init(frame: CGRect) {
-            self.headerOffsetContainer = UIView()
-            self.headerOffsetContainer.isUserInteractionEnabled = false
-            
             self.navigationBackgroundView = BlurredBackgroundView(color: nil, enableBlur: true)
             self.navigationBackgroundView.alpha = 0.0
             
@@ -158,8 +152,6 @@ final class StarsTransactionsScreenComponent: Component {
             
             self.navigationSeparatorLayerContainer.addSublayer(self.navigationSeparatorLayer)
             self.layer.addSublayer(self.navigationSeparatorLayerContainer)
-            
-            self.addSubview(self.headerOffsetContainer)
         }
         
         required init?(coder: NSCoder) {
@@ -529,7 +521,9 @@ final class StarsTransactionsScreenComponent: Component {
                             strings: environment.strings,
                             dateTimeFormat: environment.dateTimeFormat,
                             count: self.starsState?.balance ?? 0,
-                            purchaseAvailable: !premiumConfiguration.areStarsDisabled,
+                            rate: nil,
+                            actionTitle: environment.strings.Stars_Intro_Buy,
+                            actionAvailable: !premiumConfiguration.areStarsDisabled,
                             buy: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
@@ -713,6 +707,8 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                 buyImpl?()
             }
         ), navigationBarAppearance: .transparent)
+        
+        self.navigationPresentation = .modalInLargeLayout
         
         self.options.set(.single([]) |> then(context.engine.payments.starsTopUpOptions()))
         

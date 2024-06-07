@@ -892,11 +892,19 @@ public final class ChatInlineSearchResultsListComponent: Component {
                     environment: {},
                     containerSize: availableSize
                 )
+                
+                let placeholderText: String
+                if query.hasPrefix("$") {
+                    placeholderText = component.presentation.strings.HashtagSearch_NoResultsQueryCashtagDescription(query).string
+                } else {
+                    placeholderText = component.presentation.strings.HashtagSearch_NoResultsQueryDescription(query).string
+                }
+                
                 let emptyResultsTextSize = self.emptyResultsText.update(
                     transition: .immediate,
                     component: AnyComponent(
                         MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: component.presentation.strings.HashtagSearch_NoResultsQueryDescription(query).string, font: Font.regular(15.0), textColor: component.presentation.theme.list.itemSecondaryTextColor)),
+                            text: .plain(NSAttributedString(string: placeholderText, font: Font.regular(15.0), textColor: component.presentation.theme.list.itemSecondaryTextColor)),
                             horizontalAlignment: .center,
                             maximumNumberOfLines: 0
                         )

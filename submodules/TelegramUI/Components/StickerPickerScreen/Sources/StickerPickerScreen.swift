@@ -542,8 +542,8 @@ public class StickerPickerScreen: ViewController {
                 self.storyStickersContentView?.reactionAction = { [weak self] in
                     self?.controller?.addReaction()
                 }
-                self.storyStickersContentView?.cameraAction = { [weak self] in
-                    self?.controller?.addCamera()
+                self.storyStickersContentView?.linkAction = { [weak self] in
+                    self?.controller?.addLink()
                 }
             }
             
@@ -2029,7 +2029,7 @@ public class StickerPickerScreen: ViewController {
     public var presentLocationPicker: () -> Void = { }
     public var presentAudioPicker: () -> Void = { }
     public var addReaction: () -> Void = { }
-    public var addCamera: () -> Void = { }
+    public var addLink: () -> Void = { }
     
     public init(context: AccountContext, inputData: Signal<StickerPickerInput, NoError>, forceDark: Bool = false, expanded: Bool = false, defaultToEmoji: Bool = false, hasEmoji: Bool = true, hasGifs: Bool = false, hasInteractiveStickers: Bool = true) {
         self.context = context
@@ -2502,15 +2502,39 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
     var locationAction: () -> Void = {}
     var audioAction: () -> Void = {}
     var reactionAction: () -> Void = {}
-    var cameraAction: () -> Void = {}
+    var linkAction: () -> Void = {}
     
     func update(theme: PresentationTheme, strings: PresentationStrings, useOpaqueTheme: Bool, availableSize: CGSize, transition: Transition) -> CGSize {
+        //TODO:localize
         let padding: CGFloat = 22.0
         let size = self.container.update(
             transition: transition,
             component: AnyComponent(
                 ItemStack(
                     [
+                        AnyComponentWithIdentity(
+                            id: "link",
+                            component: AnyComponent(
+                                CameraButton(
+                                    content: AnyComponentWithIdentity(
+                                        id: "content",
+                                        component: AnyComponent(
+                                            InteractiveStickerButtonContent(
+                                                theme: theme,
+                                                title: "LINK",
+                                                iconName: "Premium/Link",
+                                                useOpaqueTheme: useOpaqueTheme,
+                                                tintContainerView: self.tintContainerView
+                                            )
+                                        )
+                                    ),
+                                    action: { [weak self] in
+                                        if let self {
+                                            self.linkAction()
+                                        }
+                                    })
+                            )
+                        ),
                         AnyComponentWithIdentity(
                             id: "location",
                             component: AnyComponent(

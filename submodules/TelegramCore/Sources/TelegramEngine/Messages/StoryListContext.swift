@@ -1260,10 +1260,9 @@ public final class PeerStoryListContext: StoryListContext {
 }
 
 public final class SearchStoryListContext: StoryListContext {
-    
     public enum Source {
         case hashtag(String)
-        case location(coordinates: MediaArea.Coordinates, venue: MediaArea.Venue, address: MediaArea.Address?)
+        case mediaArea(MediaArea)
     }
     
     private final class Impl {
@@ -1327,7 +1326,7 @@ public final class SearchStoryListContext: StoryListContext {
             let accountPeerId = account.peerId
             
             var searchHashtag: String? = nil
-            var searchMediaArea: Api.MediaArea?
+            var area: Api.MediaArea? = nil
             
             var flags: Int32 = 0
             switch source {
@@ -1338,12 +1337,12 @@ public final class SearchStoryListContext: StoryListContext {
                     searchHashtag = query
                 }
                 flags |= (1 << 0)
-            case let .location(coordinates, venue, address):
-                searchMediaArea = apiMediaAreaFromVenue(coordinates: coordinates, venue: venue, address: address)
+            case let .mediaArea(mediaArea):
+                area = apiMediaAreasFromMediaAreas([mediaArea], transaction: nil).first
                 flags |= (1 << 1)
             }
             
-            self.requestDisposable = (account.network.request(Api.functions.stories.searchPosts(flags: flags, hashtag: searchHashtag, area: searchMediaArea, offset: loadMoreToken, limit:  Int32(limit)))
+            self.requestDisposable = (account.network.request(Api.functions.stories.searchPosts(flags: flags, hashtag: searchHashtag, area: area, offset: "", limit:  Int32(limit)))
             |> map { result -> Api.stories.FoundStories? in
                 return result
             }

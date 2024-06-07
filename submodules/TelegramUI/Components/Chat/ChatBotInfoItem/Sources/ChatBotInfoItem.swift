@@ -477,22 +477,25 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                         case .longTap, .doubleTap:
                             if let item = self.item, self.backgroundNode.frame.contains(location) {
                                 let tapAction = self.tapActionAtPoint(location, gesture: gesture, isEstimating: false)
-                                switch tapAction.content {
-                                case .none, .ignore:
-                                    break
-                                case let .url(url):
-                                    item.controllerInteraction.longTap(.url(url.url), nil)
-                                case let .peerMention(peerId, mention, _):
-                                    item.controllerInteraction.longTap(.peerMention(peerId, mention), nil)
-                                case let .textMention(name):
-                                    item.controllerInteraction.longTap(.mention(name), nil)
-                                case let .botCommand(command):
-                                    item.controllerInteraction.longTap(.command(command), nil)
-                                case let .hashtag(_, hashtag):
-                                    item.controllerInteraction.longTap(.hashtag(hashtag), nil)
-                                default:
-                                    break
-                                }
+//TODO:do
+                                let _ = item
+                                let _ = tapAction
+//                                switch tapAction.content {
+//                                case .none, .ignore:
+//                                    break
+//                                case let .url(url):
+//                                    item.controllerInteraction.longTap(.url(url.url), nil)
+//                                case let .peerMention(peerId, mention, _):
+//                                    item.controllerInteraction.longTap(.peerMention(peerId, mention), nil)
+//                                case let .textMention(name):
+//                                    item.controllerInteraction.longTap(.mention(name), nil)
+//                                case let .botCommand(command):
+//                                    item.controllerInteraction.longTap(.command(command), nil)
+//                                case let .hashtag(_, hashtag):
+//                                    item.controllerInteraction.longTap(.hashtag(hashtag), nil)
+//                                default:
+//                                    break
+//                                }
                             }
                         default:
                             break

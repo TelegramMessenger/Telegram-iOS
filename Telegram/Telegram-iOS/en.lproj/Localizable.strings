@@ -12203,6 +12203,7 @@ Sorry for the inconvenience.";
 
 "HashtagSearch.NoResults" = "No Results";
 "HashtagSearch.NoResultsQueryDescription" = "There were no results for %@.\nTry another hashtag.";
+"HashtagSearch.NoResultsQueryCashtagDescription" = "There were no results for %@.\nTry another cashtag.";
 
 "Chat.Context.Phone.AddToContacts" = "Add to Contacts";
 "Chat.Context.Phone.CreateNewContact" = "Create New Contact";
@@ -12314,3 +12315,13 @@ Sorry for the inconvenience.";
 "BusinessLink.AlertTextLimitText" = "The message text limit is 4096 characters";
 
 "Chat.SendMessageMenu.EditMessage" = "Edit Message";
+
+"Story.ViewLink" = "Open Link";
+
+"PeerInfo.Bot.Balance" = "Balance";
+"PeerInfo.Bot.Balance.Stars_1" = "%@ Star";
+"PeerInfo.Bot.Balance.Stars_any" = "%@ Stars";
+
+"HashtagSearch.StoriesFound_1" = "%@ Story Found";
+"HashtagSearch.StoriesFound_any" = "%@ Stories Found";
+"HashtagSearch.StoriesFoundInfo" = "View stories with %@";

@@ -7,7 +7,6 @@ public enum MediaArea: Codable, Equatable {
         case coordinates
         case value
         case flags
-        case address
     }
         
     public struct Coordinates: Codable, Equatable {
@@ -65,6 +64,7 @@ public enum MediaArea: Codable, Equatable {
             case latitude
             case longitude
             case venue
+            case address
             case queryId
             case resultId
         }
@@ -72,6 +72,7 @@ public enum MediaArea: Codable, Equatable {
         public let latitude: Double
         public let longitude: Double
         public let venue: MapVenue?
+        public let address: MapGeoAddress?
         public let queryId: Int64?
         public let resultId: String?
         
@@ -79,12 +80,14 @@ public enum MediaArea: Codable, Equatable {
             latitude: Double,
             longitude: Double,
             venue: MapVenue?,
+            address: MapGeoAddress?,
             queryId: Int64?,
             resultId: String?
         ) {
             self.latitude = latitude
             self.longitude = longitude
             self.venue = venue
+            self.address = address
             self.queryId = queryId
             self.resultId = resultId
         }
@@ -99,6 +102,12 @@ public enum MediaArea: Codable, Equatable {
                 self.venue = PostboxDecoder(buffer: MemoryBuffer(data: venueData)).decodeRootObject() as? MapVenue
             } else {
                 self.venue = nil
+            }
+            
+            if let addressData = try container.decodeIfPresent(Data.self, forKey: .address) {
+                self.address = PostboxDecoder(buffer: MemoryBuffer(data: addressData)).decodeRootObject() as? MapGeoAddress
+            } else {
+                self.address = nil
             }
             
             self.queryId = try container.decodeIfPresent(Int64.self, forKey: .queryId)
@@ -118,30 +127,23 @@ public enum MediaArea: Codable, Equatable {
                 try container.encode(venueData, forKey: .venue)
             }
             
+            if let address = self.address {
+                let encoder = PostboxEncoder()
+                encoder.encodeRootObject(address)
+                let addressData = encoder.makeData()
+                try container.encode(addressData, forKey: .address)
+            }
+            
             try container.encodeIfPresent(self.queryId, forKey: .queryId)
             try container.encodeIfPresent(self.resultId, forKey: .resultId)
         }
     }
     
-    public struct Address: Codable, Equatable {
-        public var countryIso2: String
-        public var state: String?
-        public var city: String?
-        public var street: String?
-        
-        public init(countryIso2: String, state: String?, city: String?, street: String?) {
-            self.countryIso2 = countryIso2
-            self.state = state
-            self.city = city
-            self.street = street
-        }
-    }
-    
-    case venue(coordinates: Coordinates, venue: Venue, address: Address?)
+    case venue(coordinates: Coordinates, venue: Venue)
     case reaction(coordinates: Coordinates, reaction: MessageReaction.Reaction, flags: ReactionFlags)
     case channelMessage(coordinates: Coordinates, messageId: EngineMessage.Id)
-    case url(coordinates: Coordinates, url: String)
-    
+    case link(coordinates: Coordinates, url: String)
+   
     public struct ReactionFlags: OptionSet {
         public var rawValue: Int32
         
@@ -162,7 +164,7 @@ public enum MediaArea: Codable, Equatable {
         case venue
         case reaction
         case channelMessage
-        case url
+        case link
     }
     
     public enum DecodingError: Error {
@@ -179,8 +181,7 @@ public enum MediaArea: Codable, Equatable {
         case .venue:
             let coordinates = try container.decode(MediaArea.Coordinates.self, forKey: .coordinates)
             let venue = try container.decode(MediaArea.Venue.self, forKey: .value)
-            let address = try container.decodeIfPresent(MediaArea.Address.self, forKey: .address)
-            self = .venue(coordinates: coordinates, venue: venue, address: address)
+            self = .venue(coordinates: coordinates, venue: venue)
         case .reaction:
             let coordinates = try container.decode(MediaArea.Coordinates.self, forKey: .coordinates)
             let reaction = try container.decode(MessageReaction.Reaction.self, forKey: .value)
@@ -190,10 +191,10 @@ public enum MediaArea: Codable, Equatable {
             let coordinates = try container.decode(MediaArea.Coordinates.self, forKey: .coordinates)
             let messageId = try container.decode(MessageId.self, forKey: .value)
             self = .channelMessage(coordinates: coordinates, messageId: messageId)
-        case .url:
+        case .link:
             let coordinates = try container.decode(MediaArea.Coordinates.self, forKey: .coordinates)
             let url = try container.decode(String.self, forKey: .value)
-            self = .url(coordinates: coordinates, url: url)
+            self = .link(coordinates: coordinates, url: url)
         }
     }
     
@@ -201,11 +202,10 @@ public enum MediaArea: Codable, Equatable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
         switch self {
-        case let .venue(coordinates, venue, address):
+        case let .venue(coordinates, venue):
             try container.encode(MediaAreaType.venue.rawValue, forKey: .type)
             try container.encode(coordinates, forKey: .coordinates)
             try container.encode(venue, forKey: .value)
-            try container.encodeIfPresent(address, forKey: .address)
         case let .reaction(coordinates, reaction, flags):
             try container.encode(MediaAreaType.reaction.rawValue, forKey: .type)
             try container.encode(coordinates, forKey: .coordinates)
@@ -215,8 +215,8 @@ public enum MediaArea: Codable, Equatable {
             try container.encode(MediaAreaType.channelMessage.rawValue, forKey: .type)
             try container.encode(coordinates, forKey: .coordinates)
             try container.encode(messageId, forKey: .value)
-        case let .url(coordinates, url):
-            try container.encode(MediaAreaType.url.rawValue, forKey: .type)
+        case let .link(coordinates, url):
+            try container.encode(MediaAreaType.link.rawValue, forKey: .type)
             try container.encode(coordinates, forKey: .coordinates)
             try container.encode(url, forKey: .value)
         }
@@ -226,13 +226,13 @@ public enum MediaArea: Codable, Equatable {
 public extension MediaArea {
     var coordinates: Coordinates {
         switch self {
-        case let .venue(coordinates, _, _):
+        case let .venue(coordinates, _):
             return coordinates
         case let .reaction(coordinates, _, _):
             return coordinates
         case let .channelMessage(coordinates, _):
             return coordinates
-        case let .url(coordinates, _):
+        case let .link(coordinates, _):
             return coordinates
         }
     }

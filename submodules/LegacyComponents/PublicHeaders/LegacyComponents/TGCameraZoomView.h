@@ -29,7 +29,7 @@
 
 - (void)panGesture:(UIPanGestureRecognizer *)gestureRecognizer;
 
-- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera minZoomLevel:(CGFloat)minZoomLevel maxZoomLevel:(CGFloat)maxZoomLevel;
+- (instancetype)initWithFrame:(CGRect)frame hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera hasCenterRightZoom:(bool)hasCenterRightZoom minZoomLevel:(CGFloat)minZoomLevel maxZoomLevel:(CGFloat)maxZoomLevel secondMarkZoomValue:(CGFloat)secondMarkZoomValue;
 
 @end
 

@@ -3346,7 +3346,7 @@ final class StoryItemSetContainerSendMessage {
         
         var actions: [ContextMenuAction] = []
         switch mediaArea {
-        case let .venue(coordinates, venue, address):
+        case let .venue(_, venue):
             let action = { [weak controller, weak view] in
                 let _ = view
                 /*let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
@@ -3435,8 +3435,30 @@ final class StoryItemSetContainerSendMessage {
             }))
         case .reaction:
             return
-        case .url:
-            return
+        case let .link(_, url):
+            let action = {
+                let _ = openUserGeneratedUrl(context: component.context, peerId: component.slice.effectivePeer.id, url: url, concealed: false, skipUrlAuth: false, skipConcealedAlert: false, forceDark: true, present: { [weak controller] c in
+                    controller?.present(c, in: .window(.root))
+                }, openResolved: { [weak self, weak view] resolved in
+                    guard let self, let view else {
+                        return
+                    }
+                    self.openResolved(view: view, result: resolved, forceExternal: false, concealed: false)
+                }, alertDisplayUpdated: { [weak self, weak view] alertController in
+                    guard let self, let view else {
+                        return
+                    }
+                    self.statusController = alertController
+                    view.updateIsProgressPaused()
+                })
+            }
+            if immediate {
+                action()
+                return
+            }
+            actions.append(ContextMenuAction(content: .textWithSubtitleAndIcon(title: updatedPresentationData.initial.strings.Story_ViewLink, subtitle: url, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: {
+                action()
+            }))
         }
         
         self.selectedMediaArea =  mediaArea

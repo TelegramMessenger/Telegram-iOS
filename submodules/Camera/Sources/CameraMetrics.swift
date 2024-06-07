@@ -46,8 +46,10 @@ public extension Camera {
                 return [1.0]
             case .iPhone14, .iPhone14Plus, .iPhone15, .iPhone15Plus:
                 return [0.5, 1.0, 2.0]
-            case .iPhone14Pro, .iPhone14ProMax, .iPhone15Pro, .iPhone15ProMax:
+            case .iPhone14Pro, .iPhone14ProMax, .iPhone15Pro:
                 return [0.5, 1.0, 2.0, 3.0]
+            case .iPhone15ProMax:
+                return [0.5, 1.0, 2.0, 5.0]
             case .unknown:
                 return [1.0, 2.0]
             }

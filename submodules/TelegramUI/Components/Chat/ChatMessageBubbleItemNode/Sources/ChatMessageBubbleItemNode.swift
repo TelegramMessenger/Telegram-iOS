@@ -3126,7 +3126,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         } else if !incoming {
             backgroundType = .outgoing(mergeType)
         } else {
-            backgroundType = .incoming(mergeType)
+            if !item.presentationData.chatBubbleCorners.hasTails {
+                backgroundType = .incoming(.Extracted)
+            } else {
+                backgroundType = .incoming(mergeType)
+            }
         }
         let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
         if item.presentationData.theme.theme.forceSync {
@@ -4672,13 +4676,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         }
                     case let .phone(number):
                         return .action(InternalBubbleTapAction.Action({ [weak self] in
-                            guard let self, let item = self.item, let contentNode = self.contextContentNodeForPhoneNumber(number) else {
+                            guard let self, let item = self.item, let contentNode = self.contextContentNodeForLink(number) else {
                                 return
                             }
+                                                        
+                            item.controllerInteraction.longTap(.phone(number), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                             
-                            self.addSubnode(contentNode)
-                            
-                            item.controllerInteraction.openPhoneContextMenu(ChatControllerInteraction.OpenPhone(number: number, message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
+//                            item.controllerInteraction.openPhoneContextMenu(ChatControllerInteraction.OpenPhone(number: number, message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                         }, contextMenuOnLongPress: !tapAction.hasLongTapAction))
                     case let .peerMention(peerId, _, openProfile):
                         return .action(InternalBubbleTapAction.Action { [weak self] in
@@ -4747,8 +4751,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         }
                     case let .bankCard(number):
                         if let item = self.item {
-                            return .action(InternalBubbleTapAction.Action {
-                                item.controllerInteraction.longTap(.bankCard(number), item.message)
+                            return .action(InternalBubbleTapAction.Action { [weak self] in
+                                guard let self, let contentNode = self.contextContentNodeForLink(number) else {
+                                    return
+                                }
+                                item.controllerInteraction.longTap(.bankCard(number), ChatControllerInteraction.LongTapParams(message: item.message, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                             })
                         }
                     case let .tooltip(text, node, rect):
@@ -4796,7 +4803,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 return nil
             case .longTap, .doubleTap, .secondaryTap:
                 if let item = self.item, self.backgroundNode.frame.contains(location) {
-                    let message = item.message
+//                    let message = item.message
                     
                     if let threadInfoNode = self.threadInfoNode, self.item?.controllerInteraction.tapMessage == nil, threadInfoNode.frame.contains(location) {
                         return .action(InternalBubbleTapAction.Action {})
@@ -4836,37 +4843,50 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             break
                         case let .url(url):
                             if tapAction.hasLongTapAction {
-                                return .action(InternalBubbleTapAction.Action({
-                                    item.controllerInteraction.longTap(.url(url.url), message)
+                                return .action(InternalBubbleTapAction.Action({ [weak self] in
+                                    let cleanUrl = url.url.replacingOccurrences(of: "mailto:", with: "")
+                                    guard let self, let contentNode = self.contextContentNodeForLink(cleanUrl) else {
+                                        return
+                                    }
+                                    item.controllerInteraction.longTap(.url(url.url), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                                 }, contextMenuOnLongPress: false))
                             } else {
                                 disableDefaultPressAnimation = true
                             }
                         case let .phone(number):
                             return .action(InternalBubbleTapAction.Action({ [weak self] in
-                                guard let self, let item = self.item, let contentNode = self.contextContentNodeForPhoneNumber(number) else {
+                                guard let self, let contentNode = self.contextContentNodeForLink(number) else {
                                     return
                                 }
-                                
-                                self.addSubnode(contentNode)
-                                
-                                item.controllerInteraction.openPhoneContextMenu(ChatControllerInteraction.OpenPhone(number: number, message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
+                                item.controllerInteraction.longTap(.phone(number), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                             }, contextMenuOnLongPress: !tapAction.hasLongTapAction))
                         case let .peerMention(peerId, mention, _):
-                            return .action(InternalBubbleTapAction.Action {
-                                item.controllerInteraction.longTap(.peerMention(peerId, mention), message)
+                            return .action(InternalBubbleTapAction.Action { [weak self] in
+                                guard let self, let contentNode = self.contextContentNodeForLink(mention) else {
+                                    return
+                                }
+                                item.controllerInteraction.longTap(.peerMention(peerId, mention), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                             })
                         case let .textMention(name):
-                            return .action(InternalBubbleTapAction.Action {
-                                item.controllerInteraction.longTap(.mention(name), message)
+                            return .action(InternalBubbleTapAction.Action { [weak self] in
+                                guard let self, let contentNode = self.contextContentNodeForLink(name) else {
+                                    return
+                                }
+                                item.controllerInteraction.longTap(.mention(name), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                             })
                         case let .botCommand(command):
-                            return .action(InternalBubbleTapAction.Action {
-                                item.controllerInteraction.longTap(.command(command), message)
+                            return .action(InternalBubbleTapAction.Action { [weak self] in
+                                guard let self, let contentNode = self.contextContentNodeForLink(command) else {
+                                    return
+                                }
+                                item.controllerInteraction.longTap(.command(command), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                             })
                         case let .hashtag(_, hashtag):
-                            return .action(InternalBubbleTapAction.Action {
-                                item.controllerInteraction.longTap(.hashtag(hashtag), message)
+                            return .action(InternalBubbleTapAction.Action { [weak self] in
+                                guard let self, let contentNode = self.contextContentNodeForLink(hashtag) else {
+                                    return
+                                }
+                                item.controllerInteraction.longTap(.hashtag(hashtag), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                             })
                         case .instantPage:
                             break
@@ -4880,13 +4900,19 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             break
                         case let .timecode(timecode, text):
                             if let mediaMessage = mediaMessage {
-                                return .action(InternalBubbleTapAction.Action {
-                                    item.controllerInteraction.longTap(.timecode(timecode, text), mediaMessage)
+                                return .action(InternalBubbleTapAction.Action { [weak self] in
+                                    guard let self, let contentNode = self.contextContentNodeForLink(text) else {
+                                        return
+                                    }
+                                    item.controllerInteraction.longTap(.timecode(timecode, text), ChatControllerInteraction.LongTapParams(message: mediaMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                                 })
                             }
                         case let .bankCard(number):
-                            return .action(InternalBubbleTapAction.Action {
-                                item.controllerInteraction.longTap(.bankCard(number), message)
+                            return .action(InternalBubbleTapAction.Action { [weak self] in
+                                guard let self, let contentNode = self.contextContentNodeForLink(number) else {
+                                    return
+                                }
+                                item.controllerInteraction.longTap(.bankCard(number), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                             })
                         case .tooltip:
                             break
@@ -4921,7 +4947,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return nil
     }
     
-    private func contextContentNodeForPhoneNumber(_ number: String) -> ContextExtractedContentContainingNode? {
+    private func contextContentNodeForLink(_ link: String) -> ContextExtractedContentContainingNode? {
         guard let item = self.item else {
             return nil
         }
@@ -4930,7 +4956,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
         
         let textNode = ImmediateTextNode()
-        textNode.attributedText = NSAttributedString(string: number, font: Font.regular(item.presentationData.fontSize.baseDisplaySize), textColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.linkTextColor : item.presentationData.theme.theme.chat.message.outgoing.linkTextColor)
+        textNode.attributedText = NSAttributedString(string: link, font: Font.regular(item.presentationData.fontSize.baseDisplaySize), textColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.linkTextColor : item.presentationData.theme.theme.chat.message.outgoing.linkTextColor)
         let textSize = textNode.updateLayout(CGSize(width: 1000.0, height: 100.0))
         
         let backgroundNode = ASDisplayNode()
@@ -4950,6 +4976,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         containingNode.contentNode.addSubnode(backgroundNode)
         
         containingNode.contentNode.alpha = 0.0
+        
+        self.addSubnode(containingNode)
         
         return containingNode
     }

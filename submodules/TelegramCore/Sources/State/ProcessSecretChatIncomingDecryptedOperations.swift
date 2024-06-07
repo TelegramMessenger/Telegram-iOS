@@ -866,11 +866,11 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                     case let .decryptedMessageMediaWebPage(url):
                         parsedMedia.append(TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: Int64.random(in: Int64.min ... Int64.max)), content: .Pending(0, url)))
                     case let .decryptedMessageMediaGeoPoint(lat, long):
-                        parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
+                        parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
                     case let .decryptedMessageMediaContact(phoneNumber, firstName, lastName, userId):
                         parsedMedia.append(TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: userId == 0 ? nil : PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(Int64(userId))), vCardData: nil))
                     case let .decryptedMessageMediaVenue(lat, long, title, address, provider, venueId):
-                        parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
+                        parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
                     case .decryptedMessageMediaEmpty:
                         break
                 }
@@ -1085,11 +1085,11 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                     case let .decryptedMessageMediaWebPage(url):
                         parsedMedia.append(TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: Int64.random(in: Int64.min ... Int64.max)), content: .Pending(0, url)))
                     case let .decryptedMessageMediaGeoPoint(lat, long):
-                        parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
+                        parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
                     case let .decryptedMessageMediaContact(phoneNumber, firstName, lastName, userId):
                         parsedMedia.append(TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: userId == 0 ? nil : PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(Int64(userId))), vCardData: nil))
                     case let .decryptedMessageMediaVenue(lat, long, title, address, provider, venueId):
-                        parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
+                        parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
                     case .decryptedMessageMediaEmpty:
                         break
                 }
@@ -1364,11 +1364,11 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                 case let .decryptedMessageMediaWebPage(url):
                     parsedMedia.append(TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: Int64.random(in: Int64.min ... Int64.max)), content: .Pending(0, url)))
                 case let .decryptedMessageMediaGeoPoint(lat, long):
-                    parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
+                    parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
                 case let .decryptedMessageMediaContact(phoneNumber, firstName, lastName, userId):
                     parsedMedia.append(TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: userId == 0 ? nil : PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(Int64(userId))), vCardData: nil))
                 case let .decryptedMessageMediaVenue(lat, long, title, address, provider, venueId):
-                    parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
+                    parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
                 case .decryptedMessageMediaEmpty:
                     break
                 }
@@ -1565,11 +1565,11 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                 case let .decryptedMessageMediaWebPage(url):
                     parsedMedia.append(TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: Int64.random(in: Int64.min ... Int64.max)), content: .Pending(0, url)))
                 case let .decryptedMessageMediaGeoPoint(lat, long):
-                    parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
+                    parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
                 case let .decryptedMessageMediaContact(phoneNumber, firstName, lastName, userId):
                     parsedMedia.append(TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: userId == 0 ? nil : PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(Int64(userId))), vCardData: nil))
                 case let .decryptedMessageMediaVenue(lat, long, title, address, provider, venueId):
-                    parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
+                    parsedMedia.append(TelegramMediaMap(latitude: lat, longitude: long, heading: nil, accuracyRadius: nil, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
                 case .decryptedMessageMediaEmpty:
                     break
                 }

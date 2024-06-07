@@ -540,7 +540,7 @@ const NSInteger PGCameraFrameRate = 30;
 }
 
 - (CGFloat)maxZoomLevel {
-    return MIN(16.0f, self.videoDevice.activeFormat.videoMaxZoomFactor);
+    return MIN(64.0f, self.videoDevice.activeFormat.videoMaxZoomFactor);
 }
 
 - (void)resetZoom {
@@ -549,6 +549,14 @@ const NSInteger PGCameraFrameRate = 30;
 
 - (void)setZoomLevel:(CGFloat)zoomLevel {
     [self setZoomLevel:zoomLevel animated:false];
+}
+
+- (int32_t)maxMarkZoomValue {
+    return 25.0;
+}
+
+- (int32_t)secondMarkZoomValue {
+    return 5.0;
 }
 
 - (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated
@@ -574,10 +582,10 @@ const NSInteger PGCameraFrameRate = 30;
                     if (level < 1.0) {
                         level = MAX(0.5, level);
                         backingLevel = 1.0 + ((level - 0.5) / 0.5) * (firstMark - 1.0);
-                    } else if (zoomLevel < 2.0) {
-                        backingLevel = firstMark + ((level - 1.0) / 1.0) * (secondMark - firstMark);
+                    } else if (zoomLevel < self.secondMarkZoomValue) {
+                        backingLevel = firstMark + ((level - 1.0) / (self.secondMarkZoomValue - 1.0)) * (secondMark - firstMark);
                     } else {
-                        backingLevel = secondMark + ((level - 2.0) / 6.0) * (self.maxZoomLevel - secondMark);
+                        backingLevel = secondMark + ((level - self.secondMarkZoomValue) / (self.maxMarkZoomValue - self.secondMarkZoomValue)) * (self.maxZoomLevel - secondMark);
                     }
                 } else if (marks.count == 1) {
                     CGFloat mark = [marks.firstObject floatValue];
@@ -598,7 +606,7 @@ const NSInteger PGCameraFrameRate = 30;
                 }
             }
         }
-        CGFloat finalLevel =  MAX(1.0, MIN([strongSelf maxZoomLevel], backingLevel));
+        CGFloat finalLevel = MAX(1.0, MIN([strongSelf maxZoomLevel], backingLevel));
         if (animated) {
             bool zoomingIn = finalLevel > self.videoDevice.videoZoomFactor;
             bool needsCrossfade = level >= 1.0;

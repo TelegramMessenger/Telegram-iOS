@@ -114,7 +114,7 @@ final class StorySearchGridScreenComponent: Component {
                         }
                         return self.environment?.controller()?.navigationController as? NavigationController
                     },
-                    listContext: nil
+                    listContext: component.listContext
                 )
                 paneNode.parentController = environment.controller()
                 paneNode.isEmptyUpdated = { [weak self] _ in
@@ -186,14 +186,16 @@ public final class StorySearchGridScreen: ViewControllerComponentContainer {
     
     public init(
         context: AccountContext,
-        scope: StorySearchControllerScope
+        scope: StorySearchControllerScope,
+        listContext: SearchStoryListContext? = nil
     ) {
         self.context = context
         self.scope = scope
         
         super.init(context: context, component: StorySearchGridScreenComponent(
             context: context,
-            scope: scope
+            scope: scope,
+            listContext: listContext
         ), navigationBarAppearance: .default, theme: .default)
         
         let presentationData = context.sharedContext.currentPresentationData.with({ $0 })

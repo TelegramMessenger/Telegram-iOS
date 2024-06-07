@@ -27,7 +27,7 @@ private extension ListMessageItemInteraction {
         }, openInstantPage: { message, data in
             controllerInteraction.openInstantPage(message, data)
         }, longTap: { action, message in
-            controllerInteraction.longTap(action, message)
+            controllerInteraction.longTap(action, ChatControllerInteraction.LongTapParams(message: message))
         }, getHiddenMedia: {
             return controllerInteraction.hiddenMedia
         })

@@ -69,11 +69,13 @@ public struct PresentationChatBubbleCorners: Equatable, Hashable {
     public var mainRadius: CGFloat
     public var auxiliaryRadius: CGFloat
     public var mergeBubbleCorners: Bool
+    public var hasTails: Bool
     
-    public init(mainRadius: CGFloat, auxiliaryRadius: CGFloat, mergeBubbleCorners: Bool) {
+    public init(mainRadius: CGFloat, auxiliaryRadius: CGFloat, mergeBubbleCorners: Bool, hasTails: Bool = true) {
         self.mainRadius = mainRadius
         self.auxiliaryRadius = auxiliaryRadius
         self.mergeBubbleCorners = mergeBubbleCorners
+        self.hasTails = hasTails
     }
 }
 

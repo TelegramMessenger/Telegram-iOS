@@ -14,7 +14,9 @@ final class StarsBalanceComponent: Component {
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
     let count: Int64
-    let purchaseAvailable: Bool
+    let rate: Double?
+    let actionTitle: String
+    let actionAvailable: Bool
     let buy: () -> Void
     
     init(
@@ -22,14 +24,18 @@ final class StarsBalanceComponent: Component {
         strings: PresentationStrings,
         dateTimeFormat: PresentationDateTimeFormat,
         count: Int64,
-        purchaseAvailable: Bool,
+        rate: Double?,
+        actionTitle: String,
+        actionAvailable: Bool,
         buy: @escaping () -> Void
     ) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.count = count
-        self.purchaseAvailable = purchaseAvailable
+        self.rate = rate
+        self.actionTitle = actionTitle
+        self.actionAvailable = actionAvailable
         self.buy = buy
     }
     
@@ -43,10 +49,16 @@ final class StarsBalanceComponent: Component {
         if lhs.dateTimeFormat != rhs.dateTimeFormat {
             return false
         }
-        if lhs.purchaseAvailable != rhs.purchaseAvailable {
+        if lhs.actionTitle != rhs.actionTitle {
+            return false
+        }
+        if lhs.actionAvailable != rhs.actionAvailable {
             return false
         }
         if lhs.count != rhs.count {
+            return false
+        }
+        if lhs.rate != rhs.rate {
             return false
         }
         return true
@@ -105,11 +117,18 @@ final class StarsBalanceComponent: Component {
             }
             contentHeight += titleSize.height
         
+            let subtitleText: String
+            if let rate = component.rate {
+                subtitleText = "≈\(formatUsdValue(component.count, rate: rate))"
+            } else {
+                subtitleText = component.strings.Stars_Intro_YourBalance
+            }
+            
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: component.strings.Stars_Intro_YourBalance, font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)),
+                        text: .plain(NSAttributedString(string: subtitleText, font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)),
                         horizontalAlignment: .center
                     )
                 ),
@@ -125,14 +144,14 @@ final class StarsBalanceComponent: Component {
             }
             contentHeight += subtitleSize.height
             
-            if component.purchaseAvailable {
+            if component.actionAvailable {
                 contentHeight += 12.0
                 
                 let buttonSize = self.button.update(
                     transition: .immediate,
                     component: AnyComponent(
                         SolidRoundedButtonComponent(
-                            title: component.strings.Stars_Intro_Buy,
+                            title: component.actionTitle,
                             theme: SolidRoundedButtonComponent.Theme(theme: component.theme),
                             height: 50.0,
                             cornerRadius: 11.0,

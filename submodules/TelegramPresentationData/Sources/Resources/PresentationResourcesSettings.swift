@@ -133,6 +133,24 @@ public struct PresentationResourcesSettings {
         
         drawBorder(context: context, rect: bounds)
     })
+    
+    public static let bot = generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        let path = UIBezierPath(roundedRect: bounds, cornerRadius: 7.0)
+        context.addPath(path.cgPath)
+        context.clip()
+
+        context.setFillColor(UIColor(rgb: 0x007aff).cgColor)
+        context.fill(bounds)
+        
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Bot"), color: UIColor(rgb: 0xffffff)), let cgImage = image.cgImage {
+            context.draw(cgImage, in: CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - image.size.width) / 2.0), y: floorToScreenPixels((bounds.height - image.size.height) / 2.0)), size: image.size))
+        }
+        
+        drawBorder(context: context, rect: bounds)
+    })
 
     public static let passport = renderIcon(name: "Settings/Menu/Passport")
     public static let watch = renderIcon(name: "Settings/Menu/Watch")

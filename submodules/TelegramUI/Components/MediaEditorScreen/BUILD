@@ -60,6 +60,8 @@ swift_library(
         "//submodules/UIKitRuntimeUtils",
         "//submodules/TelegramUI/Components/MediaEditor/ImageObjectSeparation",
         "//submodules/Components/HierarchyTrackingLayer",
+        "//submodules/TelegramUI/Components/ListSectionComponent",
+        "//submodules/WebsiteType",
     ],
     visibility = [
         "//visibility:public",
