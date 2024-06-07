@@ -145,6 +145,30 @@ public func chatTextInputAddLinkAttribute(_ state: ChatTextInputState, selection
     }
 }
 
+public func chatTextInputRemoveLinkAttribute(_ state: ChatTextInputState, selectionRange: Range<Int>) -> ChatTextInputState {
+    if !selectionRange.isEmpty {
+        let nsRange = NSRange(location: selectionRange.lowerBound, length: selectionRange.count)
+        var attributesToRemove: [(NSAttributedString.Key, NSRange)] = []
+        state.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, stop in
+            for (key, _) in attributes {
+                if key == ChatTextInputAttributes.textUrl {
+                    attributesToRemove.append((key, range))
+                } else {
+                    attributesToRemove.append((key, nsRange))
+                }
+            }
+        }
+        
+        let result = NSMutableAttributedString(attributedString: state.inputText)
+        for (attribute, range) in attributesToRemove {
+            result.removeAttribute(attribute, range: range)
+        }
+        return ChatTextInputState(inputText: result, selectionRange: selectionRange)
+    } else {
+        return state
+    }
+}
+
 public func chatTextInputAddMentionAttribute(_ state: ChatTextInputState, peer: EnginePeer) -> ChatTextInputState {
     let inputText = NSMutableAttributedString(attributedString: state.inputText)
     

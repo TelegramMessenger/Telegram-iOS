@@ -1554,7 +1554,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 switch draft {
                     case .draftMessageEmpty:
                         inputState = nil
-                    case let .draftMessage(_, replyToMsgHeader, message, entities, media, date, _):
+                    case let .draftMessage(_, replyToMsgHeader, message, entities, media, date, messageEffectId):
                         let _ = media
                         var replySubject: EngineMessageReplySubject?
                         if let replyToMsgHeader = replyToMsgHeader {
@@ -1600,7 +1600,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                                 break
                             }
                         }
-                        inputState = SynchronizeableChatInputState(replySubject: replySubject, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil)
+                        inputState = SynchronizeableChatInputState(replySubject: replySubject, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil, messageEffectId: messageEffectId)
                 }
                 var threadId: Int64?
                 if let topMsgId = topMsgId {
