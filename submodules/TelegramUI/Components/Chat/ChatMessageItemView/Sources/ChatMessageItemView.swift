@@ -986,12 +986,14 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
             additionalAnimationNode = DirectAnimatedStickerNode()
             effectiveScale = 1.4
             #else
-            if "".isEmpty {
+            additionalAnimationNode = DirectAnimatedStickerNode()
+            effectiveScale = 1.4
+            /*if "".isEmpty {
                 additionalAnimationNode = DirectAnimatedStickerNode()
                 effectiveScale = 1.4
             } else {
                 additionalAnimationNode = LottieMetalAnimatedStickerNode()
-            }
+            }*/
             #endif
             additionalAnimationNode.updateLayout(size: animationSize)
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width * effectiveScale), height: Int(animationSize.height * effectiveScale), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
