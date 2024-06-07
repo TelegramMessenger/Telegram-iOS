@@ -884,6 +884,11 @@ public enum CollectibleItemInfoScreenSubject {
     case username(String)
 }
 
+public enum StorySearchControllerScope {
+    case query(String)
+    case location(coordinates: MediaArea.Coordinates, venue: MediaArea.Venue, address: MediaArea.Address?)
+}
+
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
@@ -970,7 +975,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeAttachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, send: @escaping (AnyMediaReference) -> Void) -> AttachmentFileController
     func makeGalleryCaptionPanelView(context: AccountContext, chatLocation: ChatLocation, isScheduledMessages: Bool, isFile: Bool, customEmojiAvailable: Bool, present: @escaping (ViewController) -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) -> NSObject?
     func makeHashtagSearchController(context: AccountContext, peer: EnginePeer?, query: String, all: Bool) -> ViewController
-    func makeStorySearchController(context: AccountContext, query: String) -> ViewController
+    func makeStorySearchController(context: AccountContext, scope: StorySearchControllerScope) -> ViewController
     func makeMyStoriesController(context: AccountContext, isArchive: Bool) -> ViewController
     func makeArchiveSettingsController(context: AccountContext) -> ViewController
     func makeFilterSettingsController(context: AccountContext, modal: Bool, scrollToTags: Bool, dismissed: (() -> Void)?) -> ViewController

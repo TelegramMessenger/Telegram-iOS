@@ -118,7 +118,8 @@ public enum CodableDrawingEntity: Equatable {
                     venue: entity.location.venue,
                     queryId: entity.queryId,
                     resultId: entity.resultId
-                )
+                ),
+                address: nil
             )
         case let .sticker(entity):
             if case let .file(_, type) = entity.content, case let .reaction(reaction, style) = type {

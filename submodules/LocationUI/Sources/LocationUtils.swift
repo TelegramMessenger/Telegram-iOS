@@ -101,7 +101,7 @@ func stringForEstimatedDuration(strings: PresentationStrings, time: Double, form
     }
 }
 
-func throttledUserLocation(_ userLocation: Signal<CLLocation?, NoError>) -> Signal<CLLocation?, NoError> {
+public func throttledUserLocation(_ userLocation: Signal<CLLocation?, NoError>) -> Signal<CLLocation?, NoError> {
     return userLocation
     |> reduceLeft(value: nil) { current, updated, emit -> CLLocation? in
         if let current = current {
@@ -126,13 +126,13 @@ func throttledUserLocation(_ userLocation: Signal<CLLocation?, NoError>) -> Sign
     }
 }
 
-enum ExpectedTravelTime: Equatable {
+public enum ExpectedTravelTime: Equatable {
     case unknown
     case calculating
     case ready(Double)
 }
 
-func getExpectedTravelTime(coordinate: CLLocationCoordinate2D, transportType: MKDirectionsTransportType) -> Signal<ExpectedTravelTime, NoError> {
+public func getExpectedTravelTime(coordinate: CLLocationCoordinate2D, transportType: MKDirectionsTransportType) -> Signal<ExpectedTravelTime, NoError> {
     return Signal { subscriber in
         subscriber.putNext(.calculating)
         
