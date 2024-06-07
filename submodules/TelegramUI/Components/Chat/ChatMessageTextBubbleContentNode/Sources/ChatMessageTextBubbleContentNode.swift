@@ -166,6 +166,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             guard let self else {
                 return
             }
+            
+            cancelParentGestures(view: self.view)
+            
             var mappedLocation: CGPoint?
             if let location {
                 mappedLocation = self.textNode.textNode.layer.convert(location, to: self.layer)
