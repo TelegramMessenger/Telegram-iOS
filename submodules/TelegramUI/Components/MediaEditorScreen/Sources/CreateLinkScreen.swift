@@ -319,7 +319,9 @@ private final class CreateLinkSheetComponent: CombinedComponent {
             
             self.link = link?.url ?? ""
             self.name = link?.name ?? ""
-        
+            self.positionBelowText = link?.positionBelowText ?? true
+            self.largeMedia = link?.largeMedia
+            
             super.init()
             
             self.linkDisposable.set((self.linkPromise.get()
@@ -463,10 +465,10 @@ private final class CreateLinkSheetComponent: CombinedComponent {
             let renderer = DrawingMessageRenderer(context: self.context, messages: [message], parentView: controller.view, isLink: true)
             renderer.render(completion: { result in
                 completion(
-                    link,
                     CreateLinkScreen.Result(
-                        url: link,
+                        url: self.link,
                         name: self.name,
+                        webpage: !self.dismissed ? self.webpage : nil,
                         positionBelowText: self.positionBelowText,
                         largeMedia: self.largeMedia,
                         image: !media.isEmpty ? result.dayImage : nil,
@@ -556,16 +558,26 @@ public final class CreateLinkScreen: ViewControllerComponentContainer {
     public struct Link: Equatable {
         let url: String
         let name: String?
+        let positionBelowText: Bool
+        let largeMedia: Bool?
         
-        init(url: String, name: String?) {
+        init(
+            url: String,
+            name: String?,
+            positionBelowText: Bool,
+            largeMedia: Bool?
+        ) {
             self.url = url
             self.name = name
+            self.positionBelowText = positionBelowText
+            self.largeMedia = largeMedia
         }
     }
     
     public struct Result {
         let url: String
         let name: String
+        let webpage: TelegramMediaWebpage?
         let positionBelowText: Bool
         let largeMedia: Bool?
         let image: UIImage?
@@ -575,12 +587,12 @@ public final class CreateLinkScreen: ViewControllerComponentContainer {
     }
     
     private let context: AccountContext
-    fileprivate let completion: (String, CreateLinkScreen.Result) -> Void
+    fileprivate let completion: (CreateLinkScreen.Result) -> Void
         
     public init(
         context: AccountContext,
         link: CreateLinkScreen.Link?,
-        completion: @escaping (String, CreateLinkScreen.Result) -> Void
+        completion: @escaping (CreateLinkScreen.Result) -> Void
     ) {
         self.context = context
         self.completion = completion

@@ -3452,7 +3452,7 @@ final class StoryItemSetContainerSendMessage {
                 action()
                 return
             }
-            actions.append(ContextMenuAction(content: .textWithIcon(title: updatedPresentationData.initial.strings.Story_ViewLink, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: {
+            actions.append(ContextMenuAction(content: .textWithSubtitleAndIcon(title: updatedPresentationData.initial.strings.Story_ViewLink, subtitle: url, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: {
                 action()
             }))
         }

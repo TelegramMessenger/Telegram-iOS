@@ -3300,6 +3300,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let self {
                         if let location = entity as? DrawingLocationEntity {
                             self.presentLocationPicker(location)
+                        } else if let sticker = entity as? DrawingStickerEntity, case .link = sticker.content {
+                            self.addOrEditLink(sticker)
                         }
                     }
                 },
@@ -4478,34 +4480,66 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.controller?.present(contextController, in: .window(.root))
         }
         
-        func addLink() {
+        func addOrEditLink(_ existingEntity: DrawingStickerEntity? = nil) {
             guard let controller = self.controller else {
                 return
             }
+            
+            var link: CreateLinkScreen.Link?
+            if let existingEntity, case let .link(url, name, positionBelowText, largeMedia, _, _, _) = existingEntity.content {
+                link = CreateLinkScreen.Link(
+                    url: url,
+                    name: name,
+                    positionBelowText: positionBelowText,
+                    largeMedia: largeMedia
+                )
+            }
                         
-            let linkController = CreateLinkScreen(context: controller.context, link: nil, completion: { [weak self] url, result in
+            let linkController = CreateLinkScreen(context: controller.context, link: link, completion: { [weak self] result in
                 guard let self else {
                     return
                 }
                 
+                var linkStyle: DrawingStickerEntity.Content.LinkStyle
+                if let existingEntity, case let .link(_, _, _, _, _, _, existingStyle) = existingEntity.content {
+                    if [.white, .black].contains(existingStyle), result.image == nil {
+                        switch existingStyle {
+                        case .white:
+                            linkStyle = .whiteCompact
+                        case .black:
+                            linkStyle = .blackCompact
+                        default:
+                            linkStyle = existingStyle
+                        }
+                    } else {
+                        linkStyle = existingStyle
+                    }
+                } else {
+                    linkStyle = result.image != nil ? .white : .whiteCompact
+                }
+                
                 let entity = DrawingStickerEntity(
-                    content: .link(url, result.name, result.positionBelowText, result.largeMedia, result.image?.size, result.compactLightImage.size, result.image != nil ? .white : .whiteCompact)
+                    content: .link(result.url, result.name, result.positionBelowText, result.largeMedia, result.image?.size, result.compactLightImage.size, linkStyle)
                 )
                 entity.renderImage = result.image
                 entity.secondaryRenderImage = result.nightImage
                 entity.tertiaryRenderImage = result.compactLightImage
                 entity.quaternaryRenderImage = result.compactDarkImage
-                
+                                
                 let fraction: CGFloat
                 if let image = result.image {
                     fraction = max(image.size.width, image.size.height) / 353.0
                 } else {
-                    fraction = 1.0
+                    fraction = max(result.compactLightImage.size.width, result.compactLightImage.size.height) / 353.0
+                }
+                
+                if let existingEntity {
+                    self.entitiesView.remove(uuid: existingEntity.uuid, animated: true)
                 }
                 self.interaction?.insertEntity(
                     entity,
-                    scale: min(6.0, 3.3 * fraction) * 0.5,
-                    position: nil
+                    scale: existingEntity?.scale ?? min(6.0, 3.3 * fraction) * 0.5,
+                    position: existingEntity?.position
                 )
             })
             controller.push(linkController)
@@ -4786,7 +4820,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     }
                                     controller.addLink = { [weak self, weak controller] in
                                         if let self {
-                                            self.addLink()
+                                            self.addOrEditLink()
                                             
                                             self.stickerScreen = nil
                                             controller?.dismiss(animated: true)
@@ -5724,7 +5758,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }, action: { [weak self] _, a in
             a(.default)
             
-            self?.node.addLink()
+            self?.node.addOrEditLink()
         })))
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Location, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LocationSmall"), color: theme.contextMenu.primaryColor)

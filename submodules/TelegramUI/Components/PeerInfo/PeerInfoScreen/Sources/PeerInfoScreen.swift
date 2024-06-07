@@ -1728,12 +1728,13 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             let ItemBotInfo = 10
             
             if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
-                items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text("@\(user.addressName ?? "")"), text: presentationData.strings.PeerInfo_BotLinks, icon: PresentationResourcesSettings.bot, action: {
+                //TODO:localize
+                items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text("@\(user.addressName ?? "")"), text: "Username", icon: PresentationResourcesSettings.bot, action: {
                     interaction.editingOpenPublicLinkSetup()
                 }))
                 
                 if "".isEmpty {
-                    let balance: Int64 = 1000
+                    let balance: Int64 = 2275
                     items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStars, label: .text(presentationData.strings.PeerInfo_Bot_Balance_Stars(Int32(balance))), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.stars, action: {
                         interaction.editingOpenStars()
                     }))

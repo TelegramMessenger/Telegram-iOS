@@ -123,6 +123,10 @@ public enum CodableDrawingEntity: Equatable {
             )
         case let .sticker(entity):
             if case let .link(url, _, _, _, _, _, _) = entity.content {
+                var url = url
+                if !url.hasPrefix("http://") && !url.hasPrefix("https://") {
+                    url = "https://\(url)"
+                }
                 return .link(
                     coordinates: coordinates,
                     url: url

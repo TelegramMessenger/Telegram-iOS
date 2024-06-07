@@ -697,6 +697,10 @@ public class DrawingStickerEntityView: DrawingEntityView {
     
     override func selectedTapAction() -> Bool {
         if case let .link(url, name, positionBelowText, largeMedia, size, compactSize, style) = self.stickerEntity.content {
+            let values = [self.entity.scale, self.entity.scale * 0.93, self.entity.scale]
+            let keyTimes = [0.0, 0.33, 1.0]
+            self.layer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.3, keyPath: "transform.scale")
+            
             let updatedStyle: DrawingStickerEntity.Content.LinkStyle
             switch style {
             case .white:

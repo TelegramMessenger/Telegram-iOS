@@ -13,7 +13,6 @@ import Postbox
 import MultilineTextComponent
 import BalancedTextComponent
 import Markdown
-import PremiumStarComponent
 import ListSectionComponent
 import BundleIconComponent
 import TextFormat
@@ -84,18 +83,12 @@ final class StarsStatisticsScreenComponent: Component {
         
         private let scrollContainerView: UIView
         
-        private let overscroll = ComponentView<Empty>()
-        private let fade = ComponentView<Empty>()
-        private let starView = ComponentView<Empty>()
         private let titleView = ComponentView<Empty>()
-        private let descriptionView = ComponentView<Empty>()
         
+        private let chartView = ComponentView<Empty>()
+        private let proceedsView = ComponentView<Empty>()
         private let balanceView = ComponentView<Empty>()
-        
-        private let topBalanceTitleView = ComponentView<Empty>()
-        private let topBalanceValueView = ComponentView<Empty>()
-        private let topBalanceIconView = ComponentView<Empty>()
-                
+
         private let panelContainer = ComponentView<StarsTransactionsPanelContainerEnvironment>()
                                 
         private var component: StarsStatisticsScreenComponent?
@@ -115,8 +108,8 @@ final class StarsStatisticsScreenComponent: Component {
         private var previousBalance: Int64?
         
         private var allTransactionsContext: StarsTransactionsContext?
-        private var incomingTransactionsContext: StarsTransactionsContext?
-        private var outgoingTransactionsContext: StarsTransactionsContext?
+        
+        private var cachedChevronImage: (UIImage, PresentationTheme)?
         
         override init(frame: CGRect) {
             self.headerOffsetContainer = UIView()
@@ -206,61 +199,21 @@ final class StarsStatisticsScreenComponent: Component {
             let scrollBounds = self.scrollView.bounds
             
             let isLockedAtPanels = scrollBounds.maxY == self.scrollView.contentSize.height
+                            
+            let topContentOffset = self.scrollView.contentOffset.y
+            let navigationBackgroundAlpha = min(20.0, max(0.0, topContentOffset - 95.0)) / 20.0
+                            
+            let animatedTransition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
+            animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
+            animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
             
-            if let navigationMetrics = self.navigationMetrics {
-                let topInset: CGFloat = navigationMetrics.navigationHeight - 56.0
-                
-                let titleOffset: CGFloat
-                let titleScale: CGFloat
-                let titleOffsetDelta = (topInset + 160.0) - (navigationMetrics.statusBarHeight + (navigationMetrics.navigationHeight - navigationMetrics.statusBarHeight) / 2.0)
-                
-                var topContentOffset = self.scrollView.contentOffset.y
-                
-                let navigationBackgroundAlpha = min(20.0, max(0.0, topContentOffset - 95.0)) / 20.0
-                topContentOffset = topContentOffset + max(0.0, min(1.0, topContentOffset / titleOffsetDelta)) * 10.0
-                titleOffset = topContentOffset
-                let fraction = max(0.0, min(1.0, titleOffset / titleOffsetDelta))
-                titleScale = 1.0 - fraction * 0.36
-                
-                let headerTransition: Transition = .immediate
-                
-                if let starView = self.starView.view {
-                    let starPosition = CGPoint(x: self.scrollView.frame.width / 2.0, y: topInset + starView.bounds.height / 2.0 - 30.0 - titleOffset * titleScale)
-                    
-                    headerTransition.setPosition(view: starView, position: starPosition)
-                    headerTransition.setScale(view: starView, scale: titleScale)
-                }
-                
-                if let titleView = self.titleView.view {
-                    let titlePosition = CGPoint(x: scrollBounds.width / 2.0, y: max(topInset + 160.0 - titleOffset, navigationMetrics.statusBarHeight + (navigationMetrics.navigationHeight - navigationMetrics.statusBarHeight) / 2.0))
-                    
-                    headerTransition.setPosition(view: titleView, position: titlePosition)
-                    headerTransition.setScale(view: titleView, scale: titleScale)
-                }
-                
-                let animatedTransition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
-                animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
-                animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
-                
-                let expansionDistance: CGFloat = 32.0
-                var expansionDistanceFactor: CGFloat = abs(scrollBounds.maxY - self.scrollView.contentSize.height) / expansionDistance
-                expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
-                
-                transition.setAlpha(layer: self.navigationSeparatorLayer, alpha: expansionDistanceFactor)
-                if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
-                    panelContainerView.updateNavigationMergeFactor(value: 1.0 - expansionDistanceFactor, transition: transition)
-                }
-                
-                let topBalanceAlpha = 1.0 - expansionDistanceFactor
-                if let view = self.topBalanceTitleView.view {
-                    view.alpha = topBalanceAlpha
-                }
-                if let view = self.topBalanceValueView.view {
-                    view.alpha = topBalanceAlpha
-                }
-                if let view = self.topBalanceIconView.view {
-                    view.alpha = topBalanceAlpha
-                }
+            let expansionDistance: CGFloat = 32.0
+            var expansionDistanceFactor: CGFloat = abs(scrollBounds.maxY - self.scrollView.contentSize.height) / expansionDistance
+            expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
+            
+            transition.setAlpha(layer: self.navigationSeparatorLayer, alpha: expansionDistanceFactor)
+            if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
+                panelContainerView.updateNavigationMergeFactor(value: 1.0 - expansionDistanceFactor, transition: transition)
             }
             
             let _ = self.panelContainer.updateEnvironment(
@@ -290,6 +243,7 @@ final class StarsStatisticsScreenComponent: Component {
             }
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
             if self.stateDisposable == nil {
                 self.stateDisposable = (component.starsContext.state
@@ -335,82 +289,14 @@ final class StarsStatisticsScreenComponent: Component {
             let sideInsets: CGFloat = environment.safeInsets.left + environment.safeInsets.right + 16 * 2.0
             let bottomInset: CGFloat = environment.safeInsets.bottom
              
-            contentHeight += environment.statusBarHeight
+            contentHeight += environment.navigationHeight
+            contentHeight += 31.0
             
-            let starTransition: Transition = .immediate
-            
-            var topBackgroundColor = environment.theme.list.plainBackgroundColor
-            let bottomBackgroundColor = environment.theme.list.blocksBackgroundColor
-            if environment.theme.overallDarkAppearance {
-                topBackgroundColor = bottomBackgroundColor
-            }
-            
-            let overscrollSize = self.overscroll.update(
-                transition: .immediate,
-                component: AnyComponent(Rectangle(color: topBackgroundColor)),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 1000.0)
-            )
-            let overscrollFrame = CGRect(origin: CGPoint(x: 0.0, y: -overscrollSize.height), size: overscrollSize)
-            if let overscrollView = self.overscroll.view {
-                if overscrollView.superview == nil {
-                    self.scrollView.addSubview(overscrollView)
-                }
-                starTransition.setFrame(view: overscrollView, frame: overscrollFrame)
-            }
-            
-            let fadeSize = self.fade.update(
-                transition: .immediate,
-                component: AnyComponent(RoundedRectangle(
-                    colors: [
-                        topBackgroundColor,
-                        bottomBackgroundColor
-                    ],
-                    cornerRadius: 0.0,
-                    gradientDirection: .vertical
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 1000.0)
-            )
-            let fadeFrame = CGRect(origin: CGPoint(x: 0.0, y: -fadeSize.height), size: fadeSize)
-            if let fadeView = self.fade.view {
-                if fadeView.superview == nil {
-                    self.scrollView.addSubview(fadeView)
-                }
-                starTransition.setFrame(view: fadeView, frame: fadeFrame)
-            }
-                    
-            let starSize = self.starView.update(
-                transition: .immediate,
-                component: AnyComponent(PremiumStarComponent(
-                    theme: environment.theme,
-                    isIntro: true,
-                    isVisible: true,
-                    hasIdleAnimations: true,
-                    colors: [
-                        UIColor(rgb: 0xe57d02),
-                        UIColor(rgb: 0xf09903),
-                        UIColor(rgb: 0xf9b004),
-                        UIColor(rgb: 0xfdd219)
-                    ],
-                    particleColor: UIColor(rgb: 0xf9b004)
-                )),
-                environment: {},
-                containerSize: CGSize(width: min(414.0, availableSize.width), height: 220.0)
-            )
-            let starFrame = CGRect(origin: .zero, size: starSize)
-            if let starView = self.starView.view {
-                if starView.superview == nil {
-                    self.insertSubview(starView, aboveSubview: self.scrollView)
-                }
-                starTransition.setBounds(view: starView, bounds: starFrame)
-            }
-                       
             let titleSize = self.titleView.update(
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: environment.strings.Stars_Intro_Title, font: Font.bold(28.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                        text: .plain(NSAttributedString(string: "Stars Balance", font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                         horizontalAlignment: .center,
                         truncationType: .end,
                         maximumNumberOfLines: 1
@@ -423,114 +309,100 @@ final class StarsStatisticsScreenComponent: Component {
                 if titleView.superview == nil {
                     self.addSubview(titleView)
                 }
-                starTransition.setBounds(view: titleView, bounds: CGRect(origin: .zero, size: titleSize))
+                let titlePosition = CGPoint(x: availableSize.width / 2.0, y: environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)
+                transition.setPosition(view: titleView, position: titlePosition)
+                transition.setBounds(view: titleView, bounds: CGRect(origin: .zero, size: titleSize))
             }
             
-            let topBalanceTitleSize = self.topBalanceTitleView.update(
+            let proceedsSize = self.proceedsView.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: environment.strings.Stars_Intro_Balance,
-                        font: Font.regular(14.0),
-                        textColor: environment.theme.actionSheet.primaryTextColor
+                component: AnyComponent(ListSectionComponent(
+                    theme: environment.theme,
+                    header: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: "Proceeds Overview".uppercased(),
+                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                            textColor: environment.theme.list.freeTextColor
+                        )),
+                        maximumNumberOfLines: 0
                     )),
-                    maximumNumberOfLines: 1
+                    footer: nil,
+                    items: [AnyComponentWithIdentity(id: 0, component: AnyComponent(
+                        VStack([
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(HStack([
+                                AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(name: "Premium/Stars/StarMedium", tintColor: nil))),
+                                AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: presentationStringsFormattedNumber(Int32(self.starsState?.balance ?? 0), environment.dateTimeFormat.groupingSeparator), font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))))),
+                                AnyComponentWithIdentity(id: 2, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: formatUsdValue(self.starsState?.balance ?? 0, rate: 0.2), font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor))))),
+                            ], spacing: 3.0))),
+                            AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Available Balance", font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor)))))
+                        ], alignment: .left, spacing: 2.0)
+                    )),
+                    AnyComponentWithIdentity(id: 1, component: AnyComponent(
+                        VStack([
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(HStack([
+                                AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(name: "Premium/Stars/StarMedium", tintColor: nil))),
+                                AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: presentationStringsFormattedNumber(Int32(self.starsState?.balance ?? 0) * 3, environment.dateTimeFormat.groupingSeparator), font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))))),
+                                AnyComponentWithIdentity(id: 2, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: formatUsdValue((self.starsState?.balance ?? 0) * 3, rate: 0.2), font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor))))),
+                            ], spacing: 3.0))),
+                            AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Total Lifetime Proceeds", font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor)))))
+                        ], alignment: .left, spacing: 2.0)
+                    ))],
+                    displaySeparators: false
                 )),
                 environment: {},
-                containerSize: CGSize(width: 120.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - sideInsets, height: availableSize.height)
             )
-            
-            let topBalanceValueSize = self.topBalanceValueView.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: presentationStringsFormattedNumber(Int32(self.starsState?.balance ?? 0), environment.dateTimeFormat.groupingSeparator),
-                        font: Font.semibold(14.0),
-                        textColor: environment.theme.actionSheet.primaryTextColor
-                    )),
-                    maximumNumberOfLines: 1
-                )),
-                environment: {},
-                containerSize: CGSize(width: 120.0, height: 100.0)
-            )
-            let topBalanceIconSize = self.topBalanceIconView.update(
-                transition: .immediate,
-                component: AnyComponent(BundleIconComponent(name: "Premium/Stars/StarSmall", tintColor: nil)),
-                environment: {},
-                containerSize: availableSize
-            )
-            
-            let navigationHeight = environment.navigationHeight - environment.statusBarHeight
-            let topBalanceOriginY = environment.statusBarHeight + (navigationHeight - topBalanceTitleSize.height - topBalanceValueSize.height) / 2.0
-            let topBalanceTitleFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceTitleSize.width - 16.0 - environment.safeInsets.right, y: topBalanceOriginY), size: topBalanceTitleSize)
-            if let topBalanceTitleView = self.topBalanceTitleView.view {
-                if topBalanceTitleView.superview == nil {
-                    topBalanceTitleView.alpha = 0.0
-                    self.addSubview(topBalanceTitleView)
+            let proceedsFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - proceedsSize.width) / 2.0), y: contentHeight), size: proceedsSize)
+            if let proceedsView = self.proceedsView.view {
+                if proceedsView.superview == nil {
+                    self.scrollView.addSubview(proceedsView)
                 }
-                starTransition.setFrame(view: topBalanceTitleView, frame: topBalanceTitleFrame)
-            }
-    
-            let topBalanceValueFrame = CGRect(origin: CGPoint(x: availableSize.width - topBalanceValueSize.width - 16.0 - environment.safeInsets.right, y: topBalanceTitleFrame.maxY), size: topBalanceValueSize)
-            if let topBalanceValueView = self.topBalanceValueView.view {
-                if topBalanceValueView.superview == nil {
-                    topBalanceValueView.alpha = 0.0
-                    self.addSubview(topBalanceValueView)
-                }
-                starTransition.setFrame(view: topBalanceValueView, frame: topBalanceValueFrame)
+                transition.setFrame(view: proceedsView, frame: proceedsFrame)
             }
             
-            let topBalanceIconFrame = CGRect(origin: CGPoint(x: topBalanceValueFrame.minX - topBalanceIconSize.width - 2.0, y: floorToScreenPixels(topBalanceValueFrame.midY - topBalanceIconSize.height / 2.0) - UIScreenPixel), size: topBalanceIconSize)
-            if let topBalanceIconView = self.topBalanceIconView.view {
-                if topBalanceIconView.superview == nil {
-                    topBalanceIconView.alpha = 0.0
-                    self.addSubview(topBalanceIconView)
-                }
-                starTransition.setFrame(view: topBalanceIconView, frame: topBalanceIconFrame)
-            }
-
-            contentHeight += 181.0
+            contentHeight += proceedsSize.height
+            contentHeight += 44.0
             
-            let descriptionSize = self.descriptionView.update(
-                transition: .immediate,
-                component: AnyComponent(
-                    BalancedTextComponent(
-                        text: .plain(NSAttributedString(string: environment.strings.Stars_Intro_Description, font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)),
-                        horizontalAlignment: .center,
-                        maximumNumberOfLines: 0,
-                        lineSpacing: 0.2
-                    )
-                ),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInsets - 8.0, height: 240.0)
-            )
-            let descriptionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - descriptionSize.width) / 2.0), y: contentHeight + 20.0 - floor(descriptionSize.height / 2.0)), size: descriptionSize)
-            if let descriptionView = self.descriptionView.view {
-                if descriptionView.superview == nil {
-                    self.scrollView.addSubview(descriptionView)
-                }
-                
-                starTransition.setFrame(view: descriptionView, frame: descriptionFrame)
-            }
-    
-            contentHeight += descriptionSize.height
-            contentHeight += 29.0
+            let termsFont = Font.regular(13.0)
+            let termsTextColor = environment.theme.list.freeTextColor
+            let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
+                return (TelegramTextAttributes.URL, contents)
+            })
             
-            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+            let balanceInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("You can withdraw Stars using Fragment, or use Stars to advertise your bot. [Learn More >]()", attributes: termsMarkdownAttributes, textAlignment: .natural
+            ))
+            if self.cachedChevronImage == nil || self.cachedChevronImage?.1 !== environment.theme {
+                self.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: environment.theme.list.itemAccentColor)!, environment.theme)
+            }
+            if let range = balanceInfoString.string.range(of: ">"), let chevronImage = self.cachedChevronImage?.0 {
+                balanceInfoString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: balanceInfoString.string))
+            }
+                        
             let balanceSize = self.balanceView.update(
                 transition: .immediate,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
-                    header: nil,
-                    footer: nil,
+                    header: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: "Available Balance".uppercased(),
+                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                            textColor: environment.theme.list.freeTextColor
+                        )),
+                        maximumNumberOfLines: 0
+                    )),
+                    footer: AnyComponent(MultilineTextComponent(
+                        text: .plain(balanceInfoString),
+                        maximumNumberOfLines: 0
+                    )),
                     items: [AnyComponentWithIdentity(id: 0, component: AnyComponent(
                         StarsBalanceComponent(
                             theme: environment.theme,
                             strings: environment.strings,
                             dateTimeFormat: environment.dateTimeFormat,
                             count: self.starsState?.balance ?? 0,
-                            rate: nil,
-                            actionAvailable: !premiumConfiguration.areStarsDisabled,
+                            rate: 0.2,
+                            actionTitle: "Withdraw via Fragment",
+                            actionAvailable: true,
                             buy: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
@@ -548,7 +420,7 @@ final class StarsStatisticsScreenComponent: Component {
                 if balanceView.superview == nil {
                     self.scrollView.addSubview(balanceView)
                 }
-                starTransition.setFrame(view: balanceView, frame: balanceFrame)
+                transition.setFrame(view: balanceView, frame: balanceFrame)
             }
             
             contentHeight += balanceSize.height
@@ -563,51 +435,13 @@ final class StarsStatisticsScreenComponent: Component {
                 } else {
                     allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(starsContext: component.starsContext, subject: .all)
                 }
-                
-                let incomingTransactionsContext: StarsTransactionsContext
-                if let current = self.incomingTransactionsContext {
-                    incomingTransactionsContext = current
-                } else {
-                    incomingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(starsContext: component.starsContext, subject: .incoming)
-                }
-                
-                let outgoingTransactionsContext: StarsTransactionsContext
-                if let current = self.outgoingTransactionsContext {
-                    outgoingTransactionsContext = current
-                } else {
-                    outgoingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(starsContext: component.starsContext, subject: .outgoing)
-                }
-                
+                                
                 panelItems.append(StarsTransactionsPanelContainerComponent.Item(
                     id: "all",
                     title: environment.strings.Stars_Intro_AllTransactions,
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: allTransactionsContext,
-                        action: { transaction in
-                            component.openTransaction(transaction)
-                        }
-                    ))
-                ))
-                
-                panelItems.append(StarsTransactionsPanelContainerComponent.Item(
-                    id: "incoming",
-                    title: environment.strings.Stars_Intro_Incoming,
-                    panel: AnyComponent(StarsTransactionsListPanelComponent(
-                        context: component.context,
-                        transactionsContext: incomingTransactionsContext,
-                        action: { transaction in
-                            component.openTransaction(transaction)
-                        }
-                    ))
-                ))
-                
-                panelItems.append(StarsTransactionsPanelContainerComponent.Item(
-                    id: "outgoing",
-                    title: environment.strings.Stars_Intro_Outgoing,
-                    panel: AnyComponent(StarsTransactionsListPanelComponent(
-                        context: component.context,
-                        transactionsContext: outgoingTransactionsContext,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }

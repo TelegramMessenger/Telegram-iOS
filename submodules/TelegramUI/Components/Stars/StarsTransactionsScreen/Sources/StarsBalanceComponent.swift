@@ -15,6 +15,7 @@ final class StarsBalanceComponent: Component {
     let dateTimeFormat: PresentationDateTimeFormat
     let count: Int64
     let rate: Double?
+    let actionTitle: String
     let actionAvailable: Bool
     let buy: () -> Void
     
@@ -24,6 +25,7 @@ final class StarsBalanceComponent: Component {
         dateTimeFormat: PresentationDateTimeFormat,
         count: Int64,
         rate: Double?,
+        actionTitle: String,
         actionAvailable: Bool,
         buy: @escaping () -> Void
     ) {
@@ -32,6 +34,7 @@ final class StarsBalanceComponent: Component {
         self.dateTimeFormat = dateTimeFormat
         self.count = count
         self.rate = rate
+        self.actionTitle = actionTitle
         self.actionAvailable = actionAvailable
         self.buy = buy
     }
@@ -44,6 +47,9 @@ final class StarsBalanceComponent: Component {
             return false
         }
         if lhs.dateTimeFormat != rhs.dateTimeFormat {
+            return false
+        }
+        if lhs.actionTitle != rhs.actionTitle {
             return false
         }
         if lhs.actionAvailable != rhs.actionAvailable {
@@ -111,11 +117,18 @@ final class StarsBalanceComponent: Component {
             }
             contentHeight += titleSize.height
         
+            let subtitleText: String
+            if let rate = component.rate {
+                subtitleText = "≈\(formatUsdValue(component.count, rate: rate))"
+            } else {
+                subtitleText = component.strings.Stars_Intro_YourBalance
+            }
+            
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: component.strings.Stars_Intro_YourBalance, font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)),
+                        text: .plain(NSAttributedString(string: subtitleText, font: Font.regular(17.0), textColor: component.theme.list.itemSecondaryTextColor)),
                         horizontalAlignment: .center
                     )
                 ),
@@ -138,7 +151,7 @@ final class StarsBalanceComponent: Component {
                     transition: .immediate,
                     component: AnyComponent(
                         SolidRoundedButtonComponent(
-                            title: component.strings.Stars_Intro_Buy,
+                            title: component.actionTitle,
                             theme: SolidRoundedButtonComponent.Theme(theme: component.theme),
                             height: 50.0,
                             cornerRadius: 11.0,
