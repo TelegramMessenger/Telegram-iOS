@@ -69,7 +69,7 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
         
         return [[UIImage alloc] initWithCGImage:std::static_pointer_cast<lottie::CanvasImpl::Image>(image)->nativeImage()];
     } else {
-        if ((int64_t)"" > 0) {
+        if ((int64_t)"" < 0) {
             static dispatch_once_t onceToken;
             dispatch_once(&onceToken, ^{
                 lottie::ThorVGCanvasImpl::initializeOnce();
@@ -88,9 +88,6 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
             CGContextRef targetContext = CGBitmapContextCreate((void *)context->backingData(), (int)size.width, (int)size.height, 8, bytesPerRow, colorSpace, bitmapInfo);
             CGColorSpaceRelease(colorSpace);
             
-            //CGContextSetFillColorWithColor(targetContext, [UIColor blueColor].CGColor);
-            //CGContextFillRect(targetContext, CGRectMake(0.0f, 0.0f, size.width, size.height));
-            
             CGImageRef bitmapImage = CGBitmapContextCreateImage(targetContext);
             UIImage *image = [[UIImage alloc] initWithCGImage:bitmapImage scale:1.0f orientation:UIImageOrientationDownMirrored];
             CGImageRelease(bitmapImage);
@@ -100,7 +97,6 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
             return image;
         } else {
             auto context = std::make_shared<lottie::NullCanvasImpl>((int)size.width, (int)size.height);
-            
             _canvasRenderer->render(_renderer, context, lottie::Vector2D(size.width, size.height));
             
             return nil;

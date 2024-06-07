@@ -78,7 +78,7 @@ private final class ReferenceCompareTest {
             }
             
             var continueFromName: String?
-            //continueFromName = "1137162165791227948.json"
+            //continueFromName = "1048388279864393866.json"
             
             let _ = await processAnimationFolderAsync(basePath: bundlePath, path: "", stopOnFailure: !testNonReference, process: { path, name, alwaysDraw in
                 if let continueFromNameValue = continueFromName {
@@ -119,9 +119,9 @@ public final class ViewController: UIViewController {
         
         self.view.layer.addSublayer(MetalEngine.shared.rootLayer)
         
-        if "".isEmpty {
+        if !"".isEmpty {
             if #available(iOS 13.0, *) {
-                self.test = ReferenceCompareTest(view: self.view, testNonReference: true)
+                self.test = ReferenceCompareTest(view: self.view, testNonReference: false)
             }
         } else if !"".isEmpty {
             /*let cachedAnimation = cacheLottieMetalAnimation(path: filePath)!
