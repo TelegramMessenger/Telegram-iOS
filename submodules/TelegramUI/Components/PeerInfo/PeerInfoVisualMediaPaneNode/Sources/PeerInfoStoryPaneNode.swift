@@ -3051,7 +3051,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             return
         }
         
-        let mapOverscrollInset: CGFloat = 200.0
+        let mapOverscrollInset: CGFloat = 300.0
         
         var mapHeight = min(size.width, size.height)
         mapHeight = min(mapHeight, floor(size.height * 0.389))

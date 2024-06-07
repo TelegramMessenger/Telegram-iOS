@@ -180,10 +180,10 @@ public final class LocationMapHeaderNode: ASDisplayNode {
     public func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, topPadding: CGFloat, offset: CGFloat, size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight, topPadding, offset, size)
         
-        let mapHeight: CGFloat = floor(layout.size.height * 1.3)
-        let mapFrame = CGRect(x: 0.0, y: floorToScreenPixels((size.height - mapHeight + navigationBarHeight) / 2.0) + offset, width: size.width, height: mapHeight)
+        let mapHeight: CGFloat = floor(layout.size.height * 1.3) + layout.intrinsicInsets.top * 2.0
+        let mapFrame = CGRect(x: 0.0, y: floorToScreenPixels((size.height - mapHeight + navigationBarHeight) / 2.0) + offset + floor(layout.intrinsicInsets.top * 0.5), width: size.width, height: mapHeight)
         transition.updateFrame(node: self.mapNode, frame: mapFrame)
-        self.mapNode.updateLayout(size: mapFrame.size, topPadding: layout.intrinsicInsets.top)
+        self.mapNode.updateLayout(size: mapFrame.size, topPadding: 0.0)
         
         let inset: CGFloat = 6.0
         
