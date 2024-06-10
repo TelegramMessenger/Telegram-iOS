@@ -455,11 +455,8 @@ final class PeerInfoStoryGridScreenComponent: Component {
             } else {
                 paneNode = PeerInfoStoryPaneNode(
                     context: component.context,
-                    peerId: component.peerId,
-                    contentType: .photoOrVideo,
+                    scope: .peer(id: component.peerId, isSaved: true, isArchived: component.scope == .archive),
                     captureProtected: false,
-                    isSaved: true,
-                    isArchive: component.scope == .archive,
                     isProfileEmbedded: false,
                     canManageStories: true,
                     navigationController: { [weak self] in

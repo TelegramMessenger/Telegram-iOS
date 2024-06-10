@@ -28,6 +28,8 @@ swift_library(
         "//submodules/TelegramUI/Components/MoreHeaderButton",
         "//submodules/TelegramUI/Components/MediaEditorScreen",
         "//submodules/SaveToCameraRoll",
+        "//submodules/ShareController",
+        "//submodules/OpenInExternalAppUI",
     ],
     visibility = [
         "//visibility:public",

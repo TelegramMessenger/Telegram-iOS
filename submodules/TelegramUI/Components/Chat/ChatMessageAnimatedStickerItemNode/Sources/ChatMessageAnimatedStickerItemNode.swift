@@ -592,12 +592,14 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         }
         
-        var isPlaying = self.visibilityStatus == true && !self.forceStopAnimations
+        let isPlaying = self.visibilityStatus == true && !self.forceStopAnimations
+        
+        var canPlayEffects = isPlaying
         if !item.controllerInteraction.canReadHistory {
-            isPlaying = false
+            canPlayEffects = false
         }
         
-        if !isPlaying {
+        if !canPlayEffects {
             self.removeAdditionalAnimations()
             self.removeEffectAnimations()
         }
@@ -630,7 +632,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
         }
         
-        if isPlaying, let animationNode = self.animationNode as? AnimatedStickerNode {
+        if canPlayEffects, let animationNode = self.animationNode as? AnimatedStickerNode {
             var effectAlreadySeen = true
             if item.message.flags.contains(.Incoming) {
                 if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {

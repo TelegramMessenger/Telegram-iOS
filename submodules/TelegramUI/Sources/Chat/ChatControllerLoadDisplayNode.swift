@@ -3706,14 +3706,18 @@ extension ChatControllerImpl {
                     }
                 }
                 
-                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: strongSelf.updatedPresentationData, account: strongSelf.context.account, text: text?.string ?? "", link: link, apply: { [weak self] link in
+                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: strongSelf.updatedPresentationData, account: strongSelf.context.account, text: text?.string ?? "", link: link, allowEmpty: true, apply: { [weak self] link in
                     if let strongSelf = self, let inputMode = inputMode, let selectionRange = selectionRange {
-                        if let link = link {
-                            strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-                                return (chatTextInputAddLinkAttribute(current, selectionRange: selectionRange, url: link), inputMode)
+                        if let link {
+                            if !link.isEmpty {
+                                strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                                    return (chatTextInputAddLinkAttribute(current, selectionRange: selectionRange, url: link), inputMode)
+                                }
+                            } else {
+                                strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                                    return (chatTextInputRemoveLinkAttribute(current, selectionRange: selectionRange), inputMode)
+                                }
                             }
-                        } else {
-                            
                         }
                         strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, {
                             return $0.updatedInputMode({ _ in return inputMode }).updatedInterfaceState({

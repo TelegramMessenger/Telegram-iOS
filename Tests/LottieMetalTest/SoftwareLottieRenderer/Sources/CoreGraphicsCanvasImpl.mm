@@ -3,7 +3,7 @@
 #include <LottieCpp/CGPathCocoa.h>
 #include <LottieCpp/VectorsCocoa.h>
 
-namespace lottieRendering {
+namespace lottie {
 
 namespace {
 
@@ -62,18 +62,17 @@ bool addEnumeratedPath(CGContextRef context, CanvasPathEnumerator const &enumera
 
 }
 
-ImageImpl::ImageImpl(::CGImageRef image) {
+CanvasImpl::Image::Image(::CGImageRef image) {
     _image = CGImageRetain(image);
 }
 
-ImageImpl::~ImageImpl() {
+CanvasImpl::Image::~Image() {
     CFRelease(_image);
 }
 
-::CGImageRef ImageImpl::nativeImage() const {
+::CGImageRef CanvasImpl::Image::nativeImage() const {
     return _image;
 }
-
 
 CanvasImpl::CanvasImpl(int width, int height) {
     _width = width;
@@ -516,10 +515,10 @@ void CanvasImpl::concatenate(lottie::Transform2D const &transform) {
     CGContextConcatCTM(_context, CATransform3DGetAffineTransform(nativeTransform(transform)));
 }
 
-std::shared_ptr<Image> CanvasImpl::makeImage() const {
+std::shared_ptr<CanvasImpl::Image> CanvasImpl::makeImage() const {
     ::CGImageRef nativeImage = CGBitmapContextCreateImage(_context);
     if (nativeImage) {
-        auto image = std::make_shared<ImageImpl>(nativeImage);
+        auto image = std::make_shared<CanvasImpl::Image>(nativeImage);
         CFRelease(nativeImage);
         return image;
     } else {
@@ -533,7 +532,7 @@ void CanvasImpl::draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const
         CGContextDrawLayerInRect(_context, CGRectMake(rect.x, rect.y, rect.width, rect.height), impl->_layer);
     } else {
         auto image = impl->makeImage();
-        CGContextDrawImage(_context, CGRectMake(rect.x, rect.y, rect.width, rect.height), ((ImageImpl *)image.get())->nativeImage());
+        CGContextDrawImage(_context, CGRectMake(rect.x, rect.y, rect.width, rect.height), ((CanvasImpl::Image *)image.get())->nativeImage());
     }
 }
 

@@ -1014,6 +1014,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     func coveringInsetOffsetUpdated(transition: ContainedViewLayoutTransition) {
         self.coveringInsetOffsetUpdatedImpl?(transition)
     }
+    
+    func scrollingOffsetUpdated(transition: ContainedViewLayoutTransition) {
+    }
 
     func onBeginFastScrolling() {
         self.onBeginFastScrollingImpl?()

@@ -61,37 +61,33 @@ func areImagesEqual(_ lhs: UIImage, _ rhs: UIImage) -> UIImage? {
 }
 
 @available(iOS 13.0, *)
-func processDrawAnimation(baseCachePath: String, path: String, name: String, size: CGSize, alwaysDraw: Bool, updateImage: @escaping (UIImage?, UIImage?) -> Void) async -> Bool {
+func processDrawAnimation(baseCachePath: String, path: String, name: String, size: CGSize, alwaysDraw: Bool, useNonReferenceRendering: Bool, updateImage: @escaping (UIImage?, UIImage?) -> Void) async -> Bool {
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
         print("Could not load \(path)")
         return false
     }
-    
-    guard let animation = LottieAnimation(data: data) else {
-        print("Could not parse animation at \(path)")
-        return false
-    }
-    
-    let layer = LottieAnimationContainer(animation: animation)
     
     let cacheFolderPath = cacheReferenceFolderPath(baseCachePath: baseCachePath, width: Int(size.width), name: name)
     if !FileManager.default.fileExists(atPath: cacheFolderPath) {
         let _ = await cacheReferenceAnimation(baseCachePath: baseCachePath, width: Int(size.width), path: path, name: name)
     }
     
-    let renderer = SoftwareLottieRenderer(animationContainer: layer)
+    guard let renderer = SoftwareLottieRenderer(data: data) else {
+        print("Could not parse animation at \(path)")
+        return false
+    }
     
-    for i in 0 ..< min(100000, animation.frameCount) {
+    for i in 0 ..< min(100000, renderer.frameCount) {
         let frameResult = autoreleasepool {
-            let frameIndex = i % animation.frameCount
+            let frameIndex = i % renderer.frameCount
             
             let referenceImageData = try! Data(contentsOf: URL(fileURLWithPath: cacheFolderPath + "/frame\(frameIndex)"))
             let referenceImage = decompressImageFrame(data: referenceImageData)
             
-            layer.update(frameIndex)
-            let image = renderer.render(for: size, useReferenceRendering: true)!
+            renderer.setFrame(frameIndex)
+            let image = renderer.render(for: size, useReferenceRendering: !useNonReferenceRendering)!
             
-            if let diffImage = areImagesEqual(image, referenceImage) {
+            if !useNonReferenceRendering, let diffImage = areImagesEqual(image, referenceImage) {
                 updateImage(diffImage, referenceImage)
                 
                 print("Mismatch in frame \(frameIndex)")

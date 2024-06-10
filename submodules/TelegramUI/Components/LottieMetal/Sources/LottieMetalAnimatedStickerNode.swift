@@ -34,7 +34,7 @@ func metalLibrary(device: MTLDevice) -> MTLLibrary? {
     return library
 }
 
-private func generateTexture(device: MTLDevice, sideSize: Int, msaaSampleCount: Int) -> MTLTexture {
+/*private func generateTexture(device: MTLDevice, sideSize: Int, msaaSampleCount: Int) -> MTLTexture {
     let textureDescriptor = MTLTextureDescriptor()
     textureDescriptor.sampleCount = msaaSampleCount
     if msaaSampleCount == 1 {
@@ -53,7 +53,7 @@ private func generateTexture(device: MTLDevice, sideSize: Int, msaaSampleCount: 
 }
 
 public func cacheLottieMetalAnimation(path: String) -> Data? {
-    if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+    /*if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
         let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
         if let lottieAnimation = LottieAnimation(data: decompressedData) {
             let animationContainer = LottieAnimationContainer(animation: lottieAnimation)
@@ -92,7 +92,7 @@ public func cacheLottieMetalAnimation(path: String) -> Data? {
             
             return zippedData
         }
-    }
+    }*/
     return nil
 }
 
@@ -1030,7 +1030,7 @@ public final class LottieMetalAnimatedStickerNode: ASDisplayNode, AnimatedSticke
                 if let serializedFrames {
                     content = .serialized(frameMapping: serializedFrames.0, data: serializedFrames.1)
                 } else {
-                    guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+                    /*guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
                         return
                     }
                     let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
@@ -1045,7 +1045,8 @@ public final class LottieMetalAnimatedStickerNode: ASDisplayNode, AnimatedSticke
                         AnimationCacheState.shared.enqueue(path: path, cachePath: cachePathValue)
                     }
                     
-                    content = .animation(lottieInstance)
+                    content = .animation(lottieInstance)*/
+                    return
                 }
                 
                 Queue.mainQueue().async {
@@ -1165,4 +1166,4 @@ public final class LottieMetalAnimatedStickerNode: ASDisplayNode, AnimatedSticke
     
     public func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
     }
-}
+}*/

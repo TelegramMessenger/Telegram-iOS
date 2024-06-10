@@ -478,7 +478,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
                             guard let self else {
                                 return
                             }
-                            let searchController = self.context.sharedContext.makeStorySearchController(context: self.context, query: self.query, listContext: self.globalStorySearchContext)
+                            let searchController = self.context.sharedContext.makeStorySearchController(context: self.context, scope: .query(self.query), listContext: self.globalStorySearchContext)
                             self.controller?.push(searchController)
                         }
                     )),

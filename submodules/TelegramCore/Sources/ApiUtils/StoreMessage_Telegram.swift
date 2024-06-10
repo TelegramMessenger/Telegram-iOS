@@ -483,7 +483,6 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
     case .inputMediaAreaVenue:
         return nil
     case let .mediaAreaGeoPoint(_, coordinates, geo, address):
-        let _ = address
         let latitude: Double
         let longitude: Double
         switch geo {
@@ -494,7 +493,28 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
             latitude = 0.0
             longitude = 0.0
         }
-        return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(latitude: latitude, longitude: longitude, venue: nil, address: address.flatMap(mapGeoAddressFromApiGeoPointAddress), queryId: nil, resultId: nil))
+        
+        var mappedAddress: MapGeoAddress?
+        if let address {
+            switch address {
+            case let .geoPointAddress(_, countryIso2, state, city, street):
+                mappedAddress = MapGeoAddress(
+                    country: countryIso2,
+                    state: state,
+                    city: city,
+                    street: street
+                )
+            }
+        }
+        
+        return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(
+            latitude: latitude,
+            longitude: longitude,
+            venue: nil,
+            address: mappedAddress,
+            queryId: nil,
+            resultId: nil
+        ))
     case let .mediaAreaVenue(coordinates, geo, title, address, provider, venueId, venueType):
         let latitude: Double
         let longitude: Double

@@ -46,7 +46,7 @@ SDK_PATH="$(xcrun --sdk $PLATFORM --show-sdk-path 2>/dev/null)"
 
 mkdir -p "${INTERDIR}"
 
-./configure --disable-shared --enable-static --with-pic --disable-extra-programs --disable-doc --disable-asm --enable-intrinsics --enable-deep-plc --enable-dred --enable-osce ${EXTRA_CONFIG} \
+./configure --disable-shared --enable-static --with-pic --disable-extra-programs --disable-doc --disable-asm --enable-intrinsics ${EXTRA_CONFIG} \
   --prefix="${INTERDIR}" \
   LDFLAGS="$LDFLAGS ${OPT_LDFLAGS} -fPIE -miphoneos-version-min=${MINIOSVERSION} -L${OUTPUTDIR}/lib" \
   CFLAGS="$CFLAGS ${EXTRA_CFLAGS} ${OPT_CFLAGS} -fPIE -miphoneos-version-min=${MINIOSVERSION} -I${OUTPUTDIR}/include -isysroot ${SDK_PATH}" \

@@ -419,7 +419,7 @@ private final class PeerInfoPendingPane {
                 }
             }
             
-            let visualPaneNode = PeerInfoStoryPaneNode(context: context, peerId: peerId, contentType: .photoOrVideo, captureProtected: captureProtected, isSaved: false, isArchive: key == .storyArchive, isProfileEmbedded: true, canManageStories: canManage, navigationController: chatControllerInteraction.navigationController, listContext: key == .storyArchive ? data.storyArchiveListContext : data.storyListContext)
+            let visualPaneNode = PeerInfoStoryPaneNode(context: context, scope: .peer(id: peerId, isSaved: false, isArchived: key == .storyArchive), captureProtected: captureProtected, isProfileEmbedded: true, canManageStories: canManage, navigationController: chatControllerInteraction.navigationController, listContext: key == .storyArchive ? data.storyArchiveListContext : data.storyListContext)
             paneNode = visualPaneNode
             visualPaneNode.openCurrentDate = {
                 openMediaCalendar()

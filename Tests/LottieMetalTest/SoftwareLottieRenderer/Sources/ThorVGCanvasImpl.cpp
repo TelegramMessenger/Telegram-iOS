@@ -1,9 +1,6 @@
 #include "ThorVGCanvasImpl.h"
 
-#include <LottieCpp/CGPathCocoa.h>
-#include <LottieCpp/VectorsCocoa.h>
-
-namespace lottieRendering {
+namespace lottie {
 
 namespace {
 
@@ -31,35 +28,34 @@ void tvgPath(CanvasPathEnumerator const &enumeratePath, tvg::Shape *shape) {
 }
 
 tvg::Matrix tvgTransform(lottie::Transform2D const &transform) {
-    CGAffineTransform affineTransform = CATransform3DGetAffineTransform(lottie::nativeTransform(transform));
     tvg::Matrix result;
-    result.e11 = affineTransform.a;
-    result.e21 = affineTransform.b;
-    result.e31 = 0.0f;
-    result.e12 = affineTransform.c;
-    result.e22 = affineTransform.d;
-    result.e32 = 0.0f;
-    result.e13 = affineTransform.tx;
-    result.e23 = affineTransform.ty;
-    result.e33 = 1.0f;
+    result.e11 = transform.rows().columns[0][0];
+    result.e21 = transform.rows().columns[0][1];
+    result.e31 = transform.rows().columns[0][2];
+    result.e12 = transform.rows().columns[1][0];
+    result.e22 = transform.rows().columns[1][1];
+    result.e32 = transform.rows().columns[1][2];
+    result.e13 = transform.rows().columns[2][0];
+    result.e23 = transform.rows().columns[2][1];
+    result.e33 = transform.rows().columns[2][2];
+    
     return result;
 }
 
 }
 
-ThorVGCanvasImpl::ThorVGCanvasImpl(int width, int height) :
+void ThorVGCanvasImpl::initializeOnce() {
+    tvg::Initializer::init(0);
+}
+
+ThorVGCanvasImpl::ThorVGCanvasImpl(int width, int height, int bytesPerRow) :
 _width(width), _height(height), _transform(lottie::Transform2D::identity()) {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        tvg::Initializer::init(0);
-    });
-    
     _canvas = tvg::SwCanvas::gen();
     
-    _bytesPerRow = width * 4;
+    _bytesPerRow = bytesPerRow;
     
-    static uint32_t *sharedBackingData = (uint32_t *)malloc(_bytesPerRow * height);
-    _backingData = sharedBackingData;
+    _backingData = (uint32_t *)malloc(_bytesPerRow * height);
+    memset(_backingData, 0, _bytesPerRow * height);
     
     _canvas->target(_backingData, _bytesPerRow / 4, width, height, tvg::SwCanvas::ARGB8888);
 }
@@ -76,7 +72,7 @@ int ThorVGCanvasImpl::height() const {
 }
 
 std::shared_ptr<Canvas> ThorVGCanvasImpl::makeLayer(int width, int height) {
-    return std::make_shared<ThorVGCanvasImpl>(width, height);
+    return std::make_shared<ThorVGCanvasImpl>(width, height, width * 4);
 }
 
 void ThorVGCanvasImpl::saveState() {

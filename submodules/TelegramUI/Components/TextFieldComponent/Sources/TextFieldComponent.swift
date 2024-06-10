@@ -930,11 +930,17 @@ public final class TextFieldComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: component.theme)
             let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
-            let controller = chatTextLinkEditController(sharedContext: component.context.sharedContext, updatedPresentationData: updatedPresentationData, account: component.context.account, text: text.string, link: link, apply: { [weak self] link in
+            let controller = chatTextLinkEditController(sharedContext: component.context.sharedContext, updatedPresentationData: updatedPresentationData, account: component.context.account, text: text.string, link: link, allowEmpty: true, apply: { [weak self] link in
                 if let self {
-                    if let link = link {
-                        self.updateInputState { state in
-                            return state.addLinkAttribute(selectionRange: selectionRange, url: link)
+                    if let link {
+                        if !link.isEmpty {
+                            self.updateInputState { state in
+                                return state.addLinkAttribute(selectionRange: selectionRange, url: link)
+                            }
+                        } else {
+                            self.updateInputState { state in
+                                return state.removeLinkAttribute(selectionRange: selectionRange)
+                            }
                         }
                         self.textView.becomeFirstResponder()
                     }
@@ -1580,6 +1586,30 @@ extension TextFieldComponent.InputState {
                 result.removeAttribute(attribute, range: range)
             }
             result.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: nsRange)
+            return TextFieldComponent.InputState(inputText: result, selectionRange: selectionRange)
+        } else {
+            return self
+        }
+    }
+    
+    public func removeLinkAttribute(selectionRange: Range<Int>) -> TextFieldComponent.InputState {
+        if !selectionRange.isEmpty {
+            let nsRange = NSRange(location: selectionRange.lowerBound, length: selectionRange.count)
+            var attributesToRemove: [(NSAttributedString.Key, NSRange)] = []
+            self.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, stop in
+                for (key, _) in attributes {
+                    if key == ChatTextInputAttributes.textUrl {
+                        attributesToRemove.append((key, range))
+                    } else {
+                        attributesToRemove.append((key, nsRange))
+                    }
+                }
+            }
+
+            let result = NSMutableAttributedString(attributedString: self.inputText)
+            for (attribute, range) in attributesToRemove {
+                result.removeAttribute(attribute, range: range)
+            }
             return TextFieldComponent.InputState(inputText: result, selectionRange: selectionRange)
         } else {
             return self

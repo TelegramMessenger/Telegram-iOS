@@ -967,12 +967,14 @@ final class ChatSendMessageContextScreenComponent: Component {
                                 standaloneReactionAnimation = DirectAnimatedStickerNode()
                                 effectiveScale = 1.4
                                 #else
-                                if "".isEmpty {
+                                standaloneReactionAnimation = DirectAnimatedStickerNode()
+                                effectiveScale = 1.4
+                                /*if "".isEmpty {
                                     standaloneReactionAnimation = DirectAnimatedStickerNode()
                                     effectiveScale = 1.4
                                 } else {
                                     standaloneReactionAnimation = LottieMetalAnimatedStickerNode()
-                                }
+                                }*/
                                 #endif
                                 
                                 standaloneReactionAnimation.isUserInteractionEnabled = false

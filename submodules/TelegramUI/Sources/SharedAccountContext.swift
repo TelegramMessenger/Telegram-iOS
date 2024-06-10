@@ -1907,8 +1907,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return HashtagSearchController(context: context, peer: peer, query: query, all: all)
     }
     
-    public func makeStorySearchController(context: AccountContext, query: String, listContext: SearchStoryListContext?) -> ViewController {
-        return StorySearchGridScreen(context: context, searchQuery: query, listContext: listContext)
+    public func makeStorySearchController(context: AccountContext, scope: StorySearchControllerScope, listContext: SearchStoryListContext?) -> ViewController {
+        return StorySearchGridScreen(context: context, scope: scope, listContext: listContext)
     }
     
     public func makeMyStoriesController(context: AccountContext, isArchive: Bool) -> ViewController {

@@ -2919,7 +2919,7 @@ final class StoryItemSetContainerSendMessage {
             }
             if !hashtag.isEmpty {
                 if peerName == nil {
-                    let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, query: hashtag, listContext: nil)
+                    let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, scope: .query(hashtag), listContext: nil)
                     navigationController.pushViewController(searchController)
                 } else {
                     let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)
@@ -3346,9 +3346,10 @@ final class StoryItemSetContainerSendMessage {
         
         var actions: [ContextMenuAction] = []
         switch mediaArea {
-        case let .venue(_, venue):
+        case let .venue(coordinates, venue):
             let action = { [weak controller, weak view] in
-                let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                let _ = view
+                /*let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 let locationController = LocationViewController(
                     context: context,
                     updatedPresentationData: updatedPresentationData,
@@ -3370,7 +3371,10 @@ final class StoryItemSetContainerSendMessage {
                         view?.updateIsProgressPaused()
                     })
                 }
-                controller?.push(locationController)
+                controller?.push(locationController)*/
+                
+                let searchController = context.sharedContext.makeStorySearchController(context: context, scope: .location(coordinates: coordinates, venue: venue), listContext: nil)
+                controller?.push(searchController)
             }
             if immediate {
                 action()
