@@ -21,7 +21,7 @@ private func loadCountryCodes() -> [Country] {
     }
     
     let delimiter = ";"
-    let endOfLine = "\n"
+    let endOfLine = "\r\n"
     
     var result: [Country] = []
     var countriesByPrefix: [String: (Country, Country.CountryCode)] = [:]

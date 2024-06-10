@@ -63,6 +63,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
     public let backgroundColor: BackgroundColor
     public let followContentSizeChanges: Bool
     public let clipsContent: Bool
+    public let isScrollEnabled: Bool
     public let externalState: ExternalState?
     public let animateOut: ActionSlot<Action<()>>
     public let onPan: () -> Void
@@ -72,6 +73,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         backgroundColor: BackgroundColor,
         followContentSizeChanges: Bool = false,
         clipsContent: Bool = false,
+        isScrollEnabled: Bool = true,
         externalState: ExternalState? = nil,
         animateOut: ActionSlot<Action<()>>,
         onPan: @escaping () -> Void = {}
@@ -80,6 +82,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         self.backgroundColor = backgroundColor
         self.followContentSizeChanges = followContentSizeChanges
         self.clipsContent = clipsContent
+        self.isScrollEnabled = isScrollEnabled
         self.externalState = externalState
         self.animateOut = animateOut
         self.onPan = onPan
@@ -388,6 +391,8 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             if previousContentSize.height.isZero {
                 updateContentSize()
             }
+            
+            self.scrollView.isScrollEnabled = component.isScrollEnabled
             
             self.ignoreScrolling = false
             if let currentAvailableSize = self.currentAvailableSize, currentAvailableSize.height != availableSize.height {

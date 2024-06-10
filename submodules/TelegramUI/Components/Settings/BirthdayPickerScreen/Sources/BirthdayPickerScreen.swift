@@ -267,6 +267,7 @@ private final class BirthdayPickerScreenComponent: Component {
                         }
                     )),
                     backgroundColor: .color(environment.theme.list.plainBackgroundColor),
+                    isScrollEnabled: false,
                     animateOut: self.sheetAnimateOut
                 )),
                 environment: {
