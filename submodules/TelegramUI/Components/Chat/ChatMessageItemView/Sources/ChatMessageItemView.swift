@@ -1007,7 +1007,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                 additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
             }
 
-            let decorationNode = transitionNode.add(decorationView: additionalAnimationNode.view, itemNode: self)
+            let decorationNode = transitionNode.add(decorationView: additionalAnimationNode.view, itemNode: self, aboveEverything: true)
             additionalAnimationNode.completed = { [weak self, weak decorationNode, weak transitionNode] _ in
                 guard let decorationNode = decorationNode else {
                     return
