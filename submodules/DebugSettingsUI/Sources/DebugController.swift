@@ -1485,7 +1485,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     if isMainApp {
         entries.append(.disableVideoAspectScaling(experimentalSettings.disableVideoAspectScaling))
         entries.append(.enableNetworkFramework(networkSettings?.useNetworkFramework ?? useBetaFeatures))
-        entries.append(.enableNetworkExperiments(networkSettings?.useExperimentalDownload ?? false))
+        entries.append(.enableNetworkExperiments(networkSettings?.useExperimentalDownload ?? true))
     }
 
     if let backupHostOverride = networkSettings?.backupHostOverride {

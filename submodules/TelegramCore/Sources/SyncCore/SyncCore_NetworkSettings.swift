@@ -26,7 +26,7 @@ public struct NetworkSettings: Codable {
         self.applicationUpdateUrlPrefix = try? container.decodeIfPresent(String.self, forKey: "applicationUpdateUrlPrefix")
         self.backupHostOverride = try? container.decodeIfPresent(String.self, forKey: "backupHostOverride")
         self.useNetworkFramework = try container.decodeIfPresent(Bool.self, forKey: "useNetworkFramework_v2")
-        self.useExperimentalDownload = try container.decodeIfPresent(Bool.self, forKey: "useExperimentalDownload")
+        self.useExperimentalDownload = try container.decodeIfPresent(Bool.self, forKey: "useExperimentalDownload_v2")
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -36,6 +36,6 @@ public struct NetworkSettings: Codable {
         try container.encodeIfPresent(self.applicationUpdateUrlPrefix, forKey: "applicationUpdateUrlPrefix")
         try container.encodeIfPresent(self.backupHostOverride, forKey: "backupHostOverride")
         try container.encodeIfPresent(self.useNetworkFramework, forKey: "useNetworkFramework_v2")
-        try container.encodeIfPresent(self.useExperimentalDownload, forKey: "useExperimentalDownload")
+        try container.encodeIfPresent(self.useExperimentalDownload, forKey: "useExperimentalDownload_v2")
     }
 }
