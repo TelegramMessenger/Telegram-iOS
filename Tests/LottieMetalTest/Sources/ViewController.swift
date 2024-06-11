@@ -113,15 +113,15 @@ public final class ViewController: UIViewController {
         SharedDisplayLinkDriver.shared.updateForegroundState(true)
         
         let bundlePath = Bundle.main.path(forResource: "TestDataBundle", ofType: "bundle")!
-        let filePath = bundlePath + "/fireworks.json"
+        let filePath = bundlePath + "/fire.json"
         
-        let performanceFrameSize = 8
+        let performanceFrameSize = 512
         
         self.view.layer.addSublayer(MetalEngine.shared.rootLayer)
         
-        if "".isEmpty {
+        if !"".isEmpty {
             if #available(iOS 13.0, *) {
-                self.test = ReferenceCompareTest(view: self.view, testNonReference: false)
+                self.test = ReferenceCompareTest(view: self.view, testNonReference: true)
             }
         } else if !"".isEmpty {
             /*let cachedAnimation = cacheLottieMetalAnimation(path: filePath)!

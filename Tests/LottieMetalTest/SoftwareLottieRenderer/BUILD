@@ -25,6 +25,8 @@ objc_library(
     deps = [
         "//submodules/LottieCpp",
         "//Tests/LottieMetalTest/thorvg",
+        "//Tests/LottieMetalTest/skia",
+        "//Tests/LottieMetalTest/skia:libskia"
     ],
     sdk_frameworks = [
         "Foundation",

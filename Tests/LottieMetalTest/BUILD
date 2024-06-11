@@ -201,6 +201,7 @@ ios_application(
     resources = [
         "//Tests/Common:LaunchScreen",
         ":TestDataBundle",
+        "//Tests/LottieMetalTest/skia",
     ],
     frameworks = [
     ],
