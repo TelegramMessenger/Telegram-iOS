@@ -1520,7 +1520,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     context: self.context,
                     strings: self.context.sharedContext.currentPresentationData.with({ $0 }).strings,
                     items: storyParams.items.map { StorySetIndicatorComponent.Item(storyItem: $0, peer: storyParams.peer) },
-                    displayAvatars: true,
+                    displayAvatars: false,
                     hasUnseen: storyParams.hasUnseen,
                     hasUnseenPrivate: storyParams.hasUnseenPrivate,
                     totalCount: storyParams.count,
