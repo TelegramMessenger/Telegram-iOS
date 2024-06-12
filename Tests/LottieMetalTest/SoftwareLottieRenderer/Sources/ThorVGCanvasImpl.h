@@ -14,9 +14,6 @@ public:
     ThorVGCanvasImpl(int width, int height, int bytesPerRow);
     virtual ~ThorVGCanvasImpl();
     
-    virtual int width() const override;
-    virtual int height() const override;
-    
     virtual std::shared_ptr<Canvas> makeLayer(int width, int height) override;
     
     virtual void saveState() override;
@@ -32,11 +29,9 @@ public:
     
     virtual void setBlendMode(BlendMode blendMode) override;
     
-    virtual void setAlpha(float alpha) override;
-    
     virtual void concatenate(lottie::Transform2D const &transform) override;
     
-    virtual void draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) override;
+    virtual void draw(std::shared_ptr<Canvas> const &other, float alpha, lottie::CGRect const &rect) override;
     
     uint32_t *backingData() {
         return _backingData;
@@ -49,11 +44,8 @@ public:
     void flush();
     
 private:
-    int _width = 0;
-    int _height = 0;
     std::unique_ptr<tvg::SwCanvas> _canvas;
 
-    float _alpha = 1.0;
     lottie::Transform2D _transform;
     std::vector<lottie::Transform2D> _stateStack;
     int _bytesPerRow = 0;

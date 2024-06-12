@@ -49,7 +49,7 @@ void ThorVGCanvasImpl::initializeOnce() {
 }
 
 ThorVGCanvasImpl::ThorVGCanvasImpl(int width, int height, int bytesPerRow) :
-_width(width), _height(height), _transform(lottie::Transform2D::identity()) {
+_transform(lottie::Transform2D::identity()) {
     _canvas = tvg::SwCanvas::gen();
     
     _bytesPerRow = bytesPerRow;
@@ -61,14 +61,6 @@ _width(width), _height(height), _transform(lottie::Transform2D::identity()) {
 }
 
 ThorVGCanvasImpl::~ThorVGCanvasImpl() {
-}
-
-int ThorVGCanvasImpl::width() const {
-    return _width;
-}
-
-int ThorVGCanvasImpl::height() const {
-    return _height;
 }
 
 std::shared_ptr<Canvas> ThorVGCanvasImpl::makeLayer(int width, int height) {
@@ -94,7 +86,7 @@ void ThorVGCanvasImpl::fillPath(CanvasPathEnumerator const &enumeratePath, lotti
     
     shape->transform(tvgTransform(_transform));
     
-    shape->fill((int)(color.r * 255.0), (int)(color.g * 255.0), (int)(color.b * 255.0), (int)(color.a * _alpha * 255.0));
+    shape->fill((int)(color.r * 255.0), (int)(color.g * 255.0), (int)(color.b * 255.0), (int)(color.a * 255.0));
     shape->fill(fillRule == lottie::FillRule::EvenOdd ? tvg::FillRule::EvenOdd : tvg::FillRule::Winding);
     
     _canvas->push(std::move(shape));
@@ -117,7 +109,7 @@ void ThorVGCanvasImpl::linearGradientFillPath(CanvasPathEnumerator const &enumer
         colorStop.r = (int)(color.r * 255.0);
         colorStop.g = (int)(color.g * 255.0);
         colorStop.b = (int)(color.b * 255.0);
-        colorStop.a = (int)(color.a * _alpha * 255.0);
+        colorStop.a = (int)(color.a * 255.0);
         colors.push_back(colorStop);
     }
     fill->colorStops(colors.data(), (uint32_t)colors.size());
@@ -145,7 +137,7 @@ void ThorVGCanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumer
         colorStop.r = (int)(color.r * 255.0);
         colorStop.g = (int)(color.g * 255.0);
         colorStop.b = (int)(color.b * 255.0);
-        colorStop.a = (int)(color.a * _alpha * 255.0);
+        colorStop.a = (int)(color.a * 255.0);
         colors.push_back(colorStop);
     }
     fill->colorStops(colors.data(), (uint32_t)colors.size());
@@ -162,7 +154,7 @@ void ThorVGCanvasImpl::strokePath(CanvasPathEnumerator const &enumeratePath, flo
     
     shape->transform(tvgTransform(_transform));
     
-    shape->strokeFill((int)(color.r * 255.0), (int)(color.g * 255.0), (int)(color.b * 255.0), (int)(color.a * _alpha * 255.0));
+    shape->strokeFill((int)(color.r * 255.0), (int)(color.g * 255.0), (int)(color.b * 255.0), (int)(color.a * 255.0));
     shape->strokeWidth(lineWidth);
     
     switch (lineJoin) {
@@ -228,7 +220,7 @@ void ThorVGCanvasImpl::fill(lottie::CGRect const &rect, lottie::Color const &fil
     
     shape->transform(tvgTransform(_transform));
     
-    shape->fill((int)(fillColor.r * 255.0), (int)(fillColor.g * 255.0), (int)(fillColor.b * 255.0), (int)(fillColor.a * _alpha * 255.0));
+    shape->fill((int)(fillColor.r * 255.0), (int)(fillColor.g * 255.0), (int)(fillColor.b * 255.0), (int)(fillColor.a * 255.0));
     
     _canvas->push(std::move(shape));
 }
@@ -254,10 +246,6 @@ void ThorVGCanvasImpl::setBlendMode(BlendMode blendMode) {
     }*/
 }
 
-void ThorVGCanvasImpl::setAlpha(float alpha) {
-    _alpha = alpha;
-}
-
 void ThorVGCanvasImpl::concatenate(lottie::Transform2D const &transform) {
     _transform = transform * _transform;
     /*_canvas->concat(SkM44(
@@ -268,7 +256,7 @@ void ThorVGCanvasImpl::concatenate(lottie::Transform2D const &transform) {
     ));*/
 }
 
-void ThorVGCanvasImpl::draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) {
+void ThorVGCanvasImpl::draw(std::shared_ptr<Canvas> const &other, float alpha, lottie::CGRect const &rect) {
     /*ThorVGCanvasImpl *impl = (ThorVGCanvasImpl *)other.get();
     auto image = impl->surface()->makeImageSnapshot();
     SkPaint paint;

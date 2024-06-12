@@ -50,8 +50,7 @@ void skPath(CanvasPathEnumerator const &enumeratePath, SkPath &nativePath) {
 
 }
 
-SkiaCanvasImpl::SkiaCanvasImpl(int width, int height) :
-_width(width), _height(height) {
+SkiaCanvasImpl::SkiaCanvasImpl(int width, int height) {
     int bytesPerRow = width * 4;
     _pixelData = malloc(bytesPerRow * height);
     _ownsPixelData = true;
@@ -90,14 +89,6 @@ SkiaCanvasImpl::~SkiaCanvasImpl() {
     }
 }
 
-int SkiaCanvasImpl::width() const {
-    return _width;
-}
-
-int SkiaCanvasImpl::height() const {
-    return _height;
-}
-
 std::shared_ptr<Canvas> SkiaCanvasImpl::makeLayer(int width, int height) {
     return std::make_shared<SkiaCanvasImpl>(width, height);
 }
@@ -113,7 +104,6 @@ void SkiaCanvasImpl::restoreState() {
 void SkiaCanvasImpl::fillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottie::Color const &color) {
     SkPaint paint;
     paint.setColor(skColor(color));
-    paint.setAlphaf(_alpha);
     paint.setAntiAlias(true);
     paint.setBlendMode(_blendMode);
     
@@ -138,7 +128,7 @@ void SkiaCanvasImpl::linearGradientFillPath(CanvasPathEnumerator const &enumerat
     
     std::vector<SkColor> colors;
     for (const auto &color : gradient.colors()) {
-        colors.push_back(skColor(Color(color.r, color.g, color.b, color.a * _alpha)));
+        colors.push_back(skColor(Color(color.r, color.g, color.b, color.a)));
     }
     
     std::vector<SkScalar> locations;
@@ -164,7 +154,7 @@ void SkiaCanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumerat
     
     std::vector<SkColor> colors;
     for (const auto &color : gradient.colors()) {
-        colors.push_back(skColor(Color(color.r, color.g, color.b, color.a * _alpha)));
+        colors.push_back(skColor(Color(color.r, color.g, color.b, color.a)));
     }
     
     std::vector<SkScalar> locations;
@@ -186,7 +176,6 @@ void SkiaCanvasImpl::strokePath(CanvasPathEnumerator const &enumeratePath, float
     paint.setAntiAlias(true);
     paint.setBlendMode(_blendMode);
     paint.setColor(skColor(color));
-    paint.setAlphaf(_alpha);
     paint.setStyle(SkPaint::Style::kStroke_Style);
     
     paint.setStrokeWidth(lineWidth);
@@ -255,7 +244,6 @@ void SkiaCanvasImpl::fill(lottie::CGRect const &rect, lottie::Color const &fillC
     SkPaint paint;
     paint.setAntiAlias(true);
     paint.setColor(skColor(fillColor));
-    paint.setAlphaf(_alpha);
     paint.setBlendMode(_blendMode);
     
     _canvas->drawRect(SkRect::MakeXYWH(rect.x, rect.y, rect.width, rect.height), paint);
@@ -282,10 +270,6 @@ void SkiaCanvasImpl::setBlendMode(BlendMode blendMode) {
     }
 }
 
-void SkiaCanvasImpl::setAlpha(float alpha) {
-    _alpha = alpha;
-}
-
 void SkiaCanvasImpl::concatenate(lottie::Transform2D const &transform) {
     SkScalar m9[9] = {
         transform.rows().columns[0][0], transform.rows().columns[1][0], transform.rows().columns[2][0],
@@ -297,12 +281,12 @@ void SkiaCanvasImpl::concatenate(lottie::Transform2D const &transform) {
     _canvas->concat(matrix);
 }
 
-void SkiaCanvasImpl::draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) {
+void SkiaCanvasImpl::draw(std::shared_ptr<Canvas> const &other, float alpha, lottie::CGRect const &rect) {
     SkiaCanvasImpl *impl = (SkiaCanvasImpl *)other.get();
     auto image = impl->surface()->makeImageSnapshot();
     SkPaint paint;
     paint.setBlendMode(_blendMode);
-    paint.setAlphaf(_alpha);
+    paint.setAlphaf(alpha);
     _canvas->drawImageRect(image.get(), SkRect::MakeXYWH(rect.x, rect.y, rect.width, rect.height), SkSamplingOptions(SkFilterMode::kLinear), &paint);
 }
 

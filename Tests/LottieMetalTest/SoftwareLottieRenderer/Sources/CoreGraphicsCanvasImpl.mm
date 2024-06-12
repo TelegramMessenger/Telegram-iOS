@@ -62,116 +62,117 @@ bool addEnumeratedPath(CGContextRef context, CanvasPathEnumerator const &enumera
 
 }
 
-CanvasImpl::Image::Image(::CGImageRef image) {
+class CoreGraphicsCanvasImpl::Layer {
+public:
+    explicit Layer(int width, int height) {
+        _width = width;
+        _height = height;
+        _bytesPerRow = alignUp(width * 4, 16);
+        _backingData.resize(_bytesPerRow * _height);
+        memset(_backingData.data(), 0, _backingData.size());
+        
+        CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+        CGBitmapInfo bitmapInfo = kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst;
+        _context = CGBitmapContextCreate(_backingData.data(), _width, _height, 8, _bytesPerRow, colorSpace, bitmapInfo);
+        CFRelease(colorSpace);
+        
+        CGContextClearRect(_context, CGRectMake(0.0, 0.0, _width, _height));
+        
+    }
+    
+    ~Layer() {
+        CGContextRelease(_context);
+    }
+    
+    CGContextRef context() const {
+        return _context;
+    }
+    
+public:
+    CGContextRef _context = nil;
+    int _width = 0;
+    int _height = 0;
+    int _bytesPerRow = 0;
+    std::vector<uint8_t> _backingData;
+};
+
+CoreGraphicsCanvasImpl::Image::Image(::CGImageRef image) {
     _image = CGImageRetain(image);
 }
 
-CanvasImpl::Image::~Image() {
+CoreGraphicsCanvasImpl::Image::~Image() {
     CFRelease(_image);
 }
 
-::CGImageRef CanvasImpl::Image::nativeImage() const {
+::CGImageRef CoreGraphicsCanvasImpl::Image::nativeImage() const {
     return _image;
 }
 
-CanvasImpl::CanvasImpl(int width, int height) {
-    _width = width;
-    _height = height;
-    _bytesPerRow = alignUp(width * 4, 16);
-    _backingData.resize(_bytesPerRow * _height);
-    memset(_backingData.data(), 0, _backingData.size());
-    
-    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    
-    CGBitmapInfo bitmapInfo = kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst;
-    _context = CGBitmapContextCreate(_backingData.data(), _width, _height, 8, _bytesPerRow, colorSpace, bitmapInfo);
-    
-    CGContextClearRect(_context, CGRectMake(0.0, 0.0, _width, _height));
-    
-    //CGContextSetInterpolationQuality(_context, kCGInterpolationLow);
-    //CGContextSetAllowsAntialiasing(_context, true);
-    //CGContextSetShouldAntialias(_context, true);
-    
-    CFRelease(colorSpace);
-    
-    _topContext = CGContextRetain(_context);
+CoreGraphicsCanvasImpl::CoreGraphicsCanvasImpl(int width, int height) {
+    _layerStack.push_back(std::make_shared<Layer>(width, height));
+    _topContext = CGContextRetain(currentLayer()->context());
 }
 
-CanvasImpl::CanvasImpl(CGContextRef context, int width, int height) {
+CoreGraphicsCanvasImpl::CoreGraphicsCanvasImpl(CGContextRef context, int width, int height) {
+    _layerStack.push_back(std::make_shared<Layer>(width, height));
     _topContext = CGContextRetain(context);
-    _layer = CGLayerCreateWithContext(context, CGSizeMake(width, height), nil);
-    _context = CGContextRetain(CGLayerGetContext(_layer));
-    _width = width;
-    _height = height;
 }
 
-CanvasImpl::~CanvasImpl() {
-    CFRelease(_context);
+CoreGraphicsCanvasImpl::~CoreGraphicsCanvasImpl() {
     if (_topContext) {
         CFRelease(_topContext);
     }
-    if (_layer) {
-        CFRelease(_layer);
-    }
 }
 
-int CanvasImpl::width() const {
-    return _width;
+std::shared_ptr<Canvas> CoreGraphicsCanvasImpl::makeLayer(int width, int height) {
+    return std::make_shared<CoreGraphicsCanvasImpl>(_topContext, width, height);
 }
 
-int CanvasImpl::height() const {
-    return _height;
+void CoreGraphicsCanvasImpl::saveState() {
+    CGContextSaveGState(currentLayer()->context());
 }
 
-std::shared_ptr<Canvas> CanvasImpl::makeLayer(int width, int height) {
-    return std::make_shared<CanvasImpl>(_topContext, width, height);
+void CoreGraphicsCanvasImpl::restoreState() {
+    CGContextRestoreGState(currentLayer()->context());
 }
 
-void CanvasImpl::saveState() {
-    CGContextSaveGState(_context);
-}
-
-void CanvasImpl::restoreState() {
-    CGContextRestoreGState(_context);
-}
-
-void CanvasImpl::fillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottie::Color const &color) {
-    if (!addEnumeratedPath(_context, enumeratePath)) {
+void CoreGraphicsCanvasImpl::fillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottie::Color const &color) {
+    if (!addEnumeratedPath(currentLayer()->context(), enumeratePath)) {
         return;
     }
     
     CGFloat components[4] = { color.r, color.g, color.b, color.a };
     CGColorRef nativeColor = CGColorCreate(CGBitmapContextGetColorSpace(_topContext), components);
-    CGContextSetFillColorWithColor(_context, nativeColor);
+    CGContextSetFillColorWithColor(currentLayer()->context(), nativeColor);
     CFRelease(nativeColor);
     
     switch (fillRule) {
         case lottie::FillRule::EvenOdd: {
-            CGContextEOFillPath(_context);
+            CGContextEOFillPath(currentLayer()->context());
             break;
         }
         default: {
-            CGContextFillPath(_context);
+            CGContextFillPath(currentLayer()->context());
             break;
         }
     }
 }
 
-void CanvasImpl::linearGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
-    CGContextSaveGState(_context);
+void CoreGraphicsCanvasImpl::linearGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
+    CGContextSaveGState(currentLayer()->context());
     
-    if (!addEnumeratedPath(_context, enumeratePath)) {
-        CGContextRestoreGState(_context);
+    if (!addEnumeratedPath(currentLayer()->context(), enumeratePath)) {
+        CGContextRestoreGState(currentLayer()->context());
         return;
     }
     
     switch (fillRule) {
         case lottie::FillRule::EvenOdd: {
-            CGContextEOClip(_context);
+            CGContextEOClip(currentLayer()->context());
             break;
         }
         default: {
-            CGContextClip(_context);
+            CGContextClip(currentLayer()->context());
             break;
         }
     }
@@ -195,29 +196,29 @@ void CanvasImpl::linearGradientFillPath(CanvasPathEnumerator const &enumeratePat
     
     CGGradientRef nativeGradient = CGGradientCreateWithColorComponents(CGBitmapContextGetColorSpace(_topContext), components.data(), locations.data(), locations.size());
     if (nativeGradient) {
-        CGContextDrawLinearGradient(_context, nativeGradient, CGPointMake(start.x, start.y), CGPointMake(end.x, end.y), kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
+        CGContextDrawLinearGradient(currentLayer()->context(), nativeGradient, CGPointMake(start.x, start.y), CGPointMake(end.x, end.y), kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
         CFRelease(nativeGradient);
     }
     
-    CGContextResetClip(_context);
-    CGContextRestoreGState(_context);
+    CGContextResetClip(currentLayer()->context());
+    CGContextRestoreGState(currentLayer()->context());
 }
 
-void CanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
-    CGContextSaveGState(_context);
+void CoreGraphicsCanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
+    CGContextSaveGState(currentLayer()->context());
     
-    if (!addEnumeratedPath(_context, enumeratePath)) {
-        CGContextRestoreGState(_context);
+    if (!addEnumeratedPath(currentLayer()->context(), enumeratePath)) {
+        CGContextRestoreGState(currentLayer()->context());
         return;
     }
     
     switch (fillRule) {
         case lottie::FillRule::EvenOdd: {
-            CGContextEOClip(_context);
+            CGContextEOClip(currentLayer()->context());
             break;
         }
         default: {
-            CGContextClip(_context);
+            CGContextClip(currentLayer()->context());
             break;
         }
     }
@@ -241,60 +242,60 @@ void CanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumeratePat
     
     CGGradientRef nativeGradient = CGGradientCreateWithColorComponents(CGBitmapContextGetColorSpace(_topContext), components.data(), locations.data(), locations.size());
     if (nativeGradient) {
-        CGContextDrawRadialGradient(_context, nativeGradient, CGPointMake(startCenter.x, startCenter.y), startRadius, CGPointMake(endCenter.x, endCenter.y), endRadius, kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
+        CGContextDrawRadialGradient(currentLayer()->context(), nativeGradient, CGPointMake(startCenter.x, startCenter.y), startRadius, CGPointMake(endCenter.x, endCenter.y), endRadius, kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
         CFRelease(nativeGradient);
     }
     
-    CGContextResetClip(_context);
-    CGContextRestoreGState(_context);
+    CGContextResetClip(currentLayer()->context());
+    CGContextRestoreGState(currentLayer()->context());
 }
 
-void CanvasImpl::strokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, lottie::Color const &color) {
-    if (!addEnumeratedPath(_context, enumeratePath)) {
+void CoreGraphicsCanvasImpl::strokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, lottie::Color const &color) {
+    if (!addEnumeratedPath(currentLayer()->context(), enumeratePath)) {
         return;
     }
     
     CGFloat components[4] = { color.r, color.g, color.b, color.a };
     CGColorRef nativeColor = CGColorCreate(CGBitmapContextGetColorSpace(_topContext), components);
-    CGContextSetStrokeColorWithColor(_context, nativeColor);
+    CGContextSetStrokeColorWithColor(currentLayer()->context(), nativeColor);
     CFRelease(nativeColor);
     
-    CGContextSetLineWidth(_context, lineWidth);
+    CGContextSetLineWidth(currentLayer()->context(), lineWidth);
     
     switch (lineJoin) {
         case lottie::LineJoin::Miter: {
-            CGContextSetLineJoin(_context, kCGLineJoinMiter);
+            CGContextSetLineJoin(currentLayer()->context(), kCGLineJoinMiter);
             break;
         }
         case lottie::LineJoin::Round: {
-            CGContextSetLineJoin(_context, kCGLineJoinRound);
+            CGContextSetLineJoin(currentLayer()->context(), kCGLineJoinRound);
             break;
         }
         case lottie::LineJoin::Bevel: {
-            CGContextSetLineJoin(_context, kCGLineJoinBevel);
+            CGContextSetLineJoin(currentLayer()->context(), kCGLineJoinBevel);
             break;
         }
         default: {
-            CGContextSetLineJoin(_context, kCGLineJoinBevel);
+            CGContextSetLineJoin(currentLayer()->context(), kCGLineJoinBevel);
             break;
         }
     }
     
     switch (lineCap) {
         case lottie::LineCap::Butt: {
-            CGContextSetLineCap(_context, kCGLineCapButt);
+            CGContextSetLineCap(currentLayer()->context(), kCGLineCapButt);
             break;
         }
         case lottie::LineCap::Round: {
-            CGContextSetLineCap(_context, kCGLineCapRound);
+            CGContextSetLineCap(currentLayer()->context(), kCGLineCapRound);
             break;
         }
         case lottie::LineCap::Square: {
-            CGContextSetLineCap(_context, kCGLineCapSquare);
+            CGContextSetLineCap(currentLayer()->context(), kCGLineCapSquare);
             break;
         }
         default: {
-            CGContextSetLineCap(_context, kCGLineCapSquare);
+            CGContextSetLineCap(currentLayer()->context(), kCGLineCapSquare);
             break;
         }
     }
@@ -304,54 +305,54 @@ void CanvasImpl::strokePath(CanvasPathEnumerator const &enumeratePath, float lin
         for (const auto value : dashPattern) {
             mappedDashPattern.push_back(value);
         }
-        CGContextSetLineDash(_context, dashPhase, mappedDashPattern.data(), mappedDashPattern.size());
+        CGContextSetLineDash(currentLayer()->context(), dashPhase, mappedDashPattern.data(), mappedDashPattern.size());
     }
-    CGContextStrokePath(_context);
+    CGContextStrokePath(currentLayer()->context());
 }
 
-void CanvasImpl::linearGradientStrokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
-    CGContextSaveGState(_context);
-    if (!addEnumeratedPath(_context, enumeratePath)) {
-        CGContextRestoreGState(_context);
+void CoreGraphicsCanvasImpl::linearGradientStrokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
+    CGContextSaveGState(currentLayer()->context());
+    if (!addEnumeratedPath(currentLayer()->context(), enumeratePath)) {
+        CGContextRestoreGState(currentLayer()->context());
         return;
     }
     
-    CGContextSetLineWidth(_context, lineWidth);
+    CGContextSetLineWidth(currentLayer()->context(), lineWidth);
     
     switch (lineJoin) {
         case lottie::LineJoin::Miter: {
-            CGContextSetLineJoin(_context, kCGLineJoinMiter);
+            CGContextSetLineJoin(currentLayer()->context(), kCGLineJoinMiter);
             break;
         }
         case lottie::LineJoin::Round: {
-            CGContextSetLineJoin(_context, kCGLineJoinRound);
+            CGContextSetLineJoin(currentLayer()->context(), kCGLineJoinRound);
             break;
         }
         case lottie::LineJoin::Bevel: {
-            CGContextSetLineJoin(_context, kCGLineJoinBevel);
+            CGContextSetLineJoin(currentLayer()->context(), kCGLineJoinBevel);
             break;
         }
         default: {
-            CGContextSetLineJoin(_context, kCGLineJoinBevel);
+            CGContextSetLineJoin(currentLayer()->context(), kCGLineJoinBevel);
             break;
         }
     }
     
     switch (lineCap) {
         case lottie::LineCap::Butt: {
-            CGContextSetLineCap(_context, kCGLineCapButt);
+            CGContextSetLineCap(currentLayer()->context(), kCGLineCapButt);
             break;
         }
         case lottie::LineCap::Round: {
-            CGContextSetLineCap(_context, kCGLineCapRound);
+            CGContextSetLineCap(currentLayer()->context(), kCGLineCapRound);
             break;
         }
         case lottie::LineCap::Square: {
-            CGContextSetLineCap(_context, kCGLineCapSquare);
+            CGContextSetLineCap(currentLayer()->context(), kCGLineCapSquare);
             break;
         }
         default: {
-            CGContextSetLineCap(_context, kCGLineCapSquare);
+            CGContextSetLineCap(currentLayer()->context(), kCGLineCapSquare);
             break;
         }
     }
@@ -361,11 +362,11 @@ void CanvasImpl::linearGradientStrokePath(CanvasPathEnumerator const &enumerateP
         for (const auto value : dashPattern) {
             mappedDashPattern.push_back(value);
         }
-        CGContextSetLineDash(_context, dashPhase, mappedDashPattern.data(), mappedDashPattern.size());
+        CGContextSetLineDash(currentLayer()->context(), dashPhase, mappedDashPattern.data(), mappedDashPattern.size());
     }
     
-    CGContextReplacePathWithStrokedPath(_context);
-    CGContextClip(_context);
+    CGContextReplacePathWithStrokedPath(currentLayer()->context());
+    CGContextClip(currentLayer()->context());
     
     std::vector<double> components;
     components.reserve(gradient.colors().size() + 4);
@@ -386,57 +387,57 @@ void CanvasImpl::linearGradientStrokePath(CanvasPathEnumerator const &enumerateP
     
     CGGradientRef nativeGradient = CGGradientCreateWithColorComponents(CGBitmapContextGetColorSpace(_topContext), components.data(), locations.data(), locations.size());
     if (nativeGradient) {
-        CGContextDrawLinearGradient(_context, nativeGradient, CGPointMake(start.x, start.y), CGPointMake(end.x, end.y), kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
+        CGContextDrawLinearGradient(currentLayer()->context(), nativeGradient, CGPointMake(start.x, start.y), CGPointMake(end.x, end.y), kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
         CFRelease(nativeGradient);
     }
     
-    CGContextResetClip(_context);
-    CGContextRestoreGState(_context);
+    CGContextResetClip(currentLayer()->context());
+    CGContextRestoreGState(currentLayer()->context());
 }
 
-void CanvasImpl::radialGradientStrokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
-    CGContextSaveGState(_context);
-    if (!addEnumeratedPath(_context, enumeratePath)) {
-        CGContextRestoreGState(_context);
+void CoreGraphicsCanvasImpl::radialGradientStrokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
+    CGContextSaveGState(currentLayer()->context());
+    if (!addEnumeratedPath(currentLayer()->context(), enumeratePath)) {
+        CGContextRestoreGState(currentLayer()->context());
         return;
     }
     
-    CGContextSetLineWidth(_context, lineWidth);
+    CGContextSetLineWidth(currentLayer()->context(), lineWidth);
     
     switch (lineJoin) {
         case lottie::LineJoin::Miter: {
-            CGContextSetLineJoin(_context, kCGLineJoinMiter);
+            CGContextSetLineJoin(currentLayer()->context(), kCGLineJoinMiter);
             break;
         }
         case lottie::LineJoin::Round: {
-            CGContextSetLineJoin(_context, kCGLineJoinRound);
+            CGContextSetLineJoin(currentLayer()->context(), kCGLineJoinRound);
             break;
         }
         case lottie::LineJoin::Bevel: {
-            CGContextSetLineJoin(_context, kCGLineJoinBevel);
+            CGContextSetLineJoin(currentLayer()->context(), kCGLineJoinBevel);
             break;
         }
         default: {
-            CGContextSetLineJoin(_context, kCGLineJoinBevel);
+            CGContextSetLineJoin(currentLayer()->context(), kCGLineJoinBevel);
             break;
         }
     }
     
     switch (lineCap) {
         case lottie::LineCap::Butt: {
-            CGContextSetLineCap(_context, kCGLineCapButt);
+            CGContextSetLineCap(currentLayer()->context(), kCGLineCapButt);
             break;
         }
         case lottie::LineCap::Round: {
-            CGContextSetLineCap(_context, kCGLineCapRound);
+            CGContextSetLineCap(currentLayer()->context(), kCGLineCapRound);
             break;
         }
         case lottie::LineCap::Square: {
-            CGContextSetLineCap(_context, kCGLineCapSquare);
+            CGContextSetLineCap(currentLayer()->context(), kCGLineCapSquare);
             break;
         }
         default: {
-            CGContextSetLineCap(_context, kCGLineCapSquare);
+            CGContextSetLineCap(currentLayer()->context(), kCGLineCapSquare);
             break;
         }
     }
@@ -446,11 +447,11 @@ void CanvasImpl::radialGradientStrokePath(CanvasPathEnumerator const &enumerateP
         for (const auto value : dashPattern) {
             mappedDashPattern.push_back(value);
         }
-        CGContextSetLineDash(_context, dashPhase, mappedDashPattern.data(), mappedDashPattern.size());
+        CGContextSetLineDash(currentLayer()->context(), dashPhase, mappedDashPattern.data(), mappedDashPattern.size());
     }
     
-    CGContextReplacePathWithStrokedPath(_context);
-    CGContextClip(_context);
+    CGContextReplacePathWithStrokedPath(currentLayer()->context());
+    CGContextClip(currentLayer()->context());
     
     std::vector<double> components;
     components.reserve(gradient.colors().size() + 4);
@@ -471,24 +472,24 @@ void CanvasImpl::radialGradientStrokePath(CanvasPathEnumerator const &enumerateP
     
     CGGradientRef nativeGradient = CGGradientCreateWithColorComponents(CGBitmapContextGetColorSpace(_topContext), components.data(), locations.data(), locations.size());
     if (nativeGradient) {
-        CGContextDrawRadialGradient(_context, nativeGradient, CGPointMake(startCenter.x, startCenter.y), startRadius, CGPointMake(endCenter.x, endCenter.y), endRadius, kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
+        CGContextDrawRadialGradient(currentLayer()->context(), nativeGradient, CGPointMake(startCenter.x, startCenter.y), startRadius, CGPointMake(endCenter.x, endCenter.y), endRadius, kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
         CFRelease(nativeGradient);
     }
     
-    CGContextResetClip(_context);
-    CGContextRestoreGState(_context);
+    CGContextResetClip(currentLayer()->context());
+    CGContextRestoreGState(currentLayer()->context());
 }
 
-void CanvasImpl::fill(lottie::CGRect const &rect, lottie::Color const &fillColor) {
+void CoreGraphicsCanvasImpl::fill(lottie::CGRect const &rect, lottie::Color const &fillColor) {
     CGFloat components[4] = { fillColor.r, fillColor.g, fillColor.b, fillColor.a };
     CGColorRef nativeColor = CGColorCreate(CGBitmapContextGetColorSpace(_topContext), components);
-    CGContextSetFillColorWithColor(_context, nativeColor);
+    CGContextSetFillColorWithColor(currentLayer()->context(), nativeColor);
     CFRelease(nativeColor);
     
-    CGContextFillRect(_context, CGRectMake(rect.x, rect.y, rect.width, rect.height));
+    CGContextFillRect(currentLayer()->context(), CGRectMake(rect.x, rect.y, rect.width, rect.height));
 }
 
-void CanvasImpl::setBlendMode(BlendMode blendMode) {
+void CoreGraphicsCanvasImpl::setBlendMode(BlendMode blendMode) {
     ::CGBlendMode nativeMode = kCGBlendModeNormal;
     switch (blendMode) {
         case BlendMode::Normal: {
@@ -504,21 +505,17 @@ void CanvasImpl::setBlendMode(BlendMode blendMode) {
             break;
         }
     }
-    CGContextSetBlendMode(_context, nativeMode);
+    CGContextSetBlendMode(currentLayer()->context(), nativeMode);
 }
 
-void CanvasImpl::setAlpha(float alpha) {
-    CGContextSetAlpha(_context, alpha);
+void CoreGraphicsCanvasImpl::concatenate(lottie::Transform2D const &transform) {
+    CGContextConcatCTM(currentLayer()->context(), CATransform3DGetAffineTransform(nativeTransform(transform)));
 }
 
-void CanvasImpl::concatenate(lottie::Transform2D const &transform) {
-    CGContextConcatCTM(_context, CATransform3DGetAffineTransform(nativeTransform(transform)));
-}
-
-std::shared_ptr<CanvasImpl::Image> CanvasImpl::makeImage() const {
-    ::CGImageRef nativeImage = CGBitmapContextCreateImage(_context);
+std::shared_ptr<CoreGraphicsCanvasImpl::Image> CoreGraphicsCanvasImpl::makeImage() {
+    ::CGImageRef nativeImage = CGBitmapContextCreateImage(currentLayer()->context());
     if (nativeImage) {
-        auto image = std::make_shared<CanvasImpl::Image>(nativeImage);
+        auto image = std::make_shared<CoreGraphicsCanvasImpl::Image>(nativeImage);
         CFRelease(nativeImage);
         return image;
     } else {
@@ -526,15 +523,23 @@ std::shared_ptr<CanvasImpl::Image> CanvasImpl::makeImage() const {
     }
 }
 
-void CanvasImpl::draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) {
-    CanvasImpl *impl = (CanvasImpl *)other.get();
-    if (impl->_layer) {
-        CGContextDrawLayerInRect(_context, CGRectMake(rect.x, rect.y, rect.width, rect.height), impl->_layer);
-    } else {
-        auto image = impl->makeImage();
-        CGContextDrawImage(_context, CGRectMake(rect.x, rect.y, rect.width, rect.height), ((CanvasImpl::Image *)image.get())->nativeImage());
-    }
+void CoreGraphicsCanvasImpl::draw(std::shared_ptr<Canvas> const &other, float alpha, lottie::CGRect const &rect) {
+    CGContextSetAlpha(currentLayer()->context(), alpha);
+    CoreGraphicsCanvasImpl *impl = (CoreGraphicsCanvasImpl *)other.get();
+    auto image = impl->makeImage();
+    CGContextDrawImage(currentLayer()->context(), CGRectMake(rect.x, rect.y, rect.width, rect.height), ((CoreGraphicsCanvasImpl::Image *)image.get())->nativeImage());
+    CGContextSetAlpha(currentLayer()->context(), 1.0);
+}
+
+void CoreGraphicsCanvasImpl::pushLayer(CGRect const &rect) {
+}
+
+void CoreGraphicsCanvasImpl::popLayer() {
+    
+}
+
+std::shared_ptr<CoreGraphicsCanvasImpl::Layer> &CoreGraphicsCanvasImpl::currentLayer() {
+    return _layerStack[_layerStack.size() - 1];
 }
 
 }
-

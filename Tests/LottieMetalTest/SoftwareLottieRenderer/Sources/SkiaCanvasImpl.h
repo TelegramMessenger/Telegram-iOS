@@ -14,9 +14,6 @@ public:
     SkiaCanvasImpl(int width, int height, int bytesPerRow, void *pixelData);
     virtual ~SkiaCanvasImpl();
     
-    virtual int width() const override;
-    virtual int height() const override;
-    
     virtual std::shared_ptr<Canvas> makeLayer(int width, int height) override;
     
     virtual void saveState() override;
@@ -32,11 +29,9 @@ public:
     
     virtual void setBlendMode(BlendMode blendMode) override;
     
-    virtual void setAlpha(float alpha) override;
-    
     virtual void concatenate(lottie::Transform2D const &transform) override;
     
-    virtual void draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) override;
+    virtual void draw(std::shared_ptr<Canvas> const &other, float alpha, lottie::CGRect const &rect) override;
     
     void flush();
     sk_sp<SkSurface> surface() const;
@@ -44,12 +39,9 @@ public:
 private:
     void *_pixelData = nullptr;
     bool _ownsPixelData = false;
-    int _width = 0;
-    int _height = 0;
     sk_sp<SkSurface> _surface;
     SkCanvas *_canvas = nullptr;
     SkBlendMode _blendMode = SkBlendMode::kSrcOver;
-    double _alpha = 1.0;
 };
 
 }

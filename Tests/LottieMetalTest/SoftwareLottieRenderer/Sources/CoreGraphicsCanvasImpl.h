@@ -1,5 +1,5 @@
-#ifndef CoreGraphicsCanvasImpl_h
-#define CoreGraphicsCanvasImpl_h
+#ifndef CoreGraphicsCoreGraphicsCanvasImpl_h
+#define CoreGraphicsCoreGraphicsCanvasImpl_h
 
 #include <LottieCpp/LottieCpp.h>
 
@@ -7,7 +7,9 @@
 
 namespace lottie {
 
-class CanvasImpl: public Canvas {
+class CoreGraphicsCanvasImpl: public Canvas {
+class Layer;
+    
 public:
     class Image {
     public:
@@ -20,12 +22,9 @@ public:
     };
     
 public:
-    CanvasImpl(int width, int height);
-    CanvasImpl(CGContextRef context, int width, int height);
-    virtual ~CanvasImpl();
-    
-    virtual int width() const override;
-    virtual int height() const override;
+    CoreGraphicsCanvasImpl(int width, int height);
+    CoreGraphicsCanvasImpl(CGContextRef context, int width, int height);
+    virtual ~CoreGraphicsCanvasImpl();
     
     std::shared_ptr<Canvas> makeLayer(int width, int height) override;
     
@@ -42,32 +41,23 @@ public:
     
     virtual void fill(lottie::CGRect const &rect, lottie::Color const &fillColor) override;
     virtual void setBlendMode(BlendMode blendMode) override;
-    virtual void setAlpha(float alpha) override;
     virtual void concatenate(lottie::Transform2D const &transform) override;
     
-    virtual std::shared_ptr<Image> makeImage() const;
-    virtual void draw(std::shared_ptr<Canvas> const &other, lottie::CGRect const &rect) override;
+    virtual std::shared_ptr<Image> makeImage();
+    virtual void draw(std::shared_ptr<Canvas> const &other, float alpha, lottie::CGRect const &rect) override;
     
-    CGContextRef nativeContext() const {
-        return _context;
-    }
+    virtual void pushLayer(CGRect const &rect) override;
+    virtual void popLayer() override;
     
-    std::vector<uint8_t> &backingData() {
-        return _backingData;
-    }
-    
-    int bytesPerRow() {
-        return _bytesPerRow;
-    }
+    std::vector<uint8_t> &backingData();
+    int bytesPerRow();
     
 private:
-    int _width = 0;
-    int _height = 0;
-    int _bytesPerRow = 0;
-    std::vector<uint8_t> _backingData;
-    CGContextRef _context = nil;
+    std::shared_ptr<Layer> &currentLayer();
+    
+private:
     CGContextRef _topContext = nil;
-    CGLayerRef _layer = nil;
+    std::vector<std::shared_ptr<Layer>> _layerStack;
 };
 
 }

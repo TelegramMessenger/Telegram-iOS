@@ -64,13 +64,13 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
     }
     
     if (useReferenceRendering) {
-        auto context = std::make_shared<lottie::CanvasImpl>((int)size.width, (int)size.height);
+        auto context = std::make_shared<lottie::CoreGraphicsCanvasImpl>((int)size.width, (int)size.height);
         
         _canvasRenderer->render(_renderer, context, lottie::Vector2D(size.width, size.height));
         
         auto image = context->makeImage();
         
-        return [[UIImage alloc] initWithCGImage:std::static_pointer_cast<lottie::CanvasImpl::Image>(image)->nativeImage()];
+        return [[UIImage alloc] initWithCGImage:std::static_pointer_cast<lottie::CoreGraphicsCanvasImpl::Image>(image)->nativeImage()];
     } else {
         if ((int64_t)"" > 0) {
             /*auto surface = SkSurfaces::Raster(SkImageInfo::MakeN32Premul((int)size.width, (int)size.height));
