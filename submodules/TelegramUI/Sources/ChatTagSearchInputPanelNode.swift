@@ -122,7 +122,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             return currentLayout.height
         }
 
-        let height = self.update(params: params, transition: Transition(transition))
+        let height = self.update(params: params, transition: ComponentTransition(transition))
         self.currentLayout = Layout(params: params, height: height)
 
         return height
@@ -133,7 +133,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         self.tagMessageCount = (tag, count, nil)
     }
     
-    private func update(transition: Transition) {
+    private func update(transition: ComponentTransition) {
         if self.isUpdating {
             return
         }
@@ -142,7 +142,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         }
     }
 
-    private func update(params: Params, transition: Transition) -> CGFloat {
+    private func update(params: Params, transition: ComponentTransition) -> CGFloat {
         self.isUpdating = true
         defer {
             self.isUpdating = false

@@ -27,7 +27,7 @@ final class WarpView: UIView {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(containerSize: CGSize, rect: CGRect, transition: Transition) {
+        func update(containerSize: CGSize, rect: CGRect, transition: ComponentTransition) {
             transition.setFrame(view: self.cloneView.view, frame: CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: CGSize(width: containerSize.width, height: containerSize.height)))
         }
     }
@@ -68,7 +68,7 @@ final class WarpView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(size: CGSize, topInset: CGFloat, warpHeight: CGFloat, theme: PresentationTheme, transition: Transition) {
+    func update(size: CGSize, topInset: CGFloat, warpHeight: CGFloat, theme: PresentationTheme, transition: ComponentTransition) {
         transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(), size: size))
         
         let allItemsHeight = warpHeight * 0.5

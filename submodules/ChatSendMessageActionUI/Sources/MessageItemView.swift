@@ -59,7 +59,7 @@ public final class ChatSendMessageScreenEffectIcon: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: ChatSendMessageScreenEffectIcon, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ChatSendMessageScreenEffectIcon, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             if case let .file(file) = component.content {
                 let fileView: ReactionIconView
                 if let current = self.fileView {
@@ -130,7 +130,7 @@ public final class ChatSendMessageScreenEffectIcon: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -246,7 +246,7 @@ final class MessageItemView: UIView {
     func animateIn(
         sourceTextInputView: ChatInputTextView?,
         isEditMessage: Bool,
-        transition: Transition
+        transition: ComponentTransition
     ) {
         if isEditMessage {
             transition.animateScale(view: self, from: 0.001, to: 1.0)
@@ -262,7 +262,7 @@ final class MessageItemView: UIView {
         sourceTextInputView: ChatInputTextView?,
         toEmpty: Bool,
         isEditMessage: Bool,
-        transition: Transition
+        transition: ComponentTransition
     ) {
         if isEditMessage {
             transition.setScale(view: self, scale: 0.001)
@@ -294,7 +294,7 @@ final class MessageItemView: UIView {
         containerSize: CGSize,
         effect: AvailableMessageEffects.MessageEffect?,
         isEditMessage: Bool,
-        transition: Transition
+        transition: ComponentTransition
     ) -> CGSize {
         self.emojiViewProvider = emojiViewProvider
         
@@ -351,7 +351,7 @@ final class MessageItemView: UIView {
             backgroundNode: backgroundNode
         )
         
-        let alphaTransition: Transition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.25)
+        let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.25)
         
         if let sourceMediaPreview {
             let mediaPreviewClippingView: UIView
@@ -764,7 +764,7 @@ final class MessageItemView: UIView {
         isAnimatedIn: Bool,
         localFrame: CGRect,
         containerSize: CGSize,
-        transition: Transition
+        transition: ComponentTransition
     ) {
         if let mediaPreviewClippingView = self.mediaPreviewClippingView, let sourceMediaPreview {
             let clippingFrame: CGRect

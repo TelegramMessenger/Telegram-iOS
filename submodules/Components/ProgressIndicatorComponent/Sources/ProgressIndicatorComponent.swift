@@ -67,7 +67,7 @@ public final class ProgressIndicatorComponent: Component {
             return CAShapeLayer.self
         }
         
-        func update(component: ProgressIndicatorComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: ProgressIndicatorComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let lineWidth: CGFloat = 1.33
             let size = CGSize(width: component.diameter, height: component.diameter)
 
@@ -107,7 +107,7 @@ public final class ProgressIndicatorComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

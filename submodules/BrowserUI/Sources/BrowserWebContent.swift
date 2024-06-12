@@ -258,7 +258,7 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
         self.webView.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.webView.scrollView.contentInset.top), animated: true)
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: Transition) {
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ComponentTransition) {
         var scrollInsets = insets
         scrollInsets.top = 0.0
         if self.webView.scrollView.contentInset != insets {
@@ -303,7 +303,7 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
     }
     
     private func snapScrollingOffsetToInsets() {
-        let transition = Transition(animation: .curve(duration: 0.4, curve: .spring))
+        let transition = ComponentTransition(animation: .curve(duration: 0.4, curve: .spring))
         self.updateScrollingOffset(isReset: false, transition: transition)
     }
     
@@ -317,7 +317,7 @@ final class BrowserWebContent: UIView, BrowserContent, UIScrollViewDelegate {
         self.snapScrollingOffsetToInsets()
     }
     
-    private func updateScrollingOffset(isReset: Bool, transition: Transition) {
+    private func updateScrollingOffset(isReset: Bool, transition: ComponentTransition) {
         let scrollView = self.webView.scrollView
         let isInteracting = scrollView.isDragging || scrollView.isDecelerating
         if let previousScrollingOffsetValue = self.previousScrollingOffset {

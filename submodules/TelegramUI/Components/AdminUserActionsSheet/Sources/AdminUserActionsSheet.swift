@@ -435,7 +435,7 @@ private final class AdminUserActionsSheetComponent: Component {
             )
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let environment = self.environment, let controller = environment.controller(), let itemLayout = self.itemLayout else {
                 return
             }
@@ -497,7 +497,7 @@ private final class AdminUserActionsSheetComponent: Component {
             }
         }
         
-        func update(component: AdminUserActionsSheetComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: AdminUserActionsSheetComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -859,7 +859,7 @@ private final class AdminUserActionsSheetComponent: Component {
                                 self.optionBanSelectedPeers = selectedPeers
                             }
                             
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
+                            self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut)))
                         }
                     ))))
                 }
@@ -1400,7 +1400,7 @@ private final class AdminUserActionsSheetComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -1524,7 +1524,7 @@ private final class OptionSectionExpandIndicatorComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: OptionSectionExpandIndicatorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: OptionSectionExpandIndicatorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let countArrowSpacing: CGFloat = 1.0
             let iconCountSpacing: CGFloat = 1.0
             
@@ -1578,7 +1578,7 @@ private final class OptionSectionExpandIndicatorComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -1627,7 +1627,7 @@ private final class MediaSectionExpandIndicatorComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: MediaSectionExpandIndicatorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: MediaSectionExpandIndicatorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let titleArrowSpacing: CGFloat = 1.0
             
             if self.arrowView.image == nil {
@@ -1669,7 +1669,7 @@ private final class MediaSectionExpandIndicatorComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -1728,7 +1728,7 @@ private final class OptionsSectionFooterComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: OptionsSectionFooterComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: OptionsSectionFooterComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             if self.arrowView.image == nil {
                 self.arrowView.image = PresentationResourcesItemList.expandSmallDownArrowImage(component.theme)
             }
@@ -1761,7 +1761,7 @@ private final class OptionsSectionFooterComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

@@ -629,7 +629,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
             for (_, backgroundNode) in strongSelf.backgroundNodes {
                 backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
                 if strongSelf.isExternalPreview {
-                    Transition.immediate.setScale(layer: backgroundNode.layer, scale: 0.001)
+                    ComponentTransition.immediate.setScale(layer: backgroundNode.layer, scale: 0.001)
                     transition.updateTransformScale(layer: backgroundNode.layer, scale: 1.0)
                 }
             }
@@ -719,7 +719,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
         }
     }
     
-    func animateOutOnSend(transition: Transition) {
+    func animateOutOnSend(transition: ComponentTransition) {
         transition.setAlpha(view: self.view, alpha: 0.0)
     }
     
@@ -1133,15 +1133,15 @@ final class MediaPickerSelectedListNode: ASDisplayNode, ASScrollViewDelegate, AS
         }
     }
     
-    func animateIn(transition: Transition) {
+    func animateIn(transition: ComponentTransition) {
         self.animateIn(transition: transition.containedViewLayoutTransition, initiated: {}, completion: {})
     }
     
-    func animateOut(transition: Transition) {
+    func animateOut(transition: ComponentTransition) {
         self.animateOut(transition: transition.containedViewLayoutTransition, completion: {})
     }
     
-    func update(containerSize: CGSize, transition: Transition) -> CGSize {
+    func update(containerSize: CGSize, transition: ComponentTransition) -> CGSize {
         if var validLayout = self.validLayout {
             validLayout.size = containerSize
             self.validLayout = validLayout

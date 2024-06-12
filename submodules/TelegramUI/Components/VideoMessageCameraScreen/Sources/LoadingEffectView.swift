@@ -94,7 +94,7 @@ final class LoadingEffectView: UIView {
         self.borderGradientView.layer.add(animation, forKey: "shimmer")
     }
     
-    func update(size: CGSize, transition: Transition) {
+    func update(size: CGSize, transition: ComponentTransition) {
         if self.backgroundView.bounds.size != size {
             self.backgroundView.layer.removeAllAnimations()
             

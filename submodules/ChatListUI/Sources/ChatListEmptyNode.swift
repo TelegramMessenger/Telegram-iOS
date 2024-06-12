@@ -316,7 +316,7 @@ final class ChatListEmptyNode: ASDisplayNode {
                 self.emptyArchive = emptyArchive
             }
             let emptyArchiveSize = emptyArchive.update(
-                transition: Transition(transition),
+                transition: ComponentTransition(transition),
                 component: AnyComponent(ArchiveInfoContentComponent(
                     theme: self.theme,
                     strings: self.strings,

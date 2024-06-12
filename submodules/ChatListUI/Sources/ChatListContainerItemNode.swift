@@ -303,7 +303,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
         
         if let chatFolderUpdates = self.chatFolderUpdates {
             let topPanel: TopPanelItem
-            var topPanelTransition = Transition(transition)
+            var topPanelTransition = ComponentTransition(transition)
             if let current = self.topPanel {
                 topPanel = current
             } else {
@@ -350,7 +350,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
             additionalTopInset += topPanelHeight
         } else if self.canReportPeer {
             let topPanel: TopPanelItem
-            var topPanelTransition = Transition(transition)
+            var topPanelTransition = ComponentTransition(transition)
             if let current = self.topPanel {
                 topPanel = current
             } else {

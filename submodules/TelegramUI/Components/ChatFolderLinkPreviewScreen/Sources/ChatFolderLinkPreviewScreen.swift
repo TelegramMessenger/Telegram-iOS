@@ -248,7 +248,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             }
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             guard let environment = self.environment, let controller = environment.controller(), let itemLayout = self.itemLayout else {
                 return
             }
@@ -312,7 +312,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
             }
         }
         
-        func update(component: ChatFolderLinkPreviewScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: ChatFolderLinkPreviewScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             let animationHint = transition.userData(AnimationHint.self)
             
             var contentTransition = transition
@@ -623,7 +623,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                 
                                 if let self, let component = self.component {
                                     self.linkListItems.removeAll(where: { $0.link == link.link })
-                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
+                                    self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut)))
                                     
                                     let context = component.context
                                     let _ = (context.engine.peers.editChatFolderLink(filterId: folderId, link: link, title: nil, peerIds: nil, revoke: true)
@@ -728,7 +728,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                     } else {
                                         self.selectedItems.insert(peer.id)
                                     }
-                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
+                                    self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut)))
                                 } else if linkContents.alreadyMemberPeerIds.contains(peer.id) {
                                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                                     let text: String
@@ -744,7 +744,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                     } else {
                                         self.selectedItems.insert(peer.id)
                                     }
-                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
+                                    self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut)))
                                 }
                             }
                         )),
@@ -886,7 +886,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                 self.selectedItems.insert(peerId)
                             }
                         }
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
+                        self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut)))
                     }
                 )),
                 environment: {},
@@ -1371,7 +1371,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             }
                             
                             self.linkListItems.insert(link, at: 0)
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
+                            self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut)))
                             
                             let navigationController = controller.navigationController
                             controller.push(folderInviteLinkListController(context: component.context, filterId: folderId, title: title, allPeerIds: peers.map(\.id), currentInvitation: link, linkUpdated: { [weak self] updatedLink in
@@ -1389,7 +1389,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                         self.linkListItems.insert(updatedLink, at: 0)
                                     }
                                 }
-                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .easeInOut)))
+                                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut)))
                             }, presentController: { [weak navigationController] c in
                                 (navigationController?.topViewController as? ViewController)?.present(c, in: .window(.root))
                             }))
@@ -1471,7 +1471,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

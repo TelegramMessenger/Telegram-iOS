@@ -152,7 +152,7 @@ final class MediaNavigationStripComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func updateCurrentItemProgress(value: CGFloat, isBuffering: Bool, transition: Transition) {
+        func updateCurrentItemProgress(value: CGFloat, isBuffering: Bool, transition: ComponentTransition) {
             guard let component = self.component else {
                 return
             }
@@ -170,7 +170,7 @@ final class MediaNavigationStripComponent: Component {
         }
         
         private var isTransitioning = false
-        func update(component: MediaNavigationStripComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: MediaNavigationStripComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             let previousComponent = self.component
             self.component = component
             
@@ -291,7 +291,7 @@ final class MediaNavigationStripComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

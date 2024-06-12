@@ -33,7 +33,7 @@ final class EmptySearchResultsView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(context: AccountContext, theme: PresentationTheme, useOpaqueTheme: Bool, text: String, file: TelegramMediaFile?, size: CGSize, searchInitiallyHidden: Bool, transition: Transition) {
+    func update(context: AccountContext, theme: PresentationTheme, useOpaqueTheme: Bool, text: String, file: TelegramMediaFile?, size: CGSize, searchInitiallyHidden: Bool, transition: ComponentTransition) {
         let titleColor: UIColor
         if useOpaqueTheme {
             titleColor = theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor

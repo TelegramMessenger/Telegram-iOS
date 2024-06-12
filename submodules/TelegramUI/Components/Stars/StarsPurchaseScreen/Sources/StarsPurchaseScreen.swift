@@ -61,7 +61,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
     let forceDark: Bool
     let products: [StarsProduct]?
     let expanded: Bool
-    let stateUpdated: (Transition) -> Void
+    let stateUpdated: (ComponentTransition) -> Void
     let buy: (StarsProduct) -> Void
     
     init(
@@ -76,7 +76,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
         forceDark: Bool,
         products: [StarsProduct]?,
         expanded: Bool,
-        stateUpdated: @escaping (Transition) -> Void,
+        stateUpdated: @escaping (ComponentTransition) -> Void,
         buy: @escaping (StarsProduct) -> Void
     ) {
         self.context = context
@@ -369,7 +369,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                                 },
                                 highlighting: .disabled,
                                 updateIsHighlighted: { view, isHighlighted in
-                                    let transition: Transition = .easeInOut(duration: 0.25)
+                                    let transition: ComponentTransition = .easeInOut(duration: 0.25)
                                     if let superview = view.superview {
                                         transition.setScale(view: superview, scale: isHighlighted ? 0.9 : 1.0)
                                     }

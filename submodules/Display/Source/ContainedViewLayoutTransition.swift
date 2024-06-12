@@ -1990,12 +1990,6 @@ extension CGRect: AnyValueProviding {
     }
 }
 
-extension CATransform3D: Equatable {
-    public static func ==(lhs: CATransform3D, rhs: CATransform3D) -> Bool {
-        return CATransform3DEqualToTransform(lhs, rhs)
-    }
-}
-
 extension CATransform3D: AnyValueProviding {
     func interpolate(with other: CATransform3D, fraction: CGFloat) -> CATransform3D {
         return CATransform3D(
@@ -2025,7 +2019,7 @@ extension CATransform3D: AnyValueProviding {
             stringValue: { "\(self)" },
             isEqual: { other in
                 if let otherValue = other.value as? CATransform3D {
-                    return self == otherValue
+                    return CATransform3DEqualToTransform(self, otherValue)
                 } else {
                     return false
                 }
@@ -2112,7 +2106,7 @@ final class ControlledTransitionProperty {
         return "MyCustomAnimation_\(Unmanaged.passUnretained(self).toOpaque())"
     }()
     
-    init<T: Equatable>(layer: CALayer, path: String, fromValue: T, toValue: T, completion: ((Bool) -> Void)?) where T: AnyValueProviding {
+    init<T>(layer: CALayer, path: String, fromValue: T, toValue: T, completion: ((Bool) -> Void)?) where T: AnyValueProviding {
         self.layer = layer
         self.path = path
         self.fromValue = fromValue.anyValue
@@ -2333,7 +2327,7 @@ public final class ControlledTransition {
         }
         
         public func updateTransform(layer: CALayer, transform: CATransform3D, completion: ((Bool) -> Void)?) {
-            if layer.transform == transform {
+            if CATransform3DEqualToTransform(layer.transform, transform) {
                 return
             }
             let fromValue: CATransform3D

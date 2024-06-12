@@ -897,7 +897,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 
-                self.chatListDisplayNode.requestNavigationBarLayout(transition: Transition.immediate.withUserData(ChatListNavigationBar.AnimationHint(
+                self.chatListDisplayNode.requestNavigationBarLayout(transition: ComponentTransition.immediate.withUserData(ChatListNavigationBar.AnimationHint(
                     disableStoriesAnimations: false,
                     crossfadeStoryPeers: true
                 )))

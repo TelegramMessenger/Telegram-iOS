@@ -442,7 +442,7 @@ final class MediaEditorScreenComponent: Component {
                     },
                     requestLayout: { [weak self] transition in
                         if let self {
-                            (self.environment?.controller() as? MediaEditorScreen)?.node.requestLayout(forceUpdate: true, transition: Transition(transition))
+                            (self.environment?.controller() as? MediaEditorScreen)?.node.requestLayout(forceUpdate: true, transition: ComponentTransition(transition))
                         }
                     }
                 )
@@ -556,7 +556,7 @@ final class MediaEditorScreenComponent: Component {
         func animateOut(to source: TransitionAnimationSource) {
             self.isDismissed = true
                         
-            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+            let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
             if let view = self.cancelButton.view {
                 transition.setAlpha(view: view, alpha: 0.0)
                 transition.setScale(view: view, scale: 0.1)
@@ -642,7 +642,7 @@ final class MediaEditorScreenComponent: Component {
             }
         }
         
-        func animateOutToTool(inPlace: Bool, transition: Transition) {
+        func animateOutToTool(inPlace: Bool, transition: ComponentTransition) {
             if let view = self.cancelButton.view {
                 view.alpha = 0.0
             }
@@ -671,7 +671,7 @@ final class MediaEditorScreenComponent: Component {
             }
         }
         
-        func animateInFromTool(inPlace: Bool, transition: Transition) {
+        func animateInFromTool(inPlace: Bool, transition: ComponentTransition) {
             if let view = self.cancelButton.view {
                 view.alpha = 1.0
             }
@@ -715,7 +715,7 @@ final class MediaEditorScreenComponent: Component {
             return inputText
         }
         
-        func update(component: MediaEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: MediaEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             guard !self.isDismissed else {
                 return availableSize
             }
@@ -1398,7 +1398,7 @@ final class MediaEditorScreenComponent: Component {
                 }
                 keyboardHeight = inputHeight
                 
-                let fadeTransition = Transition(animation: .curve(duration: 0.3, curve: .easeInOut))
+                let fadeTransition = ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut))
                 if self.inputPanelExternalState.isEditing {
                     fadeTransition.setAlpha(view: self.fadeView, alpha: 1.0)
                 } else {
@@ -2396,7 +2396,7 @@ final class MediaEditorScreenComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -2543,7 +2543,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var stickerCutoutStatusDisposable: Disposable?
         fileprivate var isCutout = false
         
-        private (set) var hasAnyChanges = false
+        private(set) var hasAnyChanges = false
         
         private var playbackPositionDisposable: Disposable?
         
@@ -3906,7 +3906,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                     view.animateOut(to: .camera)
                 }
-                let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                let transition = ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut))
                 transition.setAlpha(view: self.previewContainerView, alpha: 0.0, completion: { _ in
                     completion()
                 })
@@ -3933,7 +3933,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         func animateOutToTool(tool: MediaEditorScreenComponent.DrawingScreenType, inPlace: Bool = false) {
             self.isDisplayingTool = tool
             
-            let transition: Transition = .easeInOut(duration: 0.2)
+            let transition: ComponentTransition = .easeInOut(duration: 0.2)
             if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                 view.animateOutToTool(inPlace: inPlace, transition: transition)
             }
@@ -3943,7 +3943,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         func animateInFromTool(inPlace: Bool = false) {
             self.isDisplayingTool = nil
             
-            let transition: Transition = .easeInOut(duration: 0.2)
+            let transition: ComponentTransition = .easeInOut(duration: 0.2)
             if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                 view.animateInFromTool(inPlace: inPlace, transition: transition)
             }
@@ -4598,7 +4598,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return result
         }
         
-        func requestUpdate(hasAppeared: Bool = false, transition: Transition = .immediate) {
+        func requestUpdate(hasAppeared: Bool = false, transition: ComponentTransition = .immediate) {
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, hasAppeared: hasAppeared, transition: transition)
             }
@@ -4659,14 +4659,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var previousDrawingData: Data?
         private var previousDrawingEntities: [DrawingEntity]?
         
-        func requestLayout(forceUpdate: Bool, transition: Transition) {
+        func requestLayout(forceUpdate: Bool, transition: ComponentTransition) {
             guard let layout = self.validLayout else {
                 return
             }
             self.containerLayoutUpdated(layout: layout, forceUpdate: forceUpdate, hasAppeared: self.hasAppeared, transition: transition)
         }
                 
-        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, hasAppeared: Bool = false, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, hasAppeared: Bool = false, transition: ComponentTransition) {
             guard let controller = self.controller, !self.isDismissed else {
                 return
             }
@@ -7314,7 +7314,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 
-        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: Transition(transition))
+        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
     }
     
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
@@ -7625,7 +7625,7 @@ private final class ToolValueComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: ToolValueComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ToolValueComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousValue = self.component?.value
             self.component = component
             self.state = state
@@ -7692,7 +7692,7 @@ private final class ToolValueComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -7744,7 +7744,7 @@ public final class BlurredGradientComponent: Component {
         private var gradientBackground = SimpleLayer()
         private var gradientForeground = SimpleGradientLayer()
         
-        public func update(component: BlurredGradientComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        public func update(component: BlurredGradientComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             self.isUserInteractionEnabled = false
@@ -7790,7 +7790,7 @@ public final class BlurredGradientComponent: Component {
         return View(color: nil, enableBlur: true)
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

@@ -15,17 +15,11 @@ public struct KeyShortcut: Hashable {
     
     public func hash(into hasher: inout Hasher) {
         hasher.combine(self.input)
-        hasher.combine(self.modifiers)
+        hasher.combine(self.modifiers.rawValue)
     }
     
     public static func ==(lhs: KeyShortcut, rhs: KeyShortcut) -> Bool {
         return lhs.hashValue == rhs.hashValue
-    }
-}
-
-extension UIKeyModifierFlags: Hashable {
-    public var hashValue: Int {
-        return self.rawValue
     }
 }
 

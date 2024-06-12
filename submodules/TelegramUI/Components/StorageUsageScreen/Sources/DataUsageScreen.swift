@@ -433,7 +433,7 @@ final class DataUsageScreenComponent: Component {
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         }
         
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             let scrollBounds = self.scrollView.bounds
             
             if let headerView = self.segmentedControlView.view, let navigationMetrics = self.navigationMetrics {
@@ -445,7 +445,7 @@ final class DataUsageScreenComponent: Component {
                 
                 headerOffset = min(headerOffset, minOffset)
                 
-                let animatedTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                let animatedTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 let navigationBackgroundAlpha: CGFloat = abs(headerOffset - minOffset) < 4.0 ? 1.0 : 0.0
                 
                 let navigationButtonAlpha: CGFloat = scrollBounds.minY >= navigationMetrics.navigationHeight ? 0.0 : 1.0
@@ -485,7 +485,7 @@ final class DataUsageScreenComponent: Component {
             }
         }
         
-        func update(component: DataUsageScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: DataUsageScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -690,7 +690,7 @@ final class DataUsageScreenComponent: Component {
             if transition.animation.isImmediate, let animationHint {
                 switch animationHint.value {
                 case .modeChanged, .clearedItems:
-                    pieChartTransition = Transition(animation: .curve(duration: 0.4, curve: .spring))
+                    pieChartTransition = ComponentTransition(animation: .curve(duration: 0.4, curve: .spring))
                 }
             }
             
@@ -876,7 +876,7 @@ final class DataUsageScreenComponent: Component {
                 
                 var labelTransition = transition
                 if labelTransition.animation.isImmediate, let animationHint, animationHint.value == .modeChanged {
-                    labelTransition = Transition(animation: .curve(duration: 0.3, curve: .easeInOut))
+                    labelTransition = ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut))
                 }
                 
                 let chartTotalLabelSize = self.chartTotalLabel.update(
@@ -922,7 +922,7 @@ final class DataUsageScreenComponent: Component {
                             return
                         }
                         self.selectedStats = id
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(value: .modeChanged)))
+                        self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(value: .modeChanged)))
                     })),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
@@ -953,7 +953,7 @@ final class DataUsageScreenComponent: Component {
                         } else {
                             self.expandedCategories.insert(key)
                         }
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                        self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                     }
                 )),
                 environment: {},
@@ -1234,8 +1234,8 @@ final class DataUsageScreenComponent: Component {
             #endif
             
             self.allStats = StatsSet()
-            //self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: .clearedItems)))
-            self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(value: .clearedItems)))
+            //self.state?.updated(transition: ComponentTransition(animation: .none).withUserData(AnimationHint(value: .clearedItems)))
+            self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(AnimationHint(value: .clearedItems)))
         }
     }
     
@@ -1243,7 +1243,7 @@ final class DataUsageScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

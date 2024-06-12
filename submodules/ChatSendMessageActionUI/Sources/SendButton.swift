@@ -67,7 +67,7 @@ final class SendButton: HighlightTrackingButton {
         isAnimatedIn: Bool,
         isLoadingEffectAnimation: Bool,
         size: CGSize,
-        transition: Transition
+        transition: ComponentTransition
     ) {
         let innerSize = CGSize(width: size.width - 5.5 * 2.0, height: 33.0)
         let containerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - innerSize.width) * 0.5), y: floorToScreenPixels((size.height - innerSize.height) * 0.5)), size: innerSize)
@@ -197,7 +197,7 @@ final class SendButton: HighlightTrackingButton {
         }
     }
     
-    func updateGlobalRect(rect: CGRect, within containerSize: CGSize, transition: Transition) {
+    func updateGlobalRect(rect: CGRect, within containerSize: CGSize, transition: ComponentTransition) {
         if let backgroundContent = self.backgroundContent {
             backgroundContent.update(rect: CGRect(origin: CGPoint(x: rect.minX + self.containerView.frame.minX, y: rect.minY + self.containerView.frame.minY), size: backgroundContent.bounds.size), within: containerSize, transition: transition.containedViewLayoutTransition)
         }

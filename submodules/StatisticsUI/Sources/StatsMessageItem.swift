@@ -649,7 +649,7 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                         let indicatorSize = CGSize(width: imageSize.width - lineWidth * 4.0, height: imageSize.height - lineWidth * 4.0)
 
                         let storyIndicator: ComponentView<Empty>
-                        let indicatorTransition: Transition = .immediate
+                        let indicatorTransition: ComponentTransition = .immediate
                         if let current = strongSelf.storyIndicator {
                             storyIndicator = current
                         } else {

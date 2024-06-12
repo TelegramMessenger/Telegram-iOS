@@ -144,7 +144,7 @@ public final class BalancedTextComponent: Component {
             return self.textView.attributeSubstring(name: name, index: index)
         }
         
-        public func update(component: BalancedTextComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        public func update(component: BalancedTextComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let attributedString: NSAttributedString
             switch component.text {
             case let .plain(string):
@@ -203,7 +203,7 @@ public final class BalancedTextComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

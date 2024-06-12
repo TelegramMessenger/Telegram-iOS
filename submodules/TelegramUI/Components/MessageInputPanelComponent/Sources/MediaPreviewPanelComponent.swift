@@ -188,7 +188,7 @@ public final class MediaPreviewPanelComponent: Component {
             self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
         }
         
-        public func animateOut(transition: Transition, completion: @escaping () -> Void) {
+        public func animateOut(transition: ComponentTransition, completion: @escaping () -> Void) {
             let vibrancyContainer = self.vibrancyContainer
             transition.setAlpha(view: vibrancyContainer, alpha: 0.0, completion: { [weak vibrancyContainer] _ in
                 vibrancyContainer?.removeFromSuperview()
@@ -230,7 +230,7 @@ public final class MediaPreviewPanelComponent: Component {
             }
         }
         
-        func update(component: MediaPreviewPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: MediaPreviewPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             if self.component == nil, case let .audio(audio) = component.mediaPreview {
                 self.timerTextValue = textForDuration(seconds: audio.duration)
             }
@@ -353,7 +353,7 @@ public final class MediaPreviewPanelComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

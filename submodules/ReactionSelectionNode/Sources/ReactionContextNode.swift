@@ -701,11 +701,11 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                 strongSelf.updateEmojiContent(emojiContent)
                 
                 if let reactionSelectionComponentHost = strongSelf.reactionSelectionComponentHost, let componentView = reactionSelectionComponentHost.view {
-                    var emojiTransition: Transition = .immediate
+                    var emojiTransition: ComponentTransition = .immediate
                     if let scheduledEmojiContentAnimationHint = strongSelf.scheduledEmojiContentAnimationHint {
                         strongSelf.scheduledEmojiContentAnimationHint = nil
                         let contentAnimation = scheduledEmojiContentAnimationHint
-                        emojiTransition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
+                        emojiTransition = ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
                     }
                     
                     var hideTopPanel = false
@@ -1375,7 +1375,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         
         if (self.isExpanded || (self.reactionSelectionComponentHost != nil && !self.isCollapsing)), let _ = self.getEmojiContent, !self.reactionsLocked {
             let reactionSelectionComponentHost: ComponentView<Empty>
-            var componentTransition = Transition(transition)
+            var componentTransition = ComponentTransition(transition)
             if let current = self.reactionSelectionComponentHost {
                 reactionSelectionComponentHost = current
             } else {
@@ -1390,7 +1390,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                 if let scheduledEmojiContentAnimationHint = self.scheduledEmojiContentAnimationHint {
                     self.scheduledEmojiContentAnimationHint = nil
                     let contentAnimation = scheduledEmojiContentAnimationHint
-                    componentTransition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
+                    componentTransition = ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
                 }
                 
                 var hideTopPanel = false
@@ -1478,7 +1478,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                     animationOffsetY += 46.0 + 54.0 - 4.0
                                 }
                                 
-                                Transition(transition).animateBoundsOrigin(view: mirrorContentClippingView, from: CGPoint(x: 0.0, y: animationOffsetY), to: CGPoint(), additive: true, completion: { [weak mirrorContentClippingView] _ in
+                                ComponentTransition(transition).animateBoundsOrigin(view: mirrorContentClippingView, from: CGPoint(x: 0.0, y: animationOffsetY), to: CGPoint(), additive: true, completion: { [weak mirrorContentClippingView] _ in
                                     mirrorContentClippingView?.clipsToBounds = true
                                 })
                             }

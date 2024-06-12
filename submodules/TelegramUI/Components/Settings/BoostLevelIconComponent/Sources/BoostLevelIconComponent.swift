@@ -80,7 +80,7 @@ public final class BoostLevelIconComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: BoostLevelIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: BoostLevelIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             if self.component != component {
                 self.imageView.image = generateDisclosureActionBoostLevelBadgeImage(text: component.strings.Channel_Appearance_BoostLevel("\(component.level)").string)
             }
@@ -99,7 +99,7 @@ public final class BoostLevelIconComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

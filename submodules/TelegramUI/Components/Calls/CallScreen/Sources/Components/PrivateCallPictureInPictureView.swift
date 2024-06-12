@@ -166,11 +166,11 @@ final class PrivateCallPictureInPictureView: UIView {
         let animationDuration = CATransaction.animationDuration()
         let timingFunction = CATransaction.animationTimingFunction()
         
-        let mappedTransition: Transition
+        let mappedTransition: ComponentTransition
         if self.sampleBufferView.bounds.isEmpty {
             mappedTransition = .immediate
         } else if animationDuration > 0.0 && !CATransaction.disableActions() {
-            let mappedCurve: Transition.Animation.Curve
+            let mappedCurve: ComponentTransition.Animation.Curve
             if let timingFunction {
                 var controlPoint0: [Float] = [0.0, 0.0]
                 var controlPoint1: [Float] = [0.0, 0.0]
@@ -182,7 +182,7 @@ final class PrivateCallPictureInPictureView: UIView {
             } else {
                 mappedCurve = .easeInOut
             }
-            mappedTransition = Transition(animation: .curve(
+            mappedTransition = ComponentTransition(animation: .curve(
                 duration: animationDuration,
                 curve: mappedCurve
             ))

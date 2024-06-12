@@ -137,7 +137,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             lineWidth: 3.0,
             inactiveLineWidth: 1.5,
             forceRoundedRect: isForum
-        ), transition: Transition(transition))
+        ), transition: ComponentTransition(transition))
     }
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {

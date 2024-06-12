@@ -12,9 +12,9 @@ public final class List<ChildEnvironment: Equatable>: CombinedComponent {
     private let items: [AnyComponentWithIdentity<ChildEnvironment>]
     private let direction: Direction
     private let centerAlignment: Bool
-    private let appear: Transition.Appear
+    private let appear: ComponentTransition.Appear
 
-    public init(_ items: [AnyComponentWithIdentity<ChildEnvironment>], direction: Direction = .vertical, centerAlignment: Bool = false, appear: Transition.Appear = .default()) {
+    public init(_ items: [AnyComponentWithIdentity<ChildEnvironment>], direction: Direction = .vertical, centerAlignment: Bool = false, appear: ComponentTransition.Appear = .default()) {
         self.items = items
         self.direction = direction
         self.centerAlignment = centerAlignment

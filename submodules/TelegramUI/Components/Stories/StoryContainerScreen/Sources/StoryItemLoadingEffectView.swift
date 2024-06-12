@@ -102,7 +102,7 @@ final class StoryItemLoadingEffectView: UIView {
         self.didPlayOnce = true
     }
     
-    func update(size: CGSize, transition: Transition) {
+    func update(size: CGSize, transition: ComponentTransition) {
         if self.backgroundView.bounds.size != size {
             self.backgroundView.layer.removeAllAnimations()
             

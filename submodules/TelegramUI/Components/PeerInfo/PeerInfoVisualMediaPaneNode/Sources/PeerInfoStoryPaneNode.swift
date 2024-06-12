@@ -40,6 +40,7 @@ import CoreLocation
 import Geocoding
 import ItemListUI
 import MultilineTextComponent
+import LocationUI
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white
@@ -970,7 +971,7 @@ private final class ItemTransitionView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(state: StoryContainerScreen.TransitionState, transition: Transition) {
+    func update(state: StoryContainerScreen.TransitionState, transition: ComponentTransition) {
         let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
         
         if let copyDurationLayer = self.copyDurationLayer, let durationLayerBottomLeftPosition = self.durationLayerBottomLeftPosition {
@@ -1398,7 +1399,7 @@ private final class StorySearchHeaderComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: StorySearchHeaderComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: StorySearchHeaderComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             if self.component?.theme !== component.theme {
                 self.backgroundColor = component.theme.chatList.sectionHeaderFillColor
             }
@@ -1436,7 +1437,7 @@ private final class StorySearchHeaderComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -1776,7 +1777,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     )
                     
                     if let blurLayer = foundItem?.blurLayer {
-                        let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                        let transition = ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut))
                         transition.setAlpha(layer: blurLayer, alpha: 0.0)
                     }
                 }
@@ -1803,7 +1804,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         }
                         if let foundItemLayer {
                             if let blurLayer = foundItem?.blurLayer {
-                                let transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                                let transition = ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut))
                                 transition.setAlpha(layer: blurLayer, alpha: 1.0)
                             }
                             
@@ -2266,7 +2267,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         mapNode.mapNode.setMapCenter(coordinate: locationCoordinate, span: LocationMapNode.viewMapSpan, animated: previousState != nil)
                     }
                 case let .coordinate(coordinate, defaultSpan):
-                    if let previousState = previousState, case let .coordinate(previousCoordinate, _) = previousState.selectedLocation, previousCoordinate == coordinate {
+                    if let previousState = previousState, case let .coordinate(previousCoordinate, _) = previousState.selectedLocation, locationCoordinatesAreEqual(previousCoordinate, coordinate) {
                     } else {
                         mapNode.mapNode.setMapCenter(
                             coordinate: coordinate,
@@ -2988,7 +2989,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             itemLayer.isHidden = itemHidden
             
             if let blurLayer = itemValue.blurLayer {
-                let transition = Transition.immediate
+                let transition = ComponentTransition.immediate
                 if itemHidden {
                     transition.setAlpha(layer: blurLayer, alpha: 0.0)
                 } else {
@@ -3143,7 +3144,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                     self.searchHeader = searchHeader
                 }
                 let searchHeaderSize = searchHeader.update(
-                    transition: Transition(transition),
+                    transition: ComponentTransition(transition),
                     component: AnyComponent(StorySearchHeaderComponent(
                         theme: self.presentationData.theme,
                         strings: self.presentationData.strings,
@@ -3215,7 +3216,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         var bottomInset = bottomInset
         if self.isProfileEmbedded, let selectedIds = self.itemInteraction.selectedIds, self.canManageStories, case let .peer(peerId, _, isArchived) = self.scope {
             let selectionPanel: ComponentView<Empty>
-            var selectionPanelTransition = Transition(transition)
+            var selectionPanelTransition = ComponentTransition(transition)
             if let current = self.selectionPanel {
                 selectionPanel = current
             } else {
@@ -3351,7 +3352,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         
         if case let .peer(_, _, isArchived) = self.scope, let items = self.items, items.items.isEmpty, items.count == 0 {
             let emptyStateView: ComponentView<Empty>
-            var emptyStateTransition = Transition(transition)
+            var emptyStateTransition = ComponentTransition(transition)
             if let current = self.emptyStateView {
                 emptyStateView = current
             } else {
@@ -3412,13 +3413,13 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             }
             
             if self.didUpdateItemsOnce {
-                Transition(animation: .curve(duration: 0.2, curve: .easeInOut)).setBackgroundColor(view: self.view, color: backgroundColor)
+                ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut)).setBackgroundColor(view: self.view, color: backgroundColor)
             } else {
                 self.view.backgroundColor = backgroundColor
             }
         } else {
             if let emptyStateView = self.emptyStateView {
-                let subTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                let subTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 self.emptyStateView = nil
                 
                 if let emptyStateComponentView = emptyStateView.view {
@@ -3772,7 +3773,7 @@ private final class BottomActionsPanelComponent: Component {
         }
         
         
-        func update(component: BottomActionsPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: BottomActionsPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let themeUpdated = self.component?.theme !== component.theme
             
             self.component = component
@@ -3877,7 +3878,7 @@ private final class BottomActionsPanelComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

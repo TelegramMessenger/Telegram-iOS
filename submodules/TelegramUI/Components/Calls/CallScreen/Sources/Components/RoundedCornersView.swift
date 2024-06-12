@@ -59,7 +59,7 @@ final class RoundedCornersView: UIImageView {
         self.layer.cornerRadius = 0.0
     }
     
-    func update(cornerRadius: CGFloat, transition: Transition) {
+    func update(cornerRadius: CGFloat, transition: ComponentTransition) {
         if self.currentCornerRadius == cornerRadius {
             return
         }

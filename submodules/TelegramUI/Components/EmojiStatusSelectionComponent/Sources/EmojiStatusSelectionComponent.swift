@@ -67,7 +67,7 @@ public final class EmojiStatusSelectionComponent: Component {
     public let color: UIColor?
     public let hideTopPanel: Bool
     public let disableTopPanel: Bool
-    public let hideTopPanelUpdated: (Bool, Transition) -> Void
+    public let hideTopPanelUpdated: (Bool, ComponentTransition) -> Void
     
     public init(
         theme: PresentationTheme,
@@ -79,7 +79,7 @@ public final class EmojiStatusSelectionComponent: Component {
         separatorColor: UIColor,
         hideTopPanel: Bool,
         disableTopPanel: Bool,
-        hideTopPanelUpdated: @escaping (Bool, Transition) -> Void
+        hideTopPanelUpdated: @escaping (Bool, ComponentTransition) -> Void
     ) {
         self.theme = theme
         self.strings = strings
@@ -156,7 +156,7 @@ public final class EmojiStatusSelectionComponent: Component {
         deinit {
         }
         
-        func update(component: EmojiStatusSelectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: EmojiStatusSelectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.backgroundColor = component.backgroundColor
             let panelBackgroundColor = component.backgroundColor.withMultipliedAlpha(0.85)
             self.panelBackgroundView.updateColor(color: panelBackgroundColor, transition: .immediate)
@@ -249,7 +249,7 @@ public final class EmojiStatusSelectionComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -736,7 +736,7 @@ public final class EmojiStatusSelectionController: ViewController {
             self.emojiSearchDisposable.dispose()
         }
         
-        private func refreshLayout(transition: Transition) {
+        private func refreshLayout(transition: ComponentTransition) {
             guard let layout = self.validLayout else {
                 return
             }
@@ -968,7 +968,7 @@ public final class EmojiStatusSelectionController: ViewController {
             }, fromBackground: fromBackground)
         }
         
-        func containerLayoutUpdated(layout: ContainerViewLayout, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, transition: ComponentTransition) {
             self.validLayout = layout
             
             var transition = transition
@@ -1001,7 +1001,7 @@ public final class EmojiStatusSelectionController: ViewController {
             if let scheduledEmojiContentAnimationHint = self.scheduledEmojiContentAnimationHint {
                 self.scheduledEmojiContentAnimationHint = nil
                 let contentAnimation = scheduledEmojiContentAnimationHint
-                transition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
+                transition = ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
             }
             
             var componentWidth = layout.size.width - sideInset * 2.0
@@ -1154,7 +1154,7 @@ public final class EmojiStatusSelectionController: ViewController {
                 if let current = self.previewScreenView {
                     previewScreenView = current
                 } else {
-                    previewScreenTransition = Transition(animation: .none)
+                    previewScreenTransition = ComponentTransition(animation: .none)
                     if let emojiView = self.componentHost.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("emoji"))) as? EmojiPagerContentComponent.View, let sourceLayer = emojiView.layerForItem(groupId: previewItem.groupId, item: previewItem.item) {
                         previewScreenTransition = previewScreenTransition.withUserData(EmojiStatusPreviewScreenComponent.TransitionAnimation(
                             transitionType: .animateIn(sourceLayer: sourceLayer)
@@ -1493,7 +1493,7 @@ public final class EmojiStatusSelectionController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 
-        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: Transition(transition))
+        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
     }
 }
 

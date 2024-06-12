@@ -55,7 +55,7 @@ final class AppIconsDemoComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        public func update(component: AppIconsDemoComponent, availableSize: CGSize, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
+        public func update(component: AppIconsDemoComponent, availableSize: CGSize, environment: Environment<DemoPageEnvironment>, transition: ComponentTransition) -> CGSize {
             let isDisplaying = environment[DemoPageEnvironment.self].isDisplaying
             
             self.component = component
@@ -173,7 +173,7 @@ final class AppIconsDemoComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<DemoPageEnvironment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }

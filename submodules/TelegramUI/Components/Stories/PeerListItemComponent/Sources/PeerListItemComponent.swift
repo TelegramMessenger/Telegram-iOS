@@ -410,11 +410,11 @@ public final class PeerListItemComponent: Component {
                 }
                 self.isExtractedToContextMenu = value
                 
-                let mappedTransition: Transition
+                let mappedTransition: ComponentTransition
                 if value {
-                    mappedTransition = Transition(transition)
+                    mappedTransition = ComponentTransition(transition)
                 } else {
-                    mappedTransition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                    mappedTransition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
                 }
                 self.state?.updated(transition: mappedTransition)
             }
@@ -522,7 +522,7 @@ public final class PeerListItemComponent: Component {
             self.imageNode?.isHidden = isPreviewing
         }
         
-        func update(component: PeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: PeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousComponent = self.component
             
             var synchronousLoad = false
@@ -1134,7 +1134,7 @@ public final class PeerListItemComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

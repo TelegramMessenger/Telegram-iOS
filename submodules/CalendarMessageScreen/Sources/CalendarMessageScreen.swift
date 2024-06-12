@@ -404,7 +404,7 @@ private final class DayComponent: Component {
             self.action?()
         }
 
-        func update(component: DayComponent, availableSize: CGSize, environment: Environment<DayEnvironment>, transition: Transition) -> CGSize {
+        func update(component: DayComponent, availableSize: CGSize, environment: Environment<DayEnvironment>, transition: ComponentTransition) -> CGSize {
             let isFirstTime = self.action == nil
 
             self.action = component.action
@@ -613,7 +613,7 @@ private final class DayComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<DayEnvironment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<DayEnvironment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -859,7 +859,7 @@ private final class MonthComponent: CombinedComponent {
                     let delayIndex = dayEnvironment.selectionDelayCoordination
                     context.add(selection
                         .position(CGPoint(x: selectionRect.midX, y: selectionRect.midY))
-                        .appear(Transition.Appear { _, view, transition in
+                        .appear(ComponentTransition.Appear { _, view, transition in
                             if case .none = transition.animation {
                                 return
                             }
@@ -867,7 +867,7 @@ private final class MonthComponent: CombinedComponent {
                             view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.05, delay: delay)
                             view.layer.animateFrame(from: CGRect(origin: view.frame.origin, size: CGSize(width: selectionRadius, height: view.frame.height)), to: view.frame, duration: 0.25, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
                         })
-                        .disappear(Transition.Disappear { view, transition, completion in
+                        .disappear(ComponentTransition.Disappear { view, transition, completion in
                             if case .none = transition.animation {
                                 completion()
                                 return
@@ -1203,12 +1203,12 @@ public final class CalendarMessageScreen: ViewController {
         }
 
         func toggleSelectionMode() {
-            var transition: Transition = .immediate
+            var transition: ComponentTransition = .immediate
             if self.selectionState == nil {
                 self.selectionState = SelectionState(dayRange: nil)
             } else {
                 self.selectionState = nil
-                transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                transition = ComponentTransition(animation: .curve(duration: 0.25, curve: .easeInOut))
                 transition = transition.withUserData(SelectionTransition.end)
             }
 
@@ -1236,7 +1236,7 @@ public final class CalendarMessageScreen: ViewController {
             self.selectionToolbarActionSelected()
         }
 
-        func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition, componentsTransition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition, componentsTransition: ComponentTransition) {
             let isFirstLayout = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
 
@@ -1614,7 +1614,7 @@ public final class CalendarMessageScreen: ViewController {
             return true
         }
 
-        func updateMonthViews(transition: Transition) {
+        func updateMonthViews(transition: ComponentTransition) {
             guard let (width, _, frames) = self.scrollLayout else {
                 return
             }
@@ -1657,7 +1657,7 @@ public final class CalendarMessageScreen: ViewController {
                                 return
                             }
                             if var selectionState = strongSelf.selectionState {
-                                var transition = Transition(animation: .curve(duration: 0.2, curve: .spring))
+                                var transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .spring))
                                 if let dayRange = selectionState.dayRange {
                                     if dayRange.lowerBound == timestamp || dayRange.upperBound == timestamp {
                                         selectionState.dayRange = nil
@@ -1712,7 +1712,7 @@ public final class CalendarMessageScreen: ViewController {
                             guard var selectionState = strongSelf.selectionState else {
                                 return
                             }
-                            var transition = Transition(animation: .curve(duration: 0.2, curve: .spring))
+                            var transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .spring))
                             if let dayRange = selectionState.dayRange {
                                 if dayRange == range {
                                     selectionState.dayRange = nil
@@ -1751,7 +1751,7 @@ public final class CalendarMessageScreen: ViewController {
             }
         }
 
-        private func updateSelectionState(transition: Transition) {
+        private func updateSelectionState(transition: ComponentTransition) {
             var title = self.presentationData.strings.MessageCalendar_Title
             if let selectionState = self.selectionState, let dayRange = selectionState.dayRange {
                 var selectedCount = 0

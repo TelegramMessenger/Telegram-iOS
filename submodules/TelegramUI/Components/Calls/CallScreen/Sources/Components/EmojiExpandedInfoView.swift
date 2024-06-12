@@ -84,13 +84,13 @@ final class EmojiExpandedInfoView: OverlayMaskContainerView {
                 
                 if highlighted {
                     self.actionButton.layer.removeAnimation(forKey: "sublayerTransform")
-                    let transition = Transition(animation: .curve(duration: 0.15, curve: .easeInOut))
+                    let transition = ComponentTransition(animation: .curve(duration: 0.15, curve: .easeInOut))
                     transition.setScale(layer: self.actionButton.layer, scale: topScale)
                 } else {
                     let t = self.actionButton.layer.presentation()?.transform ?? layer.transform
                     let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
                     
-                    let transition = Transition(animation: .none)
+                    let transition = ComponentTransition(animation: .none)
                     transition.setScale(layer: self.actionButton.layer, scale: 1.0)
                     
                     self.actionButton.layer.animateScale(from: currentScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] completed in
@@ -129,7 +129,7 @@ final class EmojiExpandedInfoView: OverlayMaskContainerView {
         return nil
     }
     
-    func update(width: CGFloat, transition: Transition) -> CGSize {
+    func update(width: CGFloat, transition: ComponentTransition) -> CGSize {
         let params = Params(width: width)
         if let currentLayout = self.currentLayout, currentLayout.params == params {
             return currentLayout.size
@@ -139,7 +139,7 @@ final class EmojiExpandedInfoView: OverlayMaskContainerView {
         return size
     }
     
-    private func update(params: Params, transition: Transition) -> CGSize {
+    private func update(params: Params, transition: ComponentTransition) -> CGSize {
         let buttonHeight: CGFloat = 56.0
         
         let titleSize = self.titleView.update(string: self.title, fontSize: 16.0, fontWeight: 0.3, alignment: .center, color: .white, constrainedWidth: params.width - 16.0 * 2.0, transition: transition)

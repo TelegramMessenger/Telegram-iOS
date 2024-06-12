@@ -702,7 +702,7 @@ public final class MessageInputPanelComponent: Component {
             return result
         }
         
-        func update(component: MessageInputPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: MessageInputPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousPlaceholder = self.component?.placeholder
             
             var insets = UIEdgeInsets(top: 14.0, left: 9.0, bottom: 6.0, right: 41.0)
@@ -823,7 +823,7 @@ public final class MessageInputPanelComponent: Component {
                 }
             }
             
-            let placeholderTransition: Transition = (previousPlaceholder != nil && previousPlaceholder != component.placeholder) ? Transition(animation: .curve(duration: 0.3, curve: .spring)) : .immediate
+            let placeholderTransition: ComponentTransition = (previousPlaceholder != nil && previousPlaceholder != component.placeholder) ? ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)) : .immediate
             let placeholderSize = self.placeholder.update(
                 transition: placeholderTransition,
                 component: AnyComponent(AnimatedTextComponent(
@@ -1292,7 +1292,7 @@ public final class MessageInputPanelComponent: Component {
                             guard let self, let deleteMediaPreviewButtonView else {
                                 return
                             }
-                            let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                            let transition = ComponentTransition(animation: .curve(duration: 0.3, curve: .spring))
                             transition.setAlpha(view: deleteMediaPreviewButtonView, alpha: 0.0, completion: { [weak deleteMediaPreviewButtonView] _ in
                                 deleteMediaPreviewButtonView?.removeFromSuperview()
                             })
@@ -1404,7 +1404,7 @@ public final class MessageInputPanelComponent: Component {
                         
                         self.currentMediaInputIsVoice = !self.currentMediaInputIsVoice
                         self.hapticFeedback.impact(.medium)
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                        self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.4, curve: .spring)))
                     },
                     updateMediaCancelFraction: { [weak self] mediaCancelFraction in
                         guard let self else {
@@ -1787,7 +1787,7 @@ public final class MessageInputPanelComponent: Component {
                             attachmentButtonView.isHidden = true
                         }
                         mediaRecordingPanelView.animateOut(transition: transition, dismissRecording: wasRecordingDismissed, completion: { [weak self, weak mediaRecordingPanelView] in
-                            let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                            let transition = ComponentTransition(animation: .curve(duration: 0.3, curve: .spring))
                             
                             if let mediaRecordingPanelView = mediaRecordingPanelView {
                                 transition.setAlpha(view: mediaRecordingPanelView, alpha: 0.0, completion: { [weak mediaRecordingPanelView] _ in
@@ -2166,7 +2166,7 @@ public final class MessageInputPanelComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

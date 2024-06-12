@@ -687,6 +687,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     }
 }
 
-extension MediaEditorScreen.Result: MediaEditorScreenResult {
-    
+#if swift(>=6.0)
+extension MediaEditorScreen.Result: @retroactive MediaEditorScreenResult {
 }
+#else
+extension MediaEditorScreen.Result: MediaEditorScreenResult {
+}
+#endif

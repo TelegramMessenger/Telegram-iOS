@@ -600,13 +600,13 @@ public class BrowserScreen: ViewController {
             }
         }
         
-        func requestLayout(transition: Transition) {
+        func requestLayout(transition: ComponentTransition) {
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
             }
         }
         
-        func containerLayoutUpdated(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ComponentTransition) {
             self.validLayout = (layout, navigationBarHeight)
             
             let environment = ViewControllerComponentContainer.Environment(
@@ -705,7 +705,7 @@ public class BrowserScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.height, transition: Transition(transition))
+        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.height, transition: ComponentTransition(transition))
     }
 }
 

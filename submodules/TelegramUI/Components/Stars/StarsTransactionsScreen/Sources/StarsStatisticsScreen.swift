@@ -195,7 +195,7 @@ final class StarsStatisticsScreenComponent: Component {
             }
         }
                 
-        private func updateScrolling(transition: Transition) {
+        private func updateScrolling(transition: ComponentTransition) {
             let scrollBounds = self.scrollView.bounds
             
             let isLockedAtPanels = scrollBounds.maxY == self.scrollView.contentSize.height
@@ -203,7 +203,7 @@ final class StarsStatisticsScreenComponent: Component {
             let topContentOffset = self.scrollView.contentOffset.y
             let navigationBackgroundAlpha = min(20.0, max(0.0, topContentOffset - 95.0)) / 20.0
                             
-            let animatedTransition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
+            let animatedTransition = ComponentTransition(animation: .curve(duration: 0.18, curve: .easeInOut))
             animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
             animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
             
@@ -225,7 +225,7 @@ final class StarsStatisticsScreenComponent: Component {
         }
                 
         private var isUpdating = false
-        func update(component: StarsStatisticsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: StarsStatisticsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -521,7 +521,7 @@ final class StarsStatisticsScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

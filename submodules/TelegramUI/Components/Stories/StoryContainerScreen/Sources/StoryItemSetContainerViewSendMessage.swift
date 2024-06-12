@@ -199,7 +199,7 @@ final class StoryItemSetContainerSendMessage {
             },
             requestLayout: { [weak self] transition in
                 if let self {
-                    self.view?.state?.updated(transition: Transition(transition))
+                    self.view?.state?.updated(transition: ComponentTransition(transition))
                 }
             }
         )
@@ -220,7 +220,7 @@ final class StoryItemSetContainerSendMessage {
         }
     }
     
-    func updateInputMediaNode(view: StoryItemSetContainerComponent.View, availableSize: CGSize, bottomInset: CGFloat, bottomContainerInset: CGFloat, inputHeight: CGFloat, effectiveInputHeight: CGFloat, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: Transition) -> CGFloat {
+    func updateInputMediaNode(view: StoryItemSetContainerComponent.View, availableSize: CGSize, bottomInset: CGFloat, bottomContainerInset: CGFloat, inputHeight: CGFloat, effectiveInputHeight: CGFloat, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: ComponentTransition) -> CGFloat {
         guard let context = self.context, let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
             return 0.0
         }
@@ -284,8 +284,8 @@ final class StoryItemSetContainerSendMessage {
             
             if self.needsInputActivation {
                 let inputNodeFrame = inputNodeFrame.offsetBy(dx: 0.0, dy: inputNodeHeight)
-                Transition.immediate.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
-                Transition.immediate.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeFrame)
+                ComponentTransition.immediate.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                ComponentTransition.immediate.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeFrame)
             }
             transition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
             transition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeFrame)
@@ -584,12 +584,12 @@ final class StoryItemSetContainerSendMessage {
                 
                 let _ = enqueueMessages(account: component.context.account, peerId: peerId, messages: messages).start()
                 
-                view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
             } else if self.hasRecordedVideoPreview, let videoRecorderValue = self.videoRecorderValue {
                 videoRecorderValue.send()
                 self.hasRecordedVideoPreview = false
                 self.videoRecorder.set(.single(nil))
-                view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
             } else {
                 switch inputPanelView.getSendMessageInput() {
                 case let .text(text):
@@ -912,7 +912,7 @@ final class StoryItemSetContainerSendMessage {
                     }
                     self.hasRecordedVideoPreview = false
                     
-                    view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                    view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
                 }
             }
         })
@@ -940,13 +940,13 @@ final class StoryItemSetContainerSendMessage {
                     
                     component.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
                     self.recordedAudioPreview = .audio(ChatRecordedMediaPreview.Audio(resource: resource, fileSize: Int32(data.compressedData.count), duration: Int32(data.duration), waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5)))
-                    view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                    view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
                 }
             })
         } else if let videoRecorderValue = self.videoRecorderValue {
             if videoRecorderValue.stopVideo() {
                 self.hasRecordedVideoPreview = true
-                view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
             } else {
                 self.videoRecorder.set(.single(nil))
             }
@@ -957,12 +957,12 @@ final class StoryItemSetContainerSendMessage {
         if self.recordedAudioPreview != nil {
             self.recordedAudioPreview = nil
             self.wasRecordingDismissed = true
-            view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+            view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
         } else if self.hasRecordedVideoPreview {
             self.videoRecorder.set(.single(nil))
             self.hasRecordedVideoPreview = false
             self.wasRecordingDismissed = true
-            view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+            view.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
         }
     }
     

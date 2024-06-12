@@ -104,7 +104,7 @@ final class GroupEmbeddedView: UIScrollView, UIScrollViewDelegate, PagerExpandab
         }
     }
     
-    private func updateVisibleItems(transition: Transition, attemptSynchronousLoad: Bool) {
+    private func updateVisibleItems(transition: ComponentTransition, attemptSynchronousLoad: Bool) {
         guard let context = self.context, let theme = self.theme, let itemLayout = self.itemLayout, let items = self.items, let cache = self.cache, let renderer = self.renderer else {
             return
         }

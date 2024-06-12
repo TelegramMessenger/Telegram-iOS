@@ -67,10 +67,10 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode, ChatSendMessage
                     }
                 } else {
                     if highlighted {
-                        let transition: Transition = .easeInOut(duration: 0.4)
+                        let transition: ComponentTransition = .easeInOut(duration: 0.4)
                         transition.setScale(layer: strongSelf.sendContainerNode.layer, scale: 0.75)
                     } else {
-                        let transition: Transition = .easeInOut(duration: 0.25)
+                        let transition: ComponentTransition = .easeInOut(duration: 0.25)
                         transition.setScale(layer: strongSelf.sendContainerNode.layer, scale: 1.0)
                     }
                 }

@@ -113,7 +113,7 @@ final class ZoomComponent: Component {
             self.backgroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
         }
 
-        func update(component: ZoomComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: ZoomComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
         
             let sideInset: CGFloat = 3.0
@@ -166,7 +166,7 @@ final class ZoomComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

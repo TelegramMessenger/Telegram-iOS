@@ -811,7 +811,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                     break
                 }
                 
-                let transition = Transition.easeInOut(duration: 0.2)
+                let transition = ComponentTransition.easeInOut(duration: 0.2)
                 if isTrappedInBin, let binView = self.bin.view {
                     if !selectedEntityView.isTrappedInBin {
                         let refs = [
@@ -908,7 +908,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 self.bringSubviewToFront(binView)
             }
             binView.frame = binFrame
-            Transition.easeInOut(duration: 0.2).setAlpha(view: binView, alpha: location != nil ? 1.0 : 0.0, delay: location == nil && wasOpened ? 0.4 : 0.0)
+            ComponentTransition.easeInOut(duration: 0.2).setAlpha(view: binView, alpha: location != nil ? 1.0 : 0.0, delay: location == nil && wasOpened ? 0.4 : 0.0)
         }
         return isOpened
     }
@@ -1176,7 +1176,7 @@ private final class EntityBinComponent: Component {
         }
         
         private var wasOpened = false
-        func update(component: EntityBinComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: EntityBinComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -1221,7 +1221,7 @@ private final class EntityBinComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

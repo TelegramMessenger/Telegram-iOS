@@ -88,13 +88,13 @@ final class CloseButtonView: HighlightTrackingButton, OverlayMaskContainerViewPr
                 
                 if highlighted {
                     self.layer.removeAnimation(forKey: "sublayerTransform")
-                    let transition = Transition(animation: .curve(duration: 0.15, curve: .easeInOut))
+                    let transition = ComponentTransition(animation: .curve(duration: 0.15, curve: .easeInOut))
                     transition.setScale(layer: self.layer, scale: topScale)
                 } else {
                     let t = self.layer.presentation()?.transform ?? layer.transform
                     let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
                     
-                    let transition = Transition(animation: .none)
+                    let transition = ComponentTransition(animation: .none)
                     transition.setScale(layer: self.layer, scale: 1.0)
                     
                     self.layer.animateScale(from: currentScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] completed in
@@ -149,7 +149,7 @@ final class CloseButtonView: HighlightTrackingButton, OverlayMaskContainerViewPr
         })
     }
     
-    func update(text: String, size: CGSize, transition: Transition) {
+    func update(text: String, size: CGSize, transition: ComponentTransition) {
         let params = Params(text: text, size: size)
         if self.params == params {
             return
@@ -158,7 +158,7 @@ final class CloseButtonView: HighlightTrackingButton, OverlayMaskContainerViewPr
         self.update(params: params, transition: transition)
     }
     
-    private func update(params: Params, transition: Transition) {
+    private func update(params: Params, transition: ComponentTransition) {
         let fillFraction: CGFloat = CGFloat(self.fillTime / self.duration)
         
         let sideInset: CGFloat = 12.0

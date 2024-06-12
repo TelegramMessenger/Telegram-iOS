@@ -26,7 +26,7 @@ private class HistogramView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func updateSize(size: CGSize, histogramBins: MediaEditorHistogram.HistogramBins?, color: UIColor, transition: Transition) {
+    func updateSize(size: CGSize, histogramBins: MediaEditorHistogram.HistogramBins?, color: UIColor, transition: ComponentTransition) {
         guard self.size != size || self.color != color || self.histogramBins != histogramBins else {
             return
         }
@@ -36,7 +36,7 @@ private class HistogramView: UIView {
         self.update(transition: transition)
     }
     
-    func update(transition: Transition) {
+    func update(transition: ComponentTransition) {
         guard let size = self.size, let histogramBins = self.histogramBins, histogramBins.count > 0, let color = self.color else {
             self.shapeLayer.path = nil
             return
@@ -141,7 +141,7 @@ final class CurvesComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
                 
-        func update(component: CurvesComponent, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: CurvesComponent, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
                     
@@ -159,7 +159,7 @@ final class CurvesComponent: Component {
                         ),
                         action: { [weak state] in
                             state?.section = .all
-                            state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
+                            state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut)))
                         }
                     )
                 ),
@@ -187,7 +187,7 @@ final class CurvesComponent: Component {
                         ),
                         action: { [weak state] in
                             state?.section = .red
-                            state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
+                            state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut)))
                         }
                     )
                 ),
@@ -215,7 +215,7 @@ final class CurvesComponent: Component {
                         ),
                         action: { [weak state] in
                             state?.section = .green
-                            state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
+                            state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut)))
                         }
                     )
                 ),
@@ -243,7 +243,7 @@ final class CurvesComponent: Component {
                         ),
                         action: { [weak state] in
                             state?.section = .blue
-                            state?.updated(transition: Transition(animation: .curve(duration: 0.2, curve: .easeInOut)))
+                            state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut)))
                         }
                     )
                 ),
@@ -288,7 +288,7 @@ final class CurvesComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -505,7 +505,7 @@ final class CurvesScreenComponent: Component {
             }
         }
         
-        func update(component: CurvesScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: CurvesScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -730,7 +730,7 @@ final class CurvesScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

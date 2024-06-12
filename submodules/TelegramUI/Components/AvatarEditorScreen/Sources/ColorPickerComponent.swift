@@ -395,7 +395,7 @@ final class ColorPickerComponent: Component {
         }
         
         private var component: ColorPickerComponent?
-        func update(component: ColorPickerComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: ColorPickerComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let themeChanged = self.component?.theme !== component.theme
             let previousIsVisible = self.component?.isVisible ?? false
             self.component = component
@@ -448,7 +448,7 @@ final class ColorPickerComponent: Component {
         return View(theme: self.theme, strings: self.strings)
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

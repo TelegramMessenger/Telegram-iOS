@@ -213,6 +213,35 @@ public enum LocationViewLocation: Equatable {
     case user
     case coordinate(CLLocationCoordinate2D, Bool)
     case custom
+    
+    public static func ==(lhs: LocationViewLocation, rhs: LocationViewLocation) -> Bool {
+        switch lhs {
+        case .initial:
+            if case .initial = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .user:
+            if case .user = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .coordinate(lhsCoordinate, lhsValue):
+            if case let .coordinate(rhsCoordinate, rhsValue) = rhs, locationCoordinatesAreEqual(lhsCoordinate, rhsCoordinate), lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
+        case .custom:
+            if case .custom = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
 }
 
 public struct LocationViewState {
@@ -617,7 +646,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                             strongSelf.headerNode.mapNode.setMapCenter(coordinate: location.coordinate, span: LocationMapNode.viewMapSpan, animated: previousState != nil)
                         }
                     case let .coordinate(coordinate, defaultSpan):
-                        if let previousState = previousState, case let .coordinate(previousCoordinate, _) = previousState.selectedLocation, previousCoordinate == coordinate {
+                        if let previousState = previousState, case let .coordinate(previousCoordinate, _) = previousState.selectedLocation, locationCoordinatesAreEqual(previousCoordinate, coordinate) {
                         } else {
                             strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, span: defaultSpan ? LocationMapNode.defaultMapSpan : LocationMapNode.viewMapSpan, animated: true)
                         }

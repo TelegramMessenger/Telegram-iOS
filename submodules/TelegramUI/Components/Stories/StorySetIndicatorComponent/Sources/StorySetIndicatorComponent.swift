@@ -344,10 +344,10 @@ public final class StorySetIndicatorComponent: Component {
                     return
                 }
                 if highlighted {
-                    let transition = Transition(animation: .curve(duration: 0.16, curve: .easeInOut))
+                    let transition = ComponentTransition(animation: .curve(duration: 0.16, curve: .easeInOut))
                     transition.setSublayerTransform(view: self.button, transform: CATransform3DMakeScale(0.8, 0.8, 1.0))
                 } else {
-                    let transition = Transition(animation: .curve(duration: 0.24, curve: .easeInOut))
+                    let transition = ComponentTransition(animation: .curve(duration: 0.24, curve: .easeInOut))
                     transition.setSublayerTransform(view: self.button, transform: CATransform3DIdentity)
                 }
             }
@@ -361,7 +361,7 @@ public final class StorySetIndicatorComponent: Component {
             self.component?.action()
         }
         
-        func update(component: StorySetIndicatorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: StorySetIndicatorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -476,7 +476,7 @@ public final class StorySetIndicatorComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

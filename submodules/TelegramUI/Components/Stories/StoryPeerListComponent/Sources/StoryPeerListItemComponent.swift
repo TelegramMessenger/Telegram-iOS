@@ -196,7 +196,7 @@ private final class StoryProgressLayer: HierarchyTrackingLayer {
         self.uploadProgressLayer.path = nil
     }
     
-    func updateAnimations(transition: Transition) {
+    func updateAnimations(transition: ComponentTransition) {
         guard let params = self.currentParams else {
             return
         }
@@ -276,7 +276,7 @@ private final class StoryProgressLayer: HierarchyTrackingLayer {
         }
     }
     
-    func update(size: CGSize, lineWidth: CGFloat, radius: CGFloat, value: Value, transition: Transition) {
+    func update(size: CGSize, lineWidth: CGFloat, radius: CGFloat, value: Value, transition: ComponentTransition) {
         let params = Params(
             size: size,
             lineWidth: lineWidth,
@@ -346,7 +346,7 @@ public final class StoryPeerListItemComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(state: StoryContainerScreen.TransitionState, transition: Transition) {
+        func update(state: StoryContainerScreen.TransitionState, transition: ComponentTransition) {
             let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
             
             if let snapshotView = self.snapshotView {
@@ -635,7 +635,7 @@ public final class StoryPeerListItemComponent: Component {
             self.avatarBackgroundView.alpha = isPreviewing ? 0.0 : 1.0
         }
         
-        func update(component: StoryPeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: StoryPeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let size = availableSize
             
             let themeUpdated = self.component?.theme !== component.theme
@@ -823,10 +823,10 @@ public final class StoryPeerListItemComponent: Component {
             } else if let mappedLeftCenter {
                 avatarPath.addEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: -indicatorLineSeenWidth * 1.4, dy: -indicatorLineSeenWidth * 1.4).offsetBy(dx: -abs(indicatorCenter.x - mappedLeftCenter.x), dy: -abs(indicatorCenter.y - mappedLeftCenter.y)))
             }
-            Transition.immediate.setShapeLayerPath(layer: self.avatarShapeLayer, path: avatarPath)
+            ComponentTransition.immediate.setShapeLayerPath(layer: self.avatarShapeLayer, path: avatarPath)
             
-            Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeSeenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: true, segmentFraction: component.expandedAlphaFraction, rotationFraction: component.expandEffectFraction))
-            Transition.immediate.setShapeLayerPath(layer: self.indicatorShapeUnseenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: false, segmentFraction: component.expandedAlphaFraction, rotationFraction: component.expandEffectFraction))
+            ComponentTransition.immediate.setShapeLayerPath(layer: self.indicatorShapeSeenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: true, segmentFraction: component.expandedAlphaFraction, rotationFraction: component.expandEffectFraction))
+            ComponentTransition.immediate.setShapeLayerPath(layer: self.indicatorShapeUnseenLayer, path: calculateMergingCircleShape(center: indicatorCenter, leftCenter: mappedLeftCenter, rightCenter: mappedRightCenter, radius: indicatorRadius - indicatorLineUnseenWidth * 0.5, totalCount: component.totalCount, unseenCount: component.unseenCount, isSeen: false, segmentFraction: component.expandedAlphaFraction, rotationFraction: component.expandEffectFraction))
             
             let titleString: String
             if component.peer.id == component.context.account.peerId {
@@ -908,7 +908,7 @@ public final class StoryPeerListItemComponent: Component {
                 
                 switch ringAnimation {
                 case let .progress(progress):
-                    let progressTransition: Transition
+                    let progressTransition: ComponentTransition
                     if abs(progress - 0.028) < 0.001 {
                         progressTransition = .immediate
                     } else {
@@ -968,7 +968,7 @@ public final class StoryPeerListItemComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

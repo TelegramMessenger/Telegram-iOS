@@ -182,7 +182,7 @@ private final class MediaCutoutScreenComponent: Component {
                 overlayAlpha = 0.0
                 backgroundAlpha = 1.0
             }
-            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+            let transition = ComponentTransition(animation: .curve(duration: 0.2, curve: .easeInOut))
             transition.setAlpha(view: overlayView, alpha: overlayAlpha)
             transition.setAlpha(view: backgroundView, alpha: backgroundAlpha)
         }
@@ -270,7 +270,7 @@ private final class MediaCutoutScreenComponent: Component {
             return result
         }
         
-        func update(component: MediaCutoutScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+        func update(component: MediaCutoutScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
             
@@ -458,7 +458,7 @@ private final class MediaCutoutScreenComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -520,7 +520,7 @@ final class MediaCutoutScreen: ViewController {
             return result
         }
         
-        func requestLayout(transition: Transition) {
+        func requestLayout(transition: ComponentTransition) {
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, forceUpdate: true, transition: transition)
                 
@@ -530,7 +530,7 @@ final class MediaCutoutScreen: ViewController {
             }
         }
         
-        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, animateOut: Bool = false, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, animateOut: Bool = false, transition: ComponentTransition) {
             guard let controller = self.controller else {
                 return
             }
@@ -692,6 +692,6 @@ final class MediaCutoutScreen: ViewController {
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 
-        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: Transition(transition))
+        (self.displayNode as! Node).containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
     }
 }

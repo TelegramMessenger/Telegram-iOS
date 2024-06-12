@@ -44,10 +44,10 @@ public protocol ChatSendMessageContextScreenMediaPreview: AnyObject {
     var globalClippingRect: CGRect? { get }
     var layoutType: ChatSendMessageContextScreenMediaPreviewLayoutType { get }
     
-    func animateIn(transition: Transition)
-    func animateOut(transition: Transition)
-    func animateOutOnSend(transition: Transition)
-    func update(containerSize: CGSize, transition: Transition) -> CGSize
+    func animateIn(transition: ComponentTransition)
+    func animateOut(transition: ComponentTransition)
+    func animateOutOnSend(transition: ComponentTransition)
+    func update(containerSize: CGSize, transition: ComponentTransition) -> CGSize
 }
 
 final class ChatSendMessageContextScreenComponent: Component {
@@ -270,7 +270,7 @@ final class ChatSendMessageContextScreenComponent: Component {
             return false
         }
 
-        func update(component: ChatSendMessageContextScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: ChatSendMessageContextScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -308,7 +308,7 @@ final class ChatSendMessageContextScreenComponent: Component {
             
             let messageActionsSpacing: CGFloat = 7.0
             
-            let alphaTransition: Transition
+            let alphaTransition: ComponentTransition
             if transition.animation.isImmediate {
                 alphaTransition = .immediate
             } else {
@@ -617,7 +617,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                             return
                         }
                         if !self.isUpdating {
-                            self.state?.updated(transition: Transition(transition))
+                            self.state?.updated(transition: ComponentTransition(transition))
                         }
                     }
                 )
@@ -775,7 +775,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                                 return
                             }
                             if !self.isUpdating {
-                                self.state?.updated(transition: Transition(transition))
+                                self.state?.updated(transition: ComponentTransition(transition))
                             }
                         },
                         requestLayout: { [weak self] transition in
@@ -783,7 +783,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                                 return
                             }
                             if !self.isUpdating {
-                                self.state?.updated(transition: Transition(transition))
+                                self.state?.updated(transition: ComponentTransition(transition))
                             }
                         },
                         requestUpdateOverlayWantsToBeBelowKeyboard: { [weak self] transition in
@@ -1167,7 +1167,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                     break
                 case .animatedIn:
                     transition.setAlpha(view: actionsStackNode.view, alpha: 1.0)
-                    Transition.immediate.setScale(view: actionsStackNode.view, scale: 1.0)
+                    ComponentTransition.immediate.setScale(view: actionsStackNode.view, scale: 1.0)
                     actionsStackNode.layer.animateSpring(from: 0.001 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.42, damping: 104.0)
                     
                     messageItemView.animateIn(
@@ -1340,7 +1340,7 @@ final class ChatSendMessageContextScreenComponent: Component {
         return View()
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

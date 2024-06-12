@@ -400,7 +400,7 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
     }
     
     func update(
-        transition: Transition,
+        transition: ComponentTransition,
         size: CGSize,
         badge: Badge?,
         blurredBadgeColor: UIColor,

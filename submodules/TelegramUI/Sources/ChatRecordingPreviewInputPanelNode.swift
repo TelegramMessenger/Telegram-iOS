@@ -20,8 +20,13 @@ import TelegramNotices
 import ComponentFlow
 import MediaScrubberComponent
 
+#if swift(>=6.0)
+extension AudioWaveformNode: @retroactive CustomMediaPlayerScrubbingForegroundNode {
+}
+#else
 extension AudioWaveformNode: CustomMediaPlayerScrubbingForegroundNode {
 }
+#endif
 
 final class ChatRecordingPreviewViewForOverlayContent: UIView, ChatInputPanelViewForOverlayContent {
     let ignoreHit: (UIView, CGPoint) -> Bool

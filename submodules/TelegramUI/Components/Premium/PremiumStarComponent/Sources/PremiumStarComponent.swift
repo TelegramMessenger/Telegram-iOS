@@ -656,7 +656,7 @@ public final class PremiumStarComponent: Component {
             node.addAnimation(springAnimation, forKey: "rotate")
         }
         
-        func update(component: PremiumStarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: PremiumStarComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             self.setup()
@@ -680,7 +680,7 @@ public final class PremiumStarComponent: Component {
         return View(frame: CGRect(), isIntro: self.isIntro)
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

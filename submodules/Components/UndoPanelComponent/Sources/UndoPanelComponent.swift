@@ -48,7 +48,7 @@ public final class UndoPanelComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
-        public func update(component: UndoPanelComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        public func update(component: UndoPanelComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.effect = UIBlurEffect(style: .dark)
             
             self.layer.cornerRadius = 10.0
@@ -61,7 +61,7 @@ public final class UndoPanelComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

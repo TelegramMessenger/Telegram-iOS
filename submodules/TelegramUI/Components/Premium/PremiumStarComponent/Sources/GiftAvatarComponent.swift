@@ -307,7 +307,7 @@ public final class GiftAvatarComponent: Component {
             }
         }
         
-        func update(component: GiftAvatarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: GiftAvatarComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             self.setup()
@@ -492,7 +492,7 @@ public final class GiftAvatarComponent: Component {
         return View(frame: CGRect())
     }
     
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

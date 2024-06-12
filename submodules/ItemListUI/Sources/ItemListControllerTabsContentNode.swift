@@ -78,7 +78,7 @@ final class ItemListControllerTabsContentNode: NavigationBarContentNode {
         }
         
         let tabSelectorSize = self.tabSelector.update(
-            transition: Transition(transition),
+            transition: ComponentTransition(transition),
             component: AnyComponent(TabSelectorComponent(
                 colors: TabSelectorComponent.Colors(
                     foreground: self.theme.list.itemSecondaryTextColor,

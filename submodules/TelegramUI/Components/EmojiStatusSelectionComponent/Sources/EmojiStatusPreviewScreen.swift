@@ -57,7 +57,7 @@ private final class ContextMenuActionItem: Component, ContextMenuItemWithAction 
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: ContextMenuActionItem, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: ContextMenuActionItem, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             let contextEnvironment = environment[EnvironmentType.self].value
             
             let sideInset: CGFloat = 16.0
@@ -87,7 +87,7 @@ private final class ContextMenuActionItem: Component, ContextMenuItemWithAction 
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -263,14 +263,14 @@ private final class ContextMenuActionsComponent: Component {
             return self
         }
         
-        func update(component: ContextMenuActionsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ContextMenuActionsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             let availableItemSize = availableSize
             
             var itemsSize = CGSize()
             var validIds = Set<AnyHashable>()
-            var currentItems: [(id: AnyHashable, itemFrame: CGRect, itemTransition: Transition)] = []
+            var currentItems: [(id: AnyHashable, itemFrame: CGRect, itemTransition: ComponentTransition)] = []
             for i in 0 ..< component.items.count {
                 let item = component.items[i]
                 validIds.insert(item.id)
@@ -339,7 +339,7 @@ private final class ContextMenuActionsComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -419,7 +419,7 @@ private final class TimeSelectionControlComponent: Component {
         @objc private func datePickerUpdated() {
         }
         
-        func update(component: TimeSelectionControlComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: TimeSelectionControlComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             if self.component?.theme !== component.theme {
                 UILabel.setDateLabel(component.theme.list.itemPrimaryTextColor)
                 
@@ -521,7 +521,7 @@ private final class TimeSelectionControlComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
@@ -629,14 +629,14 @@ final class EmojiStatusPreviewScreenComponent: Component {
             switch self.currentState {
             case .menu:
                 self.currentState = .timeSelection
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)))
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.5, curve: .spring)))
             case .timeSelection:
                 self.currentState = .menu
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                self.state?.updated(transition: ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)))
             }
         }
         
-        func update(component: EmojiStatusPreviewScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: EmojiStatusPreviewScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
             
@@ -858,7 +858,7 @@ final class EmojiStatusPreviewScreenComponent: Component {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

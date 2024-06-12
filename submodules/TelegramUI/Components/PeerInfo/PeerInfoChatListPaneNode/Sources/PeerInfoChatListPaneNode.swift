@@ -440,7 +440,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, AS
                         
                         chatController.displayNode.layer.allowsGroupOpacity = true
                         if transition.isAnimated {
-                            Transition.easeInOut(duration: 0.2).setAlpha(layer: chatController.displayNode.layer, alpha: 1.0)
+                            ComponentTransition.easeInOut(duration: 0.2).setAlpha(layer: chatController.displayNode.layer, alpha: 1.0)
                         }
                         
                         if self.searchNavigationContentNode?.contentNode !== contentNode {

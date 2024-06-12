@@ -35,8 +35,8 @@ private final class ShutterButtonContentComponent: Component {
     let shutterState: ShutterButtonState
     let blobState: ShutterBlobView.BlobState
     let highlightedAction: ActionSlot<Bool>
-    let updateOffsetX: ActionSlot<(CGFloat, Transition)>
-    let updateOffsetY: ActionSlot<(CGFloat, Transition)>
+    let updateOffsetX: ActionSlot<(CGFloat, ComponentTransition)>
+    let updateOffsetY: ActionSlot<(CGFloat, ComponentTransition)>
     
     init(
         isTablet: Bool,
@@ -45,8 +45,8 @@ private final class ShutterButtonContentComponent: Component {
         shutterState: ShutterButtonState,
         blobState: ShutterBlobView.BlobState,
         highlightedAction: ActionSlot<Bool>,
-        updateOffsetX: ActionSlot<(CGFloat, Transition)>,
-        updateOffsetY: ActionSlot<(CGFloat, Transition)>
+        updateOffsetX: ActionSlot<(CGFloat, ComponentTransition)>,
+        updateOffsetY: ActionSlot<(CGFloat, ComponentTransition)>
     ) {
         self.isTablet = isTablet
         self.hasAppeared = hasAppeared
@@ -106,11 +106,11 @@ private final class ShutterButtonContentComponent: Component {
                 return
             }
             let scale: CGFloat = isHighlighted ? 0.8 : 1.0
-            let transition = Transition(animation: .curve(duration: 0.3, curve: .easeInOut))
+            let transition = ComponentTransition(animation: .curve(duration: 0.3, curve: .easeInOut))
             transition.setTransform(view: blobView, transform: CATransform3DMakeScale(scale, scale, 1.0))
         }
         
-        func update(component: ShutterButtonContentComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: ShutterButtonContentComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             if component.hasAppeared && self.blobView == nil {
@@ -245,7 +245,7 @@ private final class ShutterButtonContentComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -325,7 +325,7 @@ final class FlipButtonContentComponent: Component {
             self.darkIcon.add(darkAnimation, forKey: "transform.rotation.z")
         }
         
-        func update(component: FlipButtonContentComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: FlipButtonContentComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             component.action.connect { [weak self] _ in
@@ -353,7 +353,7 @@ final class FlipButtonContentComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -404,7 +404,7 @@ final class LockContentComponent: Component {
             preconditionFailure()
         }
         
-        func update(component: LockContentComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: LockContentComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             self.component = component
             
             let size = CGSize(width: 30.0, height: 30.0)
@@ -428,7 +428,7 @@ final class LockContentComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -599,8 +599,8 @@ final class CaptureControlsComponent: Component {
         private let leftGuide = SimpleLayer()
         private let rightGuide = SimpleLayer()
         
-        private let shutterUpdateOffsetX = ActionSlot<(CGFloat, Transition)>()
-        private let shutterUpdateOffsetY = ActionSlot<(CGFloat, Transition)>()
+        private let shutterUpdateOffsetX = ActionSlot<(CGFloat, ComponentTransition)>()
+        private let shutterUpdateOffsetY = ActionSlot<(CGFloat, ComponentTransition)>()
         
         private let shutterHightlightedAction = ActionSlot<Bool>()
         
@@ -697,13 +697,13 @@ final class CaptureControlsComponent: Component {
         private var shutterOffsetX: CGFloat = 0.0
         private var shutterOffsetY: CGFloat = 0.0
         
-        private func updateShutterOffsetX(_ offsetX: CGFloat, transition: Transition) {
+        private func updateShutterOffsetX(_ offsetX: CGFloat, transition: ComponentTransition) {
             self.shutterOffsetX = offsetX
             self.shutterUpdateOffsetX.invoke((offsetX, transition))
             self.state?.updated(transition: transition)
         }
         
-        private func updateShutterOffsetY(_ offsetY: CGFloat, transition: Transition) {
+        private func updateShutterOffsetY(_ offsetY: CGFloat, transition: ComponentTransition) {
             self.shutterOffsetY = offsetY
             self.shutterUpdateOffsetY.invoke((offsetY, transition))
             self.state?.updated(transition: transition)
@@ -720,8 +720,8 @@ final class CaptureControlsComponent: Component {
                 return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
             }
             
-            var scheduledXOffsetUpdate: (CGFloat, Transition)?
-            var scheduledYOffsetUpdate: (CGFloat, Transition)?
+            var scheduledXOffsetUpdate: (CGFloat, ComponentTransition)?
+            var scheduledYOffsetUpdate: (CGFloat, ComponentTransition)?
             
             let previousPanBlobState = self.panBlobState
             let location = gestureRecognizer.location(in: self)
@@ -766,7 +766,7 @@ final class CaptureControlsComponent: Component {
                         self.panBlobState = .video
                         isBanding = true
                     }
-                    var transition: Transition = .immediate
+                    var transition: ComponentTransition = .immediate
                     if let wasBanding = self.wasBanding, wasBanding != isBanding {
                         //self.hapticFeedback.impact(.light)
                         transition = .spring(duration: 0.35)
@@ -824,7 +824,7 @@ final class CaptureControlsComponent: Component {
                         self.panBlobState = .video
                         isBanding = true
                     }
-                    var transition: Transition = .immediate
+                    var transition: ComponentTransition = .immediate
                     if let wasBanding = self.wasBanding, wasBanding != isBanding {
                         //self.hapticFeedback.impact(.light)
                         transition = .spring(duration: 0.35)
@@ -857,7 +857,7 @@ final class CaptureControlsComponent: Component {
         }
         
         private var animatedOut = false
-        func animateOutToEditor(transition: Transition) {
+        func animateOutToEditor(transition: ComponentTransition) {
             self.animatedOut = true
             
             if let view = self.galleryButtonView.view {
@@ -876,7 +876,7 @@ final class CaptureControlsComponent: Component {
             }
         }
         
-        func animateInFromEditor(transition: Transition) {
+        func animateInFromEditor(transition: ComponentTransition) {
             self.animatedOut = false
 
             if let view = self.galleryButtonView.view {
@@ -895,7 +895,7 @@ final class CaptureControlsComponent: Component {
             }
         }
 
-        func update(component: CaptureControlsComponent, state: State, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: CaptureControlsComponent, state: State, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
             let previousShutterState = self.component?.shutterState ?? .generic
             self.component = component
             self.state = state
@@ -1227,7 +1227,7 @@ final class CaptureControlsComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, state: State, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: State, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, state: state, availableSize: availableSize, transition: transition)
     }
 }
