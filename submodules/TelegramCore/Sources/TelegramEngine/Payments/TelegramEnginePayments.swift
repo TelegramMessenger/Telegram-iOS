@@ -75,8 +75,8 @@ public extension TelegramEngine {
         }
 
         
-        public func peerStarsTransactionsContext(starsContext: StarsContext, subject: StarsTransactionsContext.Subject) -> StarsTransactionsContext {
-            return StarsTransactionsContext(account: self.account, starsContext: starsContext, subject: subject)
+        public func peerStarsTransactionsContext(subject: StarsTransactionsContext.Subject, mode: StarsTransactionsContext.Mode) -> StarsTransactionsContext {
+            return StarsTransactionsContext(account: self.account, subject: subject, mode: mode)
         }
         
         public func sendStarsPaymentForm(formId: Int64, source: BotPaymentInvoiceSource) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
