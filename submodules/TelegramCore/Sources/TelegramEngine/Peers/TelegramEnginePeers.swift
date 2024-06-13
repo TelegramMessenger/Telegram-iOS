@@ -823,6 +823,14 @@ public extension TelegramEngine {
             return _internal_requestChannelRevenueWithdrawalUrl(account: self.account, peerId: peerId, password: password)
         }
         
+        public func checkStarsRevenueWithdrawalAvailability() -> Signal<Never, RequestStarsRevenueWithdrawalError> {
+            return _internal_checkStarsRevenueWithdrawalAvailability(account: self.account)
+        }
+        
+        public func requestStarsRevenueWithdrawalUrl(peerId: EnginePeer.Id, amount: Int64, password: String) -> Signal<String, RequestStarsRevenueWithdrawalError> {
+            return _internal_requestStarsRevenueWithdrawalUrl(account: self.account, peerId: peerId, amount: amount, password: password)
+        }
+        
         public func getChatListPeers(filterPredicate: ChatListFilterPredicate) -> Signal<[EnginePeer], NoError> {
             return self.account.postbox.transaction { transaction -> [EnginePeer] in
                 return transaction.getChatListPeers(groupId: .root, filterPredicate: filterPredicate, additionalFilter: nil).map(EnginePeer.init)

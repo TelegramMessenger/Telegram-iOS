@@ -8732,6 +8732,39 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
+                static func getStarsRevenueStats(flags: Int32, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarsRevenueStats>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-652215594)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "payments.getStarsRevenueStats", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.StarsRevenueStats? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.StarsRevenueStats?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.StarsRevenueStats
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
+                static func getStarsRevenueWithdrawalUrl(peer: Api.InputPeer, stars: Int64, password: Api.InputCheckPasswordSRP) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarsRevenueWithdrawalUrl>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(331081907)
+                    peer.serialize(buffer, true)
+                    serializeInt64(stars, buffer: buffer, boxed: false)
+                    password.serialize(buffer, true)
+                    return (FunctionDescription(name: "payments.getStarsRevenueWithdrawalUrl", parameters: [("peer", String(describing: peer)), ("stars", String(describing: stars)), ("password", String(describing: password))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.StarsRevenueWithdrawalUrl? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.StarsRevenueWithdrawalUrl?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.StarsRevenueWithdrawalUrl
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
                 static func getStarsStatus(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.StarsStatus>) {
                     let buffer = Buffer()
                     buffer.appendInt32(273665959)

@@ -199,7 +199,7 @@ private final class StarsContextImpl {
             return
         }
         var transactions = state.transactions
-        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil), at: 0)
+        transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil), at: 0)
         
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: state.balance + balance, transactions: transactions, canLoadMore: state.canLoadMore, isLoading: state.isLoading))
     }
@@ -238,7 +238,7 @@ private final class StarsContextImpl {
 private extension StarsContext.State.Transaction {
     init?(apiTransaction: Api.StarsTransaction, transaction: Transaction) {
         switch apiTransaction {
-        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo):
+        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl):
             let parsedPeer: StarsContext.State.Transaction.Peer
             switch transactionPeer {
             case .starsTransactionPeerAppStore:
@@ -262,7 +262,7 @@ private extension StarsContext.State.Transaction {
             if (apiFlags & (1 << 3)) != 0 {
                 flags.insert(.isRefund)
             }
-            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init))
+            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl)
         }
     }
 }
@@ -279,6 +279,7 @@ public final class StarsContext {
                 
                 public static let isRefund = Flags(rawValue: 1 << 0)
                 public static let isLocal = Flags(rawValue: 1 << 1)
+                public static let isPending = Flags(rawValue: 1 << 2)
             }
             
             public enum Peer: Equatable {
@@ -298,6 +299,8 @@ public final class StarsContext {
             public let title: String?
             public let description: String?
             public let photo: TelegramMediaWebFile?
+            public let transactionDate: Int32?
+            public let transactionUrl: String?
             
             public init(
                 flags: Flags,
@@ -307,7 +310,9 @@ public final class StarsContext {
                 peer: Peer,
                 title: String?,
                 description: String?,
-                photo: TelegramMediaWebFile?
+                photo: TelegramMediaWebFile?,
+                transactionDate: Int32?,
+                transactionUrl: String?
             ) {
                 self.flags = flags
                 self.id = id
@@ -317,6 +322,8 @@ public final class StarsContext {
                 self.title = title
                 self.description = description
                 self.photo = photo
+                self.transactionDate = transactionDate
+                self.transactionUrl = transactionUrl
             }
         }
         

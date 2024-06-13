@@ -603,6 +603,54 @@ public extension Api {
     }
 }
 public extension Api {
+    enum StarsRevenueStatus: TypeConstructorDescription {
+        case starsRevenueStatus(flags: Int32, currentBalance: Int64, availableBalance: Int64, overallRevenue: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .starsRevenueStatus(let flags, let currentBalance, let availableBalance, let overallRevenue):
+                    if boxed {
+                        buffer.appendInt32(-407138204)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(currentBalance, buffer: buffer, boxed: false)
+                    serializeInt64(availableBalance, buffer: buffer, boxed: false)
+                    serializeInt64(overallRevenue, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .starsRevenueStatus(let flags, let currentBalance, let availableBalance, let overallRevenue):
+                return ("starsRevenueStatus", [("flags", flags as Any), ("currentBalance", currentBalance as Any), ("availableBalance", availableBalance as Any), ("overallRevenue", overallRevenue as Any)])
+    }
+    }
+    
+        public static func parse_starsRevenueStatus(_ reader: BufferReader) -> StarsRevenueStatus? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int64?
+            _4 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.StarsRevenueStatus.starsRevenueStatus(flags: _1!, currentBalance: _2!, availableBalance: _3!, overallRevenue: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum StarsTopupOption: TypeConstructorDescription {
         case starsTopupOption(flags: Int32, stars: Int64, storeProduct: String?, currency: String, amount: Int64)
     
@@ -656,13 +704,13 @@ public extension Api {
 }
 public extension Api {
     enum StarsTransaction: TypeConstructorDescription {
-        case starsTransaction(flags: Int32, id: String, stars: Int64, date: Int32, peer: Api.StarsTransactionPeer, title: String?, description: String?, photo: Api.WebDocument?)
+        case starsTransaction(flags: Int32, id: String, stars: Int64, date: Int32, peer: Api.StarsTransactionPeer, title: String?, description: String?, photo: Api.WebDocument?, transactionDate: Int32?, transactionUrl: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starsTransaction(let flags, let id, let stars, let date, let peer, let title, let description, let photo):
+                case .starsTransaction(let flags, let id, let stars, let date, let peer, let title, let description, let photo, let transactionDate, let transactionUrl):
                     if boxed {
-                        buffer.appendInt32(-865044046)
+                        buffer.appendInt32(-1442789224)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(id, buffer: buffer, boxed: false)
@@ -672,14 +720,16 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(description!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {photo!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeInt32(transactionDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeString(transactionUrl!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starsTransaction(let flags, let id, let stars, let date, let peer, let title, let description, let photo):
-                return ("starsTransaction", [("flags", flags as Any), ("id", id as Any), ("stars", stars as Any), ("date", date as Any), ("peer", peer as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any)])
+                case .starsTransaction(let flags, let id, let stars, let date, let peer, let title, let description, let photo, let transactionDate, let transactionUrl):
+                return ("starsTransaction", [("flags", flags as Any), ("id", id as Any), ("stars", stars as Any), ("date", date as Any), ("peer", peer as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("transactionDate", transactionDate as Any), ("transactionUrl", transactionUrl as Any)])
     }
     }
     
@@ -704,6 +754,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
                 _8 = Api.parse(reader, signature: signature) as? Api.WebDocument
             } }
+            var _9: Int32?
+            if Int(_1!) & Int(1 << 5) != 0 {_9 = reader.readInt32() }
+            var _10: String?
+            if Int(_1!) & Int(1 << 5) != 0 {_10 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -712,8 +766,10 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.StarsTransaction.starsTransaction(flags: _1!, id: _2!, stars: _3!, date: _4!, peer: _5!, title: _6, description: _7, photo: _8)
+            let _c9 = (Int(_1!) & Int(1 << 5) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 5) == 0) || _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.StarsTransaction.starsTransaction(flags: _1!, id: _2!, stars: _3!, date: _4!, peer: _5!, title: _6, description: _7, photo: _8, transactionDate: _9, transactionUrl: _10)
             }
             else {
                 return nil
