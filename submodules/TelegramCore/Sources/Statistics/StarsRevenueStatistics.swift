@@ -9,12 +9,12 @@ public struct StarsRevenueStats: Equatable {
         public let currentBalance: Int64
         public let availableBalance: Int64
         public let overallRevenue: Int64
+        public let withdrawEnabled: Bool
     }
     
     public let revenueGraph: StatsGraph
     public let balances: Balances
     public let usdRate: Double
-    
     init(revenueGraph: StatsGraph, balances: Balances, usdRate: Double) {
         self.revenueGraph = revenueGraph
         self.balances = balances
@@ -58,8 +58,7 @@ extension StarsRevenueStats.Balances {
     init(apiStarsRevenueStatus: Api.StarsRevenueStatus) {
         switch apiStarsRevenueStatus {
         case let .starsRevenueStatus(flags, currentBalance, availableBalance, overallRevenue):
-            let _ = flags
-            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue)
+            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, withdrawEnabled: ((flags & (1 << 0)) != 0))
         }
     }
 }

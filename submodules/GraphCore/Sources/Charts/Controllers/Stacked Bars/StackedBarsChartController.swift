@@ -13,7 +13,23 @@ import Cocoa
 import UIKit
 #endif
 
+public enum GraphCurrency : String {
+    case xtr = "XTR"
+    case ton = "TON"
+    
+    var formatter: NumberFormatter {
+        switch self {
+        case .xtr:
+            return BaseConstants.starNumberFormatter
+        case .ton:
+            return BaseConstants.tonNumberFormatter
+        }
+    }
+}
+
 public class StackedBarsChartController: BaseChartController {
+    
+    
     let barsController: BarsComponentController
     let zoomedBarsController: BarsComponentController
     
@@ -23,12 +39,12 @@ public class StackedBarsChartController: BaseChartController {
         }
     }
     
-    public init(chartsCollection: ChartsCollection, isCrypto: Bool = false, rate: Double = 1.0)  {
+    public init(chartsCollection: ChartsCollection, currency: GraphCurrency? = nil, drawCurrency:((CGContext, UIColor, CGPoint)->Void)? = nil, rate: Double = 1.0)  {
         let horizontalScalesRenderer = HorizontalScalesRenderer()
         let verticalScalesRenderer = VerticalScalesRenderer()
         var secondaryScalesRenderer: VerticalScalesRenderer?
-        if isCrypto {
-            verticalScalesRenderer.isCrypto = true
+        if let _ = currency {
+            verticalScalesRenderer.drawCurrency = drawCurrency
             secondaryScalesRenderer = VerticalScalesRenderer()
             secondaryScalesRenderer?.isRightAligned = true
         }
@@ -38,10 +54,10 @@ public class StackedBarsChartController: BaseChartController {
                                                  verticalScalesRenderer: verticalScalesRenderer,
                                                  secondaryScalesRenderer: secondaryScalesRenderer,
                                                  previewBarsChartRenderer: BarChartRenderer())
-        if isCrypto {
+        if let currency {
             barsController.conversionRate = rate
-            barsController.verticalLimitsNumberFormatter = BaseConstants.tonNumberFormatter
-            barsController.detailsNumberFormatter = BaseConstants.tonNumberFormatter
+            barsController.verticalLimitsNumberFormatter = currency.formatter
+            barsController.detailsNumberFormatter = currency.formatter
         }
         zoomedBarsController = BarsComponentController(isZoomed: true,
                                                        mainBarsRenderer: BarChartRenderer(),
