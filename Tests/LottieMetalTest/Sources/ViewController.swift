@@ -152,7 +152,7 @@ private final class ManualReferenceCompareTest {
         let bundlePath = Bundle.main.path(forResource: "TestDataBundle", ofType: "bundle")!
         self.fileList = buildAnimationFolderItems(basePath: bundlePath, path: "")
         
-        self.renderSize = CGSize(width: 128.0, height: 128.0)
+        self.renderSize = CGSize(width: 256.0, height: 256.0)
         
         self.view = view
         self.view.backgroundColor = .white
@@ -224,24 +224,24 @@ private final class ManualReferenceCompareTest {
         var animationTime = 0.0
         let secondsPerFrame = 1.0 / Double(renderer.framesPerSecond)
         
-        let frameDisplayLink = SharedDisplayLinkDriver.shared.add { [weak self] deltaTime in
+        let frameDisplayLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] deltaTime in
             guard let self, let currentItem = self.currentItem else {
                 return
             }
             
-            var frameIndex = Int(animationTime / secondsPerFrame)
-            frameIndex = frameIndex % currentItem.renderer.frameCount
+            var frameIndex = animationTime / secondsPerFrame
+            frameIndex = frameIndex.truncatingRemainder(dividingBy: Double(currentItem.renderer.frameCount))
             
             currentItem.renderer.setFrame(frameIndex)
             let image = currentItem.renderer.render(for: self.renderSize, useReferenceRendering: !self.testNonReference, canUseMoreMemory: false, skipImageGeneration: false)!
             self.imageView.image = image
             
-            currentItem.referenceRenderer.setFrame(index: frameIndex)
+            currentItem.referenceRenderer.setFrame(index: Int(frameIndex))
             let referenceImage = currentItem.referenceRenderer.makeImage(width: Int(self.renderSize.width), height: Int(self.renderSize.height))!
             self.referenceImageView.image = referenceImage
             
             animationTime += deltaTime
-        }
+        })
         self.frameDisplayLink = frameDisplayLink
         frameDisplayLink.isPaused = false
     }
@@ -267,7 +267,7 @@ public final class ViewController: UIViewController {
             if #available(iOS 13.0, *) {
                 self.test = ReferenceCompareTest(view: self.view, testNonReference: false)
             }
-        } else if !"".isEmpty {
+        } else if "".isEmpty {
             if #available(iOS 13.0, *) {
                 self.test = ManualReferenceCompareTest(view: self.view)
             }
@@ -308,7 +308,7 @@ public final class ViewController: UIViewController {
                 var numUpdates: Int = 0
                 var frameIndex = 0
                 while true {
-                    animationRenderer.setFrame(frameIndex)
+                    animationRenderer.setFrame(CGFloat(frameIndex))
                     let _ = animationRenderer.render(for: CGSize(width: CGFloat(performanceFrameSize), height: CGFloat(performanceFrameSize)), useReferenceRendering: false, canUseMoreMemory: true, skipImageGeneration: true)
                     frameIndex = (frameIndex + 1) % animationRenderer.frameCount
                     numUpdates += 1

@@ -53,8 +53,8 @@ CGRect getPathNativeBoundingBox(CGPathRef _Nonnull path) {
     return CGSizeMake(size.x, size.y);
 }
 
-- (void)setFrame:(NSInteger)index {
-    _renderer->setFrame((int)index);
+- (void)setFrame:(CGFloat)index {
+    _renderer->setFrame((float)index);
 }
 
 - (UIImage * _Nullable)renderForSize:(CGSize)size useReferenceRendering:(bool)useReferenceRendering canUseMoreMemory:(bool)canUseMoreMemory skipImageGeneration:(bool)skipImageGeneration {

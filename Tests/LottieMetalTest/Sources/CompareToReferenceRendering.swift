@@ -91,7 +91,7 @@ func processDrawAnimation(baseCachePath: String, path: String, name: String, siz
             let referenceImageData = try! Data(contentsOf: URL(fileURLWithPath: cacheFolderPath + "/frame\(frameIndex)"))
             let referenceImage = decompressImageFrame(data: referenceImageData)
             
-            renderer.setFrame(frameIndex)
+            renderer.setFrame(CGFloat(frameIndex))
             let image = renderer.render(for: size, useReferenceRendering: !useNonReferenceRendering, canUseMoreMemory: false, skipImageGeneration: false)!
             
             let (diffImage, deltaImage) = areImagesEqual(image, referenceImage, allowedDifference: allowedDifference)
