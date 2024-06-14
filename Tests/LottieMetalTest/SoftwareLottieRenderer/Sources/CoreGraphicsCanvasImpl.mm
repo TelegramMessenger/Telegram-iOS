@@ -64,9 +64,23 @@ bool addEnumeratedPath(CGContextRef context, CanvasPathEnumerator const &enumera
 
 class CoreGraphicsCanvasImpl::Layer {
 public:
-    explicit Layer(int width, int height) {
+    struct Composition {
+        CGRect rect;
+        float alpha;
+        Transform2D transform;
+        std::optional<Canvas::MaskMode> maskMode;
+        
+        Composition(CGRect rect_, float alpha_, Transform2D transform_, std::optional<Canvas::MaskMode> maskMode_) :
+        rect(rect_), alpha(alpha_), transform(transform_), maskMode(maskMode_) {
+        }
+    };
+    
+public:
+    explicit Layer(int width, int height, std::optional<Composition> composition) {
         _width = width;
         _height = height;
+        _composition = composition;
+        
         _bytesPerRow = alignUp(width * 4, 16);
         _backingData.resize(_bytesPerRow * _height);
         memset(_backingData.data(), 0, _backingData.size());
@@ -77,7 +91,6 @@ public:
         CFRelease(colorSpace);
         
         CGContextClearRect(_context, CGRectMake(0.0, 0.0, _width, _height));
-        
     }
     
     ~Layer() {
@@ -88,12 +101,29 @@ public:
         return _context;
     }
     
+    std::optional<Composition> composition() const {
+        return _composition;
+    }
+    
+    std::shared_ptr<CoreGraphicsCanvasImpl::Image> makeImage() {
+        ::CGImageRef nativeImage = CGBitmapContextCreateImage(_context);
+        if (nativeImage) {
+            auto image = std::make_shared<CoreGraphicsCanvasImpl::Image>(nativeImage);
+            CFRelease(nativeImage);
+            return image;
+        } else {
+            return nil;
+        }
+    }
+    
 public:
     CGContextRef _context = nil;
     int _width = 0;
     int _height = 0;
     int _bytesPerRow = 0;
     std::vector<uint8_t> _backingData;
+    
+    std::optional<Composition> _composition;
 };
 
 CoreGraphicsCanvasImpl::Image::Image(::CGImageRef image) {
@@ -108,24 +138,13 @@ CoreGraphicsCanvasImpl::Image::~Image() {
     return _image;
 }
 
-CoreGraphicsCanvasImpl::CoreGraphicsCanvasImpl(int width, int height) {
-    _layerStack.push_back(std::make_shared<Layer>(width, height));
-    _topContext = CGContextRetain(currentLayer()->context());
-}
-
-CoreGraphicsCanvasImpl::CoreGraphicsCanvasImpl(CGContextRef context, int width, int height) {
-    _layerStack.push_back(std::make_shared<Layer>(width, height));
-    _topContext = CGContextRetain(context);
+CoreGraphicsCanvasImpl::CoreGraphicsCanvasImpl(int width, int height) :
+_width(width),
+_height(height) {
+    _layerStack.push_back(std::make_shared<Layer>(width, height, std::nullopt));
 }
 
 CoreGraphicsCanvasImpl::~CoreGraphicsCanvasImpl() {
-    if (_topContext) {
-        CFRelease(_topContext);
-    }
-}
-
-std::shared_ptr<Canvas> CoreGraphicsCanvasImpl::makeLayer(int width, int height) {
-    return std::make_shared<CoreGraphicsCanvasImpl>(_topContext, width, height);
 }
 
 void CoreGraphicsCanvasImpl::saveState() {
@@ -142,7 +161,7 @@ void CoreGraphicsCanvasImpl::fillPath(CanvasPathEnumerator const &enumeratePath,
     }
     
     CGFloat components[4] = { color.r, color.g, color.b, color.a };
-    CGColorRef nativeColor = CGColorCreate(CGBitmapContextGetColorSpace(_topContext), components);
+    CGColorRef nativeColor = CGColorCreate(CGBitmapContextGetColorSpace(currentLayer()->context()), components);
     CGContextSetFillColorWithColor(currentLayer()->context(), nativeColor);
     CFRelease(nativeColor);
     
@@ -194,7 +213,7 @@ void CoreGraphicsCanvasImpl::linearGradientFillPath(CanvasPathEnumerator const &
         locations.push_back(location);
     }
     
-    CGGradientRef nativeGradient = CGGradientCreateWithColorComponents(CGBitmapContextGetColorSpace(_topContext), components.data(), locations.data(), locations.size());
+    CGGradientRef nativeGradient = CGGradientCreateWithColorComponents(CGBitmapContextGetColorSpace(currentLayer()->context()), components.data(), locations.data(), locations.size());
     if (nativeGradient) {
         CGContextDrawLinearGradient(currentLayer()->context(), nativeGradient, CGPointMake(start.x, start.y), CGPointMake(end.x, end.y), kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
         CFRelease(nativeGradient);
@@ -204,7 +223,7 @@ void CoreGraphicsCanvasImpl::linearGradientFillPath(CanvasPathEnumerator const &
     CGContextRestoreGState(currentLayer()->context());
 }
 
-void CoreGraphicsCanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
+void CoreGraphicsCanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, Gradient const &gradient, Vector2D const &center, float radius) {
     CGContextSaveGState(currentLayer()->context());
     
     if (!addEnumeratedPath(currentLayer()->context(), enumeratePath)) {
@@ -240,9 +259,9 @@ void CoreGraphicsCanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &
         locations.push_back(location);
     }
     
-    CGGradientRef nativeGradient = CGGradientCreateWithColorComponents(CGBitmapContextGetColorSpace(_topContext), components.data(), locations.data(), locations.size());
+    CGGradientRef nativeGradient = CGGradientCreateWithColorComponents(CGBitmapContextGetColorSpace(currentLayer()->context()), components.data(), locations.data(), locations.size());
     if (nativeGradient) {
-        CGContextDrawRadialGradient(currentLayer()->context(), nativeGradient, CGPointMake(startCenter.x, startCenter.y), startRadius, CGPointMake(endCenter.x, endCenter.y), endRadius, kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
+        CGContextDrawRadialGradient(currentLayer()->context(), nativeGradient, CGPointMake(center.x, center.y), 0.0, CGPointMake(center.x, center.y), radius, kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
         CFRelease(nativeGradient);
     }
     
@@ -256,7 +275,7 @@ void CoreGraphicsCanvasImpl::strokePath(CanvasPathEnumerator const &enumeratePat
     }
     
     CGFloat components[4] = { color.r, color.g, color.b, color.a };
-    CGColorRef nativeColor = CGColorCreate(CGBitmapContextGetColorSpace(_topContext), components);
+    CGColorRef nativeColor = CGColorCreate(CGBitmapContextGetColorSpace(currentLayer()->context()), components);
     CGContextSetStrokeColorWithColor(currentLayer()->context(), nativeColor);
     CFRelease(nativeColor);
     
@@ -385,7 +404,7 @@ void CoreGraphicsCanvasImpl::linearGradientStrokePath(CanvasPathEnumerator const
         locations.push_back(location);
     }
     
-    CGGradientRef nativeGradient = CGGradientCreateWithColorComponents(CGBitmapContextGetColorSpace(_topContext), components.data(), locations.data(), locations.size());
+    CGGradientRef nativeGradient = CGGradientCreateWithColorComponents(CGBitmapContextGetColorSpace(currentLayer()->context()), components.data(), locations.data(), locations.size());
     if (nativeGradient) {
         CGContextDrawLinearGradient(currentLayer()->context(), nativeGradient, CGPointMake(start.x, start.y), CGPointMake(end.x, end.y), kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
         CFRelease(nativeGradient);
@@ -470,7 +489,7 @@ void CoreGraphicsCanvasImpl::radialGradientStrokePath(CanvasPathEnumerator const
         locations.push_back(location);
     }
     
-    CGGradientRef nativeGradient = CGGradientCreateWithColorComponents(CGBitmapContextGetColorSpace(_topContext), components.data(), locations.data(), locations.size());
+    CGGradientRef nativeGradient = CGGradientCreateWithColorComponents(CGBitmapContextGetColorSpace(currentLayer()->context()), components.data(), locations.data(), locations.size());
     if (nativeGradient) {
         CGContextDrawRadialGradient(currentLayer()->context(), nativeGradient, CGPointMake(startCenter.x, startCenter.y), startRadius, CGPointMake(endCenter.x, endCenter.y), endRadius, kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
         CFRelease(nativeGradient);
@@ -480,32 +499,8 @@ void CoreGraphicsCanvasImpl::radialGradientStrokePath(CanvasPathEnumerator const
     CGContextRestoreGState(currentLayer()->context());
 }
 
-void CoreGraphicsCanvasImpl::fill(lottie::CGRect const &rect, lottie::Color const &fillColor) {
-    CGFloat components[4] = { fillColor.r, fillColor.g, fillColor.b, fillColor.a };
-    CGColorRef nativeColor = CGColorCreate(CGBitmapContextGetColorSpace(_topContext), components);
-    CGContextSetFillColorWithColor(currentLayer()->context(), nativeColor);
-    CFRelease(nativeColor);
-    
-    CGContextFillRect(currentLayer()->context(), CGRectMake(rect.x, rect.y, rect.width, rect.height));
-}
-
-void CoreGraphicsCanvasImpl::setBlendMode(BlendMode blendMode) {
-    ::CGBlendMode nativeMode = kCGBlendModeNormal;
-    switch (blendMode) {
-        case BlendMode::Normal: {
-            nativeMode = kCGBlendModeNormal;
-            break;
-        }
-        case BlendMode::DestinationIn: {
-            nativeMode = kCGBlendModeDestinationIn;
-            break;
-        }
-        case BlendMode::DestinationOut: {
-            nativeMode = kCGBlendModeDestinationOut;
-            break;
-        }
-    }
-    CGContextSetBlendMode(currentLayer()->context(), nativeMode);
+void CoreGraphicsCanvasImpl::clip(CGRect const &rect) {
+    CGContextClipToRect(currentLayer()->context(), CGRectMake(rect.x, rect.y, rect.width, rect.height));
 }
 
 void CoreGraphicsCanvasImpl::concatenate(lottie::Transform2D const &transform) {
@@ -513,29 +508,70 @@ void CoreGraphicsCanvasImpl::concatenate(lottie::Transform2D const &transform) {
 }
 
 std::shared_ptr<CoreGraphicsCanvasImpl::Image> CoreGraphicsCanvasImpl::makeImage() {
-    ::CGImageRef nativeImage = CGBitmapContextCreateImage(currentLayer()->context());
-    if (nativeImage) {
-        auto image = std::make_shared<CoreGraphicsCanvasImpl::Image>(nativeImage);
-        CFRelease(nativeImage);
-        return image;
+    return currentLayer()->makeImage();
+}
+
+bool CoreGraphicsCanvasImpl::pushLayer(CGRect const &rect, float alpha, std::optional<Canvas::MaskMode> maskMode) {
+    auto currentTransform = fromNativeTransform(CATransform3DMakeAffineTransform(CGContextGetCTM(currentLayer()->context())));
+    
+    CGRect globalRect(0.0f, 0.0f, 0.0f, 0.0f);
+    if (rect == CGRect::veryLarge()) {
+        globalRect = CGRect(0.0f, 0.0f, (float)_width, (float)_height);
     } else {
-        return nil;
+        CGRect transformedRect = rect.applyingTransform(currentTransform);
+        
+        CGRect integralTransformedRect(
+            std::floor(transformedRect.x),
+            std::floor(transformedRect.y),
+            std::ceil(transformedRect.width + transformedRect.x - floor(transformedRect.x)),
+            std::ceil(transformedRect.height + transformedRect.y - floor(transformedRect.y))
+        );
+        globalRect = integralTransformedRect.intersection(CGRect(0.0, 0.0, (CGFloat)_width, (CGFloat)_height));
     }
-}
-
-void CoreGraphicsCanvasImpl::draw(std::shared_ptr<Canvas> const &other, float alpha, lottie::CGRect const &rect) {
-    CGContextSetAlpha(currentLayer()->context(), alpha);
-    CoreGraphicsCanvasImpl *impl = (CoreGraphicsCanvasImpl *)other.get();
-    auto image = impl->makeImage();
-    CGContextDrawImage(currentLayer()->context(), CGRectMake(rect.x, rect.y, rect.width, rect.height), ((CoreGraphicsCanvasImpl::Image *)image.get())->nativeImage());
-    CGContextSetAlpha(currentLayer()->context(), 1.0);
-}
-
-void CoreGraphicsCanvasImpl::pushLayer(CGRect const &rect) {
+    if (globalRect.width <= 0.0f || globalRect.height <= 0.0f) {
+        return false;
+    }
+    
+    _layerStack.push_back(std::make_shared<Layer>(globalRect.width, globalRect.height, Layer::Composition(globalRect, alpha, currentTransform, maskMode)));
+    concatenate(Transform2D::identity().translated(Vector2D(-globalRect.x, -globalRect.y)));
+    concatenate(currentTransform);
+    
+    return true;
 }
 
 void CoreGraphicsCanvasImpl::popLayer() {
+    auto layer = _layerStack[_layerStack.size() - 1];
+    _layerStack.pop_back();
     
+    if (const auto composition = layer->composition()) {
+        saveState();
+        concatenate(composition->transform.inverted());
+        
+        CGContextSetAlpha(currentLayer()->context(), composition->alpha);
+        
+        if (composition->maskMode) {
+            switch (composition->maskMode.value()) {
+                case Canvas::MaskMode::Normal: {
+                    CGContextSetBlendMode(currentLayer()->context(), kCGBlendModeDestinationIn);
+                    break;
+                }
+                case Canvas::MaskMode::Inverse: {
+                    CGContextSetBlendMode(currentLayer()->context(), kCGBlendModeDestinationOut);
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+        }
+        
+        auto image = layer->makeImage();
+        CGContextDrawImage(currentLayer()->context(), CGRectMake(composition->rect.x, composition->rect.y, composition->rect.width, composition->rect.height), ((CoreGraphicsCanvasImpl::Image *)image.get())->nativeImage());
+        CGContextSetAlpha(currentLayer()->context(), 1.0);
+        CGContextSetBlendMode(currentLayer()->context(), kCGBlendModeNormal);
+        
+        restoreState();
+    }
 }
 
 std::shared_ptr<CoreGraphicsCanvasImpl::Layer> &CoreGraphicsCanvasImpl::currentLayer() {

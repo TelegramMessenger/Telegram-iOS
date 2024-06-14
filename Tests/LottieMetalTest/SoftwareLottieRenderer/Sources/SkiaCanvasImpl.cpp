@@ -17,6 +17,8 @@
 #include "include/effects/SkDashPathEffect.h"
 #include "include/effects/SkGradientShader.h"
 
+#include <cfloat>
+
 namespace lottie {
 
 namespace {
@@ -89,10 +91,6 @@ SkiaCanvasImpl::~SkiaCanvasImpl() {
     }
 }
 
-std::shared_ptr<Canvas> SkiaCanvasImpl::makeLayer(int width, int height) {
-    return std::make_shared<SkiaCanvasImpl>(width, height);
-}
-
 void SkiaCanvasImpl::saveState() {
     _canvas->save();
 }
@@ -105,7 +103,6 @@ void SkiaCanvasImpl::fillPath(CanvasPathEnumerator const &enumeratePath, lottie:
     SkPaint paint;
     paint.setColor(skColor(color));
     paint.setAntiAlias(true);
-    paint.setBlendMode(_blendMode);
     
     SkPath nativePath;
     skPath(enumeratePath, nativePath);
@@ -117,7 +114,6 @@ void SkiaCanvasImpl::fillPath(CanvasPathEnumerator const &enumeratePath, lottie:
 void SkiaCanvasImpl::linearGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottie::Gradient const &gradient, lottie::Vector2D const &start, lottie::Vector2D const &end) {
     SkPaint paint;
     paint.setAntiAlias(true);
-    paint.setBlendMode(_blendMode);
     paint.setDither(false);
     paint.setStyle(SkPaint::Style::kFill_Style);
     
@@ -136,7 +132,7 @@ void SkiaCanvasImpl::linearGradientFillPath(CanvasPathEnumerator const &enumerat
         locations.push_back(location);
     }
     
-    paint.setShader(SkGradientShader::MakeLinear(linearPoints, colors.data(), locations.data(), (int)colors.size(), SkTileMode::kMirror));
+    paint.setShader(SkGradientShader::MakeLinear(linearPoints, colors.data(), locations.data(), (int)colors.size(), SkTileMode::kClamp));
     
     SkPath nativePath;
     skPath(enumeratePath, nativePath);
@@ -145,11 +141,9 @@ void SkiaCanvasImpl::linearGradientFillPath(CanvasPathEnumerator const &enumerat
     _canvas->drawPath(nativePath, paint);
 }
 
-void SkiaCanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottie::Gradient const &gradient, lottie::Vector2D const &startCenter, float startRadius, lottie::Vector2D const &endCenter, float endRadius) {
+void SkiaCanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumeratePath, lottie::FillRule fillRule, lottie::Gradient const &gradient, Vector2D const &center, float radius) {
     SkPaint paint;
     paint.setAntiAlias(true);
-    paint.setBlendMode(_blendMode);
-    paint.setDither(false);
     paint.setStyle(SkPaint::Style::kFill_Style);
     
     std::vector<SkColor> colors;
@@ -162,7 +156,7 @@ void SkiaCanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumerat
         locations.push_back(location);
     }
     
-    paint.setShader(SkGradientShader::MakeRadial(SkPoint::Make(startCenter.x, startCenter.y), endRadius, colors.data(), locations.data(), (int)colors.size(), SkTileMode::kMirror));
+    paint.setShader(SkGradientShader::MakeRadial(SkPoint::Make(center.x, center.y), radius, colors.data(), locations.data(), (int)colors.size(), SkTileMode::kClamp));
     
     SkPath nativePath;
     skPath(enumeratePath, nativePath);
@@ -172,9 +166,11 @@ void SkiaCanvasImpl::radialGradientFillPath(CanvasPathEnumerator const &enumerat
 }
 
 void SkiaCanvasImpl::strokePath(CanvasPathEnumerator const &enumeratePath, float lineWidth, lottie::LineJoin lineJoin, lottie::LineCap lineCap, float dashPhase, std::vector<float> const &dashPattern, lottie::Color const &color) {
+    if (lineWidth <= FLT_EPSILON) {
+        return;
+    }
     SkPaint paint;
     paint.setAntiAlias(true);
-    paint.setBlendMode(_blendMode);
     paint.setColor(skColor(color));
     paint.setStyle(SkPaint::Style::kStroke_Style);
     
@@ -223,6 +219,9 @@ void SkiaCanvasImpl::strokePath(CanvasPathEnumerator const &enumeratePath, float
         for (auto value : dashPattern) {
             intervals.push_back(value);
         }
+        if (intervals.size() == 1) {
+            intervals.push_back(intervals[0]);
+        }
         paint.setPathEffect(SkDashPathEffect::Make(intervals.data(), (int)intervals.size(), dashPhase));
     }
     
@@ -240,34 +239,8 @@ void SkiaCanvasImpl::radialGradientStrokePath(CanvasPathEnumerator const &enumer
     assert(false);
 }
 
-void SkiaCanvasImpl::fill(lottie::CGRect const &rect, lottie::Color const &fillColor) {
-    SkPaint paint;
-    paint.setAntiAlias(true);
-    paint.setColor(skColor(fillColor));
-    paint.setBlendMode(_blendMode);
-    
-    _canvas->drawRect(SkRect::MakeXYWH(rect.x, rect.y, rect.width, rect.height), paint);
-}
-
-void SkiaCanvasImpl::setBlendMode(BlendMode blendMode) {
-    switch (blendMode) {
-        case BlendMode::Normal: {
-            _blendMode = SkBlendMode::kSrcOver;
-            break;
-        }
-        case BlendMode::DestinationIn: {
-            _blendMode = SkBlendMode::kDstIn;
-            break;
-        }
-        case BlendMode::DestinationOut: {
-            _blendMode = SkBlendMode::kDstOut;
-            break;
-        }
-        default: {
-            _blendMode = SkBlendMode::kSrcOver;
-            break;
-        }
-    }
+void SkiaCanvasImpl::clip(CGRect const &rect) {
+    _canvas->clipRect(SkRect::MakeXYWH(rect.x, rect.y, rect.width, rect.height), true);
 }
 
 void SkiaCanvasImpl::concatenate(lottie::Transform2D const &transform) {
@@ -281,13 +254,32 @@ void SkiaCanvasImpl::concatenate(lottie::Transform2D const &transform) {
     _canvas->concat(matrix);
 }
 
-void SkiaCanvasImpl::draw(std::shared_ptr<Canvas> const &other, float alpha, lottie::CGRect const &rect) {
-    SkiaCanvasImpl *impl = (SkiaCanvasImpl *)other.get();
-    auto image = impl->surface()->makeImageSnapshot();
+bool SkiaCanvasImpl::pushLayer(CGRect const &rect, float alpha, std::optional<MaskMode> maskMode) {
     SkPaint paint;
-    paint.setBlendMode(_blendMode);
+    paint.setAntiAlias(true);
     paint.setAlphaf(alpha);
-    _canvas->drawImageRect(image.get(), SkRect::MakeXYWH(rect.x, rect.y, rect.width, rect.height), SkSamplingOptions(SkFilterMode::kLinear), &paint);
+    if (maskMode) {
+        switch (maskMode.value()) {
+            case Canvas::MaskMode::Normal: {
+                paint.setBlendMode(SkBlendMode::kDstIn);
+                break;
+            }
+            case Canvas::MaskMode::Inverse: {
+                paint.setBlendMode(SkBlendMode::kDstOut);
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+    
+    _canvas->saveLayer(SkRect::MakeXYWH(rect.x, rect.y, rect.width, rect.height), &paint);
+    return true;
+}
+
+void SkiaCanvasImpl::popLayer() {
+    _canvas->restore();
 }
 
 void SkiaCanvasImpl::flush() {
