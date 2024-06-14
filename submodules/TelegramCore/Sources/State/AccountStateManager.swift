@@ -52,6 +52,10 @@ private final class UpdatedStarsBalanceSubscriberContext {
     let subscribers = Bag<([PeerId: Int64]) -> Void>()
 }
 
+private final class UpdatedStarsRevenueStatusSubscriberContext {
+    let subscribers = Bag<([PeerId: StarsRevenueStats.Balances]) -> Void>()
+}
+
 public enum DeletedMessageId: Hashable {
     case global(Int32)
     case messageId(MessageId)
@@ -287,6 +291,7 @@ public final class AccountStateManager {
         private var updatedPeersNearbyContext = UpdatedPeersNearbySubscriberContext()
         private var updatedRevenueBalancesContext = UpdatedRevenueBalancesSubscriberContext()
         private var updatedStarsBalanceContext = UpdatedStarsBalanceSubscriberContext()
+        private var updatedStarsRevenueStatusContext = UpdatedStarsRevenueStatusSubscriberContext()
         
         private let delayNotificatonsUntil = Atomic<Int32?>(value: nil)
         private let appliedMaxMessageIdPromise = Promise<Int32?>(nil)
@@ -1038,6 +1043,9 @@ public final class AccountStateManager {
                             if !events.updatedStarsBalance.isEmpty {
                                 strongSelf.notifyUpdatedStarsBalance(events.updatedStarsBalance)
                             }
+                            if !events.updatedStarsRevenueStatus.isEmpty {
+                                strongSelf.notifyUpdatedStarsRevenueStatus(events.updatedStarsRevenueStatus)
+                            }
                             if !events.updatedCalls.isEmpty {
                                 for call in events.updatedCalls {
                                     strongSelf.callSessionManager?.updateSession(call, completion: { _ in })
@@ -1664,6 +1672,33 @@ public final class AccountStateManager {
             }
         }
         
+        public func updatedStarsRevenueStatus() -> Signal<[PeerId: StarsRevenueStats.Balances], NoError> {
+            let queue = self.queue
+            return Signal { [weak self] subscriber in
+                let disposable = MetaDisposable()
+                queue.async {
+                    if let strongSelf = self {
+                        let index = strongSelf.updatedStarsRevenueStatusContext.subscribers.add({ revenueBalances in
+                            subscriber.putNext(revenueBalances)
+                        })
+                        
+                        disposable.set(ActionDisposable {
+                            if let strongSelf = self {
+                                strongSelf.updatedStarsRevenueStatusContext.subscribers.remove(index)
+                            }
+                        })
+                    }
+                }
+                return disposable
+            }
+        }
+        
+        private func notifyUpdatedStarsRevenueStatus(_ updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances]) {
+            for subscriber in self.updatedStarsRevenueStatusContext.subscribers.copyItems() {
+                subscriber(updatedStarsRevenueStatus)
+            }
+        }
+        
         func notifyDeletedMessages(messageIds: [MessageId]) {
             self.deletedMessagesPipe.putNext(messageIds.map { .messageId($0) })
         }
@@ -1960,6 +1995,12 @@ public final class AccountStateManager {
     public func updatedStarsBalance() -> Signal<[PeerId: Int64], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.updatedStarsBalance().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    public func updatedStarsRevenueStatus() -> Signal<[PeerId: StarsRevenueStats.Balances], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.updatedStarsRevenueStatus().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
     

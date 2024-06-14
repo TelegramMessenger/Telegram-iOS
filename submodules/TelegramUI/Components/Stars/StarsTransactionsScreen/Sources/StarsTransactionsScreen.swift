@@ -554,21 +554,21 @@ final class StarsTransactionsScreenComponent: Component {
                 if let current = self.allTransactionsContext {
                     allTransactionsContext = current
                 } else {
-                    allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(starsContext: component.starsContext, subject: .all)
+                    allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .all)
                 }
                 
                 let incomingTransactionsContext: StarsTransactionsContext
                 if let current = self.incomingTransactionsContext {
                     incomingTransactionsContext = current
                 } else {
-                    incomingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(starsContext: component.starsContext, subject: .incoming)
+                    incomingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .incoming)
                 }
                 
                 let outgoingTransactionsContext: StarsTransactionsContext
                 if let current = self.outgoingTransactionsContext {
                     outgoingTransactionsContext = current
                 } else {
-                    outgoingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(starsContext: component.starsContext, subject: .outgoing)
+                    outgoingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .outgoing)
                 }
                 
                 panelItems.append(StarsTransactionsPanelContainerComponent.Item(

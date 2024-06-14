@@ -271,6 +271,7 @@ public extension Api {
         case updateBotWebhookJSON(data: Api.DataJSON)
         case updateBotWebhookJSONQuery(queryId: Int64, data: Api.DataJSON, timeout: Int32)
         case updateBroadcastRevenueTransactions(peer: Api.Peer, balances: Api.BroadcastRevenueBalances)
+        case updateBusinessBotCallbackQuery(flags: Int32, queryId: Int64, userId: Int64, connectionId: String, message: Api.Message, replyToMessage: Api.Message?, chatInstance: Int64, data: Buffer?)
         case updateChannel(channelId: Int64)
         case updateChannelAvailableMessages(channelId: Int64, availableMinId: Int32)
         case updateChannelMessageForwards(channelId: Int64, id: Int32, forwards: Int32)
@@ -372,6 +373,7 @@ public extension Api {
         case updateServiceNotification(flags: Int32, inboxDate: Int32?, type: String, message: String, media: Api.MessageMedia, entities: [Api.MessageEntity])
         case updateSmsJob(jobId: String)
         case updateStarsBalance(balance: Int64)
+        case updateStarsRevenueStatus(peer: Api.Peer, status: Api.StarsRevenueStatus)
         case updateStickerSets(flags: Int32)
         case updateStickerSetsOrder(flags: Int32, order: [Int64])
         case updateStoriesStealthMode(stealthMode: Api.StoriesStealthMode)
@@ -601,6 +603,19 @@ public extension Api {
                     }
                     peer.serialize(buffer, true)
                     balances.serialize(buffer, true)
+                    break
+                case .updateBusinessBotCallbackQuery(let flags, let queryId, let userId, let connectionId, let message, let replyToMessage, let chatInstance, let data):
+                    if boxed {
+                        buffer.appendInt32(513998247)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeString(connectionId, buffer: buffer, boxed: false)
+                    message.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 2) != 0 {replyToMessage!.serialize(buffer, true)}
+                    serializeInt64(chatInstance, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeBytes(data!, buffer: buffer, boxed: false)}
                     break
                 case .updateChannel(let channelId):
                     if boxed {
@@ -1460,6 +1475,13 @@ public extension Api {
                     }
                     serializeInt64(balance, buffer: buffer, boxed: false)
                     break
+                case .updateStarsRevenueStatus(let peer, let status):
+                    if boxed {
+                        buffer.appendInt32(-1518030823)
+                    }
+                    peer.serialize(buffer, true)
+                    status.serialize(buffer, true)
+                    break
                 case .updateStickerSets(let flags):
                     if boxed {
                         buffer.appendInt32(834816008)
@@ -1621,6 +1643,8 @@ public extension Api {
                 return ("updateBotWebhookJSONQuery", [("queryId", queryId as Any), ("data", data as Any), ("timeout", timeout as Any)])
                 case .updateBroadcastRevenueTransactions(let peer, let balances):
                 return ("updateBroadcastRevenueTransactions", [("peer", peer as Any), ("balances", balances as Any)])
+                case .updateBusinessBotCallbackQuery(let flags, let queryId, let userId, let connectionId, let message, let replyToMessage, let chatInstance, let data):
+                return ("updateBusinessBotCallbackQuery", [("flags", flags as Any), ("queryId", queryId as Any), ("userId", userId as Any), ("connectionId", connectionId as Any), ("message", message as Any), ("replyToMessage", replyToMessage as Any), ("chatInstance", chatInstance as Any), ("data", data as Any)])
                 case .updateChannel(let channelId):
                 return ("updateChannel", [("channelId", channelId as Any)])
                 case .updateChannelAvailableMessages(let channelId, let availableMinId):
@@ -1823,6 +1847,8 @@ public extension Api {
                 return ("updateSmsJob", [("jobId", jobId as Any)])
                 case .updateStarsBalance(let balance):
                 return ("updateStarsBalance", [("balance", balance as Any)])
+                case .updateStarsRevenueStatus(let peer, let status):
+                return ("updateStarsRevenueStatus", [("peer", peer as Any), ("status", status as Any)])
                 case .updateStickerSets(let flags):
                 return ("updateStickerSets", [("flags", flags as Any)])
                 case .updateStickerSetsOrder(let flags, let order):
@@ -2328,6 +2354,42 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Update.updateBroadcastRevenueTransactions(peer: _1!, balances: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBusinessBotCallbackQuery(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Api.Message?
+            if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            var _6: Api.Message?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.Message
+            } }
+            var _7: Int64?
+            _7 = reader.readInt64()
+            var _8: Buffer?
+            if Int(_1!) & Int(1 << 0) != 0 {_8 = parseBytes(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 0) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.Update.updateBusinessBotCallbackQuery(flags: _1!, queryId: _2!, userId: _3!, connectionId: _4!, message: _5!, replyToMessage: _6, chatInstance: _7!, data: _8)
             }
             else {
                 return nil
@@ -4005,6 +4067,24 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.Update.updateStarsBalance(balance: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateStarsRevenueStatus(_ reader: BufferReader) -> Update? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Api.StarsRevenueStatus?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.StarsRevenueStatus
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateStarsRevenueStatus(peer: _1!, status: _2!)
             }
             else {
                 return nil

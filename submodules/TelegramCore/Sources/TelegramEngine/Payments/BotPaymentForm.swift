@@ -59,6 +59,15 @@ public struct BotPaymentInvoice : Equatable {
     public let prices: [BotPaymentPrice]
     public let tip: Tip?
     public let termsInfo: RecurrentInfo?
+    
+    public init(isTest: Bool, requestedFields: BotPaymentInvoiceFields, currency: String, prices: [BotPaymentPrice], tip: Tip?, termsInfo: RecurrentInfo?) {
+        self.isTest = isTest
+        self.requestedFields = requestedFields
+        self.currency = currency
+        self.prices = prices
+        self.tip = tip
+        self.termsInfo = termsInfo
+    }
 }
 
 public struct BotPaymentNativeProvider : Equatable {
@@ -125,6 +134,20 @@ public struct BotPaymentForm : Equatable {
     public let savedInfo: BotPaymentRequestedInfo?
     public let savedCredentials: [BotPaymentSavedCredentials]
     public let additionalPaymentMethods: [BotPaymentMethod]
+    
+    public init(id: Int64, canSaveCredentials: Bool, passwordMissing: Bool, invoice: BotPaymentInvoice, paymentBotId: PeerId, providerId: PeerId?, url: String?, nativeProvider: BotPaymentNativeProvider?, savedInfo: BotPaymentRequestedInfo?, savedCredentials: [BotPaymentSavedCredentials], additionalPaymentMethods: [BotPaymentMethod]) {
+        self.id = id
+        self.canSaveCredentials = canSaveCredentials
+        self.passwordMissing = passwordMissing
+        self.invoice = invoice
+        self.paymentBotId = paymentBotId
+        self.providerId = providerId
+        self.url = url
+        self.nativeProvider = nativeProvider
+        self.savedInfo = savedInfo
+        self.savedCredentials = savedCredentials
+        self.additionalPaymentMethods = additionalPaymentMethods
+    }
 }
 
 public struct BotPaymentMethod: Equatable {

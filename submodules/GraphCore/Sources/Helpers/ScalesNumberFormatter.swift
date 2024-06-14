@@ -60,3 +60,5 @@ class TonNumberFormatter: NumberFormatter, @unchecked Sendable {
         return balanceText
     }
 }
+
+
