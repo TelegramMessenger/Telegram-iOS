@@ -2452,6 +2452,24 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                     }
                 })
             }
+            
+            var lastTimestamp = 0.0
+            self.call.onMutedSpeechActivityDetected = { [weak self] value in
+                Queue.mainQueue().async {
+                    guard let self, value else {
+                        return
+                    }
+                    let timestamp = CFAbsoluteTimeGetCurrent()
+                    if lastTimestamp + 1000.0 < timestamp {
+                        lastTimestamp = timestamp
+                        
+                        //TODO:localize
+                        self.presentUndoOverlay(content: .info(title: nil, text: "Your microphone is muted.", timeout: nil, customUndoText: nil), action: { _ in
+                            return false
+                        })
+                    }
+                }
+            }
         }
         
         deinit {

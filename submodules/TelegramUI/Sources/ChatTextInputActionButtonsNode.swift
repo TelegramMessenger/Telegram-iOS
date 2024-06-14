@@ -323,7 +323,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageAction
     }
     
     func makeCustomContents() -> UIView? {
-        if self.sendButtonHasApplyIcon {
+        if self.sendButtonHasApplyIcon || self.effectBadgeView != nil {
             let result = UIView()
             result.frame = self.bounds
             if let copyView = self.sendContainerNode.view.snapshotView(afterScreenUpdates: false) {

@@ -87,7 +87,7 @@ public func createChartController(_ data: String, type: ChartType, rate: Double 
                     controller = StackedBarsChartController(chartsCollection: collection)
                     controller.isZoomable = false
                 case .currency:
-                    controller = StackedBarsChartController(chartsCollection: collection, isCrypto: true, rate: rate)
+                    controller = StackedBarsChartController(chartsCollection: collection, currency: .ton, rate: rate)
                     controller.isZoomable = false
                 case .step:
                     controller = StepBarsChartController(chartsCollection: collection)

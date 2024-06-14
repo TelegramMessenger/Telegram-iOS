@@ -1265,7 +1265,15 @@ public func canSendMessagesToChat(_ state: ChatPresentationInterfaceState) -> Bo
             return false
         }
     } else if case .customChatContents = state.chatLocation {
-        return true
+        if case let .customChatContents(contents) = state.subject {
+            if case .hashTagSearch = contents.kind {
+                return false
+            } else {
+                return true
+            }
+        } else {
+            return true
+        }
     } else {
         return false
     }

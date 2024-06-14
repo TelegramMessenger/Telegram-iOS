@@ -1747,7 +1747,16 @@ extension ChatControllerImpl {
                 return
             }
             if let messageId = messageId {
-                if canSendMessagesToChat(strongSelf.presentationInterfaceState) {
+                let intrinsicCanSendMessagesHere = canSendMessagesToChat(strongSelf.presentationInterfaceState)
+                var canSendMessagesHere = intrinsicCanSendMessagesHere
+                if case .standard(.embedded) = strongSelf.presentationInterfaceState.mode {
+                    canSendMessagesHere = false
+                }
+                if case .inline = strongSelf.presentationInterfaceState.mode {
+                    canSendMessagesHere = false
+                }
+                
+                if canSendMessagesHere {
                     let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
                         if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({
@@ -1771,11 +1780,18 @@ extension ChatControllerImpl {
                         messageId: messageId,
                         quote: nil
                     )
+                    
                     completion(.immediate, {
                         guard let self else {
                             return
                         }
-                        moveReplyMessageToAnotherChat(selfController: self, replySubject: replySubject)
+                        if intrinsicCanSendMessagesHere {
+                            if let peerId = self.chatLocation.peerId {
+                                moveReplyToChat(selfController: self, peerId: peerId, threadId: self.chatLocation.threadId, replySubject: replySubject, completion: {})
+                            }
+                        } else {
+                            moveReplyMessageToAnotherChat(selfController: self, replySubject: replySubject)
+                        }
                     })
                 }
             } else {
