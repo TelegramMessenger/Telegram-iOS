@@ -12,6 +12,7 @@ import AlertUI
 import PresentationDataUtils
 import PasswordSetupUI
 import Markdown
+import OldChannelsController
 
 private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme
@@ -562,7 +563,7 @@ private func confirmChannelOwnershipTransferController(context: AccountContext, 
     return controller
 }
 
-func channelOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, member: TelegramUser, initialError: ChannelOwnershipTransferError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (EnginePeer.Id?) -> Void) -> ViewController {
+public func channelOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, member: TelegramUser, initialError: ChannelOwnershipTransferError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (EnginePeer.Id?) -> Void) -> ViewController {
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationData: presentationData)
     

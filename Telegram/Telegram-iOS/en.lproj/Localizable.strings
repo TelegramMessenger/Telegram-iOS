@@ -12299,6 +12299,7 @@ Sorry for the inconvenience.";
 "Stars.Transfer.PurchasedText" = "You acquired **%1$@** in **%2$@** for **%3$@**.";
 "Stars.Transfer.Purchased.Stars_1" = "%@ Star";
 "Stars.Transfer.Purchased.Stars_any" = "%@ Stars";
+"Stars.Transfer.UnlockInfo" = "Do you want to unlock media for **%1$@**?";
 
 "Stars.Transfer.Balance" = "Balance";
 
@@ -12325,3 +12326,39 @@ Sorry for the inconvenience.";
 "HashtagSearch.StoriesFound_1" = "%@ Story Found";
 "HashtagSearch.StoriesFound_any" = "%@ Stories Found";
 "HashtagSearch.StoriesFoundInfo" = "View stories with %@";
+
+"Stars.BotRevenue.Title" = "Stars Balance";
+"Stars.BotRevenue.Revenue.Title" = "Revenue";
+"Stars.BotRevenue.Proceeds.Title" = "Proceeds Overview";
+"Stars.BotRevenue.Proceeds.Available" = "Available Balance";
+"Stars.BotRevenue.Proceeds.Total" = "Total Lifetime Proceeds";
+
+"Stars.BotRevenue.Withdraw.Balance" = "Available Balance";
+"Stars.BotRevenue.Withdraw.Withdraw" = "Withdraw via Fragment";
+"Stars.BotRevenue.Withdraw.Info" = "You can withdraw Stars using Fragment, or use Stars to advertise your bot. [Learn More >]()";
+
+"Stars.Withdraw.Title" = "Withdraw";
+"Stars.Withdraw.AmountTitle" = "ENTER AMOUNT TO WITHDRAW";
+"Stars.Withdraw.AmountPlaceholder" = "Stars Amount";
+"Stars.Withdraw.Withdraw" = "Withdraw";
+
+"Stars.Withdraw.Withdraw.ErrorMinimum" = "You cannot withdraw less than %@";
+"Stars.Withdraw.Withdraw.ErrorMinimum.Stars_1" = "%@ Star";
+"Stars.Withdraw.Withdraw.ErrorMinimum.Stars_any" = "%@ Stars";
+
+"Stars.PaidContent.Title" = "Paid Content";
+"Stars.PaidContent.AmountTitle" = "ENTER UNLOCK COST";
+"Stars.PaidContent.AmountPlaceholder" = "Stars to Unlock";
+"Stars.PaidContent.AmountInfo" = "Users will have to transfer this amount of Stars to your channel in order to view this media.\n[More about Stars >]()";
+"Stars.PaidContent.Create" = "Make This Media Paid";
+
+"MediaEditor.AddLink" = "LINK";
+
+"MediaEditor.Link.CreateTitle" = "Create Link";
+"MediaEditor.Link.EditTitle" = "Edit Link";
+"MediaEditor.Link.LinkTo.Title" = "LINK TO";
+"MediaEditor.Link.LinkTo.Placeholder" = "https://somesite.com";
+"MediaEditor.Link.LinkName.Title" = "LINK NAME (OPTIONAL)";
+"MediaEditor.Link.LinkName.Placeholder" = "Enter a Name";
+
+"Story.Editor.TooltipLinkPremium" = "Subscribe to [Telegram Premium]() to add links.";

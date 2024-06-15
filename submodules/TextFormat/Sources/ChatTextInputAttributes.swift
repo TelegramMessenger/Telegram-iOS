@@ -407,7 +407,7 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject, Codable {
     public enum Custom: Codable {
         case topic(id: Int64, info: EngineMessageHistoryThread.Info)
         case nameColors([UInt32])
-        case stars
+        case stars(tinted: Bool)
     }
     
     public let interactivelySelectedFromPackId: ItemCollectionId?

@@ -15,6 +15,7 @@ import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import ChatMessageInteractiveMediaNode
 import ChatControllerInteraction
+import InvisibleInkDustNode
 
 public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     override public var supportsMosaic: Bool {
@@ -106,7 +107,15 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             if selectedMedia == nil {
                 for media in item.message.media {
                     if let telegramImage = media as? TelegramMediaImage {
+                        #if DEBUG
+                        if item.message.text == "#" {
+                            selectedMedia = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: 100, startParam: "", extendedMedia: .preview(dimensions: telegramImage.representations.first?.dimensions ?? PixelDimensions(width: 1, height: 1), immediateThumbnailData: telegramImage.immediateThumbnailData, videoDuration: nil), flags: [], version: 0)
+                        } else {
+                            selectedMedia = telegramImage
+                        }
+                        #else
                         selectedMedia = telegramImage
+                        #endif
                         if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramImage) {
                             automaticDownload = .full
                         }

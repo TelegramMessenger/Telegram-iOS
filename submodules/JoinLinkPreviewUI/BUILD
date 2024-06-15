@@ -20,11 +20,11 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/ShareController:ShareController",
         "//submodules/SelectablePeerNode:SelectablePeerNode",
-        "//submodules/PeerInfoUI:PeerInfoUI",
         "//submodules/UndoUI:UndoUI",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/ComponentFlow",
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
+        "//submodules/TelegramUI/Components/PeerManagement/OldChannelsController",
     ],
     visibility = [
         "//visibility:public",

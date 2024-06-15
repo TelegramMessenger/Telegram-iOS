@@ -10,18 +10,19 @@ import PresentationDataUtils
 import GraphCore
 import GraphUI
 import ActivityIndicator
+import ListItemComponentAdaptor
 
-class StatsGraphItem: ListViewItem, ItemListItem {
+public final class StatsGraphItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
     let presentationData: ItemListPresentationData
     let graph: StatsGraph
     let type: ChartType
     let noInitialZoom: Bool
     let conversionRate: Double
     let getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)?
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, graph: StatsGraph, type: ChartType, noInitialZoom: Bool = false, conversionRate: Double = 1.0, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
+    public init(presentationData: ItemListPresentationData, graph: StatsGraph, type: ChartType, noInitialZoom: Bool = false, conversionRate: Double = 1.0, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
         self.graph = graph
         self.type = type
@@ -32,7 +33,7 @@ class StatsGraphItem: ListViewItem, ItemListItem {
         self.style = style
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = StatsGraphItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -48,7 +49,7 @@ class StatsGraphItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? StatsGraphItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -65,7 +66,36 @@ class StatsGraphItem: ListViewItem, ItemListItem {
         }
     }
     
-    var selectable: Bool = false
+    public func item() -> ListViewItem {
+        return self
+    }
+    
+    public static func ==(lhs: StatsGraphItem, rhs: StatsGraphItem) -> Bool {
+        if lhs.presentationData !== rhs.presentationData {
+            return false
+        }
+        if lhs.graph != rhs.graph {
+            return false
+        }
+        if lhs.type != rhs.type {
+            return false
+        }
+        if lhs.noInitialZoom != rhs.noInitialZoom {
+            return false
+        }
+        if lhs.conversionRate != rhs.conversionRate {
+            return false
+        }
+        if lhs.sectionId != rhs.sectionId {
+            return false
+        }
+        if lhs.style != rhs.style {
+            return false
+        }
+        return true
+    }
+    
+    public var selectable: Bool = false
 }
 
 class StatsGraphItemNode: ListViewItemNode {

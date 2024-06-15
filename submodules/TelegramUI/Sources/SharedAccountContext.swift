@@ -2054,6 +2054,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .storiesSuggestedReactions
         case .storiesHigherQuality:
             mappedSource = .storiesHigherQuality
+        case .storiesLinks:
+            mappedSource = .storiesLinks
         case let .channelBoost(peerId):
             mappedSource = .channelBoost(peerId)
         case .nameColor:
@@ -2638,8 +2640,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsTransactionScreen(context: context, subject: .receipt(receipt), action: {})
     }
     
-    public func makeStarsStatisticsScreen(context: AccountContext, starsContext: StarsContext) -> ViewController {
-        return StarsStatisticsScreen(context: context, starsContext: starsContext)
+    public func makeStarsStatisticsScreen(context: AccountContext, peerId: EnginePeer.Id, revenueContext: StarsRevenueStatsContext) -> ViewController {
+        return StarsStatisticsScreen(context: context, peerId: peerId, revenueContext: revenueContext)
+    }
+    
+    public func makeStarsAmountScreen(context: AccountContext, completion: @escaping (Int64) -> Void) -> ViewController {
+        return StarsWithdrawScreen(context: context, mode: .paidMedia, completion: completion)
     }
 }
 

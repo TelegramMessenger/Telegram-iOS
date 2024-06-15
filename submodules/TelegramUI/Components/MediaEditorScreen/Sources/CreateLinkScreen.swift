@@ -21,6 +21,7 @@ import PresentationDataUtils
 import ListSectionComponent
 import TelegramStringFormatting
 import MediaEditor
+import UrlEscaping
 
 private let linkTag = GenericComponentViewTag()
 
@@ -28,19 +29,22 @@ private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let link: CreateLinkScreen.Link?
+    let isEdit: Bool
+    let link: String
     let webpage: TelegramMediaWebpage?
     let state: CreateLinkSheetComponent.State
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
-        link: CreateLinkScreen.Link?,
+        isEdit: Bool,
+        link: String,
         webpage: TelegramMediaWebpage?,
         state: CreateLinkSheetComponent.State,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
+        self.isEdit = isEdit
         self.link = link
         self.webpage = webpage
         self.state = state
@@ -49,6 +53,9 @@ private final class SheetContent: CombinedComponent {
     
     static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.isEdit != rhs.isEdit {
             return false
         }
         if lhs.link != rhs.link {
@@ -111,6 +118,12 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: sideInset + cancelButton.size.width / 2.0, y: contentSize.height + cancelButton.size.height / 2.0))
             )
             
+            let explicitLink = explicitUrl(context.component.link)
+            var isValidLink = false
+            if isValidUrl(explicitLink) {
+                isValidLink = true
+            }
+            
             let controller = environment.controller
             let doneButton = doneButton.update(
                 component: Button(
@@ -121,7 +134,7 @@ private final class SheetContent: CombinedComponent {
                             color: state.link.isEmpty ? theme.actionSheet.secondaryTextColor : theme.actionSheet.controlAccentColor
                         )
                     ),
-                    isEnabled: !state.link.isEmpty,
+                    isEnabled: isValidLink,
                     action: { [weak state] in
                         if let controller = controller() as? CreateLinkScreen {
                             state?.complete(controller: controller)
@@ -136,8 +149,9 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width - sideInset - doneButton.size.width / 2.0, y: contentSize.height + doneButton.size.height / 2.0))
             )
             
+            
             let title = title.update(
-                component: Text(text: component.link == nil ? "Create Link" : "Edit Link", font: Font.bold(17.0), color: theme.list.itemPrimaryTextColor),
+                component: Text(text: component.isEdit ? strings.MediaEditor_Link_EditTitle : strings.MediaEditor_Link_CreateTitle, font: Font.bold(17.0), color: theme.list.itemPrimaryTextColor),
                 availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
                 transition: .immediate
             )
@@ -180,7 +194,7 @@ private final class SheetContent: CombinedComponent {
                             placeholderColor: theme.list.itemPlaceholderTextColor,
                             text: state.link,
                             link: true,
-                            placeholderText: "https://somesite.com",
+                            placeholderText: strings.MediaEditor_Link_LinkTo_Placeholder,
                             textUpdated: { [weak state] text in
                                 state?.link = text
                                 state?.updated()
@@ -196,7 +210,7 @@ private final class SheetContent: CombinedComponent {
                     theme: theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "LINK TO".uppercased(),
+                            string: strings.MediaEditor_Link_LinkTo_Title.uppercased(),
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: theme.list.freeTextColor
                         )),
@@ -223,7 +237,7 @@ private final class SheetContent: CombinedComponent {
                     theme: theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "LINK NAME (OPTIONAL)".uppercased(),
+                            string: strings.MediaEditor_Link_LinkName_Title.uppercased(),
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: theme.list.freeTextColor
                         )),
@@ -239,7 +253,7 @@ private final class SheetContent: CombinedComponent {
                                     placeholderColor: theme.list.itemPlaceholderTextColor,
                                     text: state.name,
                                     link: false,
-                                    placeholderText: "Enter a Name",
+                                    placeholderText: strings.MediaEditor_Link_LinkTo_Placeholder,
                                     textUpdated: { [weak state] text in
                                         state?.name = text
                                     }
@@ -319,6 +333,7 @@ private final class CreateLinkSheetComponent: CombinedComponent {
             
             self.link = link?.url ?? ""
             self.name = link?.name ?? ""
+            self.webpage = link?.webpage
             self.positionBelowText = link?.positionBelowText ?? true
             self.largeMedia = link?.largeMedia
             
@@ -339,10 +354,7 @@ private final class CreateLinkSheetComponent: CombinedComponent {
                     return
                 }
                 
-                var link = link
-                if !link.hasPrefix("http://") && !link.hasPrefix("https://") {
-                    link = "https://\(link)"
-                }
+                let link = explicitUrl(link)
                 
                 if self.dismissed {
                     self.dismissed = false
@@ -375,10 +387,7 @@ private final class CreateLinkSheetComponent: CombinedComponent {
             guard let webpage = self.webpage else {
                 return
             }
-            var link = self.link
-            if !link.hasPrefix("http://") && !link.hasPrefix("https://") {
-                link = "https://\(link)"
-            }
+            let link = explicitUrl(self.link)
             var name: String = self.name
             if name.isEmpty {
                 name = self.link
@@ -399,16 +408,11 @@ private final class CreateLinkSheetComponent: CombinedComponent {
         }
         
         func complete(controller: CreateLinkScreen) {
-            var link = self.link
-            if !link.hasPrefix("http://") && !link.hasPrefix("https://") {
-                link = "https://\(link)"
-            }
-        
             let text = !self.name.isEmpty ? self.name : self.link
             
-            var media: [Media] = []
-            if let webpage = self.webpage, !self.dismissed {
-                media = [webpage]
+            var effectiveMedia: TelegramMediaWebpage?
+            if let webpage = self.webpage, case .Loaded = webpage.content, !self.dismissed {
+                effectiveMedia = webpage
             }
             
             var attributes: [MessageAttribute] = []
@@ -418,48 +422,8 @@ private final class CreateLinkSheetComponent: CombinedComponent {
             }
             
             let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
-            let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: text, attributes: attributes, media: media, peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+            let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: text, attributes: attributes, media: effectiveMedia.flatMap { [$0] } ?? [], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
             
-            let whiteString = NSAttributedString(string: text, font: Font.with(size: 36, design: .camera, weight: .semibold), textColor: UIColor(rgb: 0x0a84ff))
-            let blackString = NSAttributedString(string: text, font: Font.with(size: 36, design: .camera, weight: .semibold), textColor: UIColor(rgb: 0x64d2ff))
-            
-            let textSize = whiteString.boundingRect(with: CGSize(width: 1000.0, height: 1000.0), context: nil)
-            
-            let whiteCompactImage = generateImage(CGSize(width: textSize.width + 64.0, height: floor(textSize.height * 1.2)), rotatedContext: { size, context in
-                let bounds = CGRect(origin: .zero, size: size)
-                context.clear(bounds)
-                
-                context.setFillColor(UIColor.white.cgColor)
-                context.addPath(UIBezierPath(roundedRect: bounds, cornerRadius: textSize.height * 0.2).cgPath)
-                context.fillPath()
-                
-                let inset = floor((size.height - 36.0) / 2.0)
-                if let image = generateTintedImage(image: UIImage(bundleImageName: "Premium/Link"), color: UIColor(rgb: 0x0a84ff)) {
-                    context.draw(image.cgImage!, in: CGRect(x: inset, y: inset, width: 36.0, height: 36.0))
-                }
-                
-                UIGraphicsPushContext(context)
-                whiteString.draw(at: CGPoint(x: inset + 42.0, y: 2.0))
-                UIGraphicsPopContext()
-            })!
-            
-            let blackCompactImage = generateImage(CGSize(width: textSize.width + 64.0, height: floor(textSize.height * 1.2)), rotatedContext: { size, context in
-                let bounds = CGRect(origin: .zero, size: size)
-                context.clear(bounds)
-                
-                context.setFillColor(UIColor.black.cgColor)
-                context.addPath(UIBezierPath(roundedRect: bounds, cornerRadius: textSize.height * 0.2).cgPath)
-                context.fillPath()
-                
-                let inset = floor((size.height - 36.0) / 2.0)
-                if let image = generateTintedImage(image: UIImage(bundleImageName: "Premium/Link"), color: UIColor(rgb: 0x64d2ff)) {
-                    context.draw(image.cgImage!, in: CGRect(x: inset, y: inset, width: 36.0, height: 36.0))
-                }
-                
-                UIGraphicsPushContext(context)
-                blackString.draw(at: CGPoint(x: inset + 42.0, y: 2.0))
-                UIGraphicsPopContext()
-            })!
             
             let completion = controller.completion
             let renderer = DrawingMessageRenderer(context: self.context, messages: [message], parentView: controller.view, isLink: true)
@@ -468,13 +432,11 @@ private final class CreateLinkSheetComponent: CombinedComponent {
                     CreateLinkScreen.Result(
                         url: self.link,
                         name: self.name,
-                        webpage: !self.dismissed ? self.webpage : nil,
+                        webpage: effectiveMedia,
                         positionBelowText: self.positionBelowText,
                         largeMedia: self.largeMedia,
-                        image: !media.isEmpty ? result.dayImage : nil,
-                        nightImage: !media.isEmpty ? result.nightImage : nil,
-                        compactLightImage: whiteCompactImage,
-                        compactDarkImage: blackCompactImage
+                        image: effectiveMedia != nil ? result.dayImage : nil,
+                        nightImage: effectiveMedia != nil ? result.nightImage : nil
                     )
                 )
             })
@@ -499,11 +461,14 @@ private final class CreateLinkSheetComponent: CombinedComponent {
                 webpage = nil
             }
             
+            let link = context.state.link
+            
             let sheet = sheet.update(
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
-                        link: context.component.link,
+                        isEdit: context.component.link != nil,
+                        link: link,
                         webpage: webpage,
                         state: context.state,
                         dismiss: {
@@ -517,6 +482,7 @@ private final class CreateLinkSheetComponent: CombinedComponent {
                     backgroundColor: .blur(.dark),
                     followContentSizeChanges: true,
                     clipsContent: true,
+                    isScrollEnabled: false,
                     animateOut: animateOut
                 ),
                 environment: {
@@ -558,17 +524,20 @@ public final class CreateLinkScreen: ViewControllerComponentContainer {
     public struct Link: Equatable {
         let url: String
         let name: String?
+        let webpage: TelegramMediaWebpage?
         let positionBelowText: Bool
         let largeMedia: Bool?
         
         init(
             url: String,
             name: String?,
+            webpage: TelegramMediaWebpage?,
             positionBelowText: Bool,
             largeMedia: Bool?
         ) {
             self.url = url
             self.name = name
+            self.webpage = webpage
             self.positionBelowText = positionBelowText
             self.largeMedia = largeMedia
         }
@@ -582,8 +551,6 @@ public final class CreateLinkScreen: ViewControllerComponentContainer {
         let largeMedia: Bool?
         let image: UIImage?
         let nightImage: UIImage?
-        let compactLightImage: UIImage
-        let compactDarkImage: UIImage
     }
     
     private let context: AccountContext
@@ -716,7 +683,7 @@ private final class LinkFieldComponent: Component {
         
         func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
             let newText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
-            if newText.count > 128 {
+            if let component = self.component, !component.link && newText.count > 48 {
                 textField.layer.addShakeAnimation()
                 let hapticFeedback = HapticFeedback()
                 hapticFeedback.error()

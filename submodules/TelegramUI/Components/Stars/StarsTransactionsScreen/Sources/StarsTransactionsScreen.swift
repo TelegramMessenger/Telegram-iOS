@@ -275,7 +275,7 @@ final class StarsTransactionsScreenComponent: Component {
             
             var balanceUpdated = false
             if let starsState = self.starsState {
-                if let previousBalance, starsState.balance != previousBalance {
+                if let previousBalance = self.previousBalance, starsState.balance != previousBalance {
                     balanceUpdated = true
                 }
                 self.previousBalance = starsState.balance
@@ -555,6 +555,7 @@ final class StarsTransactionsScreenComponent: Component {
                     allTransactionsContext = current
                 } else {
                     allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .all)
+                    self.allTransactionsContext = allTransactionsContext
                 }
                 
                 let incomingTransactionsContext: StarsTransactionsContext
@@ -562,6 +563,7 @@ final class StarsTransactionsScreenComponent: Component {
                     incomingTransactionsContext = current
                 } else {
                     incomingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .incoming)
+                    self.incomingTransactionsContext = incomingTransactionsContext
                 }
                 
                 let outgoingTransactionsContext: StarsTransactionsContext
@@ -569,6 +571,7 @@ final class StarsTransactionsScreenComponent: Component {
                     outgoingTransactionsContext = current
                 } else {
                     outgoingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .outgoing)
+                    self.outgoingTransactionsContext = outgoingTransactionsContext
                 }
                 
                 panelItems.append(StarsTransactionsPanelContainerComponent.Item(

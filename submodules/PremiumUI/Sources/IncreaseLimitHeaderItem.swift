@@ -7,11 +7,10 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import Markdown
-import PremiumUI
 import ComponentFlow
 
-class IncreaseLimitHeaderItem: ListViewItem, ItemListItem {
-    enum Icon {
+public class IncreaseLimitHeaderItem: ListViewItem, ItemListItem {
+    public enum Icon {
         case group
         case link
     }
@@ -24,9 +23,9 @@ class IncreaseLimitHeaderItem: ListViewItem, ItemListItem {
     let premiumCount: Int32
     let text: String
     let isPremiumDisabled: Bool
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     
-    init(theme: PresentationTheme, strings: PresentationStrings, icon: Icon, count: Int32, limit: Int32, premiumCount: Int32, text: String, isPremiumDisabled: Bool, sectionId: ItemListSectionId) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, icon: Icon, count: Int32, limit: Int32, premiumCount: Int32, text: String, isPremiumDisabled: Bool, sectionId: ItemListSectionId) {
         self.theme = theme
         self.strings = strings
         self.icon = icon
@@ -38,7 +37,7 @@ class IncreaseLimitHeaderItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = IncreaseLimitHeaderItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -54,7 +53,7 @@ class IncreaseLimitHeaderItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             guard let nodeValue = node() as? IncreaseLimitHeaderItemNode else {
                 assertionFailure()

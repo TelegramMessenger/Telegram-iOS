@@ -532,7 +532,7 @@ public class StickerPickerScreen: ViewController {
             self.containerView.addSubview(self.hostView)
             
             if controller.hasInteractiveStickers {
-                self.storyStickersContentView = StoryStickersContentView(frame: .zero)
+                self.storyStickersContentView = StoryStickersContentView(isPremium: context.isPremium)
                 self.storyStickersContentView?.locationAction = { [weak self] in
                     self?.controller?.presentLocationPicker()
                 }
@@ -543,7 +543,14 @@ public class StickerPickerScreen: ViewController {
                     self?.controller?.addReaction()
                 }
                 self.storyStickersContentView?.linkAction = { [weak self] in
-                    self?.controller?.addLink()
+                    guard let self, let controller = self.controller else {
+                        return
+                    }
+                    if controller.context.isPremium {
+                        controller.addLink()
+                    } else {
+                        self.presentLinkPremiumSuggestion()
+                    }
                 }
             }
             
@@ -799,7 +806,7 @@ public class StickerPickerScreen: ViewController {
                                 controller.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { [weak controller] action in
                                     if case .info = action, let controller {
                                         let premiumController = context.sharedContext.makePremiumIntroController(context: context, source: .savedGifs, forceDark: controller.forceDark, dismissed: nil)
-                                        controller.push(premiumController)
+                                        controller.pushController(premiumController)
                                         return true
                                     }
                                     return false
@@ -1633,6 +1640,32 @@ public class StickerPickerScreen: ViewController {
                 self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
             }
         }
+        
+        func presentLinkPremiumSuggestion() {
+            guard let controller = self.controller else {
+                return
+            }
+            let tooltipController = UndoOverlayController(
+                presentationData: self.presentationData,
+                content: .linkCopied(
+                    text: self.presentationData.strings.Story_Editor_TooltipLinkPremium
+                ),
+                elevatedLayout: true,
+                position: .top,
+                animateInAsReplacement: false, action: { [weak controller] action in
+                    if case .info = action, let controller {
+                        let _ = controller.completion(nil)
+                        controller.dismiss(animated: true)
+                        
+                        let premiumController = controller.context.sharedContext.makePremiumIntroController(context: controller.context, source: .storiesLinks, forceDark: controller.forceDark, dismissed: nil)
+                        controller.pushController(premiumController)
+                        return true
+                    }
+                    return false
+                }
+            )
+            controller.present(tooltipController, in: .window(.root))
+        }
                 
         func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: Transition) {
             guard let controller = self.controller else {
@@ -2440,7 +2473,7 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
                 
                 let remainingWidth = context.availableSize.width - itemsWidth - context.component.padding * 2.0
                 let spacing = remainingWidth / CGFloat(rowItemsCount - 1)
-                if spacing < context.component.minSpacing {
+                if spacing < context.component.minSpacing || currentGroup.count == 2 {
                     groups.append(currentGroup)
                     currentGroup = []
                 }
@@ -2493,19 +2526,29 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
     }
 }
 
-
 final class StoryStickersContentView: UIView, EmojiCustomContentView {
     let tintContainerView = UIView()
 
     private let container = ComponentView<Empty>()
         
+    private let isPremium: Bool
+    
     var locationAction: () -> Void = {}
     var audioAction: () -> Void = {}
     var reactionAction: () -> Void = {}
     var linkAction: () -> Void = {}
     
+    init(isPremium: Bool) {
+        self.isPremium = isPremium
+        
+        super.init(frame: .zero)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     func update(theme: PresentationTheme, strings: PresentationStrings, useOpaqueTheme: Bool, availableSize: CGSize, transition: Transition) -> CGSize {
-        //TODO:localize
         let padding: CGFloat = 22.0
         let size = self.container.update(
             transition: transition,
@@ -2521,7 +2564,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                         component: AnyComponent(
                                             InteractiveStickerButtonContent(
                                                 theme: theme,
-                                                title: "LINK",
+                                                title: strings.MediaEditor_AddLink,
                                                 iconName: "Premium/Link",
                                                 useOpaqueTheme: useOpaqueTheme,
                                                 tintContainerView: self.tintContainerView

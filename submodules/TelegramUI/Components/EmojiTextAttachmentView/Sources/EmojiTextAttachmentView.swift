@@ -433,9 +433,11 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 self.updateTopicInfo(topicInfo: (id, info))
             case let .nameColors(colors):
                 self.updateNameColors(colors: colors)
-            case .stars:
-                self.updateStars()
-                self.updateTintColor()
+            case let .stars(tinted):
+                self.updateStars(tinted: tinted)
+                if tinted {
+                    self.updateTintColor()
+                }
             }
         } else if let file = file {
             self.updateFile(file: file, attemptSynchronousLoad: attemptSynchronousLoad)
@@ -617,8 +619,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         self.contents = image?.cgImage
     }
     
-    private func updateStars() {
-        self.contents = starImage?.cgImage
+    private func updateStars(tinted: Bool) {
+        self.contents = tinted ? tintedStarImage?.cgImage : starImage?.cgImage
     }
     
     private func updateFile(file: TelegramMediaFile, attemptSynchronousLoad: Bool) {
@@ -881,12 +883,23 @@ public final class CustomEmojiContainerView: UIView {
     }
 }
 
-private let starImage: UIImage? = {
+private let tintedStarImage: UIImage? = {
     generateImage(CGSize(width: 32.0, height: 32.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: .zero, size: size))
         
         if let image = generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: .white), let cgImage = image.cgImage {
             context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 4.0, dy: 4.0), byTiling: false)
+        }
+    })?.withRenderingMode(.alwaysTemplate)
+}()
+
+
+private let starImage: UIImage? = {
+    generateImage(CGSize(width: 32.0, height: 32.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        
+        if let image = UIImage(bundleImageName: "Premium/Stars/StarLarge"), let cgImage = image.cgImage {
+            context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 2.0, dy: 2.0), byTiling: false)
         }
     })?.withRenderingMode(.alwaysTemplate)
 }()

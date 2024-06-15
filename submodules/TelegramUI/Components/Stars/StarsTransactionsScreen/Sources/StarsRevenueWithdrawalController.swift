@@ -1,20 +1,15 @@
 import Foundation
-import UIKit
-import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
-import ActivityIndicator
-import TextFormat
-import AccountContext
-import AlertUI
 import PresentationDataUtils
+import AccountContext
 import PasswordSetupUI
 import Markdown
-import PeerInfoUI
+import OwnershipTransferController
 
-private func commitOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, present: @escaping (ViewController, Any?) -> Void, commit: @escaping (String) -> Signal<MessageActionCallbackResult, MessageActionCallbackError>, completion: @escaping (MessageActionCallbackResult) -> Void) -> ViewController {
+func confirmStarsRevenueWithdrawalController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, amount: Int64, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (String) -> Void) -> ViewController {
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: (() -> Void)?
@@ -22,9 +17,9 @@ private func commitOwnershipTransferController(context: AccountContext, updatedP
     
     let disposable = MetaDisposable()
     
-    let contentNode = ChannelOwnershipTransferAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, title: presentationData.strings.OwnershipTransfer_EnterPassword, text: presentationData.strings.OwnershipTransfer_EnterPasswordText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+    let contentNode = ChannelOwnershipTransferAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, title: presentationData.strings.Monetization_Withdraw_EnterPassword_Title, text: presentationData.strings.Monetization_Withdraw_EnterPassword_Text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?()
-    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.OwnershipTransfer_Transfer, action: {
+    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Monetization_Withdraw_EnterPassword_Done, action: {
         proceedImpl?()
     })])
     
@@ -51,9 +46,10 @@ private func commitOwnershipTransferController(context: AccountContext, updatedP
         }
         contentNode.updateIsChecking(true)
         
-        disposable.set((commit(contentNode.password) |> deliverOnMainQueue).start(next: { result in
-            completion(result)
+        let signal = context.engine.peers.requestStarsRevenueWithdrawalUrl(peerId: peerId, amount: amount, password: contentNode.password)
+        disposable.set((signal |> deliverOnMainQueue).start(next: { url in
             dismissImpl?()
+            completion(url)
         }, error: { [weak contentNode] error in
             var errorTextAndActions: (String, [TextAlertAction])?
             switch error {
@@ -61,8 +57,6 @@ private func commitOwnershipTransferController(context: AccountContext, updatedP
                     contentNode?.animateError()
                 case .limitExceeded:
                     errorTextAndActions = (presentationData.strings.TwoStepAuth_FloodError, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                case .userBlocked, .restricted:
-                    errorTextAndActions = (presentationData.strings.Group_OwnershipTransfer_ErrorPrivacyRestricted, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                 default:
                     errorTextAndActions = (presentationData.strings.Login_UnknownError, [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
             }
@@ -79,20 +73,21 @@ private func commitOwnershipTransferController(context: AccountContext, updatedP
 }
 
 
-func ownershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, initialError: MessageActionCallbackError, present: @escaping (ViewController, Any?) -> Void, commit: @escaping (String) -> Signal<MessageActionCallbackResult, MessageActionCallbackError>, completion: @escaping (MessageActionCallbackResult) -> Void) -> ViewController {
+func starsRevenueWithdrawalController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, amount: Int64, initialError: RequestStarsRevenueWithdrawalError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (String) -> Void) -> ViewController {
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationData: presentationData)
     
     var title: NSAttributedString? = NSAttributedString(string: presentationData.strings.OwnershipTransfer_SecurityCheck, font: Font.semibold(presentationData.listsFontSize.itemListBaseFontSize), textColor: theme.primaryColor, paragraphAlignment: .center)
     
-    var text = presentationData.strings.OwnershipTransfer_SecurityRequirements
-    var actions: [TextAlertAction] = []
+    var text = presentationData.strings.Monetization_Withdraw_SecurityRequirements
     let textFontSize = presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0
+    
+    var actions: [TextAlertAction] = []
     switch initialError {
         case .requestPassword:
-            return commitOwnershipTransferController(context: context, updatedPresentationData: updatedPresentationData, present: present, commit: commit, completion: completion)
+        return confirmStarsRevenueWithdrawalController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, amount: amount, present: present, completion: completion)
         case .twoStepAuthTooFresh, .authSessionTooFresh:
-            text = text + presentationData.strings.OwnershipTransfer_ComeBackLater
+            text = text + presentationData.strings.Monetization_Withdraw_ComeBackLater
             actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
         case .twoStepAuthMissing:
             actions = [TextAlertAction(type: .genericAction, title: presentationData.strings.OwnershipTransfer_SetupTwoStepAuth, action: {
@@ -103,10 +98,6 @@ func ownershipTransferController(context: AccountContext, updatedPresentationDat
                 })
                 present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {})]
-        case .userBlocked, .restricted:
-            title = nil
-            text = presentationData.strings.Group_OwnershipTransfer_ErrorPrivacyRestricted
-            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]
         default:
             title = nil
             text = presentationData.strings.Login_UnknownError

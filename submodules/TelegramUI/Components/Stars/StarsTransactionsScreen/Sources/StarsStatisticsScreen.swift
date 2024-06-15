@@ -17,23 +17,29 @@ import ListSectionComponent
 import BundleIconComponent
 import TextFormat
 import UndoUI
+import ListItemComponentAdaptor
+import StatisticsUI
+import ItemListUI
 
 final class StarsStatisticsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let starsContext: StarsContext
+    let peerId: EnginePeer.Id
+    let revenueContext: StarsRevenueStatsContext
     let openTransaction: (StarsContext.State.Transaction) -> Void
     let buy: () -> Void
     
     init(
         context: AccountContext,
-        starsContext: StarsContext,
+        peerId: EnginePeer.Id,
+        revenueContext: StarsRevenueStatsContext,
         openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
         buy: @escaping () -> Void
     ) {
         self.context = context
-        self.starsContext = starsContext
+        self.peerId = peerId
+        self.revenueContext = revenueContext
         self.openTransaction = openTransaction
         self.buy = buy
     }
@@ -42,7 +48,10 @@ final class StarsStatisticsScreenComponent: Component {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.starsContext !== rhs.starsContext {
+        if lhs.peerId != rhs.peerId {
+            return false
+        }
+        if lhs.revenueContext !== rhs.revenueContext {
             return false
         }
         return true
@@ -103,7 +112,7 @@ final class StarsStatisticsScreenComponent: Component {
         private var ignoreScrolling: Bool = false
         
         private var stateDisposable: Disposable?
-        private var starsState: StarsContext.State?
+        private var starsState: StarsRevenueStats?
         
         private var previousBalance: Int64?
         
@@ -236,22 +245,22 @@ final class StarsStatisticsScreenComponent: Component {
             
             var balanceUpdated = false
             if let starsState = self.starsState {
-                if let previousBalance, starsState.balance != previousBalance {
+                if let previousBalance = self.previousBalance, starsState.balances.availableBalance != previousBalance {
                     balanceUpdated = true
                 }
-                self.previousBalance = starsState.balance
+                self.previousBalance = starsState.balances.availableBalance
             }
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
             if self.stateDisposable == nil {
-                self.stateDisposable = (component.starsContext.state
+                self.stateDisposable = (component.revenueContext.state
                 |> deliverOnMainQueue).start(next: { [weak self] state in
                     guard let self else {
                         return
                     }
-                    self.starsState = state
+                    self.starsState = state.stats
                     
                     if !self.isUpdating {
                         self.state?.updated()
@@ -291,12 +300,12 @@ final class StarsStatisticsScreenComponent: Component {
              
             contentHeight += environment.navigationHeight
             contentHeight += 31.0
-            
+                        
             let titleSize = self.titleView.update(
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Stars Balance", font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                        text: .plain(NSAttributedString(string: environment.strings.Stars_BotRevenue_Title, font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                         horizontalAlignment: .center,
                         truncationType: .end,
                         maximumNumberOfLines: 1
@@ -314,39 +323,71 @@ final class StarsStatisticsScreenComponent: Component {
                 transition.setBounds(view: titleView, bounds: CGRect(origin: .zero, size: titleSize))
             }
             
+            if let revenueGraph = starsState?.revenueGraph {
+                let chartSize = self.chartView.update(
+                    transition: .immediate,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: environment.strings.Stars_BotRevenue_Revenue_Title.uppercased(),
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        )),
+                        footer: nil,
+                        items: [
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
+                                itemGenerator: StatsGraphItem(presentationData: ItemListPresentationData(presentationData), graph: revenueGraph, type: .currency, conversionRate: starsState?.usdRate ?? 0.0, sectionId: 0, style: .blocks),
+                                params: ListViewItemLayoutParams(width: availableSize.width - sideInsets, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
+                            ))),
+                        ],
+                        displaySeparators: false
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInsets, height: availableSize.height)
+                )
+                let chartFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - chartSize.width) / 2.0), y: contentHeight), size: chartSize)
+                if let chartView = self.chartView.view {
+                    if chartView.superview == nil {
+                        self.scrollView.addSubview(chartView)
+                    }
+                    transition.setFrame(view: chartView, frame: chartFrame)
+                }
+                contentHeight += chartSize.height
+                contentHeight += 44.0
+            }
+            
             let proceedsSize = self.proceedsView.update(
                 transition: .immediate,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Proceeds Overview".uppercased(),
+                            string: environment.strings.Stars_BotRevenue_Proceeds_Title.uppercased(),
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
                         maximumNumberOfLines: 0
                     )),
                     footer: nil,
-                    items: [AnyComponentWithIdentity(id: 0, component: AnyComponent(
-                        VStack([
-                            AnyComponentWithIdentity(id: 0, component: AnyComponent(HStack([
-                                AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(name: "Premium/Stars/StarMedium", tintColor: nil))),
-                                AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: presentationStringsFormattedNumber(Int32(self.starsState?.balance ?? 0), environment.dateTimeFormat.groupingSeparator), font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))))),
-                                AnyComponentWithIdentity(id: 2, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: formatUsdValue(self.starsState?.balance ?? 0, rate: 0.2), font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor))))),
-                            ], spacing: 3.0))),
-                            AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Available Balance", font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor)))))
-                        ], alignment: .left, spacing: 2.0)
-                    )),
-                    AnyComponentWithIdentity(id: 1, component: AnyComponent(
-                        VStack([
-                            AnyComponentWithIdentity(id: 0, component: AnyComponent(HStack([
-                                AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(name: "Premium/Stars/StarMedium", tintColor: nil))),
-                                AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: presentationStringsFormattedNumber(Int32(self.starsState?.balance ?? 0) * 3, environment.dateTimeFormat.groupingSeparator), font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))))),
-                                AnyComponentWithIdentity(id: 2, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: formatUsdValue((self.starsState?.balance ?? 0) * 3, rate: 0.2), font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor))))),
-                            ], spacing: 3.0))),
-                            AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Total Lifetime Proceeds", font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor)))))
-                        ], alignment: .left, spacing: 2.0)
-                    ))],
+                    items: [
+                        AnyComponentWithIdentity(id: 0, component: AnyComponent(StarsOverviewItemComponent(
+                            theme: environment.theme,
+                            dateTimeFormat: environment.dateTimeFormat,
+                            title: environment.strings.Stars_BotRevenue_Proceeds_Available,
+                            value: starsState?.balances.availableBalance ?? 0,
+                            rate: starsState?.usdRate ?? 0.0
+                        ))),
+                        AnyComponentWithIdentity(id: 1, component: AnyComponent(StarsOverviewItemComponent(
+                            theme: environment.theme,
+                            dateTimeFormat: environment.dateTimeFormat,
+                            title: environment.strings.Stars_BotRevenue_Proceeds_Total,
+                            value: starsState?.balances.overallRevenue ?? 0,
+                            rate: starsState?.usdRate ?? 0.0
+                        )))
+                    ],
                     displaySeparators: false
                 )),
                 environment: {},
@@ -359,7 +400,6 @@ final class StarsStatisticsScreenComponent: Component {
                 }
                 transition.setFrame(view: proceedsView, frame: proceedsFrame)
             }
-            
             contentHeight += proceedsSize.height
             contentHeight += 44.0
             
@@ -369,7 +409,7 @@ final class StarsStatisticsScreenComponent: Component {
                 return (TelegramTextAttributes.URL, contents)
             })
             
-            let balanceInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("You can withdraw Stars using Fragment, or use Stars to advertise your bot. [Learn More >]()", attributes: termsMarkdownAttributes, textAlignment: .natural
+            let balanceInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.Stars_BotRevenue_Withdraw_Info, attributes: termsMarkdownAttributes, textAlignment: .natural
             ))
             if self.cachedChevronImage == nil || self.cachedChevronImage?.1 !== environment.theme {
                 self.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: environment.theme.list.itemAccentColor)!, environment.theme)
@@ -384,7 +424,7 @@ final class StarsStatisticsScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Available Balance".uppercased(),
+                            string: environment.strings.Stars_BotRevenue_Withdraw_Balance.uppercased(),
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -399,9 +439,9 @@ final class StarsStatisticsScreenComponent: Component {
                             theme: environment.theme,
                             strings: environment.strings,
                             dateTimeFormat: environment.dateTimeFormat,
-                            count: self.starsState?.balance ?? 0,
+                            count: self.starsState?.balances.availableBalance ?? 0,
                             rate: 0.2,
-                            actionTitle: "Withdraw via Fragment",
+                            actionTitle: environment.strings.Stars_BotRevenue_Withdraw_Withdraw,
                             actionAvailable: true,
                             buy: { [weak self] in
                                 guard let self, let component = self.component else {
@@ -426,28 +466,31 @@ final class StarsStatisticsScreenComponent: Component {
             contentHeight += balanceSize.height
             contentHeight += 44.0
             
-            let initialTransactions = self.starsState?.transactions ?? []
             var panelItems: [StarsTransactionsPanelContainerComponent.Item] = []
-            if !initialTransactions.isEmpty {
-                let allTransactionsContext: StarsTransactionsContext
-                if let current = self.allTransactionsContext {
-                    allTransactionsContext = current
-                } else {
-                    allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsContext(component.starsContext), mode: .all)
+            let allTransactionsContext: StarsTransactionsContext
+            if let current = self.allTransactionsContext {
+                allTransactionsContext = current
+            } else {
+                allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .peer(component.peerId), mode: .all)
+                component.revenueContext.setUpdated { [weak self] in
+                    if let self, let allTransactionsContext = self.allTransactionsContext {
+                        allTransactionsContext.reload()
+                    }
                 }
-                                
-                panelItems.append(StarsTransactionsPanelContainerComponent.Item(
-                    id: "all",
-                    title: environment.strings.Stars_Intro_AllTransactions,
-                    panel: AnyComponent(StarsTransactionsListPanelComponent(
-                        context: component.context,
-                        transactionsContext: allTransactionsContext,
-                        action: { transaction in
-                            component.openTransaction(transaction)
-                        }
-                    ))
-                ))
+                self.allTransactionsContext = allTransactionsContext
             }
+                            
+            panelItems.append(StarsTransactionsPanelContainerComponent.Item(
+                id: "all",
+                title: environment.strings.Stars_Intro_AllTransactions,
+                panel: AnyComponent(StarsTransactionsListPanelComponent(
+                    context: component.context,
+                    transactionsContext: allTransactionsContext,
+                    action: { transaction in
+                        component.openTransaction(transaction)
+                    }
+                ))
+            ))
             
             var panelTransition = transition
             if balanceUpdated {
@@ -528,17 +571,20 @@ final class StarsStatisticsScreenComponent: Component {
 
 public final class StarsStatisticsScreen: ViewControllerComponentContainer {
     private let context: AccountContext
-    private let starsContext: StarsContext
+    private let peerId: EnginePeer.Id
+    private let revenueContext: StarsRevenueStatsContext
         
-    public init(context: AccountContext, starsContext: StarsContext, forceDark: Bool = false) {
+    public init(context: AccountContext, peerId: EnginePeer.Id, revenueContext: StarsRevenueStatsContext) {
         self.context = context
-        self.starsContext = starsContext
+        self.peerId = peerId
+        self.revenueContext = revenueContext
         
         var withdrawImpl: (() -> Void)?
         var openTransactionImpl: ((StarsContext.State.Transaction) -> Void)?
         super.init(context: context, component: StarsStatisticsScreenComponent(
             context: context,
-            starsContext: starsContext,
+            peerId: peerId,
+            revenueContext: revenueContext,
             openTransaction: { transaction in
                 openTransactionImpl?(transaction)
             },
@@ -558,12 +604,47 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
         }
         
         withdrawImpl = { [weak self] in
-            guard let _ = self else {
+            guard let self else {
                 return
             }
+            
+            let _ = (context.engine.peers.checkStarsRevenueWithdrawalAvailability()
+            |> deliverOnMainQueue).start(error: { [weak self] error in
+                guard let self else {
+                    return
+                }
+                switch error {
+                case .requestPassword:
+                    let _ = (revenueContext.state
+                    |> take(1)
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] state in
+                        guard let self, let stats = state.stats else {
+                            return
+                        }
+                        let controller = StarsWithdrawScreen(context: context, mode: .withdraw(stats), completion: { [weak self] amount in
+                            guard let self else {
+                                return
+                            }
+                            let controller = confirmStarsRevenueWithdrawalController(context: context, peerId: peerId, amount: amount, present: { [weak self] c, a in
+                                self?.present(c, in: .window(.root))
+                            }, completion: { url in
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                            })
+                            self.present(controller, in: .window(.root))
+                        })
+                        self.push(controller)
+                    })
+                default:
+                    let controller = starsRevenueWithdrawalController(context: context, peerId: peerId, amount: 0, initialError: error, present: { [weak self] c, a in
+                        self?.present(c, in: .window(.root))
+                    }, completion: { _ in
+                        
+                    })
+                    self.present(controller, in: .window(.root))
+                }
+            })
         }
-        
-        self.starsContext.load(force: false)
     }
     
     required public init(coder aDecoder: NSCoder) {

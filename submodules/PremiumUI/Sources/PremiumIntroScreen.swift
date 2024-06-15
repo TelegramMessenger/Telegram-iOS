@@ -242,6 +242,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .storiesLinks:
+            if case .storiesLinks = rhs {
+                return true
+            } else {
+                return false
+            }
         case let .channelBoost(peerId):
             if case .channelBoost(peerId) = rhs {
                 return true
@@ -326,6 +332,7 @@ public enum PremiumSource: Equatable {
     case storiesFormatting
     case storiesExpirationDurations
     case storiesSuggestedReactions
+    case storiesLinks
     case storiesHigherQuality
     case channelBoost(EnginePeer.Id)
     case nameColor
@@ -406,6 +413,8 @@ public enum PremiumSource: Equatable {
             return "stories__expiration_durations"
         case .storiesSuggestedReactions:
             return "stories__suggested_reactions"
+        case .storiesLinks:
+            return "stories__links"
         case .storiesHigherQuality:
             return "stories__quality"
         case let .channelBoost(peerId):

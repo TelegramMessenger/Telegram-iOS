@@ -6,6 +6,7 @@ import MtProtoKit
 
 public struct StarsRevenueStats: Equatable {
     public struct Balances: Equatable {
+        public let canWithdraw: Bool
         public let currentBalance: Int64
         public let availableBalance: Int64
         public let overallRevenue: Int64
@@ -58,8 +59,7 @@ extension StarsRevenueStats.Balances {
     init(apiStarsRevenueStatus: Api.StarsRevenueStatus) {
         switch apiStarsRevenueStatus {
         case let .starsRevenueStatus(flags, currentBalance, availableBalance, overallRevenue):
-            let _ = flags
-            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue)
+            self.init(canWithdraw: (flags & (1 << 0)) != 0, currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue)
         }
     }
 }
@@ -109,6 +109,7 @@ private final class StarsRevenueStatsContextImpl {
     }
     
     private let disposable = MetaDisposable()
+    private let updateDisposable = MetaDisposable()
     
     init(account: Account, peerId: PeerId) {
         assert(Queue.mainQueue().isCurrent())
@@ -124,6 +125,17 @@ private final class StarsRevenueStatsContextImpl {
     deinit {
         assert(Queue.mainQueue().isCurrent())
         self.disposable.dispose()
+        self.updateDisposable.dispose()
+    }
+    
+    public func setUpdated(_ f: @escaping () -> Void) {
+        let peerId = self.peerId
+        self.updateDisposable.set((account.stateManager.updatedStarsRevenueStatus()
+        |> deliverOnMainQueue).startStrict(next: { updates in
+            if let _ = updates[peerId] {
+                f()
+            }
+        }))
     }
     
     fileprivate func load() {
@@ -185,6 +197,12 @@ public final class StarsRevenueStatsContext {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
             return StarsRevenueStatsContextImpl(account: account, peerId: peerId)
         })
+    }
+    
+    public func setUpdated(_ f: @escaping () -> Void) {
+        self.impl.with { impl in
+            impl.setUpdated(f)
+        }
     }
     
     public func reload() {

@@ -108,6 +108,7 @@ import GroupStickerPackSetupController
 import PeerNameColorItem
 import PeerSelectionScreen
 import UIKitRuntimeUtils
+import OldChannelsController
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -1733,9 +1734,8 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     interaction.editingOpenPublicLinkSetup()
                 }))
                 
-                if "".isEmpty {
-                    let balance: Int64 = 2275
-                    items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStars, label: .text(presentationData.strings.PeerInfo_Bot_Balance_Stars(Int32(balance))), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.stars, action: {
+                if let starsRevenueStats = data.starsRevenueStatsState {
+                    items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStars, label: .text(presentationData.strings.PeerInfo_Bot_Balance_Stars(Int32(starsRevenueStats.balances.currentBalance))), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.stars, action: {
                         interaction.editingOpenStars()
                     }))
                 }
@@ -8344,10 +8344,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func editingOpenStars() {
-        guard let starsContext = self.context.starsContext else {
+        guard let revenueContext = self.data?.starsRevenueStatsContext else {
             return
         }
-        self.controller?.push(self.context.sharedContext.makeStarsStatisticsScreen(context: self.context, starsContext: starsContext))
+        self.controller?.push(self.context.sharedContext.makeStarsStatisticsScreen(context: self.context, peerId: self.peerId, revenueContext: revenueContext))
     }
     
     private func editingOpenReactionsSetup() {

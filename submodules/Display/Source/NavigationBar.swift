@@ -64,17 +64,19 @@ public final class NavigationBarTheme {
     public let disabledButtonColor: UIColor
     public let primaryTextColor: UIColor
     public let backgroundColor: UIColor
+    public let opaqueBackgroundColor: UIColor
     public let enableBackgroundBlur: Bool
     public let separatorColor: UIColor
     public let badgeBackgroundColor: UIColor
     public let badgeStrokeColor: UIColor
     public let badgeTextColor: UIColor
     
-    public init(buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, backgroundColor: UIColor, enableBackgroundBlur: Bool, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor) {
+    public init(buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, backgroundColor: UIColor, opaqueBackgroundColor: UIColor? = nil, enableBackgroundBlur: Bool, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor) {
         self.buttonColor = buttonColor
         self.disabledButtonColor = disabledButtonColor
         self.primaryTextColor = primaryTextColor
         self.backgroundColor = backgroundColor
+        self.opaqueBackgroundColor = opaqueBackgroundColor ?? backgroundColor
         self.enableBackgroundBlur = enableBackgroundBlur
         self.separatorColor = separatorColor
         self.badgeBackgroundColor = badgeBackgroundColor
@@ -83,11 +85,11 @@ public final class NavigationBarTheme {
     }
     
     public func withUpdatedBackgroundColor(_ color: UIColor) -> NavigationBarTheme {
-        return NavigationBarTheme(buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: color, enableBackgroundBlur: false, separatorColor: self.separatorColor, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor)
+        return NavigationBarTheme(buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: color, opaqueBackgroundColor: self.opaqueBackgroundColor, enableBackgroundBlur: false, separatorColor: self.separatorColor, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor)
     }
     
     public func withUpdatedSeparatorColor(_ color: UIColor) -> NavigationBarTheme {
-        return NavigationBarTheme(buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: self.backgroundColor, enableBackgroundBlur: self.enableBackgroundBlur, separatorColor: color, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor)
+        return NavigationBarTheme(buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: self.backgroundColor, opaqueBackgroundColor: self.opaqueBackgroundColor, enableBackgroundBlur: self.enableBackgroundBlur, separatorColor: color, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor)
     }
 }
 

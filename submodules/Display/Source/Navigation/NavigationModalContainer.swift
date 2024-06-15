@@ -4,13 +4,35 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import UIKitRuntimeUtils
 
+private let minimizedMask: UIImage? = {
+    return generateImage(CGSize(width: 22.0, height: 24.0), rotatedContext: { size, context in
+        context.setFillColor(UIColor.black.cgColor)
+        context.fill(CGRect(origin: .zero, size: size))
+        
+        context.setBlendMode(.clear)
+        context.setFillColor(UIColor.clear.cgColor)
+        
+        let path = UIBezierPath(roundedRect: CGRect(x: 0, y: -10, width: 22, height: 20), cornerRadius: 10)
+        context.addPath(path.cgPath)
+        context.fillPath()
+    })?.stretchableImage(withLeftCapWidth: 11, topCapHeight: 12)
+}()
+
 final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     private var theme: NavigationControllerTheme
     let isFlat: Bool
+    var isMinimized: Bool
+    var appliedIsMinimized: Bool = false
     
+    private let minimizedFrameNode: ASImageNode
     private let dim: ASDisplayNode
     private let scrollNode: ASScrollNode
     let container: NavigationContainer
+    
+    private let minimizedBackgroundNode: ASDisplayNode
+    private let minimizedTitleNode: ImmediateTextNode
+    private let minimizedCloseButton: HighlightableButtonNode
+    private var minimizedTitleDisposable: Disposable?
     
     private var panRecognizer: InteractiveTransitionGestureRecognizer?
     
@@ -19,6 +41,9 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
     var isReadyUpdated: (() -> Void)?
     var updateDismissProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     var interactivelyDismissed: ((Bool) -> Void)?
+    
+    var minimizedRequestDismiss: ((Bool) -> Void)?
+    var minimizedRequestMaximize: (() -> Void)?
     
     private var isUpdatingState = false
     private var ignoreScrolling = false
@@ -42,9 +67,14 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         }
     }
     
-    init(theme: NavigationControllerTheme, isFlat: Bool, controllerRemoved: @escaping (ViewController) -> Void) {
+    init(theme: NavigationControllerTheme, isFlat: Bool, isMinimized: Bool, controllerRemoved: @escaping (ViewController) -> Void) {
         self.theme = theme
         self.isFlat = isFlat
+        self.isMinimized = isMinimized
+        
+        self.minimizedFrameNode = ASImageNode()
+        self.minimizedFrameNode.contentMode = .scaleToFill
+        self.minimizedFrameNode.image = minimizedMask
         
         self.dim = ASDisplayNode()
         self.dim.alpha = 0.0
@@ -54,11 +84,27 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         self.container = NavigationContainer(isFlat: false, controllerRemoved: controllerRemoved)
         self.container.clipsToBounds = true
         
+        self.minimizedBackgroundNode = ASDisplayNode()
+        self.minimizedBackgroundNode.clipsToBounds = true
+        self.minimizedBackgroundNode.backgroundColor = theme.navigationBar.opaqueBackgroundColor
+                
+        self.minimizedTitleNode = ImmediateTextNode()
+        
+        self.minimizedCloseButton = HighlightableButtonNode()
+        self.minimizedCloseButton.setImage(UIImage(bundleImageName: "Instant View/Close"), for: .normal)
+        
         super.init()
         
+        self.addSubnode(self.minimizedFrameNode)
         self.addSubnode(self.dim)
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.container)
+        
+        self.addSubnode(self.minimizedBackgroundNode)
+        self.minimizedBackgroundNode.addSubnode(self.minimizedTitleNode)
+        self.minimizedBackgroundNode.addSubnode(self.minimizedCloseButton)
+        
+        self.minimizedCloseButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: .touchUpInside)
         
         self.isReady = self.container.isReady
         self.container.isReadyUpdated = { [weak self] in
@@ -74,6 +120,11 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         }
         
         applySmoothRoundedCorners(self.container.layer)
+        applySmoothRoundedCorners(self.minimizedBackgroundNode.layer)
+    }
+    
+    deinit {
+        self.minimizedTitleDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -116,26 +167,34 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
             self.view.addGestureRecognizer(panRecognizer)
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
         }
+        
+        self.minimizedBackgroundNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.maximizeTapGesture(_:))))
     }
     
     public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        if gestureRecognizer == self.panRecognizer, let gestureRecognizer = self.panRecognizer, gestureRecognizer.numberOfTouches == 0 {
-            let translation = gestureRecognizer.velocity(in: gestureRecognizer.view)
-            if abs(translation.y) > 4.0 && abs(translation.y) > abs(translation.x) * 2.5 {
-                return false
+        if gestureRecognizer.view === self.minimizedBackgroundNode.view {
+            return self.isMinimized
+        } else if !self.isMinimized {
+            if gestureRecognizer == self.panRecognizer, let gestureRecognizer = self.panRecognizer, gestureRecognizer.numberOfTouches == 0 {
+                let translation = gestureRecognizer.velocity(in: gestureRecognizer.view)
+                if abs(translation.y) > 4.0 && abs(translation.y) > abs(translation.x) * 2.5 {
+                    return false
+                }
+                if translation.x < 4.0 {
+                    return false
+                }
+                if self.isDismissed {
+                    return false
+                }
+                return true
+            } else {
+                return true
             }
-            if translation.x < 4.0 {
-                return false
-            }
-            if self.isDismissed {
-                return false
-            }
-            return true
         } else {
             return true
         }
     }
-    
+        
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return false
     }
@@ -325,6 +384,8 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         
         self.validLayout = layout
         
+        let lastControllerUpdated = self.container.controllers.last !== controllers.last
+        
         var isStandaloneModal = false
         if let controller = controllers.first, case .standaloneModal = controller.navigationPresentation {
             isStandaloneModal = true
@@ -357,7 +418,7 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         if layout.metrics.widthClass == .compact || self.isFlat {
             self.panRecognizer?.isEnabled = true
             self.container.clipsToBounds = true
-            if self.isFlat {
+            if self.isFlat || self.isMinimized {
                 self.dim.backgroundColor = .clear
             } else {
                 self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
@@ -366,6 +427,7 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
                 self.container.cornerRadius = 0.0
             } else {
                 self.container.cornerRadius = 10.0
+                self.minimizedBackgroundNode.cornerRadius = self.container.cornerRadius
             }
             
             if #available(iOS 11.0, *) {
@@ -374,6 +436,8 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
                 } else {
                     self.container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
                 }
+                
+                self.minimizedBackgroundNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
             }
             
             var topInset: CGFloat
@@ -386,10 +450,18 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
                 containerFrame = unscaledFrame
             } else {
                 topInset = 10.0
-                if self.isFlat {
-                    topInset = 0.0
-                } else if let statusBarHeight = layout.statusBarHeight {
-                    topInset += statusBarHeight
+                
+                let height: CGFloat
+                if self.isMinimized {
+                    height = layout.size.height - topInset
+                    topInset = layout.size.height - 78.0
+                } else {
+                    if self.isFlat {
+                        topInset = 0.0
+                    } else if let statusBarHeight = layout.statusBarHeight {
+                        topInset += statusBarHeight
+                    }
+                    height = layout.size.height - topInset
                 }
                 
                 let effectiveStatusBarHeight: CGFloat?
@@ -399,7 +471,7 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
                     effectiveStatusBarHeight = nil
                 }
                 
-                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height - topInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.safeInsets.bottom, right: layout.safeInsets.right), additionalInsets: layout.additionalInsets, statusBarHeight: effectiveStatusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
+                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width, height: height), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.safeInsets.bottom, right: layout.safeInsets.right), additionalInsets: layout.additionalInsets, statusBarHeight: effectiveStatusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
                 let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset - coveredByModalTransition * 10.0), size: containerLayout.size)
                 let maxScale: CGFloat = (containerLayout.size.width - 16.0 * 2.0) / containerLayout.size.width
                 containerScale = 1.0 * (1.0 - coveredByModalTransition) + maxScale * coveredByModalTransition
@@ -407,6 +479,59 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
                 let scaledTopInset: CGFloat = topInset * (1.0 - coveredByModalTransition) + maxScaledTopInset * coveredByModalTransition
                 containerFrame = unscaledFrame.offsetBy(dx: 0.0, dy: scaledTopInset - (unscaledFrame.midY - containerScale * unscaledFrame.height / 2.0))
             }
+            
+            for controller in controllers {
+                controller.isMinimized = self.isMinimized
+            }
+            
+            if self.isMinimized != self.appliedIsMinimized {
+                self.appliedIsMinimized = self.isMinimized
+            
+                if self.isMinimized {
+                    let modalTopEdgeOffset = (controllers.last?.modalTopEdgeOffset ?? 0.0) + 96.0
+                    if transition.isAnimated {
+                        self.minimizedBackgroundNode.position = self.minimizedBackgroundNode.position.offsetBy(dx: 0.0, dy: modalTopEdgeOffset)
+                    }
+                }
+            }
+            
+            transition.updateFrame(node: self.minimizedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: containerFrame.minY), size: CGSize(width: layout.size.width, height: 243.0)))
+            transition.updateAlpha(node: self.minimizedBackgroundNode, alpha: self.isMinimized ? 1.0 : 0.0)
+            self.minimizedBackgroundNode.cornerRadius = 10.0
+            self.minimizedBackgroundNode.isUserInteractionEnabled = self.isMinimized
+            
+            let titleSideInset: CGFloat = 56.0
+            if self.isMinimized, let controller = controllers.last {
+                if lastControllerUpdated || self.minimizedTitleDisposable == nil {
+                    var isFirstUpdate = true
+                    self.minimizedTitleDisposable = (controller.titleSignal
+                    |> deliverOnMainQueue).start(next: { [weak self] title in
+                        guard let self, let layout = self.validLayout else {
+                            return
+                        }
+                        
+                        self.minimizedTitleNode.attributedText = NSAttributedString(string: title ?? "", font: Font.bold(17.0), textColor: self.theme.navigationBar.primaryTextColor)
+                        
+                        if !isFirstUpdate {
+                            let titleSize = self.minimizedTitleNode.updateLayout(CGSize(width: layout.size.width - titleSideInset * 2.0, height: 56.0))
+                            self.minimizedTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - titleSize.width) / 2.0), y: 18.0), size: titleSize)
+                        } else {
+                            isFirstUpdate = false
+                        }
+                    })
+                }
+            } else {
+                self.minimizedTitleDisposable?.dispose()
+                self.minimizedTitleDisposable = nil
+            }
+         
+            let titleSize = self.minimizedTitleNode.updateLayout(CGSize(width: layout.size.width - titleSideInset * 2.0, height: 56.0))
+            transition.updateFrame(node: self.minimizedTitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - titleSize.width) / 2.0), y: 18.0), size: titleSize))
+            
+            transition.updateFrame(node: self.minimizedCloseButton, frame: CGRect(origin: CGPoint(x: 0.0, y: 3.0), size: CGSize(width: 46.0, height: 52.0)))
+                        
+            transition.updateAlpha(node: self.minimizedFrameNode, alpha: self.isMinimized ? 1.0 : 0.0)
+            transition.updateFrame(node: self.minimizedFrameNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 81.0 - 10.0), size: CGSize(width: layout.size.width, height: 24.0 + 81.0)))
         } else {
             self.panRecognizer?.isEnabled = false
             if self.isFlat {
@@ -485,7 +610,17 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
                 let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
                 let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
                 alphaTransition.updateAlpha(node: self.dim, alpha: 0.0, beginWithCurrentState: true)
-                positionTransition.updatePosition(node: self.container, position: CGPoint(x: self.container.position.x, y: self.bounds.height + self.container.bounds.height / 2.0 + self.bounds.height), beginWithCurrentState: true, completion: { [weak self] _ in
+              
+                let targetY: CGFloat
+                if self.isMinimized {
+                    let offset: CGFloat = 81.0 + 15.0
+                    targetY = self.container.position.y + offset
+                    positionTransition.updatePosition(node: self.minimizedBackgroundNode, position: CGPoint(x: self.minimizedBackgroundNode.position.x, y: self.minimizedBackgroundNode.position.y + offset))
+                } else {
+                    targetY = self.bounds.height + self.container.bounds.height / 2.0 + self.bounds.height
+                }
+                
+                positionTransition.updatePosition(node: self.container, position: CGPoint(x: self.container.position.x, y: targetY), beginWithCurrentState: true, completion: { [weak self] _ in
                     guard let strongSelf = self else {
                         return
                     }
@@ -513,7 +648,14 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
             return nil
         }
         if !self.container.bounds.contains(self.view.convert(point, to: self.container.view)) {
-            return self.dim.view
+            if self.isMinimized {
+                return nil
+            } else {
+                return self.dim.view
+            }
+        }
+        if self.isMinimized && result == self.minimizedBackgroundNode.view {
+            return result
         }
         if self.isFlat {
             return result
@@ -567,5 +709,23 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         }
         self.scrollNode.view.isScrollEnabled = enableScrolling && !self.isFlat
         return result
+    }
+    
+    @objc private func closePressed() {
+        if !self.isDismissed {
+            self.minimizedRequestDismiss?(true)
+        }
+    }
+    
+    @objc private func maximizeTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            if !self.isDismissed {
+                if self.container.controllers.count == 1 {
+                    self.minimizedRequestMaximize?()
+                } else {
+                    
+                }
+            }
+        }
     }
 }

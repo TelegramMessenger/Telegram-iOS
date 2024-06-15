@@ -134,6 +134,10 @@ final class MediaPickerGridItemNode: GridItemNode {
     private let spoilerDisposable = MetaDisposable()
     var spoilerNode: SpoilerOverlayNode?
     
+    var priceBackgroundNode: NavigationBackgroundNode?
+    var priceIconNode: ASImageNode?
+    var priceLabelNode: ImmediateTextNode?
+    
     private let progressDisposable = MetaDisposable()
     
     private var currentIsPreviewing = false
@@ -545,12 +549,29 @@ final class MediaPickerGridItemNode: GridItemNode {
                 }
             }
             
-            self.spoilerDisposable.set((spoilerSignal
-            |> deliverOnMainQueue).start(next: { [weak self] hasSpoiler in
+            let priceSignal = Signal<Int64?, NoError> { subscriber in
+                if let signal = editingContext.priceSignal(forIdentifier: asset.localIdentifier) {
+                    let disposable = signal.start(next: { next in
+                        if let next = next as? Int64 {
+                            subscriber.putNext(next)
+                        }
+                    }, error: { _ in
+                    }, completed: nil)!
+                    
+                    return ActionDisposable {
+                        disposable.dispose()
+                    }
+                } else {
+                    return EmptyDisposable
+                }
+            }
+            
+            self.spoilerDisposable.set((combineLatest(spoilerSignal, priceSignal)
+            |> deliverOnMainQueue).start(next: { [weak self] hasSpoiler, price in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.updateHasSpoiler(hasSpoiler)
+                strongSelf.updateHasSpoiler(hasSpoiler, price: price)
             }))
             
             if self.currentDraftState != nil {
@@ -616,14 +637,14 @@ final class MediaPickerGridItemNode: GridItemNode {
     }
     
     private var didSetupSpoiler = false
-    private func updateHasSpoiler(_ hasSpoiler: Bool) {
+    private func updateHasSpoiler(_ hasSpoiler: Bool, price: Int64?) {
         var animated = true
         if !self.didSetupSpoiler {
             animated = false
             self.didSetupSpoiler = true
         }
     
-        if hasSpoiler {
+        if hasSpoiler || price != nil {
             if self.spoilerNode == nil {
                 let spoilerNode = SpoilerOverlayNode(enableAnimations: self.enableAnimations)
                 self.insertSubnode(spoilerNode, aboveSubnode: self.imageNode)
@@ -635,8 +656,45 @@ final class MediaPickerGridItemNode: GridItemNode {
                     spoilerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             }
-            self.spoilerNode?.update(size: self.bounds.size, transition: .immediate)
-            self.spoilerNode?.frame = CGRect(origin: .zero, size: self.bounds.size)
+            let bounds = self.bounds
+            self.spoilerNode?.update(size: bounds.size, transition: .immediate)
+            self.spoilerNode?.frame = CGRect(origin: .zero, size: bounds.size)
+            
+            if let price {
+                let backgroundNode: NavigationBackgroundNode
+                let labelNode: ImmediateTextNode
+                let iconNode: ASImageNode
+                
+                if let currentBackground = self.priceBackgroundNode, let currentLabel = self.priceLabelNode, let currentIcon = self.priceIconNode {
+                    backgroundNode = currentBackground
+                    labelNode = currentLabel
+                    iconNode = currentIcon
+                } else {
+                    backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x000000, alpha: 0.5), enableBlur: true)
+                    labelNode = ImmediateTextNode()
+                    iconNode = ASImageNode()
+                    iconNode.displaysAsynchronously = false
+                    iconNode.image = UIImage(bundleImageName: "Premium/Stars/StarSmall")
+                    
+                    if let spoilerNode = self.spoilerNode {
+                        self.insertSubnode(backgroundNode, aboveSubnode: spoilerNode)
+                    }
+                    backgroundNode.addSubnode(labelNode)
+                    backgroundNode.addSubnode(iconNode)
+                }
+                labelNode.attributedText = NSAttributedString(string: "\(price)", font: Font.semibold(15.0), textColor: .white)
+                
+                let labelSize = labelNode.updateLayout(CGSize(width: 200.0, height: 50.0))
+                let size = CGSize(width: labelSize.width + 40.0, height: 34.0)
+                
+                backgroundNode.update(size: size, cornerRadius: 17.0, transition: .immediate)
+                backgroundNode.frame = CGRect(origin: CGPoint(x: floor((bounds.width - size.width) / 2.0), y: floor((bounds.height - size.height) / 2.0)), size: size)
+                
+                if let icon = iconNode.image {
+                    iconNode.frame = CGRect(origin: CGPoint(x: 10.0, y: floor((size.height - icon.size.height) / 2.0)), size: icon.size)
+                }
+                labelNode.frame = CGRect(origin: CGPoint(x: 30.0, y: floor((size.height - labelSize.height) / 2.0)), size: labelSize)
+            }
         } else if let spoilerNode = self.spoilerNode {
             self.spoilerNode = nil
             spoilerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak spoilerNode] _ in

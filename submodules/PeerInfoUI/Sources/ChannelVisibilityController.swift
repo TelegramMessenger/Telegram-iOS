@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -23,7 +24,8 @@ import UndoUI
 import QrCodeUI
 import PremiumUI
 import TextFormat
-import Postbox
+import PremiumUI
+import OldChannelsController
 
 private final class ChannelVisibilityControllerArguments {
     let context: AccountContext

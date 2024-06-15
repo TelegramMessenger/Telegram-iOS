@@ -13,6 +13,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import ItemListAvatarAndNameInfoItem
+import OldChannelsController
 
 private final class ChannelBannedMemberControllerArguments {
     let context: AccountContext

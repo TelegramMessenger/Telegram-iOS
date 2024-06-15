@@ -70,10 +70,9 @@ public extension TelegramEngine {
             return _internal_starsTopUpOptions(account: self.account)
         }
         
-        public func peerStarsContext(peerId: EnginePeer.Id) -> StarsContext {
-            return StarsContext(account: self.account, peerId: peerId)
+        public func peerStarsContext() -> StarsContext {
+            return StarsContext(account: self.account)
         }
-
         
         public func peerStarsTransactionsContext(subject: StarsTransactionsContext.Subject, mode: StarsTransactionsContext.Mode) -> StarsTransactionsContext {
             return StarsTransactionsContext(account: self.account, subject: subject, mode: mode)

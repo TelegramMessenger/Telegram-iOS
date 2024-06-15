@@ -29,6 +29,7 @@ import ChatMessageDateAndStatusNode
 import ChatHistoryEntry
 import ChatMessageItemCommon
 import WallpaperPreviewMedia
+import TextNodeWithEntities
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -213,12 +214,14 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
             }
         }
     }
+    private let context: AccountContext
+    
     private let blurredImageNode: TransformImageNode
     private let dustNode: MediaDustNode
     fileprivate let buttonNode: HighlightTrackingButtonNode
     private let highlightedBackgroundNode: ASDisplayNode
     private let iconNode: ASImageNode
-    private let textNode: ImmediateTextNode
+    private let textNode: ImmediateTextNodeWithEntities
     
     private var maskView: UIView?
     private var maskLayer: CAShapeLayer?
@@ -227,7 +230,9 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     var isRevealed = false
     var tapped: () -> Void = {}
     
-    init(hasImageOverlay: Bool, icon: Icon, enableAnimations: Bool) {
+    init(context: AccountContext, hasImageOverlay: Bool, icon: Icon?, enableAnimations: Bool) {
+        self.context = context
+        
         self.blurredImageNode = TransformImageNode()
         self.blurredImageNode.contentAnimations = []
          
@@ -244,9 +249,9 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
-        self.iconNode.image = icon.image
+        self.iconNode.image = icon?.image
         
-        self.textNode = ImmediateTextNode()
+        self.textNode = ImmediateTextNodeWithEntities()
         self.textNode.isUserInteractionEnabled = false
         
         super.init()
@@ -366,16 +371,28 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
             self.buttonNode.isHidden = false
             self.textNode.isHidden = false
             
-            self.textNode.attributedText = NSAttributedString(string: text, font: Font.semibold(14.0), textColor: .white, paragraphAlignment: .center)
-            let textSize = self.textNode.updateLayout(size)
-            if let iconSize = self.iconNode.image?.size {
-                let contentSize = CGSize(width: iconSize.width + textSize.width + spacing + padding * 2.0, height: 32.0)
-                self.buttonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - contentSize.width) / 2.0), y: floorToScreenPixels((size.height - contentSize.height) / 2.0)), size: contentSize)
-                self.highlightedBackgroundNode.frame = CGRect(origin: .zero, size: contentSize)
-                
-                self.iconNode.frame = CGRect(origin: CGPoint(x: padding, y: floorToScreenPixels((contentSize.height - iconSize.height) / 2.0) + 1.0 - UIScreenPixel), size: iconSize)
-                self.textNode.frame = CGRect(origin: CGPoint(x: self.iconNode.frame.maxX + spacing, y: floorToScreenPixels((contentSize.height - textSize.height) / 2.0)), size: textSize)
+            self.textNode.arguments = TextNodeWithEntities.Arguments(context: self.context, cache: self.context.animationCache, renderer: self.context.animationRenderer, placeholderColor: .clear, attemptSynchronous: true)
+            
+            let string = NSMutableAttributedString(string: text, font: Font.semibold(15.0), textColor: .white)
+            if let range = string.string.range(of: "⭐️") {
+                string.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: string.string))
+                string.addAttribute(.baselineOffset, value: 0.5, range: NSRange(range, in: string.string))
             }
+        
+            self.textNode.attributedText = string
+            let textSize = self.textNode.updateLayout(size)
+            let iconSize = self.iconNode.image?.size ?? .zero
+                
+            var contentSize = CGSize(width: textSize.width + padding * 2.0, height: 32.0)
+            if iconSize.width > 0.0 {
+                contentSize.width += iconSize.width + spacing
+            }
+            
+            self.buttonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - contentSize.width) / 2.0), y: floorToScreenPixels((size.height - contentSize.height) / 2.0)), size: contentSize)
+            self.highlightedBackgroundNode.frame = CGRect(origin: .zero, size: contentSize)
+            
+            self.iconNode.frame = CGRect(origin: CGPoint(x: padding, y: floorToScreenPixels((contentSize.height - iconSize.height) / 2.0) + 1.0 - UIScreenPixel), size: iconSize)
+            self.textNode.frame = CGRect(origin: CGPoint(x: contentSize.width - padding - textSize.width, y: floorToScreenPixels((contentSize.height - textSize.height) / 2.0)), size: textSize)
         }
         
         var leftOffset: CGFloat = 0.0
@@ -1819,6 +1836,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 automaticPlayback = false
             }
         }
+        if let media = self.media as? TelegramMediaInvoice {
+            invoice = media
+        }
         
         var progressRequired = false
         if let updatingMedia = attributes.updatingMedia, case .update = updatingMedia.media {
@@ -2243,9 +2263,12 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             badgeNode.removeFromSupernode()
         }
         
-        var icon: ExtendedMediaOverlayNode.Icon = .lock
+        var icon: ExtendedMediaOverlayNode.Icon? = .lock
         var displaySpoiler = false
         if let invoice = invoice, let extendedMedia = invoice.extendedMedia, case .preview = extendedMedia {
+            if invoice.currency == "XTR" {
+                icon = nil
+            }
             displaySpoiler = true
         } else if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) {
             displaySpoiler = true
@@ -2257,9 +2280,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
         }
         
         if displaySpoiler {
-            if self.extendedMediaOverlayNode == nil {
-                let enableAnimations = (self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true) && !isPreview
-                let extendedMediaOverlayNode = ExtendedMediaOverlayNode(hasImageOverlay: !isSecretMedia, icon: icon,  enableAnimations: enableAnimations)
+            if self.extendedMediaOverlayNode == nil, let context = self.context {
+                let enableAnimations = context.sharedContext.energyUsageSettings.fullTranslucency && !isPreview
+                let extendedMediaOverlayNode = ExtendedMediaOverlayNode(context: context, hasImageOverlay: !isSecretMedia, icon: icon,  enableAnimations: enableAnimations)
                 extendedMediaOverlayNode.tapped = { [weak self] in
                     guard let self else {
                         return
@@ -2307,6 +2330,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                         break
                     }
                 }
+            }
+            if let invoice, invoice.currency == "XTR" && viewText.isEmpty {
+                viewText = "Unlock for ⭐️\(invoice.totalAmount)"
             }
             self.extendedMediaOverlayNode?.update(size: self.imageNode.frame.size, text: viewText, imageSignal: self.currentBlurredImageSignal, imageFrame: self.imageNode.view.convert(self.imageNode.bounds, to: self.extendedMediaOverlayNode?.view), corners: self.currentImageArguments?.corners)
         } else if let extendedMediaOverlayNode = self.extendedMediaOverlayNode {

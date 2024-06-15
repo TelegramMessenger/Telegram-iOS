@@ -50,6 +50,7 @@ import FullScreenEffectView
 import PeerInfoStoryGridScreen
 import ArchiveInfoScreen
 import BirthdayPickerScreen
+import OldChannelsController
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
