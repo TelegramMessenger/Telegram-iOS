@@ -12337,6 +12337,8 @@ Sorry for the inconvenience.";
 "Stars.BotRevenue.Withdraw.Withdraw" = "Withdraw via Fragment";
 "Stars.BotRevenue.Withdraw.Info" = "You can withdraw Stars using Fragment, or use Stars to advertise your bot. [Learn More >]()";
 
+"Stars.BotRevenue.Transactions.Title" = "Transaction History";
+
 "Stars.Withdraw.Title" = "Withdraw";
 "Stars.Withdraw.AmountTitle" = "ENTER AMOUNT TO WITHDRAW";
 "Stars.Withdraw.AmountPlaceholder" = "Stars Amount";

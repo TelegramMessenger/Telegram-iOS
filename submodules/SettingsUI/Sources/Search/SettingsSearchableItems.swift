@@ -999,7 +999,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         allItems.append(contentsOf: profileItems)
         
         let savedMessages = SettingsSearchableItem(id: .savedMessages(0), title: strings.Settings_SavedMessages, alternate: synonyms(strings.SettingsSearch_Synonyms_SavedMessages), icon: .savedMessages, breadcrumbs: [], present: { context, _, present in
-            present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: context.account.peerId), subject: nil, botStart: nil, mode: .standard(.default)))
+            present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: context.account.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil))
         })
         allItems.append(savedMessages)
         
@@ -1059,7 +1059,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
             let _ = (context.engine.peers.supportPeerId()
             |> deliverOnMainQueue).start(next: { peerId in
                 if let peerId = peerId {
-                    present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default)))
+                    present(.push, context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil))
                 }
             })
         })

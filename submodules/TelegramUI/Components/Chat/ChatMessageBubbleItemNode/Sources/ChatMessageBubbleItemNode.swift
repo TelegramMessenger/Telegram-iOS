@@ -853,6 +853,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     deinit {
     }
 
+    override public func updateTrailingItemSpace(_ height: CGFloat, transition: ContainedViewLayoutTransition) {
+        if height.isLessThanOrEqualTo(0.0) {
+            transition.updateFrame(node: self.mainContainerNode, frame: CGRect(origin: CGPoint(), size: self.mainContainerNode.bounds.size))
+        } else {
+            transition.updateFrame(node: self.mainContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -floorToScreenPixels(height / 2.0)), size: self.mainContainerNode.bounds.size))
+        }
+    }
+    
     override public func cancelInsertionAnimations() {
         self.shadowNode.layer.removeAllAnimations()
 
@@ -3086,6 +3094,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             strongSelf.didChangeFromPendingToSent = true
         }
         
+        if case let .messageOptions(_, _, info) = item.associatedData.subject, case let .link(link) = info, link.isCentered {
+            strongSelf.wantsTrailingItemSpaceUpdates = true
+        } else {
+            strongSelf.wantsTrailingItemSpaceUpdates = false
+        }
+        
         let themeUpdated = strongSelf.appliedItem?.presentationData.theme.theme !== item.presentationData.theme.theme
         let previousContextFrame = strongSelf.mainContainerNode.frame
         strongSelf.mainContainerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
@@ -3126,7 +3140,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         } else if !incoming {
             backgroundType = .outgoing(mergeType)
         } else {
-            if !item.presentationData.chatBubbleCorners.hasTails {
+            if case let .messageOptions(_, _, info) = item.associatedData.subject, case let .link(link) = info, link.isCentered {
+                backgroundType = .incoming(.Extracted)
+            } else if !item.presentationData.chatBubbleCorners.hasTails {
                 backgroundType = .incoming(.Extracted)
             } else {
                 backgroundType = .incoming(mergeType)

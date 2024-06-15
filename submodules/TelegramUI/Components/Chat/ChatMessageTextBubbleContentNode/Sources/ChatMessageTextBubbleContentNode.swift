@@ -238,11 +238,13 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let message = item.message
                 
-                let incoming: Bool
-                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
-                    incoming = false
-                } else {
-                    incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+                var incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject {
+                    if case .forward = info {
+                        incoming = false
+                    } else if case let .link(link) = info, link.isCentered {
+                        incoming = true
+                    }
                 }
                 
                 var maxTextWidth = CGFloat.greatestFiniteMagnitude
@@ -308,6 +310,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         displayStatus = false
                     }
                 } else if !item.presentationData.chatBubbleCorners.hasTails {
+                    displayStatus = false
+                } else if case let .messageOptions(_, _, info) = item.associatedData.subject, case let .link(link) = info, link.isCentered {
                     displayStatus = false
                 }
                 if displayStatus {

@@ -98,10 +98,13 @@ final class StarsStatisticsScreenComponent: Component {
         private let proceedsView = ComponentView<Empty>()
         private let balanceView = ComponentView<Empty>()
 
-        private let panelContainer = ComponentView<StarsTransactionsPanelContainerEnvironment>()
+        private let transactionsHeader = ComponentView<Empty>()
+        private let transactionsBackground = UIView()
+        private let transactionsView = ComponentView<StarsTransactionsPanelEnvironment>()
                                 
         private var component: StarsStatisticsScreenComponent?
         private weak var state: EmptyComponentState?
+        private var environment: Environment<ViewControllerComponentContainer.Environment>?
         private var navigationMetrics: (navigationHeight: CGFloat, statusBarHeight: CGFloat)?
         private var controller: (() -> ViewController?)?
         
@@ -155,7 +158,8 @@ final class StarsStatisticsScreenComponent: Component {
             self.addSubview(self.scrollView)
             
             self.scrollView.addSubview(self.scrollContainerView)
-                        
+            self.scrollContainerView.addSubview(self.transactionsBackground)
+            
             self.addSubview(self.navigationBackgroundView)
             
             self.navigationSeparatorLayerContainer.addSublayer(self.navigationSeparatorLayer)
@@ -205,12 +209,16 @@ final class StarsStatisticsScreenComponent: Component {
         }
                 
         private func updateScrolling(transition: ComponentTransition) {
+            guard let environment = self.environment?[ViewControllerComponentContainer.Environment.self].value else {
+                return
+            }
+        
             let scrollBounds = self.scrollView.bounds
             
             let isLockedAtPanels = scrollBounds.maxY == self.scrollView.contentSize.height
                             
             let topContentOffset = self.scrollView.contentOffset.y
-            let navigationBackgroundAlpha = min(20.0, max(0.0, topContentOffset - 95.0)) / 20.0
+            let navigationBackgroundAlpha = min(20.0, max(0.0, topContentOffset)) / 20.0
                             
             let animatedTransition = ComponentTransition(animation: .curve(duration: 0.18, curve: .easeInOut))
             animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
@@ -221,14 +229,18 @@ final class StarsStatisticsScreenComponent: Component {
             expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
             
             transition.setAlpha(layer: self.navigationSeparatorLayer, alpha: expansionDistanceFactor)
-            if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
-                panelContainerView.updateNavigationMergeFactor(value: 1.0 - expansionDistanceFactor, transition: transition)
-            }
             
-            let _ = self.panelContainer.updateEnvironment(
+            let _ = self.transactionsView.updateEnvironment(
                 transition: transition,
                 environment: {
-                    StarsTransactionsPanelContainerEnvironment(isScrollable: isLockedAtPanels)
+                    StarsTransactionsPanelEnvironment(
+                        theme: environment.theme,
+                        strings: environment.strings,
+                        dateTimeFormat: environment.dateTimeFormat,
+                        containerInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right),
+                        isScrollable: isLockedAtPanels,
+                        isCurrent: true
+                    )
                 }
             )
         }
@@ -241,15 +253,8 @@ final class StarsStatisticsScreenComponent: Component {
             }
             
             self.component = component
+            self.environment = environment
             self.state = state
-            
-            var balanceUpdated = false
-            if let starsState = self.starsState {
-                if let previousBalance = self.previousBalance, starsState.balances.availableBalance != previousBalance {
-                    balanceUpdated = true
-                }
-                self.previousBalance = starsState.balances.availableBalance
-            }
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
@@ -269,7 +274,7 @@ final class StarsStatisticsScreenComponent: Component {
             }
             
             var wasLockedAtPanels = false
-            if let panelContainerView = self.panelContainer.view, let navigationMetrics = self.navigationMetrics {
+            if let panelContainerView = self.transactionsView.view, let navigationMetrics = self.navigationMetrics {
                 if self.scrollView.bounds.minY > 0.0 && abs(self.scrollView.bounds.minY - (panelContainerView.frame.minY - navigationMetrics.navigationHeight)) <= UIScreenPixel {
                     wasLockedAtPanels = true
                 }
@@ -296,7 +301,6 @@ final class StarsStatisticsScreenComponent: Component {
             var contentHeight: CGFloat = 0.0
                         
             let sideInsets: CGFloat = environment.safeInsets.left + environment.safeInsets.right + 16 * 2.0
-            let bottomInset: CGFloat = environment.safeInsets.bottom
              
             contentHeight += environment.navigationHeight
             contentHeight += 31.0
@@ -401,7 +405,7 @@ final class StarsStatisticsScreenComponent: Component {
                 transition.setFrame(view: proceedsView, frame: proceedsFrame)
             }
             contentHeight += proceedsSize.height
-            contentHeight += 44.0
+            contentHeight += 31.0
             
             let termsFont = Font.regular(13.0)
             let termsTextColor = environment.theme.list.freeTextColor
@@ -464,71 +468,77 @@ final class StarsStatisticsScreenComponent: Component {
             }
             
             contentHeight += balanceSize.height
-            contentHeight += 44.0
+            contentHeight += 27.0
             
-            var panelItems: [StarsTransactionsPanelContainerComponent.Item] = []
             let allTransactionsContext: StarsTransactionsContext
             if let current = self.allTransactionsContext {
                 allTransactionsContext = current
             } else {
-                allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .peer(component.peerId), mode: .all)
-                component.revenueContext.setUpdated { [weak self] in
-                    if let self, let allTransactionsContext = self.allTransactionsContext {
-                        allTransactionsContext.reload()
-                    }
-                }
+                allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext( subject: .peer(component.peerId), mode: .all)
                 self.allTransactionsContext = allTransactionsContext
             }
-                            
-            panelItems.append(StarsTransactionsPanelContainerComponent.Item(
-                id: "all",
-                title: environment.strings.Stars_Intro_AllTransactions,
-                panel: AnyComponent(StarsTransactionsListPanelComponent(
+            
+            let transactionsHeaderSize = self.transactionsHeader.update(
+                transition: transition,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: environment.strings.Stars_BotRevenue_Transactions_Title.uppercased(),
+                        font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                        textColor: environment.theme.list.freeTextColor
+                    )),
+                    maximumNumberOfLines: 0
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            let transactionsHeaderFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 32.0, y: contentHeight), size: transactionsHeaderSize)
+            if let transactionsHeaderView = self.transactionsHeader.view {
+                if transactionsHeaderView.superview == nil {
+                    self.scrollView.addSubview(transactionsHeaderView)
+                }
+                transition.setFrame(view: transactionsHeaderView, frame: transactionsHeaderFrame)
+            }
+            contentHeight += transactionsHeaderSize.height
+            contentHeight += 6.0
+            
+            self.transactionsBackground.backgroundColor = environment.theme.list.itemBlocksBackgroundColor
+            self.transactionsBackground.layer.cornerRadius = 11.0
+            if #available(iOS 13.0, *) {
+                self.transactionsBackground.layer.cornerCurve = .continuous
+            }
+            
+            let transactionsSize = self.transactionsView.update(
+                transition: .immediate,
+                component: AnyComponent(StarsTransactionsListPanelComponent(
                     context: component.context,
                     transactionsContext: allTransactionsContext,
                     action: { transaction in
                         component.openTransaction(transaction)
                     }
-                ))
-            ))
-            
-            var panelTransition = transition
-            if balanceUpdated {
-                panelTransition = .easeInOut(duration: 0.25)
-            }
-            
-            if !panelItems.isEmpty {
-                let panelContainerSize = self.panelContainer.update(
-                    transition: panelTransition,
-                    component: AnyComponent(StarsTransactionsPanelContainerComponent(
+                )),
+                environment: {
+                    StarsTransactionsPanelEnvironment(
                         theme: environment.theme,
                         strings: environment.strings,
                         dateTimeFormat: environment.dateTimeFormat,
-                        insets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: bottomInset, right: environment.safeInsets.right),
-                        items: panelItems,
-                        currentPanelUpdated: { [weak self] id, transition in
-                            guard let self else {
-                                return
-                            }
-                            self.currentSelectedPanelId = id
-                            self.state?.updated(transition: transition)
-                        }
-                    )),
-                    environment: {
-                        StarsTransactionsPanelContainerEnvironment(isScrollable: wasLockedAtPanels)
-                    },
-                    containerSize: CGSize(width: availableSize.width, height: availableSize.height - environment.navigationHeight)
-                )
-                if let panelContainerView = self.panelContainer.view {
-                    if panelContainerView.superview == nil {
-                        self.scrollContainerView.addSubview(panelContainerView)
-                    }
-                    transition.setFrame(view: panelContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: panelContainerSize))
+                        containerInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right),
+                        isScrollable: wasLockedAtPanels,
+                        isCurrent: true
+                    )
+                },
+                containerSize: CGSize(width: availableSize.width - sideInsets, height: availableSize.height)
+            )
+            let transactionsFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - transactionsSize.width) / 2.0), y: contentHeight), size: transactionsSize)
+            if let panelContainerView = self.transactionsView.view {
+                if panelContainerView.superview == nil {
+                    self.scrollContainerView.addSubview(panelContainerView)
                 }
-                contentHeight += panelContainerSize.height
-            } else {
-                self.panelContainer.view?.removeFromSuperview()
+                transition.setFrame(view: panelContainerView, frame: transactionsFrame)
             }
+            transition.setFrame(view: self.transactionsBackground, frame: transactionsFrame)
+            
+            contentHeight += transactionsSize.height
+            contentHeight += 31.0
             
             self.ignoreScrolling = true
             
@@ -542,7 +552,7 @@ final class StarsStatisticsScreenComponent: Component {
             
             var scrollViewBounds = self.scrollView.bounds
             scrollViewBounds.size = availableSize
-            if wasLockedAtPanels, let panelContainerView = self.panelContainer.view {
+            if wasLockedAtPanels, let panelContainerView = self.transactionsView.view {
                 scrollViewBounds.origin.y = panelContainerView.frame.minY - environment.navigationHeight
             }
             transition.setBounds(view: self.scrollView, bounds: scrollViewBounds)

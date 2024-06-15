@@ -379,7 +379,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, AS
                 let threadId = peerData.peer.peerId.toInt64()
                 let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .replyThread(message: ChatReplyThreadMessage(
                     peerId: self.context.account.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
-                )), subject: nil, botStart: nil, mode: .standard(.previewing))
+                )), subject: nil, botStart: nil, mode: .standard(.previewing), params: nil)
                 chatController.canReadHistory.set(false)
                 let source: ContextContentSource = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: parentController.navigationController as? NavigationController))
                 
@@ -400,7 +400,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, AS
     
     public func activateSearch() {
         if self.chatController == nil {
-            let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: self.context.account.peerId), subject: nil, botStart: nil, mode: .standard(.embedded(invertDirection: false)))
+            let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: self.context.account.peerId), subject: nil, botStart: nil, mode: .standard(.embedded(invertDirection: false)), params: nil)
             chatController.alwaysShowSearchResultsAsList = true
             chatController.includeSavedPeersInSearchResults = true
             self.chatController = chatController

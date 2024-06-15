@@ -212,7 +212,8 @@ final class BusinessLinksSetupScreenComponent: Component {
                 chatLocation: .customChatContents,
                 subject: .customChatContents(contents: contents),
                 botStart: nil,
-                mode: .standard(.default)
+                mode: .standard(.default),
+                params: nil
             )
             if openKeyboard {
                 chatController.activateInput(type: .text)

@@ -14,7 +14,6 @@ import SheetComponent
 import BalancedTextComponent
 import MultilineTextComponent
 import BundleIconComponent
-import ButtonComponent
 import ItemListUI
 import AccountContext
 import PresentationDataUtils
@@ -315,6 +314,7 @@ private final class CreateLinkSheetComponent: CombinedComponent {
         }
         fileprivate var name: String = ""
         fileprivate var webpage: TelegramMediaWebpage?
+        fileprivate var isDark = false
         fileprivate var dismissed = false
         
         private var positionBelowText = true
@@ -334,6 +334,7 @@ private final class CreateLinkSheetComponent: CombinedComponent {
             self.link = link?.url ?? ""
             self.name = link?.name ?? ""
             self.webpage = link?.webpage
+            self.isDark = link?.isDark ?? false
             self.positionBelowText = link?.positionBelowText ?? true
             self.largeMedia = link?.largeMedia
             
@@ -392,7 +393,8 @@ private final class CreateLinkSheetComponent: CombinedComponent {
             if name.isEmpty {
                 name = self.link
             }
-            presentLinkOptionsController(context: self.context, selfController: controller, sourceNode: sourceNode, url: link, name: name, positionBelowText: self.positionBelowText, largeMedia: self.largeMedia, webPage: webpage, completion: { [weak self] positionBelowText, largeMedia in
+                        
+            presentLinkOptionsController(context: self.context, selfController: controller, snapshotImage: controller.snapshotImage, isDark: self.isDark, sourceNode: sourceNode, url: link, name: name, positionBelowText: self.positionBelowText, largeMedia: self.largeMedia, webPage: webpage, completion: { [weak self] positionBelowText, largeMedia in
                 guard let self else {
                     return
                 }
@@ -527,19 +529,22 @@ public final class CreateLinkScreen: ViewControllerComponentContainer {
         let webpage: TelegramMediaWebpage?
         let positionBelowText: Bool
         let largeMedia: Bool?
+        let isDark: Bool
         
         init(
             url: String,
             name: String?,
             webpage: TelegramMediaWebpage?,
             positionBelowText: Bool,
-            largeMedia: Bool?
+            largeMedia: Bool?,
+            isDark: Bool
         ) {
             self.url = url
             self.name = name
             self.webpage = webpage
             self.positionBelowText = positionBelowText
             self.largeMedia = largeMedia
+            self.isDark = isDark
         }
     }
     
@@ -554,14 +559,17 @@ public final class CreateLinkScreen: ViewControllerComponentContainer {
     }
     
     private let context: AccountContext
+    fileprivate let snapshotImage: UIImage?
     fileprivate let completion: (CreateLinkScreen.Result) -> Void
         
     public init(
         context: AccountContext,
         link: CreateLinkScreen.Link?,
+        snapshotImage: UIImage?,
         completion: @escaping (CreateLinkScreen.Result) -> Void
     ) {
         self.context = context
+        self.snapshotImage = snapshotImage
         self.completion = completion
         
         super.init(

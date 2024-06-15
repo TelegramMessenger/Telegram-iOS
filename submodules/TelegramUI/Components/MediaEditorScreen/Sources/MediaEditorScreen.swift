@@ -4492,11 +4492,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     name: existingEntity.name,
                     webpage: existingEntity.webpage,
                     positionBelowText: existingEntity.positionBelowText,
-                    largeMedia: existingEntity.largeMedia
+                    largeMedia: existingEntity.largeMedia,
+                    isDark: existingEntity.style == .black
                 )
             }
                         
-            let linkController = CreateLinkScreen(context: controller.context, link: link, completion: { [weak self] result in
+            let linkController = CreateLinkScreen(context: controller.context, link: link, snapshotImage: self.mediaEditor?.resultImage, completion: { [weak self] result in
                 guard let self else {
                     return
                 }

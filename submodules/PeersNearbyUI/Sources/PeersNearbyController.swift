@@ -486,7 +486,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         }))
     }, contextAction: { peer, node, gesture in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.previewing))
+        let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.previewing), params: nil)
         chatController.canReadHistory.set(false)
         let contextController = ContextController(presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: peerNearbyContextMenuItems(context: context, peerId: peer.id, present: { c in
             presentControllerImpl?(c, nil)

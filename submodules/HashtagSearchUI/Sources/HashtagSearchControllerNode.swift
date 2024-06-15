@@ -76,7 +76,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         
         let navigationController = controller.navigationController as? NavigationController
         if let peer, !controller.all {
-            self.currentController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
+            self.currentController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .inline(navigationController), params: nil)
             self.currentController?.alwaysShowSearchResultsAsList = true
             self.currentController?.showListEmptyResults = true
             self.currentController?.customNavigationController = navigationController
@@ -86,14 +86,14 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
                 
         let myChatContents = HashtagSearchGlobalChatContents(context: context, query: query, publicPosts: false)
         self.myChatContents = myChatContents
-        self.myController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: myChatContents), botStart: nil, mode: .standard(.default))
+        self.myController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: myChatContents), botStart: nil, mode: .standard(.default), params: nil)
         self.myController?.alwaysShowSearchResultsAsList = true
         self.myController?.showListEmptyResults = true
         self.myController?.customNavigationController = navigationController
         
         let globalChatContents = HashtagSearchGlobalChatContents(context: context, query: query, publicPosts: true)
         self.globalChatContents = globalChatContents
-        self.globalController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: globalChatContents), botStart: nil, mode: .standard(.default))
+        self.globalController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: globalChatContents), botStart: nil, mode: .standard(.default), params: nil)
         self.globalController?.alwaysShowSearchResultsAsList = true
         self.globalController?.showListEmptyResults = true
         self.globalController?.customNavigationController = navigationController
