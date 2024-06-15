@@ -204,6 +204,14 @@ private final class SheetContent: CombinedComponent {
                 )
             )
             
+            state.selectLink = {
+                if let controller = controller() as? CreateLinkScreen {
+                    if let view = controller.node.hostView.findTaggedView(tag: linkTag) as? LinkFieldComponent.View {
+                        view.selectAll()
+                    }
+                }
+            }
+            
             let urlSection = urlSection.update(
                 component: ListSectionComponent(
                     theme: theme,
@@ -325,6 +333,8 @@ private final class CreateLinkSheetComponent: CombinedComponent {
         private let linkDisposable =  MetaDisposable()
         private let linkPromise = ValuePromise<String>()
         
+        var selectLink: () -> Void = {}
+        
         init(
             context: AccountContext,
             link: CreateLinkScreen.Link?
@@ -339,6 +349,20 @@ private final class CreateLinkSheetComponent: CombinedComponent {
             self.largeMedia = link?.largeMedia
             
             super.init()
+            
+            if link == nil {
+                Queue.mainQueue().after(0.1, {
+                    let pasteboard = UIPasteboard.general
+                    if pasteboard.hasURLs {
+                        if let url = pasteboard.url?.absoluteString, !url.isEmpty {
+                            self.link = url
+                            self.updated()
+                            
+                            self.selectLink()
+                        }
+                    }
+                })
+            }
             
             self.linkDisposable.set((self.linkPromise.get()
             |> delay(1.5, queue: Queue.mainQueue())
@@ -705,6 +729,10 @@ private final class LinkFieldComponent: Component {
         
         func activateInput() {
             self.textField.becomeFirstResponder()
+        }
+        
+        func selectAll() {
+            self.textField.selectAll(nil)
         }
         
         func update(component: LinkFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
